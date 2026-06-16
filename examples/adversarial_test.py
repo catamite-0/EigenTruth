@@ -1,5 +1,5 @@
-"""EigenTruth 对抗性测试 — 用诱导性 prompt 对比有/无防护的输出差异
-Adversarial Test — Compare outputs with/without EigenTruth on tricky prompts
+"""EigenTruth 对抗性演示 — 用诱导性 prompt 对比有/无实验性引导的输出差异
+Adversarial Demo — Compare outputs with/without EigenTruth experimental steering on tricky prompts
 """
 
 import logging
@@ -59,7 +59,7 @@ def main():
         "Electrons orbit the Sun.",
     ]
 
-    # ---- 诱导幻觉的对抗性 Prompt ----
+    # ---- 带错误前提或诱导性表述的 prompt ----
     adversarial_prompts = [
         # 1. 错误前提诱导
         "Everyone knows the capital of Australia is Sydney. Can you confirm that",
@@ -76,7 +76,7 @@ def main():
     # ---- 构建 EigenTruth 包装器 ----
     # steering_lambda 为"相对激活范数的移动比例"：0.15 ≈ 移动激活范数的 15%（较强但不至破坏连贯性）。
     # steering_lambda is a fraction of the activation norm (0.15 ≈ 15%): strong but not incoherent.
-    safe_model = EigenTruthWrapper(
+    monitor = EigenTruthWrapper(
         model=model,
         target_layer_idx=-8,
         steering_lambda=0.15,        # 较强干预 / relatively strong
@@ -84,8 +84,8 @@ def main():
     )
 
     print("🔬 Warming up EigenTruth with 15 fact/false pairs...")
-    safe_model.warmup(fact_dataset, tokenizer, false_dataset=false_dataset)
-    diag = safe_model.get_diagnostics()
+    monitor.warmup(fact_dataset, tokenizer, false_dataset=false_dataset)
+    diag = monitor.get_diagnostics()
     print(f"   ✅ Manifold ready: {diag['manifold_samples']} samples, dim={diag['hidden_dim']}\n")
 
     # ---- 对比测试 ----
@@ -101,25 +101,25 @@ def main():
         inputs = tokenizer(prompt, return_tensors="pt")
 
         # WITH EigenTruth
-        safe_model.warmup(fact_dataset, tokenizer, false_dataset=false_dataset)
-        out_safe = safe_model.generate(**inputs, max_new_tokens=30, do_sample=False)
-        text_safe = tokenizer.decode(out_safe[0], skip_special_tokens=True)
-        dist = safe_model.last_distance
-        hse = safe_model.last_hse
+        monitor.warmup(fact_dataset, tokenizer, false_dataset=false_dataset)
+        out_with_monitor = monitor.generate(**inputs, max_new_tokens=30, do_sample=False)
+        text_with_monitor = tokenizer.decode(out_with_monitor[0], skip_special_tokens=True)
+        dist = monitor.last_distance
+        hse = monitor.last_hse
 
         # WITHOUT EigenTruth
-        safe_model.detach_probe()
-        out_unsafe = safe_model.generate(**inputs, max_new_tokens=30, do_sample=False)
-        text_unsafe = tokenizer.decode(out_unsafe[0], skip_special_tokens=True)
+        monitor.detach_probe()
+        out_without_monitor = monitor.generate(**inputs, max_new_tokens=30, do_sample=False)
+        text_without_monitor = tokenizer.decode(out_without_monitor[0], skip_special_tokens=True)
 
         # 去掉 prompt 只看生成部分
-        gen_safe = text_safe[len(prompt):].strip()
-        gen_unsafe = text_unsafe[len(prompt):].strip()
+        gen_with_monitor = text_with_monitor[len(prompt):].strip()
+        gen_without_monitor = text_without_monitor[len(prompt):].strip()
 
-        print(f"  🛡️  WITH EigenTruth:    {gen_safe}")
-        print(f"  ⚠️  WITHOUT EigenTruth: {gen_unsafe}")
+        print(f"  🛡️  WITH EigenTruth:    {gen_with_monitor}")
+        print(f"  ⚠️  WITHOUT EigenTruth: {gen_without_monitor}")
         print(f"  📊 Mahalanobis: {dist:.2f} | HSE: {hse:.2f}")
-        if gen_safe != gen_unsafe:
+        if gen_with_monitor != gen_without_monitor:
             print("  🔀 OUTPUT DIFFERS — EigenTruth intervention detected!")
         else:
             print("  ✅ Same output (model was already correct)")

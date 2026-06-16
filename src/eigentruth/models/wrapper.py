@@ -28,8 +28,8 @@ logger.addHandler(logging.NullHandler())
 
 
 class EigenTruthWrapper(nn.Module):
-    """EigenTruth 主封装器：为 HuggingFace CausalLM 模型穿戴幻觉治理装甲。
-    EigenTruth Main Wrapper: Equips HuggingFace CausalLM models with hallucination governance armor.
+    """EigenTruth 主封装器：为 HuggingFace CausalLM 模型添加表征诊断与实验性引导。
+    EigenTruth main wrapper: Adds representation diagnostics and experimental steering to HuggingFace CausalLM models.
 
     用法示例::
 
@@ -37,14 +37,14 @@ class EigenTruthWrapper(nn.Module):
         from eigentruth.models.wrapper import EigenTruthWrapper
 
         base_model = AutoModelForCausalLM.from_pretrained("Qwen/Qwen2.5-0.5B")
-        safe_model = EigenTruthWrapper(
+        monitor = EigenTruthWrapper(
             model=base_model,
             target_layer_idx=-10,
             steering_lambda=0.1,
             mahalanobis_threshold=15.0,
         )
-        safe_model.warmup(["光速是每秒299792458米。"], tokenizer)
-        outputs = safe_model.generate(**inputs, max_new_tokens=100)
+        monitor.warmup(["光速是每秒299792458米。"], tokenizer)
+        outputs = monitor.generate(**inputs, max_new_tokens=100)
 
     Args:
         model: HuggingFace CausalLM 模型实例 / Model instance.
@@ -229,10 +229,10 @@ class EigenTruthWrapper(nn.Module):
         """
         if not self._is_warmed_up:
             logger.warning(
-                "⚠️ 模型未经 warmup，将以无防护模式生成。"
-                "请先调用 safe_model.warmup(fact_dataset, tokenizer)。\n"
-                "⚠️ Model not warmed up, generating in unprotected mode. "
-                "Please call safe_model.warmup(fact_dataset, tokenizer) first."
+                "⚠️ 模型未经 warmup，将不启用 EigenTruth 诊断或引导。"
+                "请先调用 monitor.warmup(fact_dataset, tokenizer)。\n"
+                "⚠️ Model not warmed up; EigenTruth diagnostics and steering are disabled. "
+                "Please call monitor.warmup(fact_dataset, tokenizer) first."
             )
             return self.model.generate(**kwargs)
 
