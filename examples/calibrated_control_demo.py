@@ -105,7 +105,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     verification_results = verifier.verify_many(claims)
 
     controller = RiskController(artifact)
-    decision = controller.decide({key: float(value) for key, value in diagnostics.items()})
+    decision = controller.decide(
+        {key: float(value) for key, value in diagnostics.items()},
+        verification_results=verification_results,
+    )
     trace = ProductTrace(
         request_id=args.request_id,
         diagnostics=diagnostics,

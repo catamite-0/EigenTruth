@@ -11,6 +11,7 @@ from eigentruth.verify import (
     EvidenceDocument,
     GroundednessVerifier,
     InMemoryVerifier,
+    VerificationResult,
     VerificationStatus,
     extract_claims,
     normalize_claim_text,
@@ -68,6 +69,43 @@ def test_risk_controller_accepts_and_routes_threshold_exceedance():
     assert high.action is ControlAction.ABSTAIN
     assert high.risk_level is RiskLevel.HIGH
     assert high.diagnostics["triggered_scores"] == ("maha", "support")
+
+
+def test_risk_controller_combines_diagnostics_and_verification_results():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    supported = (VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),)
+    unsupported = (VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.2),)
+    refuted = (VerificationResult(VerificationStatus.REFUTED, confidence=0.92),)
+    errored = ({"status": "unexpected_status", "confidence": "0.4"},)
+
+    low_supported = controller.decide({"maha": 1.0}, verification_results=supported)
+    low_unsupported = controller.decide({"maha": 1.0}, verification_results=unsupported)
+    compound = controller.decide({"maha": 4.0}, verification_results=unsupported)
+    high_refuted = controller.decide({"maha": 1.0}, verification_results=refuted)
+    unknown_error = controller.decide({"maha": 1.0}, verification_results=errored)
+    compound_error = controller.decide({"maha": 4.0}, verification_results=errored)
+
+    assert low_supported.action is ControlAction.ACCEPT
+    assert low_supported.diagnostics["verification"]["counts"]["supported"] == 1
+    assert low_unsupported.action is ControlAction.RETRIEVE
+    assert low_unsupported.risk_level is RiskLevel.MEDIUM
+    assert compound.action is ControlAction.ABSTAIN
+    assert compound.risk_level is RiskLevel.HIGH
+    assert high_refuted.action is ControlAction.ABSTAIN
+    assert high_refuted.risk_level is RiskLevel.HIGH
+    assert high_refuted.confidence == pytest.approx(0.92)
+    assert high_refuted.diagnostics["verification"]["triggered_statuses"] == ("refuted",)
+    assert unknown_error.action is ControlAction.CLARIFY
+    assert unknown_error.risk_level is RiskLevel.UNKNOWN
+    assert compound_error.action is ControlAction.ABSTAIN
+    assert compound_error.risk_level is RiskLevel.HIGH
 
 
 def test_claim_extraction_and_in_memory_verifier():

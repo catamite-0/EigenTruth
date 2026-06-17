@@ -35,7 +35,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE)
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
-- calibrate diagnostic thresholds from benchmark score dumps and emit risk decisions/traces
+- calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
 - optionally apply experimental activation steering when a configured threshold is exceeded
 
 EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
@@ -45,7 +45,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）
 - 可选地使用事实与错误样本构建对比方向
 - 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
-- 从 benchmark 分数 dump 校准诊断阈值，并输出风险决策/trace
+- 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
 - 可选地在超过配置阈值时执行实验性激活引导
 
 ### What It Does Not Do
@@ -114,7 +114,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json
 ```
 
-This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions and `ProductTrace` records in monitor-first applications.
+This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records.
 
 ## Architecture
 
@@ -161,7 +161,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
-| `RiskController` / `ProductTrace` | Converts calibrated diagnostics into structured routing decisions and JSON-ready traces. |
+| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces. |
 | `GroundednessVerifier` | Checks extracted claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
 ### 主要组件
@@ -176,7 +176,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
-| `RiskController` / `ProductTrace` | 将校准诊断转为结构化路由决策和 JSON trace。 |
+| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace。 |
 | `GroundednessVerifier` | 用词面证据片段和显式反证检查抽取出的 claim，不增加核心依赖。 |
 
 ## Experimental Model Compatibility

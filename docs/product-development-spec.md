@@ -14,7 +14,7 @@ Implemented today:
 - `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC and Euclidean dispersion.
 - `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, and layer/score sweep reports.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
-- `eigentruth.control.RiskController`: maps calibrated diagnostic thresholds to product actions.
+- `eigentruth.control.RiskController`: maps calibrated diagnostic thresholds and optional claim verification results to product actions.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, actions, and metadata.
 - `eigentruth.verify`: dependency-free claim extraction, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
@@ -232,7 +232,7 @@ For product features:
 
 ### 0.3: Risk Control Plane
 
-- Extend `RiskController` beyond threshold counting into policy composition across diagnostics and verification.
+- Extend `RiskController` from the current built-in diagnostic/verification composition into configurable policy graphs.
 - Add concrete correction policies: accept, retrieve, rewrite, steer, abstain, clarify.
 - Upgrade claim extraction and verifier implementations beyond lexical groundedness behind the existing protocols.
 - Connect `ProductTrace` to application-facing diagnostics and evaluation artifacts.
