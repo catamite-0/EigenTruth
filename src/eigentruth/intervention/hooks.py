@@ -18,7 +18,7 @@ import copy
 import logging
 from collections import deque
 from dataclasses import is_dataclass, replace
-from typing import Any, Callable, Deque, Optional, Tuple
+from typing import Any, Callable, Deque, Optional, Sequence, Tuple
 
 import torch
 import torch.nn as nn
@@ -140,8 +140,8 @@ class TruthProbe:
 
     def _hook_fn(
         self,
-        module: nn.Module,
-        input: Any,
+        _module: nn.Module,
+        _input: Any,
         output: Any,
     ) -> Any:
         """forward_hook 回调：拦截隐状态、计算距离、注入引导。
@@ -189,7 +189,7 @@ class TruthProbe:
                 self.last_hse = hse_batch.max().item()
 
             # 引导干预 / Steering intervention
-            mask = dist > self.threshold # [B]
+            mask = dist > self.threshold  # [B]
             if mask.any() and self.steering_lambda > 0:
                 steering = self._compute_steering_vector(h_vec)  # 单位向量 [B, D]
                 # 按各样本激活范数缩放：steering_lambda 表示"相对激活范数的移动比例"，
@@ -240,13 +240,14 @@ class TruthProbe:
 
     def _ensure_manifold_device(self, device: torch.device) -> None:
         """Keep manifold tensors on the same device as the intercepted hidden states."""
-        if self.manifold.mean is None or self.manifold.cov_inv is None:
+        cov_inv = self.manifold.cov_inv
+        if self.manifold.mean is None or cov_inv is None:
             return
-        if self.manifold.mean.device != device or self.manifold.cov_inv.device != device:
+        if self.manifold.mean.device != device or cov_inv.device != device:
             self.manifold.to(device)
 
     @staticmethod
-    def _select_layer(layers: Any, layer_idx: int) -> nn.Module:
+    def _select_layer(layers: Sequence[nn.Module], layer_idx: int) -> nn.Module:
         try:
             return layers[layer_idx]
         except IndexError as exc:
@@ -258,7 +259,7 @@ class TruthProbe:
     def _find_layers(
         model: nn.Module,
         custom_layer_path: Optional[str] = None,
-    ) -> nn.ModuleList:
+    ) -> Sequence[nn.Module]:
         """在 HF 模型中定位 Transformer 层列表。
         Locate the list of Transformer layers in an HF model.
 

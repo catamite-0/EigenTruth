@@ -12,16 +12,31 @@ A minimal end-to-end demonstration using `Qwen/Qwen2.5-0.5B-Instruct`. It loads 
 
 A larger qualitative comparison over several prompts. It prints generated text with and without steering, plus Mahalanobis-style distance and HSE diagnostics. Output differences should be treated as observations, not proof of factual correction.
 
+### `calibrated_control_demo.py`
+
+A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
+or uses built-in toy thresholds, routes diagnostics through `RiskController`,
+verifies simple exact-match claims, and prints a JSON `ProductTrace`.
+
 ## Running An Example
 
 Install EigenTruth in editable mode and run a script from the repository root:
 
 ```bash
-python -m pip install -e .[dev]
+python -m pip install -e ".[examples]"
 python examples/qwen_truth_demo.py
+python examples/calibrated_control_demo.py
 ```
 
 The examples may download model weights from Hugging Face. Review model licenses, download sizes, and any requirements for remote code before running a new model.
+
+`calibrated_control_demo.py` does not load a model or download data. It is a
+small product-flow check for artifact-driven diagnostics and trace output:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --diagnostics '{"maha_last": 4.2, "subspace_resid": 0.4}'
+```
 
 ## Structure For New Example Scripts
 

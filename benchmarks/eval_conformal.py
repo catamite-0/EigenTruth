@@ -29,10 +29,31 @@ import sys
 
 import torch
 
+from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
 from eigentruth.eval.conformal import conformal_threshold
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
+
+
+def _parse_signals(value: str | None) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    signals = tuple(part.strip() for part in value.split(",") if part.strip())
+    if not signals:
+        raise ValueError("--signals must contain at least one signal name.")
+    return signals
+
+
+def _all_dump_signals(dump: dict) -> tuple[str, ...]:
+    names = set(dump.get("scores", {}))
+    for layer_scores in dump.get("sweep_scores", {}).values():
+        names.update(layer_scores)
+    return tuple(sorted(names))
+
+
+def _direction_for(signal: str, override: str | None = None) -> str:
+    return override or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
 
 
 def run(args) -> dict:
@@ -45,6 +66,7 @@ def run(args) -> dict:
         dump = json.load(f)
     labels = torch.tensor(dump["labels"])
     scores = torch.tensor(dump["scores"][args.signal], dtype=torch.float64)
+    dump_config = dump.get("config", {})
 
     true_scores = scores[labels == 0]   # 正常总体（可交换假设的对象）
     false_scores = scores[labels == 1]  # 希望被报警的对象（仅报告 power）
@@ -89,6 +111,56 @@ def run(args) -> dict:
                           "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
+
+    if args.save_calibration:
+        artifact = ConformalCalibrator(alpha=args.artifact_alpha).calibrate(
+            model_id=args.model_id or dump_config.get("model", "unknown"),
+            model_revision=args.model_revision,
+            target_layer=args.target_layer if args.target_layer is not None else int(dump_config.get("layer", 0)),
+            calibration_scores={args.signal: true_scores},
+            directions={args.signal: _direction_for(args.signal, args.direction)},
+            calibration_dataset_metadata={
+                "scores": args.scores,
+                "signal": args.signal,
+                "n_true": n_true,
+                "source": "eval_conformal.py",
+            },
+            created_at=args.created_at,
+            commit_sha=args.commit_sha,
+        )
+        artifact.save_json(args.save_calibration)
+        print(f"\nWrote calibration artifact to {args.save_calibration}")
+
+    if args.save_sweep_report or args.save_best_calibration:
+        selected_signals = _parse_signals(args.signals) or _all_dump_signals(dump)
+        direction_override = None if args.direction is None else {
+            signal: args.direction for signal in selected_signals
+        }
+        report = LayerScoreSweepCalibrator(
+            alpha=args.artifact_alpha,
+            best_by=args.best_by,
+        ).calibrate_from_dump(
+            dump,
+            signals=selected_signals,
+            directions=direction_override,
+            model_id=args.model_id or dump_config.get("model", "unknown"),
+            model_revision=args.model_revision,
+            scores_path=args.scores,
+            created_at=args.created_at,
+            commit_sha=args.commit_sha,
+            metadata={"source": "eval_conformal.py", "config": dump_config},
+        )
+        payload["sweep_report"] = report.to_dict()
+        if args.save_sweep_report:
+            report.save_json(args.save_sweep_report)
+            print(f"\nWrote sweep report to {args.save_sweep_report}")
+        if args.save_best_calibration:
+            artifact = report.best_artifact(
+                calibration_dataset_metadata={"scores": args.scores, "source": "eval_conformal.py"}
+            )
+            artifact.save_json(args.save_best_calibration)
+            print(f"\nWrote best calibration artifact to {args.save_best_calibration}")
+
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
@@ -102,9 +174,28 @@ def main():
                    help="scores JSON from eval_truthfulqa.py --dump-scores")
     p.add_argument("--signal", default="maha_last",
                    help="which signal to calibrate (maha_last / truth_proj / ...)")
+    p.add_argument("--signals", default=None,
+                   help="optional comma-list of signals for layer/score sweep reports")
     p.add_argument("--repeats", type=int, default=20, help="number of seeded 50/50 splits")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--json", default=None, help="optional path for structured results")
+    p.add_argument("--save-calibration", default=None,
+                   help="optional path to write a CalibrationArtifact JSON for the selected signal")
+    p.add_argument("--save-sweep-report", default=None,
+                   help="optional path to write a LayerScoreSweepReport JSON")
+    p.add_argument("--save-best-calibration", default=None,
+                   help="optional path to write the best CalibrationArtifact from the sweep report")
+    p.add_argument("--best-by", choices=("auroc", "detection"), default="auroc",
+                   help="metric used to choose the best layer/score calibration artifact")
+    p.add_argument("--artifact-alpha", type=float, default=0.10,
+                   help="alpha used for --save-calibration artifact threshold")
+    p.add_argument("--direction", choices=("higher", "lower"), default=None,
+                   help="optional override for whether higher or lower signal values are more anomalous")
+    p.add_argument("--model-id", default=None, help="override model_id stored in the artifact")
+    p.add_argument("--model-revision", default=None, help="optional model revision stored in the artifact")
+    p.add_argument("--target-layer", type=int, default=None, help="override target layer stored in the artifact")
+    p.add_argument("--created-at", default=None, help="optional artifact timestamp")
+    p.add_argument("--commit-sha", default=None, help="optional repository commit SHA")
     run(p.parse_args())
 
 

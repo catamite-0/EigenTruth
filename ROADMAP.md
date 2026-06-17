@@ -2,6 +2,8 @@
 
 EigenTruth is an alpha-stage research preview. This roadmap focuses on making experiments easier to reproduce and the project easier to review without implying production readiness.
 
+The product and development charter lives in [`docs/product-development-spec.md`](docs/product-development-spec.md). It defines EigenTruth as a representation-observability and factuality-control toolkit rather than a standalone truth oracle.
+
 ## Near-Term Milestones
 
 ### Examples Cleanup

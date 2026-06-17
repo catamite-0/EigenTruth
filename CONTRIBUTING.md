@@ -31,7 +31,15 @@ Install the package and development dependencies:
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e .[dev]
+python -m pip install -e ".[dev]"
+```
+
+The core package intentionally keeps Hugging Face and dataset tooling optional. Add extras only when you need them:
+
+```bash
+python -m pip install -e ".[hf]"        # Hugging Face model-loading workflows
+python -m pip install -e ".[examples]"  # runnable examples
+python -m pip install -e ".[eval]"      # benchmark datasets
 ```
 
 If your environment needs a specific PyTorch build, install it first using the instructions at [pytorch.org](https://pytorch.org/get-started/locally/).
@@ -47,7 +55,14 @@ python -m pytest tests/ -v
 Run lint checks:
 
 ```bash
-python -m ruff check src tests examples
+python -m ruff check src tests examples benchmarks
+```
+
+Or run the common checks with the local Makefile, which auto-detects `.venv/bin/python` when present:
+
+```bash
+make check
+make release-check  # also builds the package
 ```
 
 Before opening a pull request, run both commands from the repository root. Add tests for behavior changes and update documentation when interfaces, experiment assumptions, or limitations change.
@@ -133,7 +148,15 @@ source .venv/bin/activate
 
 ```bash
 python -m pip install --upgrade pip
-python -m pip install -e .[dev]
+python -m pip install -e ".[dev]"
+```
+
+核心包会尽量保持轻量；Hugging Face 与数据集工具按需安装：
+
+```bash
+python -m pip install -e ".[hf]"        # Hugging Face 模型加载流程
+python -m pip install -e ".[examples]"  # 可运行示例
+python -m pip install -e ".[eval]"      # benchmark 数据集
 ```
 
 如果环境需要特定版本的 PyTorch，请先按照 [pytorch.org](https://pytorch.org/get-started/locally/) 的说明安装。
@@ -142,7 +165,14 @@ python -m pip install -e .[dev]
 
 ```bash
 python -m pytest tests/ -v
-python -m ruff check src tests examples
+python -m ruff check src tests examples benchmarks
+```
+
+也可以使用本地 Makefile 运行常用检查；存在 `.venv/bin/python` 时会自动优先使用它：
+
+```bash
+make check
+make release-check  # 也会构建包
 ```
 
 提交 pull request 前，请在仓库根目录运行以上命令。行为发生变化时应补充测试；接口、实验假设或局限性发生变化时应更新文档。

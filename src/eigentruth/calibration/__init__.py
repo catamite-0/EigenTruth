@@ -1,0 +1,30 @@
+"""Calibration artifacts and parameter-sweep interfaces.
+
+This module defines lightweight data structures for reproducible EigenTruth
+calibration. Implementations should stay CPU-testable and avoid model-loading or
+network dependencies.
+"""
+
+from __future__ import annotations
+
+from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
+from eigentruth.calibration.calibrator import ConformalCalibrator
+from eigentruth.calibration.sweeps import (
+    DEFAULT_SCORE_DIRECTIONS,
+    LayerScoreSweepCalibrator,
+    LayerScoreSweepReport,
+    LayerScoreSweepResult,
+    SweepScoreResult,
+)
+
+__all__ = [
+    "CalibrationArtifact",
+    "CalibrationScore",
+    "ConformalCalibrator",
+    "DEFAULT_SCORE_DIRECTIONS",
+    "LayerScoreSweepCalibrator",
+    "LayerScoreSweepReport",
+    "LayerScoreSweepResult",
+    "SteeringPolicyConfig",
+    "SweepScoreResult",
+]

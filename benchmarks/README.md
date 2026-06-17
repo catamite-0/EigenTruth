@@ -14,8 +14,9 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
 
 ### What it answers
 
-1. **Is the manifold distance a useful detector, and does it beat perplexity?**
-   `maha_last` (Mahalanobis distance from the truth manifold) vs `nll_answer`
+1. **Is the manifold/subspace geometry useful, and does it beat perplexity?**
+   `maha_last` (Mahalanobis distance from the truth manifold) and `subspace_resid`
+   (residual distance from a low-rank factual subspace) vs `nll_answer`
    (answer perplexity — a cheap, strong baseline any new method must beat).
 2. **Does the hyperbolic projection earn its keep?**
    `disp_hse` (Hyperbolic Semantic Entropy) vs `disp_euclid` (the same dispersion
@@ -36,26 +37,27 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
 ### Install and run
 
 ```bash
-python -m pip install -e ".[eval]"   # adds `datasets`
+python -m pip install -e ".[hf,eval]"   # adds Transformers and `datasets`
 
 # Real benchmark (downloads model weights + TruthfulQA):
 python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct --layer -8 --limit 200
 
 # Sweep the target layer to find where the signal lives:
-python benchmarks/eval_truthfulqa.py --layer -4
-python benchmarks/eval_truthfulqa.py --layer -8
-python benchmarks/eval_truthfulqa.py --layer -12
+python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
+  --dump-scores benchmarks/scores.json
 
 # Fast pipeline self-check (tiny model, bundled statements, no dataset download):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
-the record.
+the record. Use `--subspace-rank` to tune `TruthSubspace` residual scoring; the
+implementation automatically clips rank to the available warmup states and hidden dimension.
 
 ### How to read the results
 
 - `maha_last > 0.5` means the manifold distance ranks false statements above true ones.
+- `subspace_resid > 0.5` means false statements sit farther from the fitted factual subspace.
 - Compare `maha_last` against `nll_answer`: geometry is only interesting if it adds
   signal over plain perplexity.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
@@ -129,13 +131,23 @@ split 50/50 into calibration/test over 20 seeded repeats:
 ```bash
 python benchmarks/eval_truthfulqa.py --model gpt2 --dump-scores benchmarks/scores.json ...
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj
+
+# Save a reusable CalibrationArtifact for one selected signal:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj \
+  --artifact-alpha 0.2 --save-calibration artifacts/gpt2-l8-truth-proj.json
+
+# Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
+  --signals maha_last,truth_proj,subspace_resid \
+  --artifact-alpha 0.2 \
+  --save-sweep-report artifacts/gpt2-sweep-report.json \
+  --save-best-calibration artifacts/gpt2-best-calibration.json
 ```
 
 **E1 result (gpt2, layer −8):** empirical false-alarm rate tracks the nominal α within
 1.3% at α ∈ {0.05, 0.1, 0.2} for both signals — the guarantee holds in practice. At the
 same α = 0.2 false-alarm budget, `truth_proj` detects **46.9%** of false statements vs
-34.1% for `maha_last` (committed as `results_conformal_*.json`). The calibration API
-lives in `eigentruth.eval.conformal` (`conformal_pvalues`, `conformal_threshold`).
+34.1% for `maha_last` (committed as `results_conformal_*.json`). The low-level calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`, `conformal_threshold`). Reusable single-signal artifacts are built with `eigentruth.calibration.ConformalCalibrator`; layer/score reports and best artifacts are built with `eigentruth.calibration.LayerScoreSweepCalibrator`.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
