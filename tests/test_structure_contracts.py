@@ -4,7 +4,14 @@ import pytest
 
 from eigentruth.adapters import WorldModelPrediction
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.control import ActionRequest, ControlAction, RiskDecision, RiskLevel
+from eigentruth.control import (
+    ActionExecutionStatus,
+    ActionRequest,
+    ActionResult,
+    ControlAction,
+    RiskDecision,
+    RiskLevel,
+)
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus
 
@@ -61,6 +68,24 @@ def test_action_request_json_roundtrip():
     assert loaded.action is ControlAction.RETRIEVE
     assert loaded.reason == "unsupported claim"
     assert loaded.payload["claim_ids"] == ("c1",)
+
+
+def test_action_result_json_roundtrip():
+    result = ActionResult(
+        action=ControlAction.ABSTAIN,
+        status=ActionExecutionStatus.DRY_RUN,
+        output={"message": "not enough evidence"},
+        metadata={"side_effects": False},
+        request_id="r1",
+    )
+
+    payload = result.to_dict()
+    loaded = ActionResult.from_dict(payload)
+
+    assert payload["status"] == "dry_run"
+    assert loaded.action is ControlAction.ABSTAIN
+    assert loaded.status is ActionExecutionStatus.DRY_RUN
+    assert loaded.output["message"] == "not enough evidence"
 
 
 def test_verification_result_and_world_model_prediction_validate_confidence():

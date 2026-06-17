@@ -10,6 +10,50 @@ from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 
 
+class ActionExecutionStatus(str, Enum):
+    """Outcome of executing or dry-running an action request."""
+
+    DRY_RUN = "dry_run"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
+@dataclass(frozen=True)
+class ActionResult:
+    """JSON-ready result produced by an action executor."""
+
+    action: ControlAction
+    status: ActionExecutionStatus
+    output: Mapping[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    request_id: str | None = None
+    error: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "action": self.action.value,
+            "status": self.status.value,
+            "output": _jsonable(self.output),
+            "metadata": _jsonable(self.metadata),
+            "request_id": self.request_id,
+            "error": self.error,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ActionResult":
+        """Build an action result from JSON-like data."""
+        return cls(
+            action=ControlAction(str(data["action"])),
+            status=ActionExecutionStatus(str(data["status"])),
+            output=dict(data.get("output", {})),
+            metadata=dict(data.get("metadata", {})),
+            request_id=None if data.get("request_id") is None else str(data["request_id"]),
+            error=None if data.get("error") is None else str(data["error"]),
+        )
+
+
 @dataclass(frozen=True)
 class ActionRequest:
     """JSON-ready request produced from a risk decision."""
@@ -40,6 +84,27 @@ class ActionRequest:
             metadata=dict(data.get("metadata", {})),
             request_id=None if data.get("request_id") is None else str(data["request_id"]),
         )
+
+
+@runtime_checkable
+class ActionExecutor(Protocol):
+    """Interface for executing planned action requests."""
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Execute or dry-run one action request."""
+        ...
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Execute or dry-run multiple action requests."""
+        ...
 
 
 @runtime_checkable
@@ -149,6 +214,80 @@ class DefaultCorrectionPolicy:
                 metadata=metadata,
             ),
         )
+
+
+@dataclass(frozen=True)
+class DryRunActionExecutor:
+    """Executor that records what would happen without calling external tools."""
+
+    executor_name: str = "dry_run"
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Dry-run one action request and return an execution result."""
+        output = _dry_run_output(request)
+        metadata = {
+            "executor": type(self).__name__,
+            "executor_name": self.executor_name,
+            "request_metadata": dict(request.metadata),
+            "context": dict(context or {}),
+            "side_effects": False,
+        }
+        return ActionResult(
+            action=request.action,
+            status=ActionExecutionStatus.DRY_RUN,
+            output=output,
+            metadata=metadata,
+            request_id=request.request_id,
+        )
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Dry-run multiple action requests."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+
+def _dry_run_output(request: ActionRequest) -> dict[str, Any]:
+    payload = dict(request.payload)
+    if request.action is ControlAction.ACCEPT:
+        return {"would_execute": "accept", "finalize": True, "payload": payload}
+    if request.action is ControlAction.RETRIEVE:
+        return {
+            "would_execute": "retriever",
+            "targets": payload.get("retrieval_targets", ()),
+            "instruction": payload.get("instruction"),
+        }
+    if request.action is ControlAction.REWRITE:
+        return {
+            "would_execute": "rewriter",
+            "targets": payload.get("rewrite_targets", ()),
+            "instruction": payload.get("instruction"),
+        }
+    if request.action is ControlAction.STEER_REGENERATE:
+        return {
+            "would_execute": "generator",
+            "diagnostics": payload.get("diagnostics", {}),
+            "instruction": payload.get("instruction"),
+        }
+    if request.action is ControlAction.ABSTAIN:
+        return {
+            "would_execute": "abstain",
+            "message": payload.get("message"),
+            "blocked_claims": payload.get("blocked_claims", ()),
+        }
+    if request.action is ControlAction.CLARIFY:
+        return {
+            "would_execute": "clarification_request",
+            "questions": payload.get("questions", ()),
+            "targets": payload.get("clarification_targets", ()),
+        }
+    return {"would_execute": request.action.value, "payload": payload}
 
 
 def _group_claims_by_verification(

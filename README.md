@@ -36,7 +36,7 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
 - calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
-- compile risk decisions into structured action requests for retrieve/rewrite/abstain/clarify flows
+- compile risk decisions into structured action requests and dry-run execution results
 - optionally apply experimental activation steering when a configured threshold is exceeded
 
 EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
@@ -47,7 +47,7 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 可选地使用事实与错误样本构建对比方向
 - 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
 - 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
-- 将风险决策编译成 retrieve/rewrite/abstain/clarify 等结构化 action request
+- 将风险决策编译成结构化 action request 与 dry-run 执行结果
 - 可选地在超过配置阈值时执行实验性激活引导
 
 ### What It Does Not Do
@@ -165,6 +165,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
+| `DryRunActionExecutor` / `ActionResult` | Records action execution intent without side effects so traces can close the control loop locally. |
 | `GroundednessVerifier` | Checks extracted claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
 ### 主要组件
@@ -181,6 +182,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
+| `DryRunActionExecutor` / `ActionResult` | 在无副作用的本地 dry-run 中记录动作执行意图，让 trace 闭环。 |
 | `GroundednessVerifier` | 用词面证据片段和显式反证检查抽取出的 claim，不增加核心依赖。 |
 
 ## Experimental Model Compatibility

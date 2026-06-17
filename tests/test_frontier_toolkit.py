@@ -5,7 +5,15 @@ import torch
 
 from eigentruth.adapters import InMemoryWorldModelAdapter
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ControlAction, DefaultCorrectionPolicy, RiskController, RiskDecision, RiskLevel
+from eigentruth.control import (
+    ActionExecutionStatus,
+    ControlAction,
+    DefaultCorrectionPolicy,
+    DryRunActionExecutor,
+    RiskController,
+    RiskDecision,
+    RiskLevel,
+)
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
     EvidenceDocument,
@@ -141,6 +149,30 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.action is ControlAction.ABSTAIN
     assert abstain.payload["blocked_claims"][0]["status"] == "refuted"
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
+
+
+def test_dry_run_action_executor_records_execution_without_side_effects():
+    decision = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="claim verification refuted claim",
+    )
+    claims = extract_claims("The moon is made of cheese.")
+    action = DefaultCorrectionPolicy().plan(
+        decision,
+        claims=claims,
+        verification_results=(VerificationResult(VerificationStatus.REFUTED, 0.85, evidence=("nasa",)),),
+    )[0]
+
+    result = DryRunActionExecutor().execute(action, context={"request_id": "req-1"})
+
+    assert result.action is ControlAction.ABSTAIN
+    assert result.status is ActionExecutionStatus.DRY_RUN
+    assert result.output["would_execute"] == "abstain"
+    assert result.output["blocked_claims"][0]["claim_id"] == "c1"
+    assert result.metadata["side_effects"] is False
+    assert result.metadata["context"]["request_id"] == "req-1"
 
 
 def test_claim_extraction_and_in_memory_verifier():

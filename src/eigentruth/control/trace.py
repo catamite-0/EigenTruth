@@ -6,7 +6,7 @@ from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
 from typing import Any, Mapping, Optional, Sequence
 
-from eigentruth.control.actions import ActionRequest
+from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.verify.protocols import Claim, VerificationResult
 
@@ -47,6 +47,7 @@ class ProductTrace:
     verification_results: Sequence[VerificationResult | Mapping[str, Any]] = ()
     risk_decision: RiskDecision | Mapping[str, Any] | None = None
     actions: Sequence[ActionRequest | ControlAction | str | Mapping[str, Any]] = ()
+    action_results: Sequence[ActionResult | Mapping[str, Any]] = ()
     events: Sequence[TraceEvent | Mapping[str, Any]] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -61,6 +62,7 @@ class ProductTrace:
             ],
             "risk_decision": _risk_decision_to_dict(self.risk_decision),
             "actions": [_action_to_dict(action) for action in self.actions],
+            "action_results": [_action_result_to_dict(result) for result in self.action_results],
             "events": [_event_to_dict(event) for event in self.events],
             "metadata": _to_jsonable(self.metadata),
         }
@@ -103,6 +105,12 @@ def _action_to_dict(action: ActionRequest | ControlAction | str | Mapping[str, A
     if isinstance(action, ControlAction):
         return action.value
     return _to_jsonable(action)
+
+
+def _action_result_to_dict(result: ActionResult | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(result, ActionResult):
+        return result.to_dict()
+    return dict(_to_jsonable(result))
 
 
 def _event_to_dict(event: TraceEvent | Mapping[str, Any]) -> dict[str, Any]:

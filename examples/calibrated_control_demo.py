@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import DefaultCorrectionPolicy, ProductTrace, RiskController, TraceEvent
+from eigentruth.control import DefaultCorrectionPolicy, DryRunActionExecutor, ProductTrace, RiskController, TraceEvent
 from eigentruth.verify import (
     GroundednessVerifier,
     InMemoryVerifier,
@@ -114,6 +114,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         claims=claims,
         verification_results=verification_results,
     )
+    action_results = DryRunActionExecutor().execute_many(action_requests)
     trace = ProductTrace(
         request_id=args.request_id,
         diagnostics=diagnostics,
@@ -121,11 +122,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verification_results=verification_results,
         risk_decision=decision,
         actions=action_requests,
+        action_results=action_results,
         events=(
             TraceEvent("diagnostics_observed", diagnostics),
             TraceEvent("claims_verified", {"n_claims": len(claims)}),
             TraceEvent("risk_decision", decision.to_dict()),
             TraceEvent("actions_planned", {"n_actions": len(action_requests)}),
+            TraceEvent(
+                "actions_executed",
+                {"n_results": len(action_results), "statuses": tuple(result.status.value for result in action_results)},
+            ),
         ),
         metadata={
             "artifact_model_id": artifact.model_id,
@@ -133,6 +139,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
             "verifier_type": type(verifier).__name__,
+            "action_executor_type": "DryRunActionExecutor",
         },
     )
     payload = trace.to_dict()

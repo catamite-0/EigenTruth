@@ -16,6 +16,7 @@ Implemented today:
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.control.RiskController`: maps calibrated diagnostic thresholds and optional claim verification results to product actions.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/abstain/clarify flows.
+- `eigentruth.control.DryRunActionExecutor` / `ActionResult`: records side-effect-free execution intent for local control-loop traces.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, actions, and metadata.
 - `eigentruth.verify`: dependency-free claim extraction, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
@@ -234,7 +235,7 @@ For product features:
 ### 0.3: Risk Control Plane
 
 - Extend `RiskController` from the current built-in diagnostic/verification composition into configurable policy graphs.
-- Extend the default correction policy into configurable product-specific policies and executors.
+- Extend the default correction policy and dry-run executor into configurable product-specific policies and executors.
 - Upgrade claim extraction and verifier implementations beyond lexical groundedness behind the existing protocols.
 - Connect `ProductTrace` to application-facing diagnostics and evaluation artifacts.
 

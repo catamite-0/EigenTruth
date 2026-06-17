@@ -3,7 +3,16 @@
 import json
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ActionRequest, ControlAction, ProductTrace, RiskController, RiskLevel, TraceEvent
+from eigentruth.control import (
+    ActionExecutionStatus,
+    ActionRequest,
+    ActionResult,
+    ControlAction,
+    ProductTrace,
+    RiskController,
+    RiskLevel,
+    TraceEvent,
+)
 from eigentruth.registry import ArtifactRegistry, RegistryRecord
 from eigentruth.verify import InMemoryVerifier, VerificationStatus, extract_claims, normalize_claim_text
 
@@ -36,6 +45,13 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
                 payload={"claim_ids": ("c1",)},
             ),
         ),
+        action_results=(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.DRY_RUN,
+                output={"would_execute": "retriever"},
+            ),
+        ),
         events=(TraceEvent("risk_decision", {"action": decision.action}),),
         metadata={"model_id": "tiny"},
     )
@@ -46,6 +62,8 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert payload["verification_results"][0]["status"] == "supported"
     assert payload["actions"][0]["action"] == "retrieve"
     assert tuple(payload["actions"][0]["payload"]["claim_ids"]) == ("c1",)
+    assert payload["action_results"][0]["status"] == "dry_run"
+    assert payload["action_results"][0]["output"]["would_execute"] == "retriever"
     json.dumps(payload)
 
 
