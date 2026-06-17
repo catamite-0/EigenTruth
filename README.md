@@ -165,8 +165,9 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
-| `DryRunActionExecutor` / `ActionResult` | Records action execution intent without side effects so traces can close the control loop locally. |
-| `GroundednessVerifier` | Checks extracted claims against lexical evidence snippets and explicit refutations without extra dependencies. |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
+| `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
+| `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
 ### 主要组件
 
@@ -182,8 +183,9 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
-| `DryRunActionExecutor` / `ActionResult` | 在无副作用的本地 dry-run 中记录动作执行意图，让 trace 闭环。 |
-| `GroundednessVerifier` | 用词面证据片段和显式反证检查抽取出的 claim，不增加核心依赖。 |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
+| `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
+| `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 
 ## Experimental Model Compatibility
 

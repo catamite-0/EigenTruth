@@ -11,17 +11,18 @@ Implemented today:
 - `TruthManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support.
 - `TruthProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, HSE tracking, and optional activation steering.
 - `EigenTruthWrapper`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
-- `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC and Euclidean dispersion.
+- `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, and confidence intervals.
 - `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, and layer/score sweep reports.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
-- `eigentruth.control.RiskController`: maps calibrated diagnostic thresholds and optional claim verification results to product actions.
+- `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/abstain/clarify flows.
-- `eigentruth.control.DryRunActionExecutor` / `ActionResult`: records side-effect-free execution intent for local control-loop traces.
-- `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, actions, and metadata.
-- `eigentruth.verify`: dependency-free claim extraction, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
+- `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution for local control-loop traces.
+- `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, and metadata.
+- `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
+- `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
-- `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, and saved concept metadata.
-- Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, and conformal calibration.
+- `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, and saved concept metadata.
+- Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, conformal calibration, and selective reporting.
 - Local development baseline: `make check` and `make release-check` run lint, tests, dependency consistency, and package build.
 
 Recent cleanup and platform changes:
@@ -172,19 +173,16 @@ Current modules should remain narrow:
 - `eigentruth.core`: tensor math, manifolds, distances, projections. No model loading, no datasets, no network.
 - `eigentruth.intervention`: hooks and steering logic for PyTorch modules.
 - `eigentruth.models`: user-facing wrappers around model instances.
-- `eigentruth.eval`: metrics, conformal calibration, benchmark helpers.
+- `eigentruth.eval`: metrics, conformal thresholds, selective reports, and benchmark helpers.
+- `eigentruth.calibration`: calibration artifacts and parameter sweeps.
+- `eigentruth.control`: risk controller, policy configuration, correction policy, action executor registry, and traces.
+- `eigentruth.verify`: claim extraction, verifier protocols, in-memory verification, and lexical groundedness.
+- `eigentruth.registry`: local artifact metadata records.
+- `eigentruth.adapters`: optional integration shells, including retrieval and world models.
 - `examples/`: qualitative demos only; no benchmark claims.
 - `benchmarks/`: reproducible evaluations with structured output.
 
-Future modules should follow the same separation:
-
-- `eigentruth.calibration`: calibration artifacts and parameter sweeps.
-- `eigentruth.control`: risk controller, correction policy, abstention policy.
-- `eigentruth.verify`: claim extraction and verifier interfaces.
-- `eigentruth.registry`: saved concepts/manifolds/subspaces and metadata.
-- `eigentruth.adapters`: optional integrations, including HF, retrieval, databases, and world models.
-
-The first structural scaffold for these future modules is intentionally interface-only: plain dataclasses, enums, and protocols with no heavyweight dependencies. Concrete implementations should land behind these contracts as evidence and tests justify them.
+Integration modules should stay interface-first: plain dataclasses, enums, and protocols with no heavyweight dependencies. Concrete retrieval, database, rewrite, and world-model implementations should land behind these contracts as evidence and tests justify them.
 
 ## Development Principles
 
@@ -225,27 +223,28 @@ For product features:
 
 ## Near-Term Product Roadmap
 
-### 0.2: Calibrated Observability Toolkit
+### Completed 0.2-0.3 Foundation
 
-- Validate the new `TruthSubspace` benchmark residual signal on larger instruction-tuned models.
-- Extend registry persistence from metadata records to saved subspace/manifold tensors.
-- Add steering-lambda sweep utilities after monitor-only diagnostics are stable.
-- Expand benchmark outputs for selective accuracy and confidence intervals.
+- Score dump -> layer/score sweep -> conformal calibration artifact -> risk decision -> action request/result -> product trace.
+- Configurable risk policy hooks for refuted, unsupported, error, and compound diagnostic/verification cases.
+- Action executor registry with dry-run fallback and a dependency-free in-memory retrieval executor shell.
+- Claim extraction metadata for numbers, citations, negation, and time-sensitive claims.
+- Benchmark reports now include selective accuracy, coverage, and confidence intervals.
 
-### 0.3: Risk Control Plane
+### Next 0.4 Verification Adapter Work
 
-- Extend `RiskController` from the current built-in diagnostic/verification composition into configurable policy graphs.
-- Extend the default correction policy and dry-run executor into configurable product-specific policies and executors.
-- Upgrade claim extraction and verifier implementations beyond lexical groundedness behind the existing protocols.
-- Connect `ProductTrace` to application-facing diagnostics and evaluation artifacts.
-
-### 0.4: Verification And World-Model Adapters
-
-- Add retrieval/database/calculator verifier adapters.
+- Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.
+- Add concrete domain/world-model adapters beyond the in-memory test double.
 - Add semantic-entropy sampling probes, RAG groundedness adapters, and optional SAE/ReFT integrations behind extras.
-- Replace the in-memory world-model mock with optional concrete domain/world-model adapters.
 - Add domain examples where facts depend on state transitions, physical constraints, or business rules.
 - Benchmark hybrid internal-diagnostics + external-verification pipelines.
+
+### Later Control-Plane Hardening
+
+- Persist full trace/report/action-result artifacts from benchmark and demo commands into local registries by default when requested.
+- Add policy graph composition only after current dataclass-based policy config becomes insufficient.
+- Add steering-lambda sweep utilities after monitor-only diagnostics are stable on larger replicated runs.
+- Extend registry persistence from metadata records to saved subspace/manifold tensors.
 
 ## Product Tagline
 

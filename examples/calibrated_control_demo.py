@@ -1,9 +1,9 @@
 """Calibrated control-plane demo.
 
 This example does not load a language model. It shows the product-facing part of
-EigenTruth's 0.2 workflow: load or create a calibration artifact, evaluate
-diagnostics with `RiskController`, verify simple claims, and emit a JSON
-`ProductTrace`.
+EigenTruth's control workflow: load or create a calibration artifact, evaluate
+diagnostics with `RiskController`, verify simple claims, execute actions through
+`ActionExecutorRegistry`, and emit a JSON `ProductTrace`.
 
 The output is a trace for routing and debugging. It is not proof that a response
 is true, and the built-in thresholds are only toy values for demonstration.

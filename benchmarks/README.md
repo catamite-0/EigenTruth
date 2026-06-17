@@ -147,7 +147,14 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 **E1 result (gpt2, layer −8):** empirical false-alarm rate tracks the nominal α within
 1.3% at α ∈ {0.05, 0.1, 0.2} for both signals — the guarantee holds in practice. At the
 same α = 0.2 false-alarm budget, `truth_proj` detects **46.9%** of false statements vs
-34.1% for `maha_last` (committed as `results_conformal_*.json`). The low-level calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`, `conformal_threshold`). Reusable single-signal artifacts are built with `eigentruth.calibration.ConformalCalibrator`; layer/score reports and best artifacts are built with `eigentruth.calibration.LayerScoreSweepCalibrator`.
+34.1% for `maha_last` (committed as `results_conformal_*.json`). The low-level
+calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`,
+`conformal_threshold`). Reusable single-signal artifacts are built with
+`eigentruth.calibration.ConformalCalibrator`; layer/score reports and best artifacts
+are built with `eigentruth.calibration.LayerScoreSweepCalibrator`. Structured reports
+also include `selective_report` fields for threshold, coverage, selective accuracy,
+detection, false alarm, and simple binomial confidence intervals; score dumps remain
+unchanged.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
