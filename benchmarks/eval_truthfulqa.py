@@ -56,9 +56,11 @@ from eigentruth.core.math_engine import (
     mahalanobis_distance,
     poincare_map,
 )
-from eigentruth.eval.metrics import euclidean_dispersion, roc_auc
+from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
 
 SIGNALS = ["maha_last", "truth_proj", "subspace_resid", "disp_euclid", "disp_hse", "nll_answer"]
+REPORT_ALPHA = 0.10
 
 
 @dataclass
@@ -376,6 +378,16 @@ def run(args) -> dict:
     n_pos = sum(labels)
     n_neg = len(labels) - n_pos
     results = {s: roc_auc(scores[s], labels) for s in SIGNALS}
+    labels_t = torch.tensor(labels)
+    selective = {}
+    for signal in SIGNALS:
+        signal_scores = torch.tensor(scores[signal], dtype=torch.float64)
+        true_scores = signal_scores[labels_t == 0]
+        threshold = conformal_threshold(true_scores, REPORT_ALPHA)
+        selective[signal] = {
+            "alpha": REPORT_ALPHA,
+            **selective_classification_report(signal_scores, labels_t, threshold, direction="higher"),
+        }
 
     # ---- 输出 ----
     print("\n" + "=" * 56)
@@ -418,6 +430,7 @@ def run(args) -> dict:
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed},
         "auroc": results,
+        "selective": selective,
         "sweep": sweep_payload,
     }
     if args.json:

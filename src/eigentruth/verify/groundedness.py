@@ -94,13 +94,18 @@ class GroundednessVerifier:
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against lexical evidence snippets."""
         claim_key = normalize_claim_text(claim.text)
+        features = _claim_features(claim)
         claim_tokens = _tokens(claim.text)
         if not claim_tokens:
             return VerificationResult(
                 status=VerificationStatus.NOT_APPLICABLE,
                 confidence=0.0,
                 explanation="groundedness verifier found no lexical tokens in claim",
-                metadata={"verifier": "groundedness_lexical", "claim_key": claim_key},
+                metadata={
+                    "verifier": "groundedness_lexical",
+                    "claim_key": claim_key,
+                    "claim_features": features,
+                },
             )
 
         refutation = _lookup_refutation(claim_key, self.refutations, context)
@@ -113,6 +118,7 @@ class GroundednessVerifier:
                 metadata={
                     "verifier": "groundedness_lexical",
                     "claim_key": claim_key,
+                    "claim_features": features,
                     "decision_rule": "configured_refutation",
                 },
             )
@@ -127,6 +133,7 @@ class GroundednessVerifier:
                 metadata={
                     "verifier": "groundedness_lexical",
                     "claim_key": claim_key,
+                    "claim_features": features,
                     "decision_rule": "no_evidence",
                 },
             )
@@ -135,6 +142,7 @@ class GroundednessVerifier:
         metadata = {
             "verifier": "groundedness_lexical",
             "claim_key": claim_key,
+            "claim_features": features,
             "best_overlap": best.overlap,
             "best_source": best.document.source,
             "min_overlap": self.min_overlap,
@@ -163,11 +171,14 @@ class GroundednessVerifier:
                 explanation="claim tokens are covered by evidence above threshold",
                 metadata={**metadata, "decision_rule": "token_overlap"},
             )
+        explanation = "best evidence did not cover enough claim tokens"
+        if features.get("is_time_sensitive"):
+            explanation = f"{explanation}; time-sensitive claim needs fresh evidence"
         return VerificationResult(
             status=VerificationStatus.INSUFFICIENT_EVIDENCE,
             confidence=max(0.2, 0.5 * best.overlap),
             evidence=evidence,
-            explanation="best evidence did not cover enough claim tokens",
+            explanation=explanation,
             metadata={**metadata, "decision_rule": "low_overlap"},
         )
 
@@ -178,6 +189,13 @@ class GroundednessVerifier:
     ) -> tuple[VerificationResult, ...]:
         """Verify multiple claims."""
         return tuple(self.verify(claim, context=context) for claim in claims)
+
+
+def _claim_features(claim: Claim) -> dict[str, bool]:
+    raw_features = claim.metadata.get("features", {}) if isinstance(claim.metadata, Mapping) else {}
+    if not isinstance(raw_features, Mapping):
+        return {}
+    return {str(key): bool(value) for key, value in raw_features.items()}
 
 
 def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> EvidenceDocument:

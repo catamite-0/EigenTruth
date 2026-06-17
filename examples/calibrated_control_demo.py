@@ -16,8 +16,17 @@ import json
 from pathlib import Path
 from typing import Any
 
+from eigentruth.adapters import InMemoryRetriever, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import DefaultCorrectionPolicy, DryRunActionExecutor, ProductTrace, RiskController, TraceEvent
+from eigentruth.control import (
+    ActionExecutorRegistry,
+    ControlAction,
+    DefaultCorrectionPolicy,
+    ProductTrace,
+    RiskController,
+    TraceEvent,
+)
+from eigentruth.registry import ArtifactRegistry
 from eigentruth.verify import (
     GroundednessVerifier,
     InMemoryVerifier,
@@ -99,6 +108,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     facts = None if args.facts is None else parse_json_mapping(args.facts, name="--facts")
     evidence = None if args.evidence is None else parse_json_sequence(args.evidence, name="--evidence")
     refutations = None if args.refutations is None else parse_json_mapping(args.refutations, name="--refutations")
+    retrieval_evidence = (
+        None
+        if args.retrieval_evidence is None
+        else parse_json_sequence(args.retrieval_evidence, name="--retrieval-evidence")
+    )
 
     claims = extract_claims(args.text)
     verifier = build_verifier(facts, evidence, refutations)
@@ -114,7 +128,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         claims=claims,
         verification_results=verification_results,
     )
-    action_results = DryRunActionExecutor().execute_many(action_requests)
+    executor_registry = ActionExecutorRegistry()
+    if retrieval_evidence is not None:
+        executor_registry.register(
+            ControlAction.RETRIEVE,
+            RetrievalActionExecutor(InMemoryRetriever(retrieval_evidence)),
+        )
+    action_results = executor_registry.execute_many(action_requests, context={"request_id": args.request_id})
     trace = ProductTrace(
         request_id=args.request_id,
         diagnostics=diagnostics,
@@ -139,12 +159,27 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
             "verifier_type": type(verifier).__name__,
-            "action_executor_type": "DryRunActionExecutor",
+            "action_executor_type": "ActionExecutorRegistry",
+            "registered_actions": tuple(action.value for action in executor_registry.executors),
         },
     )
     payload = trace.to_dict()
-    if args.output:
-        Path(args.output).write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output_path = Path(args.output) if args.output else None
+    if args.registry and output_path is None:
+        output_path = Path(args.registry).with_name(f"{args.request_id}_trace.json")
+    if output_path is not None:
+        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if args.registry:
+        ArtifactRegistry.load_json(args.registry).record_trace(
+            name=args.request_id,
+            path=str(output_path) if output_path is not None else "stdout",
+            version="0.3",
+            metadata={
+                "source": "examples/calibrated_control_demo.py",
+                "action_execution_summary": trace.action_execution_summary(),
+                "verifier_type": type(verifier).__name__,
+            },
+        ).save_json()
     return payload
 
 
@@ -156,6 +191,8 @@ def main() -> None:
     parser.add_argument("--facts", default=None, help="optional exact-match facts JSON object")
     parser.add_argument("--evidence", default=None, help="optional groundedness evidence JSON list")
     parser.add_argument("--refutations", default=None, help="optional groundedness refutations JSON object")
+    parser.add_argument("--retrieval-evidence", default=None, help="optional retrieval documents JSON list")
+    parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     payload = run(parser.parse_args())

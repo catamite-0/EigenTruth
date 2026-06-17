@@ -31,6 +31,7 @@ import torch
 
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
 from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.metrics import selective_classification_report
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -97,8 +98,18 @@ def run(args) -> dict:
         det = det_sum[a] / args.repeats
         ok = abs(fa - a) <= TOLERANCE
         all_pass &= ok
-        results[str(a)] = {"false_alarm": fa, "coverage": 1.0 - fa, "detection": det,
-                           "pass": ok}
+        full_threshold = conformal_threshold(true_scores, a)
+        selective_report = selective_classification_report(
+            scores, labels, full_threshold, direction=_direction_for(args.signal, args.direction)
+        )
+        results[str(a)] = {
+            "false_alarm": fa,
+            "coverage": 1.0 - fa,
+            "detection": det,
+            "pass": ok,
+            "threshold": full_threshold,
+            "selective_report": selective_report,
+        }
         print(f"  {a:>6.2f} {1 - a:>12.2f} {fa:>12.3f} {1 - fa:>9.3f} "
               f"{det:>8.3f}   {'PASS' if ok else 'FAIL'}")
     print("  " + "-" * 66)

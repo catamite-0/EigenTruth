@@ -84,3 +84,46 @@ def test_artifact_registry_json_roundtrip(tmp_path):
     assert loaded.get(record.key()) == record
     assert loaded.list_records(artifact_type="calibration_report") == (record,)
     assert loaded.to_dict()["schema_version"] == 1
+
+
+def test_product_trace_action_execution_summary_counts_results():
+    trace = ProductTrace(
+        action_results=(
+            ActionResult(action=ControlAction.RETRIEVE, status=ActionExecutionStatus.SUCCEEDED),
+            ActionResult(action=ControlAction.ABSTAIN, status=ActionExecutionStatus.DRY_RUN),
+            ActionResult(action=ControlAction.RETRIEVE, status=ActionExecutionStatus.SUCCEEDED),
+        )
+    )
+
+    summary = trace.action_execution_summary()
+
+    assert summary["total"] == 3
+    assert summary["counts_by_status"] == {"succeeded": 2, "dry_run": 1}
+    assert summary["counts_by_action"] == {"retrieve": 2, "abstain": 1}
+    assert summary["side_effects"] is False
+
+
+def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
+    registry_path = tmp_path / "registry.json"
+    registry = ArtifactRegistry.load_json(registry_path)
+
+    registry.record_trace(
+        name="req-1",
+        path="artifacts/req-1.trace.json",
+        version="0.3",
+        metadata={"total_actions": 1},
+    ).record_report(
+        name="tiny-report",
+        path="artifacts/report.json",
+        version="0.3",
+    ).record_action_result(
+        name="req-1-actions",
+        path="artifacts/req-1.actions.json",
+        version="0.3",
+    ).save_json()
+    loaded = ArtifactRegistry.load_json(registry_path)
+
+    assert loaded.list_records(artifact_type="product_trace")[0].metadata["total_actions"] == 1
+    assert loaded.list_records(artifact_type="report")[0].name == "tiny-report"
+    assert loaded.list_records(artifact_type="action_result")[0].name == "req-1-actions"
+

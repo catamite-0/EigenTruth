@@ -52,6 +52,128 @@ class ArtifactRegistry:
     records: tuple[RegistryRecord, ...] = ()
     schema_version: int = 1
 
+    def record_artifact(
+        self,
+        *,
+        name: str,
+        artifact_type: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Add or replace metadata for a saved artifact."""
+        return self.add(
+            RegistryRecord(
+                name=name,
+                artifact_type=artifact_type,
+                path=str(path),
+                version=version,
+                metadata={} if metadata is None else dict(metadata),
+            )
+        )
+
+    def record_calibration_report(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a calibration sweep/report artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="calibration_report",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_calibration_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a calibration artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="calibration_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_truth_subspace_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a truth-subspace artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="truth_subspace_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_trace(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a product trace artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_trace",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_report(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a generic report artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="report",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_action_result(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record saved action execution results."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="action_result",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def add(self, record: RegistryRecord) -> "ArtifactRegistry":
         """Add or replace a record with the same registry key."""
         records = [existing for existing in self.records if existing.key() != record.key()]

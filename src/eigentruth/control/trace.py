@@ -67,6 +67,27 @@ class ProductTrace:
             "metadata": _to_jsonable(self.metadata),
         }
 
+    def action_execution_summary(self) -> dict[str, Any]:
+        """Summarize action execution results for trace/registry metadata."""
+        results = [_action_result_to_dict(result) for result in self.action_results]
+        counts_by_status: dict[str, int] = {}
+        counts_by_action: dict[str, int] = {}
+        side_effects = False
+        for result in results:
+            status = str(result.get("status", "unknown"))
+            action = str(result.get("action", "unknown"))
+            counts_by_status[status] = counts_by_status.get(status, 0) + 1
+            counts_by_action[action] = counts_by_action.get(action, 0) + 1
+            metadata = result.get("metadata", {})
+            if isinstance(metadata, Mapping) and bool(metadata.get("side_effects", False)):
+                side_effects = True
+        return {
+            "total": len(results),
+            "counts_by_status": counts_by_status,
+            "counts_by_action": counts_by_action,
+            "side_effects": side_effects,
+        }
+
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):

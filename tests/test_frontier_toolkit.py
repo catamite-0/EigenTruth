@@ -3,11 +3,14 @@
 import pytest
 import torch
 
-from eigentruth.adapters import InMemoryWorldModelAdapter
+from eigentruth.adapters import InMemoryRetriever, InMemoryWorldModelAdapter, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutionStatus,
+    ActionExecutorRegistry,
+    ActionRequest,
     ControlAction,
+    ControlPolicyConfig,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
     RiskController,
@@ -241,3 +244,88 @@ def test_in_memory_world_model_adapter_verifies_and_predicts_state():
     assert result.status is VerificationStatus.SUPPORTED
     assert prediction.state["inventory"] == 8
     assert "Inventory" in adapter.explain(claim)
+
+
+def test_action_executor_registry_uses_fallback_and_registered_executor():
+    fallback_request = ActionRequest(
+        action=ControlAction.ABSTAIN,
+        reason="refuted claim",
+        payload={"message": "blocked"},
+    )
+    registry = ActionExecutorRegistry()
+
+    fallback_result = registry.execute(fallback_request)
+
+    assert fallback_result.status is ActionExecutionStatus.DRY_RUN
+    assert fallback_result.output["would_execute"] == "abstain"
+
+    retrieve_request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"retrieval_targets": ({"claim_id": "c1", "text": "Paris capital France"},)},
+    )
+    registry.register(
+        ControlAction.RETRIEVE,
+        RetrievalActionExecutor(InMemoryRetriever(("Paris is the capital of France.",))),
+    )
+
+    retrieve_result = registry.execute(retrieve_request)
+
+    assert retrieve_result.status is ActionExecutionStatus.SUCCEEDED
+    assert retrieve_result.output["queries"][0]["claim_id"] == "c1"
+    assert retrieve_result.output["hits"][0]["text"] == "Paris is the capital of France."
+    assert retrieve_result.metadata["executor"] == "RetrievalActionExecutor"
+
+
+def test_risk_controller_uses_configurable_control_policy():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(
+        artifact,
+        policy_config=ControlPolicyConfig(
+            refuted_action=ControlAction.REWRITE,
+            unsupported_action=ControlAction.CLARIFY,
+            compound_verification_escalates=False,
+        ),
+    )
+
+    refuted = controller.decide(
+        {"maha": 1.0},
+        verification_results=(VerificationResult(VerificationStatus.REFUTED, confidence=0.9),),
+    )
+    unsupported = controller.decide(
+        {"maha": 4.0},
+        verification_results=(VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.4),),
+    )
+
+    assert refuted.action is ControlAction.REWRITE
+    assert refuted.risk_level is RiskLevel.HIGH
+    assert unsupported.action is ControlAction.CLARIFY
+    assert unsupported.risk_level is RiskLevel.MEDIUM
+
+
+def test_claim_extraction_adds_rule_based_metadata():
+    claim = extract_claims("As of 2026, revenue is not 10 dollars [1].")[0]
+
+    features = claim.metadata["features"]
+
+    assert features["has_number"] is True
+    assert features["has_citation"] is True
+    assert features["has_negation"] is True
+    assert features["is_time_sensitive"] is True
+
+
+def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():
+    verifier = GroundednessVerifier(evidence=("AlphaCorp has offices in Europe.",), min_overlap=0.95)
+    claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["claim_features"]["is_time_sensitive"] is True
+    assert "time-sensitive" in result.explanation
+

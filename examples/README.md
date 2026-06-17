@@ -17,7 +17,8 @@ A larger qualitative comparison over several prompts. It prints generated text w
 A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
 or uses built-in toy thresholds, verifies simple claims, combines diagnostics
 and verification results through `RiskController`, plans an `ActionRequest`,
-dry-runs it with `DryRunActionExecutor`, and prints a JSON `ProductTrace`.
+executes it through `ActionExecutorRegistry` with a dry-run fallback, and prints
+a JSON `ProductTrace`.
 
 ## Running An Example
 
@@ -38,6 +39,20 @@ action planning, dry-run execution, and trace output:
 ```bash
 python examples/calibrated_control_demo.py \
   --diagnostics '{"maha_last": 4.2, "subspace_resid": 0.4}'
+```
+
+
+The demo can also route unsupported claims to the dependency-free in-memory
+retrieval executor and register the saved trace in a local JSON registry:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --text "Paris is the capital of France. Atlantis has 3 moons today." \
+  --facts '{"Paris is the capital of France":"supported"}' \
+  --diagnostics '{"maha_last":1.0,"subspace_resid":0.1}' \
+  --retrieval-evidence '["Atlantis has no verified moons in the provided archive."]' \
+  --output /tmp/eigentruth_trace.json \
+  --registry /tmp/eigentruth_registry.json
 ```
 
 It can also use the dependency-free lexical groundedness verifier. Pass evidence

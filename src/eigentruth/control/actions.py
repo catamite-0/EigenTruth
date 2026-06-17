@@ -253,6 +253,54 @@ class DryRunActionExecutor:
         return tuple(self.execute(request, context=context) for request in requests)
 
 
+@dataclass
+class ActionExecutorRegistry:
+    """Route action requests to registered executors with a dry-run fallback."""
+
+    executors: Mapping[ControlAction, ActionExecutor] = field(default_factory=dict)
+    fallback_executor: ActionExecutor = field(default_factory=DryRunActionExecutor)
+
+    def __post_init__(self) -> None:
+        self.executors = {_coerce_action(action): executor for action, executor in self.executors.items()}
+
+    def register(
+        self,
+        action: ControlAction | str,
+        executor: ActionExecutor,
+    ) -> "ActionExecutorRegistry":
+        """Register an executor for one control action."""
+        next_executors = dict(self.executors)
+        next_executors[_coerce_action(action)] = executor
+        self.executors = next_executors
+        return self
+
+    def get(self, action: ControlAction | str) -> ActionExecutor:
+        """Return the executor registered for an action, or the fallback executor."""
+        return dict(self.executors).get(_coerce_action(action), self.fallback_executor)
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Execute one action request through the registry."""
+        return self.get(request.action).execute(request, context=context)
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Execute multiple action requests through the registry."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+
+def _coerce_action(action: ControlAction | str) -> ControlAction:
+    if isinstance(action, ControlAction):
+        return action
+    return ControlAction(str(action))
+
+
 def _dry_run_output(request: ActionRequest) -> dict[str, Any]:
     payload = dict(request.payload)
     if request.action is ControlAction.ACCEPT:

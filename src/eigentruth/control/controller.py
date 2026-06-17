@@ -12,6 +12,54 @@ from eigentruth.verify.protocols import VerificationResult, VerificationStatus
 
 
 @dataclass(frozen=True)
+class ControlPolicyConfig:
+    """Configurable routing policy for composing diagnostics and verification."""
+
+    refuted_action: ControlAction = ControlAction.ABSTAIN
+    unsupported_action: ControlAction = ControlAction.RETRIEVE
+    verification_error_action: ControlAction = ControlAction.CLARIFY
+    compound_risk_action: ControlAction = ControlAction.ABSTAIN
+    compound_verification_escalates: bool = True
+    refuted_risk_level: RiskLevel = RiskLevel.HIGH
+    unsupported_risk_level: RiskLevel = RiskLevel.MEDIUM
+    verification_error_risk_level: RiskLevel = RiskLevel.UNKNOWN
+    compound_risk_level: RiskLevel = RiskLevel.HIGH
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "refuted_action": self.refuted_action.value,
+            "unsupported_action": self.unsupported_action.value,
+            "verification_error_action": self.verification_error_action.value,
+            "compound_risk_action": self.compound_risk_action.value,
+            "compound_verification_escalates": self.compound_verification_escalates,
+            "refuted_risk_level": self.refuted_risk_level.value,
+            "unsupported_risk_level": self.unsupported_risk_level.value,
+            "verification_error_risk_level": self.verification_error_risk_level.value,
+            "compound_risk_level": self.compound_risk_level.value,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ControlPolicyConfig":
+        """Build a control policy config from JSON-like data."""
+        return cls(
+            refuted_action=ControlAction(str(data.get("refuted_action", ControlAction.ABSTAIN.value))),
+            unsupported_action=ControlAction(str(data.get("unsupported_action", ControlAction.RETRIEVE.value))),
+            verification_error_action=ControlAction(
+                str(data.get("verification_error_action", ControlAction.CLARIFY.value))
+            ),
+            compound_risk_action=ControlAction(str(data.get("compound_risk_action", ControlAction.ABSTAIN.value))),
+            compound_verification_escalates=bool(data.get("compound_verification_escalates", True)),
+            refuted_risk_level=RiskLevel(str(data.get("refuted_risk_level", RiskLevel.HIGH.value))),
+            unsupported_risk_level=RiskLevel(str(data.get("unsupported_risk_level", RiskLevel.MEDIUM.value))),
+            verification_error_risk_level=RiskLevel(
+                str(data.get("verification_error_risk_level", RiskLevel.UNKNOWN.value))
+            ),
+            compound_risk_level=RiskLevel(str(data.get("compound_risk_level", RiskLevel.HIGH.value))),
+        )
+
+
+@dataclass(frozen=True)
 class RiskController:
     """Map diagnostics, calibrated thresholds, and verification results to product actions."""
 
@@ -19,6 +67,7 @@ class RiskController:
     medium_action: ControlAction = ControlAction.RETRIEVE
     high_action: ControlAction = ControlAction.ABSTAIN
     high_trigger_count: int = 2
+    policy_config: ControlPolicyConfig | None = None
 
     def decide(
         self,
@@ -27,6 +76,7 @@ class RiskController:
     ) -> RiskDecision:
         """Evaluate diagnostics and optional claim verification results."""
         diagnostic_decision = self._decide_diagnostics(diagnostics)
+        policy = self._effective_policy()
         if verification_results is None:
             return diagnostic_decision
 
@@ -48,8 +98,8 @@ class RiskController:
             if diagnostic_decision.risk_level is not RiskLevel.LOW:
                 reason = f"{reason}; {diagnostic_decision.reason}"
             return RiskDecision(
-                action=self.high_action,
-                risk_level=RiskLevel.HIGH,
+                action=policy.refuted_action,
+                risk_level=policy.refuted_risk_level,
                 confidence=_composed_confidence(
                     diagnostic_risk_confidence,
                     verification,
@@ -60,10 +110,14 @@ class RiskController:
                 diagnostics=trace,
             )
 
-        if unsupported_count and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}:
+        if (
+            unsupported_count
+            and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}
+            and policy.compound_verification_escalates
+        ):
             return RiskDecision(
-                action=self.high_action,
-                risk_level=RiskLevel.HIGH,
+                action=policy.compound_risk_action,
+                risk_level=policy.compound_risk_level,
                 confidence=_composed_confidence(
                     diagnostic_risk_confidence,
                     verification,
@@ -78,8 +132,8 @@ class RiskController:
 
         if unsupported_count:
             return RiskDecision(
-                action=self.medium_action,
-                risk_level=RiskLevel.MEDIUM,
+                action=policy.unsupported_action,
+                risk_level=policy.unsupported_risk_level,
                 confidence=_composed_confidence(
                     diagnostic_risk_confidence,
                     verification,
@@ -90,10 +144,14 @@ class RiskController:
                 diagnostics=trace,
             )
 
-        if error_count and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}:
+        if (
+            error_count
+            and diagnostic_decision.risk_level in {RiskLevel.MEDIUM, RiskLevel.HIGH}
+            and policy.compound_verification_escalates
+        ):
             return RiskDecision(
-                action=self.high_action,
-                risk_level=RiskLevel.HIGH,
+                action=policy.compound_risk_action,
+                risk_level=policy.compound_risk_level,
                 confidence=_composed_confidence(
                     diagnostic_risk_confidence,
                     verification,
@@ -106,8 +164,8 @@ class RiskController:
 
         if error_count:
             return RiskDecision(
-                action=ControlAction.CLARIFY,
-                risk_level=RiskLevel.UNKNOWN,
+                action=policy.verification_error_action,
+                risk_level=policy.verification_error_risk_level,
                 confidence=_composed_confidence(
                     diagnostic_risk_confidence,
                     verification,
@@ -119,6 +177,17 @@ class RiskController:
             )
 
         return _with_diagnostics(diagnostic_decision, trace)
+
+    def _effective_policy(self) -> ControlPolicyConfig:
+        """Return a policy config while preserving legacy action overrides."""
+        if self.policy_config is not None:
+            return self.policy_config
+        return ControlPolicyConfig(
+            refuted_action=self.high_action,
+            unsupported_action=self.medium_action,
+            verification_error_action=ControlAction.CLARIFY,
+            compound_risk_action=self.high_action,
+        )
 
     def _decide_diagnostics(self, diagnostics: Mapping[str, float]) -> RiskDecision:
         """Evaluate raw diagnostics against calibration thresholds."""

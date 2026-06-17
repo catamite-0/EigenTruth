@@ -8,7 +8,12 @@ import math
 import pytest
 import torch
 
-from eigentruth.eval.metrics import euclidean_dispersion, roc_auc
+from eigentruth.eval.metrics import (
+    binomial_confidence_interval,
+    euclidean_dispersion,
+    roc_auc,
+    selective_classification_report,
+)
 
 
 class TestRocAuc:
@@ -79,3 +84,34 @@ class TestEuclideanDispersion:
     def test_non_negative(self):
         torch.manual_seed(1)
         assert euclidean_dispersion(torch.randn(10, 32)) >= 0.0
+
+
+class TestSelectiveClassificationReport:
+    """Selective routing report tests."""
+
+    def test_reports_coverage_accuracy_and_confidence_intervals(self):
+        scores = [0.1, 0.2, 0.9, 1.1]
+        labels = [0, 0, 1, 1]
+
+        report = selective_classification_report(scores, labels, threshold=0.5)
+
+        assert report["n_flagged"] == 2
+        assert report["n_accepted"] == 2
+        assert report["coverage"] == pytest.approx(0.5)
+        assert report["selective_accuracy"] == pytest.approx(1.0)
+        assert report["detection"] == pytest.approx(1.0)
+        assert report["false_alarm"] == pytest.approx(0.0)
+        assert report["coverage_ci"]["total"] == 4
+        assert report["selective_accuracy_ci"]["successes"] == 2
+
+    def test_lower_direction_flags_low_scores(self):
+        report = selective_classification_report([0.1, 0.9], [1, 0], threshold=0.5, direction="lower")
+
+        assert report["n_flagged"] == 1
+        assert report["detection"] == pytest.approx(1.0)
+
+    def test_empty_denominator_ci_serializes_as_none(self):
+        ci = binomial_confidence_interval(0, 0)
+
+        assert ci == {"estimate": None, "lower": None, "upper": None, "successes": 0, "total": 0}
+
