@@ -162,6 +162,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics into structured routing decisions and JSON-ready traces. |
+| `GroundednessVerifier` | Checks extracted claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
 ### 主要组件
 
@@ -176,6 +177,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
 | `RiskController` / `ProductTrace` | 将校准诊断转为结构化路由决策和 JSON trace。 |
+| `GroundednessVerifier` | 用词面证据片段和显式反证检查抽取出的 claim，不增加核心依赖。 |
 
 ## Experimental Model Compatibility
 

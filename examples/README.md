@@ -38,6 +38,15 @@ python examples/calibrated_control_demo.py \
   --diagnostics '{"maha_last": 4.2, "subspace_resid": 0.4}'
 ```
 
+It can also use the dependency-free lexical groundedness verifier. Pass evidence
+snippets as a JSON list and optional explicit refutations as a JSON object:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --text "Paris is the capital of France. The moon is made of cheese." \
+  --evidence '[{"source": "atlas", "text": "Paris is the capital of France."}, {"source": "nasa", "text": "The moon is not made of cheese; lunar samples are rock."}]'
+```
+
 ## Structure For New Example Scripts
 
 New examples should be easy to inspect and reproduce. Keep this sequence explicit:

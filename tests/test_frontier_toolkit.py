@@ -7,7 +7,14 @@ from eigentruth.adapters import InMemoryWorldModelAdapter
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import ControlAction, RiskController, RiskLevel
 from eigentruth.core import TruthSubspace
-from eigentruth.verify import InMemoryVerifier, VerificationStatus, extract_claims, normalize_claim_text
+from eigentruth.verify import (
+    EvidenceDocument,
+    GroundednessVerifier,
+    InMemoryVerifier,
+    VerificationStatus,
+    extract_claims,
+    normalize_claim_text,
+)
 
 
 def test_truth_subspace_residual_distance_separates_off_plane_state():
@@ -81,6 +88,41 @@ def test_claim_extraction_and_in_memory_verifier():
     assert results[0].status is VerificationStatus.SUPPORTED
     assert results[0].evidence == ("atlas",)
     assert results[1].status is VerificationStatus.REFUTED
+
+
+def test_groundedness_verifier_supports_refutes_and_reports_evidence():
+    verifier = GroundednessVerifier(
+        evidence=(
+            EvidenceDocument("Paris is the capital of France and appears in the reference atlas.", source="atlas"),
+            EvidenceDocument("The moon is not made of cheese; lunar samples are rock.", source="nasa"),
+        ),
+        refutations={"Mars is the capital of France": ("atlas: Paris is the capital of France",)},
+        min_overlap=0.55,
+    )
+    claims = extract_claims(
+        "Paris is the capital of France. The moon is made of cheese. Mars is the capital of France."
+    )
+
+    results = verifier.verify_many(claims)
+
+    assert results[0].status is VerificationStatus.SUPPORTED
+    assert results[0].metadata["best_source"] == "atlas"
+    assert results[1].status is VerificationStatus.REFUTED
+    assert results[1].metadata["decision_rule"] == "negation_mismatch"
+    assert results[2].status is VerificationStatus.REFUTED
+    assert results[2].metadata["decision_rule"] == "configured_refutation"
+
+
+def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
+    verifier = GroundednessVerifier(
+        evidence=({"text": "Paris is the capital of France.", "source": "atlas"},),
+        min_overlap=0.8,
+    )
+    result = verifier.verify(extract_claims("Tokyo is the capital of Japan.")[0])
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "low_overlap"
+    assert result.metadata["best_overlap"] < 0.8
 
 
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():

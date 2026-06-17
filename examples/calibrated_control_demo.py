@@ -18,7 +18,14 @@ from typing import Any
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import ProductTrace, RiskController, TraceEvent
-from eigentruth.verify import InMemoryVerifier, VerificationStatus, extract_claims, normalize_claim_text
+from eigentruth.verify import (
+    GroundednessVerifier,
+    InMemoryVerifier,
+    VerificationStatus,
+    Verifier,
+    extract_claims,
+    normalize_claim_text,
+)
 
 DEFAULT_TEXT = "Paris is the capital of France. The moon is made of cheese."
 DEFAULT_DIAGNOSTICS = {"maha_last": 4.2, "subspace_resid": 0.4}
@@ -56,8 +63,23 @@ def parse_json_mapping(value: str, *, name: str) -> dict[str, Any]:
     return parsed
 
 
-def build_verifier(facts: dict[str, Any] | None) -> InMemoryVerifier:
-    """Build a deterministic verifier from exact-match facts."""
+def parse_json_sequence(value: str, *, name: str) -> list[Any]:
+    """Parse a JSON list from a CLI argument."""
+    parsed = json.loads(value)
+    if not isinstance(parsed, list):
+        raise ValueError(f"{name} must be a JSON list.")
+    return parsed
+
+
+def build_verifier(
+    facts: dict[str, Any] | None,
+    evidence: list[Any] | None,
+    refutations: dict[str, Any] | None,
+) -> Verifier:
+    """Build a deterministic verifier from exact-match facts or grounded evidence."""
+    if evidence is not None or refutations is not None:
+        evidence_documents = () if evidence is None else tuple(evidence)
+        return GroundednessVerifier(evidence=evidence_documents, refutations=refutations or {})
     if facts is None:
         facts = {
             "Paris is the capital of France": VerificationStatus.SUPPORTED.value,
@@ -75,9 +97,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     artifact = load_artifact(args.artifact)
     diagnostics = parse_json_mapping(args.diagnostics, name="--diagnostics")
     facts = None if args.facts is None else parse_json_mapping(args.facts, name="--facts")
+    evidence = None if args.evidence is None else parse_json_sequence(args.evidence, name="--evidence")
+    refutations = None if args.refutations is None else parse_json_mapping(args.refutations, name="--refutations")
 
     claims = extract_claims(args.text)
-    verifier = build_verifier(facts)
+    verifier = build_verifier(facts, evidence, refutations)
     verification_results = verifier.verify_many(claims)
 
     controller = RiskController(artifact)
@@ -99,6 +123,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
+            "verifier_type": type(verifier).__name__,
         },
     )
     payload = trace.to_dict()
@@ -113,6 +138,8 @@ def main() -> None:
     parser.add_argument("--diagnostics", default=json.dumps(DEFAULT_DIAGNOSTICS), help="diagnostics JSON object")
     parser.add_argument("--text", default=DEFAULT_TEXT, help="draft text to extract and verify claims from")
     parser.add_argument("--facts", default=None, help="optional exact-match facts JSON object")
+    parser.add_argument("--evidence", default=None, help="optional groundedness evidence JSON list")
+    parser.add_argument("--refutations", default=None, help="optional groundedness refutations JSON object")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     payload = run(parser.parse_args())

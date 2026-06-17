@@ -16,7 +16,7 @@ Implemented today:
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.control.RiskController`: maps calibrated diagnostic thresholds to product actions.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, actions, and metadata.
-- `eigentruth.verify`: dependency-free claim extraction and in-memory verifier tools for first-pass claim workflows.
+- `eigentruth.verify`: dependency-free claim extraction, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, and saved concept metadata.
 - Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, and conformal calibration.
@@ -234,7 +234,7 @@ For product features:
 
 - Extend `RiskController` beyond threshold counting into policy composition across diagnostics and verification.
 - Add concrete correction policies: accept, retrieve, rewrite, steer, abstain, clarify.
-- Upgrade claim extraction and verifier implementations behind the existing protocols.
+- Upgrade claim extraction and verifier implementations beyond lexical groundedness behind the existing protocols.
 - Connect `ProductTrace` to application-facing diagnostics and evaluation artifacts.
 
 ### 0.4: Verification And World-Model Adapters
