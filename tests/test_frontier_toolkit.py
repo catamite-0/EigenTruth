@@ -5,7 +5,7 @@ import torch
 
 from eigentruth.adapters import InMemoryWorldModelAdapter
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ControlAction, RiskController, RiskLevel
+from eigentruth.control import ControlAction, DefaultCorrectionPolicy, RiskController, RiskDecision, RiskLevel
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
     EvidenceDocument,
@@ -106,6 +106,41 @@ def test_risk_controller_combines_diagnostics_and_verification_results():
     assert unknown_error.risk_level is RiskLevel.UNKNOWN
     assert compound_error.action is ControlAction.ABSTAIN
     assert compound_error.risk_level is RiskLevel.HIGH
+
+
+def test_default_correction_policy_plans_action_payloads():
+    policy = DefaultCorrectionPolicy()
+    claims = extract_claims("Paris is the capital of France. The moon is made of cheese.")
+    unsupported_decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="claim verification found unsupported claim",
+    )
+    abstain_decision = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="claim verification refuted claim",
+    )
+    results = (
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9, evidence=("atlas",)),
+        VerificationResult(VerificationStatus.REFUTED, confidence=0.85, evidence=("nasa",)),
+    )
+
+    retrieve = policy.plan(
+        unsupported_decision,
+        claims=claims,
+        verification_results=(results[0], VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2)),
+    )[0]
+    abstain = policy.plan(abstain_decision, claims=claims, verification_results=results)[0]
+
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.payload["retrieval_targets"][0]["claim_id"] == "c2"
+    assert retrieve.payload["claim_status_counts"]["insufficient_evidence"] == 1
+    assert abstain.action is ControlAction.ABSTAIN
+    assert abstain.payload["blocked_claims"][0]["status"] == "refuted"
+    assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
 
 
 def test_claim_extraction_and_in_memory_verifier():

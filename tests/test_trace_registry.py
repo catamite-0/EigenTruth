@@ -3,7 +3,7 @@
 import json
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ControlAction, ProductTrace, RiskController, RiskLevel, TraceEvent
+from eigentruth.control import ActionRequest, ControlAction, ProductTrace, RiskController, RiskLevel, TraceEvent
 from eigentruth.registry import ArtifactRegistry, RegistryRecord
 from eigentruth.verify import InMemoryVerifier, VerificationStatus, extract_claims, normalize_claim_text
 
@@ -29,7 +29,13 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
         claims=claims,
         verification_results=results,
         risk_decision=decision,
-        actions=(ControlAction.RETRIEVE,),
+        actions=(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="diagnostic threshold exceeded",
+                payload={"claim_ids": ("c1",)},
+            ),
+        ),
         events=(TraceEvent("risk_decision", {"action": decision.action}),),
         metadata={"model_id": "tiny"},
     )
@@ -38,7 +44,8 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert payload["risk_decision"]["action"] == "retrieve"
     assert payload["risk_decision"]["risk_level"] == RiskLevel.MEDIUM.value
     assert payload["verification_results"][0]["status"] == "supported"
-    assert payload["actions"] == ["retrieve"]
+    assert payload["actions"][0]["action"] == "retrieve"
+    assert tuple(payload["actions"][0]["payload"]["claim_ids"]) == ("c1",)
     json.dumps(payload)
 
 

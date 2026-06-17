@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ProductTrace, RiskController, TraceEvent
+from eigentruth.control import DefaultCorrectionPolicy, ProductTrace, RiskController, TraceEvent
 from eigentruth.verify import (
     GroundednessVerifier,
     InMemoryVerifier,
@@ -109,17 +109,23 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         {key: float(value) for key, value in diagnostics.items()},
         verification_results=verification_results,
     )
+    action_requests = DefaultCorrectionPolicy().plan(
+        decision,
+        claims=claims,
+        verification_results=verification_results,
+    )
     trace = ProductTrace(
         request_id=args.request_id,
         diagnostics=diagnostics,
         claims=claims,
         verification_results=verification_results,
         risk_decision=decision,
-        actions=(decision.action,),
+        actions=action_requests,
         events=(
             TraceEvent("diagnostics_observed", diagnostics),
             TraceEvent("claims_verified", {"n_claims": len(claims)}),
             TraceEvent("risk_decision", decision.to_dict()),
+            TraceEvent("actions_planned", {"n_actions": len(action_requests)}),
         ),
         metadata={
             "artifact_model_id": artifact.model_id,

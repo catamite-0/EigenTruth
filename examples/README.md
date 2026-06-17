@@ -16,7 +16,8 @@ A larger qualitative comparison over several prompts. It prints generated text w
 
 A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
 or uses built-in toy thresholds, verifies simple claims, combines diagnostics
-and verification results through `RiskController`, and prints a JSON `ProductTrace`.
+and verification results through `RiskController`, plans an `ActionRequest`,
+and prints a JSON `ProductTrace`.
 
 ## Running An Example
 
@@ -32,7 +33,7 @@ The examples may download model weights from Hugging Face. Review model licenses
 
 `calibrated_control_demo.py` does not load a model or download data. It is a
 small product-flow check for artifact-driven diagnostics, claim verification,
-and trace output:
+action planning, and trace output:
 
 ```bash
 python examples/calibrated_control_demo.py \

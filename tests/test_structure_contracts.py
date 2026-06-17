@@ -4,7 +4,7 @@ import pytest
 
 from eigentruth.adapters import WorldModelPrediction
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.control import ControlAction, RiskDecision, RiskLevel
+from eigentruth.control import ActionRequest, ControlAction, RiskDecision, RiskLevel
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus
 
@@ -43,6 +43,24 @@ def test_risk_decision_validation_and_values():
     assert decision.risk_level.value == "medium"
     with pytest.raises(ValueError):
         RiskDecision(ControlAction.ACCEPT, RiskLevel.LOW, 1.2, "bad")
+
+
+def test_action_request_json_roundtrip():
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"claim_ids": ("c1",)},
+        metadata={"policy": "test"},
+        request_id="a1",
+    )
+
+    payload = request.to_dict()
+    loaded = ActionRequest.from_dict(payload)
+
+    assert payload["action"] == "retrieve"
+    assert loaded.action is ControlAction.RETRIEVE
+    assert loaded.reason == "unsupported claim"
+    assert loaded.payload["claim_ids"] == ("c1",)
 
 
 def test_verification_result_and_world_model_prediction_validate_confidence():
