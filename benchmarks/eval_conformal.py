@@ -30,7 +30,7 @@ import sys
 import torch
 
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
-from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import selective_classification_report
 
 ALPHAS = (0.05, 0.10, 0.20)
@@ -68,11 +68,12 @@ def run(args) -> dict:
     labels = torch.tensor(dump["labels"])
     scores = torch.tensor(dump["scores"][args.signal], dtype=torch.float64)
     dump_config = dump.get("config", {})
+    direction = _direction_for(args.signal, args.direction)
 
     true_scores = scores[labels == 0]   # 正常总体（可交换假设的对象）
     false_scores = scores[labels == 1]  # 希望被报警的对象（仅报告 power）
     n_true, n_false = true_scores.numel(), false_scores.numel()
-    print(f"signal={args.signal}  n_true={n_true}  n_false={n_false}  "
+    print(f"signal={args.signal}  direction={direction}  n_true={n_true}  n_false={n_false}  "
           f"repeats={args.repeats}\n")
 
     fa_sum = {a: 0.0 for a in ALPHAS}
@@ -84,9 +85,9 @@ def run(args) -> dict:
         calib = true_scores[perm[:half]]
         test_true = true_scores[perm[half:]]
         for a in ALPHAS:
-            t = conformal_threshold(calib, a)
-            fa_sum[a] += (test_true > t).double().mean().item()
-            det_sum[a] += (false_scores > t).double().mean().item()
+            t = directional_conformal_threshold(calib, a, direction)
+            fa_sum[a] += directional_trigger_rate(test_true, t, direction)
+            det_sum[a] += directional_trigger_rate(false_scores, t, direction)
 
     print(f"  {'alpha':>6} {'nominal_cov':>12} {'false_alarm':>12} "
           f"{'emp_cov':>9} {'detect':>8}   gate(|fa-a|<={TOLERANCE})")
@@ -98,9 +99,9 @@ def run(args) -> dict:
         det = det_sum[a] / args.repeats
         ok = abs(fa - a) <= TOLERANCE
         all_pass &= ok
-        full_threshold = conformal_threshold(true_scores, a)
+        full_threshold = directional_conformal_threshold(true_scores, a, direction)
         selective_report = selective_classification_report(
-            scores, labels, full_threshold, direction=_direction_for(args.signal, args.direction)
+            scores, labels, full_threshold, direction=direction
         )
         results[str(a)] = {
             "false_alarm": fa,
@@ -119,7 +120,7 @@ def run(args) -> dict:
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
     payload = {"config": {"scores": args.scores, "signal": args.signal,
-                          "repeats": args.repeats, "seed": args.seed,
+                          "direction": direction, "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
 
@@ -129,7 +130,7 @@ def run(args) -> dict:
             model_revision=args.model_revision,
             target_layer=args.target_layer if args.target_layer is not None else int(dump_config.get("layer", 0)),
             calibration_scores={args.signal: true_scores},
-            directions={args.signal: _direction_for(args.signal, args.direction)},
+            directions={args.signal: direction},
             calibration_dataset_metadata={
                 "scores": args.scores,
                 "signal": args.signal,

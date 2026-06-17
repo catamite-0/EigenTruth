@@ -45,10 +45,11 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Mapping, Optional, Sequence
 
 import torch
 
+from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.core import TruthSubspace
 from eigentruth.core.math_engine import (
     TruthManifold,
@@ -56,7 +57,7 @@ from eigentruth.core.math_engine import (
     mahalanobis_distance,
     poincare_map,
 )
-from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
 
 SIGNALS = ["maha_last", "truth_proj", "subspace_resid", "disp_euclid", "disp_hse", "nll_answer"]
@@ -68,6 +69,27 @@ class Statement:
     question: str
     answer: str
     is_false: int  # 1 = 错误答案(正类/幻觉) / incorrect (positive), 0 = 正确答案(负类)
+
+
+def _selective_reports(
+    scores: Mapping[str, Sequence[float]],
+    labels: Sequence[int],
+    *,
+    alpha: float = REPORT_ALPHA,
+    directions: Mapping[str, str] | None = None,
+) -> dict[str, dict]:
+    labels_t = torch.tensor(labels)
+    reports = {}
+    for signal, values in scores.items():
+        direction = (directions or DEFAULT_SCORE_DIRECTIONS).get(signal, "higher")
+        signal_scores = torch.tensor(values, dtype=torch.float64)
+        true_scores = signal_scores[labels_t == 0]
+        threshold = directional_conformal_threshold(true_scores, alpha, direction)
+        reports[signal] = {
+            "alpha": alpha,
+            **selective_classification_report(signal_scores, labels_t, threshold, direction=direction),
+        }
+    return reports
 
 
 # ---------------------------------------------------------------------------
@@ -272,11 +294,11 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
 
         true_states = true_state_lists[layer]
         false_states = false_state_lists[layer]
-        if true_states and false_states:
+        if len(true_states) >= 2 and false_states:
             subspaces[layer] = TruthSubspace.fit_contrastive(
                 torch.stack(true_states), torch.stack(false_states), rank=subspace_rank
             )
-        elif true_states:
+        elif len(true_states) >= 2:
             subspaces[layer] = TruthSubspace.fit(torch.stack(true_states), rank=subspace_rank)
     return manifolds, subspaces
 
@@ -378,16 +400,7 @@ def run(args) -> dict:
     n_pos = sum(labels)
     n_neg = len(labels) - n_pos
     results = {s: roc_auc(scores[s], labels) for s in SIGNALS}
-    labels_t = torch.tensor(labels)
-    selective = {}
-    for signal in SIGNALS:
-        signal_scores = torch.tensor(scores[signal], dtype=torch.float64)
-        true_scores = signal_scores[labels_t == 0]
-        threshold = conformal_threshold(true_scores, REPORT_ALPHA)
-        selective[signal] = {
-            "alpha": REPORT_ALPHA,
-            **selective_classification_report(signal_scores, labels_t, threshold, direction="higher"),
-        }
+    selective = _selective_reports(scores, labels, alpha=REPORT_ALPHA)
 
     # ---- 输出 ----
     print("\n" + "=" * 56)

@@ -13,7 +13,7 @@ import torch
 
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
 
 ArrayLike = torch.Tensor | Sequence[float]
@@ -362,10 +362,10 @@ def _calibrate_score(
     if true_scores.numel() == 0 or false_scores.numel() == 0:
         raise ValueError("sweep calibration requires at least one true and one false labeled score.")
 
-    threshold = _directional_threshold(true_scores, alpha, direction)
+    threshold = directional_conformal_threshold(true_scores, alpha, direction)
     anomaly_scores = _anomaly_scores(scores_t, direction)
-    false_alarm = _trigger_rate(true_scores, threshold, direction)
-    detection = _trigger_rate(false_scores, threshold, direction)
+    false_alarm = directional_trigger_rate(true_scores, threshold, direction)
+    detection = directional_trigger_rate(false_scores, threshold, direction)
     return SweepScoreResult(
         layer=layer,
         score_name=score_name,
@@ -380,23 +380,10 @@ def _calibrate_score(
     )
 
 
-def _directional_threshold(scores: torch.Tensor, alpha: float, direction: str) -> float:
-    if direction == "higher":
-        return conformal_threshold(scores, alpha)
-    threshold = conformal_threshold(-scores, alpha)
-    return -threshold
-
 
 def _anomaly_scores(scores: torch.Tensor, direction: str) -> torch.Tensor:
     return scores if direction == "higher" else -scores
 
-
-def _trigger_rate(scores: torch.Tensor, threshold: float, direction: str) -> float:
-    if scores.numel() == 0 or math.isinf(threshold):
-        return 0.0
-    if direction == "higher":
-        return float((scores > threshold).double().mean().item())
-    return float((scores < threshold).double().mean().item())
 
 
 def _best_result(results: Sequence[SweepScoreResult], *, best_by: str) -> SweepScoreResult:

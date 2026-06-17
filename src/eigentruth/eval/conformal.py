@@ -88,3 +88,25 @@ def conformal_threshold(calib_scores: ArrayLike, alpha: float) -> float:
         return float("inf")
     calib_sorted, _ = torch.sort(calib)
     return float(calib_sorted[rank - 1].item())
+
+
+def directional_conformal_threshold(calib_scores: ArrayLike, alpha: float, direction: str) -> float:
+    """Return a native-unit threshold for higher- or lower-is-anomalous scores."""
+    if direction == "higher":
+        return conformal_threshold(calib_scores, alpha)
+    if direction == "lower":
+        threshold = conformal_threshold(-torch.as_tensor(calib_scores, dtype=torch.float64), alpha)
+        return -threshold
+    raise ValueError("direction must be 'higher' or 'lower'.")
+
+
+def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str) -> float:
+    """Return the fraction of scores flagged by a directional conformal threshold."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    if scores_t.numel() == 0 or math.isinf(threshold):
+        return 0.0
+    if direction == "higher":
+        return float((scores_t > threshold).double().mean().item())
+    return float((scores_t < threshold).double().mean().item())

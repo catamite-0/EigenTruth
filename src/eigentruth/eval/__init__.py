@@ -9,7 +9,12 @@ benchmark runners live in `benchmarks/` at the repository root.
 
 from __future__ import annotations
 
-from eigentruth.eval.conformal import conformal_pvalues, conformal_threshold
+from eigentruth.eval.conformal import (
+    conformal_pvalues,
+    conformal_threshold,
+    directional_conformal_threshold,
+    directional_trigger_rate,
+)
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     euclidean_dispersion,
@@ -24,4 +29,6 @@ __all__ = [
     "selective_classification_report",
     "conformal_pvalues",
     "conformal_threshold",
+    "directional_conformal_threshold",
+    "directional_trigger_rate",
 ]

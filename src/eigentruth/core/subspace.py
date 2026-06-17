@@ -29,6 +29,8 @@ class TruthSubspace:
     def fit(cls, states: Tensor, rank: int = 1) -> "TruthSubspace":
         """Fit a PCA subspace from factual states, shape [N, D]."""
         states = _as_state_matrix(states)
+        if states.shape[0] < 2:
+            raise ValueError("at least two factual states are required to fit a subspace.")
         if rank < 1:
             raise ValueError("rank must be >= 1.")
         mean = states.mean(dim=0).to(torch.float32)

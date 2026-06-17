@@ -9,7 +9,12 @@ import math
 import pytest
 import torch
 
-from eigentruth.eval.conformal import conformal_pvalues, conformal_threshold
+from eigentruth.eval.conformal import (
+    conformal_pvalues,
+    conformal_threshold,
+    directional_conformal_threshold,
+    directional_trigger_rate,
+)
 
 
 class TestConformalPvalues:
@@ -108,3 +113,18 @@ class TestConformalThreshold:
         flagged_by_t = test > t
         flagged_by_p = p <= alpha
         assert (flagged_by_t == flagged_by_p).all()
+
+    def test_directional_threshold_and_trigger_rate_support_lower_scores(self):
+        calib = torch.tensor([10.0, 11.0, 12.0, 13.0])
+
+        threshold = directional_conformal_threshold(calib, 0.25, "lower")
+        rate = directional_trigger_rate(torch.tensor([9.0, 10.0, 11.0]), threshold, "lower")
+
+        assert threshold == pytest.approx(10.0)
+        assert rate == pytest.approx(1.0 / 3.0)
+
+    def test_directional_helpers_reject_invalid_direction(self):
+        with pytest.raises(ValueError, match="direction"):
+            directional_conformal_threshold(torch.tensor([1.0]), 0.1, "sideways")
+        with pytest.raises(ValueError, match="direction"):
+            directional_trigger_rate(torch.tensor([1.0]), 0.0, "sideways")

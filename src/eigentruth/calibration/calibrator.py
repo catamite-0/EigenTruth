@@ -10,7 +10,7 @@ import torch
 
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.eval.conformal import conformal_threshold
+from eigentruth.eval.conformal import directional_conformal_threshold
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -68,7 +68,7 @@ class ConformalCalibrator:
             direction = (directions or {}).get(name, "higher")
             if direction not in {"higher", "lower"}:
                 raise ValueError("directions values must be 'higher' or 'lower'.")
-            threshold = _directional_threshold(scores, self.alpha, direction)
+            threshold = directional_conformal_threshold(scores, self.alpha, direction)
             score_configs.append(
                 CalibrationScore(
                     name=name,
@@ -90,12 +90,3 @@ class ConformalCalibrator:
             created_at=created_at or datetime.now(timezone.utc).isoformat(),
             commit_sha=commit_sha,
         )
-
-
-def _directional_threshold(scores: ArrayLike, alpha: float, direction: str) -> float:
-    """Return a native-unit conformal threshold for one score direction."""
-    if direction == "higher":
-        return conformal_threshold(scores, alpha)
-    transformed = -torch.as_tensor(scores, dtype=torch.float64)
-    threshold = conformal_threshold(transformed, alpha)
-    return -threshold

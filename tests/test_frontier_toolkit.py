@@ -1,5 +1,7 @@
 """Tests for the frontier-toolkit MVP modules."""
 
+import math
+
 import pytest
 import torch
 
@@ -55,6 +57,11 @@ def test_truth_subspace_contrastive_projection():
     false_projection = subspace.truth_projection(torch.tensor([[-2.0, 0.0]])).item()
 
     assert true_projection > false_projection
+
+
+def test_truth_subspace_rejects_single_factual_state():
+    with pytest.raises(ValueError, match="at least two factual states"):
+        TruthSubspace.fit(torch.tensor([[1.0, 2.0, 3.0]]), rank=1)
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
@@ -306,6 +313,45 @@ def test_risk_controller_uses_configurable_control_policy():
     assert refuted.risk_level is RiskLevel.HIGH
     assert unsupported.action is ControlAction.CLARIFY
     assert unsupported.risk_level is RiskLevel.MEDIUM
+
+
+def test_control_policy_config_from_dict_parses_boolean_strings():
+    disabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "false"})
+    enabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "on"})
+
+    assert disabled.compound_verification_escalates is False
+    assert enabled.compound_verification_escalates is True
+    with pytest.raises(ValueError, match="compound_verification_escalates"):
+        ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
+
+
+def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    nan_decision = controller.decide({"maha": math.nan})
+    inf_decision = controller.decide({"maha": math.inf})
+
+    assert nan_decision.action is ControlAction.CLARIFY
+    assert nan_decision.risk_level is RiskLevel.UNKNOWN
+    assert nan_decision.diagnostics["invalid_scores"] == ("maha",)
+    assert nan_decision.diagnostics["invalid_values"]["maha"] == "nan"
+    assert inf_decision.action is ControlAction.CLARIFY
+    assert inf_decision.risk_level is RiskLevel.UNKNOWN
+    assert inf_decision.diagnostics["invalid_values"]["maha"] == "inf"
+
+    unsupported = controller.decide(
+        {"maha": math.nan},
+        verification_results=(VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.4),),
+    )
+    assert unsupported.action is ControlAction.CLARIFY
+    assert unsupported.risk_level is RiskLevel.UNKNOWN
+    assert unsupported.diagnostics["verification"]["counts"]["insufficient_evidence"] == 1
 
 
 def test_claim_extraction_adds_rule_based_metadata():

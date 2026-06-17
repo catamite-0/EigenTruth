@@ -49,7 +49,10 @@ class ControlPolicyConfig:
                 str(data.get("verification_error_action", ControlAction.CLARIFY.value))
             ),
             compound_risk_action=ControlAction(str(data.get("compound_risk_action", ControlAction.ABSTAIN.value))),
-            compound_verification_escalates=bool(data.get("compound_verification_escalates", True)),
+            compound_verification_escalates=_parse_bool(
+                data.get("compound_verification_escalates", True),
+                name="compound_verification_escalates",
+            ),
             refuted_risk_level=RiskLevel(str(data.get("refuted_risk_level", RiskLevel.HIGH.value))),
             unsupported_risk_level=RiskLevel(str(data.get("unsupported_risk_level", RiskLevel.MEDIUM.value))),
             verification_error_risk_level=RiskLevel(
@@ -109,6 +112,9 @@ class RiskController:
                 reason=reason,
                 diagnostics=trace,
             )
+
+        if diagnostic_decision.risk_level is RiskLevel.UNKNOWN:
+            return _with_diagnostics(diagnostic_decision, trace)
 
         if (
             unsupported_count
@@ -193,12 +199,21 @@ class RiskController:
         """Evaluate raw diagnostics against calibration thresholds."""
         triggered = []
         missing = []
+        invalid: dict[str, Any] = {}
         severities: dict[str, float] = {}
         for score in self.artifact.scores:
             if score.name not in diagnostics:
                 missing.append(score.name)
                 continue
-            value = float(diagnostics[score.name])
+            raw_value = diagnostics[score.name]
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                invalid[score.name] = _diagnostic_value_for_trace(raw_value)
+                continue
+            if not math.isfinite(value):
+                invalid[score.name] = _diagnostic_value_for_trace(raw_value)
+                continue
             is_triggered = _is_triggered(value, score)
             severity = _severity(value, score) if is_triggered else 0.0
             severities[score.name] = severity
@@ -208,9 +223,20 @@ class RiskController:
         trace: dict[str, Any] = {
             "triggered_scores": tuple(triggered),
             "missing_scores": tuple(missing),
+            "invalid_scores": tuple(invalid),
+            "invalid_values": invalid,
             "severities": severities,
             "thresholds": {score.name: score.threshold for score in self.artifact.scores},
         }
+
+        if invalid:
+            return RiskDecision(
+                action=ControlAction.CLARIFY,
+                risk_level=RiskLevel.UNKNOWN,
+                confidence=1.0,
+                reason=f"invalid diagnostic score(s): {', '.join(invalid)}",
+                diagnostics=trace,
+            )
 
         if not triggered:
             return RiskDecision(
@@ -239,6 +265,26 @@ class RiskController:
             reason=f"calibrated diagnostic threshold exceeded: {triggered[0]}",
             diagnostics=trace,
         )
+
+
+def _parse_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean or a recognized boolean string.")
+
+
+def _diagnostic_value_for_trace(value: Any) -> Any:
+    if isinstance(value, float) and not math.isfinite(value):
+        return repr(value)
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    return repr(value)
 
 
 def _is_triggered(value: float, score: CalibrationScore) -> bool:
