@@ -1,0 +1,153 @@
+{
+  "config": {
+    "scores": "benchmarks/scores_tiny_gpt2_0_2.json",
+    "signal": "truth_proj",
+    "repeats": 20,
+    "seed": 0,
+    "n_true": 652,
+    "n_false": 782
+  },
+  "results": {
+    "0.05": {
+      "false_alarm": 0.05214723926380368,
+      "coverage": 0.9478527607361963,
+      "detection": 0.05396419437340153,
+      "pass": true
+    },
+    "0.1": {
+      "false_alarm": 0.10552147239263805,
+      "coverage": 0.8944785276073619,
+      "detection": 0.1280051150895141,
+      "pass": true
+    },
+    "0.2": {
+      "false_alarm": 0.19969325153374234,
+      "coverage": 0.8003067484662576,
+      "detection": 0.21099744245524293,
+      "pass": true
+    }
+  },
+  "verdict": "ACCEPT",
+  "sweep_report": {
+    "schema_version": 1,
+    "model_id": "sshleifer/tiny-gpt2",
+    "model_revision": null,
+    "conformal_alpha": 0.2,
+    "best_by": "auroc",
+    "best": {
+      "layer": -1,
+      "score_name": "truth_proj",
+      "direction": "higher",
+      "threshold": -1.164114236831665,
+      "conformal_alpha": 0.2,
+      "auroc": 0.5208624260587137,
+      "false_alarm": 0.19785276073619631,
+      "detection": 0.20843989769820973,
+      "n_true": 652,
+      "n_false": 782
+    },
+    "layers": [
+      {
+        "layer": -2,
+        "scores": [
+          {
+            "layer": -2,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 1.7432430982589722,
+            "conformal_alpha": 0.2,
+            "auroc": 0.5199984701802833,
+            "false_alarm": 0.19785276073619631,
+            "detection": 0.21227621483375958,
+            "n_true": 652,
+            "n_false": 782
+          },
+          {
+            "layer": -2,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 3.725290298461914e-09,
+            "conformal_alpha": 0.2,
+            "auroc": 0.5064124943122087,
+            "false_alarm": 0.1058282208588957,
+            "detection": 0.11125319693094629,
+            "n_true": 652,
+            "n_false": 782
+          },
+          {
+            "layer": -2,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 0.03903738781809807,
+            "conformal_alpha": 0.2,
+            "auroc": 0.4874878398945601,
+            "false_alarm": 0.19785276073619631,
+            "detection": 0.1969309462915601,
+            "n_true": 652,
+            "n_false": 782
+          }
+        ]
+      },
+      {
+        "layer": -1,
+        "scores": [
+          {
+            "layer": -1,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 0.4896666705608368,
+            "conformal_alpha": 0.2,
+            "auroc": 0.49584497042348546,
+            "false_alarm": 0.19785276073619631,
+            "detection": 0.20843989769820973,
+            "n_true": 652,
+            "n_false": 782
+          },
+          {
+            "layer": -1,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 5.960464477539063e-08,
+            "conformal_alpha": 0.2,
+            "auroc": 0.49561451681232643,
+            "false_alarm": 0.15030674846625766,
+            "detection": 0.13938618925831203,
+            "n_true": 652,
+            "n_false": 782
+          },
+          {
+            "layer": -1,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": -1.164114236831665,
+            "conformal_alpha": 0.2,
+            "auroc": 0.5208624260587137,
+            "false_alarm": 0.19785276073619631,
+            "detection": 0.20843989769820973,
+            "n_true": 652,
+            "n_false": 782
+          }
+        ]
+      }
+    ],
+    "eigentruth_version": "0.1.0",
+    "scores_path": "benchmarks/scores_tiny_gpt2_0_2.json",
+    "created_at": "2026-06-17T06:07:52.050915+00:00",
+    "commit_sha": null,
+    "metadata": {
+      "source": "eval_conformal.py",
+      "config": {
+        "model": "sshleifer/tiny-gpt2",
+        "layer": -1,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 2,
+        "subspace_rank": 2,
+        "n_pos": 782,
+        "n_neg": 652,
+        "seed": 0
+      }
+    }
+  }
+}
