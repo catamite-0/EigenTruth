@@ -118,6 +118,8 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 
 This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records.
 
+Score directions are explicit: use `higher` for scores where larger values are more anomalous and `lower` for scores where smaller values are more anomalous. The shared directional conformal helpers keep thresholds, trigger rates, and selective reports in the same native score units. Control-plane diagnostics fail closed on invalid numeric inputs such as `NaN` or `Inf`, returning `clarify/unknown` instead of silently accepting the output.
+
 ## Architecture
 
 ```text
@@ -161,9 +163,10 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
 | `TruthProbe` | Captures selected-layer hidden states and optionally applies steering. |
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
-| `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics. |
+| `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
+| `directional_conformal_threshold` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
-| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces. |
+| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
@@ -179,9 +182,10 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
 | `TruthProbe` | 捕获指定层的隐藏状态，并可选地应用激活引导。 |
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
-| `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断。 |
+| `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
+| `directional_conformal_threshold` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
-| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace。 |
+| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |

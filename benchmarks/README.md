@@ -51,8 +51,9 @@ python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
-the record. Use `--subspace-rank` to tune `TruthSubspace` residual scoring; the
-implementation automatically clips rank to the available warmup states and hidden dimension.
+the record. Use `--subspace-rank` to tune `TruthSubspace` residual scoring; fitting
+requires at least two factual warmup states, and rank is clipped to the available
+warmup states and hidden dimension.
 
 ### How to read the results
 
@@ -132,6 +133,10 @@ split 50/50 into calibration/test over 20 seeded repeats:
 python benchmarks/eval_truthfulqa.py --model gpt2 --dump-scores benchmarks/scores.json ...
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj
 
+# Override the score direction for lower-is-more-anomalous signals:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal support_score \
+  --direction lower
+
 # Save a reusable CalibrationArtifact for one selected signal:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj \
   --artifact-alpha 0.2 --save-calibration artifacts/gpt2-l8-truth-proj.json
@@ -149,12 +154,13 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 same α = 0.2 false-alarm budget, `truth_proj` detects **46.9%** of false statements vs
 34.1% for `maha_last` (committed as `results_conformal_*.json`). The low-level
 calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`,
-`conformal_threshold`). Reusable single-signal artifacts are built with
-`eigentruth.calibration.ConformalCalibrator`; layer/score reports and best artifacts
-are built with `eigentruth.calibration.LayerScoreSweepCalibrator`. Structured reports
-also include `selective_report` fields for threshold, coverage, selective accuracy,
-detection, false alarm, and simple binomial confidence intervals; score dumps remain
-unchanged.
+`conformal_threshold`, `directional_conformal_threshold`, `directional_trigger_rate`).
+Reusable single-signal artifacts are built with `eigentruth.calibration.ConformalCalibrator`;
+layer/score reports and best artifacts are built with
+`eigentruth.calibration.LayerScoreSweepCalibrator`. Structured reports also include
+`selective_report` fields for threshold, coverage, selective accuracy, detection,
+false alarm, and simple binomial confidence intervals; thresholding honors each
+score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
