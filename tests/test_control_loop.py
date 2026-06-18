@@ -105,6 +105,32 @@ def test_verification_loop_keeps_retrieve_decision_when_no_hits_are_found():
     assert result.trace.to_dict()["risk_decision"]["action"] == "retrieve"
 
 
+def test_verification_loop_preserves_base_context_evidence_when_retrieval_is_claim_scoped():
+    claims = extract_claims("Paris is the capital of France. Berlin is the capital of Germany.")
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.7)
+    registry = _registry_with_retrieval(("Berlin is the capital of Germany.",))
+
+    result = run_verification_loop(
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        context={"evidence": ({"text": "Paris is the capital of France.", "source": "atlas"},)},
+    )
+
+    assert [item.status for item in result.initial_verification_results] == [
+        VerificationStatus.SUPPORTED,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+    ]
+    assert [item.status for item in result.final_verification_results] == [
+        VerificationStatus.SUPPORTED,
+        VerificationStatus.SUPPORTED,
+    ]
+    assert result.final_decision.action is ControlAction.ACCEPT
+    assert result.final_decision.risk_level is RiskLevel.LOW
+
+
 def test_verification_loop_does_not_override_refuted_claim_with_retrieval():
     claims = extract_claims("The moon is made of cheese.")
     verifier = GroundednessVerifier(

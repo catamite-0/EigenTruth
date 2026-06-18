@@ -249,7 +249,10 @@ def _verify_with_retrieved_evidence(
     results = []
     for index, claim in enumerate(claims):
         claim_id = claim.claim_id or f"c{index + 1}"
-        claim_context = {**base_context, **evidence_bundle.to_context(claim_id)}
+        claim_context = _context_with_retrieved_evidence(
+            base_context,
+            evidence_bundle.to_context(claim_id),
+        )
         results.append(verifier.verify(claim, context=claim_context))
     return tuple(results)
 
@@ -258,6 +261,31 @@ def _action_result_to_dict(result: ActionResult | Mapping[str, Any]) -> dict[str
     if isinstance(result, ActionResult):
         return result.to_dict()
     return dict(_jsonable(result))
+
+
+def _context_with_retrieved_evidence(
+    base_context: Mapping[str, Any],
+    retrieval_context: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Return context with retrieval evidence appended, preserving existing evidence."""
+    context = dict(base_context)
+    if "evidence" not in retrieval_context:
+        return context
+    retrieved_evidence = _evidence_sequence(retrieval_context.get("evidence", ()))
+    if not retrieved_evidence:
+        return context
+    context["evidence"] = _evidence_sequence(base_context.get("evidence", ())) + retrieved_evidence
+    return context
+
+
+def _evidence_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(value)
+    return (value,)
 
 
 def _verification_result_to_dict(result: VerificationResult | Mapping[str, Any]) -> dict[str, Any]:
