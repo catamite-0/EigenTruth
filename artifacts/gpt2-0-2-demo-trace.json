@@ -1,0 +1,119 @@
+{
+  "actions": [
+    "retrieve"
+  ],
+  "claims": [
+    {
+      "claim_id": "c1",
+      "metadata": {
+        "extractor": "sentence_split",
+        "source_index": 1
+      },
+      "span": [
+        0,
+        31
+      ],
+      "text": "Paris is the capital of France."
+    },
+    {
+      "claim_id": "c2",
+      "metadata": {
+        "extractor": "sentence_split",
+        "source_index": 2
+      },
+      "span": [
+        31,
+        59
+      ],
+      "text": "The moon is made of cheese."
+    }
+  ],
+  "diagnostics": {
+    "truth_proj": 5.0
+  },
+  "events": [
+    {
+      "created_at": null,
+      "event_type": "diagnostics_observed",
+      "payload": {
+        "truth_proj": 5.0
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "claims_verified",
+      "payload": {
+        "n_claims": 2
+      }
+    },
+    {
+      "created_at": null,
+      "event_type": "risk_decision",
+      "payload": {
+        "action": "retrieve",
+        "confidence": 0.5359535105145077,
+        "diagnostics": {
+          "missing_scores": [],
+          "severities": {
+            "truth_proj": 0.07190702102901544
+          },
+          "thresholds": {
+            "truth_proj": 4.664583683013916
+          },
+          "triggered_scores": [
+            "truth_proj"
+          ]
+        },
+        "reason": "calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "medium"
+      }
+    }
+  ],
+  "metadata": {
+    "artifact_model_id": "gpt2",
+    "artifact_scores": [
+      "truth_proj"
+    ],
+    "artifact_target_layer": -6,
+    "source": "examples/calibrated_control_demo.py"
+  },
+  "request_id": "demo-request",
+  "risk_decision": {
+    "action": "retrieve",
+    "confidence": 0.5359535105145077,
+    "diagnostics": {
+      "missing_scores": [],
+      "severities": {
+        "truth_proj": 0.07190702102901544
+      },
+      "thresholds": {
+        "truth_proj": 4.664583683013916
+      },
+      "triggered_scores": [
+        "truth_proj"
+      ]
+    },
+    "reason": "calibrated diagnostic threshold exceeded: truth_proj",
+    "risk_level": "medium"
+  },
+  "verification_results": [
+    {
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=supported",
+      "metadata": {
+        "key": "paris is the capital of france"
+      },
+      "status": "supported"
+    },
+    {
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=refuted",
+      "metadata": {
+        "key": "the moon is made of cheese"
+      },
+      "status": "refuted"
+    }
+  ]
+}

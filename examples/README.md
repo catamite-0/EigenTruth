@@ -12,16 +12,57 @@ A minimal end-to-end demonstration using `Qwen/Qwen2.5-0.5B-Instruct`. It loads 
 
 A larger qualitative comparison over several prompts. It prints generated text with and without steering, plus Mahalanobis-style distance and HSE diagnostics. Output differences should be treated as observations, not proof of factual correction.
 
+### `calibrated_control_demo.py`
+
+A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
+or uses built-in toy thresholds, verifies simple claims, combines diagnostics
+and verification results through `RiskController`, plans an `ActionRequest`,
+executes it through `ActionExecutorRegistry` with a dry-run fallback, and prints
+a JSON `ProductTrace`.
+
 ## Running An Example
 
 Install EigenTruth in editable mode and run a script from the repository root:
 
 ```bash
-python -m pip install -e .[dev]
+python -m pip install -e ".[examples]"
 python examples/qwen_truth_demo.py
+python examples/calibrated_control_demo.py
 ```
 
 The examples may download model weights from Hugging Face. Review model licenses, download sizes, and any requirements for remote code before running a new model.
+
+`calibrated_control_demo.py` does not load a model or download data. It is a
+small product-flow check for artifact-driven diagnostics, claim verification,
+action planning, dry-run execution, and trace output:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --diagnostics '{"maha_last": 4.2, "subspace_resid": 0.4}'
+```
+
+
+The demo can also route unsupported claims to the dependency-free in-memory
+retrieval executor and register the saved trace in a local JSON registry:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --text "Paris is the capital of France. Atlantis has 3 moons today." \
+  --facts '{"Paris is the capital of France":"supported"}' \
+  --diagnostics '{"maha_last":1.0,"subspace_resid":0.1}' \
+  --retrieval-evidence '["Atlantis has no verified moons in the provided archive."]' \
+  --output /tmp/eigentruth_trace.json \
+  --registry /tmp/eigentruth_registry.json
+```
+
+It can also use the dependency-free lexical groundedness verifier. Pass evidence
+snippets as a JSON list and optional explicit refutations as a JSON object:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --text "Paris is the capital of France. The moon is made of cheese." \
+  --evidence '[{"source": "atlas", "text": "Paris is the capital of France."}, {"source": "nasa", "text": "The moon is not made of cheese; lunar samples are rock."}]'
+```
 
 ## Structure For New Example Scripts
 

@@ -128,13 +128,12 @@ class EigenTruthWrapper(nn.Module):
         def _collect_states(dataset: List[str]) -> List[Tensor]:
             collected: List[Tensor] = []
 
-            def _collect_hook(module: nn.Module, input: Any, output: Any) -> None:
+            def _collect_hook(_module: nn.Module, _input: Any, output: Any) -> None:
                 hidden, _ = TruthProbe._unpack_output(output)
                 # 提取最后一个 token 的表征，逐样本安全处理 B>1
                 # Extract last-token repr, safely handle batch_size > 1
                 h_last = hidden.detach()[:, -1, :]  # [B, D]
-                for i in range(h_last.shape[0]):
-                    collected.append(h_last[i].cpu())
+                collected.extend(h.cpu() for h in h_last)
 
             layers = TruthProbe._find_layers(
                 self.model, custom_layer_path=self.custom_layer_path
@@ -143,7 +142,7 @@ class EigenTruthWrapper(nn.Module):
             hook_handle = target_layer.register_forward_hook(_collect_hook)
 
             try:
-                for i, text in enumerate(dataset):
+                for text in dataset:
                     inputs = tokenizer(
                         text, return_tensors="pt", max_length=max_length,
                         truncation=True, padding=True
@@ -194,12 +193,12 @@ class EigenTruthWrapper(nn.Module):
                 f"建议至少提供 2 条以上事实语料。"
             )
             return
-        else:
-            self.manifold.to(device)
-            logger.info(
-                f"✅ 真值流形已就绪 — {self.manifold.n} 个样本, "
-                f"hidden_dim={self.manifold.hidden_dim}"
-            )
+
+        self.manifold.to(device)
+        logger.info(
+            f"✅ 真值流形已就绪 — {self.manifold.n} 个样本, "
+            f"hidden_dim={self.manifold.hidden_dim}"
+        )
 
         # 挂载正式探针
         self._activate_probe()

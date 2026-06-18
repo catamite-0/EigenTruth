@@ -1,0 +1,257 @@
+"""Dependency-free retrieval adapter interfaces and local executor."""
+
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
+
+from eigentruth.control.actions import (
+    ActionExecutionStatus,
+    ActionExecutor,
+    ActionRequest,
+    ActionResult,
+    DryRunActionExecutor,
+)
+from eigentruth.control.policy import ControlAction
+
+_TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+
+
+@dataclass(frozen=True)
+class RetrievalQuery:
+    """One dependency-free retrieval query."""
+
+    query: str
+    claim_id: str | None = None
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.query.strip():
+            raise ValueError("retrieval query must be non-empty.")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "query": self.query,
+            "claim_id": self.claim_id,
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RetrievalQuery":
+        """Build a retrieval query from JSON-like data."""
+        claim_id = data.get("claim_id")
+        return cls(
+            query=str(data["query"]),
+            claim_id=None if claim_id is None else str(claim_id),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class RetrievalHit:
+    """One retrieval hit returned by a retriever."""
+
+    text: str
+    source: str | None = None
+    score: float = 1.0
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.text.strip():
+            raise ValueError("retrieval hit text must be non-empty.")
+        score = float(self.score)
+        if not (0.0 <= score <= 1.0):
+            raise ValueError("retrieval hit score must be in [0, 1].")
+        object.__setattr__(self, "score", score)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "text": self.text,
+            "source": self.source,
+            "score": self.score,
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RetrievalHit":
+        """Build a retrieval hit from JSON-like data."""
+        text = data.get("text", data.get("content"))
+        if text is None:
+            raise ValueError("retrieval hit mapping must contain 'text' or 'content'.")
+        source = data.get("source")
+        return cls(
+            text=str(text),
+            source=None if source is None else str(source),
+            score=float(data.get("score", 1.0)),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@runtime_checkable
+class Retriever(Protocol):
+    """Interface for local or external retrieval implementations."""
+
+    def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> Sequence[RetrievalHit]:
+        """Return retrieval hits for one query."""
+        ...
+
+
+@dataclass(frozen=True)
+class InMemoryRetriever:
+    """Token-overlap retriever over local text snippets."""
+
+    documents: Sequence[RetrievalHit | Mapping[str, Any] | str]
+    min_overlap: float = 0.2
+
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.min_overlap <= 1.0):
+            raise ValueError("min_overlap must be in [0, 1].")
+        object.__setattr__(self, "documents", tuple(_coerce_hit(item) for item in self.documents))
+
+    def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
+        """Return top local documents by lexical token overlap."""
+        if limit <= 0:
+            return ()
+        query_tokens = _tokens(query.query)
+        scored: list[tuple[float, RetrievalHit]] = []
+        for document in self.documents:
+            overlap = _token_overlap(query_tokens, _tokens(document.text))
+            if overlap < self.min_overlap:
+                continue
+            score = min(1.0, overlap * document.score)
+            metadata = {
+                **dict(document.metadata),
+                "token_overlap": overlap,
+                "retriever": type(self).__name__,
+            }
+            scored.append((score, RetrievalHit(document.text, document.source, score, metadata)))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return tuple(hit for _, hit in scored[:limit])
+
+
+@dataclass(frozen=True)
+class RetrievalActionExecutor:
+    """Execute retrieve actions against a dependency-free retriever."""
+
+    retriever: Retriever
+    fallback_executor: ActionExecutor = field(default_factory=DryRunActionExecutor)
+    limit: int = 5
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Execute one retrieve action locally, or fall back for other actions."""
+        if request.action is not ControlAction.RETRIEVE:
+            return self.fallback_executor.execute(request, context=context)
+
+        queries = _queries_from_request(request)
+        if not queries:
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SKIPPED,
+                output={"hits": (), "queries": (), "reason": "no retrieval targets"},
+                metadata={
+                    "executor": type(self).__name__,
+                    "request_metadata": dict(request.metadata),
+                    "context": dict(context or {}),
+                    "side_effects": False,
+                },
+                request_id=request.request_id,
+            )
+
+        limit = _limit_from_payload(request.payload, default=self.limit)
+        hits_by_query = []
+        all_hits = []
+        for query in queries:
+            hits = tuple(self.retriever.retrieve(query, limit=limit))
+            hit_dicts = tuple(hit.to_dict() for hit in hits)
+            hits_by_query.append({"query": query.to_dict(), "hits": hit_dicts})
+            all_hits.extend(hit_dicts)
+
+        return ActionResult(
+            action=request.action,
+            status=ActionExecutionStatus.SUCCEEDED,
+            output={
+                "queries": tuple(query.to_dict() for query in queries),
+                "hits": tuple(all_hits),
+                "hits_by_query": tuple(hits_by_query),
+            },
+            metadata={
+                "executor": type(self).__name__,
+                "request_metadata": dict(request.metadata),
+                "context": dict(context or {}),
+                "side_effects": False,
+            },
+            request_id=request.request_id,
+        )
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Execute multiple action requests."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+
+def _coerce_hit(value: RetrievalHit | Mapping[str, Any] | str) -> RetrievalHit:
+    if isinstance(value, RetrievalHit):
+        return value
+    if isinstance(value, str):
+        return RetrievalHit(value)
+    return RetrievalHit.from_dict(value)
+
+
+def _queries_from_request(request: ActionRequest) -> tuple[RetrievalQuery, ...]:
+    payload = dict(request.payload)
+    targets = payload.get("retrieval_targets", ())
+    queries: list[RetrievalQuery] = []
+    if isinstance(targets, Mapping):
+        targets = (targets,)
+    if isinstance(targets, Sequence) and not isinstance(targets, str):
+        for target in targets:
+            if isinstance(target, Mapping):
+                text = str(target.get("text", "")).strip()
+                if not text:
+                    continue
+                raw_claim_id = target.get("claim_id")
+                claim_id = None if raw_claim_id is None else str(raw_claim_id)
+                queries.append(
+                    RetrievalQuery(
+                        query=text,
+                        claim_id=claim_id,
+                        metadata={"target": dict(target)},
+                    )
+                )
+            elif isinstance(target, str) and target.strip():
+                queries.append(RetrievalQuery(query=target.strip()))
+    raw_query = payload.get("query")
+    if not queries and isinstance(raw_query, str) and raw_query.strip():
+        queries.append(RetrievalQuery(query=raw_query.strip()))
+    return tuple(queries)
+
+
+def _limit_from_payload(payload: Mapping[str, Any], *, default: int) -> int:
+    try:
+        value = int(payload.get("limit", default))
+    except (TypeError, ValueError):
+        return max(1, int(default))
+    return max(1, value)
+
+
+def _tokens(text: str) -> tuple[str, ...]:
+    return tuple(match.group(0).casefold() for match in _TOKEN_RE.finditer(text))
+
+
+def _token_overlap(query_tokens: Sequence[str], document_tokens: Sequence[str]) -> float:
+    if not query_tokens:
+        return 0.0
+    document_set = set(document_tokens)
+    if not document_set:
+        return 0.0
+    return sum(1 for token in query_tokens if token in document_set) / len(query_tokens)

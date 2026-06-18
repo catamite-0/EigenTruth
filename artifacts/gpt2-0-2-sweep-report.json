@@ -1,0 +1,532 @@
+{
+  "best": {
+    "auroc": 0.7487702603047087,
+    "conformal_alpha": 0.2,
+    "detection": 0.4884910485933504,
+    "direction": "higher",
+    "false_alarm": 0.19785276073619631,
+    "layer": -6,
+    "n_false": 782,
+    "n_true": 652,
+    "score_name": "truth_proj",
+    "threshold": 4.664583683013916
+  },
+  "best_by": "auroc",
+  "commit_sha": null,
+  "conformal_alpha": 0.2,
+  "created_at": "2026-06-17T08:17:51.456883+00:00",
+  "eigentruth_version": "0.1.0",
+  "layers": [
+    {
+      "layer": -12,
+      "scores": [
+        {
+          "auroc": 0.5785346680683476,
+          "conformal_alpha": 0.2,
+          "detection": 0.309462915601023,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -12,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 30.520267486572266
+        },
+        {
+          "auroc": 0.5303453469944927,
+          "conformal_alpha": 0.2,
+          "detection": 0.27237851662404094,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -12,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 6.5920281410217285
+        },
+        {
+          "auroc": 0.5739118666938635,
+          "conformal_alpha": 0.2,
+          "detection": 0.2774936061381074,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -12,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -1.4942318201065063
+        }
+      ]
+    },
+    {
+      "layer": -11,
+      "scores": [
+        {
+          "auroc": 0.5666873911474433,
+          "conformal_alpha": 0.2,
+          "detection": 0.31074168797953966,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -11,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 37.412208557128906
+        },
+        {
+          "auroc": 0.5246752075063154,
+          "conformal_alpha": 0.2,
+          "detection": 0.26854219948849106,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -11,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 8.225682258605957
+        },
+        {
+          "auroc": 0.6388919398114007,
+          "conformal_alpha": 0.2,
+          "detection": 0.3248081841432225,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -11,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -7.390458106994629
+        }
+      ]
+    },
+    {
+      "layer": -10,
+      "scores": [
+        {
+          "auroc": 0.5868663016019958,
+          "conformal_alpha": 0.2,
+          "detection": 0.3312020460358056,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -10,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 37.680728912353516
+        },
+        {
+          "auroc": 0.5285566347104326,
+          "conformal_alpha": 0.2,
+          "detection": 0.27877237851662406,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -10,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 10.933274269104004
+        },
+        {
+          "auroc": 0.6672642116329061,
+          "conformal_alpha": 0.2,
+          "detection": 0.3593350383631714,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -10,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -8.081849098205566
+        }
+      ]
+    },
+    {
+      "layer": -9,
+      "scores": [
+        {
+          "auroc": 0.615211115120895,
+          "conformal_alpha": 0.2,
+          "detection": 0.3414322250639386,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -9,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 39.95612335205078
+        },
+        {
+          "auroc": 0.5739589380697597,
+          "conformal_alpha": 0.2,
+          "detection": 0.2915601023017903,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -9,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 14.65503215789795
+        },
+        {
+          "auroc": 0.6940164436006464,
+          "conformal_alpha": 0.2,
+          "detection": 0.43478260869565216,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -9,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -8.587166786193848
+        }
+      ]
+    },
+    {
+      "layer": -8,
+      "scores": [
+        {
+          "auroc": 0.6336729010088965,
+          "conformal_alpha": 0.2,
+          "detection": 0.3631713554987212,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -8,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 42.34383010864258
+        },
+        {
+          "auroc": 0.5935092495253637,
+          "conformal_alpha": 0.2,
+          "detection": 0.32864450127877237,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -8,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 19.80633544921875
+        },
+        {
+          "auroc": 0.7206098096747368,
+          "conformal_alpha": 0.2,
+          "detection": 0.46035805626598464,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -8,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -2.2733917236328125
+        }
+      ]
+    },
+    {
+      "layer": -7,
+      "scores": [
+        {
+          "auroc": 0.6349850156120064,
+          "conformal_alpha": 0.2,
+          "detection": 0.3554987212276215,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -7,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 43.556549072265625
+        },
+        {
+          "auroc": 0.5895395634914409,
+          "conformal_alpha": 0.2,
+          "detection": 0.30051150895140666,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -7,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 22.215055465698242
+        },
+        {
+          "auroc": 0.7277195487424097,
+          "conformal_alpha": 0.2,
+          "detection": 0.42071611253196933,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -7,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -0.1996525526046753
+        }
+      ]
+    },
+    {
+      "layer": -6,
+      "scores": [
+        {
+          "auroc": 0.6493633596410023,
+          "conformal_alpha": 0.2,
+          "detection": 0.3414322250639386,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -6,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 43.180747985839844
+        },
+        {
+          "auroc": 0.6050888079958577,
+          "conformal_alpha": 0.2,
+          "detection": 0.27365728900255754,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -6,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 29.94879722595215
+        },
+        {
+          "auroc": 0.7487702603047087,
+          "conformal_alpha": 0.2,
+          "detection": 0.4884910485933504,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -6,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": 4.664583683013916
+        }
+      ]
+    },
+    {
+      "layer": -5,
+      "scores": [
+        {
+          "auroc": 0.649751698492147,
+          "conformal_alpha": 0.2,
+          "detection": 0.3375959079283887,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -5,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 43.254730224609375
+        },
+        {
+          "auroc": 0.5978378548004958,
+          "conformal_alpha": 0.2,
+          "detection": 0.29539641943734013,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -5,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 37.086402893066406
+        },
+        {
+          "auroc": 0.7399620290901103,
+          "conformal_alpha": 0.2,
+          "detection": 0.43350383631713557,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -5,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": 2.5210471153259277
+        }
+      ]
+    },
+    {
+      "layer": -4,
+      "scores": [
+        {
+          "auroc": 0.6504891500478559,
+          "conformal_alpha": 0.2,
+          "detection": 0.3734015345268542,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -4,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 43.95722579956055
+        },
+        {
+          "auroc": 0.5979927980794879,
+          "conformal_alpha": 0.2,
+          "detection": 0.30818414322250637,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -4,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 47.97682571411133
+        },
+        {
+          "auroc": 0.7375574663047401,
+          "conformal_alpha": 0.2,
+          "detection": 0.4616368286445013,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -4,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": 10.999284744262695
+        }
+      ]
+    },
+    {
+      "layer": -3,
+      "scores": [
+        {
+          "auroc": 0.6245292862410369,
+          "conformal_alpha": 0.2,
+          "detection": 0.2979539641943734,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -3,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 47.59237289428711
+        },
+        {
+          "auroc": 0.547753910846814,
+          "conformal_alpha": 0.2,
+          "detection": 0.24808184143222506,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -3,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 65.3759765625
+        },
+        {
+          "auroc": 0.7302986678800621,
+          "conformal_alpha": 0.2,
+          "detection": 0.43478260869565216,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -3,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": 24.455785751342773
+        }
+      ]
+    },
+    {
+      "layer": -2,
+      "scores": [
+        {
+          "auroc": 0.5742041014858864,
+          "conformal_alpha": 0.2,
+          "detection": 0.20460358056265984,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -2,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 52.33378601074219
+        },
+        {
+          "auroc": 0.5060251361147287,
+          "conformal_alpha": 0.2,
+          "detection": 0.17263427109974425,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -2,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 90.5650863647461
+        },
+        {
+          "auroc": 0.7194624448872641,
+          "conformal_alpha": 0.2,
+          "detection": 0.42071611253196933,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -2,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": 39.31105422973633
+        }
+      ]
+    },
+    {
+      "layer": -1,
+      "scores": [
+        {
+          "auroc": 0.5501663188615004,
+          "conformal_alpha": 0.2,
+          "detection": 0.21483375959079284,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -1,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "maha_last",
+          "threshold": 15.68557071685791
+        },
+        {
+          "auroc": 0.49121530447334977,
+          "conformal_alpha": 0.2,
+          "detection": 0.2020460358056266,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -1,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "subspace_resid",
+          "threshold": 15.143138885498047
+        },
+        {
+          "auroc": 0.5545831829664382,
+          "conformal_alpha": 0.2,
+          "detection": 0.2608695652173913,
+          "direction": "higher",
+          "false_alarm": 0.19785276073619631,
+          "layer": -1,
+          "n_false": 782,
+          "n_true": 652,
+          "score_name": "truth_proj",
+          "threshold": -312.7175598144531
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "config": {
+      "hidden_dim": 768,
+      "layer": -8,
+      "manifold_n": 266,
+      "model": "gpt2",
+      "n_manifold_false": 338,
+      "n_neg": 652,
+      "n_pos": 782,
+      "offline": false,
+      "seed": 0,
+      "subspace_rank": 2
+    },
+    "source": "eval_conformal.py"
+  },
+  "model_id": "gpt2",
+  "model_revision": null,
+  "schema_version": 1,
+  "scores_path": "benchmarks/scores_gpt2_0_2.json"
+}

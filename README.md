@@ -12,7 +12,7 @@
 [![Python: 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://python.org)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-[Quick start](#quick-start) | [Architecture](#architecture) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
+[Quick start](#quick-start) | [Architecture](#architecture) | [Product Charter](docs/product-development-spec.md) | [Methodology](docs/methodology.md) | [Examples](examples/README.md) | [Roadmap](ROADMAP.md) | [Contributing](CONTRIBUTING.md) | [Security](SECURITY.md)
 
 </div>
 
@@ -34,6 +34,9 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 - track Mahalanobis-style distance from that warmup manifold
 - project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE)
 - optionally build a contrastive direction from factual and false examples
+- fit a low-rank `TruthSubspace` and score residual distance from factual states
+- calibrate diagnostic thresholds from benchmark score dumps and combine them with claim verification
+- compile risk decisions into structured action requests and dry-run execution results
 - optionally apply experimental activation steering when a configured threshold is exceeded
 
 EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
@@ -42,6 +45,9 @@ EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 - 跟踪隐藏状态相对于 warmup 流形的马氏距离风格指标
 - 将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）
 - 可选地使用事实与错误样本构建对比方向
+- 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
+- 从 benchmark 分数 dump 校准诊断阈值，并与 claim 验证结果组合成风险决策
+- 将风险决策编译成结构化 action request 与 dry-run 执行结果
 - 可选地在超过配置阈值时执行实验性激活引导
 
 ### What It Does Not Do
@@ -54,8 +60,16 @@ EigenTruth 不能保证事实正确性，不能消除幻觉，不能验证模型
 
 ### Installation
 
+Core install, for the math engine and offline diagnostics:
+
 ```bash
 pip install git+https://github.com/catamitez0-maker/EigenTruth.git
+```
+
+Install the Hugging Face extra when using `EigenTruthWrapper` with model-loading workflows:
+
+```bash
+pip install "eigentruth[hf] @ git+https://github.com/catamitez0-maker/EigenTruth.git"
 ```
 
 For local development:
@@ -66,7 +80,9 @@ cd EigenTruth
 python -m venv .venv
 # POSIX:   source .venv/bin/activate
 # Windows: .venv\Scripts\activate
-python -m pip install -e .[dev]
+python -m pip install -e ".[dev]"
+# Optional: add Hugging Face/example dependencies for model-loading demos
+python -m pip install -e ".[examples]"
 ```
 
 ### Minimal Integration
@@ -89,6 +105,18 @@ Start with `steering_lambda=0.0` to inspect diagnostics without modifying activa
 建议先使用 `steering_lambda=0.0`，在不修改激活值的情况下检查诊断结果。仅在明确的干预实验中启用非零引导强度。
 
 For a runnable model-loading demo, see [`examples/qwen_truth_demo.py`](examples/qwen_truth_demo.py). Example scripts may download model weights and are demonstrations rather than benchmarks. See [`examples/README.md`](examples/README.md) before adding or interpreting experiments.
+
+### Calibrated Observability Workflow
+
+```bash
+python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
+  --dump-scores benchmarks/scores.json
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
+  --save-sweep-report artifacts/gpt2-sweep-report.json \
+  --save-best-calibration artifacts/gpt2-best-calibration.json
+```
+
+This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records.
 
 ## Architecture
 
@@ -133,6 +161,13 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
 | `TruthProbe` | Captures selected-layer hidden states and optionally applies steering. |
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
+| `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics. |
+| `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
+| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces. |
+| `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
+| `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
+| `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
 ### 主要组件
 
@@ -144,6 +179,13 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
 | `TruthProbe` | 捕获指定层的隐藏状态，并可选地应用激活引导。 |
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
+| `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断。 |
+| `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
+| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace。 |
+| `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
+| `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
+| `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 
 ## Experimental Model Compatibility
 
@@ -175,7 +217,14 @@ Do not interpret output changes as benchmark evidence or as proof that a correct
 
 ```bash
 python -m pytest tests/ -v
-python -m ruff check src tests examples
+python -m ruff check src tests examples benchmarks
+```
+
+For local development, the Makefile auto-detects `.venv/bin/python` when present:
+
+```bash
+make check
+make release-check  # also builds the package
 ```
 
 The unit suite covers numerical stability, hook behavior, warmup, diagnostics, and wrapper lifecycle. It does not replace evaluation against factuality benchmarks or model-specific integration testing.
@@ -190,9 +239,10 @@ For routine changes:
 2. Make the smallest coherent change.
 3. Add or update tests for behavior changes.
 4. Run `python -m pytest tests/ -v`.
-5. Run `python -m ruff check src tests examples`.
-6. Update documentation when experiment assumptions, interfaces, or limitations change.
-7. Open a pull request with the motivation, validation steps, and any research caveats.
+5. Run `python -m ruff check src tests examples benchmarks`.
+6. Run `python -m pip check` and `python -m build` before packaging-oriented changes.
+7. Update documentation when experiment assumptions, interfaces, or limitations change.
+8. Open a pull request with the motivation, validation steps, and any research caveats.
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the complete contributor workflow and [`ROADMAP.md`](ROADMAP.md) for near-term priorities.
 

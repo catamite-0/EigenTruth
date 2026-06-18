@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Alpha research-preview PyTorch toolkit for LLM representation monitoring, geometric drift diagnostics, and experimental activation steering / 面向大模型表征监测、几何漂移诊断与实验性激活引导的 PyTorch 研究预览工具库"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [
     {name = "EigenTruth Team"},
 ]
@@ -17,27 +18,36 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
     "torch>=2.0",
-    "transformers>=4.35",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "build>=1.2",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.4",
 ]
 eval = [
-    "datasets>=2.14",
+    "datasets>=2.14,<5",
+]
+hf = [
+    "transformers>=4.35,<6",
+]
+examples = [
+    "accelerate>=0.25",
+    "safetensors>=0.4",
+    "sentencepiece>=0.1.99",
+    "transformers>=4.35,<6",
 ]
 
 [project.urls]

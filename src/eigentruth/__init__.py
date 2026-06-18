@@ -18,6 +18,7 @@ from eigentruth.core.math_engine import (
     poincare_map,
     sherman_morrison_update,
 )
+from eigentruth.core.subspace import TruthSubspace
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.models.wrapper import EigenTruthWrapper
 
@@ -25,6 +26,7 @@ __all__ = [
     "EigenTruthWrapper",
     "TruthProbe",
     "TruthManifold",
+    "TruthSubspace",
     "mahalanobis_distance",
     "poincare_map",
     "hyperbolic_semantic_entropy",
