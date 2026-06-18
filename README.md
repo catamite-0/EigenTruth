@@ -116,7 +116,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json
 ```
 
-This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records.
+This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records. The dependency-free `run_verification_loop(...)` helper can also execute retrieve actions, feed retrieved evidence back into verification, and emit a final decision trace.
 
 Score directions are explicit: use `higher` for scores where larger values are more anomalous and `lower` for scores where smaller values are more anomalous. The shared directional conformal helpers keep thresholds, trigger rates, and selective reports in the same native score units. Control-plane diagnostics fail closed on invalid numeric inputs such as `NaN` or `Inf`, returning `clarify/unknown` instead of silently accepting the output.
 
@@ -169,6 +169,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
+| `run_verification_loop` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops and converts retrieval action results into verifier-ready evidence context. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 
@@ -188,6 +189,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
+| `run_verification_loop` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 
