@@ -17,8 +17,8 @@ A larger qualitative comparison over several prompts. It prints generated text w
 A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
 or uses built-in toy thresholds, verifies simple claims, combines diagnostics
 and verification results through `RiskController`, plans an `ActionRequest`,
-executes it through `ActionExecutorRegistry` with a dry-run fallback, and prints
-a JSON `ProductTrace`.
+executes it through `ActionExecutorRegistry`, feeds retrieval hits back into
+verification when available, and prints a final JSON `ProductTrace`.
 
 ## Running An Example
 
@@ -43,17 +43,22 @@ python examples/calibrated_control_demo.py \
 
 
 The demo can also route unsupported claims to the dependency-free in-memory
-retrieval executor and register the saved trace in a local JSON registry:
+retrieval executor, feed retrieval hits back into the groundedness verifier, and
+register the saved trace in a local JSON registry:
 
 ```bash
 python examples/calibrated_control_demo.py \
-  --text "Paris is the capital of France. Atlantis has 3 moons today." \
-  --facts '{"Paris is the capital of France":"supported"}' \
+  --text "Paris is the capital of France." \
+  --evidence '[]' \
   --diagnostics '{"maha_last":1.0,"subspace_resid":0.1}' \
-  --retrieval-evidence '["Atlantis has no verified moons in the provided archive."]' \
+  --retrieval-evidence '[{"source":"atlas","text":"Paris is the capital of France."}]' \
   --output /tmp/eigentruth_trace.json \
   --registry /tmp/eigentruth_registry.json
 ```
+
+In this path the initial groundedness result is unsupported, the retrieve action
+returns local evidence, and the final trace records the reverified supported
+claim plus the final `accept` decision.
 
 It can also use the dependency-free lexical groundedness verifier. Pass evidence
 snippets as a JSON list and optional explicit refutations as a JSON object:

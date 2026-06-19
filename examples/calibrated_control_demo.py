@@ -21,10 +21,8 @@ from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutorRegistry,
     ControlAction,
-    DefaultCorrectionPolicy,
-    ProductTrace,
     RiskController,
-    TraceEvent,
+    run_verification_loop,
 )
 from eigentruth.registry import ArtifactRegistry
 from eigentruth.verify import (
@@ -116,43 +114,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     claims = extract_claims(args.text)
     verifier = build_verifier(facts, evidence, refutations)
-    verification_results = verifier.verify_many(claims)
-
     controller = RiskController(artifact)
-    decision = controller.decide(
-        {key: float(value) for key, value in diagnostics.items()},
-        verification_results=verification_results,
-    )
-    action_requests = DefaultCorrectionPolicy().plan(
-        decision,
-        claims=claims,
-        verification_results=verification_results,
-    )
     executor_registry = ActionExecutorRegistry()
     if retrieval_evidence is not None:
         executor_registry.register(
             ControlAction.RETRIEVE,
             RetrievalActionExecutor(InMemoryRetriever(retrieval_evidence)),
         )
-    action_results = executor_registry.execute_many(action_requests, context={"request_id": args.request_id})
-    trace = ProductTrace(
+
+    loop_result = run_verification_loop(
         request_id=args.request_id,
-        diagnostics=diagnostics,
+        diagnostics={key: float(value) for key, value in diagnostics.items()},
         claims=claims,
-        verification_results=verification_results,
-        risk_decision=decision,
-        actions=action_requests,
-        action_results=action_results,
-        events=(
-            TraceEvent("diagnostics_observed", diagnostics),
-            TraceEvent("claims_verified", {"n_claims": len(claims)}),
-            TraceEvent("risk_decision", decision.to_dict()),
-            TraceEvent("actions_planned", {"n_actions": len(action_requests)}),
-            TraceEvent(
-                "actions_executed",
-                {"n_results": len(action_results), "statuses": tuple(result.status.value for result in action_results)},
-            ),
-        ),
+        verifier=verifier,
+        controller=controller,
+        executor_registry=executor_registry,
         metadata={
             "artifact_model_id": artifact.model_id,
             "artifact_target_layer": artifact.target_layer,
@@ -163,6 +139,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "registered_actions": tuple(action.value for action in executor_registry.executors),
         },
     )
+    trace = loop_result.trace
     payload = trace.to_dict()
     output_path = Path(args.output) if args.output else None
     if args.registry and output_path is None:
@@ -173,9 +150,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ArtifactRegistry.load_json(args.registry).record_trace(
             name=args.request_id,
             path=str(output_path) if output_path is not None else "stdout",
-            version="0.3",
+            version="0.4",
             metadata={
                 "source": "examples/calibrated_control_demo.py",
+                "loop_version": "0.4",
                 "action_execution_summary": trace.action_execution_summary(),
                 "verifier_type": type(verifier).__name__,
             },

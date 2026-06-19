@@ -18,6 +18,7 @@ Implemented today:
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/abstain/clarify flows.
 - `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution for local control-loop traces.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, and metadata.
+- `eigentruth.control.run_verification_loop` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that feeds retrieval action results back into verifier context.
 - `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
@@ -175,7 +176,7 @@ Current modules should remain narrow:
 - `eigentruth.models`: user-facing wrappers around model instances.
 - `eigentruth.eval`: metrics, conformal thresholds, selective reports, and benchmark helpers.
 - `eigentruth.calibration`: calibration artifacts and parameter sweeps.
-- `eigentruth.control`: risk controller, policy configuration, correction policy, action executor registry, and traces.
+- `eigentruth.control`: risk controller, policy configuration, correction policy, action executor registry, verification loops, and traces.
 - `eigentruth.verify`: claim extraction, verifier protocols, in-memory verification, and lexical groundedness.
 - `eigentruth.registry`: local artifact metadata records.
 - `eigentruth.adapters`: optional integration shells, including retrieval and world models.
@@ -231,7 +232,13 @@ For product features:
 - Claim extraction metadata for numbers, citations, negation, and time-sensitive claims.
 - Benchmark reports now include selective accuracy, coverage, and confidence intervals.
 
-### Next 0.4 Verification Adapter Work
+### Completed 0.4 Verification Loop Shell
+
+- Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output.
+- `EvidenceBundle` conversion from retrieval `ActionResult` payloads into claim-scoped verifier evidence context.
+- Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
+
+### Next Verification Adapter Work
 
 - Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.
 - Add concrete domain/world-model adapters beyond the in-memory test double.
