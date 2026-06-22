@@ -6,9 +6,11 @@ import argparse
 import json
 import math
 import sys
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -133,65 +135,108 @@ class LocalRetrievalRouteWorkflowConfig:
 
 def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig) -> dict[str, Any]:
     """Run local retrieval evidence construction, route promotion, and optional registration."""
+    workflow_started = time.perf_counter()
+    profile: dict[str, float] = {}
     config.output_dir.mkdir(parents=True, exist_ok=True)
-    score_dump = load_score_dump(config.scores_path)
-    corpus_documents = load_corpus(config.corpus_paths)
-    claims_fixture = build_evidence_fixture(
-        score_dump,
-        corpus_documents,
-        retriever_min_overlap=config.retriever_min_overlap,
-        retrieval_limit=config.retrieval_limit,
-        query_field=config.query_field,
-    )
-    _write_json(config.resolved_claims_path, claims_fixture, compact=config.compact_json)
 
-    verifier_report = build_verifier_ensemble_report(
-        ((config.score_name, config.scores_path),),
-        signal=config.signal,
-        claims_path=config.resolved_claims_path,
-        direction=config.direction,
-        alphas=(config.alpha,),
-        repeats=config.repeats,
-        seed=config.seed,
-        verifier_min_overlap=config.verifier_min_overlap,
-        retriever_min_overlap=config.retriever_min_overlap,
-        retrieval_limit=config.retrieval_limit,
-    )
-    _write_json(config.resolved_verifier_report_path, verifier_report, compact=config.compact_json)
+    with _profile_phase(profile, "load_inputs"):
+        score_dump = load_score_dump(config.scores_path)
+        corpus_documents = load_corpus(config.corpus_paths)
 
-    promotion_report = run_adapter_promotion_workflow(
-        AdapterPromotionWorkflowConfig(
-            reports=((config.score_name, config.resolved_verifier_report_path),),
-            route_report_path=config.resolved_route_report_path,
-            alpha=config.alpha,
-            min_selected=config.min_selected,
-            notes=("local retrieval route workflow",),
-            gate_routes=config.gate_routes,
-            gate_min_selected=config.gate_min_selected,
-            min_decision_accuracy=config.min_decision_accuracy,
-            max_false_supported_rate=config.max_false_supported_rate,
-            min_false_refuted_rate=config.min_false_refuted_rate,
-            max_verified_false_alarm=config.max_verified_false_alarm,
-            min_verified_detection=config.min_verified_detection,
-            max_mean_duration_seconds=config.max_mean_duration_seconds,
-            max_p95_duration_seconds=config.max_p95_duration_seconds,
-            max_p99_duration_seconds=config.max_p99_duration_seconds,
-            max_max_duration_seconds=config.max_max_duration_seconds,
-            max_mean_attempted_route_count=config.max_mean_attempted_route_count,
-            max_retrieval_use_rate=config.max_retrieval_use_rate,
-            min_cache_hit_rate=config.min_cache_hit_rate,
-            compact_json=config.compact_json,
+    with _profile_phase(profile, "build_claims"):
+        claims_fixture = build_evidence_fixture(
+            score_dump,
+            corpus_documents,
+            retriever_min_overlap=config.retriever_min_overlap,
+            retrieval_limit=config.retrieval_limit,
+            query_field=config.query_field,
         )
+    with _profile_phase(profile, "write_claims"):
+        _write_json(config.resolved_claims_path, claims_fixture, compact=config.compact_json)
+
+    with _profile_phase(profile, "build_verifier_report"):
+        verifier_report = build_verifier_ensemble_report(
+            ((config.score_name, config.scores_path),),
+            signal=config.signal,
+            claims_path=config.resolved_claims_path,
+            direction=config.direction,
+            alphas=(config.alpha,),
+            repeats=config.repeats,
+            seed=config.seed,
+            verifier_min_overlap=config.verifier_min_overlap,
+            retriever_min_overlap=config.retriever_min_overlap,
+            retrieval_limit=config.retrieval_limit,
+        )
+    with _profile_phase(profile, "write_verifier_report"):
+        _write_json(config.resolved_verifier_report_path, verifier_report, compact=config.compact_json)
+
+    with _profile_phase(profile, "run_adapter_promotion"):
+        promotion_report = run_adapter_promotion_workflow(
+            AdapterPromotionWorkflowConfig(
+                reports=((config.score_name, config.resolved_verifier_report_path),),
+                route_report_path=config.resolved_route_report_path,
+                alpha=config.alpha,
+                min_selected=config.min_selected,
+                notes=("local retrieval route workflow",),
+                gate_routes=config.gate_routes,
+                gate_min_selected=config.gate_min_selected,
+                min_decision_accuracy=config.min_decision_accuracy,
+                max_false_supported_rate=config.max_false_supported_rate,
+                min_false_refuted_rate=config.min_false_refuted_rate,
+                max_verified_false_alarm=config.max_verified_false_alarm,
+                min_verified_detection=config.min_verified_detection,
+                max_mean_duration_seconds=config.max_mean_duration_seconds,
+                max_p95_duration_seconds=config.max_p95_duration_seconds,
+                max_p99_duration_seconds=config.max_p99_duration_seconds,
+                max_max_duration_seconds=config.max_max_duration_seconds,
+                max_mean_attempted_route_count=config.max_mean_attempted_route_count,
+                max_retrieval_use_rate=config.max_retrieval_use_rate,
+                min_cache_hit_rate=config.min_cache_hit_rate,
+                compact_json=config.compact_json,
+            )
+        )
+    with _profile_phase(profile, "write_promotion_report"):
+        _write_json(config.resolved_promotion_report_path, promotion_report, compact=config.compact_json)
+
+    runtime_profile = _runtime_profile_payload(
+        profile,
+        total_seconds=time.perf_counter() - workflow_started,
+        config=config,
+        score_dump=score_dump,
+        corpus_documents=corpus_documents,
+        claims_fixture=claims_fixture,
+        promotion_report=promotion_report,
     )
-    _write_json(config.resolved_promotion_report_path, promotion_report, compact=config.compact_json)
 
     metadata = _manifest_metadata(
         config,
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
+        runtime_profile=runtime_profile,
     )
-    _write_artifact_manifest(config, metadata=metadata)
-    manifest_promotion = _maybe_register_manifest(config, promotion_report, metadata)
+    with _profile_phase(profile, "write_artifact_manifest"):
+        _write_artifact_manifest(config, metadata=metadata)
+    runtime_profile = _runtime_profile_payload(
+        profile,
+        total_seconds=time.perf_counter() - workflow_started,
+        config=config,
+        score_dump=score_dump,
+        corpus_documents=corpus_documents,
+        claims_fixture=claims_fixture,
+        promotion_report=promotion_report,
+    )
+
+    with _profile_phase(profile, "register_manifest"):
+        manifest_promotion = _maybe_register_manifest(config, promotion_report, metadata)
+    runtime_profile = _runtime_profile_payload(
+        profile,
+        total_seconds=time.perf_counter() - workflow_started,
+        config=config,
+        score_dump=score_dump,
+        corpus_documents=corpus_documents,
+        claims_fixture=claims_fixture,
+        promotion_report=promotion_report,
+    )
     decision = _workflow_decision(
         promotion_report=promotion_report,
         manifest_promotion=manifest_promotion,
@@ -226,6 +271,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         "claims_summary": claims_fixture["summary"],
         "adapter_promotion": promotion_report,
         "manifest_promotion": manifest_promotion,
+        "profile": runtime_profile,
         "decision": decision,
     }
     _write_json(config.resolved_workflow_report_path, payload, compact=config.compact_json)
@@ -284,6 +330,7 @@ def _manifest_metadata(
     *,
     claims_fixture: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
+    runtime_profile: Mapping[str, Any],
 ) -> dict[str, Any]:
     decision = dict(promotion_report.get("decision") or {})
     route_comparison = dict(promotion_report.get("route_comparison") or {})
@@ -293,6 +340,10 @@ def _manifest_metadata(
     recommended_metrics = dict(by_route.get(str(recommended_route)) or {}) if recommended_route else {}
     quality_gate = dict(route_comparison.get("quality_gate") or {})
     summary = dict(claims_fixture.get("summary") or {})
+    runtime_summary = dict(runtime_profile.get("summary") or {})
+    runtime_scale = dict(runtime_profile.get("scale") or {})
+    runtime_artifacts = dict(runtime_profile.get("artifacts") or {})
+    output_bytes = dict(runtime_artifacts.get("output_bytes") or {})
     metadata = {
         "runner": "run_local_retrieval_route_workflow",
         "workflow": "local_retrieval_route_workflow",
@@ -313,6 +364,17 @@ def _manifest_metadata(
         "claims_records_with_hits": summary.get("records_with_hits"),
         "claims_total_hits": summary.get("total_hits"),
         "claims_average_hits_per_record": summary.get("average_hits_per_record"),
+        "runtime_total_seconds": runtime_profile.get("total_seconds"),
+        "runtime_bottleneck": runtime_summary.get("bottleneck"),
+        "runtime_accounted_share": runtime_summary.get("accounted_share"),
+        "runtime_n_labels": runtime_scale.get("n_labels"),
+        "runtime_n_corpus_documents": runtime_scale.get("n_corpus_documents"),
+        "runtime_n_claim_records": runtime_scale.get("n_claim_records"),
+        "runtime_n_retrieval_hits": runtime_scale.get("n_retrieval_hits"),
+        "runtime_claims_json_bytes": output_bytes.get("retrieval_claims"),
+        "runtime_verifier_report_json_bytes": output_bytes.get("verifier_report"),
+        "runtime_route_report_json_bytes": output_bytes.get("route_comparison_report"),
+        "runtime_promotion_report_json_bytes": output_bytes.get("promotion_report"),
         "recommended_selected": recommended_metrics.get("selected"),
         "recommended_decision_accuracy": recommended_metrics.get("decision_accuracy"),
         "recommended_false_supported_rate": recommended_metrics.get("false_supported_rate"),
@@ -330,6 +392,125 @@ def _manifest_metadata(
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
     return metadata
+
+
+@contextmanager
+def _profile_phase(profile: dict[str, float], name: str) -> Iterator[None]:
+    started = time.perf_counter()
+    try:
+        yield
+    finally:
+        profile[name] = profile.get(name, 0.0) + (time.perf_counter() - started)
+
+
+def _runtime_profile_payload(
+    profile: Mapping[str, float],
+    *,
+    total_seconds: float,
+    config: LocalRetrievalRouteWorkflowConfig,
+    score_dump: Mapping[str, Any],
+    corpus_documents: Sequence[Any],
+    claims_fixture: Mapping[str, Any],
+    promotion_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    phases = {name: _round_seconds(seconds) for name, seconds in sorted(profile.items())}
+    scale = _runtime_scale(
+        config=config,
+        score_dump=score_dump,
+        corpus_documents=corpus_documents,
+        claims_fixture=claims_fixture,
+        promotion_report=promotion_report,
+    )
+    artifacts = {
+        "input_bytes": {
+            "score_dump": _path_size(config.scores_path),
+            **{
+                f"retrieval_corpora.{idx}.{path.stem}": _path_size(path)
+                for idx, path in enumerate(config.corpus_paths, start=1)
+            },
+        },
+        "output_bytes": {
+            "retrieval_claims": _path_size(config.resolved_claims_path),
+            "verifier_report": _path_size(config.resolved_verifier_report_path),
+            "route_comparison_report": _path_size(config.resolved_route_report_path),
+            "promotion_report": _path_size(config.resolved_promotion_report_path),
+            "artifact_manifest": _path_size(config.resolved_artifact_manifest_path),
+            "manifest_verification": _path_size(config.resolved_verification_report_path),
+        },
+    }
+    return {
+        "total_seconds": _round_seconds(total_seconds),
+        "phases": phases,
+        "summary": _runtime_profile_summary(phases, total_seconds=total_seconds),
+        "scale": scale,
+        "artifacts": artifacts,
+    }
+
+
+def _runtime_scale(
+    *,
+    config: LocalRetrievalRouteWorkflowConfig,
+    score_dump: Mapping[str, Any],
+    corpus_documents: Sequence[Any],
+    claims_fixture: Mapping[str, Any],
+    promotion_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    labels = tuple(score_dump.get("labels", ()))
+    statements = tuple(score_dump.get("statements", ()))
+    records = tuple(claims_fixture.get("records", ()))
+    summary = dict(claims_fixture.get("summary") or {})
+    route_comparison = dict(promotion_report.get("route_comparison") or {})
+    by_route = dict(route_comparison.get("by_route") or {})
+    return {
+        "n_labels": len(labels),
+        "n_statements": len(statements),
+        "n_corpus_documents": len(corpus_documents),
+        "n_claim_records": len(records),
+        "n_records_with_hits": summary.get("records_with_hits"),
+        "n_retrieval_hits": summary.get("total_hits"),
+        "average_hits_per_record": summary.get("average_hits_per_record"),
+        "n_routes": len(by_route),
+        "n_gate_routes": len(config.gate_routes),
+        "repeats": int(config.repeats),
+        "retrieval_limit": int(config.retrieval_limit),
+    }
+
+
+def _runtime_profile_summary(phases: Mapping[str, float], *, total_seconds: float) -> dict[str, Any]:
+    phase_total = sum(max(float(seconds), 0.0) for seconds in phases.values())
+    top_phases = sorted(
+        (
+            {
+                "name": name,
+                "seconds": _round_seconds(seconds),
+                "share": _runtime_share(seconds, total_seconds),
+            }
+            for name, seconds in phases.items()
+        ),
+        key=lambda item: (-float(item["seconds"]), str(item["name"])),
+    )
+    return {
+        "bottleneck": None if not top_phases else top_phases[0]["name"],
+        "top_phases": top_phases[:5],
+        "accounted_share": _runtime_share(phase_total, total_seconds),
+    }
+
+
+def _runtime_share(seconds: float, total_seconds: float) -> float:
+    if total_seconds <= 0.0:
+        return 0.0
+    return round(max(float(seconds), 0.0) / float(total_seconds), 6)
+
+
+def _round_seconds(seconds: float) -> float:
+    return round(max(float(seconds), 0.0), 6)
+
+
+def _path_size(path: Path) -> int | None:
+    try:
+        return path.stat().st_size
+    except OSError:
+        return None
 
 
 def _workflow_decision(

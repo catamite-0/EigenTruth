@@ -1001,7 +1001,11 @@ python benchmarks/run_local_retrieval_route_workflow.py \
 Use this when the local corpus baseline should enter `compare_route_baselines.py`
 and release-candidate gates. Unlike `build_evidence_fixture.py` alone, this
 workflow records the full provenance chain needed for recursive manifest
-verification.
+verification. The workflow report also includes a lightweight `profile` block
+with phase timings, input/output artifact byte sizes, dataset scale, retrieval
+hit counts, and route-count metadata. The same runtime summary is copied into
+the artifact manifest and registry metadata so route baselines can be compared
+later without rerunning the workflow.
 
 Current l80 local-corpus baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:

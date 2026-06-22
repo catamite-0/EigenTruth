@@ -1687,6 +1687,21 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert payload["decision"]["registry_record"] == "benchmark_manifest:local-retrieval-route:0.7"
     assert payload["claims_summary"]["records_with_hits"] == 4
     assert payload["claims_summary"]["total_hits"] == 4
+    profile = payload["profile"]
+    assert profile["total_seconds"] >= 0.0
+    assert profile["summary"]["bottleneck"] in profile["phases"]
+    assert profile["summary"]["accounted_share"] >= 0.0
+    assert profile["scale"]["n_labels"] == 4
+    assert profile["scale"]["n_corpus_documents"] == 4
+    assert profile["scale"]["n_claim_records"] == 4
+    assert profile["scale"]["n_retrieval_hits"] == 4
+    assert profile["scale"]["n_routes"] >= 1
+    assert profile["artifacts"]["input_bytes"]["score_dump"] > 0
+    assert profile["artifacts"]["input_bytes"]["retrieval_corpora.1.corpus"] > 0
+    assert profile["artifacts"]["output_bytes"]["retrieval_claims"] > 0
+    assert profile["artifacts"]["output_bytes"]["verifier_report"] > 0
+    assert profile["artifacts"]["output_bytes"]["route_comparison_report"] > 0
+    assert profile["artifacts"]["output_bytes"]["promotion_report"] > 0
     route = payload["adapter_promotion"]["route_comparison"]["by_route"]["retrieval_groundedness"]
     assert route["selected"] == 4
     assert route["decision_accuracy"] == pytest.approx(1.0)
@@ -1706,12 +1721,19 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert manifest["metadata"]["recommended_route"] == "retrieval_groundedness"
     assert manifest["metadata"]["claims_records_with_hits"] == 4
     assert manifest["metadata"]["recommended_retrieval_use_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["runtime_total_seconds"] >= 0.0
+    assert manifest["metadata"]["runtime_bottleneck"] in profile["phases"]
+    assert manifest["metadata"]["runtime_n_corpus_documents"] == 4
+    assert manifest["metadata"]["runtime_n_retrieval_hits"] == 4
+    assert manifest["metadata"]["runtime_claims_json_bytes"] > 0
 
     registry = ArtifactRegistry.load_json(registry_path)
     record = registry.get("benchmark_manifest:local-retrieval-route:0.7")
     assert record.metadata["workflow"] == "run_local_retrieval_route_workflow"
     assert record.metadata["recommended_route"] == "retrieval_groundedness"
     assert record.metadata["recommended_retrieval_use_rate"] == pytest.approx(1.0)
+    assert record.metadata["runtime_bottleneck"] in profile["phases"]
+    assert record.metadata["runtime_n_claim_records"] == 4
     assert record.metadata["scope"] == "unit"
     baseline = compare_module.compare_route_baselines(
         registry_path=registry_path,
