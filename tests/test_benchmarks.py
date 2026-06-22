@@ -3245,6 +3245,159 @@ def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, mon
     assert report["worker_sweep_decision"]["recommended"]["wall_clock_seconds"] == pytest.approx(6.0)
 
 
+def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {
+            "max_workers": 1,
+            "length_bucketed_batches": True,
+        },
+        "leaderboard_sort_metric": "uncached_forced_answer_forward_seconds",
+        "execution": {"wall_clock_seconds": 30.0},
+        "prefix_kv_comparisons": [
+            {
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "status": "prefix_kv_slower",
+                "recommended_prefix_kv_cache": False,
+            }
+        ],
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_2_capture_outputs_token_budget_96_prefix_kv_off",
+            "recommendation_metric": "uncached_forced_answer_forward_seconds",
+            "candidate_count": 2,
+            "checked_cell_count": 2,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_2_capture_outputs_token_budget_96_prefix_kv_off",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "max_batch_tokens": 96,
+                "prefix_kv_cache": False,
+                "cache_only_total_seconds": 0.25,
+                "uncached_forced_answer_forward_seconds": 64.0,
+                "truth_proj_auroc": 0.88,
+            },
+        },
+    }
+    worker_report = {
+        "worker_sweep_decision": {
+            "status": "promote",
+            "recommended_worker_count": 2,
+            "blocking_reasons": (),
+            "recommended": {
+                "worker_count": 2,
+                "wall_clock_seconds": 18.0,
+                "matrix_report": str(tmp_path / "matrix-report.json"),
+            },
+        },
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        worker_sweep_report=worker_report,
+        matrix_report_path=tmp_path / "matrix-report.json",
+        worker_sweep_report_path=tmp_path / "worker-report.json",
+    )
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["layer"] == -12
+    assert report["recommendation"]["batch_size"] == 2
+    assert report["recommendation"]["max_batch_tokens"] == 96
+    assert report["recommendation"]["max_workers"] == 2
+    assert report["evidence"]["prefix_kv_comparison"]["status"] == "prefix_kv_slower"
+    assert report["evidence"]["worker_matrix_report_matches"] is True
+    assert report["benchmark_flags"]["eval_truthfulqa"] == [
+        "--layer",
+        "-12",
+        "--batch-size",
+        "2",
+        "--hidden-state-capture",
+        "outputs",
+        "--max-batch-tokens",
+        "96",
+        "--length-bucketed-batches",
+    ]
+    assert report["benchmark_flags"]["run_cache_profile_matrix"] == [
+        "--layers",
+        "-12",
+        "--batch-sizes",
+        "2",
+        "--hidden-state-captures",
+        "outputs",
+        "--max-batch-tokens",
+        "96",
+        "--max-workers",
+        "2",
+    ]
+
+
+def test_runtime_config_recommendation_blocks_on_blocked_matrix():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+
+    report = module.build_runtime_recommendation({
+        "matrix_decision": {
+            "status": "blocked",
+            "recommended_cell": "layer_m12_batch_1_capture_outputs",
+            "recommended": {
+                "id": "layer_m12_batch_1_capture_outputs",
+                "layer": -12,
+                "batch_size": 1,
+                "hidden_state_capture": "outputs",
+            },
+            "blocking_reasons": ("one or more checked matrix cells failed the regression gate",),
+        }
+    })
+
+    assert report["status"] == "blocked"
+    assert report["recommendation"] is None
+    assert report["blocking_reasons"] == [
+        "matrix: one or more checked matrix cells failed the regression gate"
+    ]
+    assert "benchmark_flags" not in report
+
+
+def test_runtime_config_recommendation_cli_writes_output(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report_path = tmp_path / "matrix-report.json"
+    output_path = tmp_path / "runtime-recommendation.json"
+    matrix_report_path.write_text(
+        json.dumps({
+            "config": {"max_workers": 1, "length_bucketed_batches": False},
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m1_batch_1_capture_outputs",
+                "recommendation_metric": "cache_only_total_seconds",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": "layer_m1_batch_1_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 1,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 0,
+                    "prefix_kv_cache": True,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        matrix_report=str(matrix_report_path),
+        worker_sweep_report=None,
+        output=str(output_path),
+        fail_on_blocked=True,
+    ))
+
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "promote"
+    assert saved["recommendation"]["prefix_kv_cache"] is True
+    assert saved["benchmark_flags"]["eval_truthfulqa"][-1] == "--prefix-kv-cache"
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

@@ -1081,6 +1081,24 @@ python benchmarks/run_cache_worker_sweep.py \
   --fail-on-blocked
 ```
 
+After a promoted matrix or worker sweep, build a compact runtime recommendation
+without rerunning any model work:
+
+```bash
+python benchmarks/recommend_runtime_config.py \
+  --matrix-report /tmp/eigentruth-qwen05-worker-sweep/workers_1/cache-profile-matrix-report.json \
+  --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
+  --output /tmp/eigentruth-qwen05-worker-sweep/runtime-recommendation.json \
+  --fail-on-blocked
+```
+
+The recommendation records the selected layer, batch size, hidden-state capture
+mode, padded-token budget, prefix-KV mode, and worker count, plus equivalent
+flags for `eval_truthfulqa.py`, `run_cache_profile_matrix.py`, and
+`run_adapter_readiness_workflow.py`. Treat it as the deployment handoff from
+same-machine performance evidence; it does not replace a promoted matrix or
+worker-sweep decision.
+
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and

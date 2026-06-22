@@ -228,6 +228,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, and state-transition fixtures, then compares their promotion metrics in one local matrix. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision. |
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
+| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, and worker count. |
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final adapter readiness decision plus a registry-ready manifest. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
