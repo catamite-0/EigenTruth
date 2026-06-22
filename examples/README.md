@@ -36,6 +36,14 @@ A dependency-free world-model control demonstration. It uses
 next state, verify structured postconditions, and emit a `ProductTrace` where a
 false claim about the action consequence drives a dry-run `abstain` decision.
 
+### `production_tool_loop_demo.py`
+
+A dependency-free production-like local tool loop. It checks pre-tool business
+state from SQLite, ingests a deterministic reserve-inventory tool output, maps
+tool fields into `ToolOutputStateSource`, verifies post-tool claims, and stores
+selected/matched/skipped verifier route counts in the final `ProductTrace`
+metadata.
+
 ## Running An Example
 
 Install EigenTruth in editable mode and run a script from the repository root:
@@ -46,6 +54,7 @@ python examples/qwen_truth_demo.py
 python examples/calibrated_control_demo.py
 python examples/sqlite_state_control_demo.py
 python examples/state_transition_control_demo.py
+python examples/production_tool_loop_demo.py
 ```
 
 The examples may download model weights from Hugging Face. Review model licenses, download sizes, and any requirements for remote code before running a new model.
@@ -133,6 +142,23 @@ python examples/state_transition_control_demo.py \
 
 The default action reserves three units of SKU 123. The trace supports the claim
 that seven units remain, refutes the claim that ten units remain, and abstains
+despite low internal diagnostics.
+
+`production_tool_loop_demo.py` also avoids model loading and network access. It
+shows the local integration shape for product tools: pre-check database state,
+ingest a reserve-inventory tool result, map tool fields into verifier state, and
+verify post-tool claims with route-summary observability.
+
+```bash
+python examples/production_tool_loop_demo.py \
+  --database /tmp/eigentruth_tool_loop.db \
+  --output /tmp/eigentruth_tool_loop_trace.json
+```
+
+The default tool output reserves five units and leaves seven available, but does
+not capture payment. The trace therefore supports the pre-check and inventory
+postcondition, refutes the payment claim, records
+`database_state=1` / `tool_output_state=2` in `route_summary`, and abstains
 despite low internal diagnostics.
 
 ## Structure For New Example Scripts

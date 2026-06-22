@@ -183,6 +183,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
+| `production_tool_loop_demo.py` | Demonstrates a local production-like loop: SQLite pre-check, tool-output state mapping, post-tool verification, and route summary in one trace. |
 | `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression and refutation policies. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into route leaderboards and by-route control-impact metrics. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures for structured-state verifier benchmarks. |
@@ -221,6 +222,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |
+| `production_tool_loop_demo.py` | 演示本地 production-like 闭环：SQLite 前置校验、工具输出状态映射、工具后校验和 trace route summary。 |
 | `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为 route 排行榜与分 route 控制收益指标。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，用于结构化状态 verifier benchmark。 |

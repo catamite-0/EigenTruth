@@ -128,3 +128,40 @@ def test_state_transition_control_demo_refutes_predicted_postcondition():
     assert routes == ["transition_postcondition_passed", "transition_postcondition_failed"]
     assert payload["risk_decision"]["action"] == "abstain"
     assert payload["risk_decision"]["risk_level"] == "high"
+
+
+def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
+    demo = importlib.import_module("examples.production_tool_loop_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            database=str(tmp_path / "orders.db"),
+            seed_database=True,
+            diagnostics=None,
+            tool_output=None,
+            request_id="test-production-tool-loop",
+            output=None,
+        )
+    )
+
+    statuses = [result["status"] for result in payload["verification_results"]]
+    selected_routes = [
+        result["metadata"]["selected_route"]
+        for result in payload["verification_results"]
+    ]
+    route_summary = payload["metadata"]["route_summary"]
+
+    assert payload["metadata"]["business_domain"] == "order_reservation"
+    assert payload["metadata"]["tool"] == "reserve_inventory"
+    assert payload["diagnostics"] == {"truth_proj": 0.0}
+    assert statuses == ["supported", "supported", "refuted"]
+    assert selected_routes == ["database_state", "tool_output_state", "tool_output_state"]
+    assert route_summary["counts_by_selected_route"] == {
+        "database_state": 1,
+        "tool_output_state": 2,
+    }
+    assert route_summary["counts_by_status"] == {"supported": 2, "refuted": 1}
+    assert payload["verification_results"][1]["metadata"]["actual"] == 7
+    assert payload["verification_results"][2]["metadata"]["actual"] is False
+    assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["risk_decision"]["risk_level"] == "high"
