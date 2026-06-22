@@ -2,6 +2,7 @@
 
 import math
 import sqlite3
+import time
 
 import pytest
 import torch
@@ -41,6 +42,7 @@ from eigentruth.control import (
     RiskController,
     RiskDecision,
     RiskLevel,
+    TimeoutActionExecutor,
 )
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
@@ -995,6 +997,104 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
     assert replayed.metadata["side_effects"] is False
     assert replayed.metadata["original_side_effects"] is True
     assert ledger.get("reserve-1") == allowed
+
+
+def test_timeout_action_executor_returns_timed_out_result():
+    class SlowExecutor:
+        def execute(self, request, context=None):
+            time.sleep(0.20)
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    executor = TimeoutActionExecutor(SlowExecutor(), default_timeout_seconds=0.01)
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="slow evidence fetch",
+        request_id="req-timeout",
+    )
+
+    try:
+        result = executor.execute(request, context={"request_id": "req-timeout"})
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.TIMED_OUT
+    assert result.request_id == "req-timeout"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["wrapped_executor"] == "SlowExecutor"
+    assert result.metadata["side_effects"] is False
+    assert "timed out" in result.error
+
+
+def test_timeout_action_executor_preserves_success_metadata():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    executor = TimeoutActionExecutor(FastExecutor(), default_timeout_seconds=1.0)
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="fast evidence fetch", request_id="req-fast")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output == {"ok": True}
+    assert result.metadata["executor"] == "FastExecutor"
+    assert result.metadata["timeout_wrapper"] == "TimeoutActionExecutor"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["timeout_seconds"] == pytest.approx(1.0)
+
+
+def test_policy_guard_preserves_timeout_enforcement_metadata():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    timeout_executor = TimeoutActionExecutor(FastExecutor(), default_timeout_seconds=1.0)
+    executor = PolicyGuardedActionExecutor(
+        timeout_executor,
+        policy=ActionExecutionPolicy(max_timeout_seconds=2.0),
+    )
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="fast evidence fetch", request_id="req-fast")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        timeout_executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.metadata["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert result.metadata["timeout_wrapper"] == "TimeoutActionExecutor"
+    assert result.metadata["timeout_enforced"] is True
+    assert result.metadata["timeout_seconds"] == pytest.approx(1.0)
 
 
 def test_risk_controller_uses_configurable_control_policy():

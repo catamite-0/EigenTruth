@@ -17,6 +17,7 @@ from eigentruth.control.actions import (
     JsonActionExecutionLedger,
     PolicyGuardedActionExecutor,
     SQLiteActionExecutionLedger,
+    TimeoutActionExecutor,
 )
 from eigentruth.control.controller import ControlPolicyConfig, RiskController
 from eigentruth.control.loop import (
@@ -46,6 +47,7 @@ __all__ = [
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
     "SQLiteActionExecutionLedger",
+    "TimeoutActionExecutor",
     "ProductTrace",
     "RiskController",
     "RiskDecision",

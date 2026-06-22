@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
 from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
 from pathlib import Path
@@ -20,6 +22,7 @@ class ActionExecutionStatus(str, Enum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     SKIPPED = "skipped"
+    TIMED_OUT = "timed_out"
 
 
 @dataclass(frozen=True)
@@ -508,6 +511,139 @@ class DryRunActionExecutor:
 
 
 @dataclass(frozen=True)
+class TimeoutActionExecutor:
+    """Apply a best-effort wall-clock timeout around another executor.
+
+    The wrapper uses a thread pool and returns before the configured timeout
+    when the wrapped executor does not complete. Python cannot safely terminate
+    an already-running thread, so use this wrapper for non-side-effecting,
+    idempotent, or adapter-level cancellable work. Side-effecting integrations
+    should still enforce hard cancellation inside the concrete adapter.
+    """
+
+    executor: ActionExecutor
+    default_timeout_seconds: float | None = None
+    max_workers: int = 1
+
+    def __post_init__(self) -> None:
+        default_timeout = _coerce_optional_positive_float(
+            self.default_timeout_seconds,
+            name="default_timeout_seconds",
+        )
+        max_workers = int(self.max_workers)
+        if max_workers < 1:
+            raise ValueError("max_workers must be >=1.")
+        object.__setattr__(self, "default_timeout_seconds", default_timeout)
+        object.__setattr__(self, "max_workers", max_workers)
+        object.__setattr__(
+            self,
+            "_pool",
+            ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="eigentruth-action-timeout"),
+        )
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Execute one action request with a best-effort timeout."""
+        try:
+            timeout_seconds = self._timeout_seconds(request)
+        except ValueError as exc:
+            return self._failed_result(request, str(exc), timeout_seconds=None, context=context)
+        if timeout_seconds is None:
+            return self.executor.execute(request, context=context)
+
+        future: Future[ActionResult] = self._pool.submit(self.executor.execute, request, context)
+        try:
+            result = future.result(timeout=timeout_seconds)
+        except FutureTimeoutError:
+            cancelled = future.cancel()
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.TIMED_OUT,
+                output={},
+                metadata={
+                    "executor": type(self).__name__,
+                    "wrapped_executor": type(self.executor).__name__,
+                    "timeout_seconds": timeout_seconds,
+                    "timeout_enforced": True,
+                    "timeout_mechanism": "thread_future_result",
+                    "executor_cancelled": cancelled,
+                    "side_effects": False,
+                    "context": dict(context or {}),
+                },
+                request_id=request.request_id,
+                error=f"action execution timed out after {timeout_seconds} seconds.",
+            )
+        except Exception as exc:  # pragma: no cover - defensive adapter boundary
+            return self._failed_result(
+                request,
+                f"wrapped executor failed: {exc}",
+                timeout_seconds=timeout_seconds,
+                context=context,
+            )
+
+        metadata = dict(result.metadata)
+        metadata.update({
+            "timeout_wrapper": type(self).__name__,
+            "timeout_seconds": timeout_seconds,
+            "timeout_enforced": True,
+            "timeout_mechanism": "thread_future_result",
+        })
+        return ActionResult(
+            action=result.action,
+            status=result.status,
+            output=result.output,
+            metadata=metadata,
+            request_id=result.request_id,
+            error=result.error,
+        )
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Execute multiple action requests with per-request timeouts."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+    def shutdown(self, *, wait: bool = False, cancel_futures: bool = True) -> None:
+        """Shut down the internal thread pool."""
+        self._pool.shutdown(wait=wait, cancel_futures=cancel_futures)
+
+    def _timeout_seconds(self, request: ActionRequest) -> float | None:
+        value = _request_value(request, "timeout_seconds")
+        if value is None:
+            return self.default_timeout_seconds
+        return _coerce_optional_positive_float(value, name="timeout_seconds")
+
+    def _failed_result(
+        self,
+        request: ActionRequest,
+        error: str,
+        *,
+        timeout_seconds: float | None,
+        context: Mapping[str, Any] | None,
+    ) -> ActionResult:
+        return ActionResult(
+            action=request.action,
+            status=ActionExecutionStatus.FAILED,
+            output={},
+            metadata={
+                "executor": type(self).__name__,
+                "wrapped_executor": type(self.executor).__name__,
+                "timeout_seconds": timeout_seconds,
+                "timeout_enforced": False,
+                "side_effects": False,
+                "context": dict(context or {}),
+            },
+            request_id=request.request_id,
+            error=error,
+        )
+
+
+@dataclass(frozen=True)
 class PolicyGuardedActionExecutor:
     """Validate requests and attach audit metadata around another executor."""
 
@@ -555,6 +691,12 @@ class PolicyGuardedActionExecutor:
 
         result = self.executor.execute(request, context=context)
         metadata = dict(result.metadata)
+        if audit_metadata.get("timeout_seconds") is None and metadata.get("timeout_seconds") is not None:
+            audit_metadata["timeout_seconds"] = metadata["timeout_seconds"]
+        audit_metadata["timeout_enforced"] = bool(
+            audit_metadata.get("timeout_enforced", False)
+            or metadata.get("timeout_enforced", False)
+        )
         metadata.update({
             "policy_guard": type(self).__name__,
             **audit_metadata,

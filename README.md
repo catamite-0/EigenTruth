@@ -169,7 +169,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, and route summaries expose selected/matched/skipped verifier tools. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations, including generic `execute_tool` requests. |
-| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback and best-effort timeout wrapping for local traces. |
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | Adds dependency-free request validation, idempotency replay, and audit metadata for side-effecting executors, including request ids, idempotency keys, and timeout bounds. |
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | Stores successful idempotent action results so repeated product requests can replay outputs without repeating side effects. |
 | `run_verification_loop` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops and converts retrieval action results into verifier-ready evidence context. |
@@ -210,7 +210,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload，包括通用 `execute_tool` 请求。 |
-| `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
+| `ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 与 best-effort timeout wrapper 支撑本地 trace。 |
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | 为有副作用 executor 增加无依赖请求校验、idempotency replay 和审计元数据，包括 request id、idempotency key 与 timeout 上限。 |
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | 保存成功的幂等 action 结果，让重复产品请求可重放输出而不重复执行副作用。 |
 | `run_verification_loop` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
@@ -234,6 +234,15 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |
 | `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
 | `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |
+
+`TimeoutActionExecutor` uses a stdlib thread-pool timeout so the control loop can
+return a traceable timeout result. It cannot safely terminate an already-running
+Python thread, so side-effecting adapters still need their own hard cancellation
+or transactional/idempotent safety boundary.
+
+`TimeoutActionExecutor` 使用标准库线程池超时，让控制闭环能返回可追踪的
+`timed_out` 结果；它不能安全终止已经运行中的 Python 线程，因此有副作用
+adapter 仍需要自身提供强取消、事务或幂等安全边界。
 
 ## Experimental Model Compatibility
 
