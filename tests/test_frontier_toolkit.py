@@ -19,6 +19,8 @@ from eigentruth.adapters import (
     SQLiteStateQuery,
     SQLiteStateSource,
     StateCheck,
+    StateTransitionCheck,
+    StateTransitionVerifier,
     StructuredStateVerifier,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
@@ -681,10 +683,90 @@ def test_in_memory_world_model_adapter_verifies_and_predicts_state():
 
     result = adapter.verify(claim)
     prediction = adapter.predict({"inventory": 10}, {"set": {"inventory": 8}})
+    nested_prediction = adapter.predict(
+        {"inventory": {"sku_123": {"available": 10}}, "quota": {"used": 1}},
+        {
+            "decrement": {"inventory.sku_123.available": 3},
+            "increment": {"quota.used": 2},
+        },
+    )
 
     assert result.status is VerificationStatus.SUPPORTED
     assert prediction.state["inventory"] == 8
+    assert nested_prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert nested_prediction.state["quota"]["used"] == 3
     assert "Inventory" in adapter.explain(claim)
+
+
+def test_state_transition_verifier_checks_predicted_postconditions():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={"inventory": {"sku_123": {"available": 10}}, "orders": {"ord_1": {"status": "pending"}}},
+    )
+    supported = verifier.verify(
+        Claim(
+            "Shipping the order leaves 7 units available.",
+            metadata={
+                "state_transition": StateTransitionCheck(
+                    action={
+                        "decrement": {"inventory.sku_123.available": 3},
+                        "set": {"orders.ord_1.status": "shipped"},
+                    },
+                    postcondition={"path": "inventory.sku_123.available", "operator": "eq", "value": 7},
+                    source="order_world_model",
+                )
+            },
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Shipping the order leaves 10 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {"path": "inventory.sku_123.available", "operator": "eq", "value": 10},
+                }
+            },
+        )
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["verifier"] == "state_transition"
+    assert supported.metadata["decision_rule"] == "transition_postcondition_passed"
+    assert supported.metadata["world_model"] == "InMemoryWorldModelAdapter"
+    assert supported.metadata["actual"] == 7
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "transition_postcondition_failed"
+    assert verifier.state["inventory"]["sku_123"]["available"] == 10
+
+
+def test_state_transition_verifier_uses_context_state_and_claim_specific_transition():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    verifier = StateTransitionVerifier(world_model=adapter, state={"quota": {"remaining": 5}})
+    result = verifier.verify(
+        Claim("The request consumes quota.", claim_id="c1"),
+        context={
+            "state": {"quota": {"remaining": 4}},
+            "state_transitions": {
+                "c1": {
+                    "action": {"set": {"quota.remaining": 2}},
+                    "state_check": {"path": "quota.remaining", "operator": "eq", "value": 2},
+                }
+            },
+        },
+    )
+    not_applicable = verifier.verify(Claim("No transition metadata."))
+    invalid = verifier.verify(
+        Claim("Invalid transition.", metadata={"state_transition": {"postcondition": {"path": "x"}}})
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["actual"] == 2
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_state_transition"
+    assert invalid.status is VerificationStatus.ERROR
+    assert invalid.metadata["decision_rule"] == "invalid_state_transition"
 
 
 def test_action_executor_registry_uses_fallback_and_registered_executor():

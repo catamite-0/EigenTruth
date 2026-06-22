@@ -29,6 +29,13 @@ SQLite order/inventory/account fixture, maps read-only SQL query results into
 refutes one business claim even though internal diagnostics are below the toy
 threshold.
 
+### `state_transition_control_demo.py`
+
+A dependency-free world-model control demonstration. It uses
+`InMemoryWorldModelAdapter` plus `StateTransitionVerifier` to predict an action's
+next state, verify structured postconditions, and emit a `ProductTrace` where a
+false claim about the action consequence drives a dry-run `abstain` decision.
+
 ## Running An Example
 
 Install EigenTruth in editable mode and run a script from the repository root:
@@ -38,6 +45,7 @@ python -m pip install -e ".[examples]"
 python examples/qwen_truth_demo.py
 python examples/calibrated_control_demo.py
 python examples/sqlite_state_control_demo.py
+python examples/state_transition_control_demo.py
 ```
 
 The examples may download model weights from Hugging Face. Review model licenses, download sizes, and any requirements for remote code before running a new model.
@@ -112,6 +120,20 @@ The demo seeds two orders. `ord_1` is supported as shippable; `ord_2` is refuted
 because the account is suspended and inventory is insufficient. The final trace
 therefore records low internal diagnostics, a `structured_state` refutation, and
 a dry-run `abstain` action.
+
+`state_transition_control_demo.py` also avoids model loading and network access.
+It shows where world-model correction sits in the product loop: predict the
+state after an action, then verify claims against postconditions on that
+predicted state.
+
+```bash
+python examples/state_transition_control_demo.py \
+  --output /tmp/eigentruth_state_transition_trace.json
+```
+
+The default action reserves three units of SKU 123. The trace supports the claim
+that seven units remain, refutes the claim that ten units remain, and abstains
+despite low internal diagnostics.
 
 ## Structure For New Example Scripts
 

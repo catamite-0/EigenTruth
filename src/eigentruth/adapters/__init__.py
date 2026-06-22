@@ -23,7 +23,13 @@ from eigentruth.adapters.state import (
     StateSource,
     StructuredStateVerifier,
 )
-from eigentruth.adapters.world_model import InMemoryWorldModelAdapter, WorldModelAdapter, WorldModelPrediction
+from eigentruth.adapters.world_model import (
+    InMemoryWorldModelAdapter,
+    StateTransitionCheck,
+    StateTransitionVerifier,
+    WorldModelAdapter,
+    WorldModelPrediction,
+)
 
 __all__ = [
     "AdapterCacheStats",
@@ -44,6 +50,8 @@ __all__ = [
     "StateSource",
     "StructuredStateVerifier",
     "InMemoryWorldModelAdapter",
+    "StateTransitionCheck",
+    "StateTransitionVerifier",
     "WorldModelAdapter",
     "WorldModelPrediction",
     "combine_cache_stats",

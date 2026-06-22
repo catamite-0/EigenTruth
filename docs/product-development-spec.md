@@ -23,6 +23,7 @@ Implemented today:
 - `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
+- `eigentruth.adapters.StateTransitionVerifier`: dependency-free action-conditioned postcondition verifier that predicts next state through a world-model adapter, then reuses structured state checks.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, and saved concept metadata.
 - Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, conformal calibration, and selective reporting.
 - Local development baseline: `make check` and `make release-check` run lint, tests, dependency consistency, deterministic profile-gate smoke checks, and package build.
@@ -249,7 +250,9 @@ For product features:
 - `CalculatorVerifier` deterministic tool adapter for structured arithmetic claims and simple symbolic equations, using a restricted local arithmetic evaluator with no new mandatory dependencies.
 - `StructuredStateVerifier` / `StateCheck` structured state and business-rule adapter for database, policy, and domain-state checks. It can be routed through `state_check` claim metadata or context and returns supported, refuted, insufficient-evidence, or error results with explicit decision rules.
 - `SQLiteStateSource` / `SQLiteStateQuery` load read-only SQLite query results into nested verifier state, giving the structured-state path a real database integration without new mandatory dependencies.
+- `StateTransitionVerifier` / `StateTransitionCheck` verify claims about action consequences by predicting next state through a world-model adapter and checking structured postconditions; `InMemoryWorldModelAdapter` supports nested and dotted-path `set`/`increment`/`decrement` actions for deterministic domain-rule tests.
 - `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
+- `state_transition_control_demo.py` emits a final `ProductTrace` where a world-model predicted postcondition refutes a claim about action consequences despite low internal diagnostics.
 - `CompositeVerifier`, `RoutedVerifier`, and `calibrated_control_demo.py --enable-calculator` show a tool-first product trace path: claim metadata, context, or text patterns can route calculator-supported/refuted claims before lexical verifier fallback.
 - `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` routes, and reports `route_summary` for structured QA, structured state, lexical groundedness, and retrieval-backed groundedness.
 - `build_domain_state_fixture.py` generates deterministic order-fulfillment score/claim/state fixtures so structured-state verifier behavior can be benchmarked without relying on label-derived TruthfulQA oracle evidence.
@@ -271,7 +274,7 @@ For product features:
 - Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.
 - Add concrete domain/world-model adapters beyond the in-memory test double.
 - Add semantic-entropy sampling probes, RAG groundedness adapters, and optional SAE/ReFT integrations behind extras.
-- Add domain examples where facts depend on state transitions, physical constraints, or business rules.
+- Add benchmark/demo domain examples where facts depend on state transitions, physical constraints, or business rules.
 - Compare real verifier/retrieval ensembles against the current `truth_proj` baseline under the same conformal false-alarm budget.
 
 ### Later Control-Plane Hardening

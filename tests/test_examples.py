@@ -103,3 +103,28 @@ def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
     assert payload["actions"][0]["action"] == "abstain"
     assert payload["action_results"][0]["status"] == "dry_run"
     assert payload["action_results"][0]["output"]["would_execute"] == "abstain"
+
+
+def test_state_transition_control_demo_refutes_predicted_postcondition():
+    demo = importlib.import_module("examples.state_transition_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            diagnostics=None,
+            state=None,
+            request_id="test-state-transition-demo",
+            output=None,
+        )
+    )
+
+    statuses = [result["status"] for result in payload["verification_results"]]
+    routes = [result["metadata"]["decision_rule"] for result in payload["verification_results"]]
+
+    assert payload["metadata"]["verifier_type"] == "StateTransitionVerifier"
+    assert payload["metadata"]["world_model_type"] == "InMemoryWorldModelAdapter"
+    assert payload["metadata"]["business_domain"] == "order_fulfillment_transition"
+    assert payload["diagnostics"] == {"truth_proj": 0.0}
+    assert statuses == ["supported", "refuted"]
+    assert routes == ["transition_postcondition_passed", "transition_postcondition_failed"]
+    assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["risk_decision"]["risk_level"] == "high"
