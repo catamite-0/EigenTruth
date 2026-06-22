@@ -1138,6 +1138,169 @@ def test_compare_verifier_routes_cli_can_fail_on_missing_promotion_gate(tmp_path
     assert payload["promotion_decision"]["status"] == "needs_gate"
 
 
+def _write_adapter_promotion_route_report(path: Path) -> None:
+    path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "routes",
+                    "route_quality": {
+                        "structured_state": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "duration_observations": 4,
+                            "total_duration_seconds": 0.04,
+                            "mean_duration_seconds": 0.01,
+                            "p95_duration_seconds": 0.019,
+                            "p99_duration_seconds": 0.0198,
+                            "max_duration_seconds": 0.02,
+                            "attempted_route_count_observations": 4,
+                            "total_attempted_route_count": 4,
+                            "mean_attempted_route_count": 1.0,
+                            "used_retrieval_count": 0,
+                            "retrieval_use_rate": 0.0,
+                        }
+                    },
+                    "cache_stats": {
+                        "total": {"size": 2, "hits": 7, "misses": 1, "requests": 8, "hit_rate": 0.875}
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+
+def test_run_adapter_promotion_workflow_promotes_gated_route(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_promotion_workflow")
+    route_source_path = tmp_path / "routes.json"
+    route_report_path = tmp_path / "route-comparison.json"
+    _write_adapter_promotion_route_report(route_source_path)
+
+    payload = module.run_adapter_promotion_workflow(
+        module.AdapterPromotionWorkflowConfig(
+            reports=(("routes", route_source_path),),
+            route_report_path=route_report_path,
+            gate_routes=("structured_state",),
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_duration_seconds=0.02,
+            max_p95_duration_seconds=0.02,
+            max_p99_duration_seconds=0.02,
+            max_max_duration_seconds=0.03,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+            min_cache_hit_rate=0.80,
+        )
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_route"] == "structured_state"
+    assert payload["route_comparison"]["promotion_decision"]["status"] == "promote"
+    assert route_report_path.exists()
+
+
+def test_run_adapter_promotion_workflow_cli_fails_on_blocked_route(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_promotion_workflow")
+    route_source_path = tmp_path / "routes.json"
+    route_report_path = tmp_path / "route-comparison.json"
+    workflow_report_path = tmp_path / "workflow.json"
+    _write_adapter_promotion_route_report(route_source_path)
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--report",
+            f"routes={route_source_path}",
+            "--route-report-json",
+            str(route_report_path),
+            "--json",
+            str(workflow_report_path),
+            "--fail-on-blocked",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(workflow_report_path.read_text(encoding="utf-8"))
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["blocking_reasons"][0]["gate"] == "route_promotion"
+    assert payload["route_comparison"]["promotion_decision"]["status"] == "needs_gate"
+
+
+def test_run_adapter_promotion_workflow_can_include_registry_baseline_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_promotion_workflow")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    route_source_path = tmp_path / "routes.json"
+    route_report_path = tmp_path / "route-comparison.json"
+    _write_adapter_promotion_route_report(route_source_path)
+    baseline_profile = tmp_path / "baseline-profile.json"
+    candidate_profile = tmp_path / "candidate-profile.json"
+    baseline_profile.write_text(
+        json.dumps({
+            "total_seconds": 100.0,
+            "phases": {"forced_answer_forward": 80.0},
+            "summary": {"bottleneck": "forced_answer_forward", "groups": {}, "throughput": {}},
+        }),
+        encoding="utf-8",
+    )
+    candidate_profile.write_text(
+        json.dumps({
+            "total_seconds": 104.0,
+            "phases": {"forced_answer_forward": 82.0},
+            "summary": {"bottleneck": "forced_answer_forward", "groups": {}, "throughput": {}},
+        }),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"profiles.uncached": baseline_profile}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="adapter-baseline",
+        path=manifest_path,
+        version="0.4",
+    ).save_json()
+
+    payload = module.run_adapter_promotion_workflow(
+        module.AdapterPromotionWorkflowConfig(
+            reports=(("routes", route_source_path),),
+            route_report_path=route_report_path,
+            gate_routes=("structured_state",),
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_duration_seconds=0.02,
+            max_p95_duration_seconds=0.02,
+            max_p99_duration_seconds=0.02,
+            max_max_duration_seconds=0.03,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+            min_cache_hit_rate=0.80,
+            registry_path=registry_path,
+            baseline_name="adapter-baseline",
+            baseline_version="0.4",
+            candidate_profiles=(("candidate", candidate_profile),),
+            max_total_ratio=1.05,
+        )
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["registry_baseline_checked"] is True
+    assert payload["decision"]["registry_baseline_passed"] is True
+    assert payload["registry_baseline_comparison"]["comparison"]["regression_gate"]["passed"] is True
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"

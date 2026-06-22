@@ -492,6 +492,47 @@ checks when a route must meet minimum quality before real adapter work proceeds.
 Use `--fail-on-promotion` when CI should fail unless the final route-specific
 promotion decision is `promote`.
 
+## `run_adapter_promotion_workflow.py`
+
+Runs the route-promotion handoff as one fail-closed workflow. It generates a
+`compare_verifier_routes.py` report, requires the route-level
+`promotion_decision` to be `promote`, and can optionally run a registered
+same-machine performance baseline comparison before returning a final adapter
+promotion decision.
+
+```bash
+python benchmarks/run_adapter_promotion_workflow.py \
+  --report qwen=artifacts/qwen05_verifier_ensemble_report.json \
+  --route-report-json artifacts/qwen05_route_comparison.json \
+  --gate-route structured_state \
+  --min-decision-accuracy 0.90 \
+  --max-false-supported-rate 0.05 \
+  --min-false-refuted-rate 0.80 \
+  --max-mean-duration-seconds 0.05 \
+  --max-p95-duration-seconds 0.10 \
+  --max-p99-duration-seconds 0.20 \
+  --max-mean-attempted-route-count 1.5 \
+  --registry artifacts/registry.json \
+  --baseline-name qwen05-profile-rescore \
+  --baseline-version 0.3 \
+  --baseline-profile-artifact \
+    cells.layer_m12_batch_1_capture_outputs.triplet_manifest::profiles.uncached \
+  --candidate-profile candidate=/tmp/eigentruth-current-profile.json \
+  --max-total-ratio 1.10 \
+  --json artifacts/qwen05_adapter_promotion_workflow.json \
+  --fail-on-blocked
+```
+
+The final report includes:
+
+- `route_comparison_path` and embedded `route_comparison` for route-quality
+  audit.
+- `registry_baseline_comparison` when candidate profiles are provided.
+- `decision`: final workflow status. It is `promote` only when route promotion
+  passes and every configured registry baseline gate passes. Missing route
+  gates, failed route gates, missing registry gates, or failed registry gates
+  produce `blocked` plus explicit `blocking_reasons`.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
