@@ -1406,6 +1406,39 @@ def test_run_adapter_promotion_workflow_can_include_registry_baseline_gate(tmp_p
     assert payload["registry_baseline_comparison"]["comparison"]["regression_gate"]["passed"] is True
 
 
+def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_family_matrix")
+    matrix_path = tmp_path / "matrix.json"
+
+    payload = module.run_adapter_family_matrix(
+        module.AdapterFamilyMatrixConfig(
+            output_dir=tmp_path,
+            matrix_report_path=matrix_path,
+            n_records=8,
+            alpha=0.2,
+            compact_json=True,
+        )
+    )
+    written = json.loads(matrix_path.read_text(encoding="utf-8"))
+    by_route = payload["route_comparison"]["by_route"]
+    families = {item["route"]: item for item in payload["families"]}
+
+    assert set(families) == {"structured_qa", "structured_state", "state_transition"}
+    assert payload["promotion_decision"]["status"] == "promote"
+    assert payload["route_comparison"]["quality_gate"]["passed"] is True
+    for route, item in families.items():
+        assert item["status"] == "promote"
+        assert item["selected"] == 8
+        assert item["decision_accuracy"] == pytest.approx(1.0)
+        assert item["false_supported_rate"] == pytest.approx(0.0)
+        assert item["false_refuted_rate"] == pytest.approx(1.0)
+        assert by_route[route]["selected"] == 8
+        assert Path(item["verifier_report_path"]).exists()
+        assert Path(item["promotion_report_path"]).exists()
+    assert written["promotion_decision"]["status"] == "promote"
+    assert Path(payload["route_comparison_path"]).exists()
+
+
 def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_path):
     module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
     scores_path = tmp_path / "scores.json"

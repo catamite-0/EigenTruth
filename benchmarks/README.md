@@ -674,6 +674,29 @@ The final report includes:
   gates, failed route gates, missing registry gates, or failed registry gates
   produce `blocked` plus explicit `blocking_reasons`.
 
+## `run_adapter_family_matrix.py`
+
+Builds deterministic local fixtures for the three front-line adapter families
+and runs each through the same refresh/promotion gate:
+
+- `structured_qa`: exact question/answer facts.
+- `structured_state`: static business/domain state checks.
+- `state_transition`: action-conditioned world-model postconditions.
+
+It then aggregates the generated verifier reports with
+`compare_verifier_routes.py` so quality, tail latency, attempted-route count,
+retrieval use, cache stats, and promotion status can be compared in one matrix.
+
+```bash
+python benchmarks/run_adapter_family_matrix.py \
+  --output-dir artifacts/adapter_family_matrix \
+  --json artifacts/adapter_family_matrix/report.json \
+  --n-records 8 \
+  --alpha 0.2 \
+  --compact-json \
+  --fail-on-blocked
+```
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
