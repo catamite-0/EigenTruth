@@ -1439,6 +1439,106 @@ def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
     assert Path(payload["route_comparison_path"]).exists()
 
 
+def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+    report_path = tmp_path / "readiness.json"
+
+    payload = module.run_adapter_readiness_workflow(
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            readiness_report_path=report_path,
+            n_records=8,
+            alpha=0.2,
+            performance_dry_run=True,
+            compact_json=True,
+        )
+    )
+    written = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert payload["adapter_family_matrix"]["promotion_decision"]["status"] == "promote"
+    assert payload["performance_matrix"]["matrix_decision"]["status"] == "dry_run"
+    assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
+    assert payload["readiness_decision"]["recommended_route"] in {
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+    }
+    assert Path(payload["adapter_family_matrix_path"]).exists()
+    assert Path(payload["performance_matrix_path"]).exists()
+    assert written["readiness_decision"]["status"] == "needs_performance_evidence"
+
+
+def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pass(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    def fake_run_matrix(config, *, clean, dry_run):
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        config.report_path.write_text("{}", encoding="utf-8")
+        return {
+            "dry_run": False,
+            "report_path": str(config.report_path),
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m1_batch_2_capture_outputs",
+                "recommended": {"id": "layer_m1_batch_2_capture_outputs"},
+            },
+        }
+
+    monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
+
+    payload = module.run_adapter_readiness_workflow(
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            n_records=8,
+            alpha=0.2,
+            batch_sizes=(2,),
+            performance_dry_run=False,
+        )
+    )
+
+    assert payload["readiness_decision"]["status"] == "promote"
+    assert payload["readiness_decision"]["recommended_route"] in {
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+    }
+    assert payload["readiness_decision"]["recommended_performance_cell"] == "layer_m1_batch_2_capture_outputs"
+
+
+def test_run_adapter_readiness_workflow_blocks_when_performance_blocks(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    def fake_run_matrix(config, *, clean, dry_run):
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        config.report_path.write_text("{}", encoding="utf-8")
+        return {
+            "dry_run": False,
+            "report_path": str(config.report_path),
+            "matrix_decision": {
+                "status": "blocked",
+                "recommended_cell": "layer_m1_batch_2_capture_outputs",
+                "failed_cells": ("layer_m2_batch_2_capture_outputs",),
+            },
+        }
+
+    monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
+
+    payload = module.run_adapter_readiness_workflow(
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            n_records=8,
+            alpha=0.2,
+            batch_sizes=(2,),
+            performance_dry_run=False,
+        )
+    )
+
+    assert payload["readiness_decision"]["status"] == "blocked"
+    assert payload["readiness_decision"]["adapter_family_promoted"] is True
+    assert payload["readiness_decision"]["performance_promoted"] is False
+    assert "performance matrix decision did not promote" in payload["readiness_decision"]["blocking_reasons"]
+
+
 def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_path):
     module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
     scores_path = tmp_path / "scores.json"

@@ -697,6 +697,35 @@ python benchmarks/run_adapter_family_matrix.py \
   --fail-on-blocked
 ```
 
+## `run_adapter_readiness_workflow.py`
+
+Combines the deterministic adapter-family quality matrix with the same-machine
+cache-profile performance matrix. The final `readiness_decision` is `promote`
+only when both the adapter-family `promotion_decision` and the performance
+`matrix_decision` promote.
+
+Use `--performance-dry-run` to inspect the performance commands without loading
+a model. Dry-run performance evidence produces `needs_performance_evidence`,
+not `promote`.
+
+```bash
+python benchmarks/run_adapter_readiness_workflow.py \
+  --output-dir artifacts/adapter_readiness \
+  --json artifacts/adapter_readiness/report.json \
+  --n-records 8 \
+  --alpha 0.2 \
+  --shared-cache-dir artifacts/adapter_readiness/cache \
+  --layers=-12 \
+  --batch-sizes=1,2 \
+  --hidden-state-captures=outputs \
+  --performance-dry-run \
+  --compact-json
+```
+
+Remove `--performance-dry-run` only when the local profile matrix cost is
+acceptable. Add `--fail-on-blocked` on real runs to require
+`readiness_decision.status=promote`.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
