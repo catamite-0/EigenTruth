@@ -22,6 +22,10 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    `disp_hse` (Hyperbolic Semantic Entropy) vs `disp_euclid` (the same dispersion
    computed in Euclidean space). If `disp_hse` does not beat `disp_euclid`, the
    hyperbolic machinery is decoration.
+3. **Does internal-state spectral diversity add a cheap uncertainty signal?**
+   `eigenscore` is an INSIDE/EigenScore-style log-det score over answer-token
+   hidden embeddings. It is deterministic and single-forward-pass here; full
+   INSIDE computes EigenScore over multiple sampled response embeddings.
 
 ### Method
 
@@ -63,6 +67,8 @@ warmup states and hidden dimension.
   signal over plain perplexity.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
   hyperbolic component.
+- Treat `eigenscore` as an internal-state spectral-diversity proxy; calibrate it
+  like any other higher-is-more-anomalous score before using it for routing.
 - Results depend strongly on the target layer; sweep it.
 
 ### First results (indicative — `gpt2`, a weak base model)
@@ -111,13 +117,14 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
 - Forced-answer statement scoring is a **proxy** for open-generation hallucination.
   It cleanly tests the representation hypothesis but is not the same as detecting
   hallucination during free generation.
-- Within-statement token dispersion is a **cheap proxy** for sample-based semantic
-  entropy (Farquhar et al., 2024); it is not the full multi-sample method.
+- Within-statement token dispersion and `eigenscore` are **cheap proxies** for
+  sample-based semantic uncertainty and INSIDE/EigenScore; they are not the full
+  multi-sample methods.
 - A small model (e.g. 0.5B) and a few hundred items give wide confidence intervals.
   Treat AUROC values as indicative, not conclusive, and report `n`.
 - Beating these in-house baselines is necessary but not sufficient; a real claim needs
-  comparison against published detectors (semantic entropy, INSIDE/EigenScore, SAPLMA)
-  on standard splits.
+  comparison against full published detectors (semantic entropy, multi-response
+  INSIDE/EigenScore, SAPLMA) on standard splits.
 
 ## `eval_conformal.py` (E1)
 
@@ -143,7 +150,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal tru
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid \
+  --signals maha_last,truth_proj,subspace_resid,eigenscore \
   --artifact-alpha 0.2 \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json
@@ -171,6 +178,7 @@ Caveat: the guarantee is conditional on exchangeability — under distribution s
 几何能否分离真/假陈述。真值流形仅用留出题目的正确答案构建（与评测题目不重叠，无泄漏），
 正类为错误答案（幻觉）。逐信号报告 AUROC（0.5 为随机，1.0 为完美分离）。
 
-两个关键对比：`maha_last` vs `nll_answer`（几何是否优于困惑度基线）、`disp_hse` vs
-`disp_euclid`（双曲投影是否真的有用）。结果强依赖目标层，应扫层。陈述级打分是开放生成
-幻觉的代理，小模型 + 数百样本的 AUROC 置信区间较宽，结论需对照已发表方法。
+三个关键对比：`maha_last` vs `nll_answer`（几何是否优于困惑度基线）、`disp_hse` vs
+`disp_euclid`（双曲投影是否真的有用）、`eigenscore` 是否补充内部状态谱分散度信号。
+结果强依赖目标层，应扫层。陈述级打分是开放生成幻觉的代理，小模型 + 数百样本的 AUROC
+置信区间较宽，结论需对照完整已发表方法。

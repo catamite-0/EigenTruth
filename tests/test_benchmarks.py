@@ -62,3 +62,10 @@ def test_eval_truthfulqa_selective_reports_accept_score_directions():
     assert reports["support"]["direction"] == "lower"
     assert reports["support"]["false_alarm"] == pytest.approx(0.0)
     assert reports["support"]["detection"] == pytest.approx(1.0)
+
+
+def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    assert "eigenscore" in module.SIGNALS
+    assert module.DEFAULT_SCORE_DIRECTIONS["eigenscore"] == "higher"
