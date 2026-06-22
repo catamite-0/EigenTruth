@@ -323,6 +323,13 @@ def _dry_run_output(request: ActionRequest) -> dict[str, Any]:
             "diagnostics": payload.get("diagnostics", {}),
             "instruction": payload.get("instruction"),
         }
+    if request.action is ControlAction.EXECUTE_TOOL:
+        return {
+            "would_execute": "tool",
+            "tool": payload.get("tool"),
+            "input": payload.get("input", {}),
+            "instruction": payload.get("instruction"),
+        }
     if request.action is ControlAction.ABSTAIN:
         return {
             "would_execute": "abstain",

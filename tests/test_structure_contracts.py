@@ -70,6 +70,22 @@ def test_action_request_json_roundtrip():
     assert loaded.payload["claim_ids"] == ("c1",)
 
 
+def test_execute_tool_action_request_roundtrip():
+    request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="run verified local tool",
+        payload={"tool": "reserve_inventory", "input": {"order_id": "ord_1"}},
+        request_id="tool-1",
+    )
+
+    payload = request.to_dict()
+    loaded = ActionRequest.from_dict(payload)
+
+    assert payload["action"] == "execute_tool"
+    assert loaded.action is ControlAction.EXECUTE_TOOL
+    assert loaded.payload["tool"] == "reserve_inventory"
+
+
 def test_action_result_json_roundtrip():
     result = ActionResult(
         action=ControlAction.ABSTAIN,

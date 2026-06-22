@@ -4,12 +4,12 @@ This example does not load a language model or call a network service. It shows
 how EigenTruth can sit around a normal product workflow:
 
 1. Check pre-tool business state from a read-only SQLite source.
-2. Execute or ingest a local tool result.
+2. Execute a local SQLite-backed reserve-inventory tool.
 3. Map selected tool-output fields into structured verifier state.
 4. Verify post-tool claims and emit a route-auditable ``ProductTrace``.
 
-The demo intentionally keeps the "tool" as local JSON so the integration shape
-is visible without adding a production tool runtime or new dependencies.
+The demo intentionally keeps the tool local and deterministic so the integration
+shape is visible without adding a production tool runtime or new dependencies.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import argparse
 import json
 import sqlite3
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -29,8 +30,17 @@ from eigentruth.adapters import (
     ToolOutputStateSource,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
-from eigentruth.control import ProductTrace, RiskController, TraceEvent
-from eigentruth.verify import Claim, RoutedVerifier, VerificationResult, VerifierRoute
+from eigentruth.control import (
+    ActionExecutionStatus,
+    ActionExecutorRegistry,
+    ActionRequest,
+    ActionResult,
+    ControlAction,
+    ProductTrace,
+    RiskController,
+    TraceEvent,
+)
+from eigentruth.verify import Claim, RoutedVerifier, VerificationResult, VerificationStatus, VerifierRoute
 
 
 def demo_artifact() -> CalibrationArtifact:
@@ -52,15 +62,10 @@ def default_diagnostics() -> dict[str, float]:
     return {"truth_proj": 0.0}
 
 
-def default_tool_output() -> dict[str, Any]:
-    """Return deterministic local tool output for the reservation step."""
+def default_tool_input() -> dict[str, Any]:
+    """Return deterministic local tool input for the reservation step."""
     return {
         "order_id": "ord_1",
-        "sku": "sku_123",
-        "reserved": 5,
-        "remaining": 7,
-        "status": "reserved",
-        "payment_captured": False,
     }
 
 
@@ -74,11 +79,12 @@ def build_demo_database(path: Path) -> None:
         connection.execute("create table inventory (sku text primary key, available integer not null)")
         connection.execute("create table accounts (id text primary key, status text not null)")
         connection.execute(
-            "create table orders (id text primary key, sku text not null, account_id text not null, quantity integer)"
+            "create table orders (id text primary key, sku text not null, account_id text not null, "
+            "quantity integer, status text not null)"
         )
         connection.execute("insert into inventory values (?, ?)", ("sku_123", 12))
         connection.execute("insert into accounts values (?, ?)", ("acct_1", "active"))
-        connection.execute("insert into orders values (?, ?, ?, ?)", ("ord_1", "sku_123", "acct_1", 5))
+        connection.execute("insert into orders values (?, ?, ?, ?, ?)", ("ord_1", "sku_123", "acct_1", 5, "pending"))
         connection.commit()
     finally:
         connection.close()
@@ -106,29 +112,161 @@ def database_state_source(database_path: Path) -> SQLiteStateSource:
     )
 
 
-def tool_output_state_source(tool_output: dict[str, Any]) -> ToolOutputStateSource:
+@dataclass(frozen=True)
+class SQLiteReserveInventoryExecutor:
+    """Local side-effecting reserve-inventory executor for the demo database."""
+
+    database_path: Path
+
+    def execute(self, request: ActionRequest, context: dict[str, Any] | None = None) -> ActionResult:
+        """Reserve inventory for one order and return structured tool output."""
+        if request.action is not ControlAction.EXECUTE_TOOL:
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                request_id=request.request_id,
+                error="SQLiteReserveInventoryExecutor only supports execute_tool actions.",
+                metadata={"executor": type(self).__name__, "side_effects": False},
+            )
+        tool = request.payload.get("tool")
+        if tool != "reserve_inventory":
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                request_id=request.request_id,
+                error=f"unsupported tool: {tool!r}",
+                metadata={"executor": type(self).__name__, "side_effects": False},
+            )
+        input_payload = request.payload.get("input", {})
+        if not isinstance(input_payload, dict):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                request_id=request.request_id,
+                error="execute_tool input must be a JSON object.",
+                metadata={"executor": type(self).__name__, "side_effects": False},
+            )
+        order_id = str(input_payload.get("order_id", "")).strip()
+        if not order_id:
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                request_id=request.request_id,
+                error="reserve_inventory requires input.order_id.",
+                metadata={"executor": type(self).__name__, "side_effects": False},
+            )
+        try:
+            output = self._reserve(order_id)
+        except ValueError as exc:
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                request_id=request.request_id,
+                error=str(exc),
+                metadata={"executor": type(self).__name__, "side_effects": False},
+            )
+        return ActionResult(
+            action=request.action,
+            status=ActionExecutionStatus.SUCCEEDED,
+            output=output,
+            metadata={
+                "executor": type(self).__name__,
+                "tool": "reserve_inventory",
+                "side_effects": True,
+                "context": dict(context or {}),
+            },
+            request_id=request.request_id,
+        )
+
+    def execute_many(
+        self,
+        requests: tuple[ActionRequest, ...],
+        context: dict[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Execute multiple reserve requests."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+    def _reserve(self, order_id: str) -> dict[str, Any]:
+        path = str(self.database_path)
+        connection = sqlite3.connect(path)
+        connection.row_factory = sqlite3.Row
+        try:
+            connection.execute("begin immediate")
+            row = connection.execute(
+                """
+                select orders.id, orders.sku, orders.quantity, orders.status, accounts.status as account_status,
+                       inventory.available
+                from orders
+                join accounts on accounts.id = orders.account_id
+                join inventory on inventory.sku = orders.sku
+                where orders.id = ?
+                """,
+                (order_id,),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"order not found: {order_id}")
+            if row["status"] != "pending":
+                raise ValueError(f"order is not pending: {order_id}")
+            if row["account_status"] != "active":
+                raise ValueError(f"account is not active for order: {order_id}")
+            if int(row["available"]) < int(row["quantity"]):
+                raise ValueError(f"insufficient inventory for order: {order_id}")
+            remaining = int(row["available"]) - int(row["quantity"])
+            connection.execute(
+                "update inventory set available = ? where sku = ?",
+                (remaining, row["sku"]),
+            )
+            connection.execute(
+                "update orders set status = ? where id = ?",
+                ("reserved", order_id),
+            )
+            connection.commit()
+            return {
+                "order_id": order_id,
+                "sku": row["sku"],
+                "reserved": int(row["quantity"]),
+                "remaining": remaining,
+                "status": "reserved",
+                "payment_captured": False,
+            }
+        except Exception:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
+
+def tool_output_state_source(action_results: tuple[ActionResult, ...]) -> ToolOutputStateSource:
     """Map local reserve-inventory tool output into structured verifier state."""
     return ToolOutputStateSource(
-        outputs={"reserve_inventory": tool_output},
+        action_results=action_results,
         mappings=(
             ToolOutputMapping(
                 state_path="reservation.order_id",
-                output_path="reserve_inventory.order_id",
+                output_path="order_id",
+                action=ControlAction.EXECUTE_TOOL,
+                request_id="reserve-ord-1",
                 required=True,
             ),
             ToolOutputMapping(
                 state_path="reservation.remaining",
-                output_path="reserve_inventory.remaining",
+                output_path="remaining",
+                action=ControlAction.EXECUTE_TOOL,
+                request_id="reserve-ord-1",
                 required=True,
             ),
             ToolOutputMapping(
                 state_path="reservation.status",
-                output_path="reserve_inventory.status",
+                output_path="status",
+                action=ControlAction.EXECUTE_TOOL,
+                request_id="reserve-ord-1",
                 required=True,
             ),
             ToolOutputMapping(
                 state_path="reservation.payment_captured",
-                output_path="reserve_inventory.payment_captured",
+                output_path="payment_captured",
+                action=ControlAction.EXECUTE_TOOL,
+                request_id="reserve-ord-1",
                 required=True,
             ),
         ),
@@ -216,7 +354,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             name="--diagnostics",
         ).items()
     }
-    tool_output = parse_json_object(args.tool_output, default=default_tool_output(), name="--tool-output")
+    tool_input = parse_json_object(args.tool_input, default=default_tool_input(), name="--tool-input")
 
     database_verifier = RoutedVerifier((
         VerifierRoute(
@@ -225,19 +363,40 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             metadata_keys=("state_check",),
         ),
     ))
-    tool_verifier = RoutedVerifier((
-        VerifierRoute(
-            "tool_output_state",
-            StructuredStateVerifier.from_source(tool_output_state_source(tool_output)),
-            metadata_keys=("state_check",),
-        ),
-    ))
-
     pre_claims = pre_tool_claims()
     post_claims = post_tool_claims()
     pre_results = tuple(database_verifier.verify_many(pre_claims))
     initial_decision = RiskController(artifact).decide(diagnostics, verification_results=pre_results)
-    post_results = tuple(tool_verifier.verify_many(post_claims))
+    tool_request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="pre-tool verification supported reservation",
+        payload={
+            "tool": "reserve_inventory",
+            "input": tool_input,
+            "instruction": "reserve inventory only after pre-tool state checks pass",
+        },
+        request_id="reserve-ord-1",
+    )
+    registry = ActionExecutorRegistry().register(
+        ControlAction.EXECUTE_TOOL,
+        SQLiteReserveInventoryExecutor(database_path),
+    )
+    action_results = (
+        registry.execute_many((tool_request,), context={"request_id": args.request_id})
+        if initial_decision.action is ControlAction.ACCEPT
+        else ()
+    )
+    if action_results and action_results[0].status is ActionExecutionStatus.SUCCEEDED:
+        tool_verifier = RoutedVerifier((
+            VerifierRoute(
+                "tool_output_state",
+                StructuredStateVerifier.from_source(tool_output_state_source(action_results)),
+                metadata_keys=("state_check",),
+            ),
+        ))
+        post_results = tuple(tool_verifier.verify_many(post_claims))
+    else:
+        post_results = tuple(_tool_not_executed_result(claim, action_results=action_results) for claim in post_claims)
     claims = pre_claims + post_claims
     results = pre_results + post_results
     final_decision = RiskController(artifact).decide(diagnostics, verification_results=results)
@@ -249,6 +408,8 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
         claims=claims,
         verification_results=results,
         risk_decision=final_decision,
+        actions=(tool_request,),
+        action_results=action_results,
         events=(
             TraceEvent(
                 "pre_tool_verification",
@@ -259,11 +420,12 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
                 },
             ),
             TraceEvent(
-                "local_tool_output_ingested",
+                "local_tool_executed",
                 {
                     "tool": "reserve_inventory",
-                    "output_keys": tuple(sorted(tool_output)),
-                    "side_effects": False,
+                    "status": action_results[0].status.value if action_results else "skipped",
+                    "output_keys": tuple(sorted(action_results[0].output)) if action_results else (),
+                    "side_effects": _action_results_side_effects(action_results),
                 },
             ),
             TraceEvent(
@@ -283,6 +445,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             "tool": "reserve_inventory",
             "business_domain": "order_reservation",
             "route_summary": route_summary,
+            "action_execution_summary": ProductTrace(action_results=action_results).action_execution_summary(),
         },
     )
     payload = trace.to_dict()
@@ -302,6 +465,31 @@ def _result_payload(result: VerificationResult) -> dict[str, Any]:
     }
 
 
+def _action_results_side_effects(action_results: tuple[ActionResult, ...]) -> bool:
+    return any(bool(result.metadata.get("side_effects", False)) for result in action_results)
+
+
+def _tool_not_executed_result(
+    claim: Claim,
+    *,
+    action_results: tuple[ActionResult, ...],
+) -> VerificationResult:
+    status = action_results[0].status.value if action_results else "skipped"
+    error = action_results[0].error if action_results else "pre-tool verification did not allow execution"
+    return VerificationResult(
+        status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+        confidence=0.2,
+        explanation="post-tool verification skipped because tool did not produce successful output",
+        metadata={
+            "claim_id": claim.claim_id,
+            "verifier": "tool_output_state",
+            "decision_rule": "tool_output_missing",
+            "tool_status": status,
+            "tool_error": error,
+        },
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="EigenTruth production-like local tool loop demo")
     parser.add_argument("--database", default=None, help="optional SQLite database path")
@@ -310,8 +498,8 @@ def main() -> None:
     parser.set_defaults(seed_database=True)
     parser.add_argument("--diagnostics", default=None,
                         help="diagnostics JSON object; defaults below the toy threshold")
-    parser.add_argument("--tool-output", default=None,
-                        help="reserve-inventory tool output JSON object; defaults to deterministic output")
+    parser.add_argument("--tool-input", default=None,
+                        help="reserve-inventory tool input JSON object; defaults to deterministic input")
     parser.add_argument("--request-id", default="production-tool-loop-demo",
                         help="request id stored in ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

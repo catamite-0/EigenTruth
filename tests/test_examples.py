@@ -138,7 +138,7 @@ def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
             database=str(tmp_path / "orders.db"),
             seed_database=True,
             diagnostics=None,
-            tool_output=None,
+            tool_input=None,
             request_id="test-production-tool-loop",
             output=None,
         )
@@ -154,6 +154,11 @@ def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
     assert payload["metadata"]["business_domain"] == "order_reservation"
     assert payload["metadata"]["tool"] == "reserve_inventory"
     assert payload["diagnostics"] == {"truth_proj": 0.0}
+    assert payload["actions"][0]["action"] == "execute_tool"
+    assert payload["actions"][0]["payload"]["tool"] == "reserve_inventory"
+    assert payload["action_results"][0]["status"] == "succeeded"
+    assert payload["action_results"][0]["metadata"]["side_effects"] is True
+    assert payload["action_results"][0]["output"]["remaining"] == 7
     assert statuses == ["supported", "supported", "refuted"]
     assert selected_routes == ["database_state", "tool_output_state", "tool_output_state"]
     assert route_summary["counts_by_selected_route"] == {
@@ -161,7 +166,34 @@ def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
         "tool_output_state": 2,
     }
     assert route_summary["counts_by_status"] == {"supported": 2, "refuted": 1}
+    assert payload["metadata"]["action_execution_summary"]["side_effects"] is True
     assert payload["verification_results"][1]["metadata"]["actual"] == 7
     assert payload["verification_results"][2]["metadata"]["actual"] is False
     assert payload["risk_decision"]["action"] == "abstain"
     assert payload["risk_decision"]["risk_level"] == "high"
+
+
+def test_production_tool_loop_demo_records_failed_tool_without_side_effect(tmp_path):
+    demo = importlib.import_module("examples.production_tool_loop_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            database=str(tmp_path / "orders.db"),
+            seed_database=True,
+            diagnostics=None,
+            tool_input='{"order_id":"missing"}',
+            request_id="test-production-tool-loop-failed-tool",
+            output=None,
+        )
+    )
+
+    statuses = [result["status"] for result in payload["verification_results"]]
+    tool_event = next(event for event in payload["events"] if event["event_type"] == "local_tool_executed")
+
+    assert payload["action_results"][0]["status"] == "failed"
+    assert payload["action_results"][0]["metadata"]["side_effects"] is False
+    assert payload["metadata"]["action_execution_summary"]["side_effects"] is False
+    assert tool_event["payload"]["status"] == "failed"
+    assert tool_event["payload"]["side_effects"] is False
+    assert statuses == ["supported", "insufficient_evidence", "insufficient_evidence"]
+    assert payload["verification_results"][1]["metadata"]["decision_rule"] == "tool_output_missing"

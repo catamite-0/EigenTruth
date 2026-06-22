@@ -23,6 +23,7 @@ class ControlAction(str, Enum):
     RETRIEVE = "retrieve"
     REWRITE = "rewrite"
     STEER_REGENERATE = "steer_regenerate"
+    EXECUTE_TOOL = "execute_tool"
     ABSTAIN = "abstain"
     CLARIFY = "clarify"
 
