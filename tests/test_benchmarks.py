@@ -238,6 +238,7 @@ def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
         encoding="utf-8",
     )
 
+    index_path = tmp_path / "retriever.sqlite"
     fixture = builder.build_evidence_fixture(
         builder.load_score_dump(scores_path),
         builder.load_corpus((corpus_path,)),
@@ -245,17 +246,40 @@ def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
         retrieval_limit=1,
         query_field="answer",
         retriever_backend="auto",
+        retriever_index_path=index_path,
     )
 
     assert fixture["summary"]["records_with_hits"] == 2
     assert fixture["retriever"]["requested_backend"] == "auto"
+    assert fixture["retriever"]["requested_index_path"] == str(index_path)
     assert fixture["retriever"]["actual_backend"] in {"sqlite_fts", "memory"}
     if fixture["retriever"]["actual_backend"] == "sqlite_fts":
         assert fixture["retriever"]["type"] == "SQLiteFTSRetriever"
+        assert fixture["retriever"]["actual_index_path"] == str(index_path)
+        assert fixture["retriever"]["index_reused"] is False
         assert fixture["records"][0]["retrieval_documents"][0]["metadata"]["retriever_backend"] == "sqlite_fts"
+        second = builder.build_evidence_fixture(
+            builder.load_score_dump(scores_path),
+            builder.load_corpus((corpus_path,)),
+            retriever_min_overlap=0.5,
+            retrieval_limit=1,
+            query_field="answer",
+            retriever_backend="auto",
+            retriever_index_path=index_path,
+        )
+        assert second["retriever"]["index_reused"] is True
     else:
         assert fixture["retriever"]["type"] == "InMemoryRetriever"
+        assert fixture["retriever"]["actual_index_path"] is None
         assert fixture["retriever"]["fallback_reason"]
+
+    with pytest.raises(ValueError, match="retriever_index_path"):
+        builder.build_evidence_fixture(
+            builder.load_score_dump(scores_path),
+            builder.load_corpus((corpus_path,)),
+            retriever_backend="memory",
+            retriever_index_path=index_path,
+        )
 
 
 def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):
@@ -1650,6 +1674,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     corpus_path = tmp_path / "corpus.json"
     registry_path = tmp_path / "registry.json"
     output_dir = tmp_path / "workflow"
+    retriever_index_path = output_dir / "retriever.sqlite"
     statements = [
         {
             "claim_id": "order_true_1",
@@ -1720,6 +1745,8 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
             name="local-retrieval-route",
             version="0.7",
             alpha=0.2,
+            retriever_backend="auto",
+            retriever_index_path=retriever_index_path,
             retrieval_limit=1,
             retriever_min_overlap=0.6,
             min_selected=4,
@@ -1741,6 +1768,8 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert payload["decision"]["registry_record"] == "benchmark_manifest:local-retrieval-route:0.7"
     assert payload["claims_summary"]["records_with_hits"] == 4
     assert payload["claims_summary"]["total_hits"] == 4
+    assert payload["config"]["retriever_backend"] == "auto"
+    assert payload["config"]["retriever_index_path"] == str(retriever_index_path)
     profile = payload["profile"]
     assert profile["total_seconds"] >= 0.0
     assert profile["summary"]["bottleneck"] in profile["phases"]
@@ -1763,7 +1792,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert route["false_refuted_rate"] == pytest.approx(1.0)
     assert route["mean_attempted_route_count"] == pytest.approx(2.0)
     assert route["retrieval_use_rate"] == pytest.approx(1.0)
-    assert sorted(manifest["artifacts"]) == [
+    expected_manifest_artifacts = [
         "promotion_report",
         "retrieval_claims",
         "retrieval_corpora.1.corpus",
@@ -1771,8 +1800,18 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
         "score_dump",
         "verifier_report",
     ]
+    if manifest["metadata"]["retriever_actual_backend"] == "sqlite_fts":
+        expected_manifest_artifacts.append("retriever_index")
+    assert sorted(manifest["artifacts"]) == sorted(expected_manifest_artifacts)
     assert manifest["metadata"]["runner"] == "run_local_retrieval_route_workflow"
     assert manifest["metadata"]["recommended_route"] == "retrieval_groundedness"
+    assert manifest["metadata"]["retriever_backend"] == "auto"
+    assert manifest["metadata"]["retriever_requested_index_path"] == str(retriever_index_path)
+    assert manifest["metadata"]["retriever_actual_backend"] in {"sqlite_fts", "memory"}
+    if manifest["metadata"]["retriever_actual_backend"] == "sqlite_fts":
+        assert manifest["metadata"]["retriever_actual_index_path"] == str(retriever_index_path)
+    else:
+        assert manifest["metadata"]["retriever_actual_index_path"] is None
     assert manifest["metadata"]["claims_records_with_hits"] == 4
     assert manifest["metadata"]["recommended_retrieval_use_rate"] == pytest.approx(1.0)
     assert manifest["metadata"]["runtime_total_seconds"] >= 0.0
@@ -1785,6 +1824,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     record = registry.get("benchmark_manifest:local-retrieval-route:0.7")
     assert record.metadata["workflow"] == "run_local_retrieval_route_workflow"
     assert record.metadata["recommended_route"] == "retrieval_groundedness"
+    assert record.metadata["retriever_actual_backend"] in {"sqlite_fts", "memory"}
     assert record.metadata["recommended_retrieval_use_rate"] == pytest.approx(1.0)
     assert record.metadata["runtime_bottleneck"] in profile["phases"]
     assert record.metadata["runtime_n_claim_records"] == 4

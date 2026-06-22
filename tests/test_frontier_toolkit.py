@@ -372,6 +372,38 @@ def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():
         assert retriever.fallback_reason
 
 
+def test_sqlite_fts_retriever_can_reuse_persistent_index(tmp_path):
+    index_path = tmp_path / "retrieval.sqlite"
+    documents = (
+        "Paris is the capital of France.",
+        "Lyon is a city in France.",
+    )
+    first = SQLiteFTSRetriever(documents, min_overlap=0.6, index_path=index_path)
+
+    first_hits = first.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert first_hits[0].text == "Paris is the capital of France."
+    assert first.index_reused is False
+    if not first.available:
+        assert first.fallback_reason
+        return
+
+    assert first.index_path == index_path
+    assert index_path.exists()
+    second = SQLiteFTSRetriever(documents, min_overlap=0.6, index_path=index_path)
+    second_hits = second.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert second.available
+    assert second.index_reused is True
+    assert second.document_fingerprint == first.document_fingerprint
+    assert second_hits[0].text == "Paris is the capital of France."
+
+    changed = SQLiteFTSRetriever((*documents, "Marseille is a port city."), min_overlap=0.6, index_path=index_path)
+    assert changed.available
+    assert changed.index_reused is False
+    assert changed.document_fingerprint != first.document_fingerprint
+
+
 def test_question_answer_verifier_checks_structured_question_answers():
     verifier = QuestionAnswerVerifier([
         QuestionAnswerFact(

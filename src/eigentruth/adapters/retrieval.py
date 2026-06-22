@@ -6,6 +6,8 @@ import json
 import re
 import sqlite3
 from dataclasses import dataclass, field
+from hashlib import sha256
+from pathlib import Path
 from typing import Any, Mapping, NamedTuple, Protocol, Sequence, runtime_checkable
 
 from eigentruth.control.actions import (
@@ -18,6 +20,7 @@ from eigentruth.control.actions import (
 from eigentruth.control.policy import ControlAction
 
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
+_FTS_SCHEMA_VERSION = "1"
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,13 @@ class _IndexedRetrievalDocument(NamedTuple):
     tokens: tuple[str, ...]
 
 
+class _FTSConnectionState(NamedTuple):
+    connection: sqlite3.Connection
+    index_reused: bool
+    index_path: Path | None
+    document_fingerprint: str
+
+
 @runtime_checkable
 class Retriever(Protocol):
     """Interface for local or external retrieval implementations."""
@@ -152,23 +162,36 @@ class SQLiteFTSRetriever:
 
     documents: Sequence[RetrievalHit | Mapping[str, Any] | str]
     min_overlap: float = 0.2
+    index_path: str | Path | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.min_overlap <= 1.0):
             raise ValueError("min_overlap must be in [0, 1].")
         documents = tuple(_coerce_hit(item) for item in self.documents)
+        index_path = None if self.index_path is None else Path(self.index_path)
         object.__setattr__(self, "documents", documents)
+        object.__setattr__(self, "index_path", index_path)
         object.__setattr__(self, "_fallback", InMemoryRetriever(documents, min_overlap=self.min_overlap))
+        document_fingerprint = ""
         try:
-            connection = _build_fts_connection(documents)
-        except sqlite3.Error as exc:
+            document_fingerprint = _documents_fingerprint(documents)
+            state = _build_fts_connection(
+                documents,
+                index_path=index_path,
+                document_fingerprint=document_fingerprint,
+            )
+        except (OSError, sqlite3.Error, TypeError, ValueError) as exc:
             object.__setattr__(self, "_connection", None)
             object.__setattr__(self, "_available", False)
             object.__setattr__(self, "_fallback_reason", str(exc))
+            object.__setattr__(self, "_index_reused", False)
+            object.__setattr__(self, "_document_fingerprint", document_fingerprint)
         else:
-            object.__setattr__(self, "_connection", connection)
+            object.__setattr__(self, "_connection", state.connection)
             object.__setattr__(self, "_available", True)
             object.__setattr__(self, "_fallback_reason", None)
+            object.__setattr__(self, "_index_reused", state.index_reused)
+            object.__setattr__(self, "_document_fingerprint", state.document_fingerprint)
 
     @property
     def available(self) -> bool:
@@ -179,6 +202,16 @@ class SQLiteFTSRetriever:
     def fallback_reason(self) -> str | None:
         """Return why FTS was unavailable, if the retriever is using fallback."""
         return self._fallback_reason
+
+    @property
+    def index_reused(self) -> bool:
+        """Return whether an existing persistent FTS index was reused."""
+        return bool(self._index_reused)
+
+    @property
+    def document_fingerprint(self) -> str:
+        """Return the fingerprint used to validate a persistent FTS index."""
+        return str(self._document_fingerprint)
 
     def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
         """Return top local documents via SQLite FTS5 candidates and token overlap."""
@@ -302,36 +335,126 @@ def _coerce_hit(value: RetrievalHit | Mapping[str, Any] | str) -> RetrievalHit:
     return RetrievalHit.from_dict(value)
 
 
-def _build_fts_connection(documents: Sequence[RetrievalHit]) -> sqlite3.Connection:
-    connection = sqlite3.connect(":memory:")
-    try:
-        connection.execute(
-            """
-            CREATE VIRTUAL TABLE documents USING fts5(
-                text,
-                source UNINDEXED,
-                metadata_json UNINDEXED,
-                base_score UNINDEXED
+def _build_fts_connection(
+    documents: Sequence[RetrievalHit],
+    *,
+    index_path: Path | None,
+    document_fingerprint: str,
+) -> _FTSConnectionState:
+    if index_path is None:
+        connection = sqlite3.connect(":memory:")
+        try:
+            _initialize_fts_connection(
+                connection,
+                documents,
+                document_fingerprint=document_fingerprint,
             )
-            """
+        except sqlite3.Error:
+            connection.close()
+            raise
+        return _FTSConnectionState(
+            connection=connection,
+            index_reused=False,
+            index_path=None,
+            document_fingerprint=document_fingerprint,
         )
-        connection.executemany(
-            "INSERT INTO documents(text, source, metadata_json, base_score) VALUES (?, ?, ?, ?)",
-            (
-                (
-                    document.text,
-                    document.source,
-                    _json_dumps_mapping(document.metadata),
-                    float(document.score),
-                )
-                for document in documents
-            ),
+
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(str(index_path))
+    try:
+        if _can_reuse_fts_connection(connection, document_fingerprint=document_fingerprint):
+            return _FTSConnectionState(
+                connection=connection,
+                index_reused=True,
+                index_path=index_path,
+                document_fingerprint=document_fingerprint,
+            )
+        _initialize_fts_connection(
+            connection,
+            documents,
+            document_fingerprint=document_fingerprint,
         )
-        connection.commit()
     except sqlite3.Error:
         connection.close()
         raise
-    return connection
+    return _FTSConnectionState(
+        connection=connection,
+        index_reused=False,
+        index_path=index_path,
+        document_fingerprint=document_fingerprint,
+    )
+
+
+def _can_reuse_fts_connection(connection: sqlite3.Connection, *, document_fingerprint: str) -> bool:
+    try:
+        rows = dict(connection.execute("SELECT key, value FROM index_metadata"))
+        count_row = connection.execute("SELECT count(*) FROM documents").fetchone()
+    except sqlite3.Error:
+        return False
+    if not count_row:
+        return False
+    return (
+        rows.get("schema_version") == _FTS_SCHEMA_VERSION
+        and rows.get("document_fingerprint") == document_fingerprint
+        and rows.get("n_documents") == str(count_row[0])
+    )
+
+
+def _initialize_fts_connection(
+    connection: sqlite3.Connection,
+    documents: Sequence[RetrievalHit],
+    *,
+    document_fingerprint: str,
+) -> None:
+    connection.execute("DROP TABLE IF EXISTS documents")
+    connection.execute("DROP TABLE IF EXISTS index_metadata")
+    connection.execute(
+        """
+        CREATE VIRTUAL TABLE documents USING fts5(
+            text,
+            source UNINDEXED,
+            metadata_json UNINDEXED,
+            base_score UNINDEXED
+        )
+        """
+    )
+    connection.execute("CREATE TABLE index_metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+    connection.executemany(
+        "INSERT INTO documents(text, source, metadata_json, base_score) VALUES (?, ?, ?, ?)",
+        (
+            (
+                document.text,
+                document.source,
+                _json_dumps_mapping(document.metadata),
+                float(document.score),
+            )
+            for document in documents
+        ),
+    )
+    connection.executemany(
+        "INSERT INTO index_metadata(key, value) VALUES (?, ?)",
+        (
+            ("schema_version", _FTS_SCHEMA_VERSION),
+            ("document_fingerprint", document_fingerprint),
+            ("n_documents", str(len(documents))),
+        ),
+    )
+    connection.commit()
+
+
+def _documents_fingerprint(documents: Sequence[RetrievalHit]) -> str:
+    hasher = sha256()
+    for document in documents:
+        hasher.update(
+            _json_dumps_mapping({
+                "text": document.text,
+                "source": document.source,
+                "score": float(document.score),
+                "metadata": dict(document.metadata),
+            }).encode("utf-8")
+        )
+        hasher.update(b"\n")
+    return hasher.hexdigest()
 
 
 def _fts_query(tokens: Sequence[str]) -> str:

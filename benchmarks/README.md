@@ -957,6 +957,7 @@ python benchmarks/build_evidence_fixture.py \
   --output artifacts/truthfulqa_l80_local_evidence_claims.json \
   --query-field answer \
   --retriever-backend auto \
+  --retriever-index-path artifacts/cache/local_retrieval_fts/truthfulqa_l80.sqlite \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3
 
@@ -974,6 +975,9 @@ Use this before wiring a real search/RAG backend: it gives the same downstream
 fixture schema and `verification_quality` fields while keeping evidence source
 and retrieval behavior fully reproducible. The default retriever backend is
 `memory`; `auto` tries SQLite FTS5 and falls back to memory when unavailable.
+When `--retriever-index-path` is provided with `auto` or `sqlite_fts`, the FTS
+index is persisted and reused when its stored corpus fingerprint matches the
+current corpus.
 
 ## `run_local_retrieval_route_workflow.py`
 
@@ -993,6 +997,7 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --signal truth_proj \
   --query-field answer \
   --retriever-backend auto \
+  --retriever-index-path artifacts/cache/local_retrieval_fts/qwen05_l80.sqlite \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3 \
   --claims-cache-dir artifacts/cache/local_retrieval_claims \
@@ -1023,7 +1028,10 @@ claims file.
 `--retriever-backend` defaults to `memory`. Use `auto` to try the standard-library
 SQLite FTS5 candidate index and fall back to memory when FTS5 is unavailable in
 the local Python build. Use `sqlite_fts` when the run should record that the
-indexed backend was explicitly requested.
+indexed backend was explicitly requested. `--retriever-index-path` is optional;
+when set with `auto` or `sqlite_fts`, the workflow can reuse a persistent FTS
+index across runs and records the actual backend, index path, and reuse status
+in the claims fixture and manifest metadata.
 
 Current l80 local-corpus baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:

@@ -51,6 +51,7 @@ class LocalRetrievalRouteWorkflowConfig:
     seed: int = 0
     query_field: str = "answer"
     retriever_backend: str = "memory"
+    retriever_index_path: Path | None = None
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.20
     retrieval_limit: int = 5
@@ -96,6 +97,7 @@ class LocalRetrievalRouteWorkflowConfig:
             "verification_report_path",
             "workflow_report_path",
             "claims_cache_dir",
+            "retriever_index_path",
         ):
             value = getattr(self, attr)
             if value is not None:
@@ -111,6 +113,8 @@ class LocalRetrievalRouteWorkflowConfig:
             raise ValueError("retrieval_limit must be positive.")
         if self.retriever_backend not in RETRIEVER_BACKENDS:
             raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
+        if self.retriever_backend == "memory" and self.retriever_index_path is not None:
+            raise ValueError("retriever_index_path is only supported with sqlite_fts or auto backends.")
         registry_fields = (self.registry_path, self.name, self.version)
         if any(value is not None for value in registry_fields) and not all(registry_fields):
             raise ValueError("registry_path, name, and version must be provided together.")
@@ -174,6 +178,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
                 retrieval_limit=config.retrieval_limit,
                 query_field=config.query_field,
                 retriever_backend=config.retriever_backend,
+                retriever_index_path=config.retriever_index_path,
             )
         claims_cache = {
             **claims_cache,
@@ -304,6 +309,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "seed": int(config.seed),
             "query_field": config.query_field,
             "retriever_backend": config.retriever_backend,
+            "retriever_index_path": None if config.retriever_index_path is None else str(config.retriever_index_path),
             "verifier_min_overlap": float(config.verifier_min_overlap),
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
@@ -370,6 +376,12 @@ def _write_artifact_manifest(
     cache_path = claims_cache.get("path")
     if cache_path is not None:
         artifacts["claims_cache_record"] = Path(str(cache_path))
+    if (
+        metadata.get("retriever_actual_backend") == "sqlite_fts"
+        and config.retriever_index_path is not None
+        and config.retriever_index_path.exists()
+    ):
+        artifacts["retriever_index"] = config.retriever_index_path
     for idx, path in enumerate(config.corpus_paths, start=1):
         artifacts[f"retrieval_corpora.{idx}.{path.stem}"] = path
     manifest = build_artifact_manifest(
@@ -396,6 +408,7 @@ def _manifest_metadata(
     recommended_metrics = dict(by_route.get(str(recommended_route)) or {}) if recommended_route else {}
     quality_gate = dict(route_comparison.get("quality_gate") or {})
     summary = dict(claims_fixture.get("summary") or {})
+    retriever_info = dict(claims_fixture.get("retriever") or {})
     runtime_summary = dict(runtime_profile.get("summary") or {})
     runtime_scale = dict(runtime_profile.get("scale") or {})
     runtime_artifacts = dict(runtime_profile.get("artifacts") or {})
@@ -413,6 +426,12 @@ def _manifest_metadata(
         "signal": config.signal,
         "query_field": config.query_field,
         "retriever_backend": config.retriever_backend,
+        "retriever_requested_index_path": (
+            None if config.retriever_index_path is None else str(config.retriever_index_path)
+        ),
+        "retriever_actual_backend": retriever_info.get("actual_backend"),
+        "retriever_actual_index_path": retriever_info.get("actual_index_path"),
+        "retriever_index_reused": retriever_info.get("index_reused"),
         "verifier_min_overlap": float(config.verifier_min_overlap),
         "retriever_min_overlap": float(config.retriever_min_overlap),
         "retrieval_limit": int(config.retrieval_limit),
@@ -484,7 +503,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
     return {
         "schema_version": 1,
         "cache_type": "local_retrieval_claims",
-        "builder": "build_evidence_fixture:v1",
+        "builder": "build_evidence_fixture:v2",
         "score_dump": fingerprint_path(config.scores_path).to_dict(),
         "corpora": [fingerprint_path(path).to_dict() for path in config.corpus_paths],
         "retrieval": {
@@ -817,6 +836,7 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         seed=args.seed,
         query_field=args.query_field,
         retriever_backend=args.retriever_backend,
+        retriever_index_path=None if args.retriever_index_path is None else Path(args.retriever_index_path),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -887,6 +907,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         default="answer",
     )
     parser.add_argument("--retriever-backend", choices=RETRIEVER_BACKENDS, default="memory")
+    parser.add_argument(
+        "--retriever-index-path",
+        default=None,
+        help="optional persistent SQLite FTS index path for sqlite_fts/auto backends",
+    )
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.20)
     parser.add_argument("--retrieval-limit", type=lambda value: _parse_positive_int(
