@@ -22,12 +22,15 @@ from eigentruth.adapters import (
     StateTransitionCheck,
     StateTransitionVerifier,
     StructuredStateVerifier,
+    ToolOutputMapping,
+    ToolOutputStateSource,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutionStatus,
     ActionExecutorRegistry,
     ActionRequest,
+    ActionResult,
     ControlAction,
     ControlPolicyConfig,
     DefaultCorrectionPolicy,
@@ -574,6 +577,107 @@ def test_sqlite_state_source_handles_missing_required_queries(tmp_path):
         required.load_state()
     with pytest.raises(ValueError, match="required must be"):
         SQLiteStateQuery.from_mapping({"path": "x", "sql": "select 1", "required": "maybe"})
+
+
+def test_tool_output_state_source_maps_action_results_for_state_verifier():
+    class ReservationToolExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                request_id=request.request_id,
+                output={
+                    "reservation": {
+                        "order_id": "ord_1",
+                        "sku": "sku_123",
+                        "status": "reserved",
+                        "remaining_available": 7,
+                    }
+                },
+                metadata={"executor": type(self).__name__, "context": dict(context or {})},
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="check reservation tool output",
+        request_id="reserve-1",
+    )
+    registry = ActionExecutorRegistry().register(ControlAction.RETRIEVE, ReservationToolExecutor())
+    action_result = registry.execute(request, context={"request_id": "req-tool-output"})
+    source = ToolOutputStateSource(
+        action_results=(action_result,),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="reserve-1",
+                required=True,
+            ),
+            {
+                "state_path": "orders.ord_1.status",
+                "output_path": "reservation.status",
+                "action": "retrieve",
+                "request_id": "reserve-1",
+            },
+        ),
+    )
+
+    state = source.load_state()
+    verifier = StructuredStateVerifier.from_source(source)
+    supported = verifier.verify(
+        Claim(
+            "Reservation tool left 7 units available.",
+            metadata={
+                "state_check": {
+                    "path": "inventory.sku_123.available",
+                    "operator": "eq",
+                    "value": 7,
+                    "source": "reservation_tool_output",
+                }
+            },
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Reservation tool left 9 units available.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": "eq", "value": 9}},
+        )
+    )
+
+    assert state["inventory"]["sku_123"]["available"] == 7
+    assert state["orders"]["ord_1"]["status"] == "reserved"
+    assert state["tool_outputs"]["by_request_id"]["reserve-1"]["reservation"]["status"] == "reserved"
+    assert state["tool_outputs"]["first_by_action"]["retrieve"]["reservation"]["remaining_available"] == 7
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["actual"] == 7
+    assert refuted.status is VerificationStatus.REFUTED
+
+
+def test_tool_output_state_source_handles_raw_outputs_defaults_and_required_mappings():
+    source = ToolOutputStateSource(
+        outputs={"calculator": {"result": 42}},
+        mappings=(
+            {"state_path": "answers.value", "output_path": "calculator.result", "required": "true"},
+            {"state_path": "answers.units", "output_path": "calculator.units", "default": "items"},
+        ),
+    )
+    required_missing = ToolOutputStateSource(
+        outputs={"calculator": {"result": 42}},
+        mappings=(
+            {"state_path": "answers.value", "output_path": "calculator.missing", "required": True},
+        ),
+    )
+
+    state = source.load_state()
+
+    assert state["answers"] == {"value": 42, "units": "items"}
+    assert state["tool_outputs"]["input"]["calculator"]["result"] == 42
+    with pytest.raises(ValueError, match="required tool output mapping"):
+        required_missing.load_state()
 
 
 def test_composite_verifier_skips_not_applicable_tool_results():

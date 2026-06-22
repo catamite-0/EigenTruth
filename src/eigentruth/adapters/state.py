@@ -5,9 +5,11 @@ from __future__ import annotations
 import math
 import sqlite3
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence
 
+from eigentruth.control.actions import ActionResult
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus
 
 
@@ -163,6 +165,101 @@ class SQLiteStateSource:
             return row[column]
         except IndexError as exc:
             raise ValueError(f"SQLite state query column {column!r} is missing for {query.path!r}.") from exc
+
+
+@dataclass(frozen=True)
+class ToolOutputMapping:
+    """Map one tool/action output path into structured verifier state."""
+
+    state_path: str
+    output_path: str
+    action: str | Enum | None = None
+    request_id: str | None = None
+    default: Any = None
+    required: bool = False
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        state_path = self.state_path.strip()
+        output_path = self.output_path.strip()
+        if not state_path:
+            raise ValueError("tool output mapping state_path must be non-empty.")
+        if not output_path:
+            raise ValueError("tool output mapping output_path must be non-empty.")
+        object.__setattr__(self, "state_path", state_path)
+        object.__setattr__(self, "output_path", output_path)
+        if self.action is not None:
+            action = self.action.value if isinstance(self.action, Enum) else str(self.action)
+            object.__setattr__(self, "action", action)
+        if self.request_id is not None:
+            object.__setattr__(self, "request_id", str(self.request_id))
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "ToolOutputMapping":
+        """Build a tool-output mapping from a JSON-like mapping."""
+        raw_state_path = data.get("state_path", data.get("path"))
+        raw_output_path = data.get("output_path", data.get("source_path", data.get("from")))
+        if raw_state_path is None:
+            raise ValueError("tool output mapping must contain state_path or path.")
+        if raw_output_path is None:
+            raise ValueError("tool output mapping must contain output_path, source_path, or from.")
+        return cls(
+            state_path=str(raw_state_path),
+            output_path=str(raw_output_path),
+            action=data.get("action"),
+            request_id=None if data.get("request_id") is None else str(data.get("request_id")),
+            default=data.get("default"),
+            required=_parse_bool(data.get("required", False), name="required"),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class ToolOutputStateSource:
+    """Load verifier state from local tool/action execution outputs.
+
+    Raw action outputs are indexed under ``namespace`` for traceability, while
+    optional mappings copy selected output paths into first-class state paths
+    that ``StructuredStateVerifier`` can check directly.
+    """
+
+    action_results: Sequence[ActionResult | Mapping[str, Any]] = ()
+    outputs: Mapping[str, Any] = field(default_factory=dict)
+    mappings: Sequence[ToolOutputMapping | Mapping[str, Any]] = ()
+    namespace: str = "tool_outputs"
+    include_raw_outputs: bool = True
+
+    def __post_init__(self) -> None:
+        mappings = tuple(
+            mapping if isinstance(mapping, ToolOutputMapping) else ToolOutputMapping.from_mapping(mapping)
+            for mapping in self.mappings
+        )
+        object.__setattr__(self, "action_results", tuple(self.action_results))
+        object.__setattr__(self, "outputs", _jsonable_mapping(self.outputs))
+        object.__setattr__(self, "mappings", mappings)
+        namespace = self.namespace.strip()
+        if self.include_raw_outputs and not namespace:
+            raise ValueError("tool output namespace must be non-empty when raw outputs are included.")
+        object.__setattr__(self, "namespace", namespace)
+
+    def load_state(self) -> Mapping[str, Any]:
+        """Return structured state built from configured tool outputs."""
+        state: dict[str, Any] = {}
+        indexed_outputs = _indexed_tool_outputs(self.outputs, self.action_results)
+        if self.include_raw_outputs and indexed_outputs:
+            _set_path(state, self.namespace, indexed_outputs)
+
+        for mapping in self.mappings:
+            found, value = _mapped_tool_output_value(mapping, self.outputs, self.action_results)
+            if not found:
+                if mapping.required:
+                    selector = _mapping_selector_text(mapping)
+                    raise ValueError(f"required tool output mapping was not found: {selector}.")
+                if mapping.default is None:
+                    continue
+                value = mapping.default
+            _set_path(state, mapping.state_path, _jsonable(value))
+        return state
 
 
 @dataclass(frozen=True)
@@ -387,6 +484,115 @@ def _parse_bool(value: Any, *, name: str) -> bool:
         if normalized in {"false", "0", "no", "off"}:
             return False
     raise ValueError(f"{name} must be a boolean or boolean string.")
+
+
+def _indexed_tool_outputs(
+    outputs: Mapping[str, Any],
+    action_results: Sequence[ActionResult | Mapping[str, Any]],
+) -> dict[str, Any]:
+    indexed: dict[str, Any] = {}
+    if outputs:
+        indexed["input"] = _jsonable_mapping(outputs)
+
+    result_payloads = tuple(_action_result_payload(result, index=index) for index, result in enumerate(action_results))
+    if not result_payloads:
+        return indexed
+
+    indexed["results"] = result_payloads
+    by_request_id: dict[str, Any] = {}
+    first_by_action: dict[str, Any] = {}
+    last_by_action: dict[str, Any] = {}
+    for index, payload in enumerate(result_payloads):
+        output = payload.get("output", {})
+        if not isinstance(output, Mapping):
+            continue
+        request_id = payload.get("request_id")
+        request_key = str(request_id) if request_id is not None else f"result_{index + 1}"
+        output_payload = _jsonable_mapping(output)
+        by_request_id[request_key] = output_payload
+
+        action = payload.get("action")
+        if action is None:
+            continue
+        action_key = str(action)
+        first_by_action.setdefault(action_key, output_payload)
+        last_by_action[action_key] = output_payload
+    if by_request_id:
+        indexed["by_request_id"] = by_request_id
+    if first_by_action:
+        indexed["first_by_action"] = first_by_action
+        indexed["last_by_action"] = last_by_action
+    return indexed
+
+
+def _mapped_tool_output_value(
+    mapping: ToolOutputMapping,
+    outputs: Mapping[str, Any],
+    action_results: Sequence[ActionResult | Mapping[str, Any]],
+) -> tuple[bool, Any]:
+    candidates: list[Mapping[str, Any]] = []
+    if mapping.action is None and mapping.request_id is None and outputs:
+        candidates.append(outputs)
+    for index, result in enumerate(action_results):
+        payload = _action_result_payload(result, index=index)
+        if mapping.action is not None and payload.get("action") != mapping.action:
+            continue
+        if mapping.request_id is not None and payload.get("request_id") != mapping.request_id:
+            continue
+        output = payload.get("output", {})
+        if isinstance(output, Mapping):
+            candidates.append(output)
+
+    for candidate in candidates:
+        found, value = _get_path(candidate, mapping.output_path)
+        if found:
+            return True, value
+    return False, None
+
+
+def _mapping_selector_text(mapping: ToolOutputMapping) -> str:
+    parts = [f"output_path={mapping.output_path!r}", f"state_path={mapping.state_path!r}"]
+    if mapping.action is not None:
+        parts.append(f"action={mapping.action!r}")
+    if mapping.request_id is not None:
+        parts.append(f"request_id={mapping.request_id!r}")
+    return ", ".join(parts)
+
+
+def _action_result_payload(result: ActionResult | Mapping[str, Any], *, index: int) -> dict[str, Any]:
+    if isinstance(result, ActionResult):
+        payload = result.to_dict()
+    elif isinstance(result, Mapping):
+        payload = _jsonable_mapping(result)
+    else:
+        raise ValueError(f"action result at index {index} must be an ActionResult or JSON object.")
+    if "output" not in payload:
+        payload["output"] = {}
+    if not isinstance(payload["output"], Mapping):
+        raise ValueError(f"action result output at index {index} must be a JSON object.")
+    return payload
+
+
+def _jsonable_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(value, Mapping):
+        raise ValueError("expected a JSON-like mapping.")
+    return {str(key): _jsonable(item) for key, item in value.items()}
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, Enum):
+        return value.value
+    if isinstance(value, ActionResult):
+        return value.to_dict()
+    if isinstance(value, Mapping):
+        return _jsonable_mapping(value)
+    if isinstance(value, tuple):
+        return tuple(_jsonable(item) for item in value)
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    return value
 
 
 _MISSING = object()

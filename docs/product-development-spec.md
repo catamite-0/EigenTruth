@@ -22,6 +22,7 @@ Implemented today:
 - `eigentruth.control.run_verification_loop` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that feeds retrieval action results back into verifier context.
 - `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
+- `eigentruth.adapters.ToolOutputStateSource` / `ToolOutputMapping`: maps local tool/action execution outputs into structured verifier state for post-tool checks.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
 - `eigentruth.adapters.StateTransitionVerifier`: dependency-free action-conditioned postcondition verifier that predicts next state through a world-model adapter, then reuses structured state checks.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, and saved concept metadata.
@@ -250,6 +251,7 @@ For product features:
 - `CalculatorVerifier` deterministic tool adapter for structured arithmetic claims and simple symbolic equations, using a restricted local arithmetic evaluator with no new mandatory dependencies.
 - `StructuredStateVerifier` / `StateCheck` structured state and business-rule adapter for database, policy, and domain-state checks. It can be routed through `state_check` claim metadata or context and returns supported, refuted, insufficient-evidence, or error results with explicit decision rules.
 - `SQLiteStateSource` / `SQLiteStateQuery` load read-only SQLite query results into nested verifier state, giving the structured-state path a real database integration without new mandatory dependencies.
+- `ToolOutputStateSource` / `ToolOutputMapping` map local action or tool execution outputs into nested verifier state, giving post-tool checks a structured path without requiring a new tool runtime.
 - `StateTransitionVerifier` / `StateTransitionCheck` verify claims about action consequences by predicting next state through a world-model adapter and checking structured postconditions; `InMemoryWorldModelAdapter` supports nested and dotted-path `set`/`increment`/`decrement` actions for deterministic domain-rule tests.
 - `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
 - `state_transition_control_demo.py` emits a final `ProductTrace` where a world-model predicted postcondition refutes a claim about action consequences despite low internal diagnostics.
@@ -266,7 +268,7 @@ For product features:
 
 ### Next Verification Adapter Work
 
-- Connect `StructuredStateVerifier` to additional live database, business-rule, tool-output, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources and stdlib SQLite.
+- Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Extend claim extraction or upstream tool calls to provide structured `expression` / `expected` metadata for calculator-verifiable claims beyond simple symbolic equations.
 - Add route policies for QA/database/world-model adapters so product traces explain why each tool was selected or skipped.
 - Track route-level metrics in future adapter benchmarks so new tools are judged by route hit rate, false support, false refutation, and downstream conformal control impact.
