@@ -172,6 +172,8 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert fixture["records"][1]["retrieval_documents"][0]["source"] == "facts:lyon"
     assert fixture["records"][1]["metadata"]["retrieval"]["query_field"] == "answer"
     assert fixture["records"][1]["metadata"]["retrieval"]["query"] == "The capital of France is Lyon."
+    assert fixture["retriever"]["requested_backend"] == "memory"
+    assert fixture["retriever"]["actual_backend"] == "memory"
     assert quality["label_status_matrix"]["true"]["supported"] == 1
     assert quality["label_status_matrix"]["true"]["insufficient_evidence"] == 1
     assert quality["label_status_matrix"]["false"]["refuted"] == 1
@@ -202,6 +204,58 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["groundedness_verifiers"]["requests"] >= 3
     assert cache_stats["retrievers"]["requests"] == 2
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
+
+
+def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    scores_path.write_text(
+        json.dumps({
+            "labels": [0, 1],
+            "statements": [
+                {
+                    "claim_id": "c1",
+                    "answer": "Order R1 is approved for expedited shipping.",
+                    "text": "Order R1 is approved for expedited shipping.",
+                },
+                {
+                    "claim_id": "c2",
+                    "answer": "Order R1 is approved for same-day drone shipping.",
+                    "text": "Order R1 is approved for same-day drone shipping.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {"text": "Order R1 is approved for expedited shipping.", "source": "support:R1"},
+                {"text": "Order R1 is not approved for same-day drone shipping.", "source": "refute:R1"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=0.5,
+        retrieval_limit=1,
+        query_field="answer",
+        retriever_backend="auto",
+    )
+
+    assert fixture["summary"]["records_with_hits"] == 2
+    assert fixture["retriever"]["requested_backend"] == "auto"
+    assert fixture["retriever"]["actual_backend"] in {"sqlite_fts", "memory"}
+    if fixture["retriever"]["actual_backend"] == "sqlite_fts":
+        assert fixture["retriever"]["type"] == "SQLiteFTSRetriever"
+        assert fixture["records"][0]["retrieval_documents"][0]["metadata"]["retriever_backend"] == "sqlite_fts"
+    else:
+        assert fixture["retriever"]["type"] == "InMemoryRetriever"
+        assert fixture["retriever"]["fallback_reason"]
 
 
 def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):

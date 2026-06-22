@@ -15,6 +15,7 @@ from eigentruth.adapters.retrieval import (
     RetrievalHit,
     RetrievalQuery,
     Retriever,
+    SQLiteFTSRetriever,
 )
 from eigentruth.adapters.state import (
     SQLiteStateQuery,
@@ -46,6 +47,7 @@ __all__ = [
     "RetrievalHit",
     "RetrievalQuery",
     "Retriever",
+    "SQLiteFTSRetriever",
     "SQLiteStateQuery",
     "SQLiteStateSource",
     "StateCheck",

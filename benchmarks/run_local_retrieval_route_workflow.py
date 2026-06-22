@@ -18,7 +18,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.build_evidence_fixture import build_evidence_fixture, load_corpus, load_score_dump  # noqa: E402
+from benchmarks.build_evidence_fixture import (  # noqa: E402
+    RETRIEVER_BACKENDS,
+    build_evidence_fixture,
+    load_corpus,
+    load_score_dump,
+)
 from benchmarks.eval_verifier_ensemble import build_verifier_ensemble_report  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.run_adapter_promotion_workflow import (  # noqa: E402
@@ -45,6 +50,7 @@ class LocalRetrievalRouteWorkflowConfig:
     repeats: int = 1
     seed: int = 0
     query_field: str = "answer"
+    retriever_backend: str = "memory"
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.20
     retrieval_limit: int = 5
@@ -103,6 +109,8 @@ class LocalRetrievalRouteWorkflowConfig:
             raise ValueError("repeats must be >= 1.")
         if int(self.retrieval_limit) <= 0:
             raise ValueError("retrieval_limit must be positive.")
+        if self.retriever_backend not in RETRIEVER_BACKENDS:
+            raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
         registry_fields = (self.registry_path, self.name, self.version)
         if any(value is not None for value in registry_fields) and not all(registry_fields):
             raise ValueError("registry_path, name, and version must be provided together.")
@@ -165,6 +173,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
                 retriever_min_overlap=config.retriever_min_overlap,
                 retrieval_limit=config.retrieval_limit,
                 query_field=config.query_field,
+                retriever_backend=config.retriever_backend,
             )
         claims_cache = {
             **claims_cache,
@@ -294,6 +303,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "repeats": int(config.repeats),
             "seed": int(config.seed),
             "query_field": config.query_field,
+            "retriever_backend": config.retriever_backend,
             "verifier_min_overlap": float(config.verifier_min_overlap),
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
@@ -402,6 +412,7 @@ def _manifest_metadata(
         "score_name": config.score_name,
         "signal": config.signal,
         "query_field": config.query_field,
+        "retriever_backend": config.retriever_backend,
         "verifier_min_overlap": float(config.verifier_min_overlap),
         "retriever_min_overlap": float(config.retriever_min_overlap),
         "retrieval_limit": int(config.retrieval_limit),
@@ -478,6 +489,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
         "corpora": [fingerprint_path(path).to_dict() for path in config.corpus_paths],
         "retrieval": {
             "query_field": config.query_field,
+            "retriever_backend": config.retriever_backend,
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
         },
@@ -804,6 +816,7 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         repeats=args.repeats,
         seed=args.seed,
         query_field=args.query_field,
+        retriever_backend=args.retriever_backend,
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -873,6 +886,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         choices=("text", "answer", "question", "question_answer"),
         default="answer",
     )
+    parser.add_argument("--retriever-backend", choices=RETRIEVER_BACKENDS, default="memory")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.20)
     parser.add_argument("--retrieval-limit", type=lambda value: _parse_positive_int(

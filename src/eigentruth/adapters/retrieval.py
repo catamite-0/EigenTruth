@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from typing import Any, Mapping, NamedTuple, Protocol, Sequence, runtime_checkable
 
@@ -145,6 +147,87 @@ class InMemoryRetriever:
 
 
 @dataclass(frozen=True)
+class SQLiteFTSRetriever:
+    """SQLite FTS5 candidate retriever with token-overlap scoring fallback."""
+
+    documents: Sequence[RetrievalHit | Mapping[str, Any] | str]
+    min_overlap: float = 0.2
+
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.min_overlap <= 1.0):
+            raise ValueError("min_overlap must be in [0, 1].")
+        documents = tuple(_coerce_hit(item) for item in self.documents)
+        object.__setattr__(self, "documents", documents)
+        object.__setattr__(self, "_fallback", InMemoryRetriever(documents, min_overlap=self.min_overlap))
+        try:
+            connection = _build_fts_connection(documents)
+        except sqlite3.Error as exc:
+            object.__setattr__(self, "_connection", None)
+            object.__setattr__(self, "_available", False)
+            object.__setattr__(self, "_fallback_reason", str(exc))
+        else:
+            object.__setattr__(self, "_connection", connection)
+            object.__setattr__(self, "_available", True)
+            object.__setattr__(self, "_fallback_reason", None)
+
+    @property
+    def available(self) -> bool:
+        """Return whether SQLite FTS5 is available in this Python build."""
+        return bool(self._available)
+
+    @property
+    def fallback_reason(self) -> str | None:
+        """Return why FTS was unavailable, if the retriever is using fallback."""
+        return self._fallback_reason
+
+    def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
+        """Return top local documents via SQLite FTS5 candidates and token overlap."""
+        if limit <= 0:
+            return ()
+        if not self.available:
+            return tuple(self._fallback.retrieve(query, limit=limit))
+        query_tokens = _tokens(query.query)
+        fts_query = _fts_query(query_tokens)
+        if not fts_query:
+            return ()
+        try:
+            rows = tuple(self._connection.execute(  # type: ignore[union-attr]
+                """
+                SELECT text, source, metadata_json, base_score
+                FROM documents
+                WHERE text MATCH ?
+                """,
+                (fts_query,),
+            ))
+        except sqlite3.Error:
+            return tuple(self._fallback.retrieve(query, limit=limit))
+
+        scored: list[tuple[float, RetrievalHit]] = []
+        for text, source, metadata_json, base_score in rows:
+            overlap = _token_overlap(query_tokens, _tokens(str(text)))
+            if overlap < self.min_overlap:
+                continue
+            try:
+                metadata = dict(_json_loads_mapping(str(metadata_json)))
+            except ValueError:
+                metadata = {}
+            document_score = float(base_score)
+            score = min(1.0, overlap * document_score)
+            hit_metadata = {
+                **metadata,
+                "token_overlap": overlap,
+                "retriever": type(self).__name__,
+                "retriever_backend": "sqlite_fts",
+            }
+            scored.append((
+                score,
+                RetrievalHit(str(text), None if source is None else str(source), score, hit_metadata),
+            ))
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return tuple(hit for _, hit in scored[:limit])
+
+
+@dataclass(frozen=True)
 class RetrievalActionExecutor:
     """Execute retrieve actions against a dependency-free retriever."""
 
@@ -217,6 +300,54 @@ def _coerce_hit(value: RetrievalHit | Mapping[str, Any] | str) -> RetrievalHit:
     if isinstance(value, str):
         return RetrievalHit(value)
     return RetrievalHit.from_dict(value)
+
+
+def _build_fts_connection(documents: Sequence[RetrievalHit]) -> sqlite3.Connection:
+    connection = sqlite3.connect(":memory:")
+    try:
+        connection.execute(
+            """
+            CREATE VIRTUAL TABLE documents USING fts5(
+                text,
+                source UNINDEXED,
+                metadata_json UNINDEXED,
+                base_score UNINDEXED
+            )
+            """
+        )
+        connection.executemany(
+            "INSERT INTO documents(text, source, metadata_json, base_score) VALUES (?, ?, ?, ?)",
+            (
+                (
+                    document.text,
+                    document.source,
+                    _json_dumps_mapping(document.metadata),
+                    float(document.score),
+                )
+                for document in documents
+            ),
+        )
+        connection.commit()
+    except sqlite3.Error:
+        connection.close()
+        raise
+    return connection
+
+
+def _fts_query(tokens: Sequence[str]) -> str:
+    unique_tokens = sorted(set(tokens))
+    return " OR ".join(f'"{token}"' for token in unique_tokens)
+
+
+def _json_dumps_mapping(payload: Mapping[str, Any]) -> str:
+    return json.dumps(dict(payload), sort_keys=True, separators=(",", ":"))
+
+
+def _json_loads_mapping(payload: str) -> Mapping[str, Any]:
+    value = json.loads(payload)
+    if not isinstance(value, Mapping):
+        raise ValueError("JSON payload is not a mapping.")
+    return value
 
 
 def _queries_from_request(request: ActionRequest) -> tuple[RetrievalQuery, ...]:

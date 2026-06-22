@@ -441,9 +441,10 @@ postcondition that the predicted state refutes.
 The current policy is deliberately simple and auditable: `refuted` always
 triggers, `supported` suppresses an internal trigger, and
 `insufficient_evidence` preserves the internal trigger. The verifier and
-retriever are dependency-free lexical baselines (`GroundednessVerifier` and
-`InMemoryRetriever`), so results are only a controlled adapter test until a real
-retrieval/verifier backend is plugged in.
+retriever are dependency-free lexical baselines (`GroundednessVerifier`,
+`InMemoryRetriever`, and optional SQLite FTS candidate retrieval), so results
+are only a controlled adapter test until a real retrieval/verifier backend is
+plugged in.
 
 Reports include `verification_quality`, a label-conditioned matrix over
 `supported` / `refuted` / `insufficient_evidence` outcomes. Use
@@ -945,8 +946,9 @@ python benchmarks/build_truthfulqa_corpus.py \
 
 Builds a non-oracle claim/evidence fixture from a statement-bearing score dump
 and local evidence corpus files. It supports JSON, JSONL, and plain text corpora,
-uses dependency-free token-overlap retrieval, and copies labels only into audit
-metadata; retrieval is driven by claim text.
+uses dependency-free token-overlap retrieval with optional SQLite FTS candidate
+indexing, and copies labels only into audit metadata; retrieval is driven by
+claim text.
 
 ```bash
 python benchmarks/build_evidence_fixture.py \
@@ -954,6 +956,7 @@ python benchmarks/build_evidence_fixture.py \
   --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
   --output artifacts/truthfulqa_l80_local_evidence_claims.json \
   --query-field answer \
+  --retriever-backend auto \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3
 
@@ -969,7 +972,8 @@ python benchmarks/eval_verifier_ensemble.py \
 
 Use this before wiring a real search/RAG backend: it gives the same downstream
 fixture schema and `verification_quality` fields while keeping evidence source
-and retrieval behavior fully reproducible.
+and retrieval behavior fully reproducible. The default retriever backend is
+`memory`; `auto` tries SQLite FTS5 and falls back to memory when unavailable.
 
 ## `run_local_retrieval_route_workflow.py`
 
@@ -988,6 +992,7 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --version 0.7 \
   --signal truth_proj \
   --query-field answer \
+  --retriever-backend auto \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3 \
   --claims-cache-dir artifacts/cache/local_retrieval_claims \
@@ -1010,9 +1015,15 @@ later without rerunning the workflow.
 
 `--claims-cache-dir` is optional. When set, the workflow caches generated
 claims fixtures by score-dump fingerprint, corpus fingerprints, query field,
-retriever overlap threshold, and retrieval limit. A cache hit skips local score
-dump/corpus parsing for claim construction, then still reruns verifier-route
-metrics and promotion against the current score dump and emitted claims file.
+retriever backend, retriever overlap threshold, and retrieval limit. A cache hit
+skips local score dump/corpus parsing for claim construction, then still reruns
+verifier-route metrics and promotion against the current score dump and emitted
+claims file.
+
+`--retriever-backend` defaults to `memory`. Use `auto` to try the standard-library
+SQLite FTS5 candidate index and fall back to memory when FTS5 is unavailable in
+the local Python build. Use `sqlite_fts` when the run should record that the
+indexed backend was explicitly requested.
 
 Current l80 local-corpus baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:

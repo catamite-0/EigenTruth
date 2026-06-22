@@ -17,6 +17,7 @@ from eigentruth.adapters import (
     QuestionAnswerVerifier,
     RetrievalActionExecutor,
     RetrievalQuery,
+    SQLiteFTSRetriever,
     SQLiteStateQuery,
     SQLiteStateSource,
     StateCheck,
@@ -351,6 +352,24 @@ def test_cached_retriever_reuses_query_results():
     assert second[0].text == "Paris is the capital of France."
     assert retriever.stats.to_dict()["hits"] == 1
     assert retriever.stats.to_dict()["misses"] == 1
+
+
+def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():
+    retriever = SQLiteFTSRetriever((
+        "Paris is the capital of France.",
+        "Lyon is a city in France.",
+    ), min_overlap=0.6)
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital France"), limit=1)
+
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].metadata["token_overlap"] == pytest.approx(1.0)
+    if retriever.available:
+        assert hits[0].metadata["retriever"] == "SQLiteFTSRetriever"
+        assert hits[0].metadata["retriever_backend"] == "sqlite_fts"
+    else:
+        assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+        assert retriever.fallback_reason
 
 
 def test_question_answer_verifier_checks_structured_question_answers():

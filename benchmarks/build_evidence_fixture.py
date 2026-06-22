@@ -2,8 +2,8 @@
 
 This is a no-network bridge from statement-bearing score dumps to
 ``eval_verifier_ensemble.py`` claim fixtures. It retrieves evidence from local
-JSON/JSONL/text corpora using the dependency-free ``InMemoryRetriever`` and
-writes one fixture record per score row.
+JSON/JSONL/text corpora using dependency-free local retrievers and writes one
+fixture record per score row.
 """
 
 from __future__ import annotations
@@ -17,7 +17,9 @@ from typing import Any, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from eigentruth.adapters import InMemoryRetriever, RetrievalHit, RetrievalQuery
+from eigentruth.adapters import InMemoryRetriever, RetrievalHit, RetrievalQuery, SQLiteFTSRetriever
+
+RETRIEVER_BACKENDS = ("memory", "sqlite_fts", "auto")
 
 
 def load_score_dump(path: Path) -> dict[str, Any]:
@@ -58,19 +60,26 @@ def build_evidence_fixture(
     retriever_min_overlap: float = 0.2,
     retrieval_limit: int = 5,
     query_field: str = "text",
+    retriever_backend: str = "memory",
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
         raise ValueError("retrieval_limit must be positive.")
     if query_field not in {"text", "answer", "question", "question_answer"}:
         raise ValueError("query_field must be one of: text, answer, question, question_answer.")
+    if retriever_backend not in RETRIEVER_BACKENDS:
+        raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
     labels = tuple(int(label) for label in dump.get("labels", ()))
     statements = tuple(dict(statement) for statement in dump.get("statements", ()))
     if len(labels) != len(statements):
         raise ValueError("labels and statements must have the same length.")
 
     documents = tuple(corpus_documents)
-    retriever = InMemoryRetriever(documents, min_overlap=retriever_min_overlap)
+    retriever, retriever_info = _build_retriever(
+        documents,
+        min_overlap=retriever_min_overlap,
+        backend=retriever_backend,
+    )
     records = []
     total_hits = 0
     for idx, (label, statement) in enumerate(zip(labels, statements), start=1):
@@ -93,7 +102,10 @@ def build_evidence_fixture(
                 "statement": statement,
                 "retrieval": {
                     "n_hits": len(hits),
-                    "retriever": "InMemoryRetriever",
+                    "retriever": retriever_info["type"],
+                    "requested_backend": retriever_info["requested_backend"],
+                    "actual_backend": retriever_info["actual_backend"],
+                    "fallback_reason": retriever_info.get("fallback_reason"),
                     "min_overlap": retriever_min_overlap,
                     "limit": retrieval_limit,
                     "query_field": query_field,
@@ -110,7 +122,7 @@ def build_evidence_fixture(
             "Labels are copied only for audit metadata; retrieval uses claim text only."
         ),
         "retriever": {
-            "type": "InMemoryRetriever",
+            **retriever_info,
             "min_overlap": retriever_min_overlap,
             "limit": retrieval_limit,
             "query_field": query_field,
@@ -136,6 +148,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
         query_field=args.query_field,
+        retriever_backend=args.retriever_backend,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -154,6 +167,44 @@ def _statement_text(statement: Mapping[str, Any]) -> str:
     if not text:
         raise ValueError("statement record is missing claim/text/answer.")
     return text
+
+
+def _build_retriever(
+    documents: Sequence[RetrievalHit | Mapping[str, Any] | str],
+    *,
+    min_overlap: float,
+    backend: str,
+):
+    if backend == "memory":
+        retriever = InMemoryRetriever(documents, min_overlap=min_overlap)
+        return retriever, {
+            "type": type(retriever).__name__,
+            "requested_backend": backend,
+            "actual_backend": "memory",
+            "fallback_reason": None,
+        }
+    retriever = SQLiteFTSRetriever(documents, min_overlap=min_overlap)
+    if retriever.available:
+        return retriever, {
+            "type": type(retriever).__name__,
+            "requested_backend": backend,
+            "actual_backend": "sqlite_fts",
+            "fallback_reason": None,
+        }
+    if backend == "sqlite_fts":
+        return retriever, {
+            "type": "InMemoryRetriever",
+            "requested_backend": backend,
+            "actual_backend": "memory",
+            "fallback_reason": retriever.fallback_reason,
+        }
+    fallback = InMemoryRetriever(documents, min_overlap=min_overlap)
+    return fallback, {
+        "type": type(fallback).__name__,
+        "requested_backend": backend,
+        "actual_backend": "memory",
+        "fallback_reason": retriever.fallback_reason,
+    }
 
 
 def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
@@ -238,6 +289,7 @@ def main() -> None:
     parser.add_argument("--output", required=True, help="path to write claim/evidence fixture JSON")
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
+    parser.add_argument("--retriever-backend", choices=RETRIEVER_BACKENDS, default="memory")
     parser.add_argument("--query-field", choices=("text", "answer", "question", "question_answer"), default="text",
                         help="statement field used for retrieval query; claim text remains unchanged")
     run(parser.parse_args())
