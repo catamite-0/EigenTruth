@@ -206,6 +206,85 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
+def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Paris is the capital of France.",
+                    "selfcheck_samples": [
+                        {"response": "Paris is the capital of France.", "source": "sample-1"},
+                        "Paris is the capital of France and a major city.",
+                    ],
+                },
+                {
+                    "claim": "Water boils at 100 degrees Celsius.",
+                    "sampled_responses": [
+                        "Water boils at 100 degrees Celsius at standard pressure.",
+                        "At standard pressure, water boils at 100 degrees Celsius.",
+                    ],
+                },
+                {
+                    "claim": "The moon is made of cheese.",
+                    "selfcheck_samples": [
+                        "The moon is not made of cheese.",
+                        "The moon is not made of cheese.",
+                    ],
+                },
+                {
+                    "claim": "AlphaCorp has 10 offices in Europe.",
+                    "selfcheck_samples": [
+                        "AlphaCorp has 12 offices in Europe.",
+                        "AlphaCorp has 12 offices in Europe as of 2026.",
+                    ],
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        selfcheck_min_overlap=0.55,
+    )
+    run = report["runs"][0]
+    quality = run["verification_quality"]
+    route_quality = run["route_quality"]["self_consistency"]
+
+    assert report["selfcheck_verifier"]["enabled"] is True
+    assert run["selfcheck_verifier"]["enabled"] is True
+    assert run["selfcheck_verifier"]["records_with_samples"] == 4
+    assert run["selfcheck_verifier"]["decided_records"] == 4
+    assert run["route_summary"]["selected_counts"] == {"self_consistency": 4}
+    assert run["route_summary"]["attempted_counts"] == {"groundedness": 4, "self_consistency": 4}
+    assert run["verification_status_counts"]["supported"] == 2
+    assert run["verification_status_counts"]["refuted"] == 2
+    assert quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["selected"] == 4
+    assert route_quality["true_supported_rate"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert run["cache_stats"]["selfcheck_verifiers"]["requests"] == 4
+    assert run["cache_stats"]["selfcheck_verifiers"]["instances"] == 4
+    assert run["retrieval"]["records_with_hits"] == 0
+
+
 def test_eval_verifier_ensemble_reuses_verification_trace_cache(tmp_path, monkeypatch):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

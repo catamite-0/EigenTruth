@@ -43,6 +43,7 @@ from eigentruth.verify import (
     Claim,
     GroundednessVerifier,
     JsonTraceCache,
+    SelfConsistencyVerifier,
     VerificationResult,
     VerificationStatus,
     stable_cache_key,
@@ -59,6 +60,7 @@ class ClaimEvidenceRecord:
     claim: Claim
     initial_evidence: Sequence[Mapping[str, Any] | str] = ()
     retrieval_documents: Sequence[Mapping[str, Any] | str] = ()
+    selfcheck_samples: Sequence[Mapping[str, Any] | str] = ()
     refutations: Mapping[str, Sequence[str] | str] = field(default_factory=dict)
     state: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -211,6 +213,7 @@ def _records_from_dump_and_fixture(
     records = []
     global_initial = tuple(fixture.get("initial_evidence", ()))
     global_documents = tuple(fixture.get("retrieval_documents", ()))
+    global_selfcheck_samples = _selfcheck_samples_from_mapping(fixture)
     global_refutations = dict(fixture.get("refutations", {}))
     for idx in range(expected_count):
         raw_record = dict(fixture_records[idx]) if fixture_records else {}
@@ -249,6 +252,10 @@ def _records_from_dump_and_fixture(
                 ),
                 initial_evidence=tuple(raw_record.get("initial_evidence", global_initial)),
                 retrieval_documents=tuple(raw_record.get("retrieval_documents", global_documents)),
+                selfcheck_samples=_selfcheck_samples_from_mapping(
+                    raw_record,
+                    fallback=_selfcheck_samples_from_mapping(statement, fallback=global_selfcheck_samples),
+                ),
                 refutations={
                     **global_refutations,
                     **dict(raw_record.get("refutations", {})),
@@ -262,6 +269,33 @@ def _records_from_dump_and_fixture(
             )
         )
     return tuple(records)
+
+
+def _selfcheck_samples_from_mapping(
+    data: Mapping[str, Any],
+    *,
+    fallback: Sequence[Mapping[str, Any] | str] = (),
+) -> tuple[Mapping[str, Any] | str, ...]:
+    """Return self-check samples from fixture or score-dump metadata."""
+    for key in ("selfcheck_samples", "sampled_responses", "samples"):
+        if key in data:
+            return _as_sample_sequence(data[key], name=key)
+    return tuple(fallback)
+
+
+def _as_sample_sequence(value: Any, *, name: str) -> tuple[Mapping[str, Any] | str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, Mapping)):
+        return (value,)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        samples = []
+        for item in value:
+            if not isinstance(item, (str, Mapping)):
+                raise ValueError(f"{name} items must be strings or JSON objects.")
+            samples.append(item)
+        return tuple(samples)
+    raise ValueError(f"{name} must be a string, JSON object, or sequence of those values.")
 
 
 def _merge_state_mappings(*values: Any) -> Mapping[str, Any]:
@@ -283,6 +317,10 @@ def _verify_records(
     verifier_min_overlap: float,
     retriever_min_overlap: float,
     retrieval_limit: int,
+    selfcheck_min_samples: int,
+    selfcheck_min_overlap: float,
+    selfcheck_support_threshold: float,
+    selfcheck_refute_threshold: float,
     qa_verifier: QuestionAnswerVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
@@ -297,6 +335,7 @@ def _verify_records(
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
+    selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
 
     def groundedness_runner(
@@ -320,6 +359,28 @@ def _verify_records(
             groundedness_runners[key] = runner
         return runner
 
+    def selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
+        key = stable_cache_key({
+            "samples": samples,
+            "min_samples": selfcheck_min_samples,
+            "min_overlap": selfcheck_min_overlap,
+            "support_threshold": selfcheck_support_threshold,
+            "refute_threshold": selfcheck_refute_threshold,
+        })
+        runner = selfcheck_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                SelfConsistencyVerifier(
+                    samples=samples,
+                    min_samples=selfcheck_min_samples,
+                    min_overlap=selfcheck_min_overlap,
+                    support_threshold=selfcheck_support_threshold,
+                    refute_threshold=selfcheck_refute_threshold,
+                )
+            )
+            selfcheck_runners[key] = runner
+        return runner
+
     def retriever_for(documents: Sequence[Mapping[str, Any] | str]) -> CachedRetriever:
         key = stable_cache_key({"documents": documents, "min_overlap": retriever_min_overlap})
         retriever = retrievers.get(key)
@@ -331,6 +392,7 @@ def _verify_records(
     for record in records:
         qa_result = None
         state_result = None
+        selfcheck_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
@@ -354,6 +416,7 @@ def _verify_records(
                     "qa": _verification_to_dict(qa_result),
                     "state": None,
                     "transition": None,
+                    "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
                         selected_route="structured_qa",
@@ -387,6 +450,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": None,
                     "transition": _verification_to_dict(transition_result),
+                    "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
                         selected_route="state_transition",
@@ -420,6 +484,7 @@ def _verify_records(
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": _verification_to_dict(state_result),
                     "transition": None,
+                    "selfcheck": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
                         selected_route="structured_state",
@@ -441,7 +506,32 @@ def _verify_records(
         )
         hits = ()
         final = initial
+        selected_route = "groundedness"
+        selected_verifier = "GroundednessVerifier"
+        if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.selfcheck_samples:
+            attempted_routes.append("self_consistency")
+            selfcheck_result = _timed_verify(
+                route_timings,
+                route="self_consistency",
+                runner=selfcheck_runner(record.selfcheck_samples),
+                claim=record.claim,
+            )
+            final = selfcheck_result
+            selected_route = "self_consistency"
+            selected_verifier = "SelfConsistencyVerifier"
         if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.retrieval_documents:
+            if final.status not in {
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                VerificationStatus.NOT_APPLICABLE,
+            }:
+                selected_route = "self_consistency"
+                selected_verifier = "SelfConsistencyVerifier"
+            else:
+                final = initial if selfcheck_result is None else selfcheck_result
+        if final.status in {
+            VerificationStatus.INSUFFICIENT_EVIDENCE,
+            VerificationStatus.NOT_APPLICABLE,
+        } and record.retrieval_documents:
             attempted_routes.append("retrieval_groundedness")
             retriever = retriever_for(record.retrieval_documents)
             hits = _timed_retrieve(
@@ -458,7 +548,8 @@ def _verify_records(
                     runner=groundedness_runner(final_evidence, record.refutations),
                     claim=record.claim,
                 )
-        selected_route = "retrieval_groundedness" if hits else "groundedness"
+                selected_route = "retrieval_groundedness"
+                selected_verifier = "GroundednessVerifier"
         verified.append({
             "claim": {
                 "text": record.claim.text,
@@ -470,10 +561,11 @@ def _verify_records(
             "qa": None if qa_result is None else _verification_to_dict(qa_result),
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None,
+            "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_hits": tuple(hit.to_dict() for hit in hits),
             "route": _route_metadata(
                 selected_route=selected_route,
-                selected_verifier="GroundednessVerifier",
+                selected_verifier=selected_verifier,
                 attempted_routes=attempted_routes,
                 used_retrieval=bool(hits),
                 route_timings=route_timings,
@@ -487,6 +579,9 @@ def _verify_records(
         groundedness_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in groundedness_runners.values())
         )
+        selfcheck_stats = combine_cache_stats(
+            *(runner.stats.to_dict() for runner in selfcheck_runners.values())
+        )
         retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
         cache_stats.update({
             "qa_verifier": qa_stats,
@@ -495,6 +590,10 @@ def _verify_records(
             "groundedness_verifiers": {
                 **groundedness_stats,
                 "instances": len(groundedness_runners),
+            },
+            "selfcheck_verifiers": {
+                **selfcheck_stats,
+                "instances": len(selfcheck_runners),
             },
             "retrievers": {
                 **retriever_stats,
@@ -505,6 +604,7 @@ def _verify_records(
                 state_stats,
                 transition_stats,
                 groundedness_stats,
+                selfcheck_stats,
                 retriever_stats,
             ),
         })
@@ -1141,11 +1241,15 @@ def _verification_trace_cache_key(
     verifier_min_overlap: float,
     retriever_min_overlap: float,
     retrieval_limit: int,
+    selfcheck_min_samples: int,
+    selfcheck_min_overlap: float,
+    selfcheck_support_threshold: float,
+    selfcheck_refute_threshold: float,
 ) -> tuple[str, dict[str, Any]]:
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v1",
+        "builder": "eval_verifier_ensemble:verified_records:v2",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -1164,6 +1268,13 @@ def _verification_trace_cache_key(
             "min_overlap": float(retriever_min_overlap),
             "limit": int(retrieval_limit),
         },
+        "selfcheck_verifier": {
+            "type": "SelfConsistencyVerifier",
+            "min_samples": int(selfcheck_min_samples),
+            "min_overlap": float(selfcheck_min_overlap),
+            "support_threshold": float(selfcheck_support_threshold),
+            "refute_threshold": float(selfcheck_refute_threshold),
+        },
     }
     key = hashlib.sha256(stable_cache_key(material).encode("utf-8")).hexdigest()
     return key, material
@@ -1179,6 +1290,7 @@ def _record_cache_material(record: ClaimEvidenceRecord) -> dict[str, Any]:
         },
         "initial_evidence": tuple(record.initial_evidence),
         "retrieval_documents": tuple(record.retrieval_documents),
+        "selfcheck_samples": tuple(record.selfcheck_samples),
         "refutations": dict(record.refutations),
         "state": dict(record.state),
         "metadata": dict(record.metadata),
@@ -1253,6 +1365,10 @@ def build_verifier_ensemble_report(
     verifier_min_overlap: float = 0.65,
     retriever_min_overlap: float = 0.2,
     retrieval_limit: int = 5,
+    selfcheck_min_samples: int = 2,
+    selfcheck_min_overlap: float = 0.65,
+    selfcheck_support_threshold: float = 0.60,
+    selfcheck_refute_threshold: float = 0.50,
     verification_cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
@@ -1261,6 +1377,14 @@ def build_verifier_ensemble_report(
         raise ValueError("repeats must be >= 1.")
     if any(not (0.0 < float(alpha) < 1.0) for alpha in alphas):
         raise ValueError("alphas must be in (0, 1).")
+    if selfcheck_min_samples < 1:
+        raise ValueError("selfcheck_min_samples must be >= 1.")
+    if not (0.0 <= selfcheck_min_overlap <= 1.0):
+        raise ValueError("selfcheck_min_overlap must be in [0, 1].")
+    if not (0.0 <= selfcheck_support_threshold <= 1.0):
+        raise ValueError("selfcheck_support_threshold must be in [0, 1].")
+    if not (0.0 <= selfcheck_refute_threshold <= 1.0):
+        raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
 
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
@@ -1281,6 +1405,7 @@ def build_verifier_ensemble_report(
     runs = []
     any_state_enabled = False
     any_transition_enabled = False
+    any_selfcheck_enabled = False
     for name, path in score_dumps:
         dump = _load_scores(path, signal)
         labels = dump["labels"]
@@ -1295,6 +1420,8 @@ def build_verifier_ensemble_report(
         state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
         any_transition_enabled = any_transition_enabled or transition_enabled
         any_state_enabled = any_state_enabled or state_enabled
+        selfcheck_enabled = any(record.selfcheck_samples for record in records)
+        any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
         transition_verifier = (
             StateTransitionVerifier(
                 world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
@@ -1319,6 +1446,10 @@ def build_verifier_ensemble_report(
             verifier_min_overlap=verifier_min_overlap,
             retriever_min_overlap=retriever_min_overlap,
             retrieval_limit=retrieval_limit,
+            selfcheck_min_samples=selfcheck_min_samples,
+            selfcheck_min_overlap=selfcheck_min_overlap,
+            selfcheck_support_threshold=selfcheck_support_threshold,
+            selfcheck_refute_threshold=selfcheck_refute_threshold,
         )
         cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
         if cached_trace is not None:
@@ -1336,6 +1467,10 @@ def build_verifier_ensemble_report(
                 verifier_min_overlap=verifier_min_overlap,
                 retriever_min_overlap=retriever_min_overlap,
                 retrieval_limit=retrieval_limit,
+                selfcheck_min_samples=selfcheck_min_samples,
+                selfcheck_min_overlap=selfcheck_min_overlap,
+                selfcheck_support_threshold=selfcheck_support_threshold,
+                selfcheck_refute_threshold=selfcheck_refute_threshold,
                 qa_verifier=qa_verifier,
                 state_verifier=state_verifier,
                 state_checks=global_state_checks,
@@ -1351,7 +1486,7 @@ def build_verifier_ensemble_report(
                         "cache_stats": dict(run_cache_stats),
                     },
                     metadata={
-                        "builder": "eval_verifier_ensemble:verified_records:v1",
+                        "builder": "eval_verifier_ensemble:verified_records:v2",
                         "name": name,
                         "signal": signal,
                         "material": trace_material,
@@ -1423,6 +1558,18 @@ def build_verifier_ensemble_report(
                 ),
                 "global_transitions": len(global_state_transitions),
             },
+            "selfcheck_verifier": {
+                "enabled": selfcheck_enabled,
+                "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
+                "decided_records": sum(
+                    1 for record in verified_records
+                    if record.get("selfcheck") is not None
+                    and record["selfcheck"]["status"] in {
+                        VerificationStatus.SUPPORTED.value,
+                        VerificationStatus.REFUTED.value,
+                    }
+                ),
+            },
             "retrieval": {
                 "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
                 "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
@@ -1449,6 +1596,14 @@ def build_verifier_ensemble_report(
         "verifier": {
             "type": "GroundednessVerifier",
             "min_overlap": verifier_min_overlap,
+        },
+        "selfcheck_verifier": {
+            "type": "SelfConsistencyVerifier",
+            "enabled": any_selfcheck_enabled,
+            "min_samples": selfcheck_min_samples,
+            "min_overlap": selfcheck_min_overlap,
+            "support_threshold": selfcheck_support_threshold,
+            "refute_threshold": selfcheck_refute_threshold,
         },
         "qa_verifier": {
             "type": "QuestionAnswerVerifier",
@@ -1496,6 +1651,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
+        selfcheck_min_samples=int(getattr(args, "selfcheck_min_samples", 2)),
+        selfcheck_min_overlap=float(getattr(args, "selfcheck_min_overlap", 0.65)),
+        selfcheck_support_threshold=float(getattr(args, "selfcheck_support_threshold", 0.60)),
+        selfcheck_refute_threshold=float(getattr(args, "selfcheck_refute_threshold", 0.50)),
         verification_cache_dir=(
             None
             if getattr(args, "verification_cache_dir", None) is None
@@ -1545,6 +1704,14 @@ def main() -> None:
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
+    parser.add_argument("--selfcheck-min-samples", type=int, default=2,
+                        help="minimum sampled responses required before self-consistency verification applies")
+    parser.add_argument("--selfcheck-min-overlap", type=float, default=0.65,
+                        help="minimum claim/sample token overlap for self-consistency support or refutation")
+    parser.add_argument("--selfcheck-support-threshold", type=float, default=0.60,
+                        help="support-rate threshold for self-consistency verification")
+    parser.add_argument("--selfcheck-refute-threshold", type=float, default=0.50,
+                        help="refute-rate threshold for self-consistency verification")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
