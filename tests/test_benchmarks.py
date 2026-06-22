@@ -739,6 +739,8 @@ def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
     assert payload["n_route_entries"] == 3
     assert payload["leaderboard"][0]["decision_accuracy"] == pytest.approx(1.0)
     assert payload["leaderboard"][0]["false_supported_rate"] == pytest.approx(0.0)
+    assert payload["promotion_decision"]["status"] == "needs_gate"
+    assert payload["promotion_decision"]["recommended_route"] == payload["pareto_frontier"]["recommended"]["route"]
     assert payload["by_route"]["structured_qa"]["selected"] == 15
     assert payload["by_route"]["structured_qa"]["false_refuted_rate"] == pytest.approx(5 / 6)
     assert payload["by_route"]["structured_qa"]["false_supported_rate"] == pytest.approx(1 / 6)
@@ -956,8 +958,14 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     assert {item["route"] for item in frontier["frontier"]} == {"fast_lexical", "structured_state"}
     assert frontier["dominated"][0]["route"] == "retrieval_groundedness"
     assert frontier["dominated"][0]["dominated_by"] == "structured_state"
+    assert passing["promotion_decision"]["status"] == "promote"
+    assert passing["promotion_decision"]["recommended_route"] == "structured_state"
+    assert passing["promotion_decision"]["route_gate_passed"] is True
     assert passing["quality_gate"]["passed"] is True
     assert failing["quality_gate"]["passed"] is False
+    assert failing["promotion_decision"]["status"] == "needs_gate_for_recommended"
+    assert failing["promotion_decision"]["recommended_route"] == "structured_state"
+    assert failing["promotion_decision"]["gate_checked_route"] is False
     assert {failure["metric"] for failure in failing["quality_gate"]["failures"]} == {
         "mean_duration_seconds",
         "max_duration_seconds",
@@ -1037,6 +1045,52 @@ def test_compare_verifier_routes_cli_exits_nonzero_on_gate_failure(tmp_path):
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["quality_gate"]["passed"] is False
     assert payload["quality_gate"]["failures"][0]["route"] == "structured_qa"
+    assert payload["promotion_decision"]["status"] == "blocked_by_gate"
+    assert payload["promotion_decision"]["recommended_route"] == "structured_qa"
+
+
+def test_compare_verifier_routes_cli_can_fail_on_missing_promotion_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "routes.json"
+    output_path = tmp_path / "promotion.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "qa",
+                    "route_quality": {
+                        "structured_qa": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                        }
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--report",
+            f"qa={report_path}",
+            "--json",
+            str(output_path),
+            "--fail-on-promotion",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["promotion_decision"]["status"] == "needs_gate"
 
 
 def test_compare_profiles_builds_regression_gate_report(tmp_path):

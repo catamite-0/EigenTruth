@@ -442,6 +442,7 @@ python benchmarks/compare_verifier_routes.py \
   --min-false-refuted-rate 0.80 \
   --max-mean-duration-seconds 0.05 \
   --max-mean-attempted-route-count 1.5 \
+  --fail-on-promotion \
   --fail-on-gate \
   --json artifacts/verifier_route_comparison.json
 ```
@@ -460,6 +461,10 @@ The output includes:
   another route across quality, control-impact, sample-size, and cost metrics.
   The `recommended` entry is a deterministic quality/cost ordering over the
   frontier, not a substitute for the fail-closed gate.
+- `promotion_decision`: route-specific adapter promotion status. It reports
+  `promote` only when the recommended Pareto route is covered by the gate and
+  has no route-specific blocking failures; otherwise it records the missing
+  gate, unchecked route, or failed metric evidence.
 - `quality_gate`: optional fail-closed adapter promotion gate when any
   `--gate-*` or threshold flag is set. It checks aggregate route metrics such
   as `decision_accuracy`, `false_supported_rate`, `false_refuted_rate`,
@@ -474,6 +479,8 @@ still preserving them in the raw `rows` and `by_route` sections.
 Use `--gate-min-selected` to set a stricter sample floor for the promotion gate
 than the display leaderboard, and use `--fail-on-gate` in local or CI smoke
 checks when a route must meet minimum quality before real adapter work proceeds.
+Use `--fail-on-promotion` when CI should fail unless the final route-specific
+promotion decision is `promote`.
 
 ## `build_truthfulqa_corpus.py`
 

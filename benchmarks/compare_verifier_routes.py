@@ -735,6 +735,125 @@ def build_route_quality_gate(
     }
 
 
+def _gate_failures_for_route(gate: Mapping[str, Any], route: str) -> list[dict[str, Any]]:
+    failures = gate.get("failures", ())
+    if not isinstance(failures, Sequence) or isinstance(failures, (str, bytes, bytearray)):
+        return []
+    return [
+        dict(failure)
+        for failure in failures
+        if isinstance(failure, Mapping) and failure.get("route") == route
+    ]
+
+
+def _global_gate_failures(gate: Mapping[str, Any]) -> list[dict[str, Any]]:
+    failures = gate.get("failures", ())
+    if not isinstance(failures, Sequence) or isinstance(failures, (str, bytes, bytearray)):
+        return []
+    return [
+        dict(failure)
+        for failure in failures
+        if isinstance(failure, Mapping) and failure.get("route") is None
+    ]
+
+
+def build_adapter_promotion_decision(
+    pareto_frontier: Mapping[str, Any],
+    quality_gate: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Build a route-specific adapter promotion decision from frontier and gate output."""
+    recommended = pareto_frontier.get("recommended")
+    if not isinstance(recommended, Mapping):
+        return {
+            "schema_version": 1,
+            "status": "no_candidate",
+            "recommended_route": None,
+            "frontier_recommended_route": None,
+            "reason": "no route met the Pareto frontier eligibility floor",
+            "gate_status": "not_configured" if quality_gate is None else "present",
+            "blocking_failures": [],
+            "warnings": [],
+        }
+
+    recommended_route = str(recommended.get("route"))
+    base = {
+        "schema_version": 1,
+        "recommended_route": recommended_route,
+        "frontier_recommended_route": recommended_route,
+        "frontier_rank": 1,
+        "promotion_score": recommended.get("promotion_score"),
+        "missing_metrics": list(recommended.get("missing_metrics", ())),
+        "blocking_failures": [],
+        "warnings": [],
+    }
+    if quality_gate is None:
+        return {
+            **base,
+            "status": "needs_gate",
+            "reason": "configure fail-closed quality/cost gate thresholds before promoting an adapter",
+            "gate_status": "not_configured",
+            "gate_checked_route": False,
+            "route_gate_passed": None,
+        }
+
+    checked_routes = {
+        str(route)
+        for route in quality_gate.get("checked_routes", ())
+        if route is not None
+    }
+    gate_failures = _gate_failures_for_route(quality_gate, recommended_route)
+    global_failures = _global_gate_failures(quality_gate)
+    other_failures = [
+        dict(failure)
+        for failure in quality_gate.get("failures", ())
+        if (
+            isinstance(failure, Mapping)
+            and failure.get("route") not in {recommended_route, None}
+        )
+    ]
+
+    if recommended_route not in checked_routes:
+        return {
+            **base,
+            "status": "needs_gate_for_recommended",
+            "reason": "recommended Pareto route was not covered by the quality/cost gate",
+            "gate_status": "failed" if quality_gate.get("passed") is False else "passed",
+            "gate_checked_route": False,
+            "route_gate_passed": None,
+            "blocking_failures": global_failures,
+            "warnings": [
+                {
+                    "type": "unchecked_recommended_route",
+                    "route": recommended_route,
+                    "checked_routes": sorted(checked_routes),
+                },
+            ],
+        }
+
+    blocking_failures = [*global_failures, *gate_failures]
+    if blocking_failures:
+        return {
+            **base,
+            "status": "blocked_by_gate",
+            "reason": "recommended Pareto route failed one or more quality/cost gate checks",
+            "gate_status": "failed",
+            "gate_checked_route": True,
+            "route_gate_passed": False,
+            "blocking_failures": blocking_failures,
+            "warnings": [{"type": "other_route_gate_failures", "failures": other_failures}] if other_failures else [],
+        }
+
+    return {
+        **base,
+        "status": "promote",
+        "reason": "recommended Pareto route is covered by the gate and has no route-specific failures",
+        "gate_status": "failed" if quality_gate.get("passed") is False else "passed",
+        "gate_checked_route": True,
+        "route_gate_passed": True,
+        "warnings": [{"type": "other_route_gate_failures", "failures": other_failures}] if other_failures else [],
+    }
+
+
 def build_route_comparison_report(
     reports: Sequence[tuple[str, Path]],
     *,
@@ -765,19 +884,6 @@ def build_route_comparison_report(
     leaderboard = _leaderboard_rows(rows, min_selected=min_selected)
     by_route = _aggregate_by_route(rows)
     pareto_frontier = build_route_pareto_frontier(by_route, min_selected=min_selected)
-    payload = {
-        "schema_version": 1,
-        "alpha": float(alpha),
-        "min_selected": int(min_selected),
-        "n_reports": len(reports),
-        "n_route_entries": len(rows),
-        "n_leaderboard_entries": len(leaderboard),
-        "leaderboard": leaderboard,
-        "by_route": by_route,
-        "pareto_frontier": pareto_frontier,
-        "rows": rows,
-        "notes": list(notes),
-    }
     gate = build_route_quality_gate(
         by_route,
         routes=gate_routes,
@@ -792,6 +898,21 @@ def build_route_comparison_report(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
     )
+    promotion_decision = build_adapter_promotion_decision(pareto_frontier, gate)
+    payload = {
+        "schema_version": 1,
+        "alpha": float(alpha),
+        "min_selected": int(min_selected),
+        "n_reports": len(reports),
+        "n_route_entries": len(rows),
+        "n_leaderboard_entries": len(leaderboard),
+        "leaderboard": leaderboard,
+        "by_route": by_route,
+        "pareto_frontier": pareto_frontier,
+        "promotion_decision": promotion_decision,
+        "rows": rows,
+        "notes": list(notes),
+    }
     if gate is not None:
         payload["quality_gate"] = gate
     return payload
@@ -860,6 +981,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="fail gate when retrieval_use_rate exceeds this value")
     parser.add_argument("--fail-on-gate", action="store_true",
                         help="exit non-zero when the route quality gate fails")
+    parser.add_argument("--fail-on-promotion", action="store_true",
+                        help="exit non-zero unless promotion_decision.status is promote")
     args = parser.parse_args(argv)
     payload = run(args)
     for item in payload["leaderboard"][:10]:
@@ -874,6 +997,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     if gate is not None:
         print(f"quality_gate={'passed' if gate['passed'] else 'failed'}")
         if args.fail_on_gate and not gate["passed"]:
+            raise SystemExit(1)
+    decision = payload.get("promotion_decision")
+    if isinstance(decision, Mapping):
+        print(
+            f"promotion_decision={decision['status']} "
+            f"route={decision.get('recommended_route')}"
+        )
+        if args.fail_on_promotion and decision["status"] != "promote":
             raise SystemExit(1)
 
 
