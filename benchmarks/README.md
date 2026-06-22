@@ -24,8 +24,10 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    hyperbolic machinery is decoration.
 3. **Does internal-state spectral diversity add a cheap uncertainty signal?**
    `eigenscore` is an INSIDE/EigenScore-style log-det score over answer-token
-   hidden embeddings. It is deterministic and single-forward-pass here; full
-   INSIDE computes EigenScore over multiple sampled response embeddings.
+   hidden embeddings. Add `--inside-samples K` (`K >= 2`) to also run
+   `inside_eigenscore`, a closer multi-response INSIDE proxy that samples
+   verifier-style continuations and computes EigenScore over their sentence
+   embeddings.
 
 ### Method
 
@@ -52,6 +54,10 @@ python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
 
 # Fast pipeline self-check (tiny model, bundled statements, no dataset download):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
+
+# Optional multi-response INSIDE proxy (slower: samples K continuations per statement):
+python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
+  --inside-samples 3 --inside-max-new-tokens 6
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
@@ -67,8 +73,10 @@ warmup states and hidden dimension.
   signal over plain perplexity.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
   hyperbolic component.
-- Treat `eigenscore` as an internal-state spectral-diversity proxy; calibrate it
-  like any other higher-is-more-anomalous score before using it for routing.
+- Treat `eigenscore` as an internal-state spectral-diversity proxy. Use
+  `inside_eigenscore` when `--inside-samples` is enabled to test a closer
+  multi-response INSIDE path. Calibrate both like other higher-is-more-anomalous
+  scores before using them for routing.
 - Results depend strongly on the target layer; sweep it.
 
 ### First results (indicative — `gpt2`, a weak base model)
@@ -118,8 +126,9 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
   It cleanly tests the representation hypothesis but is not the same as detecting
   hallucination during free generation.
 - Within-statement token dispersion and `eigenscore` are **cheap proxies** for
-  sample-based semantic uncertainty and INSIDE/EigenScore; they are not the full
-  multi-sample methods.
+  sample-based semantic uncertainty and INSIDE/EigenScore. `inside_eigenscore` is
+  closer to INSIDE because it samples multiple continuations, but it is still a
+  verifier-prompted benchmark proxy rather than a full published reproduction.
 - A small model (e.g. 0.5B) and a few hundred items give wide confidence intervals.
   Treat AUROC values as indicative, not conclusive, and report `n`.
 - Beating these in-house baselines is necessary but not sufficient; a real claim needs
@@ -150,7 +159,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal tru
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid,eigenscore \
+  --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore \
   --artifact-alpha 0.2 \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json

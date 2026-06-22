@@ -70,6 +70,7 @@ SIGNALS = [
     "eigenscore",
     "nll_answer",
 ]
+INSIDE_SIGNAL = "inside_eigenscore"
 REPORT_ALPHA = 0.10
 
 
@@ -99,6 +100,37 @@ def _selective_reports(
             **selective_classification_report(signal_scores, labels_t, threshold, direction=direction),
         }
     return reports
+
+
+def _inside_enabled(args) -> bool:
+    return int(getattr(args, "inside_samples", 0)) >= 2
+
+
+def _enabled_signals(args) -> list[str]:
+    signals = list(SIGNALS)
+    if _inside_enabled(args):
+        signals.append(INSIDE_SIGNAL)
+    return signals
+
+
+def _sweep_signal_names(args) -> list[str]:
+    signals = ["maha_last", "truth_proj", "subspace_resid", "eigenscore"]
+    if _inside_enabled(args):
+        signals.append(INSIDE_SIGNAL)
+    return signals
+
+
+def _candidate_verification_prompt(stmt: Statement) -> str:
+    if stmt.question:
+        return (
+            f"Question: {stmt.question.strip()}\n"
+            f"Candidate answer: {stmt.answer.strip()}\n"
+            "Is the candidate answer factually correct? Answer yes or no and give a brief reason."
+        )
+    return (
+        f"Statement: {stmt.answer.strip()}\n"
+        "Is this statement factually correct? Answer yes or no and give a brief reason."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +258,8 @@ def resolve_target_layer(layer: int, n_layers: int, *, offline: bool) -> int:
 @torch.no_grad()
 def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    device: torch.device, max_length: int, *,
-                   compute_answer_metrics: bool = True) -> Optional[dict]:
+                   compute_answer_metrics: bool = True,
+                   eigenscore_alpha: float = 1e-3) -> Optional[dict]:
     """单次前向：各目标层的末 token 隐状态、主层 (layers[0]) 答案 token 隐状态、答案 NLL。
     Single forward pass: last-token hidden state per requested layer, answer-token hidden
     states for the primary layer (layers[0]), and the answer NLL. output_hidden_states
@@ -254,7 +287,10 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
 
     ans_hs = out.hidden_states[layers[0]][0][-n_ans:, :].float().cpu()
     eigenscore_by_layer = {
-        layer: float(internal_eigenscore(out.hidden_states[layer][0][-n_ans:, :].float()).item())
+        layer: float(internal_eigenscore(
+            out.hidden_states[layer][0][-n_ans:, :].float(),
+            alpha=eigenscore_alpha,
+        ).item())
         for layer in layers
     }
 
@@ -271,6 +307,139 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         "ans_hs": ans_hs,
         "eigenscore_by_layer": eigenscore_by_layer,
         "nll": nll,
+    }
+
+
+def _pad_token_id(tokenizer) -> int:
+    if tokenizer.pad_token_id is not None:
+        return int(tokenizer.pad_token_id)
+    if tokenizer.eos_token_id is not None:
+        tokenizer.pad_token = tokenizer.eos_token
+        return int(tokenizer.eos_token_id)
+    raise ValueError("tokenizer must define either pad_token_id or eos_token_id for sampling.")
+
+
+def _fork_rng_devices(device: torch.device) -> list[int]:
+    if device.type != "cuda":
+        return []
+    return [device.index or torch.cuda.current_device()]
+
+
+@torch.no_grad()
+def sampled_response_embeddings(
+    model,
+    tokenizer,
+    stmt: Statement,
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+) -> Optional[dict[int, torch.Tensor]]:
+    """Generate multiple verifier-style continuations and return one embedding per sample."""
+    if n_samples < 2:
+        return None
+    if max_new_tokens < 1:
+        raise ValueError("inside max_new_tokens must be >= 1.")
+    if temperature <= 0.0:
+        raise ValueError("inside temperature must be > 0.")
+    if not (0.0 < top_p <= 1.0):
+        raise ValueError("inside top_p must be in (0, 1].")
+    if pooling not in {"last", "mean"}:
+        raise ValueError("inside pooling must be 'last' or 'mean'.")
+
+    prompt = _candidate_verification_prompt(stmt)
+    pad_token_id = _pad_token_id(tokenizer)
+    encoded = tokenizer(
+        prompt,
+        add_special_tokens=True,
+        return_tensors="pt",
+        truncation=True,
+        max_length=max_length,
+    )
+    input_ids = encoded.input_ids.to(device)
+    attention_mask = encoded.attention_mask.to(device)
+    with torch.random.fork_rng(devices=_fork_rng_devices(device)):
+        torch.manual_seed(int(seed))
+        if device.type == "cuda":
+            torch.cuda.manual_seed_all(int(seed))
+        generated = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            do_sample=True,
+            num_return_sequences=n_samples,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            pad_token_id=pad_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+    generated_attention = generated.ne(pad_token_id).long()
+    out = model(
+        input_ids=generated,
+        attention_mask=generated_attention.to(device),
+        output_hidden_states=True,
+    )
+    prompt_len = input_ids.shape[1]
+    embeddings_by_layer: dict[int, torch.Tensor] = {}
+    for layer in layers:
+        states = out.hidden_states[layer].float()
+        pooled = []
+        for sample_idx in range(states.shape[0]):
+            valid_len = int(generated_attention[sample_idx].sum().item())
+            if valid_len <= 0:
+                continue
+            start_idx = min(prompt_len, max(valid_len - 1, 0))
+            if pooling == "mean" and valid_len > start_idx:
+                pooled.append(states[sample_idx, start_idx:valid_len, :].mean(dim=0))
+            else:
+                pooled.append(states[sample_idx, valid_len - 1, :])
+        if not pooled:
+            return None
+        embeddings_by_layer[layer] = torch.stack(pooled).cpu()
+    return embeddings_by_layer
+
+
+def sampled_inside_scores(
+    model,
+    tokenizer,
+    stmt: Statement,
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+    eigenscore_alpha: float,
+) -> Optional[dict[int, float]]:
+    embeddings = sampled_response_embeddings(
+        model,
+        tokenizer,
+        stmt,
+        layers,
+        device,
+        max_length,
+        n_samples=n_samples,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        pooling=pooling,
+        seed=seed,
+    )
+    if embeddings is None:
+        return None
+    return {
+        layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
+        for layer, values in embeddings.items()
     }
 
 
@@ -389,17 +558,46 @@ def run(args) -> dict:
           f"contrastive_direction={'yes' if primary.contrastive_direction is not None else 'no'}  "
           f"subspace={'yes' if args.layer in subspaces else 'no'}\n")
 
-    scores: dict[str, List[float]] = {s: [] for s in SIGNALS}
+    signals = _enabled_signals(args)
+    sweep_signal_names = _sweep_signal_names(args)
+    scores: dict[str, List[float]] = {s: [] for s in signals}
     sweep_scores: dict = {
-        layer: {"maha_last": [], "truth_proj": [], "subspace_resid": [], "eigenscore": []} for layer in layers
+        layer: {signal: [] for signal in sweep_signal_names} for layer in layers
     }
     labels: List[int] = []
 
     print(f"Scoring {len(eval_stmts)} eval statements ...")
     for k, stmt in enumerate(eval_stmts):
-        reps = statement_reps(model, tokenizer, stmt, layers, device, args.max_length)
+        reps = statement_reps(
+            model,
+            tokenizer,
+            stmt,
+            layers,
+            device,
+            args.max_length,
+            eigenscore_alpha=args.eigenscore_alpha,
+        )
         if reps is None:
             continue
+        inside_scores = None
+        if _inside_enabled(args):
+            inside_scores = sampled_inside_scores(
+                model,
+                tokenizer,
+                stmt,
+                layers,
+                device,
+                args.max_length,
+                n_samples=args.inside_samples,
+                max_new_tokens=args.inside_max_new_tokens,
+                temperature=args.inside_temperature,
+                top_p=args.inside_top_p,
+                pooling=args.inside_pooling,
+                seed=args.seed + k,
+                eigenscore_alpha=args.eigenscore_alpha,
+            )
+            if inside_scores is None:
+                continue
 
         for layer in layers:
             m = manifolds[layer]
@@ -421,6 +619,8 @@ def run(args) -> dict:
                 resid = 0.0
             sweep_scores[layer]["subspace_resid"].append(resid)
             sweep_scores[layer]["eigenscore"].append(reps["eigenscore_by_layer"][layer])
+            if inside_scores is not None:
+                sweep_scores[layer][INSIDE_SIGNAL].append(inside_scores[layer])
 
         ans = reps["ans_hs"]
         scores["maha_last"].append(sweep_scores[args.layer]["maha_last"][-1])
@@ -431,6 +631,8 @@ def run(args) -> dict:
             float(hyperbolic_semantic_entropy(poincare_map(ans)).item())
         )
         scores["eigenscore"].append(sweep_scores[args.layer]["eigenscore"][-1])
+        if inside_scores is not None:
+            scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
         scores["nll_answer"].append(reps["nll"])
         labels.append(stmt.is_false)
 
@@ -439,7 +641,7 @@ def run(args) -> dict:
 
     n_pos = sum(labels)
     n_neg = len(labels) - n_pos
-    results = {s: roc_auc(scores[s], labels) for s in SIGNALS}
+    results = {s: roc_auc(scores[s], labels) for s in signals}
     selective = _selective_reports(scores, labels, alpha=REPORT_ALPHA)
 
     # ---- 输出 ----
@@ -447,10 +649,10 @@ def run(args) -> dict:
     print("  AUROC  (positive = false/hallucinated statement)")
     print(f"  model={args.model}  layer={args.layer}  n_pos={n_pos}  n_neg={n_neg}")
     print("=" * 56)
-    print(f"  {'signal':<14}{'AUROC':>10}   interpretation")
+    print(f"  {'signal':<18}{'AUROC':>10}   interpretation")
     print("  " + "-" * 52)
-    for s in SIGNALS:
-        print(f"  {s:<14}{results[s]:>10.3f}")
+    for s in signals:
+        print(f"  {s:<18}{results[s]:>10.3f}")
     print("  " + "-" * 52)
     # 关键对比 / key comparisons
     if not (results["disp_hse"] != results["disp_hse"]):  # not NaN
@@ -458,8 +660,7 @@ def run(args) -> dict:
         verdict = "hyperbolic HELPS" if delta > 0.01 else (
             "hyperbolic HURTS" if delta < -0.01 else "no meaningful difference")
         print(f"  disp_hse - disp_euclid = {delta:+.3f}  ->  {verdict}")
-    geo = max(results["maha_last"], results["truth_proj"], results["subspace_resid"],
-              results["disp_hse"], results["disp_euclid"])
+    geo = max(results[s] for s in signals if s != "nll_answer")
     if not (results["nll_answer"] != results["nll_answer"]):
         print(f"  best geometry ({geo:.3f}) vs nll baseline ({results['nll_answer']:.3f})  ->  "
               f"{'geometry wins' if geo > results['nll_answer'] + 0.01 else 'baseline competitive'}")
@@ -469,25 +670,28 @@ def run(args) -> dict:
     if args.sweep:
         sweep_payload = {}
         print("\n  Layer sweep (AUROC):")
-        print(f"  {'layer':>6} {'maha_last':>11} {'truth_proj':>11} {'subspace':>11} {'eigenscore':>11}")
+        header = f"  {'layer':>6}" + "".join(f" {name:>17}" for name in sweep_signal_names)
+        print(header)
         for layer in sorted(layers):
-            r_m = roc_auc(sweep_scores[layer]["maha_last"], labels)
-            r_p = roc_auc(sweep_scores[layer]["truth_proj"], labels)
-            r_s = roc_auc(sweep_scores[layer]["subspace_resid"], labels)
-            r_e = roc_auc(sweep_scores[layer]["eigenscore"], labels)
-            sweep_payload[str(layer)] = {
-                "maha_last": r_m,
-                "truth_proj": r_p,
-                "subspace_resid": r_s,
-                "eigenscore": r_e,
+            layer_payload = {
+                signal: roc_auc(sweep_scores[layer][signal], labels)
+                for signal in sweep_signal_names
             }
-            print(f"  {layer:>6} {r_m:>11.3f} {r_p:>11.3f} {r_s:>11.3f} {r_e:>11.3f}")
+            sweep_payload[str(layer)] = layer_payload
+            values = "".join(f" {layer_payload[signal]:>17.3f}" for signal in sweep_signal_names)
+            print(f"  {layer:>6}{values}")
 
     payload = {
         "config": {"model": args.model, "layer": args.layer, "offline": args.offline,
                    "manifold_n": primary.n, "n_manifold_false": len(manifold_false),
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
-                   "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed},
+                   "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
+                   "eigenscore_alpha": args.eigenscore_alpha,
+                   "inside_samples": args.inside_samples,
+                   "inside_max_new_tokens": args.inside_max_new_tokens,
+                   "inside_temperature": args.inside_temperature,
+                   "inside_top_p": args.inside_top_p,
+                   "inside_pooling": args.inside_pooling},
         "auroc": results,
         "selective": selective,
         "sweep": sweep_payload,
@@ -525,6 +729,19 @@ def main():
     p.add_argument("--max-length", type=int, default=64)
     p.add_argument("--subspace-rank", type=int, default=2,
                    help="rank for TruthSubspace residual scoring")
+    p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
+                   help="regularization alpha for EigenScore-style log-det scores")
+    p.add_argument("--inside-samples", type=int, default=0,
+                   help="enable multi-sample INSIDE proxy with this many sampled continuations; "
+                        "0 disables it, values >=2 enable inside_eigenscore")
+    p.add_argument("--inside-max-new-tokens", type=int, default=12,
+                   help="max sampled continuation length for --inside-samples")
+    p.add_argument("--inside-temperature", type=float, default=0.7,
+                   help="sampling temperature for --inside-samples")
+    p.add_argument("--inside-top-p", type=float, default=0.9,
+                   help="top-p sampling cutoff for --inside-samples")
+    p.add_argument("--inside-pooling", default="last", choices=("last", "mean"),
+                   help="sentence embedding pooling for sampled continuations")
     p.add_argument("--offline", action="store_true",
                    help="use bundled smoke statements (pipeline check, not a benchmark)")
     p.add_argument("--json", default=None, help="optional path to write structured results")
@@ -532,7 +749,10 @@ def main():
                    help="optional path to dump raw per-statement scores+labels "
                         "(enables post-hoc analyses, e.g. conformal calibration)")
     p.add_argument("--seed", type=int, default=0)
-    run(p.parse_args())
+    args = p.parse_args()
+    if args.inside_samples == 1:
+        p.error("--inside-samples must be 0 or >=2")
+    run(args)
 
 
 if __name__ == "__main__":
