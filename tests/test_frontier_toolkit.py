@@ -55,6 +55,7 @@ from eigentruth.verify import (
     InMemoryVerifier,
     JsonTraceCache,
     RoutedVerifier,
+    SelfConsistencyVerifier,
     VerificationResult,
     VerificationStatus,
     VerifierRoute,
@@ -289,6 +290,80 @@ def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["decision_rule"] == "low_overlap"
     assert result.metadata["best_overlap"] < 0.8
+
+
+def test_self_consistency_verifier_supports_claim_with_majority_samples():
+    verifier = SelfConsistencyVerifier(
+        samples=(
+            {"text": "Paris is the capital of France.", "source": "sample-1"},
+            "Paris is the capital of France and a major European city.",
+            "The capital of France is Paris.",
+        ),
+        min_overlap=0.55,
+        support_threshold=0.60,
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["support_count"] == 3
+    assert result.metadata["support_rate"] == pytest.approx(1.0)
+    assert result.metadata["decision_rule"] == "support_rate"
+    assert result.evidence[0].startswith("sample-1:")
+
+
+def test_self_consistency_verifier_refutes_numeric_and_negation_disagreement():
+    numeric_verifier = SelfConsistencyVerifier(
+        samples=(
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+            "AlphaCorp has 10 offices in Asia.",
+        ),
+        min_overlap=0.55,
+        refute_threshold=0.50,
+    )
+    numeric_claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    numeric_result = numeric_verifier.verify(numeric_claim)
+
+    assert numeric_result.status is VerificationStatus.REFUTED
+    assert numeric_result.metadata["refute_count"] == 2
+    assert numeric_result.metadata["decision_rule"] == "refute_rate"
+    assert numeric_result.metadata["sample_decisions"][0]["reason"] == "number_mismatch"
+
+    negation_verifier = SelfConsistencyVerifier(
+        samples=("The moon is not made of cheese.", "The moon is not made of cheese."),
+        min_overlap=0.50,
+    )
+    negation_claim = extract_claims("The moon is made of cheese.")[0]
+
+    negation_result = negation_verifier.verify(negation_claim)
+
+    assert negation_result.status is VerificationStatus.REFUTED
+    assert negation_result.metadata["sample_decisions"][0]["reason"] == "negation_mismatch"
+
+
+def test_self_consistency_verifier_uses_context_samples():
+    verifier = SelfConsistencyVerifier(samples=(), min_overlap=0.55)
+    claim = extract_claims("Water boils at 100 degrees Celsius.")[0]
+
+    missing = verifier.verify(claim)
+    result = verifier.verify(
+        claim,
+        context={
+            "selfcheck_samples": (
+                "Water boils at 100 degrees Celsius at standard pressure.",
+                {"response": "At standard pressure, water boils at 100 degrees Celsius.", "source": "sample-2"},
+            )
+        },
+    )
+
+    assert missing.status is VerificationStatus.NOT_APPLICABLE
+    assert missing.metadata["decision_rule"] == "too_few_samples"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["sample_count"] == 2
+    assert result.metadata["sample_decisions"][1]["source"] == "sample-2"
 
 
 def test_cached_verifier_reuses_identical_claim_context_results():

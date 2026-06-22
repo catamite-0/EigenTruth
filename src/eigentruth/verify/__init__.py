@@ -15,6 +15,7 @@ from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, Verif
 from eigentruth.verify.groundedness import EvidenceDocument, GroundednessVerifier
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
+from eigentruth.verify.selfcheck import SelfConsistencyVerifier
 
 __all__ = [
     "CachedVerifier",
@@ -33,6 +34,7 @@ __all__ = [
     "Verifier",
     "VerifierRoute",
     "SentenceClaimExtractor",
+    "SelfConsistencyVerifier",
     "claim_features",
     "extract_claims",
     "normalize_claim_text",

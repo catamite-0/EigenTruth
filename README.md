@@ -218,6 +218,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | Adds request-scoped in-memory caching and hit/miss stats for repeated verifier, retrieval, and state-source calls. |
 | `CompositeVerifier` / `RoutedVerifier` | Compose deterministic tools with lexical, retrieval, database, or world-model verifiers; routing can use claim metadata, context, or text patterns and records match reasons. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
+| `SelfConsistencyVerifier` | Checks claims against caller-supplied sampled responses with FactSelfCheck-style support/refutation rates and no model or retrieval dependency. |
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
 | `production_tool_loop_demo.py` | Demonstrates a local production-like loop: SQLite pre-check, guarded side-effecting local `execute_tool`, optional JSON/SQLite idempotency ledger, tool-output state mapping, post-tool verification, action audit metadata, and route summary in one trace. |
@@ -273,6 +274,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | 为重复 verifier、retrieval 和 state-source 调用提供 request-scoped 内存缓存与 hit/miss 统计。 |
 | `CompositeVerifier` / `RoutedVerifier` | 组合确定性工具与词面、检索、数据库或 world-model verifier；路由可依据 claim metadata、context 或文本模式，并记录匹配原因。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
+| `SelfConsistencyVerifier` | 用调用方提供的 sampled responses 对 claim 做 FactSelfCheck 风格支持/反证率检查，不增加模型或检索依赖。 |
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |
 | `production_tool_loop_demo.py` | 演示本地 production-like 闭环：SQLite 前置校验、受 guard 约束的有副作用本地 `execute_tool`、可选 JSON/SQLite idempotency ledger、工具输出状态映射、工具后校验、action audit metadata 和 trace route summary。 |

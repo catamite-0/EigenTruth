@@ -22,7 +22,7 @@ Implemented today:
 - `eigentruth.control.InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger`: store successful idempotent action results for request-local, JSON-file, or SQLite-backed replay without repeating side effects.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, verifier-route summaries, and metadata.
 - `eigentruth.control.run_verification_loop` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that feeds retrieval action results back into verifier context.
-- `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
+- `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, lexical groundedness checks, and sampled-response self-consistency verification for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.ToolOutputStateSource` / `ToolOutputMapping`: maps local tool/action execution outputs into structured verifier state for post-tool checks.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
