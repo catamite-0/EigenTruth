@@ -6,6 +6,7 @@ models. Keep those dependencies optional and outside the core install.
 
 from __future__ import annotations
 
+from eigentruth.adapters.cache import AdapterCacheStats, CachedRetriever, CachedStateSource, combine_cache_stats
 from eigentruth.adapters.calculator import CalculationResult, CalculatorVerifier
 from eigentruth.adapters.qa import QuestionAnswerFact, QuestionAnswerVerifier
 from eigentruth.adapters.retrieval import (
@@ -25,8 +26,11 @@ from eigentruth.adapters.state import (
 from eigentruth.adapters.world_model import InMemoryWorldModelAdapter, WorldModelAdapter, WorldModelPrediction
 
 __all__ = [
+    "AdapterCacheStats",
     "CalculationResult",
     "CalculatorVerifier",
+    "CachedRetriever",
+    "CachedStateSource",
     "QuestionAnswerFact",
     "QuestionAnswerVerifier",
     "InMemoryRetriever",
@@ -42,4 +46,5 @@ __all__ = [
     "InMemoryWorldModelAdapter",
     "WorldModelAdapter",
     "WorldModelPrediction",
+    "combine_cache_stats",
 ]

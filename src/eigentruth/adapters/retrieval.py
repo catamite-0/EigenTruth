@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
+from typing import Any, Mapping, NamedTuple, Protocol, Sequence, runtime_checkable
 
 from eigentruth.control.actions import (
     ActionExecutionStatus,
@@ -90,6 +90,11 @@ class RetrievalHit:
         )
 
 
+class _IndexedRetrievalDocument(NamedTuple):
+    hit: RetrievalHit
+    tokens: tuple[str, ...]
+
+
 @runtime_checkable
 class Retriever(Protocol):
     """Interface for local or external retrieval implementations."""
@@ -109,7 +114,13 @@ class InMemoryRetriever:
     def __post_init__(self) -> None:
         if not (0.0 <= self.min_overlap <= 1.0):
             raise ValueError("min_overlap must be in [0, 1].")
-        object.__setattr__(self, "documents", tuple(_coerce_hit(item) for item in self.documents))
+        documents = tuple(_coerce_hit(item) for item in self.documents)
+        object.__setattr__(self, "documents", documents)
+        object.__setattr__(
+            self,
+            "_indexed_documents",
+            tuple(_IndexedRetrievalDocument(document, _tokens(document.text)) for document in documents),
+        )
 
     def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
         """Return top local documents by lexical token overlap."""
@@ -117,8 +128,9 @@ class InMemoryRetriever:
             return ()
         query_tokens = _tokens(query.query)
         scored: list[tuple[float, RetrievalHit]] = []
-        for document in self.documents:
-            overlap = _token_overlap(query_tokens, _tokens(document.text))
+        for indexed in self._indexed_documents:
+            document = indexed.hit
+            overlap = _token_overlap(query_tokens, indexed.tokens)
             if overlap < self.min_overlap:
                 continue
             score = min(1.0, overlap * document.score)

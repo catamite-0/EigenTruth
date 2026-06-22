@@ -72,6 +72,13 @@ class _DocumentMatch(NamedTuple):
     negation_mismatch: bool
 
 
+class _IndexedEvidenceDocument(NamedTuple):
+    document: EvidenceDocument
+    tokens: tuple[str, ...]
+    key: str
+    negated: bool
+
+
 @dataclass(frozen=True)
 class GroundednessVerifier:
     """Lexical evidence-coverage verifier.
@@ -88,7 +95,9 @@ class GroundednessVerifier:
     def __post_init__(self) -> None:
         if not (0.0 <= self.min_overlap <= 1.0):
             raise ValueError("min_overlap must be in [0, 1].")
-        object.__setattr__(self, "evidence", tuple(_coerce_evidence(item) for item in self.evidence))
+        evidence = tuple(_coerce_evidence(item) for item in self.evidence)
+        object.__setattr__(self, "evidence", evidence)
+        object.__setattr__(self, "_indexed_evidence", tuple(_index_document(item) for item in evidence))
         object.__setattr__(self, "refutations", _normalize_refutations(self.refutations))
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
@@ -123,7 +132,7 @@ class GroundednessVerifier:
                 },
             )
 
-        documents = _documents_with_context(self.evidence, context)
+        documents = _documents_with_context(self._indexed_evidence, context)
         best = _best_document_match(claim.text, claim_tokens, documents)
         if best is None:
             return VerificationResult(
@@ -206,6 +215,16 @@ def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> Evide
     return EvidenceDocument.from_dict(value)
 
 
+def _index_document(document: EvidenceDocument) -> _IndexedEvidenceDocument:
+    tokens = _tokens(document.text)
+    return _IndexedEvidenceDocument(
+        document=document,
+        tokens=tokens,
+        key=normalize_claim_text(document.text),
+        negated=_has_negation(tokens),
+    )
+
+
 def _normalize_refutations(refutations: Mapping[str, Sequence[str] | str]) -> dict[str, tuple[str, ...]]:
     normalized: dict[str, tuple[str, ...]] = {}
     for claim_text, evidence in refutations.items():
@@ -231,32 +250,30 @@ def _lookup_refutation(
 
 
 def _documents_with_context(
-    base_documents: Sequence[EvidenceDocument],
+    base_documents: Sequence[_IndexedEvidenceDocument],
     context: Mapping[str, Any] | None,
-) -> tuple[EvidenceDocument, ...]:
+) -> tuple[_IndexedEvidenceDocument, ...]:
     documents = tuple(base_documents)
     if context is None or "evidence" not in context:
         return documents
-    return documents + tuple(_coerce_evidence(item) for item in _as_sequence(context["evidence"]))
+    return documents + tuple(_index_document(_coerce_evidence(item)) for item in _as_sequence(context["evidence"]))
 
 
 def _best_document_match(
     claim_text: str,
     claim_tokens: tuple[str, ...],
-    documents: Sequence[EvidenceDocument],
+    documents: Sequence[_IndexedEvidenceDocument],
 ) -> _DocumentMatch | None:
     if not documents:
         return None
     claim_key = normalize_claim_text(claim_text)
     claim_negated = _has_negation(claim_tokens)
     matches = []
-    for document in documents:
-        document_tokens = _tokens(document.text)
-        document_key = normalize_claim_text(document.text)
-        exact = claim_key in document_key
-        overlap = _token_overlap(claim_tokens, document_tokens)
-        negation_mismatch = claim_negated != _has_negation(document_tokens)
-        matches.append(_DocumentMatch(document, overlap, exact, negation_mismatch))
+    for indexed in documents:
+        exact = claim_key in indexed.key
+        overlap = _token_overlap(claim_tokens, indexed.tokens)
+        negation_mismatch = claim_negated != indexed.negated
+        matches.append(_DocumentMatch(indexed.document, overlap, exact, negation_mismatch))
     return max(matches, key=lambda match: (match.exact, match.overlap))
 
 

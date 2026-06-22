@@ -7,12 +7,15 @@ import pytest
 import torch
 
 from eigentruth.adapters import (
+    CachedRetriever,
+    CachedStateSource,
     CalculatorVerifier,
     InMemoryRetriever,
     InMemoryWorldModelAdapter,
     QuestionAnswerFact,
     QuestionAnswerVerifier,
     RetrievalActionExecutor,
+    RetrievalQuery,
     SQLiteStateQuery,
     SQLiteStateSource,
     StateCheck,
@@ -33,6 +36,7 @@ from eigentruth.control import (
 )
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
+    CachedVerifier,
     Claim,
     CompositeVerifier,
     EvidenceDocument,
@@ -273,6 +277,70 @@ def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["decision_rule"] == "low_overlap"
     assert result.metadata["best_overlap"] < 0.8
+
+
+def test_cached_verifier_reuses_identical_claim_context_results():
+    class CountingVerifier:
+        def __init__(self):
+            self.calls = 0
+
+        def verify(self, claim, context=None):
+            self.calls += 1
+            return VerificationResult(
+                VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={"claim": claim.text, "context": dict(context or {})},
+            )
+
+    base = CountingVerifier()
+    verifier = CachedVerifier(base)
+    claim = Claim("Inventory is available.", metadata={"state_check": StateCheck("inventory.sku.available")})
+    context = {"state": {"inventory": {"sku": {"available": 3}}}}
+
+    first = verifier.verify(claim, context=context)
+    second = verifier.verify(claim, context=context)
+    changed = verifier.verify(claim, context={"state": {"inventory": {"sku": {"available": 4}}}})
+
+    assert first is second
+    assert changed is not first
+    assert base.calls == 2
+    assert verifier.stats.to_dict()["hits"] == 1
+    assert verifier.stats.to_dict()["misses"] == 2
+
+
+def test_cached_state_source_loads_once_and_copies_state():
+    class CountingStateSource:
+        def __init__(self):
+            self.calls = 0
+
+        def load_state(self):
+            self.calls += 1
+            return {"inventory": {"sku": {"available": 3}}}
+
+    source = CountingStateSource()
+    cached = CachedStateSource(source)
+
+    first = cached.load_state()
+    first["inventory"]["sku"]["available"] = 0
+    second = cached.load_state()
+
+    assert source.calls == 1
+    assert second["inventory"]["sku"]["available"] == 3
+    assert cached.stats.to_dict()["hits"] == 1
+    assert cached.stats.to_dict()["misses"] == 1
+
+
+def test_cached_retriever_reuses_query_results():
+    retriever = CachedRetriever(InMemoryRetriever(("Paris is the capital of France.",)))
+    query = RetrievalQuery(query="Paris capital France", claim_id="c1")
+
+    first = retriever.retrieve(query, limit=1)
+    second = retriever.retrieve(query, limit=1)
+
+    assert first == second
+    assert second[0].text == "Paris is the capital of France."
+    assert retriever.stats.to_dict()["hits"] == 1
+    assert retriever.stats.to_dict()["misses"] == 1
 
 
 def test_question_answer_verifier_checks_structured_question_answers():

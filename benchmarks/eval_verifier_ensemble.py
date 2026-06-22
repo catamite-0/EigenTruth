@@ -22,10 +22,24 @@ from typing import Any, Mapping, Sequence
 
 import torch
 
-from eigentruth.adapters import InMemoryRetriever, QuestionAnswerVerifier, RetrievalQuery, StructuredStateVerifier
+from eigentruth.adapters import (
+    CachedRetriever,
+    InMemoryRetriever,
+    QuestionAnswerVerifier,
+    RetrievalQuery,
+    StructuredStateVerifier,
+    combine_cache_stats,
+)
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.eval.conformal import directional_conformal_threshold
-from eigentruth.verify import Claim, GroundednessVerifier, VerificationResult, VerificationStatus
+from eigentruth.verify import (
+    CachedVerifier,
+    Claim,
+    GroundednessVerifier,
+    VerificationResult,
+    VerificationStatus,
+    stable_cache_key,
+)
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -225,16 +239,51 @@ def _verify_records(
     qa_verifier: QuestionAnswerVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
+    cache_stats: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     verified = []
     state_checks = {} if state_checks is None else state_checks
+    qa_runner = CachedVerifier(qa_verifier) if qa_verifier is not None else None
+    state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
+    groundedness_runners: dict[str, CachedVerifier] = {}
+    retrievers: dict[str, CachedRetriever] = {}
+
+    def groundedness_runner(
+        evidence: Sequence[Mapping[str, Any] | str],
+        refutations: Mapping[str, Sequence[str] | str],
+    ) -> CachedVerifier:
+        key = stable_cache_key({
+            "evidence": evidence,
+            "refutations": refutations,
+            "min_overlap": verifier_min_overlap,
+        })
+        runner = groundedness_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                GroundednessVerifier(
+                    evidence=evidence,
+                    refutations=refutations,
+                    min_overlap=verifier_min_overlap,
+                )
+            )
+            groundedness_runners[key] = runner
+        return runner
+
+    def retriever_for(documents: Sequence[Mapping[str, Any] | str]) -> CachedRetriever:
+        key = stable_cache_key({"documents": documents, "min_overlap": retriever_min_overlap})
+        retriever = retrievers.get(key)
+        if retriever is None:
+            retriever = CachedRetriever(InMemoryRetriever(documents, min_overlap=retriever_min_overlap))
+            retrievers[key] = retriever
+        return retriever
+
     for record in records:
         qa_result = None
         state_result = None
         attempted_routes = []
-        if qa_verifier is not None:
+        if qa_runner is not None:
             attempted_routes.append("structured_qa")
-            qa_result = qa_verifier.verify(record.claim, context={"statement": record.metadata.get("statement", {})})
+            qa_result = qa_runner.verify(record.claim, context={"statement": record.metadata.get("statement", {})})
             if qa_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
                 verified.append({
                     "claim": {
@@ -257,9 +306,9 @@ def _verify_records(
                 })
                 continue
 
-        if state_verifier is not None and _record_has_state_check(record, state_checks):
+        if state_runner is not None and _record_has_state_check(record, state_checks):
             attempted_routes.append("structured_state")
-            state_result = state_verifier.verify(
+            state_result = state_runner.verify(
                 record.claim,
                 context=_state_context(record, state_checks),
             )
@@ -286,27 +335,19 @@ def _verify_records(
                 continue
 
         attempted_routes.append("groundedness")
-        verifier = GroundednessVerifier(
-            evidence=record.initial_evidence,
-            refutations=record.refutations,
-            min_overlap=verifier_min_overlap,
-        )
-        initial = verifier.verify(record.claim)
+        initial = groundedness_runner(record.initial_evidence, record.refutations).verify(record.claim)
         hits = ()
         final = initial
         if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.retrieval_documents:
             attempted_routes.append("retrieval_groundedness")
-            retriever = InMemoryRetriever(record.retrieval_documents, min_overlap=retriever_min_overlap)
+            retriever = retriever_for(record.retrieval_documents)
             hits = tuple(retriever.retrieve(
                 RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
                 limit=retrieval_limit,
             ))
             if hits:
-                final = GroundednessVerifier(
-                    evidence=tuple(record.initial_evidence) + tuple(hit.to_dict() for hit in hits),
-                    refutations=record.refutations,
-                    min_overlap=verifier_min_overlap,
-                ).verify(record.claim)
+                final_evidence = tuple(record.initial_evidence) + tuple(hit.to_dict() for hit in hits)
+                final = groundedness_runner(final_evidence, record.refutations).verify(record.claim)
         selected_route = "retrieval_groundedness" if hits else "groundedness"
         verified.append({
             "claim": {
@@ -326,6 +367,26 @@ def _verify_records(
                 used_retrieval=bool(hits),
             ),
             "metadata": dict(record.metadata),
+        })
+    if cache_stats is not None:
+        qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
+        state_stats = {} if state_runner is None else state_runner.stats.to_dict()
+        groundedness_stats = combine_cache_stats(
+            *(runner.stats.to_dict() for runner in groundedness_runners.values())
+        )
+        retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
+        cache_stats.update({
+            "qa_verifier": qa_stats,
+            "state_verifier": state_stats,
+            "groundedness_verifiers": {
+                **groundedness_stats,
+                "instances": len(groundedness_runners),
+            },
+            "retrievers": {
+                **retriever_stats,
+                "instances": len(retrievers),
+            },
+            "total": combine_cache_stats(qa_stats, state_stats, groundedness_stats, retriever_stats),
         })
     return tuple(verified)
 
@@ -650,6 +711,7 @@ def build_verifier_ensemble_report(
         state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
         any_state_enabled = any_state_enabled or state_enabled
         state_verifier = StructuredStateVerifier(global_state) if state_enabled else None
+        run_cache_stats: dict[str, Any] = {}
         verified_records = _verify_records(
             records,
             verifier_min_overlap=verifier_min_overlap,
@@ -658,6 +720,7 @@ def build_verifier_ensemble_report(
             qa_verifier=qa_verifier,
             state_verifier=state_verifier,
             state_checks=global_state_checks,
+            cache_stats=run_cache_stats,
         )
         alpha_results = {
             str(alpha): _evaluate_alpha(
@@ -711,6 +774,7 @@ def build_verifier_ensemble_report(
                 "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
                 "retrieval_limit": retrieval_limit,
             },
+            "cache_stats": run_cache_stats,
             "alphas": alpha_results,
         })
 

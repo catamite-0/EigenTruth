@@ -158,6 +158,7 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     )
     quality = payload["runs"][0]["verification_quality"]
     routes = payload["runs"][0]["route_summary"]
+    cache_stats = payload["runs"][0]["cache_stats"]
 
     assert fixture["fixture_type"] == "local_retrieval_evidence"
     assert fixture["summary"]["records_with_hits"] == 2
@@ -174,6 +175,9 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert routes["by_route"]["retrieval_groundedness"]["statuses"]["supported"] == 1
     assert routes["by_route"]["retrieval_groundedness"]["statuses"]["refuted"] == 1
     assert routes["by_route"]["groundedness"]["statuses"]["insufficient_evidence"] == 1
+    assert cache_stats["groundedness_verifiers"]["requests"] >= 3
+    assert cache_stats["retrievers"]["requests"] == 2
+    assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
 def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
@@ -221,6 +225,7 @@ def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
 
     assert payload["qa_verifier"]["enabled"] is True
     assert run["qa"]["decided_records"] == 6
+    assert run["cache_stats"]["qa_verifier"]["requests"] == 6
     assert routes["selected_counts"] == {"structured_qa": 6}
     assert routes["by_route"]["structured_qa"]["rates"]["supported"] == pytest.approx(4 / 6)
     assert routes["by_route"]["structured_qa"]["rates"]["refuted"] == pytest.approx(2 / 6)
@@ -317,6 +322,7 @@ def test_eval_verifier_ensemble_uses_structured_state_checks(tmp_path):
     assert payload["state_verifier"]["enabled"] is True
     assert run["state_verifier"]["enabled"] is True
     assert run["state_verifier"]["decided_records"] == 4
+    assert run["cache_stats"]["state_verifier"]["requests"] == 4
     assert run["verification_status_counts"]["supported"] == 3
     assert run["verification_status_counts"]["refuted"] == 2
     assert routes["selected_counts"] == {"structured_state": 4, "groundedness": 1}
