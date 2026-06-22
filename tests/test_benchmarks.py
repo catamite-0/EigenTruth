@@ -3148,6 +3148,88 @@ def test_run_cache_profile_matrix_blocks_when_any_checked_cell_fails(tmp_path, m
     assert report["matrix_decision"]["failed_cells"] == ("layer_m2_batch_1_capture_outputs",)
 
 
+def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_worker_sweep")
+    config = module.CacheWorkerSweepConfig(
+        output_dir=tmp_path / "worker-sweep",
+        worker_counts=(1, 2),
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(1,),
+        python_executable="/python",
+    )
+
+    report = module.run_worker_sweep(config, clean=True, dry_run=True)
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert report["dry_run"] is True
+    assert Path(report["report_path"]).exists()
+    assert [entry["worker_count"] for entry in report["worker_reports"]] == [1, 2]
+    assert [entry["matrix_status"] for entry in report["worker_reports"]] == ["dry_run", "dry_run"]
+    assert report["worker_sweep_decision"]["status"] == "dry_run"
+    assert report["worker_sweep_decision"]["recommended_worker_count"] is None
+    assert manifest["metadata"]["runner"] == "run_cache_worker_sweep"
+    assert manifest["metadata"]["worker_counts"] == [1, 2]
+    assert manifest["artifacts"]["workers.1.matrix_manifest"]["exists"] is True
+    assert manifest["artifacts"]["workers.2.matrix_manifest"]["exists"] is True
+
+    with pytest.raises(ValueError, match="duplicate"):
+        module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-duplicate", worker_counts=(1, 1))
+    with pytest.raises(ValueError, match=">=1"):
+        module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-zero", worker_counts=(0,))
+
+
+def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_worker_sweep")
+    seen_shared_cache_dirs = []
+
+    def fake_run_matrix(config, *, clean, dry_run):
+        del clean, dry_run
+        seen_shared_cache_dirs.append(config.shared_cache_dir)
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        config.report_path.write_text("{}", encoding="utf-8")
+        config.artifact_manifest.write_text("{}", encoding="utf-8")
+        wall_clock = 10.0 if config.max_workers == 1 else 6.0
+        return {
+            "dry_run": False,
+            "report_path": str(config.report_path),
+            "artifact_manifest": str(config.artifact_manifest),
+            "execution": {
+                "wall_clock_seconds": wall_clock,
+                "cell_count": 1,
+                "max_workers": config.max_workers,
+            },
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": f"workers_{config.max_workers}_cell",
+                "recommended": {
+                    "id": f"workers_{config.max_workers}_cell",
+                    "cache_only_total_seconds": 0.10,
+                    "truth_proj_auroc": 0.90,
+                },
+                "candidate_count": 1,
+                "failed_cells": (),
+                "blocking_reasons": (),
+            },
+        }
+
+    monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
+    config = module.CacheWorkerSweepConfig(
+        output_dir=tmp_path / "worker-sweep",
+        shared_cache_dir=tmp_path / "shared-cache",
+        worker_counts=(1, 2),
+        model="tiny-local",
+    )
+
+    report = module.run_worker_sweep(config, clean=True, dry_run=False)
+
+    assert [path.name for path in seen_shared_cache_dirs] == ["workers_1", "workers_2"]
+    assert [entry["worker_count"] for entry in report["leaderboard"]] == [2, 1]
+    assert report["worker_sweep_decision"]["status"] == "promote"
+    assert report["worker_sweep_decision"]["recommended_worker_count"] == 2
+    assert report["worker_sweep_decision"]["recommended"]["wall_clock_seconds"] == pytest.approx(6.0)
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

@@ -1060,6 +1060,27 @@ comparisons should use end-to-end wall-clock time instead of summing profile
 totals. When `--shared-cache-dir` is set, the runner keeps refresh cells serial
 until shared statement/layer/eval caches exist, then executes dependent
 warm-start/cache-only cells concurrently up to the worker limit.
+To compare worker counts in one reproducible run, use
+`run_cache_worker_sweep.py`. It runs the same matrix under each worker count,
+writes `cache-worker-sweep-report.json`, and recommends the fastest worker count
+whose matrix promoted. If a shared-cache root is provided, each worker count gets
+an isolated subdirectory so later runs do not inherit warmed caches from earlier
+worker counts:
+
+```bash
+python benchmarks/run_cache_worker_sweep.py \
+  --output-dir /tmp/eigentruth-qwen05-worker-sweep \
+  --shared-cache-dir /tmp/eigentruth-qwen05-worker-sweep-cache \
+  --worker-counts=1,2 \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --real-truthfulqa \
+  --limit 8 \
+  --manifold-questions 4 \
+  --layers=-16,-12 \
+  --batch-sizes=1 \
+  --fail-on-blocked
+```
+
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and
