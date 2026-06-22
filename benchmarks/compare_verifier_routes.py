@@ -50,6 +50,15 @@ def _as_float(value: Any) -> float | None:
     return float(value)
 
 
+def _as_int_or_none(value: Any) -> int | None:
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     if denominator == 0:
         return None
@@ -132,6 +141,8 @@ def _route_row(
         "duration_observations": int(route_quality.get("duration_observations", 0)),
         "total_duration_seconds": _as_float(route_quality.get("total_duration_seconds")),
         "mean_duration_seconds": _as_float(route_quality.get("mean_duration_seconds")),
+        "p95_duration_seconds": _as_float(route_quality.get("p95_duration_seconds")),
+        "p99_duration_seconds": _as_float(route_quality.get("p99_duration_seconds")),
         "max_duration_seconds": _as_float(route_quality.get("max_duration_seconds")),
         "selected_route_duration_observations": int(
             route_quality.get("selected_route_duration_observations", 0)
@@ -141,6 +152,12 @@ def _route_row(
         ),
         "mean_selected_route_duration_seconds": _as_float(
             route_quality.get("mean_selected_route_duration_seconds")
+        ),
+        "p95_selected_route_duration_seconds": _as_float(
+            route_quality.get("p95_selected_route_duration_seconds")
+        ),
+        "p99_selected_route_duration_seconds": _as_float(
+            route_quality.get("p99_selected_route_duration_seconds")
         ),
         "attempted_route_count_observations": int(route_quality.get("attempted_route_count_observations", 0)),
         "total_attempted_route_count": _as_float(route_quality.get("total_attempted_route_count")),
@@ -160,12 +177,40 @@ def _route_row(
     }
 
 
-def _extract_route_rows(
+def _cache_record(
+    *,
+    report_name: str,
+    source: Path,
+    run: Mapping[str, Any],
+) -> dict[str, Any]:
+    stats = run.get("cache_stats", {})
+    total = stats.get("total", {}) if isinstance(stats, Mapping) else {}
+    total = total if isinstance(total, Mapping) else {}
+    hits = _as_int_or_none(total.get("hits"))
+    misses = _as_int_or_none(total.get("misses"))
+    requests = _as_int_or_none(total.get("requests"))
+    if requests is None and hits is not None and misses is not None:
+        requests = hits + misses
+    return {
+        "report": report_name,
+        "run": str(run.get("name", report_name)),
+        "source": str(source),
+        "has_cache_stats": isinstance(stats, Mapping) and bool(stats),
+        "size": _as_int_or_none(total.get("size")),
+        "hits": hits,
+        "misses": misses,
+        "requests": requests,
+        "hit_rate": _as_float(total.get("hit_rate")) if total.get("hit_rate") is not None else None,
+    }
+
+
+def _extract_route_rows_and_cache_records(
     reports: Sequence[tuple[str, Path]],
     *,
     alpha: float,
-) -> list[dict[str, Any]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     rows = []
+    cache_records = []
     for report_name, path in reports:
         with open(path, encoding="utf-8") as f:
             report = json.load(f)
@@ -175,6 +220,7 @@ def _extract_route_rows(
         for run in runs:
             if not isinstance(run, Mapping):
                 continue
+            cache_records.append(_cache_record(report_name=report_name, source=path, run=run))
             route_quality = run.get("route_quality", {})
             if not isinstance(route_quality, Mapping):
                 continue
@@ -189,6 +235,15 @@ def _extract_route_rows(
                     route_quality=payload,
                     alpha=alpha,
                 ))
+    return rows, cache_records
+
+
+def _extract_route_rows(
+    reports: Sequence[tuple[str, Path]],
+    *,
+    alpha: float,
+) -> list[dict[str, Any]]:
+    rows, _ = _extract_route_rows_and_cache_records(reports, alpha=alpha)
     return rows
 
 
@@ -279,12 +334,22 @@ def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str,
         "duration_observations": duration_observations,
         "total_duration_seconds": total_duration,
         "mean_duration_seconds": _mean_from_total(total_duration, duration_observations),
+        "p95_duration_seconds": _max_finite_metric(rows, "p95_duration_seconds"),
+        "p99_duration_seconds": _max_finite_metric(rows, "p99_duration_seconds"),
         "max_duration_seconds": _max_finite_metric(rows, "max_duration_seconds"),
         "selected_route_duration_observations": selected_route_duration_observations,
         "total_selected_route_duration_seconds": total_selected_route_duration,
         "mean_selected_route_duration_seconds": _mean_from_total(
             total_selected_route_duration,
             selected_route_duration_observations,
+        ),
+        "p95_selected_route_duration_seconds": _max_finite_metric(
+            rows,
+            "p95_selected_route_duration_seconds",
+        ),
+        "p99_selected_route_duration_seconds": _max_finite_metric(
+            rows,
+            "p99_selected_route_duration_seconds",
         ),
         "attempted_route_count_observations": attempted_route_count_observations,
         "total_attempted_route_count": total_attempted_route_count,
@@ -335,6 +400,26 @@ def _aggregate_by_route(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _aggregate_cache_summary(cache_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    present = [row for row in cache_records if row.get("has_cache_stats")]
+    hits = sum(int(row.get("hits") or 0) for row in present)
+    misses = sum(int(row.get("misses") or 0) for row in present)
+    size = sum(int(row.get("size") or 0) for row in present)
+    requests = hits + misses
+    return {
+        "n_runs": len(cache_records),
+        "n_runs_with_cache_stats": len(present),
+        "total": {
+            "size": size,
+            "hits": hits,
+            "misses": misses,
+            "requests": requests,
+            "hit_rate": None if requests == 0 else hits / requests,
+        },
+        "runs": [dict(row) for row in cache_records],
+    }
+
+
 PARETO_MAXIMIZE_METRICS = (
     "decision_accuracy",
     "false_refuted_rate",
@@ -346,6 +431,8 @@ PARETO_MINIMIZE_METRICS = (
     "false_supported_rate",
     "verified_false_alarm",
     "mean_duration_seconds",
+    "p95_duration_seconds",
+    "p99_duration_seconds",
     "mean_attempted_route_count",
     "retrieval_use_rate",
 )
@@ -445,10 +532,12 @@ def _promotion_score(payload: Mapping[str, Any]) -> float:
         1.0 * _bounded_metric(payload.get("verified_detection")),
         1.0 * (1.0 - _bounded_metric(payload.get("verified_false_alarm"), default=1.0)),
         0.75 * _efficiency_score(payload.get("mean_duration_seconds")),
+        0.50 * _efficiency_score(payload.get("p95_duration_seconds")),
+        0.50 * _efficiency_score(payload.get("p99_duration_seconds")),
         0.50 * _efficiency_score(payload.get("mean_attempted_route_count")),
         0.50 * (1.0 - _bounded_metric(payload.get("retrieval_use_rate"), default=0.5)),
     )
-    return sum(components) / 8.75
+    return sum(components) / 9.75
 
 
 def _pareto_entry(route: str, payload: Mapping[str, Any], *, dominated_by: str | None = None) -> dict[str, Any]:
@@ -534,9 +623,12 @@ def _thresholds_enabled(
     max_verified_false_alarm: float | None,
     min_verified_detection: float | None,
     max_mean_duration_seconds: float | None,
+    max_p95_duration_seconds: float | None,
+    max_p99_duration_seconds: float | None,
     max_max_duration_seconds: float | None,
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
+    min_cache_hit_rate: float | None,
 ) -> bool:
     return any(
         value is not None
@@ -547,9 +639,12 @@ def _thresholds_enabled(
             max_verified_false_alarm,
             min_verified_detection,
             max_mean_duration_seconds,
+            max_p95_duration_seconds,
+            max_p99_duration_seconds,
             max_max_duration_seconds,
             max_mean_attempted_route_count,
             max_retrieval_use_rate,
+            min_cache_hit_rate,
         )
     )
 
@@ -616,6 +711,7 @@ def _check_max_metric(
 def build_route_quality_gate(
     by_route: Mapping[str, Any],
     *,
+    cache_summary: Mapping[str, Any] | None = None,
     routes: Sequence[str] = (),
     min_selected: int = 1,
     min_decision_accuracy: float | None = None,
@@ -624,9 +720,12 @@ def build_route_quality_gate(
     max_verified_false_alarm: float | None = None,
     min_verified_detection: float | None = None,
     max_mean_duration_seconds: float | None = None,
+    max_p95_duration_seconds: float | None = None,
+    max_p99_duration_seconds: float | None = None,
     max_max_duration_seconds: float | None = None,
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
+    min_cache_hit_rate: float | None = None,
 ) -> dict[str, Any] | None:
     """Build a fail-closed route quality gate over aggregate route metrics."""
     if min_selected < 0:
@@ -637,12 +736,15 @@ def build_route_quality_gate(
     max_verified_false_alarm = _validated_limit("max_verified_false_alarm", max_verified_false_alarm)
     min_verified_detection = _validated_limit("min_verified_detection", min_verified_detection)
     max_mean_duration_seconds = _validated_limit("max_mean_duration_seconds", max_mean_duration_seconds)
+    max_p95_duration_seconds = _validated_limit("max_p95_duration_seconds", max_p95_duration_seconds)
+    max_p99_duration_seconds = _validated_limit("max_p99_duration_seconds", max_p99_duration_seconds)
     max_max_duration_seconds = _validated_limit("max_max_duration_seconds", max_max_duration_seconds)
     max_mean_attempted_route_count = _validated_limit(
         "max_mean_attempted_route_count",
         max_mean_attempted_route_count,
     )
     max_retrieval_use_rate = _validated_limit("max_retrieval_use_rate", max_retrieval_use_rate)
+    min_cache_hit_rate = _validated_limit("min_cache_hit_rate", min_cache_hit_rate)
     enabled = bool(routes) or _thresholds_enabled(
         min_decision_accuracy=min_decision_accuracy,
         max_false_supported_rate=max_false_supported_rate,
@@ -650,9 +752,12 @@ def build_route_quality_gate(
         max_verified_false_alarm=max_verified_false_alarm,
         min_verified_detection=min_verified_detection,
         max_mean_duration_seconds=max_mean_duration_seconds,
+        max_p95_duration_seconds=max_p95_duration_seconds,
+        max_p99_duration_seconds=max_p99_duration_seconds,
         max_max_duration_seconds=max_max_duration_seconds,
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
+        min_cache_hit_rate=min_cache_hit_rate,
     )
     if not enabled:
         return None
@@ -703,6 +808,8 @@ def build_route_quality_gate(
             ("verified_false_alarm", max_verified_false_alarm, _check_max_metric),
             ("verified_detection", min_verified_detection, _check_min_metric),
             ("mean_duration_seconds", max_mean_duration_seconds, _check_max_metric),
+            ("p95_duration_seconds", max_p95_duration_seconds, _check_max_metric),
+            ("p99_duration_seconds", max_p99_duration_seconds, _check_max_metric),
             ("max_duration_seconds", max_max_duration_seconds, _check_max_metric),
             ("mean_attempted_route_count", max_mean_attempted_route_count, _check_max_metric),
             ("retrieval_use_rate", max_retrieval_use_rate, _check_max_metric),
@@ -713,6 +820,22 @@ def build_route_quality_gate(
             failure = checker(route=route, metric=metric, value=payload.get(metric), limit=float(limit))
             if failure is not None:
                 failures.append(failure)
+
+    if min_cache_hit_rate is not None:
+        total_cache = {}
+        if isinstance(cache_summary, Mapping):
+            raw_total = cache_summary.get("total", {})
+            if isinstance(raw_total, Mapping):
+                total_cache = raw_total
+        failure = _check_min_metric(
+            route=None,
+            metric="cache_hit_rate",
+            value=total_cache.get("hit_rate"),
+            limit=float(min_cache_hit_rate),
+        )
+        if failure is not None:
+            failure["reason"] = "aggregate report cache hit rate is missing or below threshold"
+            failures.append(failure)
 
     return {
         "enabled": True,
@@ -727,9 +850,12 @@ def build_route_quality_gate(
             "max_verified_false_alarm": max_verified_false_alarm,
             "min_verified_detection": min_verified_detection,
             "max_mean_duration_seconds": max_mean_duration_seconds,
+            "max_p95_duration_seconds": max_p95_duration_seconds,
+            "max_p99_duration_seconds": max_p99_duration_seconds,
             "max_max_duration_seconds": max_max_duration_seconds,
             "max_mean_attempted_route_count": max_mean_attempted_route_count,
             "max_retrieval_use_rate": max_retrieval_use_rate,
+            "min_cache_hit_rate": min_cache_hit_rate,
         },
         "failures": failures,
     }
@@ -868,9 +994,12 @@ def build_route_comparison_report(
     max_verified_false_alarm: float | None = None,
     min_verified_detection: float | None = None,
     max_mean_duration_seconds: float | None = None,
+    max_p95_duration_seconds: float | None = None,
+    max_p99_duration_seconds: float | None = None,
     max_max_duration_seconds: float | None = None,
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
+    min_cache_hit_rate: float | None = None,
 ) -> dict[str, Any]:
     """Build a route comparison report from verifier-ensemble JSON files."""
     if not reports:
@@ -880,12 +1009,14 @@ def build_route_comparison_report(
     if min_selected < 0:
         raise ValueError("min_selected must be >= 0.")
 
-    rows = _extract_route_rows(reports, alpha=float(alpha))
+    rows, cache_records = _extract_route_rows_and_cache_records(reports, alpha=float(alpha))
     leaderboard = _leaderboard_rows(rows, min_selected=min_selected)
     by_route = _aggregate_by_route(rows)
+    cache_summary = _aggregate_cache_summary(cache_records)
     pareto_frontier = build_route_pareto_frontier(by_route, min_selected=min_selected)
     gate = build_route_quality_gate(
         by_route,
+        cache_summary=cache_summary,
         routes=gate_routes,
         min_selected=min_selected if gate_min_selected is None else gate_min_selected,
         min_decision_accuracy=min_decision_accuracy,
@@ -894,9 +1025,12 @@ def build_route_comparison_report(
         max_verified_false_alarm=max_verified_false_alarm,
         min_verified_detection=min_verified_detection,
         max_mean_duration_seconds=max_mean_duration_seconds,
+        max_p95_duration_seconds=max_p95_duration_seconds,
+        max_p99_duration_seconds=max_p99_duration_seconds,
         max_max_duration_seconds=max_max_duration_seconds,
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
+        min_cache_hit_rate=min_cache_hit_rate,
     )
     promotion_decision = build_adapter_promotion_decision(pareto_frontier, gate)
     payload = {
@@ -908,6 +1042,7 @@ def build_route_comparison_report(
         "n_leaderboard_entries": len(leaderboard),
         "leaderboard": leaderboard,
         "by_route": by_route,
+        "cache_summary": cache_summary,
         "pareto_frontier": pareto_frontier,
         "promotion_decision": promotion_decision,
         "rows": rows,
@@ -933,9 +1068,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_verified_false_alarm=args.max_verified_false_alarm,
         min_verified_detection=args.min_verified_detection,
         max_mean_duration_seconds=args.max_mean_duration_seconds,
+        max_p95_duration_seconds=args.max_p95_duration_seconds,
+        max_p99_duration_seconds=args.max_p99_duration_seconds,
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        min_cache_hit_rate=args.min_cache_hit_rate,
     )
     if args.json:
         output_path = Path(args.json)
@@ -973,12 +1111,18 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="fail gate when verified_detection is below this value")
     parser.add_argument("--max-mean-duration-seconds", type=float, default=None,
                         help="fail gate when aggregate mean_duration_seconds exceeds this value")
+    parser.add_argument("--max-p95-duration-seconds", type=float, default=None,
+                        help="fail gate when aggregate p95_duration_seconds exceeds this value")
+    parser.add_argument("--max-p99-duration-seconds", type=float, default=None,
+                        help="fail gate when aggregate p99_duration_seconds exceeds this value")
     parser.add_argument("--max-max-duration-seconds", type=float, default=None,
                         help="fail gate when aggregate max_duration_seconds exceeds this value")
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None,
                         help="fail gate when mean_attempted_route_count exceeds this value")
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None,
                         help="fail gate when retrieval_use_rate exceeds this value")
+    parser.add_argument("--min-cache-hit-rate", type=float, default=None,
+                        help="fail gate when aggregate report cache hit rate is below this value")
     parser.add_argument("--fail-on-gate", action="store_true",
                         help="exit non-zero when the route quality gate fails")
     parser.add_argument("--fail-on-promotion", action="store_true",

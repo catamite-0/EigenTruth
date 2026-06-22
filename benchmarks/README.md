@@ -423,7 +423,9 @@ final control-policy detection and false-alarm rates. Reports also include
 per-route supported/refuted/error rates. Use `route_quality` for label-conditioned
 false-support / false-refutation metrics per selected route, and use each
 alpha result's `route_control_impact` to see how that route changed internal
-false alarm, detection, suppression, and rescued-detection rates.
+false alarm, detection, suppression, and rescued-detection rates. New reports
+also include route-level `p95_duration_seconds` and `p99_duration_seconds`
+tail-latency fields for promotion gates.
 
 ## `compare_verifier_routes.py`
 
@@ -441,6 +443,8 @@ python benchmarks/compare_verifier_routes.py \
   --max-false-supported-rate 0.05 \
   --min-false-refuted-rate 0.80 \
   --max-mean-duration-seconds 0.05 \
+  --max-p95-duration-seconds 0.10 \
+  --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
   --fail-on-promotion \
   --fail-on-gate \
@@ -455,8 +459,13 @@ The output includes:
 - `by_route`: aggregate counts and weighted rates across all reports for each
   route, useful for comparing route families such as `structured_qa`,
   `structured_state`, and `state_transition`. New verifier-ensemble reports
-  include cost fields such as `mean_duration_seconds`, `max_duration_seconds`,
+  include cost fields such as `mean_duration_seconds`,
+  `p95_duration_seconds`, `p99_duration_seconds`, `max_duration_seconds`,
   `mean_attempted_route_count`, and `retrieval_use_rate`.
+- `cache_summary`: aggregate report-level cache hit/miss/request totals across
+  compared runs. This is reported separately from route metrics because cache
+  hits are global to the benchmark run rather than safely attributable to one
+  selected route.
 - `pareto_frontier`: aggregate route candidates that are not dominated by
   another route across quality, control-impact, sample-size, and cost metrics.
   The `recommended` entry is a deterministic quality/cost ordering over the
@@ -469,9 +478,10 @@ The output includes:
   `--gate-*` or threshold flag is set. It checks aggregate route metrics such
   as `decision_accuracy`, `false_supported_rate`, `false_refuted_rate`,
   `verified_false_alarm`, `verified_detection`, `mean_duration_seconds`,
-  `max_duration_seconds`, `mean_attempted_route_count`, and
-  `retrieval_use_rate`; missing routes, missing metrics, non-finite values, or
-  no eligible routes fail the gate.
+  `p95_duration_seconds`, `p99_duration_seconds`, `max_duration_seconds`,
+  `mean_attempted_route_count`, and `retrieval_use_rate`, plus optional global
+  `cache_hit_rate`; missing routes, missing metrics, non-finite values, missing
+  cache evidence, or no eligible routes fail the gate.
 - `rows`: the unaggregated route entries for audit and follow-up slicing.
 
 Use `--min-selected` to keep tiny route samples out of the leaderboard while

@@ -804,12 +804,16 @@ def _route_cost_metrics(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "duration_observations": len(total_durations),
         "total_duration_seconds": None if not total_durations else float(sum(total_durations)),
         "mean_duration_seconds": _mean_or_none(total_durations),
+        "p95_duration_seconds": _percentile_or_none(total_durations, 95.0),
+        "p99_duration_seconds": _percentile_or_none(total_durations, 99.0),
         "max_duration_seconds": None if not total_durations else max(total_durations),
         "selected_route_duration_observations": len(selected_route_durations),
         "total_selected_route_duration_seconds": (
             None if not selected_route_durations else float(sum(selected_route_durations))
         ),
         "mean_selected_route_duration_seconds": _mean_or_none(selected_route_durations),
+        "p95_selected_route_duration_seconds": _percentile_or_none(selected_route_durations, 95.0),
+        "p99_selected_route_duration_seconds": _percentile_or_none(selected_route_durations, 99.0),
         "attempted_route_count_observations": len(attempted_route_counts),
         "total_attempted_route_count": None if not attempted_route_counts else float(sum(attempted_route_counts)),
         "mean_attempted_route_count": _mean_or_none(attempted_route_counts),
@@ -1052,6 +1056,24 @@ def _mean_or_none(values: Sequence[float]) -> float | None:
     if not values:
         return None
     return _mean(values)
+
+
+def _percentile_or_none(values: Sequence[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    if not (0.0 <= percentile <= 100.0):
+        raise ValueError("percentile must be between 0 and 100.")
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return ordered[0]
+    rank = (percentile / 100.0) * (len(ordered) - 1)
+    lower_index = math.floor(rank)
+    upper_index = math.ceil(rank)
+    if lower_index == upper_index:
+        return ordered[lower_index]
+    lower = ordered[lower_index]
+    upper = ordered[upper_index]
+    return lower + (upper - lower) * (rank - lower_index)
 
 
 def _optional_delta(after: float | None, before: float | None) -> float | None:

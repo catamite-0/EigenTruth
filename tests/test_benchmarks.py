@@ -181,6 +181,8 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert routes["by_route"]["retrieval_groundedness"]["statuses"]["refuted"] == 1
     assert routes["by_route"]["retrieval_groundedness"]["duration_observations"] == 2
     assert routes["by_route"]["retrieval_groundedness"]["mean_duration_seconds"] >= 0.0
+    assert routes["by_route"]["retrieval_groundedness"]["p95_duration_seconds"] >= 0.0
+    assert routes["by_route"]["retrieval_groundedness"]["p99_duration_seconds"] >= 0.0
     assert routes["by_route"]["retrieval_groundedness"]["mean_attempted_route_count"] == pytest.approx(2.0)
     assert routes["by_route"]["retrieval_groundedness"]["retrieval_use_rate"] == pytest.approx(1.0)
     assert routes["by_route"]["groundedness"]["statuses"]["insufficient_evidence"] == 1
@@ -188,7 +190,11 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert routes["by_route"]["groundedness"]["mean_attempted_route_count"] == pytest.approx(1.0)
     assert retrieval_route_quality["duration_observations"] == 2
     assert retrieval_route_quality["mean_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["p95_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["p99_duration_seconds"] >= 0.0
     assert retrieval_route_quality["mean_selected_route_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["p95_selected_route_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["p99_selected_route_duration_seconds"] >= 0.0
     assert retrieval_route_quality["mean_attempted_route_count"] == pytest.approx(2.0)
     assert retrieval_route_quality["retrieval_use_rate"] == pytest.approx(1.0)
     assert groundedness_route_quality["duration_observations"] == 1
@@ -859,10 +865,14 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
                             "duration_observations": 4,
                             "total_duration_seconds": 0.04,
                             "mean_duration_seconds": 0.01,
+                            "p95_duration_seconds": 0.019,
+                            "p99_duration_seconds": 0.0198,
                             "max_duration_seconds": 0.02,
                             "selected_route_duration_observations": 4,
                             "total_selected_route_duration_seconds": 0.04,
                             "mean_selected_route_duration_seconds": 0.01,
+                            "p95_selected_route_duration_seconds": 0.019,
+                            "p99_selected_route_duration_seconds": 0.0198,
                             "attempted_route_count_observations": 4,
                             "total_attempted_route_count": 4,
                             "mean_attempted_route_count": 1.0,
@@ -885,10 +895,14 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
                             "duration_observations": 4,
                             "total_duration_seconds": 0.40,
                             "mean_duration_seconds": 0.10,
+                            "p95_duration_seconds": 0.19,
+                            "p99_duration_seconds": 0.198,
                             "max_duration_seconds": 0.20,
                             "selected_route_duration_observations": 4,
                             "total_selected_route_duration_seconds": 0.32,
                             "mean_selected_route_duration_seconds": 0.08,
+                            "p95_selected_route_duration_seconds": 0.15,
+                            "p99_selected_route_duration_seconds": 0.158,
                             "attempted_route_count_observations": 4,
                             "total_attempted_route_count": 8,
                             "mean_attempted_route_count": 2.0,
@@ -911,10 +925,14 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
                             "duration_observations": 4,
                             "total_duration_seconds": 0.004,
                             "mean_duration_seconds": 0.001,
+                            "p95_duration_seconds": 0.0019,
+                            "p99_duration_seconds": 0.00198,
                             "max_duration_seconds": 0.002,
                             "selected_route_duration_observations": 4,
                             "total_selected_route_duration_seconds": 0.004,
                             "mean_selected_route_duration_seconds": 0.001,
+                            "p95_selected_route_duration_seconds": 0.0019,
+                            "p99_selected_route_duration_seconds": 0.00198,
                             "attempted_route_count_observations": 4,
                             "total_attempted_route_count": 4,
                             "mean_attempted_route_count": 1.0,
@@ -923,6 +941,9 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
                             "retrieval_hit_count": 0,
                             "mean_retrieval_hits": 0.0,
                         },
+                    },
+                    "cache_stats": {
+                        "total": {"size": 3, "hits": 6, "misses": 2, "requests": 8, "hit_rate": 0.75}
                     },
                     "alphas": {"0.1": {"route_control_impact": {}}},
                 }
@@ -935,25 +956,44 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
         [("costs", report_path)],
         gate_routes=("structured_state",),
         max_mean_duration_seconds=0.02,
+        max_p95_duration_seconds=0.02,
+        max_p99_duration_seconds=0.02,
         max_max_duration_seconds=0.03,
         max_mean_attempted_route_count=1.1,
         max_retrieval_use_rate=0.0,
+        min_cache_hit_rate=0.70,
     )
     failing = module.build_route_comparison_report(
         [("costs", report_path)],
         gate_routes=("retrieval_groundedness",),
         max_mean_duration_seconds=0.02,
+        max_p95_duration_seconds=0.02,
+        max_p99_duration_seconds=0.02,
         max_max_duration_seconds=0.03,
         max_mean_attempted_route_count=1.1,
         max_retrieval_use_rate=0.5,
+    )
+    cache_failing = module.build_route_comparison_report(
+        [("costs", report_path)],
+        gate_routes=("structured_state",),
+        max_mean_duration_seconds=0.02,
+        max_p95_duration_seconds=0.02,
+        max_p99_duration_seconds=0.02,
+        max_max_duration_seconds=0.03,
+        max_mean_attempted_route_count=1.1,
+        max_retrieval_use_rate=0.0,
+        min_cache_hit_rate=0.90,
     )
 
     aggregate = passing["by_route"]["structured_state"]
     frontier = passing["pareto_frontier"]
     assert aggregate["mean_duration_seconds"] == pytest.approx(0.01)
+    assert aggregate["p95_duration_seconds"] == pytest.approx(0.019)
+    assert aggregate["p99_duration_seconds"] == pytest.approx(0.0198)
     assert aggregate["max_duration_seconds"] == pytest.approx(0.02)
     assert aggregate["mean_attempted_route_count"] == pytest.approx(1.0)
     assert aggregate["retrieval_use_rate"] == pytest.approx(0.0)
+    assert passing["cache_summary"]["total"]["hit_rate"] == pytest.approx(0.75)
     assert frontier["recommended"]["route"] == "structured_state"
     assert {item["route"] for item in frontier["frontier"]} == {"fast_lexical", "structured_state"}
     assert frontier["dominated"][0]["route"] == "retrieval_groundedness"
@@ -968,10 +1008,15 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     assert failing["promotion_decision"]["gate_checked_route"] is False
     assert {failure["metric"] for failure in failing["quality_gate"]["failures"]} == {
         "mean_duration_seconds",
+        "p95_duration_seconds",
+        "p99_duration_seconds",
         "max_duration_seconds",
         "mean_attempted_route_count",
         "retrieval_use_rate",
     }
+    assert cache_failing["quality_gate"]["passed"] is False
+    assert cache_failing["quality_gate"]["failures"][0]["metric"] == "cache_hit_rate"
+    assert cache_failing["promotion_decision"]["status"] == "blocked_by_gate"
 
 
 def test_compare_verifier_routes_quality_gate_fails_closed_for_empty_or_nonfinite_metrics():
