@@ -546,17 +546,20 @@ rules, tool outputs, and domain/world-model state.
    multi-sample generation is the dominant CPU cost.
 2. Pair future long runs with `--warmup-checkpoint` and `--layer-stats-cache` so
    interrupted warmup can resume and completed warmup becomes a compact final cache.
-3. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
+3. Use sharded `--eval-reps-cache` for long forced-answer runs and cache-only
+   rescoring; adjacent batch reads reuse the active shard and expose shard IO
+   counters in the structured JSON output.
+4. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
    peak memory is the bottleneck; keep the default output capture for final-layer
    or full hidden-state semantics.
-4. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
+5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
    `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
    budget and shared conformal report.
-5. Replace the label-derived oracle evidence fixture with real retrieval,
+6. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm
    budgets. Use `benchmarks/build_evidence_fixture.py` with a local corpus as
    the first reproducible non-oracle baseline before networked retrieval.
-6. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
+7. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a
    deterministic tool adapter, not a broad natural-language math parser.

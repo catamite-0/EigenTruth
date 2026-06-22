@@ -1155,6 +1155,11 @@ class EvalRepsCacheReader:
         self.record_count = int(expected_records)
         self._records: list[Optional[dict]] | None = None
         self._shards: list[dict] = []
+        self._cached_shard_path: str | None = None
+        self._cached_shard_start: int | None = None
+        self._cached_shard_records: list[object] | None = None
+        self._shard_loads = 0
+        self._shard_cache_hits = 0
         if _is_sharded_eval_reps_cache(self.path):
             manifest = _load_eval_reps_manifest(self.path)
             self.metadata = dict(manifest.get("metadata", {}))
@@ -1196,10 +1201,7 @@ class EvalRepsCacheReader:
                 continue
             if shard_start >= end:
                 break
-            shard_payload = torch.load(self.path / shard["path"], map_location="cpu", weights_only=True)
-            raw_records = shard_payload.get("records", [])
-            if int(shard_payload.get("start", -1)) != shard_start or len(raw_records) != shard_count:
-                raise ValueError("sharded eval reps cache shard payload does not match manifest.")
+            raw_records = self._load_shard_records(shard)
             local_start = max(start, shard_start) - shard_start
             local_end = min(end, shard_end) - shard_start
             records.extend(_reps_from_cache_state(record) for record in raw_records[local_start:local_end])
@@ -1209,6 +1211,35 @@ class EvalRepsCacheReader:
 
     def read_all(self) -> list[Optional[dict]]:
         return self.read_range(0, self.record_count)
+
+    def cache_stats(self) -> dict[str, int]:
+        """Return reader-local shard IO reuse counters."""
+        return {
+            "shard_loads": int(self._shard_loads),
+            "shard_cache_hits": int(self._shard_cache_hits),
+        }
+
+    def _load_shard_records(self, shard: Mapping[str, object]) -> list[object]:
+        shard_path = str(shard["path"])
+        shard_start = int(shard["start"])
+        shard_count = int(shard["count"])
+        if (
+            self._cached_shard_path == shard_path
+            and self._cached_shard_start == shard_start
+            and self._cached_shard_records is not None
+        ):
+            self._shard_cache_hits += 1
+            return self._cached_shard_records
+
+        shard_payload = torch.load(self.path / shard_path, map_location="cpu", weights_only=True)
+        raw_records = list(shard_payload.get("records", []))
+        if int(shard_payload.get("start", -1)) != shard_start or len(raw_records) != shard_count:
+            raise ValueError("sharded eval reps cache shard payload does not match manifest.")
+        self._cached_shard_path = shard_path
+        self._cached_shard_start = shard_start
+        self._cached_shard_records = raw_records
+        self._shard_loads += 1
+        return raw_records
 
 
 class EvalRepsCacheWriter:
@@ -2544,6 +2575,10 @@ def run(args) -> dict:
             "triggered": int(inside_triggered_total),
             "skipped_by_trigger": int(inside_skipped_total),
             "fill_value_for_untriggered": 0.0 if _inside_trigger_enabled(args) else None,
+        }
+    if eval_reps_reader is not None:
+        payload["cache_stats"] = {
+            "eval_reps_reader": eval_reps_reader.cache_stats(),
         }
     if _profile_requested(args):
         payload["profile"] = _profile_payload(

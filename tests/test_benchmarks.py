@@ -3,6 +3,7 @@
 import importlib
 import json
 import sys
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -1369,7 +1370,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     assert loaded[1] is None
 
 
-def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path):
+def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     statements = [
         module.Statement("q1", "a1", 0),
@@ -1410,7 +1411,24 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path):
         expected_metadata=metadata,
         expected_records=3,
     )
+    original_torch_load = module.torch.load
+    loaded_shards = []
+
+    def counting_torch_load(path, *args, **kwargs):
+        if str(path).endswith(".pt"):
+            loaded_shards.append(Path(path).name)
+        return original_torch_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.torch, "load", counting_torch_load)
+
     ranged = reader.read_range(1, 2)
+    repeat_second_shard = reader.read_range(2, 1)
+    repeat_first_shard = reader.read_range(0, 1)
+    repeat_first_shard_again = reader.read_range(1, 1)
+    reader_stats = reader.cache_stats()
+    counted_reader_loads = list(loaded_shards)
+    monkeypatch.setattr(module.torch, "load", original_torch_load)
+
     loaded, loaded_metadata = module.load_eval_reps_cache(
         cache_dir,
         expected_metadata=metadata,
@@ -1422,6 +1440,15 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path):
     assert reader.metadata == metadata
     assert ranged[0] is None
     assert torch.allclose(ranged[1]["last"][-1], reps_b["last"][-1])
+    assert torch.allclose(repeat_first_shard[0]["ans_hs"], reps_a["ans_hs"])
+    assert repeat_first_shard_again[0] is None
+    assert repeat_second_shard[0]["nll"] == pytest.approx(2.5)
+    assert counted_reader_loads == [
+        "records-000000.pt",
+        "records-000001.pt",
+        "records-000000.pt",
+    ]
+    assert reader_stats == {"shard_loads": 3, "shard_cache_hits": 2}
     assert loaded_metadata == metadata
     assert torch.allclose(loaded[0]["ans_hs"], reps_a["ans_hs"])
     assert loaded[1] is None
