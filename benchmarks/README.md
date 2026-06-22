@@ -355,9 +355,28 @@ python benchmarks/eval_verifier_ensemble.py \
   --json artifacts/state_verifier_ensemble_report.json
 ```
 
-The state source may be a raw JSON object used as state, or an object with
-`state`, optional `state_checks`, and optional `state_transitions` fields. A
-claim fixture record can provide `state_check` directly or under
+The state source may be a raw JSON object used as state, an object with `state`,
+optional `state_checks`, and optional `state_transitions` fields, or a SQLite
+state-source spec:
+
+```json
+{
+  "sqlite": {
+    "database_path": "domain_state.db",
+    "queries": [
+      {
+        "path": "orders.ord_0001.can_ship",
+        "sql": "select 1 as can_ship",
+        "column": "can_ship",
+        "required": true
+      }
+    ]
+  }
+}
+```
+
+Relative SQLite database paths are resolved from the state-source JSON file's
+directory. A claim fixture record can provide `state_check` directly or under
 `claim_metadata.state_check`; top-level `state_checks` keyed by `claim_id` are
 also supported.
 
@@ -370,6 +389,8 @@ python benchmarks/build_domain_state_fixture.py \
   --scores-output artifacts/order_fulfillment_scores.json \
   --claims-output artifacts/order_fulfillment_claims.json \
   --state-output artifacts/order_fulfillment_state.json \
+  --sqlite-output artifacts/order_fulfillment_state.db \
+  --sqlite-state-source-output artifacts/order_fulfillment_sqlite_state_source.json \
   --n-records 12
 
 python benchmarks/eval_verifier_ensemble.py \
@@ -383,6 +404,9 @@ python benchmarks/eval_verifier_ensemble.py \
 This fixture checks the product-control path, not open-domain factuality: true
 labels are shippable orders, while false labels are claims that an order can
 ship even though inventory or account state refutes it.
+Swap `--state-source artifacts/order_fulfillment_state.json` for
+`--state-source artifacts/order_fulfillment_sqlite_state_source.json` to run the
+same benchmark through read-only SQLite queries.
 
 For action-conditioned state checks, provide `state_transition` metadata. The
 runner routes these records through `StateTransitionVerifier`, which applies an
@@ -480,12 +504,14 @@ python benchmarks/build_domain_state_fixture.py \
   --scores-output artifacts/order_fulfillment_scores.json \
   --claims-output artifacts/order_fulfillment_claims.json \
   --state-output artifacts/order_fulfillment_state.json \
+  --sqlite-output artifacts/order_fulfillment_state.db \
+  --sqlite-state-source-output artifacts/order_fulfillment_sqlite_state_source.json \
   --n-records 12
 
 python benchmarks/refresh_verifier_route_artifacts.py \
   --scores orders=artifacts/order_fulfillment_scores.json \
   --claims artifacts/order_fulfillment_claims.json \
-  --state-source artifacts/order_fulfillment_state.json \
+  --state-source artifacts/order_fulfillment_sqlite_state_source.json \
   --signal truth_proj \
   --alphas 0.2 \
   --repeats 1 \

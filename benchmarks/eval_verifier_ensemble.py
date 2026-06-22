@@ -30,6 +30,7 @@ from eigentruth.adapters import (
     InMemoryWorldModelAdapter,
     QuestionAnswerVerifier,
     RetrievalQuery,
+    SQLiteStateSource,
     StateTransitionVerifier,
     StructuredStateVerifier,
     combine_cache_stats,
@@ -133,7 +134,8 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
 
     The file may be either a raw JSON object used as state, or an object with
     explicit ``state`` and optional ``state_checks`` / ``state_transitions``
-    fields.
+    fields. It may also contain a ``sqlite`` state-source spec with
+    ``database_path`` and ``queries`` fields.
     """
     if path is None:
         return {}, {}, {}
@@ -141,6 +143,22 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
         payload = json.load(f)
     if not isinstance(payload, Mapping):
         raise ValueError("state source must be a JSON object.")
+    if "sqlite" in payload:
+        state = _load_sqlite_state_source(payload["sqlite"], base_path=path.parent)
+        extra_state = payload.get("state", {})
+        if not isinstance(extra_state, Mapping):
+            raise ValueError("state source 'state' must be a JSON object when present.")
+        raw_checks = payload.get("state_checks", {})
+        if not isinstance(raw_checks, Mapping):
+            raise ValueError("state source 'state_checks' must be a JSON object.")
+        raw_transitions = payload.get("state_transitions", {})
+        if not isinstance(raw_transitions, Mapping):
+            raise ValueError("state source 'state_transitions' must be a JSON object.")
+        return (
+            dict(_merge_state_mappings(state, extra_state)),
+            dict(raw_checks),
+            dict(raw_transitions),
+        )
     if "state" in payload:
         state = payload.get("state", {})
         if not isinstance(state, Mapping):
@@ -153,6 +171,21 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
             raise ValueError("state source 'state_transitions' must be a JSON object.")
         return dict(state), dict(raw_checks), dict(raw_transitions)
     return dict(payload), {}, {}
+
+
+def _load_sqlite_state_source(spec: Any, *, base_path: Path) -> Mapping[str, Any]:
+    if not isinstance(spec, Mapping):
+        raise ValueError("state source 'sqlite' must be a JSON object.")
+    raw_database_path = spec.get("database_path", spec.get("path"))
+    if raw_database_path is None:
+        raise ValueError("state source 'sqlite' must contain database_path or path.")
+    queries = spec.get("queries")
+    if not isinstance(queries, Sequence) or isinstance(queries, (str, bytes, bytearray)):
+        raise ValueError("state source 'sqlite.queries' must be a list.")
+    database_path = Path(str(raw_database_path))
+    if not database_path.is_absolute():
+        database_path = base_path / database_path
+    return SQLiteStateSource(database_path, queries=tuple(queries)).load_state()
 
 
 def _records_from_dump_and_fixture(

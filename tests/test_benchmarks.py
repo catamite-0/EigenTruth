@@ -256,6 +256,52 @@ def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):
     assert run["alphas"]["0.2"]["verified"]["detection"] == pytest.approx(1.0)
 
 
+def test_build_domain_state_fixture_writes_sqlite_state_source_for_verifier(tmp_path):
+    builder = importlib.import_module("benchmarks.build_domain_state_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "domain_scores.json"
+    claims_path = tmp_path / "domain_claims.json"
+    state_path = tmp_path / "domain_state.json"
+    sqlite_path = tmp_path / "domain_state.db"
+    sqlite_state_source_path = tmp_path / "domain_sqlite_state_source.json"
+
+    payload = builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        sqlite_output=str(sqlite_path),
+        sqlite_state_source_output=str(sqlite_state_source_path),
+        n_records=8,
+        signal="truth_proj",
+    ))
+    sqlite_spec = json.loads(sqlite_state_source_path.read_text(encoding="utf-8"))
+
+    assert sqlite_path.exists()
+    assert sqlite_spec["sqlite"]["database_path"] == "domain_state.db"
+    assert sqlite_spec["summary"]["n_queries"] == 8
+    assert payload["sqlite_state_source"]["fixture_type"] == "order_fulfillment_sqlite_state_source"
+
+    report = verifier.build_verifier_ensemble_report(
+        [("orders", scores_path)],
+        signal="truth_proj",
+        claims_path=claims_path,
+        state_path=sqlite_state_source_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+    )
+    run = report["runs"][0]
+    route_quality = run["route_quality"]["structured_state"]
+
+    assert report["state_verifier"]["state_path"] == str(sqlite_state_source_path)
+    assert run["state_verifier"]["enabled"] is True
+    assert run["state_verifier"]["decided_records"] == 8
+    assert run["route_summary"]["selected_counts"] == {"structured_state": 8}
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+
+
 def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     builder = importlib.import_module("benchmarks.build_transition_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

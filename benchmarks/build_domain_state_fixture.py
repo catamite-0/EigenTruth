@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -149,6 +151,23 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     _write_json(Path(args.scores_output), payload["scores"])
     _write_json(Path(args.claims_output), payload["claims"])
     _write_json(Path(args.state_output), payload["state"])
+    sqlite_output = getattr(args, "sqlite_output", None)
+    sqlite_state_source_output = getattr(args, "sqlite_state_source_output", None)
+    if sqlite_state_source_output is not None and sqlite_output is None:
+        raise ValueError("--sqlite-state-source-output requires --sqlite-output.")
+    if sqlite_output is not None:
+        sqlite_path = Path(sqlite_output)
+        _write_sqlite_database(sqlite_path, payload)
+        payload["sqlite_database_path"] = str(sqlite_path)
+        if sqlite_state_source_output is not None:
+            sqlite_state_source_path = Path(sqlite_state_source_output)
+            sqlite_source = _sqlite_state_source_payload(
+                database_path=sqlite_path,
+                source_path=sqlite_state_source_path,
+                payload=payload,
+            )
+            _write_json(sqlite_state_source_path, sqlite_source)
+            payload["sqlite_state_source"] = sqlite_source
     summary = payload["claims"]["summary"]
     print(
         "Wrote order-fulfillment fixture "
@@ -197,6 +216,66 @@ def _synthetic_score(idx: int, label: int) -> float:
     return round(0.22 + jitter, 6)
 
 
+def _write_sqlite_database(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        path.unlink()
+    connection = sqlite3.connect(path)
+    try:
+        connection.execute("create table inventory (sku text primary key, available integer not null)")
+        connection.execute("create table accounts (id text primary key, status text not null)")
+        connection.execute(
+            "create table orders (id text primary key, sku text not null, account_id text not null, quantity integer)"
+        )
+        state = payload["state"]["state"]
+        for sku, item in state["inventory"].items():
+            connection.execute("insert into inventory values (?, ?)", (sku, int(item["available"])))
+        for account_id, item in state["accounts"].items():
+            connection.execute("insert into accounts values (?, ?)", (account_id, str(item["status"])))
+        for order_id, item in state["orders"].items():
+            connection.execute(
+                "insert into orders values (?, ?, ?, ?)",
+                (order_id, str(item["sku"]), str(item["account_id"]), int(item["quantity"])),
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def _sqlite_state_source_payload(
+    *,
+    database_path: Path,
+    source_path: Path,
+    payload: dict[str, Any],
+) -> dict[str, Any]:
+    source_path.parent.mkdir(parents=True, exist_ok=True)
+    database_ref = os.path.relpath(database_path, source_path.parent)
+    records = payload["claims"]["records"]
+    queries = [
+        {
+            "path": f"orders.{record['metadata']['order_id']}.can_ship",
+            "sql": _CAN_SHIP_SQL,
+            "params": [record["metadata"]["order_id"]],
+            "column": "can_ship",
+            "required": True,
+        }
+        for record in records
+    ]
+    return {
+        "schema_version": 1,
+        "fixture_type": "order_fulfillment_sqlite_state_source",
+        "sqlite": {
+            "database_path": database_ref,
+            "queries": queries,
+        },
+        "summary": {
+            "n_queries": len(queries),
+            "database_path": database_ref,
+            **payload["claims"]["summary"],
+        },
+    }
+
+
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
@@ -208,9 +287,25 @@ def main() -> None:
     parser.add_argument("--scores-output", required=True, help="path to write synthetic score dump JSON")
     parser.add_argument("--claims-output", required=True, help="path to write claim fixture JSON")
     parser.add_argument("--state-output", required=True, help="path to write structured state JSON")
+    parser.add_argument("--sqlite-output", default=None, help="optional path to write an order-state SQLite fixture")
+    parser.add_argument("--sqlite-state-source-output", default=None,
+                        help="optional path to write an eval_verifier_ensemble SQLite state-source JSON spec")
     parser.add_argument("--n-records", type=int, default=12, help="number of synthetic order records")
     parser.add_argument("--signal", default="truth_proj", help="score signal name to emit")
     run(parser.parse_args())
+
+
+_CAN_SHIP_SQL = """
+select
+  case
+    when inventory.available >= orders.quantity and accounts.status = 'active' then 1
+    else 0
+  end as can_ship
+from orders
+join inventory on inventory.sku = orders.sku
+join accounts on accounts.id = orders.account_id
+where orders.id = ?
+"""
 
 
 if __name__ == "__main__":
