@@ -42,8 +42,9 @@ A dependency-free production-like local tool loop. It checks pre-tool business
 state from SQLite, executes a deterministic reserve-inventory `execute_tool`
 action through `PolicyGuardedActionExecutor`, maps the returned
 `ActionResult.output` into `ToolOutputStateSource`, verifies post-tool claims,
-and stores selected/matched/skipped verifier route counts plus action audit
-metadata in the final `ProductTrace`.
+optionally replays repeated executions through a JSON idempotency ledger, and
+stores selected/matched/skipped verifier route counts plus action audit metadata
+in the final `ProductTrace`.
 
 ## Running An Example
 
@@ -149,11 +150,14 @@ despite low internal diagnostics.
 shows the local integration shape for product tools: pre-check database state,
 execute a reserve-inventory tool through `ActionExecutorRegistry` and
 `PolicyGuardedActionExecutor`, map `ActionResult.output` into verifier state,
-and verify post-tool claims with route-summary observability.
+and verify post-tool claims with route-summary observability. Pass
+`--execution-ledger` to persist successful action results and replay duplicate
+requests without running the side-effecting SQLite mutation again.
 
 ```bash
 python examples/production_tool_loop_demo.py \
   --database /tmp/eigentruth_tool_loop.db \
+  --execution-ledger /tmp/eigentruth_tool_loop_ledger.json \
   --output /tmp/eigentruth_tool_loop_trace.json
 ```
 

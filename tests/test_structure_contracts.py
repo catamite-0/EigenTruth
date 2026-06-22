@@ -10,6 +10,7 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    JsonActionExecutionLedger,
     RiskDecision,
     RiskLevel,
 )
@@ -125,6 +126,24 @@ def test_action_result_json_roundtrip():
     assert loaded.action is ControlAction.ABSTAIN
     assert loaded.status is ActionExecutionStatus.DRY_RUN
     assert loaded.output["message"] == "not enough evidence"
+
+
+def test_json_action_execution_ledger_roundtrip(tmp_path):
+    ledger_path = tmp_path / "action-ledger.json"
+    ledger = JsonActionExecutionLedger(ledger_path)
+    result = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={"reserved": 5},
+        metadata={"side_effects": True},
+        request_id="reserve-1",
+    )
+
+    ledger.record("reserve:1", result)
+    loaded = JsonActionExecutionLedger(ledger_path).get("reserve:1")
+
+    assert loaded == result
+    assert JsonActionExecutionLedger(ledger_path).get("missing") is None
 
 
 def test_verification_result_and_world_model_prediction_validate_confidence():

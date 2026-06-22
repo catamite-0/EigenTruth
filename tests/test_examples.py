@@ -1,6 +1,7 @@
 """Tests for repository example scripts."""
 
 import importlib
+import sqlite3
 from types import SimpleNamespace
 
 
@@ -140,6 +141,7 @@ def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
             diagnostics=None,
             tool_input=None,
             request_id="test-production-tool-loop",
+            execution_ledger=None,
             output=None,
         )
     )
@@ -190,6 +192,7 @@ def test_production_tool_loop_demo_records_failed_tool_without_side_effect(tmp_p
             diagnostics=None,
             tool_input='{"order_id":"missing"}',
             request_id="test-production-tool-loop-failed-tool",
+            execution_ledger=None,
             output=None,
         )
     )
@@ -208,3 +211,46 @@ def test_production_tool_loop_demo_records_failed_tool_without_side_effect(tmp_p
     assert tool_event["payload"]["side_effects"] is False
     assert statuses == ["supported", "insufficient_evidence", "insufficient_evidence"]
     assert payload["verification_results"][1]["metadata"]["decision_rule"] == "tool_output_missing"
+
+
+def test_production_tool_loop_demo_replays_from_execution_ledger_without_second_mutation(tmp_path):
+    demo = importlib.import_module("examples.production_tool_loop_demo")
+    database_path = tmp_path / "orders.db"
+    ledger_path = tmp_path / "action-ledger.json"
+
+    first = demo.run(
+        SimpleNamespace(
+            database=str(database_path),
+            seed_database=True,
+            diagnostics=None,
+            tool_input=None,
+            request_id="test-production-tool-loop-replay",
+            execution_ledger=str(ledger_path),
+            output=None,
+        )
+    )
+    second = demo.run(
+        SimpleNamespace(
+            database=str(database_path),
+            seed_database=False,
+            diagnostics=None,
+            tool_input=None,
+            request_id="test-production-tool-loop-replay",
+            execution_ledger=str(ledger_path),
+            output=None,
+        )
+    )
+    connection = sqlite3.connect(database_path)
+    try:
+        available = connection.execute("select available from inventory where sku = ?", ("sku_123",)).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert first["action_results"][0]["metadata"]["idempotency_replayed"] is False
+    assert first["action_results"][0]["metadata"]["side_effects"] is True
+    assert second["action_results"][0]["metadata"]["idempotency_replayed"] is True
+    assert second["action_results"][0]["metadata"]["side_effects"] is False
+    assert second["action_results"][0]["metadata"]["original_side_effects"] is True
+    assert second["action_results"][0]["output"]["remaining"] == 7
+    assert second["metadata"]["action_execution_summary"]["side_effects"] is False
+    assert available == 7

@@ -6,7 +6,8 @@ how EigenTruth can sit around a normal product workflow:
 1. Check pre-tool business state from a read-only SQLite source.
 2. Execute a local SQLite-backed reserve-inventory tool.
 3. Map selected tool-output fields into structured verifier state.
-4. Verify post-tool claims and emit a route-auditable ``ProductTrace``.
+4. Optionally replay repeated executions from a JSON idempotency ledger.
+5. Verify post-tool claims and emit a route-auditable ``ProductTrace``.
 
 The demo intentionally keeps the tool local and deterministic so the integration
 shape is visible without adding a production tool runtime or new dependencies.
@@ -37,6 +38,7 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    JsonActionExecutionLedger,
     PolicyGuardedActionExecutor,
     ProductTrace,
     RiskController,
@@ -395,6 +397,11 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
                 default_timeout_seconds=5.0,
                 max_timeout_seconds=30.0,
             ),
+            idempotency_ledger=(
+                JsonActionExecutionLedger(args.execution_ledger)
+                if getattr(args, "execution_ledger", None)
+                else None
+            ),
         ),
     )
     action_results = (
@@ -458,6 +465,9 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             "artifact_model_id": artifact.model_id,
             "database_path": "<temporary>" if temporary else str(database_path),
             "database_seeded": bool(args.seed_database),
+            "execution_ledger_path": (
+                None if not getattr(args, "execution_ledger", None) else str(args.execution_ledger)
+            ),
             "tool": "reserve_inventory",
             "business_domain": "order_reservation",
             "route_summary": route_summary,
@@ -518,6 +528,8 @@ def main() -> None:
                         help="reserve-inventory tool input JSON object; defaults to deterministic input")
     parser.add_argument("--request-id", default="production-tool-loop-demo",
                         help="request id stored in ProductTrace")
+    parser.add_argument("--execution-ledger", default=None,
+                        help="optional JSON idempotency ledger for local tool execution")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     payload = run(parser.parse_args())
     print(json.dumps(payload, indent=2, sort_keys=True))

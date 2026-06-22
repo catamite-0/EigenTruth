@@ -36,6 +36,7 @@ from eigentruth.control import (
     ControlPolicyConfig,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
+    InMemoryActionExecutionLedger,
     PolicyGuardedActionExecutor,
     RiskController,
     RiskDecision,
@@ -932,6 +933,7 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
             return tuple(self.execute(request, context=context) for request in requests)
 
     wrapped = RecordingExecutor()
+    ledger = InMemoryActionExecutionLedger()
     executor = PolicyGuardedActionExecutor(
         wrapped,
         policy=ActionExecutionPolicy(
@@ -940,6 +942,7 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
             require_idempotency_key=True,
             max_timeout_seconds=5.0,
         ),
+        idempotency_ledger=ledger,
     )
     missing_key = ActionRequest(
         action=ControlAction.EXECUTE_TOOL,
@@ -964,6 +967,15 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
         ),
         context={"request_id": "req-1"},
     )
+    replayed = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
+        context={"request_id": "req-2"},
+    )
 
     assert blocked.status is ActionExecutionStatus.FAILED
     assert "idempotency_key is required" in blocked.error
@@ -976,6 +988,13 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
     assert allowed.metadata["idempotency_key"] == "reserve-1"
     assert allowed.metadata["timeout_seconds"] == 3.0
     assert allowed.metadata["timeout_enforced"] is False
+    assert allowed.metadata["idempotency_replayed"] is False
+    assert replayed.status is ActionExecutionStatus.SUCCEEDED
+    assert replayed.output == {"ok": True}
+    assert replayed.metadata["idempotency_replayed"] is True
+    assert replayed.metadata["side_effects"] is False
+    assert replayed.metadata["original_side_effects"] is True
+    assert ledger.get("reserve-1") == allowed
 
 
 def test_risk_controller_uses_configurable_control_policy():

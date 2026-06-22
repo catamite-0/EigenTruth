@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.control.policy import ControlAction, RiskDecision
@@ -202,6 +204,80 @@ class ActionExecutionPolicy:
 
 
 @runtime_checkable
+class ActionExecutionLedger(Protocol):
+    """Lookup and persist idempotent action execution results."""
+
+    def get(self, idempotency_key: str) -> ActionResult | None:
+        """Return a recorded result for an idempotency key, if present."""
+        ...
+
+    def record(self, idempotency_key: str, result: ActionResult) -> None:
+        """Persist a result for an idempotency key."""
+        ...
+
+
+@dataclass
+class InMemoryActionExecutionLedger:
+    """Request-local idempotency ledger for tests and in-process demos."""
+
+    records: Mapping[str, ActionResult | Mapping[str, Any]] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        self._records = {
+            str(key): _coerce_action_result(value)
+            for key, value in self.records.items()
+        }
+
+    def get(self, idempotency_key: str) -> ActionResult | None:
+        """Return a recorded result for an idempotency key, if present."""
+        return self._records.get(str(idempotency_key))
+
+    def record(self, idempotency_key: str, result: ActionResult) -> None:
+        """Persist a result for an idempotency key."""
+        self._records[str(idempotency_key)] = result
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready ledger snapshot."""
+        return {
+            key: result.to_dict()
+            for key, result in self._records.items()
+        }
+
+
+@dataclass(frozen=True)
+class JsonActionExecutionLedger:
+    """File-backed idempotency ledger for local reproducible workflows."""
+
+    path: str | Path
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", Path(self.path))
+
+    def get(self, idempotency_key: str) -> ActionResult | None:
+        """Return a recorded result for an idempotency key, if present."""
+        data = self._load()
+        payload = data.get(str(idempotency_key))
+        if payload is None:
+            return None
+        return _coerce_action_result(payload)
+
+    def record(self, idempotency_key: str, result: ActionResult) -> None:
+        """Persist a result for an idempotency key."""
+        data = self._load()
+        data[str(idempotency_key)] = result.to_dict()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    def _load(self) -> dict[str, Any]:
+        if not self.path.exists():
+            return {}
+        payload = json.loads(self.path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("action execution ledger must contain a JSON object.")
+        return dict(payload)
+
+
+@runtime_checkable
 class ActionExecutor(Protocol):
     """Interface for executing planned action requests."""
 
@@ -374,6 +450,15 @@ class PolicyGuardedActionExecutor:
 
     executor: ActionExecutor
     policy: ActionExecutionPolicy = field(default_factory=ActionExecutionPolicy)
+    idempotency_ledger: ActionExecutionLedger | None = None
+    record_statuses: Sequence[ActionExecutionStatus | str] = (ActionExecutionStatus.SUCCEEDED,)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "record_statuses",
+            tuple(_coerce_execution_status(status) for status in self.record_statuses),
+        )
 
     def execute(
         self,
@@ -399,13 +484,20 @@ class PolicyGuardedActionExecutor:
                 error="action execution policy violation: " + "; ".join(violations),
             )
 
+        idempotency_key = audit_metadata.get("idempotency_key")
+        if self.idempotency_ledger is not None and idempotency_key is not None:
+            recorded = self.idempotency_ledger.get(str(idempotency_key))
+            if recorded is not None:
+                return self._replay_result(recorded, audit_metadata)
+
         result = self.executor.execute(request, context=context)
         metadata = dict(result.metadata)
         metadata.update({
             "policy_guard": type(self).__name__,
             **audit_metadata,
+            "idempotency_replayed": False,
         })
-        return ActionResult(
+        guarded_result = ActionResult(
             action=result.action,
             status=result.status,
             output=result.output,
@@ -413,6 +505,13 @@ class PolicyGuardedActionExecutor:
             request_id=result.request_id,
             error=result.error,
         )
+        if (
+            self.idempotency_ledger is not None
+            and idempotency_key is not None
+            and guarded_result.status in self.record_statuses
+        ):
+            self.idempotency_ledger.record(str(idempotency_key), guarded_result)
+        return guarded_result
 
     def execute_many(
         self,
@@ -421,6 +520,26 @@ class PolicyGuardedActionExecutor:
     ) -> tuple[ActionResult, ...]:
         """Validate and execute multiple action requests."""
         return tuple(self.execute(request, context=context) for request in requests)
+
+    def _replay_result(self, recorded: ActionResult, audit_metadata: Mapping[str, Any]) -> ActionResult:
+        metadata = dict(recorded.metadata)
+        original_side_effects = bool(metadata.get("side_effects", False))
+        metadata.update({
+            "policy_guard": type(self).__name__,
+            **dict(audit_metadata),
+            "idempotency_replayed": True,
+            "idempotency_replay_source": type(self.idempotency_ledger).__name__,
+            "original_side_effects": original_side_effects,
+            "side_effects": False,
+        })
+        return ActionResult(
+            action=recorded.action,
+            status=recorded.status,
+            output=recorded.output,
+            metadata=metadata,
+            request_id=recorded.request_id,
+            error=recorded.error,
+        )
 
 
 @dataclass
@@ -469,6 +588,20 @@ def _coerce_action(action: ControlAction | str) -> ControlAction:
     if isinstance(action, ControlAction):
         return action
     return ControlAction(str(action))
+
+
+def _coerce_execution_status(status: ActionExecutionStatus | str) -> ActionExecutionStatus:
+    if isinstance(status, ActionExecutionStatus):
+        return status
+    return ActionExecutionStatus(str(status))
+
+
+def _coerce_action_result(value: ActionResult | Mapping[str, Any]) -> ActionResult:
+    if isinstance(value, ActionResult):
+        return value
+    if isinstance(value, Mapping):
+        return ActionResult.from_dict(value)
+    raise ValueError("ledger result must be an ActionResult or JSON object.")
 
 
 def _request_value(request: ActionRequest, key: str) -> Any:
