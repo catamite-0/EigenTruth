@@ -590,6 +590,27 @@ def test_compare_profiles_cli_exits_nonzero_on_regression_gate_failure(tmp_path,
     assert payload["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_profile_gate_smoke_writes_pass_and_expected_failure_reports(tmp_path):
+    module = importlib.import_module("benchmarks.profile_gate_smoke")
+
+    payload = module.build_profile_gate_smoke(tmp_path)
+    pass_report = payload["pass_report"]
+    failure_report = payload["expected_failure_report"]
+
+    assert (tmp_path / "profile_baseline.json").exists()
+    assert (tmp_path / "profile_candidate.json").exists()
+    assert (tmp_path / "profile_regression.json").exists()
+    assert (tmp_path / "profile_gate_pass_report.json").exists()
+    assert (tmp_path / "profile_gate_expected_failure_report.json").exists()
+    assert pass_report["regression_gate"]["passed"] is True
+    assert failure_report["regression_gate"]["passed"] is False
+    assert {failure["metric"] for failure in failure_report["regression_gate"]["failures"]} == {
+        "total_seconds",
+        "phase:forced_answer_forward",
+        "throughput:forced_answer_records_per_second",
+    }
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

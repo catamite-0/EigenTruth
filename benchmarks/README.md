@@ -625,6 +625,13 @@ python benchmarks/compare_profiles.py \
   --json artifacts/truthfulqa_profile_gate.json
 ```
 
+`make perf-check` runs `benchmarks/profile_gate_smoke.py`, which uses fixed
+synthetic profile payloads to verify that the gate passes an acceptable
+candidate and catches an expected regression. It is stable enough for default
+local/CI checks because it does not load a model or measure machine speed. Use
+real `eval_truthfulqa.py --profile-json` artifacts with `compare_profiles.py`
+before making actual runtime claims.
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use

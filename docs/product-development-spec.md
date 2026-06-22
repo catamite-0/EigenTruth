@@ -25,7 +25,7 @@ Implemented today:
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, and saved concept metadata.
 - Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, conformal calibration, and selective reporting.
-- Local development baseline: `make check` and `make release-check` run lint, tests, dependency consistency, and package build.
+- Local development baseline: `make check` and `make release-check` run lint, tests, dependency consistency, deterministic profile-gate smoke checks, and package build.
 
 Recent cleanup and platform changes:
 
@@ -258,6 +258,7 @@ For product features:
 - `eval_truthfulqa.py --auto-batch-size` can halve and retry warmup/forced-answer batch size after retriable memory errors, recording requested/effective batch size and reduction events in JSON/profile output.
 - `eval_truthfulqa.py --statement-encoding-cache` persists tokenizer outputs and answer-span lengths as validated JSON so repeated benchmark/cache rebuilds avoid redundant tokenizer setup without changing scoring semantics.
 - `compare_profiles.py` compares profile JSON payloads across baseline/cache/cache-only runs, reporting speedup, phase deltas, grouped time deltas, and throughput ratios without loading models. Optional regression gates can fail CI/local checks when total time, phase time, or throughput ratios exceed configured limits.
+- `profile_gate_smoke.py` and `make perf-check` provide a deterministic no-model smoke check for the profile regression gate machinery; real performance claims still require representative `eval_truthfulqa.py --profile-json` artifacts.
 
 ### Next Verification Adapter Work
 
