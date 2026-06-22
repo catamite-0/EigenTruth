@@ -251,9 +251,20 @@ def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
         name="req-1-actions",
         path="artifacts/req-1.actions.json",
         version="0.3",
+    ).record_benchmark_manifest(
+        name="qwen-mini-matrix",
+        path="artifacts/qwen-mini/artifact-manifest.json",
+        version="0.3",
+        metadata={"verified": True},
+    ).record_manifest_verification(
+        name="qwen-mini-matrix-verification",
+        path="artifacts/qwen-mini/manifest-verification.json",
+        version="0.3",
     ).save_json()
     loaded = ArtifactRegistry.load_json(registry_path)
 
     assert loaded.list_records(artifact_type="product_trace")[0].metadata["total_actions"] == 1
     assert loaded.list_records(artifact_type="report")[0].name == "tiny-report"
     assert loaded.list_records(artifact_type="action_result")[0].name == "req-1-actions"
+    assert loaded.list_records(artifact_type="benchmark_manifest")[0].metadata["verified"] is True
+    assert loaded.list_records(artifact_type="manifest_verification")[0].name == "qwen-mini-matrix-verification"

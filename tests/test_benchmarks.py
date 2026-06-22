@@ -942,6 +942,70 @@ def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
     assert {failure["field"] for failure in report["failures"]} >= {"sha256", "size_bytes"}
 
 
+def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.promote_artifact_manifest")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"ok": true}\n', encoding="utf-8")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": data_path}, root=tmp_path, metadata={"runner": "unit"})),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry" / "registry.json"
+    verification_path = tmp_path / "reports" / "verification.json"
+
+    payload = module.promote_artifact_manifest(
+        manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="unit-baseline",
+        version="0.3",
+        verification_report_path=verification_path,
+        metadata={"machine": "local"},
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    manifest_record = registry.get("benchmark_manifest:unit-baseline:0.3")
+    verification_record = registry.get("manifest_verification:unit-baseline-verification:0.3")
+
+    assert payload["verification"]["passed"] is True
+    assert verification_path.exists()
+    assert manifest_record.path == str(manifest_path)
+    assert manifest_record.metadata["verified"] is True
+    assert manifest_record.metadata["machine"] == "local"
+    assert manifest_record.metadata["manifest_metadata"] == {"runner": "unit"}
+    assert verification_record.path == str(verification_path)
+    assert verification_record.metadata["passed"] is True
+
+
+def test_promote_artifact_manifest_rejects_drift_by_default(tmp_path):
+    module = importlib.import_module("benchmarks.promote_artifact_manifest")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"ok": true}\n', encoding="utf-8")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": data_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    data_path.write_text('{"ok": false, "changed": true}\n', encoding="utf-8")
+    registry_path = tmp_path / "registry.json"
+    verification_path = tmp_path / "verification.json"
+
+    with pytest.raises(ValueError):
+        module.promote_artifact_manifest(
+            manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="unit-baseline",
+            version="0.3",
+            verification_report_path=verification_path,
+        )
+
+    assert verification_path.exists()
+    assert ArtifactRegistry.load_json(registry_path).list_records() == ()
+
+
 def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(

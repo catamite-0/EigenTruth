@@ -804,6 +804,18 @@ python benchmarks/verify_artifact_manifest.py \
   --json /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
 ```
 
+Once verification passes, `promote_artifact_manifest.py` can register the
+manifest and verification report in a local `ArtifactRegistry` JSON file:
+
+```bash
+python benchmarks/promote_artifact_manifest.py \
+  --manifest /tmp/eigentruth-qwen05-profile-rescore/artifact-manifest.json \
+  --registry artifacts/registry.json \
+  --name qwen05-profile-rescore \
+  --version 0.3 \
+  --verification-report /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
+```
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
 to verify that the gates pass acceptable candidates and catch expected

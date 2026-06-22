@@ -157,6 +157,40 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_benchmark_manifest(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a verified benchmark artifact manifest."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="benchmark_manifest",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
+    def record_manifest_verification(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a manifest verification report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="manifest_verification",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_action_result(
         self,
         *,
@@ -213,6 +247,7 @@ class ArtifactRegistry:
     def save_json(self, path: str | Path | None = None) -> None:
         """Save registry records to UTF-8 JSON."""
         output_path = Path(path or self.path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
