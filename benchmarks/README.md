@@ -1034,7 +1034,7 @@ python benchmarks/run_cache_profile_matrix.py \
   --manifold-questions 12 \
   --layers=-16,-12,-10 \
   --batch-sizes=1,2,4 \
-  --max-batch-tokens 1024 \
+  --max-batch-token-budgets=0,512,1024 \
   --hidden-state-captures=outputs,hooks \
   --dry-run
 ```
@@ -1047,7 +1047,11 @@ one checked cell passes its regression gate and no checked cell fails; use
 `--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
 non-zero. Use `--max-batch-tokens` when sequence lengths vary widely: it caps
 the padded token budget per warmup/eval forward while `--batch-size` remains the
-maximum row count, reducing padding spikes without changing score semantics.
+maximum row count, reducing padding spikes without changing score semantics. To
+measure multiple budgets in one matrix, use `--max-batch-token-budgets 0,512`;
+token-budget matrix recommendations are sorted by uncached forced-answer forward
+time because the budget changes forward batching, not cache-only replay
+semantics.
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and
@@ -1055,9 +1059,9 @@ shared eval cache groups include the prefix mode so the two forward paths do not
 silently share eval-reps caches. Because prefix caching changes only the
 uncached/cached model-forward path, cache-only runs omit the flag and replay the
 saved representations. For prefix on/off comparisons, use the report's
-`prefix_kv_comparisons`, `uncached_total_seconds`, and
-`forced_answer_forward_seconds` fields; cache-only speedup is a cache-replay
-metric and is not evidence that prefix KV forward is faster.
+`prefix_kv_comparisons` and `forced_answer_forward_seconds` fields; cache-only
+speedup is a cache-replay metric and is not evidence that prefix KV forward is
+faster.
 When `--shared-cache-dir` is set, cells with the same layer and hidden-state
 capture share statement/layer/eval cache paths. The first cell for each group
 refreshes the shared caches; later batch-size cells use a warm-start uncached

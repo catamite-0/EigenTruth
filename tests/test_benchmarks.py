@@ -1452,6 +1452,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
             performance_dry_run=True,
             prefix_kv_cache=True,
             max_batch_tokens=77,
+            max_batch_token_budgets=(0, 77),
             compact_json=True,
         )
     )
@@ -1459,7 +1460,8 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
 
     assert payload["adapter_family_matrix"]["promotion_decision"]["status"] == "promote"
     assert payload["performance_matrix"]["matrix_decision"]["status"] == "dry_run"
-    assert payload["performance_matrix"]["config"]["max_batch_tokens"] == 77
+    assert payload["performance_matrix"]["config"]["max_batch_tokens"] == 0
+    assert payload["performance_matrix"]["config"]["max_batch_token_budgets"] == (0, 77)
     assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
     assert payload["readiness_decision"]["recommended_route"] in {
         "structured_qa",
@@ -2624,6 +2626,59 @@ def test_run_cache_profile_matrix_can_enable_prefix_kv_cache(tmp_path):
     assert manifest["metadata"]["prefix_kv_cache"] is True
 
 
+def test_run_cache_profile_matrix_compares_max_batch_token_budgets(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(2,),
+        max_batch_token_budgets=(0, 96),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    base_cell, budget_cell = report["cells"]
+    base_commands = base_cell["triplet"]["commands"]
+    budget_commands = budget_cell["triplet"]["commands"]
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_2_capture_outputs_token_budget_0",
+        "layer_m2_batch_2_capture_outputs_token_budget_96",
+    ]
+    assert base_cell["max_batch_tokens"] == 0
+    assert budget_cell["max_batch_tokens"] == 96
+    assert base_commands["uncached"][base_commands["uncached"].index("--max-batch-tokens") + 1] == "0"
+    assert budget_commands["uncached"][budget_commands["uncached"].index("--max-batch-tokens") + 1] == "96"
+    assert base_cell["shared_cache_group"] == budget_cell["shared_cache_group"]
+    assert (
+        base_cell["triplet"]["caches"]["statement_encoding_cache"]
+        == budget_cell["triplet"]["caches"]["statement_encoding_cache"]
+    )
+    assert (
+        base_cell["triplet"]["caches"]["eval_reps_cache"]
+        == budget_cell["triplet"]["caches"]["eval_reps_cache"]
+    )
+    assert report["config"]["max_batch_token_budgets"] == (0, 96)
+    assert report["leaderboard_sort_metric"] == "uncached_forced_answer_forward_seconds"
+    assert manifest["metadata"]["max_batch_token_budgets"] == [0, 96]
+
+    with pytest.raises(ValueError, match="duplicate"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-duplicate",
+            max_batch_token_budgets=(96, 96),
+        )
+    with pytest.raises(ValueError, match="triplet"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-rescore",
+            shared_cache_dir=tmp_path / "shared",
+            max_batch_token_budgets=(0, 96),
+            matrix_mode="rescore",
+        )
+
+
 def test_run_cache_profile_matrix_compares_prefix_kv_cache_modes(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     config = module.CacheProfileMatrixConfig(
@@ -2745,10 +2800,10 @@ def test_run_cache_profile_matrix_prefix_modes_recommend_by_uncached_forward(tmp
     report = module.run_matrix(config, clean=True, dry_run=False)
     comparison = report["prefix_kv_comparisons"][0]
 
-    assert report["leaderboard_sort_metric"] == "uncached_total_seconds"
+    assert report["leaderboard_sort_metric"] == "uncached_forced_answer_forward_seconds"
     assert report["leaderboard"][0]["id"] == "layer_m12_batch_1_capture_outputs_prefix_kv_off"
     assert report["matrix_decision"]["recommended_cell"] == "layer_m12_batch_1_capture_outputs_prefix_kv_off"
-    assert report["matrix_decision"]["recommendation_metric"] == "uncached_total_seconds"
+    assert report["matrix_decision"]["recommendation_metric"] == "uncached_forced_answer_forward_seconds"
     assert comparison["status"] == "prefix_kv_slower"
     assert comparison["recommended_prefix_kv_cache"] is False
     assert comparison["uncached_total_ratio_on_vs_off"] == pytest.approx(140.0 / 120.0)
