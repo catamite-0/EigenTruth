@@ -910,6 +910,106 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        layer=-2,
+        batch_size=2,
+        max_length=32,
+        eval_reps_cache_shard_size=3,
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+    commands = payload["commands"]
+
+    assert payload["dry_run"] is True
+    assert Path(payload["command_log"]).exists()
+    assert commands["uncached"][0] == "/python"
+    assert commands["uncached"].count("--refresh-layer-stats-cache") == 1
+    assert commands["uncached"].count("--refresh-eval-reps-cache") == 1
+    assert commands["uncached"][commands["uncached"].index("--eval-reps-cache-shard-size") + 1] == "3"
+    assert "--cache-only" not in commands["cached"]
+    assert "--refresh-eval-reps-cache" not in commands["cached"]
+    assert "--cache-only" in commands["cache_only"]
+    assert "--statement-encoding-cache" not in commands["cache_only"]
+
+
+def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        python_executable="/python",
+        cached_max_total_ratio=0.80,
+        cache_only_max_total_ratio=0.30,
+    )
+    totals = {
+        "profile-uncached.json": 100.0,
+        "profile-cached.json": 70.0,
+        "profile-cache_only.json": 20.0,
+    }
+    calls = []
+
+    def fake_run(command, *, cwd, check):
+        calls.append({"command": command, "cwd": cwd, "check": check})
+        profile_path = Path(command[command.index("--profile-json") + 1])
+        result_path = Path(command[command.index("--json") + 1])
+        total = totals[profile_path.name]
+        profile_path.write_text(
+            json.dumps({
+                "total_seconds": total,
+                "phases": {"forced_answer_forward": total / 2},
+                "summary": {
+                    "bottleneck": "forced_answer_forward",
+                    "groups": {},
+                    "throughput": {"end_to_end_eval_records_per_second": 10.0},
+                },
+            }),
+            encoding="utf-8",
+        )
+        result_path.write_text(json.dumps({"profile": {"total_seconds": total, "phases": {}}}), encoding="utf-8")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module.run_triplet(config, clean=True, dry_run=False)
+    report = json.loads(Path(payload["comparison_report"]).read_text(encoding="utf-8"))
+
+    assert [call["check"] for call in calls] == [True, True, True]
+    assert payload["dry_run"] is False
+    assert payload["regression_gate"]["passed"] is True
+    assert report["baseline"] == "uncached"
+    assert report["regression_gate"]["config"]["max_run_total_ratios"] == {
+        "cached": pytest.approx(0.80),
+        "cache_only": pytest.approx(0.30),
+    }
+    assert report["fastest"]["name"] == "cache_only"
+
+
+def test_run_cache_profile_triplet_cli_can_fail_on_regression(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        return {
+            "dry_run": dry_run,
+            "output_dir": str(config.output_dir),
+            "regression_gate": {"passed": False},
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--output-dir",
+            str(tmp_path),
+            "--fail-on-regression",
+        ])
+
+    assert exc_info.value.code == 1
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

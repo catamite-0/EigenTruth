@@ -146,8 +146,9 @@ caches or comparing batch/layer settings without paying repeated tokenizer and
 answer-span setup cost; use `--refresh-statement-encoding-cache` to rebuild it.
 Use `--eval-reps-cache-shard-size N` to write the eval reps cache as a directory
 containing a JSON manifest and `records-*.pt` shards. Existing sharded caches are
-loaded batch-by-batch and remain compatible with `--cache-only`; old single-file
-`.pt` caches remain the default and continue to load normally.
+loaded batch-by-batch, reuse the active shard across adjacent reads, and remain
+compatible with `--cache-only`; old single-file `.pt` caches remain the default
+and continue to load normally.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
 not run sampled INSIDE.
@@ -680,12 +681,43 @@ python benchmarks/compare_profiles.py \
   --json artifacts/truthfulqa_profile_gate.json
 ```
 
-`make perf-check` runs `benchmarks/profile_gate_smoke.py`, which uses fixed
-synthetic profile payloads to verify that the gate passes an acceptable
-candidate and catches an expected regression. It is stable enough for default
-local/CI checks because it does not load a model or measure machine speed. Use
-real `eval_truthfulqa.py --profile-json` artifacts with `compare_profiles.py`
-before making actual runtime claims.
+For cache experiments, run-specific total-time gates let cached and cache-only
+paths use different expectations:
+
+```bash
+python benchmarks/compare_profiles.py \
+  --profile uncached=/tmp/eigentruth-profile-uncached.json \
+  --profile cached=/tmp/eigentruth-profile-cached.json \
+  --profile cache_only=/tmp/eigentruth-profile-cache-only.json \
+  --baseline uncached \
+  --max-run-total-ratio cached=0.90 \
+  --max-run-total-ratio cache_only=0.35 \
+  --json artifacts/truthfulqa_cache_profile_gate.json
+```
+
+`benchmarks/run_cache_profile_triplet.py` automates a same-machine real cache
+comparison. It runs `eval_truthfulqa.py` once to build statement/layer/eval
+caches, once to reuse them with model loading, and once in `--cache-only` mode;
+then it writes a `compare_profiles.py` report. This command may download/load
+the configured model:
+
+```bash
+python benchmarks/run_cache_profile_triplet.py \
+  --output-dir /tmp/eigentruth-cache-profile-triplet \
+  --model sshleifer/tiny-gpt2 \
+  --clean
+```
+
+Use `--dry-run` first to inspect the exact commands without loading a model.
+Add `--fail-on-regression` when using the generated gate in automation.
+
+`make perf-check` runs `benchmarks/profile_gate_smoke.py` and
+`benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
+to verify that the gates pass acceptable candidates and catch expected
+regressions. They are stable enough for default local/CI checks because they do
+not load a model or measure machine speed. Use real `eval_truthfulqa.py
+--profile-json` artifacts, or `run_cache_profile_triplet.py`, before making
+actual runtime claims.
 
 ## `compare_transfer.py`
 
