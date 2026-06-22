@@ -531,6 +531,40 @@ python benchmarks/refresh_verifier_route_artifacts.py \
   --fail-on-blocked
 ```
 
+For action-conditioned world-model/postcondition checks, use the transition
+fixture and gate `state_transition`:
+
+```bash
+python benchmarks/build_transition_fixture.py \
+  --scores-output artifacts/order_transition_scores.json \
+  --claims-output artifacts/order_transition_claims.json \
+  --state-output artifacts/order_transition_state.json \
+  --n-records 12
+
+python benchmarks/refresh_verifier_route_artifacts.py \
+  --scores transitions=artifacts/order_transition_scores.json \
+  --claims artifacts/order_transition_claims.json \
+  --state-source artifacts/order_transition_state.json \
+  --signal truth_proj \
+  --alphas 0.2 \
+  --repeats 1 \
+  --verifier-report-json artifacts/order_transition_verifier_report.json \
+  --promotion-json artifacts/order_transition_promotion_workflow.json \
+  --route-report-json artifacts/order_transition_route_comparison.json \
+  --gate-route state_transition \
+  --gate-min-selected 12 \
+  --min-decision-accuracy 1.0 \
+  --max-false-supported-rate 0.0 \
+  --min-false-refuted-rate 1.0 \
+  --max-mean-duration-seconds 0.05 \
+  --max-p99-duration-seconds 0.20 \
+  --max-max-duration-seconds 0.50 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --compact-json \
+  --fail-on-blocked
+```
+
 ## `compare_verifier_routes.py`
 
 Aggregates `route_quality` and per-alpha `route_control_impact` from one or more

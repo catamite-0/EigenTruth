@@ -1548,6 +1548,74 @@ def test_refresh_verifier_route_artifacts_promotes_structured_state_route(tmp_pa
     assert "\n  " not in promotion_report_text
 
 
+def test_refresh_verifier_route_artifacts_promotes_state_transition_route(tmp_path):
+    builder = importlib.import_module("benchmarks.build_transition_fixture")
+    module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
+    scores_path = tmp_path / "transition_scores.json"
+    claims_path = tmp_path / "transition_claims.json"
+    state_path = tmp_path / "transition_state.json"
+    verifier_report_path = tmp_path / "transition-verifier-report.json"
+    route_report_path = tmp_path / "transition-route-comparison.json"
+    promotion_report_path = tmp_path / "transition-promotion.json"
+
+    builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+    ))
+
+    payload = module.refresh_verifier_route_artifacts(
+        module.VerifierRouteArtifactRefreshConfig(
+            score_dumps=(("transitions", scores_path),),
+            verifier_report_path=verifier_report_path,
+            claims_path=claims_path,
+            state_path=state_path,
+            alphas=(0.2,),
+            repeats=1,
+            promotion_report_path=promotion_report_path,
+            route_report_path=route_report_path,
+            promotion_gate_routes=("state_transition",),
+            promotion_gate_min_selected=8,
+            min_decision_accuracy=1.0,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=1.0,
+            max_mean_duration_seconds=1.0,
+            max_p99_duration_seconds=1.0,
+            max_max_duration_seconds=1.0,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+            compact_json=True,
+        )
+    )
+    verifier_report_text = verifier_report_path.read_text(encoding="utf-8")
+    route_report_text = route_report_path.read_text(encoding="utf-8")
+    promotion_report_text = promotion_report_path.read_text(encoding="utf-8")
+    verifier_report = json.loads(verifier_report_text)
+    promotion_report = json.loads(promotion_report_text)
+    run = verifier_report["runs"][0]
+    route_quality = run["route_quality"]["state_transition"]
+
+    summary_run = payload["verifier_report_summary"]["runs"][0]
+    summary_route = summary_run["routes"]["state_transition"]
+    assert summary_route["selected"] == 8
+    assert summary_route["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert summary_route["retrieval_use_rate"] == pytest.approx(0.0)
+    assert summary_run["cache_stats"]["transition_verifier"]["requests"] == 8
+    assert run["route_summary"]["selected_counts"] == {"state_transition": 8}
+    assert run["cache_stats"]["transition_verifier"]["requests"] == 8
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert payload["promotion"]["decision"]["status"] == "promote"
+    assert promotion_report["decision"]["recommended_route"] == "state_transition"
+    assert route_report_path.exists()
+    assert "\n  " not in verifier_report_text
+    assert "\n  " not in route_report_text
+    assert "\n  " not in promotion_report_text
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"
