@@ -1185,6 +1185,9 @@ def test_compare_verifier_routes_gate_fails_on_partially_invalid_aggregate_cost_
     aggregate = payload["by_route"]["structured_state"]
     failures = payload["quality_gate"]["failures"]
     assert aggregate["invalid_metric_counts"]["mean_duration_seconds"] == 1
+    assert aggregate["duration_observations"] == 4
+    assert aggregate["total_duration_seconds"] == pytest.approx(0.04)
+    assert aggregate["mean_duration_seconds"] == pytest.approx(0.01)
     assert payload["quality_gate"]["passed"] is False
     assert failures[0]["metric"] == "mean_duration_seconds"
     assert failures[0]["limit_type"] == "finite"

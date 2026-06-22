@@ -605,7 +605,9 @@ The output includes:
   `structured_state`, and `state_transition`. New verifier-ensemble reports
   include cost fields such as `mean_duration_seconds`,
   `p95_duration_seconds`, `p99_duration_seconds`, `max_duration_seconds`,
-  `mean_attempted_route_count`, and `retrieval_use_rate`.
+  `mean_attempted_route_count`, and `retrieval_use_rate`. Aggregate cost means
+  use only the observation counts whose paired total metric is finite; discarded
+  source entries are exposed through `invalid_metric_counts`.
 - `cache_summary`: aggregate report-level cache hit/miss/request totals across
   compared runs. This is reported separately from route metrics because cache
   hits are global to the benchmark run rather than safely attributable to one

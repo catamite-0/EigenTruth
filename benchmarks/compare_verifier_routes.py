@@ -57,6 +57,13 @@ def _as_int_or_none(value: Any) -> int | None:
         return None
 
 
+def _nonnegative_int(value: Any) -> int:
+    parsed = _as_int_or_none(value)
+    if parsed is None or parsed < 0:
+        return 0
+    return parsed
+
+
 def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     if denominator == 0:
         return None
@@ -128,9 +135,9 @@ def _route_row_invalid_metric_counts(
     impact: Mapping[str, Any],
 ) -> dict[str, int]:
     counts: dict[str, int] = {}
-    selected = _as_int_or_none(route_quality.get("selected")) or 0
-    n_true = _as_int_or_none(route_quality.get("n_true")) or 0
-    n_false = _as_int_or_none(route_quality.get("n_false")) or 0
+    selected = _nonnegative_int(route_quality.get("selected"))
+    n_true = _nonnegative_int(route_quality.get("n_true"))
+    n_false = _nonnegative_int(route_quality.get("n_false"))
     if selected > 0:
         if (
             not _has_finite_metric(route_quality, "mean_duration_seconds")
@@ -186,10 +193,10 @@ def _route_row(
         "route": route,
         "alpha": float(alpha),
         "invalid_metric_counts": invalid_metric_counts,
-        "selected": int(route_quality.get("selected", 0)),
+        "selected": _nonnegative_int(route_quality.get("selected")),
         "selection_rate": _as_float(route_quality.get("selection_rate")),
-        "n_true": int(route_quality.get("n_true", 0)),
-        "n_false": int(route_quality.get("n_false", 0)),
+        "n_true": _nonnegative_int(route_quality.get("n_true")),
+        "n_false": _nonnegative_int(route_quality.get("n_false")),
         **counts,
         "true_supported_rate": _as_float(route_quality.get("true_supported_rate")),
         "true_refuted_rate": _as_float(route_quality.get("true_refuted_rate")),
@@ -198,14 +205,14 @@ def _route_row(
         "insufficient_evidence_rate": _as_float(route_quality.get("insufficient_evidence_rate")),
         "decision_accuracy": _as_float(route_quality.get("decision_accuracy")),
         "decision_error_rate": _as_float(route_quality.get("decision_error_rate")),
-        "duration_observations": int(route_quality.get("duration_observations", 0)),
+        "duration_observations": _nonnegative_int(route_quality.get("duration_observations")),
         "total_duration_seconds": _as_float(route_quality.get("total_duration_seconds")),
         "mean_duration_seconds": _as_float(route_quality.get("mean_duration_seconds")),
         "p95_duration_seconds": _as_float(route_quality.get("p95_duration_seconds")),
         "p99_duration_seconds": _as_float(route_quality.get("p99_duration_seconds")),
         "max_duration_seconds": _as_float(route_quality.get("max_duration_seconds")),
-        "selected_route_duration_observations": int(
-            route_quality.get("selected_route_duration_observations", 0)
+        "selected_route_duration_observations": _nonnegative_int(
+            route_quality.get("selected_route_duration_observations")
         ),
         "total_selected_route_duration_seconds": _as_float(
             route_quality.get("total_selected_route_duration_seconds")
@@ -219,12 +226,14 @@ def _route_row(
         "p99_selected_route_duration_seconds": _as_float(
             route_quality.get("p99_selected_route_duration_seconds")
         ),
-        "attempted_route_count_observations": int(route_quality.get("attempted_route_count_observations", 0)),
+        "attempted_route_count_observations": _nonnegative_int(
+            route_quality.get("attempted_route_count_observations")
+        ),
         "total_attempted_route_count": _as_float(route_quality.get("total_attempted_route_count")),
         "mean_attempted_route_count": _as_float(route_quality.get("mean_attempted_route_count")),
-        "used_retrieval_count": int(route_quality.get("used_retrieval_count", 0)),
+        "used_retrieval_count": _nonnegative_int(route_quality.get("used_retrieval_count")),
         "retrieval_use_rate": _as_float(route_quality.get("retrieval_use_rate")),
-        "retrieval_hit_count": int(route_quality.get("retrieval_hit_count", 0)),
+        "retrieval_hit_count": _nonnegative_int(route_quality.get("retrieval_hit_count")),
         "mean_retrieval_hits": _as_float(route_quality.get("mean_retrieval_hits")),
         "internal_false_alarm": _as_float(internal.get("false_alarm")),
         "verified_false_alarm": _as_float(verified.get("false_alarm")),
@@ -354,6 +363,20 @@ def _mean_from_total(total: float | None, observations: int) -> float | None:
     return _safe_div(total, observations)
 
 
+def _sum_observations_with_finite_metric(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    metric: str,
+    observation_metric: str,
+) -> int:
+    observations = 0
+    for row in rows:
+        if _finite_float(row.get(metric)) is None:
+            continue
+        observations += _nonnegative_int(row.get(observation_metric))
+    return observations
+
+
 def _invalid_metric_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for row in rows:
@@ -381,12 +404,20 @@ def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str,
     decided = true_supported + true_refuted + false_supported + false_refuted
     correct = true_supported + false_refuted
     wrong = true_refuted + false_supported
-    duration_observations = sum(int(row.get("duration_observations", 0)) for row in rows)
-    selected_route_duration_observations = sum(
-        int(row.get("selected_route_duration_observations", 0)) for row in rows
+    duration_observations = _sum_observations_with_finite_metric(
+        rows,
+        metric="total_duration_seconds",
+        observation_metric="duration_observations",
     )
-    attempted_route_count_observations = sum(
-        int(row.get("attempted_route_count_observations", 0)) for row in rows
+    selected_route_duration_observations = _sum_observations_with_finite_metric(
+        rows,
+        metric="total_selected_route_duration_seconds",
+        observation_metric="selected_route_duration_observations",
+    )
+    attempted_route_count_observations = _sum_observations_with_finite_metric(
+        rows,
+        metric="total_attempted_route_count",
+        observation_metric="attempted_route_count_observations",
     )
     total_duration = _sum_finite_metric(rows, "total_duration_seconds")
     total_selected_route_duration = _sum_finite_metric(rows, "total_selected_route_duration_seconds")
