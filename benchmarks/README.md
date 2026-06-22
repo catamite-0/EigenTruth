@@ -50,20 +50,22 @@ python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct --layer 
 
 # Sweep the target layer to find where the signal lives:
 python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
-  --dump-scores benchmarks/scores.json
+  --batch-size 4 --dump-scores benchmarks/scores.json
 
 # Fast pipeline self-check (tiny model, bundled statements, no dataset download):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
 
 # Optional multi-response INSIDE proxy (slower: samples K continuations per statement):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
-  --inside-samples 3 --inside-max-new-tokens 6
+  --batch-size 4 --inside-samples 3 --inside-batch-size 2 --inside-max-new-tokens 6
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
 the record. Use `--subspace-rank` to tune `TruthSubspace` residual scoring; fitting
 requires at least two factual warmup states, and rank is clipped to the available
-warmup states and hidden dimension.
+warmup states and hidden dimension. Increase `--batch-size` to batch forced-answer
+forward passes, and increase `--inside-batch-size` to batch sampled INSIDE prompts;
+higher values improve throughput but raise memory use.
 
 ### How to read the results
 
