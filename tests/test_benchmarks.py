@@ -968,6 +968,37 @@ def test_run_cache_profile_triplet_builds_real_truthfulqa_commands(tmp_path):
     assert cache_only[cache_only.index("--limit") + 1] == "24"
 
 
+def test_run_cache_profile_triplet_supports_warm_start_cache_overrides(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    shared = tmp_path / "shared"
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path / "cell",
+        model="tiny-local",
+        layer=-2,
+        batch_size=2,
+        statement_encoding_cache_path=shared / "statement-encodings.json",
+        layer_stats_cache_path=shared / "layer-stats.pt",
+        eval_reps_cache_path=shared / "eval-reps-cache",
+        uncached_cache_mode="warm_start",
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+    uncached = payload["commands"]["uncached"]
+    cached = payload["commands"]["cached"]
+    cache_only = payload["commands"]["cache_only"]
+
+    assert payload["uncached_cache_mode"] == "warm_start"
+    assert payload["caches"]["statement_encoding_cache"] == str(shared / "statement-encodings.json")
+    assert uncached[uncached.index("--statement-encoding-cache") + 1] == str(shared / "statement-encodings.json")
+    assert uncached[uncached.index("--layer-stats-cache") + 1] == str(shared / "layer-stats.pt")
+    assert "--eval-reps-cache" not in uncached
+    assert "--refresh-statement-encoding-cache" not in uncached
+    assert "--refresh-layer-stats-cache" not in uncached
+    assert cached[cached.index("--eval-reps-cache") + 1] == str(shared / "eval-reps-cache")
+    assert cache_only[cache_only.index("--eval-reps-cache") + 1] == str(shared / "eval-reps-cache")
+
+
 def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(
@@ -1066,6 +1097,41 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     assert first["summary"]["dry_run"] is True
     assert "--layer -2" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
+
+
+def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(1, 2),
+        hidden_state_captures=("outputs",),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    first, second = report["cells"]
+    first_commands = first["triplet"]["commands"]
+    second_commands = second["triplet"]["commands"]
+    first_eval_cache = first["triplet"]["caches"]["eval_reps_cache"]
+    second_eval_cache = second["triplet"]["caches"]["eval_reps_cache"]
+
+    assert report["config"]["shared_cache_dir"] == str(tmp_path / "shared-cache")
+    assert report["config"]["shared_cache_root"].startswith(str(tmp_path / "shared-cache"))
+    assert first["uncached_cache_mode"] == "refresh"
+    assert second["uncached_cache_mode"] == "warm_start"
+    assert first["shared_cache_group"] == second["shared_cache_group"]
+    assert first_eval_cache == second_eval_cache
+    assert "--refresh-eval-reps-cache" in first_commands["uncached"]
+    assert "--eval-reps-cache" not in second_commands["uncached"]
+    assert "--layer-stats-cache" in second_commands["uncached"]
+    assert second_commands["cached"][second_commands["cached"].index("--eval-reps-cache") + 1] == second_eval_cache
+    assert (
+        second_commands["cache_only"][second_commands["cache_only"].index("--eval-reps-cache") + 1]
+        == second_eval_cache
+    )
 
 
 def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):

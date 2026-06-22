@@ -8,6 +8,7 @@ layers, and hidden-state capture modes before committing to a larger benchmark.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import itertools
 import json
 import sys
@@ -43,9 +44,12 @@ class CacheProfileMatrixConfig:
     progress_every: int = 0
     length_bucketed_batches: bool = True
     offline: bool = True
+    shared_cache_dir: Path | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
+        if self.shared_cache_dir is not None:
+            object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
         layers = tuple(int(layer) for layer in self.layers)
         batch_sizes = tuple(int(batch_size) for batch_size in self.batch_sizes)
         captures = tuple(str(capture).strip() for capture in self.hidden_state_captures if str(capture).strip())
@@ -87,8 +91,11 @@ def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]
 def triplet_config_for_cell(
     config: CacheProfileMatrixConfig,
     cell: dict[str, Any],
+    *,
+    uncached_cache_mode: str = "refresh",
 ) -> CacheProfileTripletConfig:
     """Build a triplet config for one matrix cell."""
+    shared_paths = _shared_cache_paths(config, cell)
     return CacheProfileTripletConfig(
         output_dir=config.output_dir / str(cell["id"]),
         model=config.model,
@@ -106,6 +113,10 @@ def triplet_config_for_cell(
         progress_every=config.progress_every,
         length_bucketed_batches=config.length_bucketed_batches,
         offline=config.offline,
+        statement_encoding_cache_path=shared_paths.get("statement_encoding_cache"),
+        layer_stats_cache_path=shared_paths.get("layer_stats_cache"),
+        eval_reps_cache_path=shared_paths.get("eval_reps_cache"),
+        uncached_cache_mode=uncached_cache_mode,
     )
 
 
@@ -118,12 +129,25 @@ def run_matrix(
     """Run all matrix cells and write a matrix report."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     cells = []
+    seen_shared_cache_groups: set[str] = set()
     for cell in matrix_cells(config):
-        triplet_config = triplet_config_for_cell(config, cell)
+        shared_cache_group = _shared_cache_group(config, cell)
+        uncached_cache_mode = "refresh"
+        if shared_cache_group is not None and shared_cache_group in seen_shared_cache_groups:
+            uncached_cache_mode = "warm_start"
+        triplet_config = triplet_config_for_cell(
+            config,
+            cell,
+            uncached_cache_mode=uncached_cache_mode,
+        )
         triplet_payload = run_triplet(triplet_config, clean=clean, dry_run=dry_run)
+        if shared_cache_group is not None:
+            seen_shared_cache_groups.add(shared_cache_group)
         cells.append({
             **cell,
             "output_dir": str(triplet_config.output_dir),
+            "shared_cache_group": shared_cache_group,
+            "uncached_cache_mode": uncached_cache_mode,
             "triplet": triplet_payload,
             "summary": _cell_summary(triplet_payload),
         })
@@ -142,6 +166,8 @@ def run_matrix(
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
+            "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+            "shared_cache_root": None if config.shared_cache_dir is None else str(_shared_cache_root(config)),
         },
         "cells": cells,
         "leaderboard": _leaderboard(cells),
@@ -150,6 +176,59 @@ def run_matrix(
     with open(config.report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     return report
+
+
+def _shared_cache_paths(config: CacheProfileMatrixConfig, cell: Mapping[str, Any]) -> dict[str, Path]:
+    if config.shared_cache_dir is None:
+        return {}
+    root = _shared_cache_root(config)
+    group = _shared_cache_group_name(cell)
+    return {
+        "statement_encoding_cache": root / "statement-encodings.json",
+        "layer_stats_cache": root / group / "layer-stats.pt",
+        "eval_reps_cache": root / group / "eval-reps-cache",
+    }
+
+
+def _shared_cache_group(config: CacheProfileMatrixConfig, cell: Mapping[str, Any]) -> str | None:
+    if config.shared_cache_dir is None:
+        return None
+    return str(_shared_cache_root(config) / _shared_cache_group_name(cell))
+
+
+def _shared_cache_root(config: CacheProfileMatrixConfig) -> Path:
+    if config.shared_cache_dir is None:
+        raise ValueError("shared_cache_dir is not configured.")
+    payload = {
+        "model": config.model,
+        "dtype": config.dtype,
+        "offline": config.offline,
+        "limit": config.limit,
+        "manifold_questions": config.manifold_questions,
+        "max_length": config.max_length,
+        "length_bucketed_batches": config.length_bucketed_batches,
+    }
+    digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()[:12]
+    return config.shared_cache_dir / f"{_safe_path_component(config.model)}-{digest}"
+
+
+def _shared_cache_group_name(cell: Mapping[str, Any]) -> str:
+    return (
+        f"layer_{_layer_component(int(cell['layer']))}"
+        f"_capture_{_safe_path_component(str(cell['hidden_state_capture']))}"
+    )
+
+
+def _layer_component(layer: int) -> str:
+    return str(int(layer)).replace("-", "m")
+
+
+def _safe_path_component(value: str) -> str:
+    chars = [ch.lower() if ch.isalnum() else "_" for ch in str(value)]
+    text = "".join(chars).strip("_")
+    while "__" in text:
+        text = text.replace("__", "_")
+    return text or "value"
 
 
 def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
@@ -220,6 +299,8 @@ def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
             "layer": cell["layer"],
             "batch_size": cell["batch_size"],
             "hidden_state_capture": cell["hidden_state_capture"],
+            "uncached_cache_mode": cell.get("uncached_cache_mode"),
+            "shared_cache_group": cell.get("shared_cache_group"),
             "cache_only_total_seconds": total_seconds,
             "cache_only_speedup_vs_baseline": cache_only.get("speedup_vs_baseline"),
             "truth_proj_auroc": summary.get("truth_proj_auroc"),
@@ -273,6 +354,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         progress_every=args.progress_every,
         length_bucketed_batches=not args.no_length_bucketed_batches,
         offline=not args.real_truthfulqa,
+        shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
     )
 
 
@@ -312,6 +394,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--progress-every", type=int, default=0)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--no-length-bucketed-batches", action="store_true")
+    parser.add_argument("--shared-cache-dir", default=None,
+                        help="optional directory for caches shared across cells with the same layer/capture; "
+                             "later batch-size cells warm-start from statement/layer caches")
     parser.add_argument("--real-truthfulqa", action="store_true")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")

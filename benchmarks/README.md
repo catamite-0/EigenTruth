@@ -741,6 +741,7 @@ changing benchmark defaults:
 ```bash
 python benchmarks/run_cache_profile_matrix.py \
   --output-dir /tmp/eigentruth-qwen05-profile-matrix \
+  --shared-cache-dir /tmp/eigentruth-qwen05-profile-cache \
   --model Qwen/Qwen2.5-0.5B-Instruct \
   --real-truthfulqa \
   --limit 24 \
@@ -754,6 +755,12 @@ python benchmarks/run_cache_profile_matrix.py \
 Remove `--dry-run` only when the full matrix cost is acceptable. The matrix
 report includes each triplet's command log, gate summary, cache-only timing,
 per-run bottleneck phase, and `truth_proj` AUROC when result JSON is available.
+When `--shared-cache-dir` is set, cells with the same layer and hidden-state
+capture share statement/layer/eval cache paths. The first cell for each group
+refreshes the shared caches; later batch-size cells use a warm-start uncached
+run that reuses statement/layer caches but still omits the eval-reps cache, so
+forced-answer forward timing remains visible while repeated warmup/tokenization
+cost is reduced.
 
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads

@@ -46,9 +46,19 @@ class CacheProfileTripletConfig:
     progress_every: int = 0
     length_bucketed_batches: bool = True
     offline: bool = True
+    statement_encoding_cache_path: Path | None = None
+    layer_stats_cache_path: Path | None = None
+    eval_reps_cache_path: Path | None = None
+    uncached_cache_mode: str = "refresh"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
+        if self.statement_encoding_cache_path is not None:
+            object.__setattr__(self, "statement_encoding_cache_path", Path(self.statement_encoding_cache_path))
+        if self.layer_stats_cache_path is not None:
+            object.__setattr__(self, "layer_stats_cache_path", Path(self.layer_stats_cache_path))
+        if self.eval_reps_cache_path is not None:
+            object.__setattr__(self, "eval_reps_cache_path", Path(self.eval_reps_cache_path))
         if self.limit is not None and int(self.limit) < 0:
             raise ValueError("limit must be >=0.")
         if self.manifold_questions is not None and int(self.manifold_questions) < 1:
@@ -63,20 +73,23 @@ class CacheProfileTripletConfig:
             raise ValueError("cached_max_total_ratio must be non-negative.")
         if float(self.cache_only_max_total_ratio) < 0:
             raise ValueError("cache_only_max_total_ratio must be non-negative.")
+        if self.uncached_cache_mode not in {"refresh", "warm_start", "none"}:
+            raise ValueError("uncached_cache_mode must be one of: refresh, warm_start, none.")
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
+        object.__setattr__(self, "uncached_cache_mode", str(self.uncached_cache_mode))
 
     @property
     def statement_encoding_cache(self) -> Path:
-        return self.output_dir / "statement-encodings.json"
+        return self.statement_encoding_cache_path or self.output_dir / "statement-encodings.json"
 
     @property
     def layer_stats_cache(self) -> Path:
-        return self.output_dir / "layer-stats.pt"
+        return self.layer_stats_cache_path or self.output_dir / "layer-stats.pt"
 
     @property
     def eval_reps_cache(self) -> Path:
-        return self.output_dir / "eval-reps-cache"
+        return self.eval_reps_cache_path or self.output_dir / "eval-reps-cache"
 
     @property
     def comparison_report(self) -> Path:
@@ -122,7 +135,7 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
     if config.length_bucketed_batches:
         base.append("--length-bucketed-batches")
 
-    if name == "uncached":
+    if name == "uncached" and config.uncached_cache_mode == "refresh":
         return [
             *base,
             "--statement-encoding-cache",
@@ -137,6 +150,16 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
             str(config.eval_reps_cache_shard_size),
             "--refresh-eval-reps-cache",
         ]
+    if name == "uncached" and config.uncached_cache_mode == "warm_start":
+        return [
+            *base,
+            "--statement-encoding-cache",
+            str(config.statement_encoding_cache),
+            "--layer-stats-cache",
+            str(config.layer_stats_cache),
+        ]
+    if name == "uncached" and config.uncached_cache_mode == "none":
+        return base
     if name == "cached":
         return [
             *base,
@@ -191,6 +214,8 @@ def run_triplet(
             "dry_run": True,
             "output_dir": str(config.output_dir),
             "commands": command_log,
+            "caches": _cache_paths(config),
+            "uncached_cache_mode": config.uncached_cache_mode,
         }
     else:
         comparison = build_profile_comparison(
@@ -224,6 +249,8 @@ def run_triplet(
             },
             "comparison_report": str(config.comparison_report),
             "regression_gate": comparison.get("regression_gate"),
+            "caches": _cache_paths(config),
+            "uncached_cache_mode": config.uncached_cache_mode,
         }
 
     command_log_path = config.output_dir / "cache-profile-triplet-commands.json"
@@ -231,6 +258,14 @@ def run_triplet(
         json.dump(command_log, f, indent=2)
     payload["command_log"] = str(command_log_path)
     return payload
+
+
+def _cache_paths(config: CacheProfileTripletConfig) -> dict[str, str]:
+    return {
+        "statement_encoding_cache": str(config.statement_encoding_cache),
+        "layer_stats_cache": str(config.layer_stats_cache),
+        "eval_reps_cache": str(config.eval_reps_cache),
+    }
 
 
 def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
@@ -251,6 +286,10 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         progress_every=args.progress_every,
         length_bucketed_batches=not args.no_length_bucketed_batches,
         offline=not args.real_truthfulqa,
+        statement_encoding_cache_path=Path(args.statement_encoding_cache) if args.statement_encoding_cache else None,
+        layer_stats_cache_path=Path(args.layer_stats_cache) if args.layer_stats_cache else None,
+        eval_reps_cache_path=Path(args.eval_reps_cache) if args.eval_reps_cache else None,
+        uncached_cache_mode=args.uncached_cache_mode,
     )
 
 
@@ -297,6 +336,15 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="omit --length-bucketed-batches from all eval runs")
     parser.add_argument("--real-truthfulqa", action="store_true",
                         help="load the configured model and TruthfulQA dataset instead of the offline fixture")
+    parser.add_argument("--statement-encoding-cache", default=None,
+                        help="override the statement encoding cache path used by triplet commands")
+    parser.add_argument("--layer-stats-cache", default=None,
+                        help="override the layer stats cache path used by triplet commands")
+    parser.add_argument("--eval-reps-cache", default=None,
+                        help="override the eval reps cache path used by triplet commands")
+    parser.add_argument("--uncached-cache-mode", default="refresh", choices=["refresh", "warm_start", "none"],
+                        help="cache behavior for the uncached run: refresh all caches, warm-start from "
+                             "statement/layer caches without eval reps, or avoid caches")
     parser.add_argument("--clean", action="store_true",
                         help="remove --output-dir before running")
     parser.add_argument("--dry-run", action="store_true",
