@@ -726,6 +726,12 @@ Remove `--performance-dry-run` only when the local profile matrix cost is
 acceptable. Add `--fail-on-blocked` on real runs to require
 `readiness_decision.status=promote`.
 
+The workflow also writes a top-level `artifact-manifest.json` that fingerprints
+the readiness report, adapter-family matrix, route-comparison report,
+cache-profile matrix report, and nested cache-profile matrix manifest. Use
+`verify_artifact_manifest.py --recursive` and `promote_artifact_manifest.py` on
+that manifest to register a readiness baseline.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval

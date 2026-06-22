@@ -1463,9 +1463,23 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
         "structured_state",
         "state_transition",
     }
+    assert Path(payload["artifact_manifest"]).exists()
     assert Path(payload["adapter_family_matrix_path"]).exists()
     assert Path(payload["performance_matrix_path"]).exists()
     assert written["readiness_decision"]["status"] == "needs_performance_evidence"
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+    verification = importlib.import_module("eigentruth.registry").load_and_verify_artifact_manifest(
+        payload["artifact_manifest"],
+        recursive=True,
+    )
+    assert manifest["metadata"]["runner"] == "run_adapter_readiness_workflow"
+    assert manifest["metadata"]["readiness_status"] == "needs_performance_evidence"
+    assert manifest["artifacts"]["readiness_report"]["exists"] is True
+    assert manifest["artifacts"]["adapter_family_matrix"]["exists"] is True
+    assert manifest["artifacts"]["adapter_family_route_comparison"]["exists"] is True
+    assert manifest["artifacts"]["performance_matrix_manifest"]["exists"] is True
+    assert verification.passed is True
+    assert verification.nested
 
 
 def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pass(tmp_path, monkeypatch):

@@ -227,7 +227,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
 | `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, and state-transition fixtures, then compares their promotion metrics in one local matrix. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision. |
-| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final adapter readiness decision. |
+| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final adapter readiness decision plus a registry-ready manifest. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
 | `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
@@ -273,7 +273,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
 | `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition fixtures，并在一个本地矩阵里比较 promotion 指标。 |
 | `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision。 |
-| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛和 cache-profile 性能门槛合并为一个最终 adapter readiness decision。 |
+| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛和 cache-profile 性能门槛合并为一个最终 adapter readiness decision，并输出可注册 manifest。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |

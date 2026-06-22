@@ -24,6 +24,7 @@ from benchmarks.run_adapter_family_matrix import (  # noqa: E402
     run_adapter_family_matrix,
 )
 from benchmarks.run_cache_profile_matrix import MATRIX_MODES, CacheProfileMatrixConfig, run_matrix  # noqa: E402
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -90,6 +91,10 @@ class AdapterReadinessWorkflowConfig:
     def report_path(self) -> Path:
         return self.readiness_report_path or self.output_dir / "adapter-readiness-report.json"
 
+    @property
+    def artifact_manifest_path(self) -> Path:
+        return self.output_dir / "artifact-manifest.json"
+
 
 def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> dict[str, Any]:
     """Run adapter-family and performance gates, then return readiness status."""
@@ -144,6 +149,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "workflow": "adapter_readiness_workflow",
         "adapter_family_matrix_path": str(adapter_report_path),
         "performance_matrix_path": str(performance_report_path),
+        "artifact_manifest": str(config.artifact_manifest_path),
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
         "readiness_decision": decision,
@@ -153,6 +159,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         _json_text(report, compact=config.compact_json, sort_keys=True),
         encoding="utf-8",
     )
+    _write_artifact_manifest(config, report)
     return report
 
 
@@ -190,6 +197,53 @@ def build_readiness_decision(
         "performance_promoted": performance_status == "promote",
         "blocking_reasons": tuple(blocking_reasons),
     }
+
+
+def _write_artifact_manifest(
+    config: AdapterReadinessWorkflowConfig,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    adapter_report = report.get("adapter_family_matrix", {})
+    performance_report = report.get("performance_matrix", {})
+    artifacts = {
+        "readiness_report": config.report_path,
+        "adapter_family_matrix": report.get("adapter_family_matrix_path"),
+        "adapter_family_route_comparison": (
+            adapter_report.get("route_comparison_path") if isinstance(adapter_report, Mapping) else None
+        ),
+        "performance_matrix_report": (
+            performance_report.get("report_path") if isinstance(performance_report, Mapping) else None
+        ),
+        "performance_matrix_manifest": (
+            performance_report.get("artifact_manifest") if isinstance(performance_report, Mapping) else None
+        ),
+    }
+    decision = dict(report.get("readiness_decision") or {})
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=config.output_dir,
+        metadata={
+            "runner": "run_adapter_readiness_workflow",
+            "model": config.model,
+            "dtype": config.dtype,
+            "layers": tuple(config.layers),
+            "batch_sizes": tuple(config.batch_sizes),
+            "hidden_state_captures": tuple(config.hidden_state_captures),
+            "offline": config.offline,
+            "matrix_mode": config.matrix_mode,
+            "performance_dry_run": config.performance_dry_run,
+            "readiness_status": decision.get("status"),
+            "adapter_family_status": decision.get("adapter_family_status"),
+            "performance_status": decision.get("performance_status"),
+            "recommended_route": decision.get("recommended_route"),
+            "recommended_performance_cell": decision.get("recommended_performance_cell"),
+        },
+    )
+    config.artifact_manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _json_text(payload: Mapping[str, Any], *, compact: bool, sort_keys: bool) -> str:
