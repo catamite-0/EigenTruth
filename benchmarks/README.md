@@ -695,11 +695,11 @@ python benchmarks/compare_profiles.py \
   --json artifacts/truthfulqa_cache_profile_gate.json
 ```
 
-`benchmarks/run_cache_profile_triplet.py` automates a same-machine real cache
+`benchmarks/run_cache_profile_triplet.py` automates a same-machine cache
 comparison. It runs `eval_truthfulqa.py` once to build statement/layer/eval
 caches, once to reuse them with model loading, and once in `--cache-only` mode;
-then it writes a `compare_profiles.py` report. This command may download/load
-the configured model:
+then it writes a `compare_profiles.py` report. By default it uses the offline
+fixture, so it is suitable for command inspection and local mechanics:
 
 ```bash
 python benchmarks/run_cache_profile_triplet.py \
@@ -708,8 +708,27 @@ python benchmarks/run_cache_profile_triplet.py \
   --clean
 ```
 
+Use `--real-truthfulqa` for representative model/data profile artifacts. Start
+small, then increase `--limit` and `--manifold-questions` once the machine and
+cache settings are known:
+
+```bash
+python benchmarks/run_cache_profile_triplet.py \
+  --output-dir /tmp/eigentruth-qwen05-cache-profile \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --real-truthfulqa \
+  --limit 24 \
+  --manifold-questions 12 \
+  --layer -12 \
+  --batch-size 2 \
+  --eval-reps-cache-shard-size 8 \
+  --clean
+```
+
 Use `--dry-run` first to inspect the exact commands without loading a model.
-Add `--fail-on-regression` when using the generated gate in automation.
+Add `--fail-on-regression` when using the generated gate in automation. Treat
+the resulting timings as same-machine artifacts; do not quote them as general
+model speed claims.
 
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads

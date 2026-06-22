@@ -32,18 +32,27 @@ class CacheProfileTripletConfig:
 
     output_dir: Path
     model: str = "sshleifer/tiny-gpt2"
+    dtype: str = "float32"
     layer: int = -1
+    limit: int | None = None
+    manifold_questions: int | None = None
     batch_size: int = 4
     max_length: int = 64
+    hidden_state_capture: str = "outputs"
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
     progress_every: int = 0
     length_bucketed_batches: bool = True
+    offline: bool = True
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
+        if self.limit is not None and int(self.limit) < 0:
+            raise ValueError("limit must be >=0.")
+        if self.manifold_questions is not None and int(self.manifold_questions) < 1:
+            raise ValueError("manifold_questions must be >=1.")
         if int(self.batch_size) < 1:
             raise ValueError("batch_size must be >=1.")
         if int(self.max_length) < 1:
@@ -54,6 +63,8 @@ class CacheProfileTripletConfig:
             raise ValueError("cached_max_total_ratio must be non-negative.")
         if float(self.cache_only_max_total_ratio) < 0:
             raise ValueError("cache_only_max_total_ratio must be non-negative.")
+        object.__setattr__(self, "dtype", str(self.dtype))
+        object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
 
     @property
     def statement_encoding_cache(self) -> Path:
@@ -85,13 +96,16 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         str(EVAL_SCRIPT),
         "--model",
         config.model,
-        "--offline",
+        "--dtype",
+        config.dtype,
         "--layer",
         str(config.layer),
         "--batch-size",
         str(config.batch_size),
         "--max-length",
         str(config.max_length),
+        "--hidden-state-capture",
+        config.hidden_state_capture,
         "--progress-every",
         str(config.progress_every),
         "--json",
@@ -99,6 +113,12 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         "--profile-json",
         str(config.profile_path(name)),
     ]
+    if config.offline:
+        base.append("--offline")
+    if config.limit is not None:
+        base.extend(["--limit", str(config.limit)])
+    if config.manifold_questions is not None:
+        base.extend(["--manifold-questions", str(config.manifold_questions)])
     if config.length_bucketed_batches:
         base.append("--length-bucketed-batches")
 
@@ -217,15 +237,20 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
     return CacheProfileTripletConfig(
         output_dir=Path(args.output_dir),
         model=args.model,
+        dtype=args.dtype,
         layer=args.layer,
+        limit=args.limit,
+        manifold_questions=args.manifold_questions,
         batch_size=args.batch_size,
         max_length=args.max_length,
+        hidden_state_capture=args.hidden_state_capture,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
         progress_every=args.progress_every,
         length_bucketed_batches=not args.no_length_bucketed_batches,
+        offline=not args.real_truthfulqa,
     )
 
 
@@ -249,9 +274,17 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="directory for caches, profile payloads, result JSON, and comparison report")
     parser.add_argument("--model", default="sshleifer/tiny-gpt2",
                         help="model id passed to eval_truthfulqa.py; may be downloaded by transformers")
+    parser.add_argument("--dtype", default="float32",
+                        help="dtype passed to eval_truthfulqa.py")
     parser.add_argument("--layer", type=int, default=-1)
+    parser.add_argument("--limit", type=int, default=None,
+                        help="eval question limit passed to eval_truthfulqa.py; 0 means all")
+    parser.add_argument("--manifold-questions", type=int, default=None,
+                        help="warmup question count passed to eval_truthfulqa.py")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-length", type=int, default=64)
+    parser.add_argument("--hidden-state-capture", default="outputs",
+                        help="hidden state capture mode passed to eval_truthfulqa.py")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10,
                         help="max cached/uncached total-time ratio for the comparison gate")
@@ -262,6 +295,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="Python executable used for eval_truthfulqa.py subprocesses")
     parser.add_argument("--no-length-bucketed-batches", action="store_true",
                         help="omit --length-bucketed-batches from all eval runs")
+    parser.add_argument("--real-truthfulqa", action="store_true",
+                        help="load the configured model and TruthfulQA dataset instead of the offline fixture")
     parser.add_argument("--clean", action="store_true",
                         help="remove --output-dir before running")
     parser.add_argument("--dry-run", action="store_true",

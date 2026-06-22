@@ -928,6 +928,9 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert payload["dry_run"] is True
     assert Path(payload["command_log"]).exists()
     assert commands["uncached"][0] == "/python"
+    assert "--offline" in commands["uncached"]
+    assert commands["uncached"][commands["uncached"].index("--dtype") + 1] == "float32"
+    assert commands["uncached"][commands["uncached"].index("--hidden-state-capture") + 1] == "outputs"
     assert commands["uncached"].count("--refresh-layer-stats-cache") == 1
     assert commands["uncached"].count("--refresh-eval-reps-cache") == 1
     assert commands["uncached"][commands["uncached"].index("--eval-reps-cache-shard-size") + 1] == "3"
@@ -935,6 +938,34 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert "--refresh-eval-reps-cache" not in commands["cached"]
     assert "--cache-only" in commands["cache_only"]
     assert "--statement-encoding-cache" not in commands["cache_only"]
+
+
+def test_run_cache_profile_triplet_builds_real_truthfulqa_commands(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        dtype="bfloat16",
+        layer=-12,
+        limit=24,
+        manifold_questions=12,
+        batch_size=2,
+        hidden_state_capture="hooks",
+        python_executable="/python",
+        offline=False,
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+    uncached = payload["commands"]["uncached"]
+    cache_only = payload["commands"]["cache_only"]
+
+    assert "--offline" not in uncached
+    assert uncached[uncached.index("--model") + 1] == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert uncached[uncached.index("--dtype") + 1] == "bfloat16"
+    assert uncached[uncached.index("--limit") + 1] == "24"
+    assert uncached[uncached.index("--manifold-questions") + 1] == "12"
+    assert uncached[uncached.index("--hidden-state-capture") + 1] == "hooks"
+    assert cache_only[cache_only.index("--limit") + 1] == "24"
 
 
 def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatch):
