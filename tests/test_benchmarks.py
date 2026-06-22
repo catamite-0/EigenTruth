@@ -1152,6 +1152,110 @@ def test_compare_registry_baseline_cli_exits_on_regression(tmp_path):
     assert payload["comparison"]["regression_gate"]["failures"][0]["run"] == "candidate"
 
 
+def test_compare_registry_baseline_resolves_nested_manifest_profile(tmp_path):
+    module = importlib.import_module("benchmarks.compare_registry_baseline")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    cell_dir = tmp_path / "cell"
+    cell_dir.mkdir()
+    baseline_profile = cell_dir / "profile-uncached.json"
+    candidate_profile = tmp_path / "profile-candidate.json"
+    baseline_profile.write_text(
+        json.dumps({"total_seconds": 100.0, "phases": {"forced_answer_forward": 80.0}}),
+        encoding="utf-8",
+    )
+    candidate_profile.write_text(
+        json.dumps({"total_seconds": 102.0, "phases": {"forced_answer_forward": 81.0}}),
+        encoding="utf-8",
+    )
+    triplet_manifest_path = cell_dir / "artifact-manifest.json"
+    triplet_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"profiles.uncached": baseline_profile}, root=cell_dir)),
+        encoding="utf-8",
+    )
+    root_manifest_path = tmp_path / "artifact-manifest.json"
+    root_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"cells.unit.triplet_manifest": triplet_manifest_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="matrix-baseline",
+        path=root_manifest_path,
+        version="0.3",
+    ).save_json()
+
+    payload = module.compare_registry_baseline(
+        registry_path=registry_path,
+        baseline_name="matrix-baseline",
+        baseline_version="0.3",
+        baseline_profile_artifact="cells.unit.triplet_manifest::profiles.uncached",
+        candidate_profiles=(("candidate", candidate_profile),),
+        max_total_ratio=1.05,
+    )
+
+    assert payload["registry_baseline"]["verification"]["passed"] is True
+    assert payload["registry_baseline"]["profile_path"] == str(baseline_profile)
+    assert payload["comparison"]["regression_gate"]["passed"] is True
+
+
+def test_run_registry_baseline_workflow_dry_run_promotes_matrix_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.run_registry_baseline_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry" / "registry.json"
+    report_path = tmp_path / "workflow-report.json"
+    payload = module.run(
+        SimpleNamespace(
+            output_dir=str(output_dir),
+            registry=str(registry_path),
+            name="qwen-mini-dry-run",
+            version="0.3",
+            verification_report=None,
+            metadata=["machine=unit"],
+            model="Qwen/Qwen2.5-0.5B-Instruct",
+            dtype="float32",
+            layers="-12",
+            batch_sizes="1,2",
+            hidden_state_captures="outputs",
+            limit=4,
+            manifold_questions=2,
+            max_length=32,
+            eval_reps_cache_shard_size=2,
+            cached_max_total_ratio=1.10,
+            cache_only_max_total_ratio=0.35,
+            progress_every=0,
+            python=sys.executable,
+            no_length_bucketed_batches=False,
+            real_truthfulqa=False,
+            shared_cache_dir=str(tmp_path / "shared-cache"),
+            matrix_mode="rescore",
+            clean=True,
+            dry_run=True,
+            allow_promotion_failures=False,
+            candidate_profile=[],
+            baseline_profile_artifact="profiles.uncached",
+            allow_unverified_compare=False,
+            max_total_ratio=None,
+            max_run_total_ratio=[],
+            max_phase_ratio=[],
+            min_throughput_ratio=[],
+            fail_on_regression=False,
+            json=str(report_path),
+        )
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("benchmark_manifest:qwen-mini-dry-run:0.3")
+
+    assert payload["matrix"]["dry_run"] is True
+    assert payload["promotion"]["verification"]["passed"] is True
+    assert payload["comparison"] is None
+    assert record.metadata["machine"] == "unit"
+    assert record.metadata["manifest_metadata"]["runner"] == "run_cache_profile_matrix"
+    assert report_path.exists()
+
+
 def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(

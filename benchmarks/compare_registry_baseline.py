@@ -99,6 +99,19 @@ def _select_manifest_record(
 
 
 def _resolve_manifest_artifact_path(manifest_path: Path, *, artifact_name: str) -> Path:
+    parts = tuple(part.strip() for part in artifact_name.split("::"))
+    if not parts or any(not part for part in parts):
+        raise ValueError("artifact reference must not be empty.")
+    current_manifest_path = manifest_path
+    for index, part in enumerate(parts):
+        path = _resolve_single_manifest_artifact_path(current_manifest_path, artifact_name=part)
+        if index == len(parts) - 1:
+            return path
+        current_manifest_path = path
+    raise AssertionError("unreachable artifact reference resolution path")
+
+
+def _resolve_single_manifest_artifact_path(manifest_path: Path, *, artifact_name: str) -> Path:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     artifacts = manifest.get("artifacts", {})
     if not isinstance(artifacts, Mapping):

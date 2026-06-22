@@ -833,6 +833,45 @@ python benchmarks/compare_registry_baseline.py \
   --fail-on-regression
 ```
 
+For matrix manifests, profile payloads live inside each cell's triplet manifest.
+Use `root_artifact::nested_artifact` syntax to resolve the nested profile:
+
+```bash
+python benchmarks/compare_registry_baseline.py \
+  --registry artifacts/registry.json \
+  --baseline-name qwen05-profile-rescore \
+  --baseline-version 0.3 \
+  --baseline-profile-artifact \
+    cells.layer_m12_batch_1_capture_outputs.triplet_manifest::profiles.uncached \
+  --candidate-profile candidate=/tmp/eigentruth-current-profile.json \
+  --max-total-ratio 1.10 \
+  --fail-on-regression
+```
+
+`run_registry_baseline_workflow.py` combines the matrix run, recursive manifest
+verification, promotion, and optional registry-backed comparison in one command.
+Run it with `--dry-run` first to inspect the generated commands and registry
+records without loading a model:
+
+```bash
+python benchmarks/run_registry_baseline_workflow.py \
+  --output-dir /tmp/eigentruth-qwen05-baseline-workflow \
+  --registry artifacts/registry.json \
+  --name qwen05-profile-rescore \
+  --version 0.3 \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --real-truthfulqa \
+  --limit 24 \
+  --manifold-questions 12 \
+  --layers=-12 \
+  --batch-sizes=1,2,4 \
+  --hidden-state-captures=outputs \
+  --shared-cache-dir /tmp/eigentruth-qwen05-profile-cache \
+  --matrix-mode rescore \
+  --dry-run \
+  --json artifacts/qwen05_registry_baseline_workflow.json
+```
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py`,
 `benchmarks/cache_profile_smoke.py`, and
 `benchmarks/registry_baseline_smoke.py`. These use fixed synthetic profile
