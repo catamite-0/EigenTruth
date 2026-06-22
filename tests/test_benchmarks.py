@@ -1120,6 +1120,77 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     assert cache_failing["promotion_decision"]["status"] == "blocked_by_gate"
 
 
+def test_compare_verifier_routes_gate_fails_on_partially_invalid_aggregate_cost_metrics(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    valid_report = tmp_path / "valid-cost.json"
+    invalid_report = tmp_path / "invalid-cost.json"
+
+    base_route_quality = {
+        "selected": 4,
+        "n_true": 2,
+        "n_false": 2,
+        "label_status_matrix": {
+            "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+            "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+        },
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "decision_accuracy": 1.0,
+        "duration_observations": 4,
+        "total_duration_seconds": 0.04,
+        "mean_duration_seconds": 0.01,
+        "p95_duration_seconds": 0.019,
+        "p99_duration_seconds": 0.0198,
+        "max_duration_seconds": 0.02,
+        "attempted_route_count_observations": 4,
+        "total_attempted_route_count": 4,
+        "mean_attempted_route_count": 1.0,
+        "used_retrieval_count": 0,
+        "retrieval_use_rate": 0.0,
+    }
+    valid_report.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "valid",
+                    "route_quality": {"structured_state": base_route_quality},
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    invalid_quality = dict(base_route_quality)
+    invalid_quality["total_duration_seconds"] = float("nan")
+    invalid_quality["mean_duration_seconds"] = float("nan")
+    invalid_report.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "invalid",
+                    "route_quality": {"structured_state": invalid_quality},
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_route_comparison_report(
+        [("valid", valid_report), ("invalid", invalid_report)],
+        gate_routes=("structured_state",),
+        max_mean_duration_seconds=0.02,
+    )
+
+    aggregate = payload["by_route"]["structured_state"]
+    failures = payload["quality_gate"]["failures"]
+    assert aggregate["invalid_metric_counts"]["mean_duration_seconds"] == 1
+    assert payload["quality_gate"]["passed"] is False
+    assert failures[0]["metric"] == "mean_duration_seconds"
+    assert failures[0]["limit_type"] == "finite"
+    assert payload["promotion_decision"]["status"] == "blocked_by_gate"
+
+
 def test_compare_verifier_routes_quality_gate_fails_closed_for_empty_or_nonfinite_metrics():
     module = importlib.import_module("benchmarks.compare_verifier_routes")
 

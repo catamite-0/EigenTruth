@@ -625,7 +625,10 @@ The output includes:
   `p95_duration_seconds`, `p99_duration_seconds`, `max_duration_seconds`,
   `mean_attempted_route_count`, and `retrieval_use_rate`, plus optional global
   `cache_hit_rate`; missing routes, missing metrics, non-finite values, missing
-  cache evidence, or no eligible routes fail the gate.
+  cache evidence, or no eligible routes fail the gate. When multiple reports are
+  aggregated, any route entry with missing or non-finite source metrics for an
+  enabled gate records `invalid_metric_counts` and blocks promotion even if the
+  remaining entries produce an aggregate value below the threshold.
 - `rows`: the unaggregated route entries for audit and follow-up slicing.
 
 Use `--min-selected` to keep tiny route samples out of the leaderboard while

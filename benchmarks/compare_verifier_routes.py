@@ -45,9 +45,7 @@ def _alpha_payload(run: Mapping[str, Any], alpha: float) -> Mapping[str, Any]:
 
 
 def _as_float(value: Any) -> float | None:
-    if value is None:
-        return None
-    return float(value)
+    return _finite_float(value)
 
 
 def _as_int_or_none(value: Any) -> int | None:
@@ -106,6 +104,63 @@ def _impact_for_route(run: Mapping[str, Any], route: str, alpha: float) -> Mappi
     return route_impact if isinstance(route_impact, Mapping) else {}
 
 
+def _has_finite_metric(payload: Mapping[str, Any], metric: str) -> bool:
+    return _finite_float(payload.get(metric)) is not None
+
+
+def _has_nonnegative_int_metric(payload: Mapping[str, Any], metric: str) -> bool:
+    value = _as_int_or_none(payload.get(metric))
+    return value is not None and value >= 0
+
+
+def _has_positive_int_metric(payload: Mapping[str, Any], metric: str) -> bool:
+    value = _as_int_or_none(payload.get(metric))
+    return value is not None and value > 0
+
+
+def _add_invalid_metric(counts: dict[str, int], metric: str) -> None:
+    counts[metric] = counts.get(metric, 0) + 1
+
+
+def _route_row_invalid_metric_counts(
+    *,
+    route_quality: Mapping[str, Any],
+    impact: Mapping[str, Any],
+) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    selected = _as_int_or_none(route_quality.get("selected")) or 0
+    n_true = _as_int_or_none(route_quality.get("n_true")) or 0
+    n_false = _as_int_or_none(route_quality.get("n_false")) or 0
+    if selected > 0:
+        if (
+            not _has_finite_metric(route_quality, "mean_duration_seconds")
+            or not _has_positive_int_metric(route_quality, "duration_observations")
+            or not _has_finite_metric(route_quality, "total_duration_seconds")
+        ):
+            _add_invalid_metric(counts, "mean_duration_seconds")
+        for metric in ("p95_duration_seconds", "p99_duration_seconds", "max_duration_seconds"):
+            if not _has_finite_metric(route_quality, metric):
+                _add_invalid_metric(counts, metric)
+        if (
+            not _has_finite_metric(route_quality, "mean_attempted_route_count")
+            or not _has_positive_int_metric(route_quality, "attempted_route_count_observations")
+            or not _has_finite_metric(route_quality, "total_attempted_route_count")
+        ):
+            _add_invalid_metric(counts, "mean_attempted_route_count")
+        if (
+            not _has_finite_metric(route_quality, "retrieval_use_rate")
+            or not _has_nonnegative_int_metric(route_quality, "used_retrieval_count")
+        ):
+            _add_invalid_metric(counts, "retrieval_use_rate")
+
+    verified = impact.get("verified", {}) if isinstance(impact.get("verified", {}), Mapping) else {}
+    if n_true > 0 and not _has_finite_metric(verified, "false_alarm"):
+        _add_invalid_metric(counts, "verified_false_alarm")
+    if n_false > 0 and not _has_finite_metric(verified, "detection"):
+        _add_invalid_metric(counts, "verified_detection")
+    return counts
+
+
 def _route_row(
     *,
     report_name: str,
@@ -120,12 +175,17 @@ def _route_row(
     verified = impact.get("verified", {}) if isinstance(impact.get("verified", {}), Mapping) else {}
     delta = impact.get("delta", {}) if isinstance(impact.get("delta", {}), Mapping) else {}
     counts = _label_counts(route_quality)
+    invalid_metric_counts = _route_row_invalid_metric_counts(
+        route_quality=route_quality,
+        impact=impact,
+    )
     return {
         "report": report_name,
         "run": str(run.get("name", report_name)),
         "source": str(source),
         "route": route,
         "alpha": float(alpha),
+        "invalid_metric_counts": invalid_metric_counts,
         "selected": int(route_quality.get("selected", 0)),
         "selection_rate": _as_float(route_quality.get("selection_rate")),
         "n_true": int(route_quality.get("n_true", 0)),
@@ -294,6 +354,22 @@ def _mean_from_total(total: float | None, observations: int) -> float | None:
     return _safe_div(total, observations)
 
 
+def _invalid_metric_counts(rows: Sequence[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        row_counts = row.get("invalid_metric_counts", {})
+        if not isinstance(row_counts, Mapping):
+            continue
+        for metric, value in row_counts.items():
+            try:
+                increment = int(value)
+            except (TypeError, ValueError):
+                continue
+            if increment > 0:
+                counts[str(metric)] = counts.get(str(metric), 0) + increment
+    return counts
+
+
 def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     selected = sum(int(row.get("selected", 0)) for row in rows)
     n_true = sum(int(row.get("n_true", 0)) for row in rows)
@@ -321,6 +397,7 @@ def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str,
     return {
         "route": route,
         "n_entries": len(rows),
+        "invalid_metric_counts": _invalid_metric_counts(rows),
         "selected": selected,
         "n_true": n_true,
         "n_false": n_false,
@@ -708,6 +785,28 @@ def _check_max_metric(
     return None
 
 
+def _check_invalid_metric_count(
+    *,
+    route: str,
+    metric: str,
+    payload: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    counts = payload.get("invalid_metric_counts", {})
+    if not isinstance(counts, Mapping):
+        return None
+    invalid_count = int(counts.get(metric, 0) or 0)
+    if invalid_count <= 0:
+        return None
+    return {
+        "route": route,
+        "metric": metric,
+        "limit_type": "finite",
+        "limit": 0,
+        "value": invalid_count,
+        "reason": "one or more route report entries had missing or non-finite values for this metric",
+    }
+
+
 def build_route_quality_gate(
     by_route: Mapping[str, Any],
     *,
@@ -816,6 +915,10 @@ def build_route_quality_gate(
         )
         for metric, limit, checker in metric_checks:
             if limit is None:
+                continue
+            invalid_failure = _check_invalid_metric_count(route=route, metric=metric, payload=payload)
+            if invalid_failure is not None:
+                failures.append(invalid_failure)
                 continue
             failure = checker(route=route, metric=metric, value=payload.get(metric), limit=float(limit))
             if failure is not None:
