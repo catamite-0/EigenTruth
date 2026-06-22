@@ -353,6 +353,29 @@ The state source may be a raw JSON object used as state, or an object with
 `state_check` directly or under `claim_metadata.state_check`; top-level
 `state_checks` keyed by `claim_id` are also supported.
 
+For a fully reproducible domain-state smoke benchmark, generate synthetic
+order-fulfillment state, claim, and score fixtures, then feed them into the same
+verifier-ensemble runner:
+
+```bash
+python benchmarks/build_domain_state_fixture.py \
+  --scores-output artifacts/order_fulfillment_scores.json \
+  --claims-output artifacts/order_fulfillment_claims.json \
+  --state-output artifacts/order_fulfillment_state.json \
+  --n-records 12
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores orders=artifacts/order_fulfillment_scores.json \
+  --claims artifacts/order_fulfillment_claims.json \
+  --state-source artifacts/order_fulfillment_state.json \
+  --signal truth_proj \
+  --json artifacts/order_fulfillment_verifier_ensemble_report.json
+```
+
+This fixture checks the product-control path, not open-domain factuality: true
+labels are shippable orders, while false labels are claims that an order can
+ship even though inventory or account state refutes it.
+
 The current policy is deliberately simple and auditable: `refuted` always
 triggers, `supported` suppresses an internal trigger, and
 `insufficient_evidence` preserves the internal trigger. The verifier and

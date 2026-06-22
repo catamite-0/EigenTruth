@@ -180,6 +180,51 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
+def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):
+    builder = importlib.import_module("benchmarks.build_domain_state_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "domain_scores.json"
+    claims_path = tmp_path / "domain_claims.json"
+    state_path = tmp_path / "domain_state.json"
+
+    payload = builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+    ))
+
+    assert payload["claims"]["fixture_type"] == "order_fulfillment_state_claims"
+    assert payload["claims"]["summary"]["n_true"] == 4
+    assert payload["claims"]["summary"]["n_false"] == 4
+    assert scores_path.exists()
+    assert claims_path.exists()
+    assert state_path.exists()
+
+    report = verifier.build_verifier_ensemble_report(
+        [("orders", scores_path)],
+        signal="truth_proj",
+        claims_path=claims_path,
+        state_path=state_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+    )
+    run = report["runs"][0]
+    quality = run["verification_quality"]
+    routes = run["route_summary"]
+
+    assert run["state_verifier"]["enabled"] is True
+    assert run["state_verifier"]["decided_records"] == 8
+    assert routes["selected_counts"] == {"structured_state": 8}
+    assert quality["true_supported_rate"] == pytest.approx(1.0)
+    assert quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert quality["false_supported_rate"] == pytest.approx(0.0)
+    assert run["alphas"]["0.2"]["verified"]["false_alarm"] == pytest.approx(0.0)
+    assert run["alphas"]["0.2"]["verified"]["detection"] == pytest.approx(1.0)
+
+
 def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
