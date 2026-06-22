@@ -259,6 +259,7 @@ For product features:
 - `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` and `state_transition` routes, and reports `route_summary`, `route_quality`, and per-alpha `route_control_impact` for structured QA, state transition, structured state, lexical groundedness, and retrieval-backed groundedness.
 - `build_domain_state_fixture.py` generates deterministic order-fulfillment score/claim/state fixtures so structured-state verifier behavior can be benchmarked without relying on label-derived TruthfulQA oracle evidence.
 - `build_transition_fixture.py` generates deterministic order-reservation score/claim/state fixtures so world-model predicted postconditions can be benchmarked without a real simulator or external dependency.
+- `compare_verifier_routes.py` aggregates route-level verifier quality and control impact across saved verifier-ensemble reports, producing a route leaderboard and by-route weighted metrics without loading models.
 - `CachedVerifier`, `CachedRetriever`, and `CachedStateSource` provide request-scoped caching plus hit/miss stats for repeated verifier, retrieval, and state-source calls; `eval_verifier_ensemble.py` includes these `cache_stats` in each run report.
 - `eval_truthfulqa.py --profile` now emits a structured performance summary with bottleneck phase, top phases, grouped time shares, and warmup/eval throughput fields for reproducible optimization comparisons.
 - `eval_truthfulqa.py --auto-batch-size` can halve and retry warmup/forced-answer batch size after retriable memory errors, recording requested/effective batch size and reduction events in JSON/profile output.
@@ -271,7 +272,7 @@ For product features:
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Extend claim extraction or upstream tool calls to provide structured `expression` / `expected` metadata for calculator-verifiable claims beyond simple symbolic equations.
 - Add route policies for QA/database/world-model adapters so product traces explain why each tool was selected or skipped.
-- Extend route-level metrics to future adapters and real fixtures so new tools are judged by route hit rate, false support, false refutation, and downstream conformal control impact.
+- Extend route-level metrics to future adapters and real fixtures, then compare them with `compare_verifier_routes.py` so new tools are judged by route hit rate, false support, false refutation, and downstream conformal control impact.
 - Replace label-derived oracle evidence with real retrieval/database/calculator evidence and rerun verifier/retrieval ensemble reports on Qwen/SmolLM2.
 - Use local corpus fixtures from `build_evidence_fixture.py` as the reproducible baseline before adding networked retrieval extras.
 - Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.

@@ -184,6 +184,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
 | `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression and refutation policies. |
+| `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into route leaderboards and by-route control-impact metrics. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
 | `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
@@ -221,6 +222,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |
 | `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略。 |
+| `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为 route 排行榜与分 route 控制收益指标。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，用于结构化状态 verifier benchmark。 |
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |

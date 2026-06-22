@@ -590,6 +590,146 @@ def test_compare_profiles_accepts_legacy_profile_without_summary(tmp_path):
     assert run["total_delta"]["ratio_to_baseline"] == pytest.approx(1.0)
 
 
+def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_a = tmp_path / "report_a.json"
+    report_b = tmp_path / "report_b.json"
+    report_a.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "qwen",
+                    "route_quality": {
+                        "structured_qa": {
+                            "selected": 10,
+                            "selection_rate": 0.5,
+                            "n_true": 6,
+                            "n_false": 4,
+                            "label_status_matrix": {
+                                "true": {"supported": 6, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 1, "refuted": 3, "insufficient_evidence": 0},
+                            },
+                            "true_supported_rate": 1.0,
+                            "true_refuted_rate": 0.0,
+                            "false_refuted_rate": 0.75,
+                            "false_supported_rate": 0.25,
+                            "insufficient_evidence_rate": 0.0,
+                            "decision_accuracy": 0.9,
+                            "decision_error_rate": 0.1,
+                        },
+                        "structured_state": {
+                            "selected": 8,
+                            "selection_rate": 0.4,
+                            "n_true": 4,
+                            "n_false": 4,
+                            "label_status_matrix": {
+                                "true": {"supported": 4, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 4, "insufficient_evidence": 0},
+                            },
+                            "true_supported_rate": 1.0,
+                            "true_refuted_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "insufficient_evidence_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "decision_error_rate": 0.0,
+                        },
+                    },
+                    "alphas": {
+                        "0.20": {
+                            "route_control_impact": {
+                                "structured_qa": {
+                                    "internal": {"false_alarm": 0.2, "detection": 0.5},
+                                    "verified": {"false_alarm": 0.0, "detection": 0.75},
+                                    "delta": {
+                                        "false_alarm": -0.2,
+                                        "detection": 0.25,
+                                        "suppressed_false_alarm_rate": 0.2,
+                                        "rescued_detection_rate": 0.25,
+                                    },
+                                },
+                                "structured_state": {
+                                    "internal": {"false_alarm": 0.25, "detection": 0.25},
+                                    "verified": {"false_alarm": 0.0, "detection": 1.0},
+                                    "delta": {
+                                        "false_alarm": -0.25,
+                                        "detection": 0.75,
+                                        "suppressed_false_alarm_rate": 0.25,
+                                        "rescued_detection_rate": 0.75,
+                                    },
+                                },
+                            }
+                        }
+                    },
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    report_b.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "smol",
+                    "route_quality": {
+                        "structured_qa": {
+                            "selected": 5,
+                            "selection_rate": 0.25,
+                            "n_true": 3,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 3, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "true_supported_rate": 1.0,
+                            "true_refuted_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "insufficient_evidence_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "decision_error_rate": 0.0,
+                        },
+                    },
+                    "alphas": {
+                        "0.2": {
+                            "route_control_impact": {
+                                "structured_qa": {
+                                    "internal": {"false_alarm": 0.2, "detection": 0.5},
+                                    "verified": {"false_alarm": 0.0, "detection": 1.0},
+                                    "delta": {
+                                        "false_alarm": -0.2,
+                                        "detection": 0.5,
+                                        "suppressed_false_alarm_rate": 0.2,
+                                        "rescued_detection_rate": 0.5,
+                                    },
+                                }
+                            }
+                        }
+                    },
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_route_comparison_report(
+        [("a", report_a), ("b", report_b)],
+        alpha=0.2,
+        min_selected=1,
+        notes=["unit-test"],
+    )
+
+    assert payload["notes"] == ["unit-test"]
+    assert payload["n_route_entries"] == 3
+    assert payload["leaderboard"][0]["decision_accuracy"] == pytest.approx(1.0)
+    assert payload["leaderboard"][0]["false_supported_rate"] == pytest.approx(0.0)
+    assert payload["by_route"]["structured_qa"]["selected"] == 15
+    assert payload["by_route"]["structured_qa"]["false_refuted_rate"] == pytest.approx(5 / 6)
+    assert payload["by_route"]["structured_qa"]["false_supported_rate"] == pytest.approx(1 / 6)
+    assert payload["by_route"]["structured_qa"]["verified_detection"] == pytest.approx(5 / 6)
+    assert payload["by_route"]["structured_state"]["rescued_detection_rate"] == pytest.approx(0.75)
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"

@@ -421,6 +421,33 @@ false-support / false-refutation metrics per selected route, and use each
 alpha result's `route_control_impact` to see how that route changed internal
 false alarm, detection, suppression, and rescued-detection rates.
 
+## `compare_verifier_routes.py`
+
+Aggregates `route_quality` and per-alpha `route_control_impact` from one or more
+`eval_verifier_ensemble.py` JSON reports. This is a no-model post-processing step
+for deciding which verifier routes deserve real adapter work.
+
+```bash
+python benchmarks/compare_verifier_routes.py \
+  --report qwen=artifacts/qwen05_verifier_ensemble_report.json \
+  --report smol=artifacts/smollm2_verifier_ensemble_report.json \
+  --alpha 0.1 \
+  --json artifacts/verifier_route_comparison.json
+```
+
+The output includes:
+
+- `leaderboard`: individual report/run/route rows sorted by decision accuracy,
+  false-refutation rate, low false-support rate, verified detection, and low
+  verified false alarm.
+- `by_route`: aggregate counts and weighted rates across all reports for each
+  route, useful for comparing route families such as `structured_qa`,
+  `structured_state`, and `state_transition`.
+- `rows`: the unaggregated route entries for audit and follow-up slicing.
+
+Use `--min-selected` to keep tiny route samples out of the leaderboard while
+still preserving them in the raw `rows` and `by_route` sections.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
