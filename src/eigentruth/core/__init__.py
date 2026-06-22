@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from eigentruth.core.inside import internal_eigenscore, spectral_effective_rank
+from eigentruth.core.inside import internal_eigenscore, lexical_semantic_entropy, spectral_effective_rank
 from eigentruth.core.math_engine import (
     TruthManifold,
     hyperbolic_semantic_entropy,
@@ -16,6 +16,7 @@ __all__ = [
     "TruthManifold",
     "TruthSubspace",
     "internal_eigenscore",
+    "lexical_semantic_entropy",
     "spectral_effective_rank",
     "hyperbolic_semantic_entropy",
     "mahalanobis_distance",

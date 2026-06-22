@@ -5507,9 +5507,13 @@ def test_eval_truthfulqa_multisample_inside_signal_is_optional():
     sweep_layers = SimpleNamespace(sweep=False, sweep_layers="-12,-8")
 
     assert module.INSIDE_SIGNAL not in module._enabled_signals(disabled)
+    assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_SIGNAL in module._enabled_signals(enabled)
+    assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_SIGNAL in module._sweep_signal_names(enabled)
+    assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._sweep_signal_names(enabled)
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SIGNAL] == "higher"
+    assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SEMANTIC_ENTROPY_SIGNAL] == "higher"
     assert module._sweep_output_enabled(sweep_layers) is True
 
 

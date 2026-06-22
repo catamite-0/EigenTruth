@@ -3,7 +3,7 @@
 import pytest
 import torch
 
-from eigentruth.core import internal_eigenscore, spectral_effective_rank
+from eigentruth.core import internal_eigenscore, lexical_semantic_entropy, spectral_effective_rank
 
 
 def test_internal_eigenscore_increases_for_diverse_embeddings():
@@ -52,3 +52,25 @@ def test_spectral_effective_rank_reports_dimensional_spread():
     plane = torch.tensor([[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [0.0, -1.0]])
 
     assert spectral_effective_rank(plane) > spectral_effective_rank(line)
+
+
+def test_lexical_semantic_entropy_increases_for_diverse_samples():
+    repeated = ["Paris is the capital.", "paris is the capital", "Paris is the capital!"]
+    diverse = ["Paris.", "Lyon.", "The answer is unknown."]
+
+    assert lexical_semantic_entropy(repeated).item() == pytest.approx(0.0)
+    assert lexical_semantic_entropy(diverse).item() > lexical_semantic_entropy(repeated).item()
+
+
+def test_lexical_semantic_entropy_is_normalized_by_default():
+    score = lexical_semantic_entropy(["alpha", "beta", "gamma"])
+
+    assert 0.0 <= score.item() <= 1.0
+    assert score.item() == pytest.approx(1.0)
+
+
+def test_lexical_semantic_entropy_rejects_invalid_inputs():
+    with pytest.raises(ValueError, match="strings"):
+        lexical_semantic_entropy(["alpha", 7])  # type: ignore[list-item]
+    with pytest.raises(ValueError, match="eps"):
+        lexical_semantic_entropy(["alpha", "beta"], eps=0.0)

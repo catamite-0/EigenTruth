@@ -25,9 +25,10 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
 3. **Does internal-state spectral diversity add a cheap uncertainty signal?**
    `eigenscore` is an INSIDE/EigenScore-style log-det score over answer-token
    hidden embeddings. Add `--inside-samples K` (`K >= 2`) to also run
-   `inside_eigenscore`, a closer multi-response INSIDE proxy that samples
-   verifier-style continuations and computes EigenScore over their sentence
-   embeddings.
+   `inside_eigenscore` and `inside_semantic_entropy`, closer multi-response
+   proxies that sample verifier-style continuations, compute EigenScore over
+   their sentence embeddings, and compute a dependency-free lexical cluster
+   entropy over the sampled texts.
 
 ### Method
 
@@ -158,8 +159,9 @@ cache-only falls back to the original dataset load for validation and labels.
 Use `--inside-trigger-signal` with either `--inside-trigger-threshold` or
 `--inside-trigger-top-fraction` to run sampled INSIDE only on suspicious
 statements. In this budgeted mode, untriggered statements receive
-`inside_eigenscore=0.0`; read it as a two-stage policy score, not as a full
-INSIDE-only AUROC. The JSON output includes `inside_sampling` counts.
+`inside_eigenscore=0.0` and `inside_semantic_entropy=0.0`; read them as
+two-stage policy scores, not as full INSIDE-only AUROC. The JSON output includes
+`inside_sampling` counts.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
@@ -188,9 +190,9 @@ progress output.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
   hyperbolic component.
 - Treat `eigenscore` as an internal-state spectral-diversity proxy. Use
-  `inside_eigenscore` when `--inside-samples` is enabled to test a closer
-  multi-response INSIDE path. Calibrate both like other higher-is-more-anomalous
-  scores before using them for routing.
+  `inside_eigenscore` and `inside_semantic_entropy` when `--inside-samples` is
+  enabled to test a closer multi-response INSIDE path. Calibrate them like other
+  higher-is-more-anomalous scores before using them for routing.
 - Results depend strongly on the target layer; sweep it.
 
 ### First results (indicative — `gpt2`, a weak base model)
@@ -248,9 +250,10 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
   It cleanly tests the representation hypothesis but is not the same as detecting
   hallucination during free generation.
 - Within-statement token dispersion and `eigenscore` are **cheap proxies** for
-  sample-based semantic uncertainty and INSIDE/EigenScore. `inside_eigenscore` is
-  closer to INSIDE because it samples multiple continuations, but it is still a
-  verifier-prompted benchmark proxy rather than a full published reproduction.
+  sample-based semantic uncertainty and INSIDE/EigenScore. `inside_eigenscore`
+  and `inside_semantic_entropy` are closer because they sample multiple
+  continuations, but they are still verifier-prompted benchmark proxies rather
+  than full published reproductions.
 - A small model (e.g. 0.5B) and a few hundred items give wide confidence intervals.
   Treat AUROC values as indicative, not conclusive, and report `n`.
 - Beating these in-house baselines is necessary but not sufficient; a real claim needs
@@ -281,7 +284,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal tru
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore \
+  --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore,inside_semantic_entropy \
   --artifact-alpha 0.2 \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json

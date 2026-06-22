@@ -56,7 +56,7 @@ from typing import Iterator, List, Mapping, Optional, Sequence
 import torch
 
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
-from eigentruth.core import TruthSubspace, internal_eigenscore
+from eigentruth.core import TruthSubspace, internal_eigenscore, lexical_semantic_entropy
 from eigentruth.core.math_engine import (
     TruthManifold,
     hyperbolic_semantic_entropy,
@@ -77,6 +77,8 @@ SIGNALS = [
     "nll_answer",
 ]
 INSIDE_SIGNAL = "inside_eigenscore"
+INSIDE_SEMANTIC_ENTROPY_SIGNAL = "inside_semantic_entropy"
+INSIDE_SIGNALS = (INSIDE_SIGNAL, INSIDE_SEMANTIC_ENTROPY_SIGNAL)
 REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
 PROFILE_GROUPS = {
@@ -130,6 +132,18 @@ class StatementEncoding:
             "input_ids": list(self.input_ids),
             "n_answer_tokens": int(self.n_answer_tokens),
         }
+
+
+@dataclass(frozen=True)
+class SampledResponseDiagnostics:
+    embeddings_by_layer: dict[int, torch.Tensor]
+    sample_texts: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class SampledInsideDiagnostics:
+    eigenscore_by_layer: dict[int, float]
+    semantic_entropy: float
 
 
 @dataclass
@@ -217,14 +231,14 @@ def _inside_trigger_enabled(args) -> bool:
 def _enabled_signals(args) -> list[str]:
     signals = list(SIGNALS)
     if _inside_enabled(args):
-        signals.append(INSIDE_SIGNAL)
+        signals.extend(INSIDE_SIGNALS)
     return signals
 
 
 def _sweep_signal_names(args) -> list[str]:
     signals = ["maha_last", "truth_proj", "subspace_resid", "eigenscore"]
     if _inside_enabled(args):
-        signals.append(INSIDE_SIGNAL)
+        signals.extend(INSIDE_SIGNALS)
     return signals
 
 
@@ -575,6 +589,7 @@ def _score_reps_batch(
             "layer_scores": {},
             "primary_scores": {},
             "inside_scores": None,
+            "inside_semantic_entropy": None,
             "inside_sampled": False,
         }
         for stmt, _ in valid
@@ -2048,7 +2063,7 @@ def _fork_rng_devices(device: torch.device) -> list[int]:
 
 
 @torch.no_grad()
-def sampled_response_embeddings_batch(
+def sampled_response_diagnostics_batch(
     model,
     tokenizer,
     statements: Sequence[Statement],
@@ -2063,8 +2078,8 @@ def sampled_response_embeddings_batch(
     pooling: str,
     seed: int,
     hidden_state_capture: str = "outputs",
-) -> list[Optional[dict[int, torch.Tensor]]]:
-    """Generate multiple continuations per statement and pool response embeddings."""
+) -> list[Optional[SampledResponseDiagnostics]]:
+    """Generate multiple continuations per statement and pool response diagnostics."""
     if n_samples < 2:
         return [None] * len(statements)
     if max_new_tokens < 1:
@@ -2128,8 +2143,15 @@ def sampled_response_embeddings_batch(
         layers=layers,
         hidden_state_capture=hidden_state_capture,
     )
-    results: list[Optional[dict[int, torch.Tensor]]] = [{layer: torch.empty(0) for layer in layers}
-                                                        for _ in statements]
+    sample_texts = _decode_sampled_continuations(
+        tokenizer,
+        generated,
+        prompt_width=prompt_width,
+        n_statements=len(statements),
+        n_samples=n_samples,
+    )
+    embeddings_by_statement: list[dict[int, torch.Tensor]] = [{layer: torch.empty(0) for layer in layers}
+                                                              for _ in statements]
     response_start = min(prompt_width, generated.shape[1] - 1)
     response_end = generated.shape[1]
     for layer in layers:
@@ -2142,8 +2164,71 @@ def sampled_response_embeddings_batch(
                     pooled.append(states[row, response_start:response_end, :].mean(dim=0))
                 else:
                     pooled.append(states[row, response_end - 1, :])
-            results[stmt_idx][layer] = torch.stack(pooled).cpu()
-    return results
+            embeddings_by_statement[stmt_idx][layer] = torch.stack(pooled).cpu()
+    return [
+        SampledResponseDiagnostics(
+            embeddings_by_layer=embeddings_by_statement[stmt_idx],
+            sample_texts=sample_texts[stmt_idx],
+        )
+        for stmt_idx in range(len(statements))
+    ]
+
+
+def _decode_sampled_continuations(
+    tokenizer,
+    generated: torch.Tensor,
+    *,
+    prompt_width: int,
+    n_statements: int,
+    n_samples: int,
+) -> list[tuple[str, ...]]:
+    continuation_start = min(int(prompt_width), int(generated.shape[1]))
+    continuation_ids = generated[:, continuation_start:].detach().cpu()
+    decoded = tokenizer.batch_decode(continuation_ids, skip_special_tokens=True)
+    groups = []
+    for stmt_idx in range(n_statements):
+        start = stmt_idx * n_samples
+        groups.append(tuple(decoded[start:start + n_samples]))
+    return groups
+
+
+@torch.no_grad()
+def sampled_response_embeddings_batch(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+    hidden_state_capture: str = "outputs",
+) -> list[Optional[dict[int, torch.Tensor]]]:
+    """Generate multiple continuations per statement and pool response embeddings."""
+    diagnostics_batch = sampled_response_diagnostics_batch(
+        model,
+        tokenizer,
+        statements,
+        layers,
+        device,
+        max_length,
+        n_samples=n_samples,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        pooling=pooling,
+        seed=seed,
+        hidden_state_capture=hidden_state_capture,
+    )
+    return [
+        diagnostics.embeddings_by_layer if diagnostics is not None else None
+        for diagnostics in diagnostics_batch
+    ]
 
 
 @torch.no_grad()
@@ -2180,6 +2265,53 @@ def sampled_response_embeddings(
     )[0]
 
 
+def sampled_inside_diagnostics_batch(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+    eigenscore_alpha: float,
+    hidden_state_capture: str = "outputs",
+) -> list[Optional[SampledInsideDiagnostics]]:
+    response_diagnostics_batch = sampled_response_diagnostics_batch(
+        model,
+        tokenizer,
+        statements,
+        layers,
+        device,
+        max_length,
+        n_samples=n_samples,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        pooling=pooling,
+        seed=seed,
+        hidden_state_capture=hidden_state_capture,
+    )
+    diagnostics_batch: list[Optional[SampledInsideDiagnostics]] = []
+    for response_diagnostics in response_diagnostics_batch:
+        if response_diagnostics is None:
+            diagnostics_batch.append(None)
+            continue
+        diagnostics_batch.append(SampledInsideDiagnostics(
+            eigenscore_by_layer={
+                layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
+                for layer, values in response_diagnostics.embeddings_by_layer.items()
+            },
+            semantic_entropy=float(lexical_semantic_entropy(response_diagnostics.sample_texts).item()),
+        ))
+    return diagnostics_batch
+
+
 def sampled_inside_scores_batch(
     model,
     tokenizer,
@@ -2197,7 +2329,7 @@ def sampled_inside_scores_batch(
     eigenscore_alpha: float,
     hidden_state_capture: str = "outputs",
 ) -> list[Optional[dict[int, float]]]:
-    embeddings_batch = sampled_response_embeddings_batch(
+    diagnostics_batch = sampled_inside_diagnostics_batch(
         model,
         tokenizer,
         statements,
@@ -2210,18 +2342,13 @@ def sampled_inside_scores_batch(
         top_p=top_p,
         pooling=pooling,
         seed=seed,
+        eigenscore_alpha=eigenscore_alpha,
         hidden_state_capture=hidden_state_capture,
     )
-    scores_batch: list[Optional[dict[int, float]]] = []
-    for embeddings in embeddings_batch:
-        if embeddings is None:
-            scores_batch.append(None)
-            continue
-        scores_batch.append({
-            layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
-            for layer, values in embeddings.items()
-        })
-    return scores_batch
+    return [
+        diagnostics.eigenscore_by_layer if diagnostics is not None else None
+        for diagnostics in diagnostics_batch
+    ]
 
 
 def sampled_inside_scores(
@@ -2755,7 +2882,7 @@ def run(args) -> dict:
             for inside_batch_idx, position_batch in enumerate(_chunked(triggered_positions, args.inside_batch_size)):
                 inside_batch = [batch_records[position]["stmt"] for position in position_batch]
                 with _profile_phase(profile, "inside_generation"):
-                    sampled_batch = sampled_inside_scores_batch(
+                    sampled_batch = sampled_inside_diagnostics_batch(
                         model,
                         tokenizer,
                         inside_batch,
@@ -2772,18 +2899,27 @@ def run(args) -> dict:
                         hidden_state_capture=args.hidden_state_capture,
                     )
                 for position, sampled in zip(position_batch, sampled_batch):
-                    batch_records[position]["inside_scores"] = sampled
+                    batch_records[position]["inside_scores"] = (
+                        sampled.eigenscore_by_layer if sampled is not None else None
+                    )
+                    batch_records[position]["inside_semantic_entropy"] = (
+                        sampled.semantic_entropy if sampled is not None else None
+                    )
                     batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
                 if position not in triggered:
                     record["inside_scores"] = _empty_inside_scores(layers)
+                    record["inside_semantic_entropy"] = 0.0
 
         with _profile_phase(profile, "score_postprocess"):
             for record in batch_records:
                 inside_scores = record["inside_scores"]
                 if _inside_enabled(args) and inside_scores is None:
                     continue
+                inside_entropy = record["inside_semantic_entropy"]
+                if inside_scores is not None:
+                    inside_entropy = 0.0 if inside_entropy is None else float(inside_entropy)
 
                 for layer in layers:
                     layer_scores = record["layer_scores"][layer]
@@ -2793,6 +2929,7 @@ def run(args) -> dict:
                     sweep_scores[layer]["eigenscore"].append(layer_scores["eigenscore"])
                     if inside_scores is not None:
                         sweep_scores[layer][INSIDE_SIGNAL].append(float(inside_scores[layer]))
+                        sweep_scores[layer][INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
 
                 primary_scores = record["primary_scores"]
                 scores["maha_last"].append(primary_scores["maha_last"])
@@ -2803,6 +2940,7 @@ def run(args) -> dict:
                 scores["eigenscore"].append(primary_scores["eigenscore"])
                 if inside_scores is not None:
                     scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
+                    scores[INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
                 scores["nll_answer"].append(primary_scores["nll_answer"])
                 labels.append(record["stmt"].is_false)
                 scored_statements.append(_statement_to_dump(record["stmt"]))
@@ -2917,6 +3055,7 @@ def run(args) -> dict:
     if _inside_enabled(args):
         payload["inside_sampling"] = {
             "mode": "triggered" if _inside_trigger_enabled(args) else "all",
+            "signals": list(INSIDE_SIGNALS),
             "signal": args.inside_trigger_signal,
             "threshold": args.inside_trigger_threshold,
             "top_fraction": args.inside_trigger_top_fraction,
@@ -3023,7 +3162,7 @@ def main():
                    help="regularization alpha for EigenScore-style log-det scores")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
-                        "0 disables it, values >=2 enable inside_eigenscore")
+                        "0 disables it, values >=2 enable inside_eigenscore and inside_semantic_entropy")
     p.add_argument("--inside-batch-size", type=int, default=1,
                    help="number of prompts to sample in one generate() call for --inside-samples")
     p.add_argument("--inside-max-new-tokens", type=int, default=12,
