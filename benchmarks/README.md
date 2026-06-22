@@ -462,6 +462,9 @@ python benchmarks/refresh_verifier_route_artifacts.py \
 Add `--registry`, `--baseline-*`, `--candidate-profile`, and
 `--max-total-ratio` flags when the refresh should also run the same registry
 baseline gate used by `run_adapter_promotion_workflow.py`.
+The refresh workflow summary mirrors the route promotion metrics needed for
+audit, including mean/p95/p99/max duration, attempted-route count, retrieval use
+rate, and compact cache hit/miss/request stats.
 
 For structured state or database-like adapters, use the same refresh workflow
 with `--claims` and `--state-source` so promotion gates cover the actual

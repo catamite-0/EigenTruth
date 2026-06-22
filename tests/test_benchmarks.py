@@ -1356,7 +1356,15 @@ def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_pa
     verifier_report = json.loads(verifier_report_path.read_text(encoding="utf-8"))
     promotion_report = json.loads(promotion_report_path.read_text(encoding="utf-8"))
 
-    assert payload["verifier_report_summary"]["runs"][0]["routes"]["structured_qa"]["selected"] == 4
+    summary_run = payload["verifier_report_summary"]["runs"][0]
+    summary_route = summary_run["routes"]["structured_qa"]
+    assert summary_route["selected"] == 4
+    assert summary_route["p95_duration_seconds"] >= 0.0
+    assert summary_route["max_duration_seconds"] >= 0.0
+    assert summary_route["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert summary_route["retrieval_use_rate"] == pytest.approx(0.0)
+    assert summary_run["cache_stats"]["qa_verifier"]["requests"] == 4
+    assert summary_run["cache_stats"]["total"]["requests"] >= 4
     assert verifier_report["runs"][0]["route_quality"]["structured_qa"]["decision_accuracy"] == pytest.approx(1.0)
     assert verifier_report["runs"][0]["cache_stats"]["qa_verifier"]["requests"] == 4
     assert payload["promotion"]["decision"]["status"] == "promote"
@@ -1409,7 +1417,15 @@ def test_refresh_verifier_route_artifacts_promotes_structured_state_route(tmp_pa
     run = verifier_report["runs"][0]
     route_quality = run["route_quality"]["structured_state"]
 
-    assert payload["verifier_report_summary"]["runs"][0]["routes"]["structured_state"]["selected"] == 8
+    summary_run = payload["verifier_report_summary"]["runs"][0]
+    summary_route = summary_run["routes"]["structured_state"]
+    assert summary_route["selected"] == 8
+    assert summary_route["p95_duration_seconds"] >= 0.0
+    assert summary_route["max_duration_seconds"] >= 0.0
+    assert summary_route["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert summary_route["retrieval_use_rate"] == pytest.approx(0.0)
+    assert summary_run["cache_stats"]["state_verifier"]["requests"] == 8
+    assert summary_run["cache_stats"]["total"]["requests"] >= 8
     assert run["route_summary"]["selected_counts"] == {"structured_state": 8}
     assert run["cache_stats"]["state_verifier"]["requests"] == 8
     assert route_quality["decision_accuracy"] == pytest.approx(1.0)

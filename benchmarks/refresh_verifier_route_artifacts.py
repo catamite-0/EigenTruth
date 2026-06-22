@@ -188,18 +188,37 @@ def _verifier_report_summary(report: Mapping[str, Any]) -> dict[str, Any]:
                     "false_supported_rate": payload.get("false_supported_rate"),
                     "false_refuted_rate": payload.get("false_refuted_rate"),
                     "mean_duration_seconds": payload.get("mean_duration_seconds"),
+                    "p95_duration_seconds": payload.get("p95_duration_seconds"),
                     "p99_duration_seconds": payload.get("p99_duration_seconds"),
+                    "max_duration_seconds": payload.get("max_duration_seconds"),
+                    "mean_attempted_route_count": payload.get("mean_attempted_route_count"),
+                    "retrieval_use_rate": payload.get("retrieval_use_rate"),
                 }
         runs.append({
             "name": str(run.get("name", "")),
             "n_total": int(run.get("n_total", 0)),
             "routes": routes,
+            "cache_stats": _cache_summary(run.get("cache_stats", {})),
         })
     return {
         "signal": report.get("signal"),
         "alphas": list(report.get("alphas", ())),
         "runs": runs,
     }
+
+
+def _cache_summary(cache_stats: Any) -> dict[str, Any]:
+    if not isinstance(cache_stats, Mapping):
+        return {}
+    summary = {}
+    fields = ("requests", "hits", "misses", "hit_rate", "instances")
+    for name, payload in cache_stats.items():
+        if not isinstance(payload, Mapping):
+            continue
+        compact = {field: payload[field] for field in fields if field in payload}
+        if compact:
+            summary[str(name)] = compact
+    return summary
 
 
 def _parse_named_path(value: str) -> tuple[str, Path]:
