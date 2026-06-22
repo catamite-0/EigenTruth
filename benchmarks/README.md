@@ -105,6 +105,12 @@ python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
   --batch-size 4 --inside-samples 3 --inside-trigger-signal truth_proj \
   --inside-trigger-top-fraction 0.5 --inside-max-new-tokens 6
+
+# Adaptive INSIDE: cap at K samples, but stop early when semantic scores stabilize:
+python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
+  --batch-size 4 --inside-samples 5 --inside-adaptive-sampling \
+  --inside-min-samples 2 --inside-sample-step 1 --inside-stability-delta 0.05 \
+  --inside-max-new-tokens 6
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
@@ -167,6 +173,12 @@ Use `--inside-embedding-threshold` to tune the cosine-similarity cluster
 threshold for `inside_embedding_entropy`. It defaults to `0.90`; higher values
 split sampled embeddings into more clusters, while lower values merge more
 responses into the same semantic-equivalence proxy.
+Use `--inside-adaptive-sampling` to treat `--inside-samples` as the maximum
+sample budget. The benchmark first draws `--inside-min-samples`, then adds
+`--inside-sample-step` continuations until lexical and embedding entropy changes
+are within `--inside-stability-delta` or the maximum budget is reached. The JSON
+output records `inside_sample_counts`, `inside_adaptive_rounds`, and
+`inside_stopped_early` per scored statement.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the

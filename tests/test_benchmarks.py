@@ -6255,6 +6255,75 @@ def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(mo
     assert -1 in diagnostics.eigenscore_by_layer
 
 
+def test_eval_truthfulqa_adaptive_inside_stops_when_entropy_is_stable(monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    requested_samples = []
+
+    def fake_response_diagnostics_batch(*_args, **kwargs):
+        n_samples = int(kwargs["n_samples"])
+        requested_samples.append(n_samples)
+        return [
+            module.SampledResponseDiagnostics(
+                embeddings_by_layer={-1: torch.ones(n_samples, 3)},
+                sample_texts=tuple("same answer" for _ in range(n_samples)),
+            )
+        ]
+
+    monkeypatch.setattr(module, "sampled_response_diagnostics_batch", fake_response_diagnostics_batch)
+
+    diagnostics = module.sampled_inside_adaptive_diagnostics_batch(
+        None,
+        None,
+        [module.Statement("Question?", "Answer.", 0)],
+        [-1],
+        torch.device("cpu"),
+        64,
+        min_samples=2,
+        max_samples=5,
+        sample_step=1,
+        stability_delta=0.0,
+        target_layer=-1,
+        max_new_tokens=2,
+        temperature=0.7,
+        top_p=0.9,
+        pooling="last",
+        seed=0,
+        eigenscore_alpha=1e-3,
+        embedding_similarity_threshold=0.95,
+    )[0]
+
+    assert diagnostics is not None
+    assert requested_samples == [2, 1]
+    assert diagnostics.n_samples == 3
+    assert diagnostics.adaptive_rounds == 2
+    assert diagnostics.stopped_early is True
+
+
+def test_eval_truthfulqa_adaptive_inside_rejects_invalid_config():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    with pytest.raises(ValueError, match="min_samples"):
+        module.sampled_inside_adaptive_diagnostics_batch(
+            None,
+            None,
+            [module.Statement("Question?", "Answer.", 0)],
+            [-1],
+            torch.device("cpu"),
+            64,
+            min_samples=1,
+            max_samples=2,
+            sample_step=1,
+            stability_delta=0.0,
+            target_layer=-1,
+            max_new_tokens=2,
+            temperature=0.7,
+            top_p=0.9,
+            pooling="last",
+            seed=0,
+            eigenscore_alpha=1e-3,
+        )
+
+
 def test_eval_truthfulqa_resolves_limited_sweep_layers():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
 

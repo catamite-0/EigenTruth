@@ -151,6 +151,9 @@ class SampledInsideDiagnostics:
     eigenscore_by_layer: dict[int, float]
     semantic_entropy: float
     embedding_entropy_by_layer: dict[int, float]
+    n_samples: int = 0
+    adaptive_rounds: int = 1
+    stopped_early: bool = False
 
 
 @dataclass
@@ -2087,8 +2090,8 @@ def sampled_response_diagnostics_batch(
     seed: int,
     hidden_state_capture: str = "outputs",
 ) -> list[Optional[SampledResponseDiagnostics]]:
-    """Generate multiple continuations per statement and pool response diagnostics."""
-    if n_samples < 2:
+    """Generate one or more continuations per statement and pool response diagnostics."""
+    if n_samples < 1:
         return [None] * len(statements)
     if max_new_tokens < 1:
         raise ValueError("inside max_new_tokens must be >= 1.")
@@ -2273,6 +2276,72 @@ def sampled_response_embeddings(
     )[0]
 
 
+def _inside_diagnostics_from_response(
+    response_diagnostics: SampledResponseDiagnostics,
+    *,
+    eigenscore_alpha: float,
+    embedding_similarity_threshold: float,
+    adaptive_rounds: int = 1,
+    stopped_early: bool = False,
+) -> SampledInsideDiagnostics:
+    n_samples = len(response_diagnostics.sample_texts)
+    return SampledInsideDiagnostics(
+        eigenscore_by_layer={
+            layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
+            for layer, values in response_diagnostics.embeddings_by_layer.items()
+        },
+        semantic_entropy=float(lexical_semantic_entropy(response_diagnostics.sample_texts).item()),
+        embedding_entropy_by_layer={
+            layer: float(
+                embedding_semantic_entropy(
+                    values,
+                    similarity_threshold=embedding_similarity_threshold,
+                ).item()
+            )
+            for layer, values in response_diagnostics.embeddings_by_layer.items()
+        },
+        n_samples=n_samples,
+        adaptive_rounds=adaptive_rounds,
+        stopped_early=stopped_early,
+    )
+
+
+def _merge_response_diagnostics(
+    previous: SampledResponseDiagnostics | None,
+    new: SampledResponseDiagnostics,
+) -> SampledResponseDiagnostics:
+    if previous is None:
+        return new
+    return SampledResponseDiagnostics(
+        embeddings_by_layer={
+            layer: torch.cat([previous.embeddings_by_layer[layer], new.embeddings_by_layer[layer]], dim=0)
+            for layer in previous.embeddings_by_layer
+        },
+        sample_texts=previous.sample_texts + new.sample_texts,
+    )
+
+
+def _inside_diagnostics_delta(
+    previous: SampledInsideDiagnostics,
+    current: SampledInsideDiagnostics,
+    *,
+    target_layer: int,
+) -> float:
+    layer = (
+        target_layer
+        if target_layer in current.embedding_entropy_by_layer
+        else next(iter(current.embedding_entropy_by_layer))
+    )
+    return max(
+        abs(float(current.semantic_entropy) - float(previous.semantic_entropy)),
+        abs(float(current.embedding_entropy_by_layer[layer]) - float(previous.embedding_entropy_by_layer[layer])),
+    )
+
+
+def _adaptive_inside_seed(base_seed: int, round_idx: int) -> int:
+    return int(base_seed) + int(round_idx) * 1_000_003
+
+
 def sampled_inside_diagnostics_batch(
     model,
     tokenizer,
@@ -2291,6 +2360,8 @@ def sampled_inside_diagnostics_batch(
     embedding_similarity_threshold: float = 0.90,
     hidden_state_capture: str = "outputs",
 ) -> list[Optional[SampledInsideDiagnostics]]:
+    if n_samples < 2:
+        return [None] * len(statements)
     response_diagnostics_batch = sampled_response_diagnostics_batch(
         model,
         tokenizer,
@@ -2311,23 +2382,113 @@ def sampled_inside_diagnostics_batch(
         if response_diagnostics is None:
             diagnostics_batch.append(None)
             continue
-        diagnostics_batch.append(SampledInsideDiagnostics(
-            eigenscore_by_layer={
-                layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
-                for layer, values in response_diagnostics.embeddings_by_layer.items()
-            },
-            semantic_entropy=float(lexical_semantic_entropy(response_diagnostics.sample_texts).item()),
-            embedding_entropy_by_layer={
-                layer: float(
-                    embedding_semantic_entropy(
-                        values,
-                        similarity_threshold=embedding_similarity_threshold,
-                    ).item()
-                )
-                for layer, values in response_diagnostics.embeddings_by_layer.items()
-            },
+        diagnostics_batch.append(_inside_diagnostics_from_response(
+            response_diagnostics,
+            eigenscore_alpha=eigenscore_alpha,
+            embedding_similarity_threshold=embedding_similarity_threshold,
         ))
     return diagnostics_batch
+
+
+def sampled_inside_adaptive_diagnostics_batch(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    min_samples: int,
+    max_samples: int,
+    sample_step: int,
+    stability_delta: float,
+    target_layer: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+    eigenscore_alpha: float,
+    embedding_similarity_threshold: float = 0.90,
+    hidden_state_capture: str = "outputs",
+) -> list[Optional[SampledInsideDiagnostics]]:
+    if min_samples < 2:
+        raise ValueError("adaptive inside min_samples must be >= 2.")
+    if max_samples < min_samples:
+        raise ValueError("adaptive inside max_samples must be >= min_samples.")
+    if sample_step < 1:
+        raise ValueError("adaptive inside sample_step must be >= 1.")
+    if stability_delta < 0.0:
+        raise ValueError("adaptive inside stability_delta must be >= 0.")
+    if not statements:
+        return []
+
+    accumulated: list[SampledResponseDiagnostics | None] = [None] * len(statements)
+    previous: list[SampledInsideDiagnostics | None] = [None] * len(statements)
+    final: list[Optional[SampledInsideDiagnostics]] = [None] * len(statements)
+    active = list(range(len(statements)))
+    round_idx = 0
+
+    while active:
+        requested = min_samples if round_idx == 0 else sample_step
+        current_count = len(accumulated[active[0]].sample_texts) if accumulated[active[0]] is not None else 0
+        requested = min(requested, max_samples - current_count)
+        if requested <= 0:
+            break
+
+        active_statements = [statements[idx] for idx in active]
+        response_batch = sampled_response_diagnostics_batch(
+            model,
+            tokenizer,
+            active_statements,
+            layers,
+            device,
+            max_length,
+            n_samples=requested,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            pooling=pooling,
+            seed=_adaptive_inside_seed(seed, round_idx),
+            hidden_state_capture=hidden_state_capture,
+        )
+
+        next_active: list[int] = []
+        for position, response_diagnostics in zip(active, response_batch):
+            if response_diagnostics is None:
+                final[position] = None
+                continue
+            accumulated[position] = _merge_response_diagnostics(accumulated[position], response_diagnostics)
+            current = _inside_diagnostics_from_response(
+                accumulated[position],
+                eigenscore_alpha=eigenscore_alpha,
+                embedding_similarity_threshold=embedding_similarity_threshold,
+                adaptive_rounds=round_idx + 1,
+            )
+            previous_diagnostics = previous[position]
+            reached_max = current.n_samples >= max_samples
+            stable = (
+                previous_diagnostics is not None
+                and current.n_samples >= min_samples
+                and _inside_diagnostics_delta(previous_diagnostics, current, target_layer=target_layer)
+                <= stability_delta
+            )
+            if stable or reached_max:
+                final[position] = SampledInsideDiagnostics(
+                    eigenscore_by_layer=current.eigenscore_by_layer,
+                    semantic_entropy=current.semantic_entropy,
+                    embedding_entropy_by_layer=current.embedding_entropy_by_layer,
+                    n_samples=current.n_samples,
+                    adaptive_rounds=current.adaptive_rounds,
+                    stopped_early=stable and not reached_max,
+                )
+            else:
+                previous[position] = current
+                next_active.append(position)
+        active = next_active
+        round_idx += 1
+
+    return final
 
 
 def sampled_inside_scores_batch(
@@ -2613,6 +2774,10 @@ def run(args) -> dict:
     batch_fallback_state = BatchSizeFallbackState(args.batch_size, enabled=args.auto_batch_size)
     max_batch_tokens = int(getattr(args, "max_batch_tokens", 0))
     inside_embedding_threshold = float(getattr(args, "inside_embedding_threshold", 0.90))
+    inside_adaptive_sampling = bool(getattr(args, "inside_adaptive_sampling", False))
+    inside_min_samples = int(getattr(args, "inside_min_samples", 2))
+    inside_sample_step = int(getattr(args, "inside_sample_step", 1))
+    inside_stability_delta = float(getattr(args, "inside_stability_delta", 0.05))
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -2800,6 +2965,9 @@ def run(args) -> dict:
     labels: List[int] = []
     scored_statements: list[dict[str, object]] = []
     inside_sampled: List[bool] = []
+    inside_sample_counts: List[int] = []
+    inside_adaptive_rounds: List[int] = []
+    inside_stopped_early: List[bool] = []
     inside_triggered_total = 0
     inside_skipped_total = 0
 
@@ -2905,23 +3073,46 @@ def run(args) -> dict:
             for inside_batch_idx, position_batch in enumerate(_chunked(triggered_positions, args.inside_batch_size)):
                 inside_batch = [batch_records[position]["stmt"] for position in position_batch]
                 with _profile_phase(profile, "inside_generation"):
-                    sampled_batch = sampled_inside_diagnostics_batch(
-                        model,
-                        tokenizer,
-                        inside_batch,
-                        layers,
-                        device,
-                        args.max_length,
-                        n_samples=args.inside_samples,
-                        max_new_tokens=args.inside_max_new_tokens,
-                        temperature=args.inside_temperature,
-                        top_p=args.inside_top_p,
-                        pooling=args.inside_pooling,
-                        seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
-                        eigenscore_alpha=args.eigenscore_alpha,
-                        embedding_similarity_threshold=inside_embedding_threshold,
-                        hidden_state_capture=args.hidden_state_capture,
-                    )
+                    if inside_adaptive_sampling:
+                        sampled_batch = sampled_inside_adaptive_diagnostics_batch(
+                            model,
+                            tokenizer,
+                            inside_batch,
+                            layers,
+                            device,
+                            args.max_length,
+                            min_samples=inside_min_samples,
+                            max_samples=args.inside_samples,
+                            sample_step=inside_sample_step,
+                            stability_delta=inside_stability_delta,
+                            target_layer=args.layer,
+                            max_new_tokens=args.inside_max_new_tokens,
+                            temperature=args.inside_temperature,
+                            top_p=args.inside_top_p,
+                            pooling=args.inside_pooling,
+                            seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
+                            eigenscore_alpha=args.eigenscore_alpha,
+                            embedding_similarity_threshold=inside_embedding_threshold,
+                            hidden_state_capture=args.hidden_state_capture,
+                        )
+                    else:
+                        sampled_batch = sampled_inside_diagnostics_batch(
+                            model,
+                            tokenizer,
+                            inside_batch,
+                            layers,
+                            device,
+                            args.max_length,
+                            n_samples=args.inside_samples,
+                            max_new_tokens=args.inside_max_new_tokens,
+                            temperature=args.inside_temperature,
+                            top_p=args.inside_top_p,
+                            pooling=args.inside_pooling,
+                            seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
+                            eigenscore_alpha=args.eigenscore_alpha,
+                            embedding_similarity_threshold=inside_embedding_threshold,
+                            hidden_state_capture=args.hidden_state_capture,
+                        )
                 for position, sampled in zip(position_batch, sampled_batch):
                     batch_records[position]["inside_scores"] = (
                         sampled.eigenscore_by_layer if sampled is not None else None
@@ -2932,6 +3123,13 @@ def run(args) -> dict:
                     batch_records[position]["inside_embedding_entropy"] = (
                         sampled.embedding_entropy_by_layer if sampled is not None else None
                     )
+                    batch_records[position]["inside_sample_count"] = sampled.n_samples if sampled is not None else 0
+                    batch_records[position]["inside_adaptive_rounds"] = (
+                        sampled.adaptive_rounds if sampled is not None else 0
+                    )
+                    batch_records[position]["inside_stopped_early"] = (
+                        sampled.stopped_early if sampled is not None else False
+                    )
                     batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
@@ -2939,6 +3137,9 @@ def run(args) -> dict:
                     record["inside_scores"] = _empty_inside_scores(layers)
                     record["inside_semantic_entropy"] = 0.0
                     record["inside_embedding_entropy"] = _empty_inside_scores(layers)
+                    record["inside_sample_count"] = 0
+                    record["inside_adaptive_rounds"] = 0
+                    record["inside_stopped_early"] = False
 
         with _profile_phase(profile, "score_postprocess"):
             for record in batch_records:
@@ -2981,6 +3182,9 @@ def run(args) -> dict:
                 scored_statements.append(_statement_to_dump(record["stmt"]))
                 if _inside_enabled(args):
                     inside_sampled.append(bool(record["inside_sampled"]))
+                    inside_sample_counts.append(int(record.get("inside_sample_count", 0)))
+                    inside_adaptive_rounds.append(int(record.get("inside_adaptive_rounds", 0)))
+                    inside_stopped_early.append(bool(record.get("inside_stopped_early", False)))
                 scored += 1
 
                 if _progress_report_due(scored, len(eval_stmts), args.progress_every, eval_last_reported):
@@ -3064,6 +3268,10 @@ def run(args) -> dict:
                    "inside_top_p": args.inside_top_p,
                    "inside_pooling": args.inside_pooling,
                    "inside_embedding_threshold": inside_embedding_threshold,
+                   "inside_adaptive_sampling": inside_adaptive_sampling,
+                   "inside_min_samples": inside_min_samples,
+                   "inside_sample_step": inside_sample_step,
+                   "inside_stability_delta": inside_stability_delta,
                    "inside_trigger_signal": args.inside_trigger_signal,
                    "inside_trigger_threshold": args.inside_trigger_threshold,
                    "inside_trigger_top_fraction": args.inside_trigger_top_fraction,
@@ -3089,17 +3297,30 @@ def run(args) -> dict:
         "batch_size_fallback": batch_fallback_state.to_dict(),
     }
     if _inside_enabled(args):
+        sampled_count = int(sum(inside_sampled))
+        total_sample_count = int(sum(inside_sample_counts))
         payload["inside_sampling"] = {
             "mode": "triggered" if _inside_trigger_enabled(args) else "all",
+            "adaptive": inside_adaptive_sampling,
             "signals": list(INSIDE_SIGNALS),
             "signal": args.inside_trigger_signal,
             "threshold": args.inside_trigger_threshold,
             "top_fraction": args.inside_trigger_top_fraction,
             "embedding_similarity_threshold": inside_embedding_threshold,
-            "sampled": int(sum(inside_sampled)),
-            "not_sampled": int(len(inside_sampled) - sum(inside_sampled)),
+            "min_samples": inside_min_samples if inside_adaptive_sampling else args.inside_samples,
+            "max_samples": args.inside_samples,
+            "sample_step": inside_sample_step if inside_adaptive_sampling else None,
+            "stability_delta": inside_stability_delta if inside_adaptive_sampling else None,
+            "sampled": sampled_count,
+            "not_sampled": int(len(inside_sampled) - sampled_count),
             "triggered": int(inside_triggered_total),
             "skipped_by_trigger": int(inside_skipped_total),
+            "total_generated_samples": total_sample_count,
+            "mean_samples_per_record": (
+                total_sample_count / len(inside_sample_counts) if inside_sample_counts else 0.0
+            ),
+            "mean_samples_per_sampled_record": (total_sample_count / sampled_count) if sampled_count else 0.0,
+            "stopped_early": int(sum(inside_stopped_early)),
             "fill_value_for_untriggered": 0.0 if _inside_trigger_enabled(args) else None,
         }
     if eval_reps_reader is not None:
@@ -3151,6 +3372,9 @@ def run(args) -> dict:
         dump = {"config": payload["config"], "labels": labels, "scores": scores, "statements": scored_statements}
         if _inside_enabled(args):
             dump["inside_sampled"] = inside_sampled
+            dump["inside_sample_counts"] = inside_sample_counts
+            dump["inside_adaptive_rounds"] = inside_adaptive_rounds
+            dump["inside_stopped_early"] = inside_stopped_early
             dump["inside_sampling"] = payload["inside_sampling"]
         if _sweep_output_enabled(args):
             dump["sweep_scores"] = {str(layer): sweep_scores[layer] for layer in layers}
@@ -3213,6 +3437,15 @@ def main():
                    help="sentence embedding pooling for sampled continuations")
     p.add_argument("--inside-embedding-threshold", type=float, default=0.90,
                    help="cosine similarity threshold for inside_embedding_entropy clusters")
+    p.add_argument("--inside-adaptive-sampling", action="store_true",
+                   help="adaptively sample INSIDE continuations until semantic scores stabilize or "
+                        "--inside-samples is reached")
+    p.add_argument("--inside-min-samples", type=int, default=2,
+                   help="minimum sampled continuations before adaptive INSIDE early-stop checks")
+    p.add_argument("--inside-sample-step", type=int, default=1,
+                   help="additional continuations per adaptive INSIDE round after --inside-min-samples")
+    p.add_argument("--inside-stability-delta", type=float, default=0.05,
+                   help="early-stop when lexical and embedding entropy changes are at most this value")
     p.add_argument("--inside-trigger-signal", default=None, choices=SIGNALS,
                    help="optional cheap primary-layer signal used to decide which statements receive "
                         "sampled INSIDE scoring")
@@ -3266,6 +3499,17 @@ def main():
         p.error("--inside-samples must be 0 or >=2")
     if not (-1.0 <= args.inside_embedding_threshold <= 1.0):
         p.error("--inside-embedding-threshold must be in [-1, 1]")
+    if args.inside_min_samples < 2:
+        p.error("--inside-min-samples must be >=2")
+    if args.inside_sample_step < 1:
+        p.error("--inside-sample-step must be >=1")
+    if args.inside_stability_delta < 0.0:
+        p.error("--inside-stability-delta must be >=0")
+    if args.inside_adaptive_sampling:
+        if args.inside_samples < 2:
+            p.error("--inside-adaptive-sampling requires --inside-samples >=2")
+        if args.inside_min_samples > args.inside_samples:
+            p.error("--inside-min-samples cannot exceed --inside-samples")
     if args.inside_trigger_signal and args.inside_samples < 2:
         p.error("--inside-trigger-signal requires --inside-samples >=2")
     if (args.inside_trigger_threshold is not None or args.inside_trigger_top_fraction is not None) \
