@@ -971,6 +971,38 @@ Use this before wiring a real search/RAG backend: it gives the same downstream
 fixture schema and `verification_quality` fields while keeping evidence source
 and retrieval behavior fully reproducible.
 
+## `run_local_retrieval_route_workflow.py`
+
+Builds the same local retrieval evidence fixture, runs verifier-ensemble route
+metrics, applies adapter promotion gates, fingerprints the score dump, corpora,
+claims, verifier report, route comparison, and promotion report, then optionally
+registers the verified manifest as a route baseline.
+
+```bash
+python benchmarks/run_local_retrieval_route_workflow.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --output-dir artifacts/qwen05_l80_local_retrieval_route \
+  --registry artifacts/registry.json \
+  --name qwen05-l80-local-retrieval-route \
+  --version 0.7 \
+  --signal truth_proj \
+  --query-field answer \
+  --retriever-min-overlap 0.95 \
+  --retrieval-limit 3 \
+  --min-selected 100 \
+  --min-decision-accuracy 0.90 \
+  --max-false-supported-rate 0.05 \
+  --max-mean-attempted-route-count 2.1 \
+  --max-retrieval-use-rate 1.0 \
+  --fail-on-blocked
+```
+
+Use this when the local corpus baseline should enter `compare_route_baselines.py`
+and release-candidate gates. Unlike `build_evidence_fixture.py` alone, this
+workflow records the full provenance chain needed for recursive manifest
+verification.
+
 Current l80 local-corpus baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:
 

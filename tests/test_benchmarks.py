@@ -1587,6 +1587,140 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
     assert baseline["decision"]["recommended_route"] == "structured_state"
 
 
+def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_path):
+    module = importlib.import_module("benchmarks.run_local_retrieval_route_workflow")
+    compare_module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    registry_path = tmp_path / "registry.json"
+    output_dir = tmp_path / "workflow"
+    statements = [
+        {
+            "claim_id": "order_true_1",
+            "question": "What shipping option is order R1 approved for?",
+            "answer": "Order R1 is approved for expedited shipping.",
+            "text": "Order R1 is approved for expedited shipping.",
+        },
+        {
+            "claim_id": "order_true_2",
+            "question": "What shipping option is order R2 approved for?",
+            "answer": "Order R2 is approved for expedited shipping.",
+            "text": "Order R2 is approved for expedited shipping.",
+        },
+        {
+            "claim_id": "order_false_1",
+            "question": "What shipping option is order R1 approved for?",
+            "answer": "Order R1 is approved for same-day drone shipping.",
+            "text": "Order R1 is approved for same-day drone shipping.",
+        },
+        {
+            "claim_id": "order_false_2",
+            "question": "What shipping option is order R2 approved for?",
+            "answer": "Order R2 is approved for same-day drone shipping.",
+            "text": "Order R2 is approved for same-day drone shipping.",
+        },
+    ]
+    scores_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "config": {"model": "synthetic-local-retrieval", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.2, 0.21, 0.8, 0.81]},
+            "statements": statements,
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "documents": [
+                {
+                    "text": "Order R1 is approved for expedited shipping.",
+                    "source": "shipping:R1:support",
+                },
+                {
+                    "text": "Order R2 is approved for expedited shipping.",
+                    "source": "shipping:R2:support",
+                },
+                {
+                    "text": "Order R1 is not approved for same-day drone shipping.",
+                    "source": "shipping:R1:refute",
+                },
+                {
+                    "text": "Order R2 is not approved for same-day drone shipping.",
+                    "source": "shipping:R2:refute",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_local_retrieval_route_workflow(
+        module.LocalRetrievalRouteWorkflowConfig(
+            scores_path=scores_path,
+            corpus_paths=(corpus_path,),
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="local-retrieval-route",
+            version="0.7",
+            alpha=0.2,
+            retrieval_limit=1,
+            retriever_min_overlap=0.6,
+            min_selected=4,
+            gate_min_selected=4,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_attempted_route_count=2.1,
+            max_retrieval_use_rate=1.0,
+            compact_json=True,
+            promotion_metadata={"scope": "unit"},
+        )
+    )
+    manifest = json.loads((output_dir / "retrieval-route-artifact-manifest.json").read_text(encoding="utf-8"))
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["manifest_promoted"] is True
+    assert payload["decision"]["manifest_verified"] is True
+    assert payload["decision"]["registry_record"] == "benchmark_manifest:local-retrieval-route:0.7"
+    assert payload["claims_summary"]["records_with_hits"] == 4
+    assert payload["claims_summary"]["total_hits"] == 4
+    route = payload["adapter_promotion"]["route_comparison"]["by_route"]["retrieval_groundedness"]
+    assert route["selected"] == 4
+    assert route["decision_accuracy"] == pytest.approx(1.0)
+    assert route["false_supported_rate"] == pytest.approx(0.0)
+    assert route["false_refuted_rate"] == pytest.approx(1.0)
+    assert route["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert route["retrieval_use_rate"] == pytest.approx(1.0)
+    assert sorted(manifest["artifacts"]) == [
+        "promotion_report",
+        "retrieval_claims",
+        "retrieval_corpora.1.corpus",
+        "route_comparison_report",
+        "score_dump",
+        "verifier_report",
+    ]
+    assert manifest["metadata"]["runner"] == "run_local_retrieval_route_workflow"
+    assert manifest["metadata"]["recommended_route"] == "retrieval_groundedness"
+    assert manifest["metadata"]["claims_records_with_hits"] == 4
+    assert manifest["metadata"]["recommended_retrieval_use_rate"] == pytest.approx(1.0)
+
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("benchmark_manifest:local-retrieval-route:0.7")
+    assert record.metadata["workflow"] == "run_local_retrieval_route_workflow"
+    assert record.metadata["recommended_route"] == "retrieval_groundedness"
+    assert record.metadata["recommended_retrieval_use_rate"] == pytest.approx(1.0)
+    assert record.metadata["scope"] == "unit"
+    baseline = compare_module.compare_route_baselines(
+        registry_path=registry_path,
+        max_mean_attempted_route_count=2.1,
+        max_retrieval_use_rate=1.0,
+    )
+    assert baseline["decision"]["status"] == "promote"
+
+
 def test_run_adapter_promotion_registry_workflow_cli_blocks_non_promoted_route(tmp_path):
     module = importlib.import_module("benchmarks.run_adapter_promotion_registry_workflow")
     from eigentruth.registry import ArtifactRegistry
