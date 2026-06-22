@@ -749,12 +749,14 @@ the best quality/cost ordering.
 
 ## `run_adapter_family_matrix.py`
 
-Builds deterministic local fixtures for the three front-line adapter families
-and runs each through the same refresh/promotion gate:
+Builds deterministic local fixtures for the front-line adapter families and
+runs each through the same refresh/promotion gate:
 
 - `structured_qa`: exact question/answer facts.
 - `structured_state`: static business/domain state checks.
 - `state_transition`: action-conditioned world-model postconditions.
+- `retrieval_groundedness`: optional local retrieval evidence plus lexical
+  support/refutation checks.
 
 It then aggregates the generated verifier reports with
 `compare_verifier_routes.py` so quality, tail latency, attempted-route count,
@@ -766,6 +768,23 @@ python benchmarks/run_adapter_family_matrix.py \
   --json artifacts/adapter_family_matrix/report.json \
   --n-records 8 \
   --alpha 0.2 \
+  --compact-json \
+  --fail-on-blocked
+```
+
+By default the matrix keeps retrieval disabled so cold-start quality gates stay
+strict about zero retrieval cost. To include the local retrieval fixture, enable
+it explicitly and set route-count/retrieval-use gates for the expected cost:
+
+```bash
+python benchmarks/run_adapter_family_matrix.py \
+  --output-dir artifacts/adapter_family_matrix_retrieval \
+  --json artifacts/adapter_family_matrix_retrieval/report.json \
+  --n-records 8 \
+  --alpha 0.2 \
+  --include-retrieval \
+  --max-mean-attempted-route-count 2.1 \
+  --max-retrieval-use-rate 1.0 \
   --compact-json \
   --fail-on-blocked
 ```

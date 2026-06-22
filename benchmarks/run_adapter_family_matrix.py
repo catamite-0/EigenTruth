@@ -1,6 +1,6 @@
 """Build a deterministic adapter-family promotion matrix.
 
-This no-model workflow creates small local fixtures for three verifier-route
+This no-model workflow creates small local fixtures for verifier-route
 families, runs the same refresh/promotion gate for each route, then aggregates
 the generated verifier reports into a route comparison matrix.
 """
@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.build_domain_state_fixture import build_order_fulfillment_fixture  # noqa: E402
+from benchmarks.build_evidence_fixture import build_evidence_fixture  # noqa: E402
 from benchmarks.build_transition_fixture import build_order_transition_fixture  # noqa: E402
 from benchmarks.compare_verifier_routes import build_route_comparison_report  # noqa: E402
 from benchmarks.refresh_verifier_route_artifacts import (  # noqa: E402
@@ -27,7 +28,7 @@ from benchmarks.refresh_verifier_route_artifacts import (  # noqa: E402
     refresh_verifier_route_artifacts,
 )
 
-ROUTES = ("structured_qa", "structured_state", "state_transition")
+RETRIEVAL_ROUTE = "retrieval_groundedness"
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,10 @@ class AdapterFamilyMatrixConfig:
     max_max_duration_seconds: float = 1.0
     max_mean_attempted_route_count: float = 1.1
     max_retrieval_use_rate: float = 0.0
+    include_retrieval: bool = False
+    verifier_min_overlap: float = 0.65
+    retriever_min_overlap: float = 0.6
+    retrieval_limit: int = 1
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -57,6 +62,8 @@ class AdapterFamilyMatrixConfig:
             raise ValueError("n_records must be an even integer >= 2.")
         if not (0.0 < float(self.alpha) < 1.0):
             raise ValueError("alpha must be in (0, 1).")
+        if int(self.retrieval_limit) <= 0:
+            raise ValueError("retrieval_limit must be positive.")
 
 
 def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
@@ -69,13 +76,16 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
         _run_structured_state(config),
         _run_state_transition(config),
     ]
+    if config.include_retrieval:
+        families.append(_run_retrieval_groundedness(config))
+    routes = tuple(str(item["route"]) for item in families)
     comparison_path = output_dir / "route-family-comparison.json"
     comparison = build_route_comparison_report(
         tuple((str(item["route"]), Path(item["verifier_report_path"])) for item in families),
         alpha=config.alpha,
         min_selected=1,
         notes=("deterministic adapter-family matrix",),
-        gate_routes=ROUTES,
+        gate_routes=routes,
         gate_min_selected=config.n_records,
         min_decision_accuracy=config.min_decision_accuracy,
         max_false_supported_rate=config.max_false_supported_rate,
@@ -97,7 +107,8 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
         "alpha": float(config.alpha),
         "n_records": int(config.n_records),
         "signal": config.signal,
-        "routes": ROUTES,
+        "routes": routes,
+        "include_retrieval": bool(config.include_retrieval),
         "families": families,
         "route_comparison_path": str(comparison_path),
         "route_comparison": comparison,
@@ -179,6 +190,34 @@ def _run_state_transition(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
     )
 
 
+def _run_retrieval_groundedness(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
+    route = RETRIEVAL_ROUTE
+    route_dir = config.output_dir / route
+    route_dir.mkdir(parents=True, exist_ok=True)
+    scores_path = route_dir / "scores.json"
+    corpus_path = route_dir / "retrieval-corpus.json"
+    claims_path = route_dir / "retrieval-claims.json"
+    _write_retrieval_fixture_inputs(
+        scores_path=scores_path,
+        corpus_path=corpus_path,
+        claims_path=claims_path,
+        n_records=config.n_records,
+        signal=config.signal,
+        compact=config.compact_json,
+        retriever_min_overlap=config.retriever_min_overlap,
+        retrieval_limit=config.retrieval_limit,
+    )
+    return _refresh_route(
+        config,
+        route=route,
+        score_name="retrieval",
+        scores_path=scores_path,
+        claims_path=claims_path,
+        qa_corpus_path=None,
+        state_path=None,
+    )
+
+
 def _refresh_route(
     config: AdapterFamilyMatrixConfig,
     *,
@@ -203,6 +242,9 @@ def _refresh_route(
             signal=config.signal,
             alphas=(config.alpha,),
             repeats=1,
+            verifier_min_overlap=config.verifier_min_overlap,
+            retriever_min_overlap=config.retriever_min_overlap,
+            retrieval_limit=config.retrieval_limit,
             promotion_report_path=promotion_report_path,
             route_report_path=route_report_path,
             promotion_gate_routes=(route,),
@@ -302,6 +344,81 @@ def _write_structured_qa_fixture(
     _write_json(qa_corpus_path, qa_payload, compact=compact)
 
 
+def _write_retrieval_fixture_inputs(
+    *,
+    scores_path: Path,
+    corpus_path: Path,
+    claims_path: Path,
+    n_records: int,
+    signal: str,
+    compact: bool,
+    retriever_min_overlap: float,
+    retrieval_limit: int,
+) -> None:
+    n_pairs = n_records // 2
+    labels = [0] * n_pairs + [1] * n_pairs
+    scores = [round(0.18 + 0.01 * idx, 6) for idx in range(n_pairs)] + [
+        round(0.76 + 0.01 * idx, 6) for idx in range(n_pairs)
+    ]
+    true_statements = [
+        {
+            "claim_id": f"retrieval_true_{idx + 1}",
+            "question": f"What shipping option is order R{idx + 1} approved for?",
+            "answer": f"Order R{idx + 1} is approved for expedited shipping.",
+            "text": f"Order R{idx + 1} is approved for expedited shipping.",
+        }
+        for idx in range(n_pairs)
+    ]
+    false_statements = [
+        {
+            "claim_id": f"retrieval_false_{idx + 1}",
+            "question": f"What shipping option is order R{idx + 1} approved for?",
+            "answer": f"Order R{idx + 1} is approved for same-day drone shipping.",
+            "text": f"Order R{idx + 1} is approved for same-day drone shipping.",
+        }
+        for idx in range(n_pairs)
+    ]
+    scores_payload = {
+        "schema_version": 1,
+        "config": {
+            "model": "synthetic-retrieval-groundedness",
+            "layer": -1,
+            "fixture_type": "retrieval_groundedness_route_family",
+            "signal": signal,
+            "n_records": n_records,
+        },
+        "labels": labels,
+        "scores": {signal: scores},
+        "statements": true_statements + false_statements,
+    }
+    corpus_payload = {
+        "schema_version": 1,
+        "documents": [
+            {
+                "text": f"Order R{idx + 1} is approved for expedited shipping.",
+                "source": f"shipping-policy:R{idx + 1}:support",
+            }
+            for idx in range(n_pairs)
+        ] + [
+            {
+                "text": f"Order R{idx + 1} is not approved for same-day drone shipping.",
+                "source": f"shipping-policy:R{idx + 1}:refutation",
+            }
+            for idx in range(n_pairs)
+        ],
+    }
+    claims_payload = build_evidence_fixture(
+        scores_payload,
+        corpus_payload["documents"],
+        retriever_min_overlap=retriever_min_overlap,
+        retrieval_limit=retrieval_limit,
+        query_field="answer",
+    )
+    _write_json(scores_path, scores_payload, compact=compact)
+    _write_json(corpus_path, corpus_payload, compact=compact)
+    _write_json(claims_path, claims_payload, compact=compact)
+
+
 def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_json_text(payload, compact=compact, sort_keys=True), encoding="utf-8")
@@ -329,6 +446,10 @@ def _config_from_args(args: argparse.Namespace) -> AdapterFamilyMatrixConfig:
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        include_retrieval=bool(args.include_retrieval),
+        verifier_min_overlap=args.verifier_min_overlap,
+        retriever_min_overlap=args.retriever_min_overlap,
+        retrieval_limit=args.retrieval_limit,
     )
 
 
@@ -358,6 +479,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-max-duration-seconds", type=float, default=1.0)
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=1.1)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=0.0)
+    parser.add_argument("--include-retrieval", action="store_true",
+                        help="include a local retrieval-groundedness route fixture")
+    parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
+    parser.add_argument("--retrieval-limit", type=int, default=1)
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified JSON artifacts for automation")
     parser.add_argument("--fail-on-blocked", action="store_true",
