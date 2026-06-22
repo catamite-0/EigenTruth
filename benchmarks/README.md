@@ -414,9 +414,12 @@ Reports include `verification_quality`, a label-conditioned matrix over
 `decision_error_rate` to evaluate evidence fixture quality separately from the
 final control-policy detection and false-alarm rates. Reports also include
 `route_summary`, which breaks verification outcomes down by selected route
-(`structured_qa`, `structured_state`, `groundedness`, or `retrieval_groundedness`) and records
-attempted-route counts, status counts, and per-route supported/refuted/error
-rates.
+(`structured_qa`, `state_transition`, `structured_state`, `groundedness`, or
+`retrieval_groundedness`) and records attempted-route counts, status counts, and
+per-route supported/refuted/error rates. Use `route_quality` for label-conditioned
+false-support / false-refutation metrics per selected route, and use each
+alpha result's `route_control_impact` to see how that route changed internal
+false alarm, detection, suppression, and rescued-detection rates.
 
 ## `build_truthfulqa_corpus.py`
 

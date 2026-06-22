@@ -215,10 +215,18 @@ def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):
     run = report["runs"][0]
     quality = run["verification_quality"]
     routes = run["route_summary"]
+    route_quality = run["route_quality"]["structured_state"]
+    route_impact = run["alphas"]["0.2"]["route_control_impact"]["structured_state"]
 
     assert run["state_verifier"]["enabled"] is True
     assert run["state_verifier"]["decided_records"] == 8
     assert routes["selected_counts"] == {"structured_state": 8}
+    assert route_quality["selected"] == 8
+    assert route_quality["true_supported_rate"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_impact["verified"]["false_alarm"] == pytest.approx(0.0)
+    assert route_impact["verified"]["detection"] == pytest.approx(1.0)
     assert quality["true_supported_rate"] == pytest.approx(1.0)
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
     assert quality["false_supported_rate"] == pytest.approx(0.0)
@@ -260,6 +268,8 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     run = report["runs"][0]
     quality = run["verification_quality"]
     routes = run["route_summary"]
+    route_quality = run["route_quality"]["state_transition"]
+    route_impact = run["alphas"]["0.2"]["route_control_impact"]["state_transition"]
 
     assert report["transition_verifier"]["enabled"] is True
     assert run["transition_verifier"]["enabled"] is True
@@ -268,6 +278,13 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     assert routes["selected_counts"] == {"state_transition": 8}
     assert routes["by_route"]["state_transition"]["rates"]["supported"] == pytest.approx(0.5)
     assert routes["by_route"]["state_transition"]["rates"]["refuted"] == pytest.approx(0.5)
+    assert route_quality["selected"] == 8
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_impact["n_selected"] == 8
+    assert route_impact["verified"]["false_alarm"] == pytest.approx(0.0)
+    assert route_impact["verified"]["detection"] == pytest.approx(1.0)
     assert quality["true_supported_rate"] == pytest.approx(1.0)
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
     assert quality["false_supported_rate"] == pytest.approx(0.0)
@@ -317,6 +334,8 @@ def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     quality = run["verification_quality"]
     alpha = run["alphas"]["0.2"]
     routes = run["route_summary"]
+    route_quality = run["route_quality"]["structured_qa"]
+    route_impact = alpha["route_control_impact"]["structured_qa"]
 
     assert payload["qa_verifier"]["enabled"] is True
     assert run["qa"]["decided_records"] == 6
@@ -324,6 +343,12 @@ def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     assert routes["selected_counts"] == {"structured_qa": 6}
     assert routes["by_route"]["structured_qa"]["rates"]["supported"] == pytest.approx(4 / 6)
     assert routes["by_route"]["structured_qa"]["rates"]["refuted"] == pytest.approx(2 / 6)
+    assert route_quality["selected"] == 6
+    assert route_quality["true_supported_rate"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_impact["verified"]["false_alarm"] == pytest.approx(0.0)
+    assert route_impact["verified"]["detection"] == pytest.approx(1.0)
     assert quality["true_supported_rate"] == pytest.approx(1.0)
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
     assert quality["false_supported_rate"] == pytest.approx(0.0)
@@ -413,6 +438,8 @@ def test_eval_verifier_ensemble_uses_structured_state_checks(tmp_path):
     quality = run["verification_quality"]
     alpha = run["alphas"]["0.2"]
     routes = run["route_summary"]
+    route_quality = run["route_quality"]["structured_state"]
+    route_impact = alpha["route_control_impact"]["structured_state"]
 
     assert payload["state_verifier"]["enabled"] is True
     assert run["state_verifier"]["enabled"] is True
@@ -424,6 +451,12 @@ def test_eval_verifier_ensemble_uses_structured_state_checks(tmp_path):
     assert routes["by_route"]["structured_state"]["rates"]["supported"] == pytest.approx(0.5)
     assert routes["by_route"]["structured_state"]["rates"]["refuted"] == pytest.approx(0.5)
     assert routes["by_route"]["groundedness"]["statuses"]["supported"] == 1
+    assert route_quality["selected"] == 4
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_impact["verified"]["false_alarm"] == pytest.approx(0.0)
+    assert route_impact["verified"]["detection"] == pytest.approx(1.0)
     assert quality["true_supported_rate"] == pytest.approx(1.0)
     assert quality["false_refuted_rate"] == pytest.approx(1.0)
     assert quality["decision_accuracy"] == pytest.approx(1.0)

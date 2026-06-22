@@ -632,6 +632,36 @@ def _route_summary(
     }
 
 
+def _route_quality(
+    verified_records: Sequence[Mapping[str, Any]],
+    labels: torch.Tensor,
+) -> dict[str, Any]:
+    """Return label-conditioned verifier quality broken down by selected route."""
+    if labels.numel() != len(verified_records):
+        raise ValueError("labels and verified records must have the same length.")
+    grouped: dict[str, dict[str, Any]] = {}
+    for label, record in zip(labels.tolist(), verified_records):
+        route = _selected_route(record)
+        payload = grouped.setdefault(route, {"records": [], "labels": []})
+        payload["records"].append(record)
+        payload["labels"].append(int(label))
+
+    quality: dict[str, Any] = {}
+    total = len(verified_records)
+    for route, payload in sorted(grouped.items()):
+        route_labels = torch.tensor(payload["labels"], dtype=torch.int64)
+        route_quality = _verification_quality(payload["records"], route_labels)
+        selected = len(payload["records"])
+        quality[route] = {
+            "selected": selected,
+            "selection_rate": _safe_div(selected, total),
+            "n_true": int((route_labels == 0).sum().item()),
+            "n_false": int((route_labels == 1).sum().item()),
+            **route_quality,
+        }
+    return quality
+
+
 def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     if denominator == 0:
         return None
@@ -672,6 +702,8 @@ def _evaluate_alpha(
     rescued_detections = []
 
     final_statuses = tuple(str(record["final"]["status"]) for record in verified_records)
+    selected_routes = tuple(_selected_route(record) for record in verified_records)
+    route_impacts = _empty_route_impact_accumulator(selected_routes, labels)
     for repeat in range(repeats):
         generator = torch.Generator().manual_seed(seed + repeat)
         perm = true_idx[torch.randperm(true_idx.numel(), generator=generator)]
@@ -691,6 +723,16 @@ def _evaluate_alpha(
         detection_verified.append(_rate(verified_false))
         suppressed_false_alarms.append(_rate(internal_true & ~verified_true))
         rescued_detections.append(_rate(~internal_false & verified_false))
+        _accumulate_route_control_impact(
+            route_impacts,
+            selected_routes=selected_routes,
+            test_true_idx=test_true_idx,
+            false_idx=false_idx,
+            internal_true=internal_true,
+            internal_false=internal_false,
+            verified_true=verified_true,
+            verified_false=verified_false,
+        )
 
     internal_fa = _mean(false_alarm_internal)
     verified_fa = _mean(false_alarm_verified)
@@ -714,6 +756,7 @@ def _evaluate_alpha(
             "suppressed_false_alarm_rate": _mean(suppressed_false_alarms),
             "rescued_detection_rate": _mean(rescued_detections),
         },
+        "route_control_impact": _finalize_route_control_impact(route_impacts),
         "repeats": repeats,
     }
 
@@ -743,6 +786,120 @@ def _verified_triggers(
         for trigger, item in zip(internal_triggers.tolist(), idx.tolist())
     ]
     return torch.tensor(values, dtype=torch.bool)
+
+
+def _selected_route(record: Mapping[str, Any]) -> str:
+    route = record.get("route", {})
+    if not isinstance(route, Mapping):
+        return "unknown"
+    return str(route.get("selected_route", "unknown"))
+
+
+def _empty_route_impact_accumulator(
+    selected_routes: Sequence[str],
+    labels: torch.Tensor,
+) -> dict[str, dict[str, Any]]:
+    routes = sorted(set(selected_routes))
+    return {
+        route: {
+            "n_selected": sum(1 for item in selected_routes if item == route),
+            "n_true": sum(
+                1 for index, item in enumerate(selected_routes)
+                if item == route and int(labels[index].item()) == 0
+            ),
+            "n_false": sum(
+                1 for index, item in enumerate(selected_routes)
+                if item == route and int(labels[index].item()) == 1
+            ),
+            "false_alarm_internal": [],
+            "false_alarm_verified": [],
+            "detection_internal": [],
+            "detection_verified": [],
+            "suppressed_false_alarm_rate": [],
+            "rescued_detection_rate": [],
+        }
+        for route in routes
+    }
+
+
+def _accumulate_route_control_impact(
+    route_impacts: dict[str, dict[str, Any]],
+    *,
+    selected_routes: Sequence[str],
+    test_true_idx: torch.Tensor,
+    false_idx: torch.Tensor,
+    internal_true: torch.Tensor,
+    internal_false: torch.Tensor,
+    verified_true: torch.Tensor,
+    verified_false: torch.Tensor,
+) -> None:
+    test_true_items = test_true_idx.tolist()
+    false_items = false_idx.tolist()
+    for route, payload in route_impacts.items():
+        true_positions = [
+            pos for pos, item in enumerate(test_true_items)
+            if selected_routes[int(item)] == route
+        ]
+        if true_positions:
+            positions = torch.tensor(true_positions, dtype=torch.int64)
+            route_internal_true = internal_true[positions]
+            route_verified_true = verified_true[positions]
+            payload["false_alarm_internal"].append(_rate(route_internal_true))
+            payload["false_alarm_verified"].append(_rate(route_verified_true))
+            payload["suppressed_false_alarm_rate"].append(_rate(route_internal_true & ~route_verified_true))
+
+        false_positions = [
+            pos for pos, item in enumerate(false_items)
+            if selected_routes[int(item)] == route
+        ]
+        if false_positions:
+            positions = torch.tensor(false_positions, dtype=torch.int64)
+            route_internal_false = internal_false[positions]
+            route_verified_false = verified_false[positions]
+            payload["detection_internal"].append(_rate(route_internal_false))
+            payload["detection_verified"].append(_rate(route_verified_false))
+            payload["rescued_detection_rate"].append(_rate(~route_internal_false & route_verified_false))
+
+
+def _finalize_route_control_impact(route_impacts: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    finalized: dict[str, Any] = {}
+    for route, payload in route_impacts.items():
+        internal_false_alarm = _mean_or_none(payload["false_alarm_internal"])
+        verified_false_alarm = _mean_or_none(payload["false_alarm_verified"])
+        internal_detection = _mean_or_none(payload["detection_internal"])
+        verified_detection = _mean_or_none(payload["detection_verified"])
+        finalized[route] = {
+            "n_selected": payload["n_selected"],
+            "n_true": payload["n_true"],
+            "n_false": payload["n_false"],
+            "internal": {
+                "false_alarm": internal_false_alarm,
+                "detection": internal_detection,
+            },
+            "verified": {
+                "false_alarm": verified_false_alarm,
+                "detection": verified_detection,
+            },
+            "delta": {
+                "false_alarm": _optional_delta(verified_false_alarm, internal_false_alarm),
+                "detection": _optional_delta(verified_detection, internal_detection),
+                "suppressed_false_alarm_rate": _mean_or_none(payload["suppressed_false_alarm_rate"]),
+                "rescued_detection_rate": _mean_or_none(payload["rescued_detection_rate"]),
+            },
+        }
+    return finalized
+
+
+def _mean_or_none(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return _mean(values)
+
+
+def _optional_delta(after: float | None, before: float | None) -> float | None:
+    if after is None or before is None:
+        return None
+    return after - before
 
 
 def build_verifier_ensemble_report(
@@ -845,6 +1002,7 @@ def build_verifier_ensemble_report(
             "verification_status_counts": _status_counts(verified_records),
             "verification_quality": _verification_quality(verified_records, labels),
             "route_summary": _route_summary(verified_records, labels),
+            "route_quality": _route_quality(verified_records, labels),
             "qa": {
                 "enabled": qa_verifier is not None,
                 "decided_records": sum(
