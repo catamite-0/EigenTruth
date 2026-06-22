@@ -192,6 +192,77 @@ class SelfConsistencyVerifier:
         """Verify multiple claims."""
         return tuple(self.verify(claim, context=context) for claim in claims)
 
+    def sample_budget_status(
+        self,
+        claim: Claim,
+        samples: Sequence[str | Mapping[str, Any]] | None = None,
+        *,
+        total_samples: int | None = None,
+        context: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Return whether current samples fix the final threshold outcome.
+
+        This is useful during generation: callers can pass the samples generated
+        so far plus the planned total sample budget, and stop generating once
+        no future samples can change the self-consistency decision.
+        """
+        if samples is None:
+            current_samples = self._samples_from_context(context)
+        else:
+            current_samples = _coerce_samples(samples)
+        planned_total = self.max_samples if total_samples is None else int(total_samples)
+        if planned_total is None:
+            planned_total = len(current_samples)
+        if planned_total < len(current_samples):
+            raise ValueError("total_samples must be >= current sample count.")
+
+        if len(current_samples) < self.min_samples:
+            return {
+                "can_stop": False,
+                "reason": None,
+                "sample_count": len(current_samples),
+                "total_samples": planned_total,
+                "remaining_samples": planned_total - len(current_samples),
+                "min_samples": self.min_samples,
+                "decision_rule": "too_few_samples",
+            }
+        claim_tokens = _tokens(claim.text)
+        if not claim_tokens:
+            return {
+                "can_stop": False,
+                "reason": None,
+                "sample_count": len(current_samples),
+                "total_samples": planned_total,
+                "remaining_samples": planned_total - len(current_samples),
+                "decision_rule": "empty_claim_tokens",
+            }
+        decisions = tuple(
+            _judge_sample(claim, claim_tokens, sample, min_overlap=self.min_overlap)
+            for sample in current_samples
+        )
+        support_count = sum(1 for item in decisions if item.status is VerificationStatus.SUPPORTED)
+        refute_count = sum(1 for item in decisions if item.status is VerificationStatus.REFUTED)
+        reason = _early_stop_reason(
+            decisions,
+            total_samples=planned_total,
+            support_threshold=self.support_threshold,
+            refute_threshold=self.refute_threshold,
+        )
+        return {
+            "can_stop": reason is not None,
+            "reason": reason,
+            "sample_count": len(current_samples),
+            "total_samples": planned_total,
+            "remaining_samples": planned_total - len(current_samples),
+            "support_count": support_count,
+            "refute_count": refute_count,
+            "insufficient_count": len(decisions) - support_count - refute_count,
+            "support_rate_lower_bound": support_count / planned_total if planned_total else 0.0,
+            "refute_rate_lower_bound": refute_count / planned_total if planned_total else 0.0,
+            "support_threshold": self.support_threshold,
+            "refute_threshold": self.refute_threshold,
+        }
+
     def _samples_from_context(self, context: Mapping[str, Any] | None) -> tuple[_Sample, ...]:
         samples = list(self.samples)
         if context is not None:

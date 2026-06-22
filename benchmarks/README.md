@@ -178,7 +178,13 @@ sample budget. The benchmark first draws `--inside-min-samples`, then adds
 `--inside-sample-step` continuations until lexical and embedding entropy changes
 are within `--inside-stability-delta` or the maximum budget is reached. The JSON
 output records `inside_sample_counts`, `inside_adaptive_rounds`, and
-`inside_stopped_early` per scored statement.
+`inside_stopped_early` per scored statement. Add
+`--inside-selfcheck-early-stop` to also stop generation when finite-sample
+self-consistency threshold bounds prove that no remaining continuations can
+change the final support/refute/insufficient outcome. This option is off by
+default and is most useful when the sampled continuations will feed
+`SelfConsistencyVerifier` fixtures; reports include `inside_stop_reasons` and
+`inside_sampling.stop_reason_counts` so cost savings remain auditable.
 Add `--dump-inside-samples` with `--dump-scores` to include sampled continuation
 text in the score dump as `inside_sample_texts`. This is useful for building
 `SelfConsistencyVerifier` fixtures without rerunning generation:

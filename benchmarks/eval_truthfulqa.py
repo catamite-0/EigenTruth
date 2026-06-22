@@ -71,6 +71,7 @@ from eigentruth.core.math_engine import (
 from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
 from eigentruth.intervention.hooks import TruthProbe
+from eigentruth.verify import Claim, SelfConsistencyVerifier
 
 SIGNALS = [
     "maha_last",
@@ -155,6 +156,7 @@ class SampledInsideDiagnostics:
     n_samples: int = 0
     adaptive_rounds: int = 1
     stopped_early: bool = False
+    stop_reason: str | None = None
 
 
 @dataclass
@@ -2284,6 +2286,7 @@ def _inside_diagnostics_from_response(
     embedding_similarity_threshold: float,
     adaptive_rounds: int = 1,
     stopped_early: bool = False,
+    stop_reason: str | None = None,
 ) -> SampledInsideDiagnostics:
     n_samples = len(response_diagnostics.sample_texts)
     return SampledInsideDiagnostics(
@@ -2305,6 +2308,7 @@ def _inside_diagnostics_from_response(
         n_samples=n_samples,
         adaptive_rounds=adaptive_rounds,
         stopped_early=stopped_early,
+        stop_reason=stop_reason,
     )
 
 
@@ -2342,6 +2346,38 @@ def _inside_diagnostics_delta(
 
 def _adaptive_inside_seed(base_seed: int, round_idx: int) -> int:
     return int(base_seed) + int(round_idx) * 1_000_003
+
+
+def _selfcheck_claim_for_statement(stmt: Statement) -> Claim:
+    text = stmt.answer.strip()
+    if stmt.question.strip():
+        text = f"{stmt.question.strip()} {text}".strip()
+    return Claim(text=text)
+
+
+def _inside_selfcheck_stop_reason(
+    stmt: Statement,
+    sample_texts: Sequence[str],
+    *,
+    total_samples: int,
+    min_overlap: float,
+    support_threshold: float,
+    refute_threshold: float,
+) -> str | None:
+    if len(sample_texts) >= total_samples:
+        return None
+    status = SelfConsistencyVerifier(
+        min_samples=2,
+        min_overlap=min_overlap,
+        support_threshold=support_threshold,
+        refute_threshold=refute_threshold,
+    ).sample_budget_status(
+        _selfcheck_claim_for_statement(stmt),
+        tuple(sample_texts),
+        total_samples=total_samples,
+    )
+    reason = status.get("reason") if status.get("can_stop") else None
+    return None if reason is None else f"selfcheck_{reason}"
 
 
 def sampled_inside_diagnostics_batch(
@@ -2413,6 +2449,10 @@ def sampled_inside_adaptive_diagnostics_batch(
     eigenscore_alpha: float,
     embedding_similarity_threshold: float = 0.90,
     hidden_state_capture: str = "outputs",
+    selfcheck_early_stop: bool = False,
+    selfcheck_min_overlap: float = 0.65,
+    selfcheck_support_threshold: float = 0.60,
+    selfcheck_refute_threshold: float = 0.50,
 ) -> list[Optional[SampledInsideDiagnostics]]:
     if min_samples < 2:
         raise ValueError("adaptive inside min_samples must be >= 2.")
@@ -2422,6 +2462,12 @@ def sampled_inside_adaptive_diagnostics_batch(
         raise ValueError("adaptive inside sample_step must be >= 1.")
     if stability_delta < 0.0:
         raise ValueError("adaptive inside stability_delta must be >= 0.")
+    if not (0.0 <= selfcheck_min_overlap <= 1.0):
+        raise ValueError("adaptive inside selfcheck_min_overlap must be in [0, 1].")
+    if not (0.0 <= selfcheck_support_threshold <= 1.0):
+        raise ValueError("adaptive inside selfcheck_support_threshold must be in [0, 1].")
+    if not (0.0 <= selfcheck_refute_threshold <= 1.0):
+        raise ValueError("adaptive inside selfcheck_refute_threshold must be in [0, 1].")
     if not statements:
         return []
 
@@ -2475,7 +2521,20 @@ def sampled_inside_adaptive_diagnostics_batch(
                 and _inside_diagnostics_delta(previous_diagnostics, current, target_layer=target_layer)
                 <= stability_delta
             )
-            if stable or reached_max:
+            selfcheck_stop_reason = (
+                _inside_selfcheck_stop_reason(
+                    statements[position],
+                    current.sample_texts,
+                    total_samples=max_samples,
+                    min_overlap=selfcheck_min_overlap,
+                    support_threshold=selfcheck_support_threshold,
+                    refute_threshold=selfcheck_refute_threshold,
+                )
+                if selfcheck_early_stop and current.n_samples >= min_samples
+                else None
+            )
+            stop_reason = selfcheck_stop_reason or ("stability_delta" if stable and not reached_max else None)
+            if stop_reason is not None or reached_max:
                 final[position] = SampledInsideDiagnostics(
                     eigenscore_by_layer=current.eigenscore_by_layer,
                     semantic_entropy=current.semantic_entropy,
@@ -2483,7 +2542,8 @@ def sampled_inside_adaptive_diagnostics_batch(
                     sample_texts=current.sample_texts,
                     n_samples=current.n_samples,
                     adaptive_rounds=current.adaptive_rounds,
-                    stopped_early=stable and not reached_max,
+                    stopped_early=stop_reason is not None,
+                    stop_reason=stop_reason,
                 )
             else:
                 previous[position] = current
@@ -2782,6 +2842,10 @@ def run(args) -> dict:
     inside_sample_step = int(getattr(args, "inside_sample_step", 1))
     inside_stability_delta = float(getattr(args, "inside_stability_delta", 0.05))
     dump_inside_samples = bool(getattr(args, "dump_inside_samples", False))
+    inside_selfcheck_early_stop = bool(getattr(args, "inside_selfcheck_early_stop", False))
+    inside_selfcheck_min_overlap = float(getattr(args, "inside_selfcheck_min_overlap", 0.65))
+    inside_selfcheck_support_threshold = float(getattr(args, "inside_selfcheck_support_threshold", 0.60))
+    inside_selfcheck_refute_threshold = float(getattr(args, "inside_selfcheck_refute_threshold", 0.50))
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -2972,6 +3036,7 @@ def run(args) -> dict:
     inside_sample_counts: List[int] = []
     inside_adaptive_rounds: List[int] = []
     inside_stopped_early: List[bool] = []
+    inside_stop_reasons: list[str | None] = []
     inside_sample_texts: list[list[str]] = []
     inside_triggered_total = 0
     inside_skipped_total = 0
@@ -3099,6 +3164,10 @@ def run(args) -> dict:
                             eigenscore_alpha=args.eigenscore_alpha,
                             embedding_similarity_threshold=inside_embedding_threshold,
                             hidden_state_capture=args.hidden_state_capture,
+                            selfcheck_early_stop=inside_selfcheck_early_stop,
+                            selfcheck_min_overlap=inside_selfcheck_min_overlap,
+                            selfcheck_support_threshold=inside_selfcheck_support_threshold,
+                            selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
                         )
                     else:
                         sampled_batch = sampled_inside_diagnostics_batch(
@@ -3135,6 +3204,9 @@ def run(args) -> dict:
                     batch_records[position]["inside_stopped_early"] = (
                         sampled.stopped_early if sampled is not None else False
                     )
+                    batch_records[position]["inside_stop_reason"] = (
+                        sampled.stop_reason if sampled is not None else None
+                    )
                     batch_records[position]["inside_sample_texts"] = (
                         tuple(sampled.sample_texts) if sampled is not None else ()
                     )
@@ -3148,6 +3220,7 @@ def run(args) -> dict:
                     record["inside_sample_count"] = 0
                     record["inside_adaptive_rounds"] = 0
                     record["inside_stopped_early"] = False
+                    record["inside_stop_reason"] = None
                     record["inside_sample_texts"] = ()
 
         with _profile_phase(profile, "score_postprocess"):
@@ -3194,6 +3267,7 @@ def run(args) -> dict:
                     inside_sample_counts.append(int(record.get("inside_sample_count", 0)))
                     inside_adaptive_rounds.append(int(record.get("inside_adaptive_rounds", 0)))
                     inside_stopped_early.append(bool(record.get("inside_stopped_early", False)))
+                    inside_stop_reasons.append(record.get("inside_stop_reason"))
                     if dump_inside_samples:
                         inside_sample_texts.append(list(record.get("inside_sample_texts", ())))
                 scored += 1
@@ -3284,6 +3358,10 @@ def run(args) -> dict:
                    "inside_sample_step": inside_sample_step,
                    "inside_stability_delta": inside_stability_delta,
                    "dump_inside_samples": dump_inside_samples,
+                   "inside_selfcheck_early_stop": inside_selfcheck_early_stop,
+                   "inside_selfcheck_min_overlap": inside_selfcheck_min_overlap,
+                   "inside_selfcheck_support_threshold": inside_selfcheck_support_threshold,
+                   "inside_selfcheck_refute_threshold": inside_selfcheck_refute_threshold,
                    "inside_trigger_signal": args.inside_trigger_signal,
                    "inside_trigger_threshold": args.inside_trigger_threshold,
                    "inside_trigger_top_fraction": args.inside_trigger_top_fraction,
@@ -3311,6 +3389,11 @@ def run(args) -> dict:
     if _inside_enabled(args):
         sampled_count = int(sum(inside_sampled))
         total_sample_count = int(sum(inside_sample_counts))
+        stop_reason_counts: dict[str, int] = {}
+        for reason in inside_stop_reasons:
+            if reason is None:
+                continue
+            stop_reason_counts[str(reason)] = stop_reason_counts.get(str(reason), 0) + 1
         payload["inside_sampling"] = {
             "mode": "triggered" if _inside_trigger_enabled(args) else "all",
             "adaptive": inside_adaptive_sampling,
@@ -3323,6 +3406,16 @@ def run(args) -> dict:
             "max_samples": args.inside_samples,
             "sample_step": inside_sample_step if inside_adaptive_sampling else None,
             "stability_delta": inside_stability_delta if inside_adaptive_sampling else None,
+            "selfcheck_early_stop": inside_selfcheck_early_stop if inside_adaptive_sampling else False,
+            "selfcheck_min_overlap": (
+                inside_selfcheck_min_overlap if inside_adaptive_sampling and inside_selfcheck_early_stop else None
+            ),
+            "selfcheck_support_threshold": (
+                inside_selfcheck_support_threshold if inside_adaptive_sampling and inside_selfcheck_early_stop else None
+            ),
+            "selfcheck_refute_threshold": (
+                inside_selfcheck_refute_threshold if inside_adaptive_sampling and inside_selfcheck_early_stop else None
+            ),
             "sampled": sampled_count,
             "not_sampled": int(len(inside_sampled) - sampled_count),
             "triggered": int(inside_triggered_total),
@@ -3333,6 +3426,7 @@ def run(args) -> dict:
             ),
             "mean_samples_per_sampled_record": (total_sample_count / sampled_count) if sampled_count else 0.0,
             "stopped_early": int(sum(inside_stopped_early)),
+            "stop_reason_counts": stop_reason_counts,
             "fill_value_for_untriggered": 0.0 if _inside_trigger_enabled(args) else None,
         }
     if eval_reps_reader is not None:
@@ -3387,6 +3481,7 @@ def run(args) -> dict:
             dump["inside_sample_counts"] = inside_sample_counts
             dump["inside_adaptive_rounds"] = inside_adaptive_rounds
             dump["inside_stopped_early"] = inside_stopped_early
+            dump["inside_stop_reasons"] = inside_stop_reasons
             dump["inside_sampling"] = payload["inside_sampling"]
             if dump_inside_samples:
                 dump["inside_sample_texts"] = inside_sample_texts
@@ -3460,6 +3555,15 @@ def main():
                    help="additional continuations per adaptive INSIDE round after --inside-min-samples")
     p.add_argument("--inside-stability-delta", type=float, default=0.05,
                    help="early-stop when lexical and embedding entropy changes are at most this value")
+    p.add_argument("--inside-selfcheck-early-stop", action="store_true",
+                   help="with --inside-adaptive-sampling, stop sampled generation once self-consistency "
+                        "threshold bounds cannot change the final support/refute/insufficient outcome")
+    p.add_argument("--inside-selfcheck-min-overlap", type=float, default=0.65,
+                   help="minimum claim/sample token overlap for --inside-selfcheck-early-stop")
+    p.add_argument("--inside-selfcheck-support-threshold", type=float, default=0.60,
+                   help="support-rate threshold for --inside-selfcheck-early-stop")
+    p.add_argument("--inside-selfcheck-refute-threshold", type=float, default=0.50,
+                   help="refute-rate threshold for --inside-selfcheck-early-stop")
     p.add_argument("--inside-trigger-signal", default=None, choices=SIGNALS,
                    help="optional cheap primary-layer signal used to decide which statements receive "
                         "sampled INSIDE scoring")
@@ -3522,6 +3626,14 @@ def main():
         p.error("--inside-sample-step must be >=1")
     if args.inside_stability_delta < 0.0:
         p.error("--inside-stability-delta must be >=0")
+    if not (0.0 <= args.inside_selfcheck_min_overlap <= 1.0):
+        p.error("--inside-selfcheck-min-overlap must be in [0, 1]")
+    if not (0.0 <= args.inside_selfcheck_support_threshold <= 1.0):
+        p.error("--inside-selfcheck-support-threshold must be in [0, 1]")
+    if not (0.0 <= args.inside_selfcheck_refute_threshold <= 1.0):
+        p.error("--inside-selfcheck-refute-threshold must be in [0, 1]")
+    if args.inside_selfcheck_early_stop and not args.inside_adaptive_sampling:
+        p.error("--inside-selfcheck-early-stop requires --inside-adaptive-sampling")
     if args.inside_adaptive_sampling:
         if args.inside_samples < 2:
             p.error("--inside-adaptive-sampling requires --inside-samples >=2")

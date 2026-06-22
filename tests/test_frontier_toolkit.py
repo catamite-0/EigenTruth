@@ -397,6 +397,32 @@ def test_self_consistency_verifier_early_stops_when_threshold_result_is_fixed():
     assert len(result.metadata["sample_decisions"]) == 2
 
 
+def test_self_consistency_sample_budget_status_reports_fixed_threshold_outcome():
+    verifier = SelfConsistencyVerifier(
+        min_samples=2,
+        min_overlap=0.55,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+    )
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    status = verifier.sample_budget_status(
+        claim,
+        (
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+        ),
+        total_samples=5,
+    )
+
+    assert status["can_stop"] is True
+    assert status["reason"] == "refute_threshold_guaranteed"
+    assert status["sample_count"] == 2
+    assert status["remaining_samples"] == 3
+    assert status["refute_count"] == 2
+    assert status["refute_rate_lower_bound"] == pytest.approx(0.40)
+
+
 def test_cached_verifier_reuses_identical_claim_context_results():
     class CountingVerifier:
         def __init__(self):
