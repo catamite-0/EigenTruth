@@ -762,6 +762,24 @@ python benchmarks/run_adapter_readiness_registry_workflow.py \
   --fail-on-blocked
 ```
 
+After two or more readiness manifests are registered, compare them without
+rerunning model work:
+
+```bash
+python benchmarks/compare_readiness_baselines.py \
+  --registry artifacts/registry.json \
+  --min-best-quality-auroc 0.60 \
+  --max-uncached-forward-seconds 40 \
+  --json artifacts/readiness-baseline-comparison.json \
+  --fail-on-blocked
+```
+
+The comparison verifies each registered readiness manifest recursively, reloads
+the saved performance matrix to recover all available AUROC quality signals for
+older records, applies optional quality/performance gates, and recommends the
+passing baseline with the best quality signal, breaking ties by lower
+forced-answer forward time and then lower cache-only time.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
@@ -1123,6 +1141,10 @@ equivalent flags for `eval_truthfulqa.py`, `run_cache_profile_matrix.py`, and
 `run_adapter_readiness_workflow.py`. Treat it as the deployment handoff from
 same-machine performance evidence; it does not replace a promoted matrix or
 worker-sweep decision.
+
+Use `compare_readiness_baselines.py` after registering multiple readiness
+manifests to choose among model/runtime candidates using verified manifests,
+best AUROC quality signal, and explicit runtime gates.
 
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path

@@ -1744,6 +1744,198 @@ def test_run_adapter_readiness_registry_workflow_blocks_non_promoted_readiness(t
     )
 
 
+def test_compare_readiness_baselines_recommends_best_quality_signal_from_matrix(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "qwen",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.5",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.55, "subspace_resid": 0.64},
+        uncached_forward_seconds=40.0,
+        cache_only_seconds=0.20,
+    )
+    _write_readiness_baseline_manifest(
+        tmp_path / "smollm",
+        registry_path=registry_path,
+        name="smollm-readiness",
+        version="0.5",
+        model="HuggingFaceTB/SmolLM2-135M-Instruct",
+        layer=-16,
+        quality_signals={"truth_proj": 0.61, "subspace_resid": 0.60},
+        uncached_forward_seconds=12.0,
+        cache_only_seconds=0.12,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="not-readiness",
+        version="0.1",
+        path=tmp_path / "missing.json",
+        metadata={"workflow": "other"},
+    ).save_json()
+
+    payload = module.compare_readiness_baselines(registry_path=registry_path)
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_record"] == "benchmark_manifest:qwen-readiness:0.5"
+    assert payload["summary"]["record_count"] == 2
+    first = payload["leaderboard"][0]
+    assert first["record_key"] == "benchmark_manifest:qwen-readiness:0.5"
+    assert first["best_quality_signal"] == {
+        "name": "subspace_resid",
+        "auroc": pytest.approx(0.64),
+    }
+    assert first["runtime_recommendation_source"].endswith("performance-matrix.json")
+    assert first["quality_signals"] == {
+        "subspace_resid": pytest.approx(0.64),
+        "truth_proj": pytest.approx(0.55),
+    }
+
+
+def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "slow",
+        registry_path=registry_path,
+        name="slow-high-quality",
+        version="0.5",
+        model="slow-model",
+        layer=-12,
+        quality_signals={"truth_proj": 0.70},
+        uncached_forward_seconds=90.0,
+        cache_only_seconds=0.20,
+    )
+    _write_readiness_baseline_manifest(
+        tmp_path / "fast",
+        registry_path=registry_path,
+        name="fast-acceptable-quality",
+        version="0.5",
+        model="fast-model",
+        layer=-16,
+        quality_signals={"truth_proj": 0.66},
+        uncached_forward_seconds=15.0,
+        cache_only_seconds=0.10,
+    )
+
+    payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        min_best_quality_auroc=0.65,
+        max_uncached_forward_seconds=20.0,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_record"] == "benchmark_manifest:fast-acceptable-quality:0.5"
+    blocked = next(row for row in payload["leaderboard"] if row["record_key"].endswith("slow-high-quality:0.5"))
+    assert blocked["gate"]["passed"] is False
+    assert "uncached forced-answer forward seconds above 20.0" in blocked["gate"]["blocking_reasons"]
+
+
+def _write_readiness_baseline_manifest(
+    output_dir,
+    *,
+    registry_path,
+    name,
+    version,
+    model,
+    layer,
+    quality_signals,
+    uncached_forward_seconds,
+    cache_only_seconds,
+):
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / "cache-only-result.json"
+    matrix_path = output_dir / "performance-matrix.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
+    result_path.write_text(
+        json.dumps({"auroc": dict(quality_signals)}),
+        encoding="utf-8",
+    )
+    matrix_path.write_text(
+        json.dumps({
+            "config": {
+                "max_workers": 1,
+                "length_bucketed_batches": True,
+            },
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": cell_id,
+                "recommendation_metric": "uncached_forced_answer_forward_seconds",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": cell_id,
+                    "layer": layer,
+                    "batch_size": 1,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 0,
+                    "prefix_kv_cache": False,
+                    "cache_only_total_seconds": cache_only_seconds,
+                    "uncached_forced_answer_forward_seconds": uncached_forward_seconds,
+                    "truth_proj_auroc": quality_signals.get("truth_proj"),
+                },
+            },
+            "cells": [
+                {
+                    "id": cell_id,
+                    "layer": layer,
+                    "batch_size": 1,
+                    "hidden_state_capture": "outputs",
+                    "summary": {
+                        "quality_signals": dict(quality_signals),
+                        "truth_proj_auroc": quality_signals.get("truth_proj"),
+                    },
+                    "triplet": {"results": {"cache_only": str(result_path)}},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    metadata = {
+        "runner": "run_adapter_readiness_workflow",
+        "model": model,
+        "dtype": "auto",
+        "readiness_status": "promote",
+        "adapter_family_status": "promote",
+        "performance_status": "promote",
+        "runtime_recommendation_status": "promote",
+        "recommended_route": "structured_qa",
+        "recommended_performance_cell": cell_id,
+    }
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"performance_matrix_report": matrix_path},
+                root=output_dir,
+                metadata=metadata,
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name=name,
+        version=version,
+        path=manifest_path,
+        metadata={
+            "workflow": "run_adapter_readiness_registry_workflow",
+            "readiness_status": "promote",
+            "runtime_recommendation_status": "promote",
+            "manifest_metadata": metadata,
+        },
+    ).save_json()
+    return manifest_path
+
+
 def _write_fake_readiness_report(output_dir, *, status, runtime_status):
     from eigentruth.registry import build_artifact_manifest
 
