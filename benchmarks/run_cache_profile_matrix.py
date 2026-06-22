@@ -172,6 +172,8 @@ def run_matrix(
             "summary": _cell_summary(triplet_payload),
         })
 
+    leaderboard = _leaderboard(cells)
+    matrix_decision = _matrix_decision(cells, leaderboard)
     report = {
         "dry_run": dry_run,
         "config": {
@@ -191,7 +193,8 @@ def run_matrix(
             "matrix_mode": config.matrix_mode,
         },
         "cells": cells,
-        "leaderboard": _leaderboard(cells),
+        "leaderboard": leaderboard,
+        "matrix_decision": matrix_decision,
         "report_path": str(config.report_path),
         "artifact_manifest": str(config.artifact_manifest),
     }
@@ -401,6 +404,69 @@ def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
     return tuple(sorted(scored, key=lambda item: (item["cache_only_total_seconds"], str(item["id"]))))
 
 
+def _matrix_decision(
+    cells: Sequence[dict[str, Any]],
+    leaderboard: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Return a fail-closed matrix-level decision for automation."""
+    material_cells = [
+        cell
+        for cell in cells
+        if not dict(cell.get("summary", {})).get("dry_run", False)
+    ]
+    if not material_cells:
+        return {
+            "status": "dry_run",
+            "recommended_cell": None,
+            "recommended": None,
+            "checked_cell_count": 0,
+            "candidate_count": 0,
+            "failed_cells": (),
+            "unchecked_cells": (),
+            "blocking_reasons": ("matrix was run in dry_run mode; no performance profiles were executed",),
+        }
+
+    checked_cells = []
+    failed_cells = []
+    unchecked_cells = []
+    for cell in material_cells:
+        cell_id = str(cell.get("id"))
+        summary = dict(cell.get("summary", {}))
+        gate = summary.get("regression_gate")
+        if gate is None:
+            unchecked_cells.append(cell_id)
+            continue
+        checked_cells.append(cell_id)
+        if not _gate_passed(gate):
+            failed_cells.append(cell_id)
+
+    passing_candidates = tuple(item for item in leaderboard if item.get("gate_passed") is True)
+    blocking_reasons = []
+    if failed_cells:
+        blocking_reasons.append("one or more checked matrix cells failed the regression gate")
+    if not passing_candidates:
+        blocking_reasons.append("no matrix cell produced a passing regression-gated candidate")
+
+    recommended = None if not passing_candidates else dict(passing_candidates[0])
+    if failed_cells:
+        status = "blocked"
+    elif not passing_candidates:
+        status = "no_candidate"
+    else:
+        status = "promote"
+
+    return {
+        "status": status,
+        "recommended_cell": None if recommended is None else recommended.get("id"),
+        "recommended": recommended,
+        "checked_cell_count": len(checked_cells),
+        "candidate_count": len(passing_candidates),
+        "failed_cells": tuple(failed_cells),
+        "unchecked_cells": tuple(unchecked_cells),
+        "blocking_reasons": tuple(blocking_reasons),
+    }
+
+
 def _gate_passed(regression_gate: Any) -> bool | None:
     if regression_gate is None:
         return None
@@ -471,6 +537,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ]
         if failures:
             raise SystemExit(1)
+    if args.fail_on_blocked and report["matrix_decision"]["status"] != "promote":
+        raise SystemExit(1)
     return report
 
 
@@ -504,6 +572,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-on-regression", action="store_true")
+    parser.add_argument("--fail-on-blocked", action="store_true",
+                        help="exit non-zero unless matrix_decision.status is promote")
     run(parser.parse_args(argv))
 
 

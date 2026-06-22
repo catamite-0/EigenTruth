@@ -2422,6 +2422,8 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     assert first["summary"]["dry_run"] is True
     assert "--layer -2" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
+    assert report["matrix_decision"]["status"] == "dry_run"
+    assert report["matrix_decision"]["recommended_cell"] is None
 
 
 def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_path):
@@ -2556,6 +2558,9 @@ def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, m
     assert second["summary"]["truth_proj_auroc"] == pytest.approx(0.91)
     assert report["leaderboard"][0]["gate_passed"] is True
     assert report["leaderboard"][1]["gate_passed"] is None
+    assert report["matrix_decision"]["status"] == "promote"
+    assert report["matrix_decision"]["checked_cell_count"] == 1
+    assert report["matrix_decision"]["unchecked_cells"] == ("layer_m2_batch_2_capture_outputs",)
 
 
 def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
@@ -2616,8 +2621,62 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
     ]
     assert saved["leaderboard"][0]["id"] == "layer_m1_batch_2_capture_outputs"
     assert saved["leaderboard"][0]["gate_passed"] is True
+    assert saved["matrix_decision"]["status"] == "promote"
+    assert saved["matrix_decision"]["recommended_cell"] == "layer_m1_batch_2_capture_outputs"
     assert saved["cells"][0]["summary"]["truth_proj_auroc"] == pytest.approx(0.82)
     assert saved["cells"][0]["summary"]["totals"]["cache_only"]["bottleneck"] == "load_data"
+
+
+def test_run_cache_profile_matrix_blocks_when_any_checked_cell_fails(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        comparison_path = config.output_dir / "cache-profile-comparison.json"
+        result_path = config.output_dir / "result-cache_only.json"
+        gate_passed = config.layer == -1
+        total = 9.0 if gate_passed else 20.0
+        comparison_path.write_text(
+            json.dumps({
+                "runs": [
+                    {"name": "uncached", "total_seconds": 100.0, "bottleneck": "forward"},
+                    {
+                        "name": "cache_only",
+                        "total_seconds": total,
+                        "bottleneck": "score_postprocess",
+                        "total_delta": {
+                            "speedup_vs_baseline": 100.0 / total,
+                            "ratio_to_baseline": total / 100.0,
+                        },
+                    },
+                ],
+                "fastest": {"name": "cache_only", "total_seconds": total},
+                "regression_gate": {"passed": gate_passed},
+            }),
+            encoding="utf-8",
+        )
+        result_path.write_text(json.dumps({"auroc": {"truth_proj": 0.9}}), encoding="utf-8")
+        return {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "comparison_report": str(comparison_path),
+            "results": {"cache_only": str(result_path)},
+            "regression_gate": {"passed": gate_passed},
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path,
+        layers=(-2, -1),
+        batch_sizes=(1,),
+        hidden_state_captures=("outputs",),
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=False)
+
+    assert report["matrix_decision"]["status"] == "blocked"
+    assert report["matrix_decision"]["recommended_cell"] == "layer_m1_batch_1_capture_outputs"
+    assert report["matrix_decision"]["failed_cells"] == ("layer_m2_batch_1_capture_outputs",)
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):

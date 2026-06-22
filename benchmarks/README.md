@@ -999,7 +999,11 @@ python benchmarks/run_cache_profile_matrix.py \
 
 Remove `--dry-run` only when the full matrix cost is acceptable. The matrix
 report includes each triplet's command log, gate summary, cache-only timing,
-per-run bottleneck phase, and `truth_proj` AUROC when result JSON is available.
+per-run bottleneck phase, `truth_proj` AUROC when result JSON is available, and
+a matrix-level `matrix_decision`. The decision is `promote` only when at least
+one checked cell passes its regression gate and no checked cell fails; use
+`--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
+non-zero.
 When `--shared-cache-dir` is set, cells with the same layer and hidden-state
 capture share statement/layer/eval cache paths. The first cell for each group
 refreshes the shared caches; later batch-size cells use a warm-start uncached
