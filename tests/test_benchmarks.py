@@ -1041,6 +1041,94 @@ def test_run_cache_profile_triplet_cli_can_fail_on_regression(tmp_path, monkeypa
     assert exc_info.value.code == 1
 
 
+def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        layers=(-2, -1),
+        batch_sizes=(2,),
+        hidden_state_captures=("outputs", "hooks"),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+
+    assert report["dry_run"] is True
+    assert Path(report["report_path"]).exists()
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_2_capture_outputs",
+        "layer_m2_batch_2_capture_hooks",
+        "layer_m1_batch_2_capture_outputs",
+        "layer_m1_batch_2_capture_hooks",
+    ]
+    first = report["cells"][0]
+    assert first["summary"]["dry_run"] is True
+    assert "--layer -2" in first["summary"]["commands"]["uncached"]
+    assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
+
+
+def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    seen = []
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        seen.append({"layer": config.layer, "batch_size": config.batch_size, "capture": config.hidden_state_capture})
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        comparison_path = config.output_dir / "cache-profile-comparison.json"
+        result_path = config.output_dir / "result-cache_only.json"
+        cache_only_total = 10.0 + abs(config.layer) + config.batch_size
+        comparison_path.write_text(
+            json.dumps({
+                "runs": [
+                    {"name": "uncached", "total_seconds": 100.0, "summary": {"bottleneck": "forward"}},
+                    {
+                        "name": "cache_only",
+                        "total_seconds": cache_only_total,
+                        "summary": {"bottleneck": "load_data"},
+                        "total_delta": {
+                            "speedup_vs_baseline": 100.0 / cache_only_total,
+                            "ratio_to_baseline": cache_only_total / 100.0,
+                        },
+                    },
+                ],
+                "fastest": {"name": "cache_only", "total_seconds": cache_only_total},
+                "regression_gate": {"passed": True},
+            }),
+            encoding="utf-8",
+        )
+        result_path.write_text(
+            json.dumps({"auroc": {"truth_proj": 0.8 + (0.01 * abs(config.layer))}}),
+            encoding="utf-8",
+        )
+        return {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "comparison_report": str(comparison_path),
+            "results": {"cache_only": str(result_path)},
+            "regression_gate": {"passed": True},
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path,
+        layers=(-2, -1),
+        batch_sizes=(2,),
+        hidden_state_captures=("outputs",),
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=False)
+    saved = json.loads(Path(report["report_path"]).read_text(encoding="utf-8"))
+
+    assert seen == [
+        {"layer": -2, "batch_size": 2, "capture": "outputs"},
+        {"layer": -1, "batch_size": 2, "capture": "outputs"},
+    ]
+    assert saved["leaderboard"][0]["id"] == "layer_m1_batch_2_capture_outputs"
+    assert saved["leaderboard"][0]["gate_passed"] is True
+    assert saved["cells"][0]["summary"]["truth_proj_auroc"] == pytest.approx(0.82)
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

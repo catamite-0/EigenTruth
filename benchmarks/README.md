@@ -730,6 +730,28 @@ Add `--fail-on-regression` when using the generated gate in automation. Treat
 the resulting timings as same-machine artifacts; do not quote them as general
 model speed claims.
 
+`benchmarks/run_cache_profile_matrix.py` runs multiple triplets and writes a
+single `cache-profile-matrix-report.json` with one row per layer / batch-size /
+hidden-state-capture combination. Use it for controlled local sweeps before
+changing benchmark defaults:
+
+```bash
+python benchmarks/run_cache_profile_matrix.py \
+  --output-dir /tmp/eigentruth-qwen05-profile-matrix \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --real-truthfulqa \
+  --limit 24 \
+  --manifold-questions 12 \
+  --layers=-16,-12,-10 \
+  --batch-sizes=1,2,4 \
+  --hidden-state-captures=outputs,hooks \
+  --dry-run
+```
+
+Remove `--dry-run` only when the full matrix cost is acceptable. The matrix
+report includes each triplet's command log, gate summary, cache-only timing,
+and `truth_proj` AUROC when result JSON is available.
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
 to verify that the gates pass acceptable candidates and catch expected
