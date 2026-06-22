@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -259,12 +260,197 @@ def _aggregate_by_route(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _thresholds_enabled(
+    *,
+    min_decision_accuracy: float | None,
+    max_false_supported_rate: float | None,
+    min_false_refuted_rate: float | None,
+    max_verified_false_alarm: float | None,
+    min_verified_detection: float | None,
+) -> bool:
+    return any(
+        value is not None
+        for value in (
+            min_decision_accuracy,
+            max_false_supported_rate,
+            min_false_refuted_rate,
+            max_verified_false_alarm,
+            min_verified_detection,
+        )
+    )
+
+
+def _finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) else None
+
+
+def _validated_limit(name: str, value: float | None) -> float | None:
+    if value is None:
+        return None
+    limit = float(value)
+    if not math.isfinite(limit):
+        raise ValueError(f"{name} must be finite.")
+    return limit
+
+
+def _check_min_metric(
+    *,
+    route: str,
+    metric: str,
+    value: Any,
+    limit: float,
+) -> dict[str, Any] | None:
+    observed = _finite_float(value)
+    if observed is None or observed < float(limit):
+        return {
+            "route": route,
+            "metric": metric,
+            "limit_type": "min",
+            "limit": float(limit),
+            "value": observed,
+            "raw_value": None if value is None else repr(value),
+        }
+    return None
+
+
+def _check_max_metric(
+    *,
+    route: str,
+    metric: str,
+    value: Any,
+    limit: float,
+) -> dict[str, Any] | None:
+    observed = _finite_float(value)
+    if observed is None or observed > float(limit):
+        return {
+            "route": route,
+            "metric": metric,
+            "limit_type": "max",
+            "limit": float(limit),
+            "value": observed,
+            "raw_value": None if value is None else repr(value),
+        }
+    return None
+
+
+def build_route_quality_gate(
+    by_route: Mapping[str, Any],
+    *,
+    routes: Sequence[str] = (),
+    min_selected: int = 1,
+    min_decision_accuracy: float | None = None,
+    max_false_supported_rate: float | None = None,
+    min_false_refuted_rate: float | None = None,
+    max_verified_false_alarm: float | None = None,
+    min_verified_detection: float | None = None,
+) -> dict[str, Any] | None:
+    """Build a fail-closed route quality gate over aggregate route metrics."""
+    if min_selected < 0:
+        raise ValueError("gate min_selected must be >= 0.")
+    min_decision_accuracy = _validated_limit("min_decision_accuracy", min_decision_accuracy)
+    max_false_supported_rate = _validated_limit("max_false_supported_rate", max_false_supported_rate)
+    min_false_refuted_rate = _validated_limit("min_false_refuted_rate", min_false_refuted_rate)
+    max_verified_false_alarm = _validated_limit("max_verified_false_alarm", max_verified_false_alarm)
+    min_verified_detection = _validated_limit("min_verified_detection", min_verified_detection)
+    enabled = bool(routes) or _thresholds_enabled(
+        min_decision_accuracy=min_decision_accuracy,
+        max_false_supported_rate=max_false_supported_rate,
+        min_false_refuted_rate=min_false_refuted_rate,
+        max_verified_false_alarm=max_verified_false_alarm,
+        min_verified_detection=min_verified_detection,
+    )
+    if not enabled:
+        return None
+
+    route_names = tuple(str(route) for route in routes) or tuple(
+        route
+        for route, payload in sorted(by_route.items())
+        if isinstance(payload, Mapping) and int(payload.get("selected", 0)) >= min_selected
+    )
+    failures = []
+    checked_routes = []
+    if not route_names:
+        failures.append({
+            "route": None,
+            "metric": "eligible_routes",
+            "limit_type": "min",
+            "limit": 1,
+            "value": 0,
+            "reason": "no aggregate routes met gate min_selected",
+        })
+    for route in route_names:
+        payload = by_route.get(route)
+        if not isinstance(payload, Mapping):
+            failures.append({
+                "route": route,
+                "metric": "route",
+                "limit_type": "present",
+                "limit": True,
+                "value": None,
+                "reason": "route missing from aggregate report",
+            })
+            continue
+        selected = int(payload.get("selected", 0))
+        if selected < min_selected:
+            failures.append({
+                "route": route,
+                "metric": "selected",
+                "limit_type": "min",
+                "limit": int(min_selected),
+                "value": selected,
+            })
+            continue
+        checked_routes.append(route)
+        metric_checks = (
+            ("decision_accuracy", min_decision_accuracy, _check_min_metric),
+            ("false_supported_rate", max_false_supported_rate, _check_max_metric),
+            ("false_refuted_rate", min_false_refuted_rate, _check_min_metric),
+            ("verified_false_alarm", max_verified_false_alarm, _check_max_metric),
+            ("verified_detection", min_verified_detection, _check_min_metric),
+        )
+        for metric, limit, checker in metric_checks:
+            if limit is None:
+                continue
+            failure = checker(route=route, metric=metric, value=payload.get(metric), limit=float(limit))
+            if failure is not None:
+                failures.append(failure)
+
+    return {
+        "enabled": True,
+        "passed": not failures,
+        "checked_routes": checked_routes,
+        "config": {
+            "routes": list(route_names),
+            "min_selected": int(min_selected),
+            "min_decision_accuracy": min_decision_accuracy,
+            "max_false_supported_rate": max_false_supported_rate,
+            "min_false_refuted_rate": min_false_refuted_rate,
+            "max_verified_false_alarm": max_verified_false_alarm,
+            "min_verified_detection": min_verified_detection,
+        },
+        "failures": failures,
+    }
+
+
 def build_route_comparison_report(
     reports: Sequence[tuple[str, Path]],
     *,
     alpha: float = 0.10,
     min_selected: int = 1,
     notes: Sequence[str] = (),
+    gate_routes: Sequence[str] = (),
+    gate_min_selected: int | None = None,
+    min_decision_accuracy: float | None = None,
+    max_false_supported_rate: float | None = None,
+    min_false_refuted_rate: float | None = None,
+    max_verified_false_alarm: float | None = None,
+    min_verified_detection: float | None = None,
 ) -> dict[str, Any]:
     """Build a route comparison report from verifier-ensemble JSON files."""
     if not reports:
@@ -276,7 +462,8 @@ def build_route_comparison_report(
 
     rows = _extract_route_rows(reports, alpha=float(alpha))
     leaderboard = _leaderboard_rows(rows, min_selected=min_selected)
-    return {
+    by_route = _aggregate_by_route(rows)
+    payload = {
         "schema_version": 1,
         "alpha": float(alpha),
         "min_selected": int(min_selected),
@@ -284,10 +471,23 @@ def build_route_comparison_report(
         "n_route_entries": len(rows),
         "n_leaderboard_entries": len(leaderboard),
         "leaderboard": leaderboard,
-        "by_route": _aggregate_by_route(rows),
+        "by_route": by_route,
         "rows": rows,
         "notes": list(notes),
     }
+    gate = build_route_quality_gate(
+        by_route,
+        routes=gate_routes,
+        min_selected=min_selected if gate_min_selected is None else gate_min_selected,
+        min_decision_accuracy=min_decision_accuracy,
+        max_false_supported_rate=max_false_supported_rate,
+        min_false_refuted_rate=min_false_refuted_rate,
+        max_verified_false_alarm=max_verified_false_alarm,
+        min_verified_detection=min_verified_detection,
+    )
+    if gate is not None:
+        payload["quality_gate"] = gate
+    return payload
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
@@ -297,6 +497,13 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         alpha=args.alpha,
         min_selected=args.min_selected,
         notes=args.note,
+        gate_routes=args.gate_route,
+        gate_min_selected=args.gate_min_selected,
+        min_decision_accuracy=args.min_decision_accuracy,
+        max_false_supported_rate=args.max_false_supported_rate,
+        min_false_refuted_rate=args.min_false_refuted_rate,
+        max_verified_false_alarm=args.max_verified_false_alarm,
+        min_verified_detection=args.min_verified_detection,
     )
     if args.json:
         output_path = Path(args.json)
@@ -307,7 +514,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
-def main() -> None:
+def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Compare verifier route metrics across reports")
     parser.add_argument("--report", action="append", required=True,
                         help="verifier ensemble report path, optionally named as name=path; repeatable")
@@ -318,7 +525,23 @@ def main() -> None:
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the output report; repeatable")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
-    args = parser.parse_args()
+    parser.add_argument("--gate-route", action="append", default=[],
+                        help="aggregate route to gate; repeatable. Defaults to all routes passing --min-selected")
+    parser.add_argument("--gate-min-selected", type=int, default=None,
+                        help="minimum selected records for gated routes; defaults to --min-selected")
+    parser.add_argument("--min-decision-accuracy", type=float, default=None,
+                        help="fail gate when decision_accuracy is below this value")
+    parser.add_argument("--max-false-supported-rate", type=float, default=None,
+                        help="fail gate when false_supported_rate exceeds this value")
+    parser.add_argument("--min-false-refuted-rate", type=float, default=None,
+                        help="fail gate when false_refuted_rate is below this value")
+    parser.add_argument("--max-verified-false-alarm", type=float, default=None,
+                        help="fail gate when verified_false_alarm exceeds this value")
+    parser.add_argument("--min-verified-detection", type=float, default=None,
+                        help="fail gate when verified_detection is below this value")
+    parser.add_argument("--fail-on-gate", action="store_true",
+                        help="exit non-zero when the route quality gate fails")
+    args = parser.parse_args(argv)
     payload = run(args)
     for item in payload["leaderboard"][:10]:
         print(
@@ -328,6 +551,11 @@ def main() -> None:
             f"false_refuted={item['false_refuted_rate']} "
             f"false_supported={item['false_supported_rate']}"
         )
+    gate = payload.get("quality_gate")
+    if gate is not None:
+        print(f"quality_gate={'passed' if gate['passed'] else 'failed'}")
+        if args.fail_on_gate and not gate["passed"]:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

@@ -731,6 +731,167 @@ def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
     assert payload["by_route"]["structured_state"]["rescued_detection_rate"] == pytest.approx(0.75)
 
 
+def test_compare_verifier_routes_builds_quality_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "routes.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "orders",
+                    "route_quality": {
+                        "structured_state": {
+                            "selected": 8,
+                            "selection_rate": 1.0,
+                            "n_true": 4,
+                            "n_false": 4,
+                            "label_status_matrix": {
+                                "true": {"supported": 4, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 4, "insufficient_evidence": 0},
+                            },
+                            "true_supported_rate": 1.0,
+                            "true_refuted_rate": 0.0,
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "decision_error_rate": 0.0,
+                        },
+                        "groundedness": {
+                            "selected": 6,
+                            "selection_rate": 0.75,
+                            "n_true": 3,
+                            "n_false": 3,
+                            "label_status_matrix": {
+                                "true": {"supported": 3, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 1, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "true_supported_rate": 1.0,
+                            "false_refuted_rate": 2 / 3,
+                            "false_supported_rate": 1 / 3,
+                            "decision_accuracy": 5 / 6,
+                            "decision_error_rate": 1 / 6,
+                        },
+                    },
+                    "alphas": {
+                        "0.1": {
+                            "route_control_impact": {
+                                "structured_state": {
+                                    "verified": {"false_alarm": 0.0, "detection": 1.0},
+                                    "delta": {"rescued_detection_rate": 0.5},
+                                },
+                                "groundedness": {
+                                    "verified": {"false_alarm": 0.1, "detection": 2 / 3},
+                                    "delta": {"rescued_detection_rate": 0.1},
+                                },
+                            }
+                        }
+                    },
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    passing = module.build_route_comparison_report(
+        [("orders", report_path)],
+        gate_routes=("structured_state",),
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        max_verified_false_alarm=0.0,
+        min_verified_detection=0.99,
+    )
+    failing = module.build_route_comparison_report(
+        [("orders", report_path)],
+        gate_routes=("groundedness",),
+        min_decision_accuracy=0.90,
+        max_false_supported_rate=0.10,
+        min_false_refuted_rate=0.90,
+    )
+
+    assert passing["quality_gate"]["passed"] is True
+    assert passing["quality_gate"]["checked_routes"] == ["structured_state"]
+    assert failing["quality_gate"]["passed"] is False
+    assert {failure["metric"] for failure in failing["quality_gate"]["failures"]} == {
+        "decision_accuracy",
+        "false_supported_rate",
+        "false_refuted_rate",
+    }
+
+
+def test_compare_verifier_routes_quality_gate_fails_closed_for_empty_or_nonfinite_metrics():
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+
+    empty = module.build_route_quality_gate(
+        {"structured_state": {"selected": 0, "decision_accuracy": 1.0}},
+        min_selected=1,
+        min_decision_accuracy=0.90,
+    )
+    nonfinite = module.build_route_quality_gate(
+        {"structured_state": {"selected": 2, "decision_accuracy": float("nan")}},
+        routes=("structured_state",),
+        min_decision_accuracy=0.90,
+    )
+
+    assert empty["passed"] is False
+    assert empty["failures"][0]["metric"] == "eligible_routes"
+    assert nonfinite["passed"] is False
+    assert nonfinite["failures"][0]["metric"] == "decision_accuracy"
+    assert nonfinite["failures"][0]["value"] is None
+    assert nonfinite["failures"][0]["raw_value"] == "nan"
+
+
+def test_compare_verifier_routes_cli_exits_nonzero_on_gate_failure(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "routes.json"
+    output_path = tmp_path / "route-gate.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "qa",
+                    "route_quality": {
+                        "structured_qa": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 1, "refuted": 1, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 0.5,
+                            "false_supported_rate": 0.5,
+                            "decision_accuracy": 0.75,
+                        }
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--report",
+            f"qa={report_path}",
+            "--gate-route",
+            "structured_qa",
+            "--min-decision-accuracy",
+            "0.90",
+            "--max-false-supported-rate",
+            "0.10",
+            "--json",
+            str(output_path),
+            "--fail-on-gate",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["quality_gate"]["passed"] is False
+    assert payload["quality_gate"]["failures"][0]["route"] == "structured_qa"
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"

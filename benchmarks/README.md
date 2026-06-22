@@ -436,6 +436,11 @@ python benchmarks/compare_verifier_routes.py \
   --report qwen=artifacts/qwen05_verifier_ensemble_report.json \
   --report smol=artifacts/smollm2_verifier_ensemble_report.json \
   --alpha 0.1 \
+  --gate-route structured_state \
+  --min-decision-accuracy 0.90 \
+  --max-false-supported-rate 0.05 \
+  --min-false-refuted-rate 0.80 \
+  --fail-on-gate \
   --json artifacts/verifier_route_comparison.json
 ```
 
@@ -447,10 +452,18 @@ The output includes:
 - `by_route`: aggregate counts and weighted rates across all reports for each
   route, useful for comparing route families such as `structured_qa`,
   `structured_state`, and `state_transition`.
+- `quality_gate`: optional fail-closed adapter promotion gate when any
+  `--gate-*` or threshold flag is set. It checks aggregate route metrics such
+  as `decision_accuracy`, `false_supported_rate`, `false_refuted_rate`,
+  `verified_false_alarm`, and `verified_detection`; missing routes, missing
+  metrics, non-finite values, or no eligible routes fail the gate.
 - `rows`: the unaggregated route entries for audit and follow-up slicing.
 
 Use `--min-selected` to keep tiny route samples out of the leaderboard while
 still preserving them in the raw `rows` and `by_route` sections.
+Use `--gate-min-selected` to set a stricter sample floor for the promotion gate
+than the display leaderboard, and use `--fail-on-gate` in local or CI smoke
+checks when a route must meet minimum quality before real adapter work proceeds.
 
 ## `build_truthfulqa_corpus.py`
 
