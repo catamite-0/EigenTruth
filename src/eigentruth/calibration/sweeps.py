@@ -28,6 +28,7 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "eigenscore": "higher",
     "inside_eigenscore": "higher",
     "inside_semantic_entropy": "higher",
+    "inside_embedding_entropy": "higher",
     "nll_answer": "higher",
 }
 

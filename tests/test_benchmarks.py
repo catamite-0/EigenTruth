@@ -5508,12 +5508,16 @@ def test_eval_truthfulqa_multisample_inside_signal_is_optional():
 
     assert module.INSIDE_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL not in module._enabled_signals(disabled)
+    assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._enabled_signals(enabled)
+    assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_SIGNAL in module._sweep_signal_names(enabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._sweep_signal_names(enabled)
+    assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL in module._sweep_signal_names(enabled)
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SIGNAL] == "higher"
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SEMANTIC_ENTROPY_SIGNAL] == "higher"
+    assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_EMBEDDING_ENTROPY_SIGNAL] == "higher"
     assert module._sweep_output_enabled(sweep_layers) is True
 
 
@@ -6207,6 +6211,48 @@ def test_eval_truthfulqa_inside_seed_changes_by_inner_batch():
     assert module._inside_seed(7, eval_batch_idx=2, inside_batch_idx=3) == module._inside_seed(
         7, eval_batch_idx=2, inside_batch_idx=3
     )
+
+
+def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    def fake_response_diagnostics_batch(*_args, **_kwargs):
+        return [
+            module.SampledResponseDiagnostics(
+                embeddings_by_layer={
+                    -1: torch.tensor([
+                        [1.0, 0.0, 0.0],
+                        [0.0, 1.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ])
+                },
+                sample_texts=("Paris is correct.", "Paris is correct.", "Lyon is correct."),
+            )
+        ]
+
+    monkeypatch.setattr(module, "sampled_response_diagnostics_batch", fake_response_diagnostics_batch)
+
+    diagnostics = module.sampled_inside_diagnostics_batch(
+        None,
+        None,
+        [module.Statement("Question?", "Answer.", 0)],
+        [-1],
+        torch.device("cpu"),
+        64,
+        n_samples=3,
+        max_new_tokens=2,
+        temperature=0.7,
+        top_p=0.9,
+        pooling="last",
+        seed=0,
+        eigenscore_alpha=1e-3,
+        embedding_similarity_threshold=0.95,
+    )[0]
+
+    assert diagnostics is not None
+    assert diagnostics.semantic_entropy > 0.0
+    assert diagnostics.embedding_entropy_by_layer[-1] > 0.99
+    assert -1 in diagnostics.eigenscore_by_layer
 
 
 def test_eval_truthfulqa_resolves_limited_sweep_layers():

@@ -56,7 +56,12 @@ from typing import Iterator, List, Mapping, Optional, Sequence
 import torch
 
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
-from eigentruth.core import TruthSubspace, internal_eigenscore, lexical_semantic_entropy
+from eigentruth.core import (
+    TruthSubspace,
+    embedding_semantic_entropy,
+    internal_eigenscore,
+    lexical_semantic_entropy,
+)
 from eigentruth.core.math_engine import (
     TruthManifold,
     hyperbolic_semantic_entropy,
@@ -78,7 +83,8 @@ SIGNALS = [
 ]
 INSIDE_SIGNAL = "inside_eigenscore"
 INSIDE_SEMANTIC_ENTROPY_SIGNAL = "inside_semantic_entropy"
-INSIDE_SIGNALS = (INSIDE_SIGNAL, INSIDE_SEMANTIC_ENTROPY_SIGNAL)
+INSIDE_EMBEDDING_ENTROPY_SIGNAL = "inside_embedding_entropy"
+INSIDE_SIGNALS = (INSIDE_SIGNAL, INSIDE_SEMANTIC_ENTROPY_SIGNAL, INSIDE_EMBEDDING_ENTROPY_SIGNAL)
 REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
 PROFILE_GROUPS = {
@@ -144,6 +150,7 @@ class SampledResponseDiagnostics:
 class SampledInsideDiagnostics:
     eigenscore_by_layer: dict[int, float]
     semantic_entropy: float
+    embedding_entropy_by_layer: dict[int, float]
 
 
 @dataclass
@@ -590,6 +597,7 @@ def _score_reps_batch(
             "primary_scores": {},
             "inside_scores": None,
             "inside_semantic_entropy": None,
+            "inside_embedding_entropy": None,
             "inside_sampled": False,
         }
         for stmt, _ in valid
@@ -2280,6 +2288,7 @@ def sampled_inside_diagnostics_batch(
     pooling: str,
     seed: int,
     eigenscore_alpha: float,
+    embedding_similarity_threshold: float = 0.90,
     hidden_state_capture: str = "outputs",
 ) -> list[Optional[SampledInsideDiagnostics]]:
     response_diagnostics_batch = sampled_response_diagnostics_batch(
@@ -2308,6 +2317,15 @@ def sampled_inside_diagnostics_batch(
                 for layer, values in response_diagnostics.embeddings_by_layer.items()
             },
             semantic_entropy=float(lexical_semantic_entropy(response_diagnostics.sample_texts).item()),
+            embedding_entropy_by_layer={
+                layer: float(
+                    embedding_semantic_entropy(
+                        values,
+                        similarity_threshold=embedding_similarity_threshold,
+                    ).item()
+                )
+                for layer, values in response_diagnostics.embeddings_by_layer.items()
+            },
         ))
     return diagnostics_batch
 
@@ -2327,6 +2345,7 @@ def sampled_inside_scores_batch(
     pooling: str,
     seed: int,
     eigenscore_alpha: float,
+    embedding_similarity_threshold: float = 0.90,
     hidden_state_capture: str = "outputs",
 ) -> list[Optional[dict[int, float]]]:
     diagnostics_batch = sampled_inside_diagnostics_batch(
@@ -2343,6 +2362,7 @@ def sampled_inside_scores_batch(
         pooling=pooling,
         seed=seed,
         eigenscore_alpha=eigenscore_alpha,
+        embedding_similarity_threshold=embedding_similarity_threshold,
         hidden_state_capture=hidden_state_capture,
     )
     return [
@@ -2366,6 +2386,7 @@ def sampled_inside_scores(
     pooling: str,
     seed: int,
     eigenscore_alpha: float,
+    embedding_similarity_threshold: float = 0.90,
     hidden_state_capture: str = "outputs",
 ) -> Optional[dict[int, float]]:
     return sampled_inside_scores_batch(
@@ -2382,6 +2403,7 @@ def sampled_inside_scores(
         pooling=pooling,
         seed=seed,
         eigenscore_alpha=eigenscore_alpha,
+        embedding_similarity_threshold=embedding_similarity_threshold,
         hidden_state_capture=hidden_state_capture,
     )[0]
 
@@ -2590,6 +2612,7 @@ def run(args) -> dict:
     torch.manual_seed(args.seed)
     batch_fallback_state = BatchSizeFallbackState(args.batch_size, enabled=args.auto_batch_size)
     max_batch_tokens = int(getattr(args, "max_batch_tokens", 0))
+    inside_embedding_threshold = float(getattr(args, "inside_embedding_threshold", 0.90))
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -2896,6 +2919,7 @@ def run(args) -> dict:
                         pooling=args.inside_pooling,
                         seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
                         eigenscore_alpha=args.eigenscore_alpha,
+                        embedding_similarity_threshold=inside_embedding_threshold,
                         hidden_state_capture=args.hidden_state_capture,
                     )
                 for position, sampled in zip(position_batch, sampled_batch):
@@ -2905,17 +2929,22 @@ def run(args) -> dict:
                     batch_records[position]["inside_semantic_entropy"] = (
                         sampled.semantic_entropy if sampled is not None else None
                     )
+                    batch_records[position]["inside_embedding_entropy"] = (
+                        sampled.embedding_entropy_by_layer if sampled is not None else None
+                    )
                     batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
                 if position not in triggered:
                     record["inside_scores"] = _empty_inside_scores(layers)
                     record["inside_semantic_entropy"] = 0.0
+                    record["inside_embedding_entropy"] = _empty_inside_scores(layers)
 
         with _profile_phase(profile, "score_postprocess"):
             for record in batch_records:
                 inside_scores = record["inside_scores"]
-                if _inside_enabled(args) and inside_scores is None:
+                inside_embedding_entropy = record["inside_embedding_entropy"]
+                if _inside_enabled(args) and (inside_scores is None or inside_embedding_entropy is None):
                     continue
                 inside_entropy = record["inside_semantic_entropy"]
                 if inside_scores is not None:
@@ -2930,6 +2959,9 @@ def run(args) -> dict:
                     if inside_scores is not None:
                         sweep_scores[layer][INSIDE_SIGNAL].append(float(inside_scores[layer]))
                         sweep_scores[layer][INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
+                        sweep_scores[layer][INSIDE_EMBEDDING_ENTROPY_SIGNAL].append(
+                            float(inside_embedding_entropy[layer])
+                        )
 
                 primary_scores = record["primary_scores"]
                 scores["maha_last"].append(primary_scores["maha_last"])
@@ -2941,6 +2973,9 @@ def run(args) -> dict:
                 if inside_scores is not None:
                     scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
                     scores[INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
+                    scores[INSIDE_EMBEDDING_ENTROPY_SIGNAL].append(
+                        sweep_scores[args.layer][INSIDE_EMBEDDING_ENTROPY_SIGNAL][-1]
+                    )
                 scores["nll_answer"].append(primary_scores["nll_answer"])
                 labels.append(record["stmt"].is_false)
                 scored_statements.append(_statement_to_dump(record["stmt"]))
@@ -3028,6 +3063,7 @@ def run(args) -> dict:
                    "inside_temperature": args.inside_temperature,
                    "inside_top_p": args.inside_top_p,
                    "inside_pooling": args.inside_pooling,
+                   "inside_embedding_threshold": inside_embedding_threshold,
                    "inside_trigger_signal": args.inside_trigger_signal,
                    "inside_trigger_threshold": args.inside_trigger_threshold,
                    "inside_trigger_top_fraction": args.inside_trigger_top_fraction,
@@ -3059,6 +3095,7 @@ def run(args) -> dict:
             "signal": args.inside_trigger_signal,
             "threshold": args.inside_trigger_threshold,
             "top_fraction": args.inside_trigger_top_fraction,
+            "embedding_similarity_threshold": inside_embedding_threshold,
             "sampled": int(sum(inside_sampled)),
             "not_sampled": int(len(inside_sampled) - sum(inside_sampled)),
             "triggered": int(inside_triggered_total),
@@ -3162,7 +3199,8 @@ def main():
                    help="regularization alpha for EigenScore-style log-det scores")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
-                        "0 disables it, values >=2 enable inside_eigenscore and inside_semantic_entropy")
+                        "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
+                        "and inside_embedding_entropy")
     p.add_argument("--inside-batch-size", type=int, default=1,
                    help="number of prompts to sample in one generate() call for --inside-samples")
     p.add_argument("--inside-max-new-tokens", type=int, default=12,
@@ -3173,6 +3211,8 @@ def main():
                    help="top-p sampling cutoff for --inside-samples")
     p.add_argument("--inside-pooling", default="last", choices=("last", "mean"),
                    help="sentence embedding pooling for sampled continuations")
+    p.add_argument("--inside-embedding-threshold", type=float, default=0.90,
+                   help="cosine similarity threshold for inside_embedding_entropy clusters")
     p.add_argument("--inside-trigger-signal", default=None, choices=SIGNALS,
                    help="optional cheap primary-layer signal used to decide which statements receive "
                         "sampled INSIDE scoring")
@@ -3224,6 +3264,8 @@ def main():
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:
         p.error("--inside-samples must be 0 or >=2")
+    if not (-1.0 <= args.inside_embedding_threshold <= 1.0):
+        p.error("--inside-embedding-threshold must be in [-1, 1]")
     if args.inside_trigger_signal and args.inside_samples < 2:
         p.error("--inside-trigger-signal requires --inside-samples >=2")
     if (args.inside_trigger_threshold is not None or args.inside_trigger_top_fraction is not None) \

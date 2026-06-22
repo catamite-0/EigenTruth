@@ -1,6 +1,13 @@
 """EigenTruth 包级别冒烟测试。"""
 
-from eigentruth import __version__, internal_eigenscore, lexical_semantic_entropy, spectral_effective_rank
+from eigentruth import (
+    __version__,
+    cluster_assignment_entropy,
+    embedding_semantic_entropy,
+    internal_eigenscore,
+    lexical_semantic_entropy,
+    spectral_effective_rank,
+)
 
 
 def test_version():
@@ -8,6 +15,8 @@ def test_version():
 
 
 def test_top_level_inside_exports():
+    assert callable(cluster_assignment_entropy)
+    assert callable(embedding_semantic_entropy)
     assert callable(internal_eigenscore)
     assert callable(lexical_semantic_entropy)
     assert callable(spectral_effective_rank)

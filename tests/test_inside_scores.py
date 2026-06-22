@@ -3,7 +3,13 @@
 import pytest
 import torch
 
-from eigentruth.core import internal_eigenscore, lexical_semantic_entropy, spectral_effective_rank
+from eigentruth.core import (
+    cluster_assignment_entropy,
+    embedding_semantic_entropy,
+    internal_eigenscore,
+    lexical_semantic_entropy,
+    spectral_effective_rank,
+)
 
 
 def test_internal_eigenscore_increases_for_diverse_embeddings():
@@ -74,3 +80,37 @@ def test_lexical_semantic_entropy_rejects_invalid_inputs():
         lexical_semantic_entropy(["alpha", 7])  # type: ignore[list-item]
     with pytest.raises(ValueError, match="eps"):
         lexical_semantic_entropy(["alpha", "beta"], eps=0.0)
+
+
+def test_cluster_assignment_entropy_accepts_external_cluster_labels():
+    repeated = ["same", "same", "same"]
+    mixed = ["a", "a", "b", "c"]
+
+    assert cluster_assignment_entropy(repeated).item() == pytest.approx(0.0)
+    assert cluster_assignment_entropy(mixed).item() > 0.0
+
+
+def test_cluster_assignment_entropy_rejects_unhashable_labels():
+    with pytest.raises(ValueError, match="hashable"):
+        cluster_assignment_entropy([["a"], ["b"]])
+
+
+def test_embedding_semantic_entropy_clusters_similar_embeddings():
+    similar = torch.tensor([
+        [1.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [1.0, 0.01, 0.0],
+    ])
+    diverse = torch.tensor([
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+    ])
+
+    assert embedding_semantic_entropy(similar, similarity_threshold=0.95).item() == pytest.approx(0.0)
+    assert embedding_semantic_entropy(diverse, similarity_threshold=0.95).item() > 0.99
+
+
+def test_embedding_semantic_entropy_rejects_invalid_threshold():
+    with pytest.raises(ValueError, match="similarity_threshold"):
+        embedding_semantic_entropy(torch.ones(2, 3), similarity_threshold=1.5)
