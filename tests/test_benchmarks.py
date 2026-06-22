@@ -895,6 +895,32 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
                             "retrieval_hit_count": 6,
                             "mean_retrieval_hits": 1.5,
                         },
+                        "fast_lexical": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 1, "refuted": 1, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 0.5,
+                            "false_supported_rate": 0.5,
+                            "decision_accuracy": 0.75,
+                            "duration_observations": 4,
+                            "total_duration_seconds": 0.004,
+                            "mean_duration_seconds": 0.001,
+                            "max_duration_seconds": 0.002,
+                            "selected_route_duration_observations": 4,
+                            "total_selected_route_duration_seconds": 0.004,
+                            "mean_selected_route_duration_seconds": 0.001,
+                            "attempted_route_count_observations": 4,
+                            "total_attempted_route_count": 4,
+                            "mean_attempted_route_count": 1.0,
+                            "used_retrieval_count": 0,
+                            "retrieval_use_rate": 0.0,
+                            "retrieval_hit_count": 0,
+                            "mean_retrieval_hits": 0.0,
+                        },
                     },
                     "alphas": {"0.1": {"route_control_impact": {}}},
                 }
@@ -921,10 +947,15 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     )
 
     aggregate = passing["by_route"]["structured_state"]
+    frontier = passing["pareto_frontier"]
     assert aggregate["mean_duration_seconds"] == pytest.approx(0.01)
     assert aggregate["max_duration_seconds"] == pytest.approx(0.02)
     assert aggregate["mean_attempted_route_count"] == pytest.approx(1.0)
     assert aggregate["retrieval_use_rate"] == pytest.approx(0.0)
+    assert frontier["recommended"]["route"] == "structured_state"
+    assert {item["route"] for item in frontier["frontier"]} == {"fast_lexical", "structured_state"}
+    assert frontier["dominated"][0]["route"] == "retrieval_groundedness"
+    assert frontier["dominated"][0]["dominated_by"] == "structured_state"
     assert passing["quality_gate"]["passed"] is True
     assert failing["quality_gate"]["passed"] is False
     assert {failure["metric"] for failure in failing["quality_gate"]["failures"]} == {

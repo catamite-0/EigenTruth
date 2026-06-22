@@ -335,6 +335,197 @@ def _aggregate_by_route(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+PARETO_MAXIMIZE_METRICS = (
+    "decision_accuracy",
+    "false_refuted_rate",
+    "verified_detection",
+    "rescued_detection_rate",
+    "selected",
+)
+PARETO_MINIMIZE_METRICS = (
+    "false_supported_rate",
+    "verified_false_alarm",
+    "mean_duration_seconds",
+    "mean_attempted_route_count",
+    "retrieval_use_rate",
+)
+
+
+def _metric_value(payload: Mapping[str, Any], metric: str) -> float | None:
+    if metric == "selected":
+        return float(int(payload.get("selected", 0)))
+    return _finite_float(payload.get(metric))
+
+
+def _all_pareto_metrics() -> tuple[str, ...]:
+    return (*PARETO_MAXIMIZE_METRICS, *PARETO_MINIMIZE_METRICS)
+
+
+def _missing_pareto_metrics(payload: Mapping[str, Any]) -> list[str]:
+    return [
+        metric
+        for metric in _all_pareto_metrics()
+        if _metric_value(payload, metric) is None
+    ]
+
+
+def _better_or_equal(
+    challenger: Mapping[str, Any],
+    incumbent: Mapping[str, Any],
+    *,
+    metric: str,
+    maximize: bool,
+) -> bool | None:
+    challenger_value = _metric_value(challenger, metric)
+    incumbent_value = _metric_value(incumbent, metric)
+    if challenger_value is None or incumbent_value is None:
+        return None
+    if maximize:
+        return challenger_value >= incumbent_value
+    return challenger_value <= incumbent_value
+
+
+def _strictly_better(
+    challenger: Mapping[str, Any],
+    incumbent: Mapping[str, Any],
+    *,
+    metric: str,
+    maximize: bool,
+) -> bool | None:
+    challenger_value = _metric_value(challenger, metric)
+    incumbent_value = _metric_value(incumbent, metric)
+    if challenger_value is None or incumbent_value is None:
+        return None
+    if maximize:
+        return challenger_value > incumbent_value
+    return challenger_value < incumbent_value
+
+
+def _dominates(challenger: Mapping[str, Any], incumbent: Mapping[str, Any]) -> bool:
+    """Return whether challenger is at least as good on shared metrics and better on one."""
+    comparisons = []
+    improvements = []
+    for metric in PARETO_MAXIMIZE_METRICS:
+        better_or_equal = _better_or_equal(challenger, incumbent, metric=metric, maximize=True)
+        strictly_better = _strictly_better(challenger, incumbent, metric=metric, maximize=True)
+        if better_or_equal is not None:
+            comparisons.append(better_or_equal)
+        if strictly_better is not None:
+            improvements.append(strictly_better)
+    for metric in PARETO_MINIMIZE_METRICS:
+        better_or_equal = _better_or_equal(challenger, incumbent, metric=metric, maximize=False)
+        strictly_better = _strictly_better(challenger, incumbent, metric=metric, maximize=False)
+        if better_or_equal is not None:
+            comparisons.append(better_or_equal)
+        if strictly_better is not None:
+            improvements.append(strictly_better)
+    return bool(comparisons) and all(comparisons) and any(improvements)
+
+
+def _bounded_metric(value: Any, *, default: float = 0.0) -> float:
+    observed = _finite_float(value)
+    if observed is None:
+        return default
+    return max(0.0, min(1.0, observed))
+
+
+def _efficiency_score(value: Any, *, default: float = 0.5) -> float:
+    observed = _finite_float(value)
+    if observed is None or observed < 0.0:
+        return default
+    return 1.0 / (1.0 + observed)
+
+
+def _promotion_score(payload: Mapping[str, Any]) -> float:
+    """Return a deterministic quality/cost score for ordering Pareto candidates."""
+    components = (
+        2.0 * _bounded_metric(payload.get("decision_accuracy")),
+        1.5 * _bounded_metric(payload.get("false_refuted_rate")),
+        1.5 * (1.0 - _bounded_metric(payload.get("false_supported_rate"), default=1.0)),
+        1.0 * _bounded_metric(payload.get("verified_detection")),
+        1.0 * (1.0 - _bounded_metric(payload.get("verified_false_alarm"), default=1.0)),
+        0.75 * _efficiency_score(payload.get("mean_duration_seconds")),
+        0.50 * _efficiency_score(payload.get("mean_attempted_route_count")),
+        0.50 * (1.0 - _bounded_metric(payload.get("retrieval_use_rate"), default=0.5)),
+    )
+    return sum(components) / 8.75
+
+
+def _pareto_entry(route: str, payload: Mapping[str, Any], *, dominated_by: str | None = None) -> dict[str, Any]:
+    return {
+        "route": route,
+        "selected": int(payload.get("selected", 0)),
+        "promotion_score": _promotion_score(payload),
+        "dominated_by": dominated_by,
+        "missing_metrics": _missing_pareto_metrics(payload),
+        "metrics": {
+            metric: _metric_value(payload, metric)
+            for metric in _all_pareto_metrics()
+        },
+    }
+
+
+def _entry_metric_or(item: Mapping[str, Any], metric: str, default: float) -> float:
+    metrics = item.get("metrics", {})
+    if not isinstance(metrics, Mapping):
+        return default
+    value = _finite_float(metrics.get(metric))
+    return default if value is None else value
+
+
+def build_route_pareto_frontier(
+    by_route: Mapping[str, Any],
+    *,
+    min_selected: int = 1,
+) -> dict[str, Any]:
+    """Build a route quality/cost Pareto frontier over aggregate route metrics."""
+    if min_selected < 0:
+        raise ValueError("pareto min_selected must be >= 0.")
+    eligible = {
+        str(route): payload
+        for route, payload in by_route.items()
+        if isinstance(payload, Mapping) and int(payload.get("selected", 0)) >= min_selected
+    }
+    frontier = []
+    dominated = []
+    for route, payload in sorted(eligible.items()):
+        dominator = None
+        for other_route, other_payload in sorted(eligible.items()):
+            if other_route == route:
+                continue
+            if _dominates(other_payload, payload):
+                dominator = other_route
+                break
+        if dominator is None:
+            frontier.append(_pareto_entry(route, payload))
+        else:
+            dominated.append(_pareto_entry(route, payload, dominated_by=dominator))
+
+    frontier.sort(
+        key=lambda item: (
+            item["promotion_score"],
+            _entry_metric_or(item, "decision_accuracy", -1.0),
+            _entry_metric_or(item, "false_refuted_rate", -1.0),
+            -_entry_metric_or(item, "mean_duration_seconds", math.inf),
+            item["selected"],
+        ),
+        reverse=True,
+    )
+    dominated.sort(key=lambda item: (item["dominated_by"] or "", item["route"]))
+    return {
+        "config": {
+            "min_selected": int(min_selected),
+            "maximize": list(PARETO_MAXIMIZE_METRICS),
+            "minimize": list(PARETO_MINIMIZE_METRICS),
+            "score": "weighted_quality_cost_v1",
+        },
+        "n_eligible": len(eligible),
+        "recommended": None if not frontier else frontier[0],
+        "frontier": frontier,
+        "dominated": dominated,
+    }
+
+
 def _thresholds_enabled(
     *,
     min_decision_accuracy: float | None,
@@ -573,6 +764,7 @@ def build_route_comparison_report(
     rows = _extract_route_rows(reports, alpha=float(alpha))
     leaderboard = _leaderboard_rows(rows, min_selected=min_selected)
     by_route = _aggregate_by_route(rows)
+    pareto_frontier = build_route_pareto_frontier(by_route, min_selected=min_selected)
     payload = {
         "schema_version": 1,
         "alpha": float(alpha),
@@ -582,6 +774,7 @@ def build_route_comparison_report(
         "n_leaderboard_entries": len(leaderboard),
         "leaderboard": leaderboard,
         "by_route": by_route,
+        "pareto_frontier": pareto_frontier,
         "rows": rows,
         "notes": list(notes),
     }

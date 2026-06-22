@@ -456,6 +456,10 @@ The output includes:
   `structured_state`, and `state_transition`. New verifier-ensemble reports
   include cost fields such as `mean_duration_seconds`, `max_duration_seconds`,
   `mean_attempted_route_count`, and `retrieval_use_rate`.
+- `pareto_frontier`: aggregate route candidates that are not dominated by
+  another route across quality, control-impact, sample-size, and cost metrics.
+  The `recommended` entry is a deterministic quality/cost ordering over the
+  frontier, not a substitute for the fail-closed gate.
 - `quality_gate`: optional fail-closed adapter promotion gate when any
   `--gate-*` or threshold flag is set. It checks aggregate route metrics such
   as `decision_accuracy`, `false_supported_rate`, `false_refuted_rate`,
