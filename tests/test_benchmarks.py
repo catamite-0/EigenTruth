@@ -1450,6 +1450,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
             n_records=8,
             alpha=0.2,
             performance_dry_run=True,
+            prefix_kv_cache=True,
             compact_json=True,
         )
     )
@@ -1474,6 +1475,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     )
     assert manifest["metadata"]["runner"] == "run_adapter_readiness_workflow"
     assert manifest["metadata"]["readiness_status"] == "needs_performance_evidence"
+    assert manifest["metadata"]["prefix_kv_cache"] is True
     assert manifest["artifacts"]["readiness_report"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_matrix"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_route_comparison"]["exists"] is True
@@ -2379,6 +2381,24 @@ def test_run_cache_profile_triplet_builds_real_truthfulqa_commands(tmp_path):
     assert cache_only[cache_only.index("--limit") + 1] == "24"
 
 
+def test_run_cache_profile_triplet_can_enable_prefix_kv_cache(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        prefix_kv_cache=True,
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+
+    assert "--prefix-kv-cache" in payload["commands"]["uncached"]
+    assert "--prefix-kv-cache" in payload["commands"]["cached"]
+    assert "--prefix-kv-cache" not in payload["commands"]["cache_only"]
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert manifest["metadata"]["prefix_kv_cache"] is True
+
+
 def test_run_cache_profile_triplet_supports_warm_start_cache_overrides(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     shared = tmp_path / "shared"
@@ -2573,6 +2593,26 @@ def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_p
         second_commands["cache_only"][second_commands["cache_only"].index("--eval-reps-cache") + 1]
         == second_eval_cache
     )
+
+
+def test_run_cache_profile_matrix_can_enable_prefix_kv_cache(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(2,),
+        prefix_kv_cache=True,
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    command = report["cells"][0]["triplet"]["commands"]["uncached"]
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert report["config"]["prefix_kv_cache"] is True
+    assert "--prefix-kv-cache" in command
+    assert manifest["metadata"]["prefix_kv_cache"] is True
 
 
 def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, monkeypatch):
@@ -3933,6 +3973,104 @@ def test_eval_truthfulqa_answer_nll_only_normalizes_answer_window():
 
     assert module._answer_nll_from_logits(logits, input_ids, 7, 2) == pytest.approx(legacy_nll(7, 2))
     assert module._answer_nll_from_logits(logits, input_ids, 7, 7) == pytest.approx(legacy_nll(7, 7))
+
+
+def test_eval_truthfulqa_prefix_kv_cache_matches_full_sequence_reps():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class PrefixCacheModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.prefix_calls = 0
+            self.answer_calls = 0
+            self.full_calls = 0
+
+        def forward(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            output_hidden_states=False,
+            use_cache=False,
+            past_key_values=None,
+            **_kwargs,
+        ):
+            del attention_mask
+            batch_size, current_len = input_ids.shape
+            vocab_size = 32
+            hidden_rows = []
+            logits_rows = []
+            for row in range(batch_size):
+                if past_key_values is None:
+                    prefix_ids = torch.empty(0, dtype=torch.long, device=input_ids.device)
+                    self.full_calls += int(not use_cache)
+                else:
+                    prefix_ids = past_key_values[0].to(input_ids.device)
+                    self.answer_calls += 1
+                if use_cache:
+                    self.prefix_calls += 1
+                full_ids = torch.cat([prefix_ids, input_ids[row]])
+                row_hidden = []
+                row_logits = []
+                for pos in range(current_len):
+                    full_pos = len(prefix_ids) + pos
+                    prefix_sum = float(full_ids[:full_pos + 1].sum().item())
+                    base = prefix_sum + float(full_pos)
+                    row_hidden.append(torch.tensor([base, base + 1, base + 2, base + 3]))
+                    row_logits.append(torch.arange(vocab_size, dtype=torch.float32) * 0.01 + base)
+                hidden_rows.append(torch.stack(row_hidden))
+                logits_rows.append(torch.stack(row_logits))
+            return SimpleNamespace(
+                logits=torch.stack(logits_rows),
+                hidden_states=(torch.stack(hidden_rows),) if output_hidden_states else None,
+                past_key_values=(input_ids[0].detach().cpu(),) if use_cache else None,
+            )
+
+    statements = [
+        module.Statement("Q?", "A", 0),
+        module.Statement("Q?", "B C", 1),
+    ]
+    encodings = [
+        module.StatementEncoding((1, 2, 10), 1),
+        module.StatementEncoding((1, 2, 11, 12), 2),
+    ]
+    full_model = PrefixCacheModel()
+    prefix_model = PrefixCacheModel()
+
+    full_reps = module.batched_statement_reps(
+        full_model,
+        NoCallTokenizer(),
+        statements,
+        [0],
+        torch.device("cpu"),
+        8,
+        encoded_statements=encodings,
+    )
+    prefix_reps = module.batched_statement_reps(
+        prefix_model,
+        NoCallTokenizer(),
+        statements,
+        [0],
+        torch.device("cpu"),
+        8,
+        encoded_statements=encodings,
+        prefix_kv_cache=True,
+    )
+
+    assert prefix_model.prefix_calls == 1
+    assert prefix_model.answer_calls == 2
+    assert full_model.prefix_calls == 0
+    for full_rep, prefix_rep in zip(full_reps, prefix_reps):
+        assert torch.allclose(prefix_rep["last"][0], full_rep["last"][0])
+        assert torch.allclose(prefix_rep["ans_hs"], full_rep["ans_hs"])
+        assert prefix_rep["nll"] == pytest.approx(full_rep["nll"])
+        assert prefix_rep["eigenscore_by_layer"][0] == pytest.approx(full_rep["eigenscore_by_layer"][0])
 
 
 def test_eval_truthfulqa_statement_dump_preserves_question_answer_and_label():

@@ -41,6 +41,7 @@ class CacheProfileMatrixConfig:
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
+    prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
@@ -66,6 +67,8 @@ class CacheProfileMatrixConfig:
             raise ValueError("batch_sizes must be >=1.")
         if not captures:
             raise ValueError("hidden_state_captures must not be empty.")
+        if self.prefix_kv_cache and any(capture != "outputs" for capture in captures):
+            raise ValueError("prefix_kv_cache requires hidden_state_captures to be outputs.")
         matrix_mode = str(self.matrix_mode)
         if matrix_mode not in MATRIX_MODES:
             raise ValueError("matrix_mode must be one of: triplet, rescore.")
@@ -122,6 +125,7 @@ def triplet_config_for_cell(
         batch_size=int(cell["batch_size"]),
         max_length=config.max_length,
         hidden_state_capture=str(cell["hidden_state_capture"]),
+        prefix_kv_cache=config.prefix_kv_cache,
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
@@ -188,6 +192,7 @@ def run_matrix(
             "limit": config.limit,
             "manifold_questions": config.manifold_questions,
             "max_length": config.max_length,
+            "prefix_kv_cache": config.prefix_kv_cache,
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
@@ -250,6 +255,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "prefix_kv_cache": config.prefix_kv_cache,
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "dry_run": bool(report.get("dry_run")),
@@ -590,6 +596,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
+        prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
@@ -635,6 +642,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=64)
+    parser.add_argument("--prefix-kv-cache", action="store_true",
+                        help="pass --prefix-kv-cache through to non-cache-only eval runs; requires outputs capture")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)

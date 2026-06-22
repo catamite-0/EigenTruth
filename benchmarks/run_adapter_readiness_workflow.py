@@ -53,6 +53,7 @@ class AdapterReadinessWorkflowConfig:
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
+    prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
@@ -130,6 +131,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             limit=config.limit,
             manifold_questions=config.manifold_questions,
             max_length=config.max_length,
+            prefix_kv_cache=config.prefix_kv_cache,
             eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
             cached_max_total_ratio=config.cached_max_total_ratio,
             cache_only_max_total_ratio=config.cache_only_max_total_ratio,
@@ -229,6 +231,7 @@ def _write_artifact_manifest(
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "prefix_kv_cache": config.prefix_kv_cache,
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "performance_dry_run": config.performance_dry_run,
@@ -290,6 +293,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
+        prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
@@ -343,6 +347,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=64)
+    parser.add_argument("--prefix-kv-cache", action="store_true",
+                        help="pass --prefix-kv-cache through to non-cache-only performance eval runs")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)

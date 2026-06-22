@@ -169,6 +169,12 @@ before treating a benchmark run as faster. The profile payload includes raw
 shares for startup/tokenization/model-forward/cache/postprocess work, and
 throughput fields for warmup and forced-answer eval records when counts are
 available.
+Use `--prefix-kv-cache` as an experimental forced-answer optimization when a
+batch contains multiple candidate answers sharing the same question prefix. It
+reuses one prefix KV cache per shared prefix during eval scoring, requires
+`--hidden-state-capture outputs`, and is recorded in JSON/profile workflow
+metadata. Keep it behind profile gates until a representative run proves that
+the model/backend combination benefits.
 Use `--progress-every N` to print warmup and eval progress every N statements
 during long runs; the default is 50, and `--progress-every 0` disables periodic
 progress output.
@@ -1039,6 +1045,10 @@ a matrix-level `matrix_decision`. The decision is `promote` only when at least
 one checked cell passes its regression gate and no checked cell fails; use
 `--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
 non-zero.
+Add `--prefix-kv-cache` to compare the experimental shared-prefix eval path
+inside the same triplet/matrix/readiness gates. Because it changes only the
+uncached/cached model-forward path, cache-only runs omit the flag and replay the
+saved representations.
 When `--shared-cache-dir` is set, cells with the same layer and hidden-state
 capture share statement/layer/eval cache paths. The first cell for each group
 refreshes the shared caches; later batch-size cells use a warm-start uncached

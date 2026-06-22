@@ -1706,6 +1706,7 @@ def batched_statement_reps(
     eigenscore_alpha: float = 1e-3,
     hidden_state_capture: str = "outputs",
     encoded_statements: Sequence[Optional[StatementEncoding]] | None = None,
+    prefix_kv_cache: bool = False,
 ) -> list[Optional[dict]]:
     """Batch forced-answer forwards while preserving per-statement result shape."""
     encoded: list[tuple[int, list[int], int]] = []
@@ -1723,6 +1724,18 @@ def batched_statement_reps(
         encoded.append((idx, ids, n_ans))
     if not encoded:
         return results
+    if prefix_kv_cache:
+        if hidden_state_capture != "outputs":
+            raise ValueError("--prefix-kv-cache requires hidden_state_capture='outputs'.")
+        if compute_answer_metrics:
+            return _batched_statement_reps_with_prefix_kv(
+                model,
+                encoded,
+                layers,
+                device,
+                result_count=len(statements),
+                eigenscore_alpha=eigenscore_alpha,
+            )
 
     pad_token_id = _pad_token_id(tokenizer)
     batch_len = max(len(ids) for _, ids, _ in encoded)
@@ -1770,6 +1783,97 @@ def batched_statement_reps(
     return results
 
 
+def _batched_statement_reps_with_prefix_kv(
+    model,
+    encoded: Sequence[tuple[int, list[int], int]],
+    layers: Sequence[int],
+    device: torch.device,
+    *,
+    result_count: int,
+    eigenscore_alpha: float,
+) -> list[Optional[dict]]:
+    """Score encoded statements by reusing one prefix KV cache per shared prefix."""
+    results: list[Optional[dict]] = [None] * int(result_count)
+    groups: dict[tuple[int, ...], list[tuple[int, list[int], int]]] = {}
+    for original_idx, ids, n_ans in encoded:
+        prefix_len = len(ids) - int(n_ans)
+        if prefix_len <= 0:
+            raise ValueError("--prefix-kv-cache requires at least one prefix token per statement.")
+        groups.setdefault(tuple(ids[:prefix_len]), []).append((original_idx, ids, int(n_ans)))
+
+    for prefix_ids_tuple, items in groups.items():
+        prefix_ids = torch.tensor([prefix_ids_tuple], dtype=torch.long, device=device)
+        prefix_mask = torch.ones_like(prefix_ids)
+        prefix_out = model(
+            input_ids=prefix_ids,
+            attention_mask=prefix_mask,
+            output_hidden_states=False,
+            use_cache=True,
+        )
+        prefix_past = getattr(prefix_out, "past_key_values", None)
+        if prefix_past is None:
+            raise ValueError("model did not return past_key_values for --prefix-kv-cache.")
+        prefix_next_logits = prefix_out.logits[0, -1:, :]
+
+        for original_idx, ids, n_ans in items:
+            answer_ids = ids[-n_ans:]
+            answer_input = torch.tensor([answer_ids], dtype=torch.long, device=device)
+            full_attention_mask = torch.ones(
+                (1, len(prefix_ids_tuple) + len(answer_ids)),
+                dtype=torch.long,
+                device=device,
+            )
+            answer_out = model(
+                input_ids=answer_input,
+                attention_mask=full_attention_mask,
+                past_key_values=_clone_prefix_past(prefix_past),
+                output_hidden_states=True,
+                use_cache=False,
+            )
+            hidden_by_layer = {int(layer): answer_out.hidden_states[int(layer)] for layer in layers}
+            answer_len = len(answer_ids)
+            last_by_layer = {
+                int(layer): hidden_by_layer[int(layer)][0, answer_len - 1, :].float().cpu()
+                for layer in layers
+            }
+            ans_hs = hidden_by_layer[int(layers[0])][0, :answer_len, :].float().cpu()
+            eigenscore_by_layer = {
+                int(layer): float(internal_eigenscore(
+                    hidden_by_layer[int(layer)][0, :answer_len, :].float(),
+                    alpha=eigenscore_alpha,
+                ).item())
+                for layer in layers
+            }
+            prediction_logits = prefix_next_logits
+            if answer_len > 1:
+                prediction_logits = torch.cat(
+                    [prefix_next_logits, answer_out.logits[0, :answer_len - 1, :]],
+                    dim=0,
+                )
+            nll = _nll_from_prediction_logits(prediction_logits, answer_input[0])
+            results[original_idx] = {
+                "last": last_by_layer,
+                "ans_hs": ans_hs,
+                "eigenscore_by_layer": eigenscore_by_layer,
+                "nll": nll,
+            }
+    return results
+
+
+def _clone_prefix_past(past_key_values):
+    """Return a reusable copy of a prefix cache for one answer continuation."""
+    if hasattr(past_key_values, "layers"):
+        data = []
+        for layer in past_key_values.layers:
+            keys = getattr(layer, "keys", None)
+            values = getattr(layer, "values", None)
+            if keys is None or values is None:
+                raise ValueError("unsupported cache layer format for --prefix-kv-cache.")
+            data.append((keys.detach().clone(), values.detach().clone()))
+        return past_key_values.__class__(ddp_cache_data=data)
+    return past_key_values
+
+
 def _answer_nll_from_logits(
     logits: torch.Tensor,
     input_ids: torch.Tensor,
@@ -1786,9 +1890,15 @@ def _answer_nll_from_logits(
         return float("nan")
     answer_logits = logits[logit_start:logit_end, :].float()
     targets = input_ids[logit_start + 1:seq_len]
-    logp = torch.log_softmax(answer_logits, dim=-1)
+    return _nll_from_prediction_logits(answer_logits, targets)
+
+
+def _nll_from_prediction_logits(prediction_logits: torch.Tensor, targets: torch.Tensor) -> float:
+    """Return mean NLL for logits that directly predict the given targets."""
+    logp = torch.log_softmax(prediction_logits.float(), dim=-1)
     tok_logp = logp[torch.arange(logp.shape[0], device=logp.device), targets.to(logp.device)]
     return float((-tok_logp.mean()).item())
+
 
 
 def _batched_statement_reps_for_pairs(
@@ -1805,6 +1915,7 @@ def _batched_statement_reps_for_pairs(
     compute_answer_metrics: bool = True,
     eigenscore_alpha: float = 1e-3,
     hidden_state_capture: str = "outputs",
+    prefix_kv_cache: bool = False,
 ) -> list[Optional[dict]]:
     """Run forced-answer forwards for statement pairs with optional memory fallback."""
 
@@ -1822,6 +1933,7 @@ def _batched_statement_reps_for_pairs(
             eigenscore_alpha=eigenscore_alpha,
             hidden_state_capture=hidden_state_capture,
             encoded_statements=encoded,
+            prefix_kv_cache=prefix_kv_cache,
         )
 
     return _run_with_batch_size_fallback(
@@ -1837,7 +1949,8 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    device: torch.device, max_length: int, *,
                    compute_answer_metrics: bool = True,
                    eigenscore_alpha: float = 1e-3,
-                   hidden_state_capture: str = "outputs") -> Optional[dict]:
+                   hidden_state_capture: str = "outputs",
+                   prefix_kv_cache: bool = False) -> Optional[dict]:
     """Single-statement compatibility wrapper around batched_statement_reps."""
     return batched_statement_reps(
         model,
@@ -1850,6 +1963,7 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         eigenscore_alpha=eigenscore_alpha,
         hidden_state_capture=hidden_state_capture,
         encoded_statements=None,
+        prefix_kv_cache=prefix_kv_cache,
     )[0]
 
 
@@ -2513,6 +2627,7 @@ def run(args) -> dict:
                     fallback_state=batch_fallback_state,
                     phase="forced_answer_forward",
                     hidden_state_capture=args.hidden_state_capture,
+                    prefix_kv_cache=bool(getattr(args, "prefix_kv_cache", False)),
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -2682,6 +2797,7 @@ def run(args) -> dict:
                    "inside_trigger_top_fraction": args.inside_trigger_top_fraction,
                    "length_bucketed_batches": args.length_bucketed_batches,
                    "hidden_state_capture": args.hidden_state_capture,
+                   "prefix_kv_cache": bool(getattr(args, "prefix_kv_cache", False)),
                    "cache_only": args.cache_only,
                    "cache_only_restored_eval_statements": restored_eval_statements,
                    "statement_encoding_cache": args.statement_encoding_cache,
@@ -2797,6 +2913,9 @@ def main():
                    help="how forced-answer forwards collect hidden states: 'outputs' preserves exact "
                         "HF output_hidden_states semantics; 'hooks' stores only selected non-final "
                         "decoder-layer states and can reduce memory pressure")
+    p.add_argument("--prefix-kv-cache", action="store_true",
+                   help="experimental: reuse one question-prefix KV cache per shared prefix during eval "
+                        "forced-answer scoring; requires --hidden-state-capture outputs")
     p.add_argument("--subspace-rank", type=int, default=2,
                    help="rank for TruthSubspace residual scoring")
     p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
@@ -2889,6 +3008,8 @@ def main():
         p.error("--progress-every must be >=0")
     if args.warmup_checkpoint_every < 0:
         p.error("--warmup-checkpoint-every must be >=0")
+    if args.prefix_kv_cache and args.hidden_state_capture != "outputs":
+        p.error("--prefix-kv-cache requires --hidden-state-capture outputs")
     if args.cache_only:
         if not args.layer_stats_cache or not args.eval_reps_cache:
             p.error("--cache-only requires --layer-stats-cache and --eval-reps-cache")

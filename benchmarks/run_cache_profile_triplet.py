@@ -42,6 +42,7 @@ class CacheProfileTripletConfig:
     batch_size: int = 4
     max_length: int = 64
     hidden_state_capture: str = "outputs"
+    prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
@@ -79,6 +80,8 @@ class CacheProfileTripletConfig:
             raise ValueError("cache_only_max_total_ratio must be non-negative.")
         if self.uncached_cache_mode not in {"refresh", "warm_start", "none"}:
             raise ValueError("uncached_cache_mode must be one of: refresh, warm_start, none.")
+        if self.prefix_kv_cache and str(self.hidden_state_capture) != "outputs":
+            raise ValueError("prefix_kv_cache requires hidden_state_capture='outputs'.")
         run_names = _normalize_run_names(self.run_names)
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
@@ -144,6 +147,8 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         base.extend(["--manifold-questions", str(config.manifold_questions)])
     if config.length_bucketed_batches:
         base.append("--length-bucketed-batches")
+    if config.prefix_kv_cache and name != "cache_only":
+        base.append("--prefix-kv-cache")
 
     if name == "uncached" and config.uncached_cache_mode == "refresh":
         return [
@@ -310,6 +315,7 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
             "layer": config.layer,
             "batch_size": config.batch_size,
             "hidden_state_capture": config.hidden_state_capture,
+            "prefix_kv_cache": config.prefix_kv_cache,
             "offline": config.offline,
             "run_names": tuple(config.run_names),
             "uncached_cache_mode": config.uncached_cache_mode,
@@ -335,6 +341,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         batch_size=args.batch_size,
         max_length=args.max_length,
         hidden_state_capture=args.hidden_state_capture,
+        prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
@@ -381,6 +388,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--hidden-state-capture", default="outputs",
                         help="hidden state capture mode passed to eval_truthfulqa.py")
+    parser.add_argument("--prefix-kv-cache", action="store_true",
+                        help="pass --prefix-kv-cache to non-cache-only eval_truthfulqa.py runs")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10,
                         help="max cached/uncached total-time ratio for the comparison gate")
