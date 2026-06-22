@@ -25,8 +25,10 @@ import torch
 from eigentruth.adapters import (
     CachedRetriever,
     InMemoryRetriever,
+    InMemoryWorldModelAdapter,
     QuestionAnswerVerifier,
     RetrievalQuery,
+    StateTransitionVerifier,
     StructuredStateVerifier,
     combine_cache_stats,
 )
@@ -124,14 +126,15 @@ def _load_qa_verifier(path: Path | None) -> QuestionAnswerVerifier | None:
     return QuestionAnswerVerifier.from_corpus(payload)
 
 
-def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[str, Any]]:
+def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]:
     """Load a local structured state source.
 
     The file may be either a raw JSON object used as state, or an object with
-    explicit ``state`` and optional ``state_checks`` fields.
+    explicit ``state`` and optional ``state_checks`` / ``state_transitions``
+    fields.
     """
     if path is None:
-        return {}, {}
+        return {}, {}, {}
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
     if not isinstance(payload, Mapping):
@@ -143,8 +146,11 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
         raw_checks = payload.get("state_checks", {})
         if not isinstance(raw_checks, Mapping):
             raise ValueError("state source 'state_checks' must be a JSON object.")
-        return dict(state), dict(raw_checks)
-    return dict(payload), {}
+        raw_transitions = payload.get("state_transitions", {})
+        if not isinstance(raw_transitions, Mapping):
+            raise ValueError("state source 'state_transitions' must be a JSON object.")
+        return dict(state), dict(raw_checks), dict(raw_transitions)
+    return dict(payload), {}, {}
 
 
 def _records_from_dump_and_fixture(
@@ -189,6 +195,10 @@ def _records_from_dump_and_fixture(
             claim_metadata["state_check"] = statement["state_check"]
         if "state_check" in raw_record:
             claim_metadata["state_check"] = raw_record["state_check"]
+        if "state_transition" in statement:
+            claim_metadata["state_transition"] = statement["state_transition"]
+        if "state_transition" in raw_record:
+            claim_metadata["state_transition"] = raw_record["state_transition"]
         record_state = _merge_state_mappings(
             statement.get("state", {}),
             raw_record.get("state", {}),
@@ -239,12 +249,16 @@ def _verify_records(
     qa_verifier: QuestionAnswerVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
+    transition_verifier: StateTransitionVerifier | None = None,
+    state_transitions: Mapping[str, Any] | None = None,
     cache_stats: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], ...]:
     verified = []
     state_checks = {} if state_checks is None else state_checks
+    state_transitions = {} if state_transitions is None else state_transitions
     qa_runner = CachedVerifier(qa_verifier) if qa_verifier is not None else None
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
+    transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
 
@@ -295,10 +309,40 @@ def _verify_records(
                     "final": _verification_to_dict(qa_result),
                     "qa": _verification_to_dict(qa_result),
                     "state": None,
+                    "transition": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
                         selected_route="structured_qa",
                         selected_verifier="QuestionAnswerVerifier",
+                        attempted_routes=attempted_routes,
+                        used_retrieval=False,
+                    ),
+                    "metadata": dict(record.metadata),
+                })
+                continue
+
+        if transition_runner is not None and _record_has_state_transition(record, state_transitions):
+            attempted_routes.append("state_transition")
+            transition_result = transition_runner.verify(
+                record.claim,
+                context=_transition_context(record, state_transitions),
+            )
+            if transition_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
+                verified.append({
+                    "claim": {
+                        "text": record.claim.text,
+                        "claim_id": record.claim.claim_id,
+                        "metadata": dict(record.claim.metadata),
+                    },
+                    "initial": _verification_to_dict(transition_result),
+                    "final": _verification_to_dict(transition_result),
+                    "qa": None if qa_result is None else _verification_to_dict(qa_result),
+                    "state": None,
+                    "transition": _verification_to_dict(transition_result),
+                    "retrieval_hits": (),
+                    "route": _route_metadata(
+                        selected_route="state_transition",
+                        selected_verifier="StateTransitionVerifier",
                         attempted_routes=attempted_routes,
                         used_retrieval=False,
                     ),
@@ -323,6 +367,7 @@ def _verify_records(
                     "final": _verification_to_dict(state_result),
                     "qa": None if qa_result is None else _verification_to_dict(qa_result),
                     "state": _verification_to_dict(state_result),
+                    "transition": None,
                     "retrieval_hits": (),
                     "route": _route_metadata(
                         selected_route="structured_state",
@@ -359,6 +404,7 @@ def _verify_records(
             "final": _verification_to_dict(final),
             "qa": None if qa_result is None else _verification_to_dict(qa_result),
             "state": None if state_result is None else _verification_to_dict(state_result),
+            "transition": None,
             "retrieval_hits": tuple(hit.to_dict() for hit in hits),
             "route": _route_metadata(
                 selected_route=selected_route,
@@ -371,6 +417,7 @@ def _verify_records(
     if cache_stats is not None:
         qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
         state_stats = {} if state_runner is None else state_runner.stats.to_dict()
+        transition_stats = {} if transition_runner is None else transition_runner.stats.to_dict()
         groundedness_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in groundedness_runners.values())
         )
@@ -378,6 +425,7 @@ def _verify_records(
         cache_stats.update({
             "qa_verifier": qa_stats,
             "state_verifier": state_stats,
+            "transition_verifier": transition_stats,
             "groundedness_verifiers": {
                 **groundedness_stats,
                 "instances": len(groundedness_runners),
@@ -386,7 +434,13 @@ def _verify_records(
                 **retriever_stats,
                 "instances": len(retrievers),
             },
-            "total": combine_cache_stats(qa_stats, state_stats, groundedness_stats, retriever_stats),
+            "total": combine_cache_stats(
+                qa_stats,
+                state_stats,
+                transition_stats,
+                groundedness_stats,
+                retriever_stats,
+            ),
         })
     return tuple(verified)
 
@@ -405,6 +459,34 @@ def _state_context(record: ClaimEvidenceRecord, state_checks: Mapping[str, Any])
     if state_checks:
         context["state_checks"] = dict(state_checks)
     return context
+
+
+def _record_has_state_transition(record: ClaimEvidenceRecord, state_transitions: Mapping[str, Any]) -> bool:
+    metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    if "state_transition" in metadata:
+        return True
+    if "action" in metadata and any(key in metadata for key in ("postcondition", "state_check", "check")):
+        return True
+    return record.claim.claim_id is not None and record.claim.claim_id in state_transitions
+
+
+def _transition_context(record: ClaimEvidenceRecord, state_transitions: Mapping[str, Any]) -> dict[str, Any]:
+    context: dict[str, Any] = {"statement": record.metadata.get("statement", {})}
+    if record.state:
+        context["state"] = dict(record.state)
+    if state_transitions:
+        context["state_transitions"] = dict(state_transitions)
+    return context
+
+
+def _transition_routes_enabled(
+    records: Sequence[ClaimEvidenceRecord],
+    global_state: Mapping[str, Any],
+    state_transitions: Mapping[str, Any],
+) -> bool:
+    if global_state or state_transitions:
+        return any(_record_has_state_transition(record, state_transitions) for record in records)
+    return any(record.state and _record_has_state_transition(record, state_transitions) for record in records)
 
 
 def _state_routes_enabled(
@@ -687,17 +769,22 @@ def build_verifier_ensemble_report(
 
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
-    source_state, source_state_checks = _load_state_source(state_path)
+    source_state, source_state_checks, source_state_transitions = _load_state_source(state_path)
     fixture_state = fixture.get("state", {})
     if not isinstance(fixture_state, Mapping):
         raise ValueError("claim fixture 'state' must be a JSON object when present.")
     fixture_state_checks = fixture.get("state_checks", {})
     if not isinstance(fixture_state_checks, Mapping):
         raise ValueError("claim fixture 'state_checks' must be a JSON object when present.")
+    fixture_state_transitions = fixture.get("state_transitions", {})
+    if not isinstance(fixture_state_transitions, Mapping):
+        raise ValueError("claim fixture 'state_transitions' must be a JSON object when present.")
     global_state = _merge_state_mappings(source_state, fixture_state)
     global_state_checks = {**dict(source_state_checks), **dict(fixture_state_checks)}
+    global_state_transitions = {**dict(source_state_transitions), **dict(fixture_state_transitions)}
     runs = []
     any_state_enabled = False
+    any_transition_enabled = False
     for name, path in score_dumps:
         dump = _load_scores(path, signal)
         labels = dump["labels"]
@@ -708,8 +795,18 @@ def build_verifier_ensemble_report(
             fixture=fixture,
             expected_count=int(labels.numel()),
         )
+        transition_enabled = _transition_routes_enabled(records, global_state, global_state_transitions)
         state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
+        any_transition_enabled = any_transition_enabled or transition_enabled
         any_state_enabled = any_state_enabled or state_enabled
+        transition_verifier = (
+            StateTransitionVerifier(
+                world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
+                state=global_state,
+            )
+            if transition_enabled
+            else None
+        )
         state_verifier = StructuredStateVerifier(global_state) if state_enabled else None
         run_cache_stats: dict[str, Any] = {}
         verified_records = _verify_records(
@@ -720,6 +817,8 @@ def build_verifier_ensemble_report(
             qa_verifier=qa_verifier,
             state_verifier=state_verifier,
             state_checks=global_state_checks,
+            transition_verifier=transition_verifier,
+            state_transitions=global_state_transitions,
             cache_stats=run_cache_stats,
         )
         alpha_results = {
@@ -769,6 +868,18 @@ def build_verifier_ensemble_report(
                 ),
                 "global_checks": len(global_state_checks),
             },
+            "transition_verifier": {
+                "enabled": transition_enabled,
+                "decided_records": sum(
+                    1 for record in verified_records
+                    if record.get("transition") is not None
+                    and record["transition"]["status"] in {
+                        VerificationStatus.SUPPORTED.value,
+                        VerificationStatus.REFUTED.value,
+                    }
+                ),
+                "global_transitions": len(global_state_transitions),
+            },
             "retrieval": {
                 "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
                 "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
@@ -807,6 +918,13 @@ def build_verifier_ensemble_report(
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_checks": len(global_state_checks),
+        },
+        "transition_verifier": {
+            "type": "StateTransitionVerifier",
+            "enabled": any_transition_enabled,
+            "state_path": None if state_path is None else str(state_path),
+            "fixture_has_state": bool(fixture_state),
+            "global_transitions": len(global_state_transitions),
         },
         "retriever": {
             "type": "InMemoryRetriever",

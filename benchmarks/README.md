@@ -349,9 +349,10 @@ python benchmarks/eval_verifier_ensemble.py \
 ```
 
 The state source may be a raw JSON object used as state, or an object with
-`state` and optional `state_checks` fields. A claim fixture record can provide
-`state_check` directly or under `claim_metadata.state_check`; top-level
-`state_checks` keyed by `claim_id` are also supported.
+`state`, optional `state_checks`, and optional `state_transitions` fields. A
+claim fixture record can provide `state_check` directly or under
+`claim_metadata.state_check`; top-level `state_checks` keyed by `claim_id` are
+also supported.
 
 For a fully reproducible domain-state smoke benchmark, generate synthetic
 order-fulfillment state, claim, and score fixtures, then feed them into the same
@@ -375,6 +376,30 @@ python benchmarks/eval_verifier_ensemble.py \
 This fixture checks the product-control path, not open-domain factuality: true
 labels are shippable orders, while false labels are claims that an order can
 ship even though inventory or account state refutes it.
+
+For action-conditioned state checks, provide `state_transition` metadata. The
+runner routes these records through `StateTransitionVerifier`, which applies an
+in-memory world-model transition and checks the resulting postcondition before
+falling back to static state or lexical verification:
+
+```bash
+python benchmarks/build_transition_fixture.py \
+  --scores-output artifacts/order_transition_scores.json \
+  --claims-output artifacts/order_transition_claims.json \
+  --state-output artifacts/order_transition_state.json \
+  --n-records 12
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores transitions=artifacts/order_transition_scores.json \
+  --claims artifacts/order_transition_claims.json \
+  --state-source artifacts/order_transition_state.json \
+  --signal truth_proj \
+  --json artifacts/order_transition_verifier_ensemble_report.json
+```
+
+This fixture checks action-consequence verification: true labels match the
+predicted inventory after reservation, while false labels assert an off-by-one
+postcondition that the predicted state refutes.
 
 The current policy is deliberately simple and auditable: `refuted` always
 triggers, `supported` suppresses an internal trigger, and

@@ -239,7 +239,7 @@ For product features:
 - Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output.
 - `EvidenceBundle` conversion from retrieval `ActionResult` payloads into claim-scoped verifier evidence context.
 - Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
-- `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies.
+- `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies, including structured QA, static state, and action-conditioned state-transition routes.
 - `build_truthfulqa_corpus.py` for creating a local TruthfulQA correct-answer evidence corpus.
 - `build_evidence_fixture.py` for building non-oracle verifier fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora.
 - `backfill_truthfulqa_statements.py` for adding statement metadata to older TruthfulQA score dumps without rerunning models.
@@ -254,8 +254,9 @@ For product features:
 - `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
 - `state_transition_control_demo.py` emits a final `ProductTrace` where a world-model predicted postcondition refutes a claim about action consequences despite low internal diagnostics.
 - `CompositeVerifier`, `RoutedVerifier`, and `calibrated_control_demo.py --enable-calculator` show a tool-first product trace path: claim metadata, context, or text patterns can route calculator-supported/refuted claims before lexical verifier fallback.
-- `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` routes, and reports `route_summary` for structured QA, structured state, lexical groundedness, and retrieval-backed groundedness.
+- `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` and `state_transition` routes, and reports `route_summary` for structured QA, state transition, structured state, lexical groundedness, and retrieval-backed groundedness.
 - `build_domain_state_fixture.py` generates deterministic order-fulfillment score/claim/state fixtures so structured-state verifier behavior can be benchmarked without relying on label-derived TruthfulQA oracle evidence.
+- `build_transition_fixture.py` generates deterministic order-reservation score/claim/state fixtures so world-model predicted postconditions can be benchmarked without a real simulator or external dependency.
 - `CachedVerifier`, `CachedRetriever`, and `CachedStateSource` provide request-scoped caching plus hit/miss stats for repeated verifier, retrieval, and state-source calls; `eval_verifier_ensemble.py` includes these `cache_stats` in each run report.
 - `eval_truthfulqa.py --profile` now emits a structured performance summary with bottleneck phase, top phases, grouped time shares, and warmup/eval throughput fields for reproducible optimization comparisons.
 - `eval_truthfulqa.py --auto-batch-size` can halve and retry warmup/forced-answer batch size after retriable memory errors, recording requested/effective batch size and reduction events in JSON/profile output.
