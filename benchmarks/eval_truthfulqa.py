@@ -49,7 +49,7 @@ import math
 import sys
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterator, List, Mapping, Optional, Sequence
 
@@ -129,6 +129,59 @@ class StatementEncoding:
         return {
             "input_ids": list(self.input_ids),
             "n_answer_tokens": int(self.n_answer_tokens),
+        }
+
+
+@dataclass
+class BatchSizeFallbackState:
+    """Mutable request-local batch-size fallback state."""
+
+    requested_size: int
+    enabled: bool = False
+    current_size: int | None = None
+    reductions: list[dict[str, object]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        requested_size = int(self.requested_size)
+        if requested_size < 1:
+            raise ValueError("requested_size must be >= 1.")
+        self.requested_size = requested_size
+        if self.current_size is None:
+            self.current_size = requested_size
+        else:
+            self.current_size = int(self.current_size)
+        if self.current_size < 1:
+            raise ValueError("current_size must be >= 1.")
+
+    def batch_size(self) -> int:
+        """Return the current effective batch size."""
+        return max(1, int(self.current_size or self.requested_size))
+
+    def reduce(self, *, phase: str, attempted_size: int, exc: BaseException) -> int:
+        """Reduce effective batch size after a retriable memory error."""
+        attempted_size = int(attempted_size)
+        if not self.enabled or attempted_size <= 1:
+            raise exc
+        new_size = max(1, attempted_size // 2)
+        self.current_size = min(self.batch_size(), new_size)
+        event = {
+            "phase": phase,
+            "attempted_batch_size": attempted_size,
+            "new_batch_size": self.batch_size(),
+            "error_type": type(exc).__name__,
+            "error": _compact_error_message(exc),
+        }
+        self.reductions.append(event)
+        return self.batch_size()
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-serializable fallback summary."""
+        return {
+            "enabled": bool(self.enabled),
+            "requested_batch_size": int(self.requested_size),
+            "effective_batch_size": self.batch_size(),
+            "reductions": tuple(dict(item) for item in self.reductions),
+            "n_reductions": len(self.reductions),
         }
 
 
@@ -332,6 +385,70 @@ def _chunked(items: Sequence, size: int):
         raise ValueError("batch size must be >= 1.")
     for start in range(0, len(items), size):
         yield items[start:start + size]
+
+
+_MEMORY_ERROR_MARKERS = (
+    "out of memory",
+    "cuda error: out of memory",
+    "cudnn_status_alloc_failed",
+    "mps backend out of memory",
+    "defaultcpuallocator",
+    "memoryerror",
+)
+
+
+def _compact_error_message(exc: BaseException, *, max_chars: int = 180) -> str:
+    message = " ".join(str(exc).split())
+    if len(message) > max_chars:
+        return message[: max_chars - 3].rstrip() + "..."
+    return message
+
+
+def _is_retriable_memory_error(exc: BaseException) -> bool:
+    """Return whether an exception looks like a batch-size-related memory failure."""
+    if not isinstance(exc, (RuntimeError, MemoryError)):
+        return False
+    message = str(exc).casefold()
+    return any(marker in message for marker in _MEMORY_ERROR_MARKERS)
+
+
+def _clear_device_cache(device: torch.device) -> None:
+    """Release accelerator allocator caches after a memory failure when possible."""
+    if device.type == "cuda" and torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    elif device.type == "mps" and hasattr(torch, "mps"):
+        empty_cache = getattr(torch.mps, "empty_cache", None)
+        if callable(empty_cache):
+            empty_cache()
+
+
+def _run_with_batch_size_fallback(
+    items: Sequence,
+    *,
+    state: BatchSizeFallbackState | None,
+    phase: str,
+    runner,
+    clear_cache=None,
+) -> list:
+    """Run a batch, recursively splitting it when an enabled memory fallback fires."""
+    try:
+        return list(runner(items))
+    except (RuntimeError, MemoryError) as exc:
+        if state is None or not state.enabled or len(items) <= 1 or not _is_retriable_memory_error(exc):
+            raise
+        next_size = state.reduce(phase=phase, attempted_size=len(items), exc=exc)
+        if clear_cache is not None:
+            clear_cache()
+        outputs = []
+        for chunk in _chunked(list(items), next_size):
+            outputs.extend(_run_with_batch_size_fallback(
+                chunk,
+                state=state,
+                phase=phase,
+                runner=runner,
+                clear_cache=clear_cache,
+            ))
+        return outputs
 
 
 def _statement_length(stmt: Statement) -> int:
@@ -1415,6 +1532,16 @@ def _batched_statement_pairs(
 ):
     if size < 1:
         raise ValueError("batch size must be >= 1.")
+    pairs = _statement_pairs(statements, encodings, length_bucketed=length_bucketed)
+    yield from _chunked(pairs, size)
+
+
+def _statement_pairs(
+    statements: Sequence[Statement],
+    encodings: Sequence[Optional[StatementEncoding]] | None,
+    *,
+    length_bucketed: bool,
+) -> list[tuple[Statement, Optional[StatementEncoding]]]:
     if encodings is not None and len(encodings) != len(statements):
         raise ValueError("statement encodings must have the same length as statements.")
     if encodings is None:
@@ -1423,7 +1550,7 @@ def _batched_statement_pairs(
         pairs = list(zip(statements, encodings))
     if length_bucketed:
         pairs = sorted(pairs, key=lambda pair: _statement_length(pair[0]))
-    yield from _chunked(pairs, size)
+    return pairs
 
 
 def _batched_statement_pairs_after_offset(
@@ -1528,6 +1655,48 @@ def batched_statement_reps(
             "nll": nll,
         }
     return results
+
+
+def _batched_statement_reps_for_pairs(
+    model,
+    tokenizer,
+    batch_pairs: Sequence[tuple[Statement, Optional[StatementEncoding]]],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    encoded_statements_provided: bool,
+    fallback_state: BatchSizeFallbackState | None,
+    phase: str,
+    compute_answer_metrics: bool = True,
+    eigenscore_alpha: float = 1e-3,
+    hidden_state_capture: str = "outputs",
+) -> list[Optional[dict]]:
+    """Run forced-answer forwards for statement pairs with optional memory fallback."""
+
+    def _runner(pairs):
+        statements = [stmt for stmt, _encoding in pairs]
+        encoded = [encoding for _stmt, encoding in pairs] if encoded_statements_provided else None
+        return batched_statement_reps(
+            model,
+            tokenizer,
+            statements,
+            layers,
+            device,
+            max_length,
+            compute_answer_metrics=compute_answer_metrics,
+            eigenscore_alpha=eigenscore_alpha,
+            hidden_state_capture=hidden_state_capture,
+            encoded_statements=encoded,
+        )
+
+    return _run_with_batch_size_fallback(
+        list(batch_pairs),
+        state=fallback_state,
+        phase=phase,
+        runner=_runner,
+        clear_cache=lambda: _clear_device_cache(device),
+    )
 
 
 def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
@@ -1785,7 +1954,8 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
                       checkpoint_every: int = 50,
                       hidden_state_capture: str = "outputs",
                       true_encodings: Sequence[Optional[StatementEncoding]] | None = None,
-                      false_encodings: Sequence[Optional[StatementEncoding]] | None = None) -> tuple[dict, dict]:
+                      false_encodings: Sequence[Optional[StatementEncoding]] | None = None,
+                      batch_fallback_state: BatchSizeFallbackState | None = None) -> tuple[dict, dict]:
     """逐层构建真值流形与 mass-mean 对比方向（与 EigenTruthWrapper.warmup 同构）。
     Per-layer truth manifolds plus the mass-mean contrastive direction
     (mirrors EigenTruthWrapper.warmup; cf. Marks & Tegmark mass-mean probing).
@@ -1820,25 +1990,28 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     true_last_reported = true_done
     true_last_checkpoint = true_done
     true_started = time.perf_counter()
-    for batch_pairs in _batched_statement_pairs_after_offset(
+    true_pairs = _statement_pairs(
         true_statements,
         true_encodings,
-        batch_size,
         length_bucketed=length_bucketed,
-        offset=true_done,
-    ):
+    )[true_done:]
+    true_pair_offset = 0
+    while true_pair_offset < len(true_pairs):
+        current_batch_size = batch_fallback_state.batch_size() if batch_fallback_state else batch_size
+        batch_pairs = true_pairs[true_pair_offset:true_pair_offset + current_batch_size]
         batch = [stmt for stmt, _encoding in batch_pairs]
-        batch_encodings = None if true_encodings is None else [encoding for _stmt, encoding in batch_pairs]
-        reps_batch = batched_statement_reps(
+        reps_batch = _batched_statement_reps_for_pairs(
             model,
             tokenizer,
-            batch,
+            batch_pairs,
             layers,
             device,
             max_length,
             compute_answer_metrics=False,
+            encoded_statements_provided=true_encodings is not None,
+            fallback_state=batch_fallback_state,
+            phase="build_layer_stats",
             hidden_state_capture=hidden_state_capture,
-            encoded_statements=batch_encodings,
         )
         for reps in reps_batch:
             if reps is None:
@@ -1848,6 +2021,7 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
                 manifolds[layer].update(h)
                 true_state_lists[layer].append(h)
         true_done += len(batch)
+        true_pair_offset += len(batch_pairs)
         if _progress_report_due(true_done, len(true_statements), progress_every, true_last_reported):
             true_last_reported = min(true_done, len(true_statements))
             print(_format_progress("warmup true", true_last_reported, len(true_statements),
@@ -1874,25 +2048,28 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     false_last_reported = false_done
     false_last_checkpoint = false_done
     false_started = time.perf_counter()
-    for batch_pairs in _batched_statement_pairs_after_offset(
+    false_pairs = _statement_pairs(
         false_statements,
         false_encodings,
-        batch_size,
         length_bucketed=length_bucketed,
-        offset=false_done,
-    ):
+    )[false_done:]
+    false_pair_offset = 0
+    while false_pair_offset < len(false_pairs):
+        current_batch_size = batch_fallback_state.batch_size() if batch_fallback_state else batch_size
+        batch_pairs = false_pairs[false_pair_offset:false_pair_offset + current_batch_size]
         batch = [stmt for stmt, _encoding in batch_pairs]
-        batch_encodings = None if false_encodings is None else [encoding for _stmt, encoding in batch_pairs]
-        reps_batch = batched_statement_reps(
+        reps_batch = _batched_statement_reps_for_pairs(
             model,
             tokenizer,
-            batch,
+            batch_pairs,
             layers,
             device,
             max_length,
             compute_answer_metrics=False,
+            encoded_statements_provided=false_encodings is not None,
+            fallback_state=batch_fallback_state,
+            phase="build_layer_stats",
             hidden_state_capture=hidden_state_capture,
-            encoded_statements=batch_encodings,
         )
         for reps in reps_batch:
             if reps is None:
@@ -1903,6 +2080,7 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
                 false_state_lists[layer].append(h)
                 false_sums[layer] = h if false_sums[layer] is None else false_sums[layer] + h
         false_done += len(batch)
+        false_pair_offset += len(batch_pairs)
         if _progress_report_due(false_done, len(false_statements), progress_every, false_last_reported):
             false_last_reported = min(false_done, len(false_statements))
             print(_format_progress("warmup false", false_last_reported, len(false_statements),
@@ -1959,6 +2137,7 @@ def run(args) -> dict:
     total_started = time.perf_counter()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(args.seed)
+    batch_fallback_state = BatchSizeFallbackState(args.batch_size, enabled=args.auto_batch_size)
 
     with _profile_phase(profile, "load_data"):
         if args.offline:
@@ -2074,6 +2253,7 @@ def run(args) -> dict:
                 hidden_state_capture=args.hidden_state_capture,
                 true_encodings=true_encodings,
                 false_encodings=false_encodings,
+                batch_fallback_state=batch_fallback_state,
             )
         if stats_cache_path:
             with _profile_phase(profile, "save_layer_stats_cache"):
@@ -2106,14 +2286,12 @@ def run(args) -> dict:
 
     print(f"Scoring {len(eval_stmts)} eval statements ...")
     scored = 0
-    eval_batch_pairs = list(_batched_statement_pairs(
+    eval_pairs = _statement_pairs(
         eval_stmts,
         eval_encodings,
-        args.batch_size,
         length_bucketed=args.length_bucketed_batches,
-    ))
-    eval_batches = [[stmt for stmt, _encoding in batch_pairs] for batch_pairs in eval_batch_pairs]
-    expected_eval_records = sum(len(batch) for batch in eval_batches)
+    )
+    expected_eval_records = len(eval_pairs)
     eval_reps_cache_metadata = _eval_reps_cache_metadata(
         args,
         layers=layers,
@@ -2144,25 +2322,31 @@ def run(args) -> dict:
                 )
 
     eval_reps_offset = 0
+    eval_pair_offset = 0
+    eval_batch_idx = 0
     eval_last_reported = 0
     eval_started = time.perf_counter()
-    for batch_idx, (batch, batch_pairs) in enumerate(zip(eval_batches, eval_batch_pairs)):
+    while eval_pair_offset < len(eval_pairs):
+        current_batch_size = batch_fallback_state.batch_size()
+        batch_pairs = eval_pairs[eval_pair_offset:eval_pair_offset + current_batch_size]
+        batch = [stmt for stmt, _encoding in batch_pairs]
         if eval_reps_reader is not None:
             with _profile_phase(profile, "read_eval_reps_cache_batch"):
                 reps_batch = eval_reps_reader.read_range(eval_reps_offset, len(batch))
         else:
-            batch_encodings = None if eval_encodings is None else [encoding for _stmt, encoding in batch_pairs]
             with _profile_phase(profile, "forced_answer_forward"):
-                reps_batch = batched_statement_reps(
+                reps_batch = _batched_statement_reps_for_pairs(
                     model,
                     tokenizer,
-                    batch,
+                    batch_pairs,
                     layers,
                     device,
                     args.max_length,
                     eigenscore_alpha=args.eigenscore_alpha,
+                    encoded_statements_provided=eval_encodings is not None,
+                    fallback_state=batch_fallback_state,
+                    phase="forced_answer_forward",
                     hidden_state_capture=args.hidden_state_capture,
-                    encoded_statements=batch_encodings,
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -2205,7 +2389,7 @@ def run(args) -> dict:
                         temperature=args.inside_temperature,
                         top_p=args.inside_top_p,
                         pooling=args.inside_pooling,
-                        seed=_inside_seed(args.seed, batch_idx, inside_batch_idx),
+                        seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
                         eigenscore_alpha=args.eigenscore_alpha,
                         hidden_state_capture=args.hidden_state_capture,
                     )
@@ -2252,6 +2436,8 @@ def run(args) -> dict:
                     eval_last_reported = min(scored, len(eval_stmts))
                     print(_format_progress("eval", eval_last_reported, len(eval_stmts),
                                            time.perf_counter() - eval_started))
+        eval_pair_offset += len(batch_pairs)
+        eval_batch_idx += 1
 
     if eval_reps_writer is not None:
         with _profile_phase(profile, "save_eval_reps_cache"):
@@ -2317,6 +2503,8 @@ def run(args) -> dict:
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
                    "eigenscore_alpha": args.eigenscore_alpha,
                    "batch_size": args.batch_size,
+                   "auto_batch_size": args.auto_batch_size,
+                   "effective_batch_size": batch_fallback_state.batch_size(),
                    "inside_samples": args.inside_samples,
                    "inside_batch_size": args.inside_batch_size,
                    "inside_max_new_tokens": args.inside_max_new_tokens,
@@ -2343,6 +2531,7 @@ def run(args) -> dict:
         "auroc": results,
         "selective": selective,
         "sweep": sweep_payload,
+        "batch_size_fallback": batch_fallback_state.to_dict(),
     }
     if _inside_enabled(args):
         payload["inside_sampling"] = {
@@ -2364,6 +2553,7 @@ def run(args) -> dict:
             n_warmup_true=len(manifold_true),
             n_warmup_false=len(manifold_false),
         )
+        payload["profile"]["batch_size_fallback"] = batch_fallback_state.to_dict()
         print("\n  Profile timings (seconds):")
         for name, seconds in payload["profile"]["phases"].items():
             print(f"  {name:<24}{seconds:>10.3f}")
@@ -2428,6 +2618,8 @@ def main():
     p.add_argument("--max-length", type=int, default=64)
     p.add_argument("--batch-size", type=int, default=1,
                    help="forced-answer forward batch size; increase for faster benchmarks if memory allows")
+    p.add_argument("--auto-batch-size", action="store_true",
+                   help="on retriable memory errors during warmup/forced-answer forwards, halve batch size and retry")
     p.add_argument("--length-bucketed-batches", action="store_true",
                    help="sort statements by approximate text length before batching to reduce padding")
     p.add_argument("--hidden-state-capture", default="outputs", choices=HIDDEN_STATE_CAPTURE_METHODS,

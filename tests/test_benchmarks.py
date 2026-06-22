@@ -706,6 +706,48 @@ def test_eval_truthfulqa_chunked_preserves_order():
         list(module._chunked([1], 0))
 
 
+def test_eval_truthfulqa_batch_size_fallback_splits_memory_errors():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    state = module.BatchSizeFallbackState(4, enabled=True)
+    calls = []
+
+    def runner(items):
+        calls.append(tuple(items))
+        if len(items) > 2:
+            raise RuntimeError("CUDA out of memory while allocating tensor")
+        return [item * 10 for item in items]
+
+    result = module._run_with_batch_size_fallback(
+        [1, 2, 3, 4],
+        state=state,
+        phase="forced_answer_forward",
+        runner=runner,
+    )
+
+    assert result == [10, 20, 30, 40]
+    assert calls == [(1, 2, 3, 4), (1, 2), (3, 4)]
+    assert state.batch_size() == 2
+    assert state.to_dict()["n_reductions"] == 1
+    assert state.to_dict()["reductions"][0]["phase"] == "forced_answer_forward"
+
+
+def test_eval_truthfulqa_batch_size_fallback_does_not_hide_non_memory_errors():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    state = module.BatchSizeFallbackState(4, enabled=True)
+
+    def runner(_items):
+        raise RuntimeError("shape mismatch")
+
+    with pytest.raises(RuntimeError, match="shape mismatch"):
+        module._run_with_batch_size_fallback(
+            [1, 2, 3, 4],
+            state=state,
+            phase="forced_answer_forward",
+            runner=runner,
+        )
+    assert state.to_dict()["n_reductions"] == 0
+
+
 def test_eval_truthfulqa_length_bucketed_batches_sort_by_statement_length():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     statements = [
