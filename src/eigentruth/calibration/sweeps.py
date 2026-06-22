@@ -26,6 +26,7 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "disp_euclid": "higher",
     "disp_hse": "higher",
     "eigenscore": "higher",
+    "inside_eigenscore": "higher",
     "nll_answer": "higher",
 }
 

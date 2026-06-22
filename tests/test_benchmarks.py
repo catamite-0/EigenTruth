@@ -69,3 +69,26 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
 
     assert "eigenscore" in module.SIGNALS
     assert module.DEFAULT_SCORE_DIRECTIONS["eigenscore"] == "higher"
+
+
+def test_eval_truthfulqa_multisample_inside_signal_is_optional():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    disabled = SimpleNamespace(inside_samples=0)
+    enabled = SimpleNamespace(inside_samples=3)
+
+    assert module.INSIDE_SIGNAL not in module._enabled_signals(disabled)
+    assert module.INSIDE_SIGNAL in module._enabled_signals(enabled)
+    assert module.INSIDE_SIGNAL in module._sweep_signal_names(enabled)
+    assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SIGNAL] == "higher"
+
+
+def test_eval_truthfulqa_candidate_verification_prompt_includes_context():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    stmt = module.Statement("What is the capital of France?", "Paris", 0)
+
+    prompt = module._candidate_verification_prompt(stmt)
+
+    assert "Question: What is the capital of France?" in prompt
+    assert "Candidate answer: Paris" in prompt
+    assert "factually correct" in prompt
