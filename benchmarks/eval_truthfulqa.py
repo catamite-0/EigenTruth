@@ -1760,12 +1760,7 @@ def batched_statement_reps(
             for layer in layers
         }
 
-        logits = out.logits[row, :seq_len, :].float()
-        logp = torch.log_softmax(logits[:-1], dim=-1)
-        targets = input_ids[row, 1:seq_len]
-        tok_logp = logp[torch.arange(logp.shape[0], device=device), targets]
-        ans_logp = tok_logp[-n_ans:] if n_ans <= tok_logp.shape[0] else tok_logp
-        nll = float((-ans_logp.mean()).item())
+        nll = _answer_nll_from_logits(out.logits[row], input_ids[row], seq_len, n_ans)
         results[original_idx] = {
             "last": last_by_layer,
             "ans_hs": ans_hs,
@@ -1773,6 +1768,27 @@ def batched_statement_reps(
             "nll": nll,
         }
     return results
+
+
+def _answer_nll_from_logits(
+    logits: torch.Tensor,
+    input_ids: torch.Tensor,
+    seq_len: int,
+    n_answer_tokens: int,
+) -> float:
+    """Return answer-token NLL without normalizing unused prompt positions."""
+    seq_len = int(seq_len)
+    n_answer_tokens = int(n_answer_tokens)
+    ans_start = seq_len - n_answer_tokens
+    logit_start = max(0, ans_start - 1)
+    logit_end = seq_len - 1
+    if logit_end <= logit_start:
+        return float("nan")
+    answer_logits = logits[logit_start:logit_end, :].float()
+    targets = input_ids[logit_start + 1:seq_len]
+    logp = torch.log_softmax(answer_logits, dim=-1)
+    tok_logp = logp[torch.arange(logp.shape[0], device=logp.device), targets.to(logp.device)]
+    return float((-tok_logp.mean()).item())
 
 
 def _batched_statement_reps_for_pairs(

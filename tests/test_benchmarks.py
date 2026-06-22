@@ -3918,6 +3918,23 @@ def test_eval_truthfulqa_batched_statement_reps_can_use_precomputed_encodings():
     assert reps[0]["nll"] == pytest.approx(torch.log(torch.tensor(64.0)).item())
 
 
+def test_eval_truthfulqa_answer_nll_only_normalizes_answer_window():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    torch.manual_seed(0)
+    logits = torch.randn(7, 11)
+    input_ids = torch.tensor([1, 3, 5, 7, 2, 4, 6])
+
+    def legacy_nll(seq_len: int, n_answer_tokens: int) -> float:
+        full_logp = torch.log_softmax(logits[:seq_len - 1].float(), dim=-1)
+        targets = input_ids[1:seq_len]
+        tok_logp = full_logp[torch.arange(full_logp.shape[0]), targets]
+        ans_logp = tok_logp[-n_answer_tokens:] if n_answer_tokens <= tok_logp.shape[0] else tok_logp
+        return float((-ans_logp.mean()).item())
+
+    assert module._answer_nll_from_logits(logits, input_ids, 7, 2) == pytest.approx(legacy_nll(7, 2))
+    assert module._answer_nll_from_logits(logits, input_ids, 7, 7) == pytest.approx(legacy_nll(7, 7))
+
+
 def test_eval_truthfulqa_statement_dump_preserves_question_answer_and_label():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     stmt = module.Statement("Where?", "There.", 1)
