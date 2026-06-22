@@ -270,7 +270,7 @@ For product features:
 - `eval_truthfulqa.py --statement-encoding-cache` persists tokenizer outputs and answer-span lengths as validated JSON so repeated benchmark/cache rebuilds avoid redundant tokenizer setup without changing scoring semantics.
 - Sharded `--eval-reps-cache` readers reuse the active shard across adjacent batch reads, reducing repeated `torch.load` calls during small-batch cache-only or cached scoring runs; JSON output includes `cache_stats.eval_reps_reader` counters when an eval-reps reader is used.
 - `compare_profiles.py` compares profile JSON payloads across baseline/cache/cache-only runs, reporting speedup, phase deltas, grouped time deltas, and throughput ratios without loading models. Optional regression gates can fail CI/local checks when total time, phase time, or throughput ratios exceed configured limits.
-- `profile_gate_smoke.py` and `make perf-check` provide a deterministic no-model smoke check for the profile regression gate machinery; real performance claims still require representative `eval_truthfulqa.py --profile-json` artifacts.
+- `profile_gate_smoke.py`, `cache_profile_smoke.py`, and `make perf-check` provide deterministic no-model smoke checks for profile regression and cache/cache-only gate machinery; real performance claims still require representative `eval_truthfulqa.py --profile-json` artifacts.
 
 ### Next Verification Adapter Work
 

@@ -21,6 +21,7 @@ pip-check:
 
 perf-check:
 	$(PYTHON) benchmarks/profile_gate_smoke.py
+	$(PYTHON) benchmarks/cache_profile_smoke.py
 
 build:
 	$(PYTHON) -m build

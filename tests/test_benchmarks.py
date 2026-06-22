@@ -777,6 +777,55 @@ def test_compare_profiles_builds_regression_gate_report(tmp_path):
     }
 
 
+def test_compare_profiles_supports_run_specific_total_ratio_gates(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    baseline_path = tmp_path / "baseline.json"
+    cached_path = tmp_path / "cached.json"
+    cache_only_path = tmp_path / "cache_only.json"
+    baseline_path.write_text(
+        json.dumps({
+            "total_seconds": 100.0,
+            "phases": {"forced_answer_forward": 80.0},
+        }),
+        encoding="utf-8",
+    )
+    cached_path.write_text(
+        json.dumps({
+            "total_seconds": 98.0,
+            "phases": {"read_eval_reps_cache_batch": 5.0},
+        }),
+        encoding="utf-8",
+    )
+    cache_only_path.write_text(
+        json.dumps({
+            "total_seconds": 30.0,
+            "phases": {"read_eval_reps_cache_batch": 20.0},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_profile_comparison(
+        [
+            ("baseline", baseline_path),
+            ("cached", cached_path),
+            ("cache_only", cache_only_path),
+        ],
+        baseline="baseline",
+        max_total_ratio=1.05,
+        max_run_total_ratios={"cache_only": 0.25},
+    )
+    gate = payload["regression_gate"]
+
+    assert gate["passed"] is False
+    assert gate["config"]["max_total_ratio"] == pytest.approx(1.05)
+    assert gate["config"]["max_run_total_ratios"] == {"cache_only": 0.25}
+    assert len(gate["failures"]) == 1
+    assert gate["failures"][0]["run"] == "cache_only"
+    assert gate["failures"][0]["metric"] == "total_seconds"
+    assert gate["failures"][0]["limit"] == pytest.approx(0.25)
+    assert gate["failures"][0]["value"] == pytest.approx(0.30)
+
+
 def test_compare_profiles_cli_exits_nonzero_on_regression_gate_failure(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"
@@ -800,6 +849,8 @@ def test_compare_profiles_cli_exits_nonzero_on_regression_gate_failure(tmp_path,
         "baseline",
         "--max-total-ratio",
         "1.10",
+        "--max-run-total-ratio",
+        "candidate=1.20",
         "--json",
         str(report_path),
     ])
@@ -811,6 +862,7 @@ def test_compare_profiles_cli_exits_nonzero_on_regression_gate_failure(tmp_path,
     payload = json.loads(report_path.read_text(encoding="utf-8"))
     assert payload["regression_gate"]["passed"] is False
     assert payload["regression_gate"]["failures"][0]["metric"] == "total_seconds"
+    assert payload["regression_gate"]["failures"][0]["limit"] == pytest.approx(1.20)
 
 
 def test_profile_gate_smoke_writes_pass_and_expected_failure_reports(tmp_path):
@@ -832,6 +884,30 @@ def test_profile_gate_smoke_writes_pass_and_expected_failure_reports(tmp_path):
         "phase:forced_answer_forward",
         "throughput:forced_answer_records_per_second",
     }
+
+
+def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
+    module = importlib.import_module("benchmarks.cache_profile_smoke")
+
+    payload = module.build_cache_profile_smoke(tmp_path)
+    pass_report = payload["pass_report"]
+    failure_report = payload["expected_failure_report"]
+
+    assert (tmp_path / "profile_uncached.json").exists()
+    assert (tmp_path / "profile_cached.json").exists()
+    assert (tmp_path / "profile_cache_only.json").exists()
+    assert (tmp_path / "profile_cache_only_regression.json").exists()
+    assert (tmp_path / "cache_profile_gate_pass_report.json").exists()
+    assert (tmp_path / "cache_profile_gate_expected_failure_report.json").exists()
+    assert pass_report["regression_gate"]["passed"] is True
+    assert pass_report["regression_gate"]["config"]["max_run_total_ratios"] == {
+        "cached": pytest.approx(0.75),
+        "cache_only": pytest.approx(0.20),
+        "cache_only_regression": pytest.approx(0.20),
+    }
+    assert failure_report["regression_gate"]["passed"] is False
+    assert failure_report["regression_gate"]["failures"][0]["run"] == "cache_only_regression"
+    assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):

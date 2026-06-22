@@ -272,7 +272,7 @@ For local development, the Makefile auto-detects `.venv/bin/python` when present
 
 ```bash
 make check
-make perf-check     # deterministic profile-gate smoke; no model load
+make perf-check     # deterministic profile/cache-gate smokes; no model load
 make release-check  # also builds the package
 ```
 
