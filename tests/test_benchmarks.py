@@ -3,6 +3,7 @@
 import importlib
 import json
 import sys
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -2566,9 +2567,104 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     assert "--max-batch-tokens 96" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
     assert report["config"]["max_batch_tokens"] == 96
+    assert report["config"]["max_workers"] == 1
     assert manifest["metadata"]["max_batch_tokens"] == 96
     assert report["matrix_decision"]["status"] == "dry_run"
     assert report["matrix_decision"]["recommended_cell"] is None
+
+    with pytest.raises(ValueError, match="max_workers"):
+        module.CacheProfileMatrixConfig(output_dir=tmp_path / "bad-workers", max_workers=0)
+
+
+def test_run_cache_profile_matrix_can_run_cells_in_parallel(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    barrier = threading.Barrier(2, timeout=2.0)
+    lock = threading.Lock()
+    started = []
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        del clean
+        assert dry_run is True
+        with lock:
+            started.append(config.layer)
+        barrier.wait()
+        return {
+            "dry_run": True,
+            "output_dir": str(config.output_dir),
+            "commands": {"uncached": ["/python"]},
+            "run_names": ("uncached",),
+            "caches": {},
+            "uncached_cache_mode": config.uncached_cache_mode,
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        model="tiny-local",
+        layers=(-2, -1),
+        batch_sizes=(1,),
+        max_workers=2,
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+
+    assert sorted(started) == [-2, -1]
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_1_capture_outputs",
+        "layer_m1_batch_1_capture_outputs",
+    ]
+    assert report["config"]["max_workers"] == 2
+
+
+def test_run_cache_profile_matrix_parallel_shared_cache_waits_for_refresh_cells(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    lock = threading.Lock()
+    calls = []
+    violations = []
+    refresh_done = 0
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        nonlocal refresh_done
+        del clean
+        assert dry_run is True
+        with lock:
+            calls.append((config.layer, config.batch_size, config.uncached_cache_mode, refresh_done))
+            if config.uncached_cache_mode != "refresh" and refresh_done < 2:
+                violations.append((config.layer, config.batch_size, refresh_done))
+        if config.uncached_cache_mode == "refresh":
+            with lock:
+                refresh_done += 1
+        return {
+            "dry_run": True,
+            "output_dir": str(config.output_dir),
+            "commands": {"uncached": ["/python"]},
+            "run_names": ("uncached",),
+            "caches": {"eval_reps_cache": str(config.eval_reps_cache)},
+            "uncached_cache_mode": config.uncached_cache_mode,
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2, -1),
+        batch_sizes=(1, 2),
+        max_workers=4,
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+
+    assert violations == []
+    assert [call[2] for call in calls[:2]] == ["refresh", "refresh"]
+    assert [cell["uncached_cache_mode"] for cell in report["cells"]] == [
+        "refresh",
+        "warm_start",
+        "refresh",
+        "warm_start",
+    ]
 
 
 def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_path):
@@ -2744,7 +2840,7 @@ def test_run_cache_profile_matrix_prefix_modes_recommend_by_uncached_forward(tmp
         del clean, dry_run
         config.output_dir.mkdir(parents=True, exist_ok=True)
         is_prefix_on = bool(config.prefix_kv_cache)
-        uncached_total = 140.0 if is_prefix_on else 120.0
+        uncached_total = 110.0 if is_prefix_on else 120.0
         forced_answer = 100.0 if is_prefix_on else 80.0
         cache_only_total = 0.30 if is_prefix_on else 0.31
         profiles = {}
@@ -2806,7 +2902,8 @@ def test_run_cache_profile_matrix_prefix_modes_recommend_by_uncached_forward(tmp
     assert report["matrix_decision"]["recommendation_metric"] == "uncached_forced_answer_forward_seconds"
     assert comparison["status"] == "prefix_kv_slower"
     assert comparison["recommended_prefix_kv_cache"] is False
-    assert comparison["uncached_total_ratio_on_vs_off"] == pytest.approx(140.0 / 120.0)
+    assert comparison["recommendation_metric"] == "forced_answer_forward_seconds"
+    assert comparison["uncached_total_ratio_on_vs_off"] == pytest.approx(110.0 / 120.0)
     assert comparison["forced_answer_forward_ratio_on_vs_off"] == pytest.approx(100.0 / 80.0)
 
 

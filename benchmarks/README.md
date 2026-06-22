@@ -1036,6 +1036,7 @@ python benchmarks/run_cache_profile_matrix.py \
   --batch-sizes=1,2,4 \
   --max-batch-token-budgets=0,512,1024 \
   --hidden-state-captures=outputs,hooks \
+  --max-workers=2 \
   --dry-run
 ```
 
@@ -1052,6 +1053,11 @@ measure multiple budgets in one matrix, use `--max-batch-token-budgets 0,512`;
 token-budget matrix recommendations are sorted by uncached forced-answer forward
 time because the budget changes forward batching, not cache-only replay
 semantics.
+Use `--max-workers` to run independent matrix cells concurrently. The default is
+`1` for fully serial/reproducible local runs. When `--shared-cache-dir` is set,
+the runner keeps refresh cells serial until shared statement/layer/eval caches
+exist, then executes dependent warm-start/cache-only cells concurrently up to
+the worker limit.
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and

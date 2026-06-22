@@ -72,6 +72,7 @@ class AdapterReadinessWorkflowConfig:
     offline: bool = True
     shared_cache_dir: Path | None = None
     matrix_mode: str = "triplet"
+    performance_max_workers: int = 1
     performance_clean: bool = False
     performance_dry_run: bool = False
 
@@ -85,7 +86,10 @@ class AdapterReadinessWorkflowConfig:
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
         if int(self.max_batch_tokens) < 0:
             raise ValueError("max_batch_tokens must be >=0.")
+        if int(self.performance_max_workers) < 1:
+            raise ValueError("performance_max_workers must be >=1.")
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
+        object.__setattr__(self, "performance_max_workers", int(self.performance_max_workers))
         if self.max_batch_token_budgets is not None:
             object.__setattr__(
                 self,
@@ -162,6 +166,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             offline=config.offline,
             shared_cache_dir=config.shared_cache_dir,
             matrix_mode=config.matrix_mode,
+            max_workers=config.performance_max_workers,
         ),
         clean=config.performance_clean,
         dry_run=config.performance_dry_run,
@@ -262,6 +267,7 @@ def _write_artifact_manifest(
             ),
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
+            "performance_max_workers": config.performance_max_workers,
             "performance_dry_run": config.performance_dry_run,
             "readiness_status": decision.get("status"),
             "adapter_family_status": decision.get("adapter_family_status"),
@@ -334,6 +340,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         offline=not args.real_truthfulqa,
         shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
         matrix_mode=args.matrix_mode,
+        performance_max_workers=args.performance_max_workers,
         performance_clean=bool(args.performance_clean),
         performance_dry_run=bool(args.performance_dry_run),
     )
@@ -395,6 +402,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--real-truthfulqa", action="store_true")
     parser.add_argument("--shared-cache-dir", default=None)
     parser.add_argument("--matrix-mode", default="triplet", choices=MATRIX_MODES)
+    parser.add_argument("--performance-max-workers", type=int, default=1,
+                        help="maximum cache-profile matrix cells to execute concurrently")
     parser.add_argument("--performance-clean", action="store_true")
     parser.add_argument("--performance-dry-run", action="store_true")
     parser.add_argument("--fail-on-blocked", action="store_true",

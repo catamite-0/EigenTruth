@@ -12,6 +12,7 @@ import hashlib
 import itertools
 import json
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -54,6 +55,7 @@ class CacheProfileMatrixConfig:
     offline: bool = True
     shared_cache_dir: Path | None = None
     matrix_mode: str = "triplet"
+    max_workers: int = 1
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -91,6 +93,8 @@ class CacheProfileMatrixConfig:
             raise ValueError("matrix_mode='rescore' requires shared_cache_dir.")
         if matrix_mode == "rescore" and len(token_budgets) > 1:
             raise ValueError("max_batch_token_budgets comparisons require matrix_mode='triplet'.")
+        if int(self.max_workers) < 1:
+            raise ValueError("max_workers must be >=1.")
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
@@ -99,6 +103,7 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
         object.__setattr__(self, "prefix_kv_cache", any(prefix_modes))
         object.__setattr__(self, "matrix_mode", matrix_mode)
+        object.__setattr__(self, "max_workers", int(self.max_workers))
 
     @property
     def report_path(self) -> Path:
@@ -187,33 +192,8 @@ def run_matrix(
 ) -> dict[str, Any]:
     """Run all matrix cells and write a matrix report."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
-    cells = []
-    seen_shared_cache_groups: set[str] = set()
-    for cell in matrix_cells(config):
-        shared_cache_group = _shared_cache_group(config, cell)
-        first_shared_group_run = shared_cache_group is None or shared_cache_group not in seen_shared_cache_groups
-        uncached_cache_mode, run_names = _cell_execution_plan(
-            config,
-            first_shared_group_run=first_shared_group_run,
-        )
-        triplet_config = triplet_config_for_cell(
-            config,
-            cell,
-            uncached_cache_mode=uncached_cache_mode,
-            run_names=run_names,
-        )
-        triplet_payload = run_triplet(triplet_config, clean=clean, dry_run=dry_run)
-        if shared_cache_group is not None:
-            seen_shared_cache_groups.add(shared_cache_group)
-        cells.append({
-            **cell,
-            "output_dir": str(triplet_config.output_dir),
-            "shared_cache_group": shared_cache_group,
-            "uncached_cache_mode": uncached_cache_mode,
-            "run_names": tuple(run_names),
-            "triplet": triplet_payload,
-            "summary": _cell_summary(triplet_payload),
-        })
+    plans = _build_cell_run_plans(config)
+    cells = list(_run_cell_plans(plans, clean=clean, dry_run=dry_run, max_workers=config.max_workers))
 
     if config.matrix_mode == "rescore":
         _apply_rescore_baselines(config, cells)
@@ -242,6 +222,7 @@ def run_matrix(
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
             "shared_cache_root": None if config.shared_cache_dir is None else str(_shared_cache_root(config)),
             "matrix_mode": config.matrix_mode,
+            "max_workers": config.max_workers,
         },
         "cells": cells,
         "leaderboard": leaderboard,
@@ -255,6 +236,106 @@ def run_matrix(
         json.dump(report, f, indent=2)
     _write_artifact_manifest(config, report)
     return report
+
+
+@dataclass(frozen=True)
+class _CellRunPlan:
+    index: int
+    cell: dict[str, Any]
+    shared_cache_group: str | None
+    uncached_cache_mode: str
+    run_names: tuple[str, ...]
+    triplet_config: CacheProfileTripletConfig
+
+
+def _build_cell_run_plans(config: CacheProfileMatrixConfig) -> tuple[_CellRunPlan, ...]:
+    plans = []
+    seen_shared_cache_groups: set[str] = set()
+    for index, cell in enumerate(matrix_cells(config)):
+        shared_cache_group = _shared_cache_group(config, cell)
+        first_shared_group_run = shared_cache_group is None or shared_cache_group not in seen_shared_cache_groups
+        uncached_cache_mode, run_names = _cell_execution_plan(
+            config,
+            first_shared_group_run=first_shared_group_run,
+        )
+        triplet_config = triplet_config_for_cell(
+            config,
+            cell,
+            uncached_cache_mode=uncached_cache_mode,
+            run_names=run_names,
+        )
+        if shared_cache_group is not None:
+            seen_shared_cache_groups.add(shared_cache_group)
+        plans.append(_CellRunPlan(
+            index=index,
+            cell=cell,
+            shared_cache_group=shared_cache_group,
+            uncached_cache_mode=uncached_cache_mode,
+            run_names=tuple(run_names),
+            triplet_config=triplet_config,
+        ))
+    return tuple(plans)
+
+
+def _run_cell_plans(
+    plans: Sequence[_CellRunPlan],
+    *,
+    clean: bool,
+    dry_run: bool,
+    max_workers: int,
+) -> tuple[dict[str, Any], ...]:
+    if max_workers <= 1 or len(plans) <= 1:
+        return tuple(_run_cell_plan(plan, clean=clean, dry_run=dry_run) for plan in plans)
+
+    results: list[dict[str, Any] | None] = [None] * len(plans)
+    if any(plan.shared_cache_group is not None for plan in plans):
+        refresh_plans = [plan for plan in plans if plan.uncached_cache_mode == "refresh"]
+        dependent_plans = [plan for plan in plans if plan.uncached_cache_mode != "refresh"]
+        for plan in refresh_plans:
+            results[plan.index] = _run_cell_plan(plan, clean=clean, dry_run=dry_run)
+        _run_cell_plans_parallel(dependent_plans, results, clean=clean, dry_run=dry_run, max_workers=max_workers)
+    else:
+        _run_cell_plans_parallel(plans, results, clean=clean, dry_run=dry_run, max_workers=max_workers)
+
+    return tuple(result for result in results if result is not None)
+
+
+def _run_cell_plans_parallel(
+    plans: Sequence[_CellRunPlan],
+    results: list[dict[str, Any] | None],
+    *,
+    clean: bool,
+    dry_run: bool,
+    max_workers: int,
+) -> None:
+    if not plans:
+        return
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(plans))) as executor:
+        futures = {
+            executor.submit(_run_cell_plan, plan, clean=clean, dry_run=dry_run): plan
+            for plan in plans
+        }
+        for future in as_completed(futures):
+            plan = futures[future]
+            results[plan.index] = future.result()
+
+
+def _run_cell_plan(
+    plan: _CellRunPlan,
+    *,
+    clean: bool,
+    dry_run: bool,
+) -> dict[str, Any]:
+    triplet_payload = run_triplet(plan.triplet_config, clean=clean, dry_run=dry_run)
+    return {
+        **plan.cell,
+        "output_dir": str(plan.triplet_config.output_dir),
+        "shared_cache_group": plan.shared_cache_group,
+        "uncached_cache_mode": plan.uncached_cache_mode,
+        "run_names": tuple(plan.run_names),
+        "triplet": triplet_payload,
+        "summary": _cell_summary(triplet_payload),
+    }
 
 
 def _cell_execution_plan(
@@ -306,6 +387,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
+            "max_workers": config.max_workers,
             "dry_run": bool(report.get("dry_run")),
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
         },
@@ -566,10 +648,7 @@ def _leaderboard(
         uncached = dict(totals.get("uncached", {}))
         cache_only_total = cache_only.get("total_seconds")
         uncached_total = uncached.get("total_seconds")
-        sort_value = uncached_total if sort_metric == "uncached_total_seconds" else cache_only_total
-        if sort_value is None:
-            continue
-        scored.append({
+        row = {
             "id": cell["id"],
             "layer": cell["layer"],
             "batch_size": cell["batch_size"],
@@ -587,8 +666,14 @@ def _leaderboard(
             "truth_proj_auroc": summary.get("truth_proj_auroc"),
             "gate_passed": _gate_passed(summary.get("regression_gate")),
             "recommendation_metric": sort_metric,
-        })
-    return tuple(sorted(scored, key=lambda item: (item[sort_metric], str(item["id"]))))
+        }
+        sort_value = _float_or_none(row.get(sort_metric))
+        if sort_value is None:
+            continue
+        row["_sort_value"] = sort_value
+        scored.append(row)
+    ordered = sorted(scored, key=lambda item: (item["_sort_value"], str(item["id"])))
+    return tuple({key: value for key, value in item.items() if key != "_sort_value"} for item in ordered)
 
 
 def _matrix_decision(
@@ -689,13 +774,15 @@ def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, A
         on_forward = _float_or_none(on_uncached.get("forced_answer_forward_seconds"))
         total_ratio = _safe_ratio(on_total, off_total)
         forward_ratio = _safe_ratio(on_forward, off_forward)
+        decision_ratio = forward_ratio if forward_ratio is not None else total_ratio
+        decision_metric = "forced_answer_forward_seconds" if forward_ratio is not None else "uncached_total_seconds"
         status = "incomplete"
         recommended_prefix = None
-        if total_ratio is not None:
-            if total_ratio < 1.0:
+        if decision_ratio is not None:
+            if decision_ratio < 1.0:
                 status = "prefix_kv_faster"
                 recommended_prefix = True
-            elif total_ratio > 1.0:
+            elif decision_ratio > 1.0:
                 status = "prefix_kv_slower"
                 recommended_prefix = False
             else:
@@ -709,6 +796,7 @@ def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, A
             "on_cell": on.get("id"),
             "status": status,
             "recommended_prefix_kv_cache": recommended_prefix,
+            "recommendation_metric": decision_metric,
             "off_uncached_total_seconds": off_total,
             "on_uncached_total_seconds": on_total,
             "uncached_total_ratio_on_vs_off": total_ratio,
@@ -853,6 +941,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         offline=not args.real_truthfulqa,
         shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
         matrix_mode=args.matrix_mode,
+        max_workers=args.max_workers,
     )
 
 
@@ -911,6 +1000,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--matrix-mode", default="triplet", choices=MATRIX_MODES,
                         help="triplet runs every cell as uncached/cached/cache-only; rescore runs the first shared "
                              "cache group cell as a full triplet and repeated group cells as cache-only")
+    parser.add_argument("--max-workers", type=int, default=1,
+                        help="maximum matrix cells to execute concurrently; shared-cache refresh cells are still "
+                             "run serially before dependent warm-start cells")
     parser.add_argument("--real-truthfulqa", action="store_true")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
