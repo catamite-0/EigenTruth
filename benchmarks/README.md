@@ -879,6 +879,34 @@ Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
 
+To write, verify, and register that release candidate as its own manifest, use
+`run_release_candidate_registry_workflow.py`:
+
+```bash
+python benchmarks/run_release_candidate_registry_workflow.py \
+  --readiness-registry artifacts/registry.json \
+  --route-registry artifacts/registry.json \
+  --release-registry artifacts/release-registry.json \
+  --name qwen05-local-release-candidate \
+  --version 0.7 \
+  --min-best-quality-auroc 0.60 \
+  --max-uncached-forward-seconds 40 \
+  --min-selected 100 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-p99-duration-seconds 0.20 \
+  --json artifacts/release-candidate-registry-workflow.json \
+  --release-report-json artifacts/release-candidate-comparison.json \
+  --artifact-manifest artifacts/release-candidate-artifact-manifest.json \
+  --fail-on-blocked
+```
+
+The generated manifest fingerprints the release-candidate report and the
+selected readiness and route manifests. Recursive verification therefore checks
+the final candidate and both underlying baseline manifests before the release
+candidate is registered.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval

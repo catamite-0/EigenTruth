@@ -2338,6 +2338,146 @@ def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
     assert "p99_duration_seconds above 0.01" in payload["decision"]["blocking_reasons"][0]["reasons"][0]
 
 
+def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.run_release_candidate_registry_workflow(
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=baseline_registry_path,
+            release_registry_path=release_registry_path,
+            name="qwen-release-candidate",
+            version="0.7",
+            workflow_report_path=tmp_path / "workflow.json",
+            release_report_path=tmp_path / "release-candidate.json",
+            artifact_manifest_path=tmp_path / "release-manifest.json",
+            verification_report_path=tmp_path / "release-verification.json",
+            min_best_quality_auroc=0.70,
+            max_uncached_forward_seconds=20.0,
+            min_selected=4,
+            min_decision_accuracy=0.99,
+            max_p99_duration_seconds=0.03,
+            promotion_metadata={"scope": "unit"},
+        )
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["manifest_promoted"] is True
+    assert payload["decision"]["manifest_verified"] is True
+    assert payload["decision"]["registry_record"] == "benchmark_manifest:qwen-release-candidate:0.7"
+    manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
+    assert sorted(manifest["artifacts"]) == [
+        "readiness_manifest",
+        "release_candidate_report",
+        "route_manifest",
+    ]
+    assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
+    assert manifest["metadata"]["release_candidate_status"] == "promote"
+    assert manifest["metadata"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
+    assert manifest["metadata"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
+    registry = ArtifactRegistry.load_json(release_registry_path)
+    record = registry.get("benchmark_manifest:qwen-release-candidate:0.7")
+    assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
+    assert record.metadata["release_candidate_status"] == "promote"
+    assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert record.metadata["recommended_route"] == "structured_state"
+    assert record.metadata["scope"] == "unit"
+
+
+def test_run_release_candidate_registry_workflow_cli_blocks_without_registration(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    workflow_path = tmp_path / "workflow.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--readiness-registry",
+            str(baseline_registry_path),
+            "--release-registry",
+            str(release_registry_path),
+            "--name",
+            "qwen-release-candidate",
+            "--version",
+            "0.7",
+            "--max-p99-duration-seconds",
+            "0.01",
+            "--json",
+            str(workflow_path),
+            "--fail-on-blocked",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(workflow_path.read_text(encoding="utf-8"))
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["manifest_promoted"] is False
+    assert payload["decision"]["manifest_verified"] is False
+    assert payload["promotion"] is None
+    assert payload["decision"]["blocking_reasons"] == [
+        "release candidate comparison did not promote",
+    ]
+    assert ArtifactRegistry.load_json(release_registry_path).records == ()
+
+
 def _write_readiness_baseline_manifest(
     output_dir,
     *,
