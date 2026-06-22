@@ -225,6 +225,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache-aware route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
+| `run_adapter_promotion_registry_workflow.py` | Runs route promotion, writes a manifest, recursively verifies it, and registers the promoted route baseline in one command. |
 | `compare_route_baselines.py` | Compares registered verifier-route promotion manifests by verified state, route quality, false support/refutation, tail latency, and retrieval cost. |
 | `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, and state-transition fixtures, then compares their promotion metrics in one local matrix. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision with per-cell AUROC quality signals. |
@@ -276,6 +277,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache-aware route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
+| `run_adapter_promotion_registry_workflow.py` | 一次性执行 route promotion、写 manifest、递归验证 manifest，并把 promoted route baseline 注册到本地 registry。 |
 | `compare_route_baselines.py` | 按 manifest 验证状态、route 质量、误支持/反证率、尾延迟和 retrieval 成本比较已注册 verifier-route promotion baseline。 |
 | `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition fixtures，并在一个本地矩阵里比较 promotion 指标。 |
 | `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision 和每个 cell 的 AUROC quality signals。 |

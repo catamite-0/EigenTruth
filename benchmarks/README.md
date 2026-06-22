@@ -690,6 +690,37 @@ The final report includes:
   gates, failed route gates, missing registry gates, or failed registry gates
   produce `blocked` plus explicit `blocking_reasons`.
 
+## `run_adapter_promotion_registry_workflow.py`
+
+Runs route promotion and registry promotion in one command. It writes the route
+comparison report, writes the registry-ready artifact manifest, recursively
+verifies that manifest, and records it in `ArtifactRegistry` only when the
+adapter promotion decision is `promote` by default.
+
+```bash
+python benchmarks/run_adapter_promotion_registry_workflow.py \
+  --report qwen=artifacts/qwen05_verifier_ensemble_report.json \
+  --route-report-json artifacts/qwen05_route_comparison.json \
+  --artifact-manifest artifacts/qwen05_adapter_promotion_manifest.json \
+  --registry artifacts/registry.json \
+  --name qwen05-route-structured-state \
+  --version 0.6 \
+  --gate-route structured_state \
+  --min-decision-accuracy 0.90 \
+  --max-false-supported-rate 0.05 \
+  --min-false-refuted-rate 0.80 \
+  --max-mean-duration-seconds 0.05 \
+  --max-p99-duration-seconds 0.20 \
+  --max-mean-attempted-route-count 1.5 \
+  --json artifacts/qwen05_adapter_promotion_registry_workflow.json \
+  --fail-on-blocked
+```
+
+Use `--baseline-registry` with `--candidate-profile` and the same performance
+gate flags as `run_adapter_promotion_workflow.py` when the route promotion must
+also compare the current profile against a registered same-machine baseline.
+`--registry` is always the destination registry for the promoted route manifest.
+
 ## `compare_route_baselines.py`
 
 Compares registered route-promotion manifests from `ArtifactRegistry` without
