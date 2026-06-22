@@ -1045,8 +1045,11 @@ a matrix-level `matrix_decision`. The decision is `promote` only when at least
 one checked cell passes its regression gate and no checked cell fails; use
 `--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
 non-zero.
-Add `--prefix-kv-cache` to compare the experimental shared-prefix eval path
-inside the same triplet/matrix/readiness gates. Because it changes only the
+Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
+the same triplet/matrix/readiness gates. To compare it against the default path
+in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and
+shared eval cache groups include the prefix mode so the two forward paths do not
+silently share eval-reps caches. Because prefix caching changes only the
 uncached/cached model-forward path, cache-only runs omit the flag and replay the
 saved representations.
 When `--shared-cache-dir` is set, cells with the same layer and hidden-state

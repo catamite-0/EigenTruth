@@ -23,7 +23,12 @@ from benchmarks.run_adapter_family_matrix import (  # noqa: E402
     AdapterFamilyMatrixConfig,
     run_adapter_family_matrix,
 )
-from benchmarks.run_cache_profile_matrix import MATRIX_MODES, CacheProfileMatrixConfig, run_matrix  # noqa: E402
+from benchmarks.run_cache_profile_matrix import (  # noqa: E402
+    MATRIX_MODES,
+    CacheProfileMatrixConfig,
+    _parse_prefix_kv_cache_modes,
+    run_matrix,
+)
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
@@ -54,6 +59,7 @@ class AdapterReadinessWorkflowConfig:
     manifold_questions: int | None = None
     max_length: int = 64
     prefix_kv_cache: bool = False
+    prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
@@ -132,6 +138,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             manifold_questions=config.manifold_questions,
             max_length=config.max_length,
             prefix_kv_cache=config.prefix_kv_cache,
+            prefix_kv_cache_modes=config.prefix_kv_cache_modes,
             eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
             cached_max_total_ratio=config.cached_max_total_ratio,
             cache_only_max_total_ratio=config.cache_only_max_total_ratio,
@@ -232,6 +239,9 @@ def _write_artifact_manifest(
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
             "prefix_kv_cache": config.prefix_kv_cache,
+            "prefix_kv_cache_modes": (
+                None if config.prefix_kv_cache_modes is None else tuple(config.prefix_kv_cache_modes)
+            ),
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "performance_dry_run": config.performance_dry_run,
@@ -294,6 +304,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
         prefix_kv_cache=args.prefix_kv_cache,
+        prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
@@ -349,6 +360,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache through to non-cache-only performance eval runs")
+    parser.add_argument("--prefix-kv-cache-modes", default=None,
+                        help="comma-list of prefix cache modes to compare in the performance matrix, e.g. off,on")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)

@@ -42,6 +42,7 @@ class CacheProfileMatrixConfig:
     manifold_questions: int | None = None
     max_length: int = 64
     prefix_kv_cache: bool = False
+    prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
@@ -67,7 +68,12 @@ class CacheProfileMatrixConfig:
             raise ValueError("batch_sizes must be >=1.")
         if not captures:
             raise ValueError("hidden_state_captures must not be empty.")
-        if self.prefix_kv_cache and any(capture != "outputs" for capture in captures):
+        prefix_modes = (
+            _normalize_prefix_kv_cache_modes(self.prefix_kv_cache_modes)
+            if self.prefix_kv_cache_modes is not None
+            else (bool(self.prefix_kv_cache),)
+        )
+        if any(prefix_modes) and any(capture != "outputs" for capture in captures):
             raise ValueError("prefix_kv_cache requires hidden_state_captures to be outputs.")
         matrix_mode = str(self.matrix_mode)
         if matrix_mode not in MATRIX_MODES:
@@ -77,6 +83,8 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
+        object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
+        object.__setattr__(self, "prefix_kv_cache", any(prefix_modes))
         object.__setattr__(self, "matrix_mode", matrix_mode)
 
     @property
@@ -91,17 +99,25 @@ class CacheProfileMatrixConfig:
 def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]:
     """Return matrix cells in deterministic execution order."""
     cells = []
-    for layer, batch_size, capture in itertools.product(
+    prefix_modes = config.prefix_kv_cache_modes or (bool(config.prefix_kv_cache),)
+    include_prefix_component = len(prefix_modes) > 1 or any(prefix_modes)
+    for layer, batch_size, capture, prefix_kv_cache in itertools.product(
         config.layers,
         config.batch_sizes,
         config.hidden_state_captures,
+        prefix_modes,
     ):
-        cell_id = f"layer_{layer}_batch_{batch_size}_capture_{capture}".replace("-", "m")
+        base_id = f"layer_{layer}_batch_{batch_size}_capture_{capture}"
+        prefix_component = "prefix_kv_on" if prefix_kv_cache else "prefix_kv_off"
+        cell_id = f"{base_id}_{prefix_component}" if include_prefix_component else base_id
+        cell_id = cell_id.replace("-", "m")
         cells.append({
             "id": cell_id,
             "layer": layer,
             "batch_size": batch_size,
             "hidden_state_capture": capture,
+            "prefix_kv_cache": bool(prefix_kv_cache),
+            "prefix_kv_cache_component": prefix_component if include_prefix_component else None,
         })
     return tuple(cells)
 
@@ -125,7 +141,7 @@ def triplet_config_for_cell(
         batch_size=int(cell["batch_size"]),
         max_length=config.max_length,
         hidden_state_capture=str(cell["hidden_state_capture"]),
-        prefix_kv_cache=config.prefix_kv_cache,
+        prefix_kv_cache=bool(cell.get("prefix_kv_cache", config.prefix_kv_cache)),
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
@@ -193,6 +209,7 @@ def run_matrix(
             "manifold_questions": config.manifold_questions,
             "max_length": config.max_length,
             "prefix_kv_cache": config.prefix_kv_cache,
+            "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
@@ -256,6 +273,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
             "prefix_kv_cache": config.prefix_kv_cache,
+            "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "dry_run": bool(report.get("dry_run")),
@@ -289,10 +307,14 @@ def _shared_cache_root(config: CacheProfileMatrixConfig) -> Path:
 
 
 def _shared_cache_group_name(cell: Mapping[str, Any]) -> str:
-    return (
+    group_name = (
         f"layer_{_layer_component(int(cell['layer']))}"
         f"_capture_{_safe_path_component(str(cell['hidden_state_capture']))}"
     )
+    prefix_component = cell.get("prefix_kv_cache_component")
+    if prefix_component:
+        group_name = f"{group_name}_{_safe_path_component(str(prefix_component))}"
+    return group_name
 
 
 def _layer_component(layer: int) -> str:
@@ -479,6 +501,7 @@ def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
             "layer": cell["layer"],
             "batch_size": cell["batch_size"],
             "hidden_state_capture": cell["hidden_state_capture"],
+            "prefix_kv_cache": bool(cell.get("prefix_kv_cache", False)),
             "uncached_cache_mode": cell.get("uncached_cache_mode"),
             "shared_cache_group": cell.get("shared_cache_group"),
             "cache_only_total_seconds": total_seconds,
@@ -585,6 +608,37 @@ def _parse_str_list(value: str, *, name: str) -> tuple[str, ...]:
     return items
 
 
+def _parse_bool_token(value: object, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} values must be one of: off,on,false,true,0,1,yes,no.")
+
+
+def _normalize_prefix_kv_cache_modes(values: Sequence[object] | str) -> tuple[bool, ...]:
+    raw_values: Sequence[object]
+    if isinstance(values, str):
+        raw_values = tuple(item.strip() for item in values.split(",") if item.strip())
+    else:
+        raw_values = tuple(values)
+    if not raw_values:
+        raise ValueError("prefix_kv_cache_modes must not be empty.")
+    modes = tuple(_parse_bool_token(value, name="prefix_kv_cache_modes") for value in raw_values)
+    if len(modes) != len(set(modes)):
+        raise ValueError("prefix_kv_cache_modes must not contain duplicate modes.")
+    return modes
+
+
+def _parse_prefix_kv_cache_modes(value: str | None) -> tuple[bool, ...] | None:
+    if value is None:
+        return None
+    return _normalize_prefix_kv_cache_modes(value)
+
+
 def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
     return CacheProfileMatrixConfig(
         output_dir=Path(args.output_dir),
@@ -597,6 +651,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
         prefix_kv_cache=args.prefix_kv_cache,
+        prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
@@ -644,6 +699,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache through to non-cache-only eval runs; requires outputs capture")
+    parser.add_argument("--prefix-kv-cache-modes", default=None,
+                        help="comma-list of prefix cache modes to compare, e.g. off,on; overrides "
+                             "--prefix-kv-cache when set")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)

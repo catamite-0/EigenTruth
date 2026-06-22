@@ -2615,6 +2615,48 @@ def test_run_cache_profile_matrix_can_enable_prefix_kv_cache(tmp_path):
     assert manifest["metadata"]["prefix_kv_cache"] is True
 
 
+def test_run_cache_profile_matrix_compares_prefix_kv_cache_modes(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(2,),
+        prefix_kv_cache_modes=(False, True),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    off_cell, on_cell = report["cells"]
+    off_commands = off_cell["triplet"]["commands"]
+    on_commands = on_cell["triplet"]["commands"]
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_2_capture_outputs_prefix_kv_off",
+        "layer_m2_batch_2_capture_outputs_prefix_kv_on",
+    ]
+    assert off_cell["prefix_kv_cache"] is False
+    assert on_cell["prefix_kv_cache"] is True
+    assert "--prefix-kv-cache" not in off_commands["uncached"]
+    assert "--prefix-kv-cache" in on_commands["uncached"]
+    assert off_cell["shared_cache_group"] != on_cell["shared_cache_group"]
+    assert (
+        off_cell["triplet"]["caches"]["statement_encoding_cache"]
+        == on_cell["triplet"]["caches"]["statement_encoding_cache"]
+    )
+    assert off_cell["triplet"]["caches"]["eval_reps_cache"] != on_cell["triplet"]["caches"]["eval_reps_cache"]
+    assert report["config"]["prefix_kv_cache_modes"] == (False, True)
+    assert manifest["metadata"]["prefix_kv_cache_modes"] == [False, True]
+
+    with pytest.raises(ValueError, match="duplicate"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad",
+            prefix_kv_cache_modes=(False, False),
+        )
+
+
 def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     seen = []
