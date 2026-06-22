@@ -1643,6 +1643,131 @@ def test_run_adapter_readiness_workflow_blocks_when_runtime_recommendation_missi
     )
 
 
+def test_run_adapter_readiness_registry_workflow_promotes_manifest(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    def fake_readiness_workflow(config):
+        return _write_fake_readiness_report(config.output_dir, status="promote", runtime_status="promote")
+
+    monkeypatch.setattr(module, "run_adapter_readiness_workflow", fake_readiness_workflow)
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.run_adapter_readiness_registry_workflow(
+        module.AdapterReadinessRegistryWorkflowConfig(
+            readiness=module.AdapterReadinessWorkflowConfig(output_dir=tmp_path / "readiness"),
+            registry_path=registry_path,
+            name="readiness-baseline",
+            version="0.5",
+            workflow_report_path=tmp_path / "workflow.json",
+            promotion_metadata={"scope": "unit"},
+        )
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["manifest_promoted"] is True
+    assert payload["decision"]["manifest_verified"] is True
+    assert payload["decision"]["registry_record"] == "benchmark_manifest:readiness-baseline:0.5"
+    assert Path(payload["promotion"]["verification_report"]).exists()
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("benchmark_manifest:readiness-baseline:0.5")
+    assert record.metadata["workflow"] == "run_adapter_readiness_registry_workflow"
+    assert record.metadata["readiness_status"] == "promote"
+    assert record.metadata["runtime_recommendation_status"] == "promote"
+    assert record.metadata["recommended_batch_size"] == 2
+    assert record.metadata["scope"] == "unit"
+    assert (tmp_path / "workflow.json").exists()
+
+
+def test_run_adapter_readiness_registry_workflow_blocks_non_promoted_readiness(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_registry_workflow")
+
+    def fake_readiness_workflow(config):
+        return _write_fake_readiness_report(
+            config.output_dir,
+            status="needs_performance_evidence",
+            runtime_status="needs_evidence",
+        )
+
+    monkeypatch.setattr(module, "run_adapter_readiness_workflow", fake_readiness_workflow)
+
+    payload = module.run_adapter_readiness_registry_workflow(
+        module.AdapterReadinessRegistryWorkflowConfig(
+            readiness=module.AdapterReadinessWorkflowConfig(output_dir=tmp_path / "readiness"),
+            registry_path=tmp_path / "registry.json",
+            name="readiness-baseline",
+            version="0.5",
+        )
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["manifest_promoted"] is False
+    assert payload["decision"]["manifest_verified"] is False
+    assert payload["promotion"] is None
+    assert payload["decision"]["blocking_reasons"] == (
+        "adapter readiness decision did not promote",
+    )
+
+
+def _write_fake_readiness_report(output_dir, *, status, runtime_status):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    readiness_path = output_dir / "adapter-readiness-report.json"
+    runtime_path = output_dir / "runtime-recommendation.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    runtime_payload = {
+        "status": runtime_status,
+        "recommendation": (
+            {
+                "layer": -1,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "max_batch_tokens": 0,
+                "prefix_kv_cache": False,
+                "max_workers": 1,
+            }
+            if runtime_status == "promote"
+            else None
+        ),
+    }
+    report = {
+        "artifact_manifest": str(manifest_path),
+        "runtime_recommendation_path": str(runtime_path),
+        "runtime_recommendation": runtime_payload,
+        "readiness_decision": {
+            "status": status,
+            "adapter_family_status": "promote",
+            "performance_status": "promote" if status == "promote" else "dry_run",
+            "recommended_route": "structured_qa",
+            "recommended_performance_cell": "layer_m1_batch_2_capture_outputs",
+        },
+    }
+    readiness_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    runtime_path.write_text(json.dumps(runtime_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "readiness_report": readiness_path,
+                    "runtime_recommendation": runtime_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_adapter_readiness_workflow",
+                    "readiness_status": status,
+                    "runtime_recommendation_status": runtime_status,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report
+
+
 def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_path):
     module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
     scores_path = tmp_path / "scores.json"

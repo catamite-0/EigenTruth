@@ -743,6 +743,24 @@ flags for the next run. Use `verify_artifact_manifest.py --recursive` and
 `promote_artifact_manifest.py` on that manifest to register a readiness
 baseline.
 
+To run readiness and register the verified manifest in one command, use
+`run_adapter_readiness_registry_workflow.py`. It promotes only when
+`readiness_decision.status=promote` unless `--allow-non-promote` is explicitly
+set:
+
+```bash
+python benchmarks/run_adapter_readiness_registry_workflow.py \
+  --output-dir artifacts/adapter_readiness \
+  --registry artifacts/registry.json \
+  --name qwen05-readiness-local \
+  --version 0.5 \
+  --shared-cache-dir artifacts/adapter_readiness/cache \
+  --layers=-12 \
+  --batch-sizes=1,2 \
+  --hidden-state-captures=outputs \
+  --fail-on-blocked
+```
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
