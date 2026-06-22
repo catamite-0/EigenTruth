@@ -2227,6 +2227,117 @@ def test_compare_readiness_baselines_uses_uncached_total_fallback_for_legacy_mat
     assert row["uncached_forward_cost_source"] == "uncached_total_seconds_fallback"
 
 
+def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72, "subspace_resid": 0.68},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        max_p99_duration_seconds=0.03,
+    )
+    candidate = payload["release_candidate"]
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
+    assert payload["decision"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
+    assert candidate["model"] == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert candidate["runtime"]["layer"] == -12
+    assert candidate["runtime"]["benchmark_flags"]["eval_truthfulqa"][:4] == ["--layer", "-12", "--batch-size", "1"]
+    assert candidate["quality"]["best_quality_signal"] == {"name": "truth_proj", "auroc": pytest.approx(0.72)}
+    assert candidate["verifier_route"]["route"] == "structured_state"
+    assert candidate["verifier_route"]["decision_accuracy"] == pytest.approx(1.0)
+
+
+def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    output_path = tmp_path / "release-candidate.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--readiness-registry",
+            str(registry_path),
+            "--min-best-quality-auroc",
+            "0.70",
+            "--max-p99-duration-seconds",
+            "0.01",
+            "--json",
+            str(output_path),
+            "--fail-on-blocked",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["release_candidate"] is None
+    assert payload["decision"]["blocking_reasons"][0]["gate"] == "route_baseline"
+    assert "p99_duration_seconds above 0.01" in payload["decision"]["blocking_reasons"][0]["reasons"][0]
+
+
 def _write_readiness_baseline_manifest(
     output_dir,
     *,

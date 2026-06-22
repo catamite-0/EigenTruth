@@ -234,6 +234,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, and runtime cost, then recommends one deployable baseline. |
+| `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, and cost evidence. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
 | `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
@@ -286,6 +287,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛和 cache-profile 性能门槛合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal 和 runtime cost 比较已注册 readiness baseline，并推荐一个可部署 baseline。 |
+| `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量和成本证据。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |

@@ -850,6 +850,35 @@ reports that predate forced-answer phase timing, the uncached total time is used
 as a conservative forward-cost fallback and reported as
 `uncached_forward_cost_source=uncached_total_seconds_fallback`.
 
+## `compare_release_candidates.py`
+
+Combines the recommended readiness baseline and verifier-route baseline into one
+fail-closed release candidate. It does not rerun model work, verifier adapters,
+or promotion workflows; it reloads the already registered manifests through
+`compare_readiness_baselines.py` and `compare_route_baselines.py`, then emits the
+deployable runtime flags, verifier route, quality summary, runtime cost, and
+route cost in one report.
+
+```bash
+python benchmarks/compare_release_candidates.py \
+  --readiness-registry artifacts/registry.json \
+  --route-registry artifacts/registry.json \
+  --min-best-quality-auroc 0.60 \
+  --max-uncached-forward-seconds 40 \
+  --min-selected 100 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-p99-duration-seconds 0.20 \
+  --max-mean-attempted-route-count 1.5 \
+  --json artifacts/release-candidate-comparison.json \
+  --fail-on-blocked
+```
+
+Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
+release should be constrained to named registry records. Omit `--route-registry`
+when readiness and route manifests are stored in the same local registry file.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
