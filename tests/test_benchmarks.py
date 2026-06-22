@@ -1467,6 +1467,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert payload["execution"]["performance_wall_clock_seconds"] >= 0.0
     assert payload["execution"]["performance_max_workers"] == 1
     assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
+    assert payload["runtime_recommendation"]["status"] == "needs_evidence"
     assert payload["readiness_decision"]["recommended_route"] in {
         "structured_qa",
         "structured_state",
@@ -1475,7 +1476,10 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert Path(payload["artifact_manifest"]).exists()
     assert Path(payload["adapter_family_matrix_path"]).exists()
     assert Path(payload["performance_matrix_path"]).exists()
+    assert Path(payload["runtime_recommendation_path"]).exists()
     assert written["readiness_decision"]["status"] == "needs_performance_evidence"
+    runtime_recommendation = json.loads(Path(payload["runtime_recommendation_path"]).read_text(encoding="utf-8"))
+    assert runtime_recommendation["status"] == "needs_evidence"
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
     verification = importlib.import_module("eigentruth.registry").load_and_verify_artifact_manifest(
         payload["artifact_manifest"],
@@ -1484,12 +1488,14 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert manifest["metadata"]["runner"] == "run_adapter_readiness_workflow"
     assert manifest["metadata"]["readiness_status"] == "needs_performance_evidence"
     assert manifest["metadata"]["prefix_kv_cache"] is True
+    assert manifest["metadata"]["runtime_recommendation_status"] == "needs_evidence"
     assert manifest["metadata"]["wall_clock_seconds"] >= 0.0
     assert manifest["metadata"]["performance_wall_clock_seconds"] >= 0.0
     assert manifest["artifacts"]["readiness_report"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_matrix"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_route_comparison"]["exists"] is True
     assert manifest["artifacts"]["performance_matrix_manifest"]["exists"] is True
+    assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
     assert verification.passed is True
     assert verification.nested
 
@@ -1503,11 +1509,26 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
         return {
             "dry_run": False,
             "report_path": str(config.report_path),
+            "config": {
+                "max_workers": config.max_workers,
+                "length_bucketed_batches": config.length_bucketed_batches,
+            },
             "matrix_decision": {
                 "status": "promote",
                 "recommended_cell": "layer_m1_batch_2_capture_outputs",
-                "recommended": {"id": "layer_m1_batch_2_capture_outputs"},
+                "recommendation_metric": "cache_only_total_seconds",
+                "recommended": {
+                    "id": "layer_m1_batch_2_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 0,
+                    "prefix_kv_cache": False,
+                    "cache_only_total_seconds": 0.11,
+                    "truth_proj_auroc": 0.8,
+                },
             },
+            "execution": {"wall_clock_seconds": 1.2, "max_workers": config.max_workers},
         }
 
     monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
@@ -1529,6 +1550,24 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
         "state_transition",
     }
     assert payload["readiness_decision"]["recommended_performance_cell"] == "layer_m1_batch_2_capture_outputs"
+    assert payload["runtime_recommendation"]["status"] == "promote"
+    assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
+    assert payload["runtime_recommendation"]["benchmark_flags"]["run_adapter_readiness_workflow"] == [
+        "--layers",
+        "-1",
+        "--batch-sizes",
+        "2",
+        "--hidden-state-captures",
+        "outputs",
+        "--max-workers",
+        "1",
+    ]
+    runtime_recommendation = json.loads(Path(payload["runtime_recommendation_path"]).read_text(encoding="utf-8"))
+    assert runtime_recommendation["status"] == "promote"
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
+    assert manifest["metadata"]["runtime_recommendation_status"] == "promote"
+    assert manifest["metadata"]["recommended_batch_size"] == 2
 
 
 def test_run_adapter_readiness_workflow_blocks_when_performance_blocks(tmp_path, monkeypatch):
@@ -1563,6 +1602,45 @@ def test_run_adapter_readiness_workflow_blocks_when_performance_blocks(tmp_path,
     assert payload["readiness_decision"]["adapter_family_promoted"] is True
     assert payload["readiness_decision"]["performance_promoted"] is False
     assert "performance matrix decision did not promote" in payload["readiness_decision"]["blocking_reasons"]
+
+
+def test_run_adapter_readiness_workflow_blocks_when_runtime_recommendation_missing(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    def fake_run_matrix(config, *, clean, dry_run):
+        del clean, dry_run
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        config.report_path.write_text("{}", encoding="utf-8")
+        return {
+            "dry_run": False,
+            "report_path": str(config.report_path),
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m1_batch_2_capture_outputs",
+                "recommended": {"id": "layer_m1_batch_2_capture_outputs"},
+            },
+        }
+
+    monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
+
+    payload = module.run_adapter_readiness_workflow(
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            n_records=8,
+            alpha=0.2,
+            batch_sizes=(2,),
+            performance_dry_run=False,
+        )
+    )
+
+    assert payload["readiness_decision"]["status"] == "blocked"
+    assert payload["readiness_decision"]["performance_promoted"] is True
+    assert payload["readiness_decision"]["runtime_recommendation_promoted"] is False
+    assert payload["runtime_recommendation"]["status"] == "no_candidate"
+    assert (
+        "runtime recommendation did not produce deployable settings"
+        in payload["readiness_decision"]["blocking_reasons"]
+    )
 
 
 def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_path):

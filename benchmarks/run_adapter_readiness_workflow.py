@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.recommend_runtime_config import build_runtime_recommendation  # noqa: E402
 from benchmarks.run_adapter_family_matrix import (  # noqa: E402
     AdapterFamilyMatrixConfig,
     run_adapter_family_matrix,
@@ -119,6 +120,10 @@ class AdapterReadinessWorkflowConfig:
     def artifact_manifest_path(self) -> Path:
         return self.output_dir / "artifact-manifest.json"
 
+    @property
+    def runtime_recommendation_path(self) -> Path:
+        return self.output_dir / "runtime-recommendation.json"
+
 
 def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> dict[str, Any]:
     """Run adapter-family and performance gates, then return readiness status."""
@@ -173,16 +178,26 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         clean=config.performance_clean,
         dry_run=config.performance_dry_run,
     )
-    decision = build_readiness_decision(adapter_report, performance_report)
+    runtime_recommendation = build_runtime_recommendation(
+        performance_report,
+        matrix_report_path=performance_report_path,
+    )
+    config.runtime_recommendation_path.write_text(
+        _json_text(runtime_recommendation, compact=config.compact_json, sort_keys=True),
+        encoding="utf-8",
+    )
+    decision = build_readiness_decision(adapter_report, performance_report, runtime_recommendation)
     wall_clock_seconds = time.perf_counter() - started_at
     report = {
         "schema_version": 1,
         "workflow": "adapter_readiness_workflow",
         "adapter_family_matrix_path": str(adapter_report_path),
         "performance_matrix_path": str(performance_report_path),
+        "runtime_recommendation_path": str(config.runtime_recommendation_path),
         "artifact_manifest": str(config.artifact_manifest_path),
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
+        "runtime_recommendation": runtime_recommendation,
         "readiness_decision": decision,
         "execution": {
             "wall_clock_seconds": wall_clock_seconds,
@@ -204,12 +219,15 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
 def build_readiness_decision(
     adapter_report: Mapping[str, Any],
     performance_report: Mapping[str, Any],
+    runtime_recommendation: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the final fail-closed readiness decision."""
     adapter_decision = dict(adapter_report.get("promotion_decision") or {})
     performance_decision = dict(performance_report.get("matrix_decision") or {})
+    runtime_recommendation = dict(runtime_recommendation or {})
     adapter_status = str(adapter_decision.get("status"))
     performance_status = str(performance_decision.get("status"))
+    runtime_status = str(runtime_recommendation.get("status") or "missing")
     blocking_reasons = []
     if adapter_status != "promote":
         blocking_reasons.append("adapter-family quality gate did not promote")
@@ -217,8 +235,10 @@ def build_readiness_decision(
         blocking_reasons.append("performance matrix was dry-run only; run real profiles before promotion")
     elif performance_status != "promote":
         blocking_reasons.append("performance matrix decision did not promote")
+    elif runtime_status != "promote":
+        blocking_reasons.append("runtime recommendation did not produce deployable settings")
 
-    if adapter_status == "promote" and performance_status == "promote":
+    if adapter_status == "promote" and performance_status == "promote" and runtime_status == "promote":
         status = "promote"
     elif adapter_status == "promote" and performance_status == "dry_run":
         status = "needs_performance_evidence"
@@ -229,10 +249,12 @@ def build_readiness_decision(
         "status": status,
         "adapter_family_status": adapter_status,
         "performance_status": performance_status,
+        "runtime_recommendation_status": runtime_status,
         "recommended_route": adapter_decision.get("recommended_route"),
         "recommended_performance_cell": performance_decision.get("recommended_cell"),
         "adapter_family_promoted": adapter_status == "promote",
         "performance_promoted": performance_status == "promote",
+        "runtime_recommendation_promoted": runtime_status == "promote",
         "blocking_reasons": tuple(blocking_reasons),
     }
 
@@ -255,8 +277,11 @@ def _write_artifact_manifest(
         "performance_matrix_manifest": (
             performance_report.get("artifact_manifest") if isinstance(performance_report, Mapping) else None
         ),
+        "runtime_recommendation": report.get("runtime_recommendation_path"),
     }
     decision = dict(report.get("readiness_decision") or {})
+    runtime_recommendation = dict(report.get("runtime_recommendation") or {})
+    runtime_config = dict(runtime_recommendation.get("recommendation") or {})
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -288,6 +313,13 @@ def _write_artifact_manifest(
             "performance_status": decision.get("performance_status"),
             "recommended_route": decision.get("recommended_route"),
             "recommended_performance_cell": decision.get("recommended_performance_cell"),
+            "runtime_recommendation_status": runtime_recommendation.get("status"),
+            "recommended_layer": runtime_config.get("layer"),
+            "recommended_batch_size": runtime_config.get("batch_size"),
+            "recommended_hidden_state_capture": runtime_config.get("hidden_state_capture"),
+            "recommended_max_batch_tokens": runtime_config.get("max_batch_tokens"),
+            "recommended_prefix_kv_cache": runtime_config.get("prefix_kv_cache"),
+            "recommended_max_workers": runtime_config.get("max_workers"),
         },
     )
     config.artifact_manifest_path.write_text(

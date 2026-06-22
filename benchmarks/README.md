@@ -708,7 +708,8 @@ python benchmarks/run_adapter_family_matrix.py \
 Combines the deterministic adapter-family quality matrix with the same-machine
 cache-profile performance matrix. The final `readiness_decision` is `promote`
 only when both the adapter-family `promotion_decision` and the performance
-`matrix_decision` promote.
+`matrix_decision` promote and the performance report can produce deployable
+runtime settings.
 
 Use `--performance-dry-run` to inspect the performance commands without loading
 a model. Dry-run performance evidence produces `needs_performance_evidence`,
@@ -734,9 +735,13 @@ acceptable. Add `--fail-on-blocked` on real runs to require
 
 The workflow also writes a top-level `artifact-manifest.json` that fingerprints
 the readiness report, adapter-family matrix, route-comparison report,
-cache-profile matrix report, and nested cache-profile matrix manifest. Use
-`verify_artifact_manifest.py --recursive` and `promote_artifact_manifest.py` on
-that manifest to register a readiness baseline.
+cache-profile matrix report, nested cache-profile matrix manifest, and
+`runtime-recommendation.json`. The runtime recommendation is generated from the
+saved performance matrix without rerunning model work; when the matrix promotes
+it includes deployable layer, batch-size, token-budget, prefix-KV, and worker
+flags for the next run. Use `verify_artifact_manifest.py --recursive` and
+`promote_artifact_manifest.py` on that manifest to register a readiness
+baseline.
 
 ## `build_truthfulqa_corpus.py`
 
