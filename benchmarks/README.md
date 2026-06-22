@@ -1067,8 +1067,11 @@ python benchmarks/run_cache_profile_matrix.py \
 ```
 
 Use `rescore` only when the question is post-processing/report behavior over
-the same cached representations. It deliberately skips repeated forward timing,
-so it should not be used to compare batch-size runtime performance.
+the same cached representations. Later cache-only cells are compared against
+the first cell's uncached baseline for matrix gating, so they can be promoted
+when cache-only scoring is faster. They deliberately skip repeated model
+forward timing, so use normal `triplet` mode for end-to-end batch-size runtime
+claims.
 
 Both cache-profile runners write an `artifact-manifest.json` next to their
 outputs. The manifest records SHA-256 fingerprints for command logs, profile

@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.compare_profiles import build_profile_comparison  # noqa: E402
 from benchmarks.run_cache_profile_triplet import CacheProfileTripletConfig, run_triplet  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
@@ -172,6 +173,8 @@ def run_matrix(
             "summary": _cell_summary(triplet_payload),
         })
 
+    if config.matrix_mode == "rescore":
+        _apply_rescore_baselines(config, cells)
     leaderboard = _leaderboard(cells)
     matrix_decision = _matrix_decision(cells, leaderboard)
     report = {
@@ -356,6 +359,82 @@ def _cell_summary_without_comparison(triplet_payload: dict[str, Any]) -> dict[st
         "comparison_skipped_reason": triplet_payload.get("comparison_skipped_reason"),
         "totals": totals,
     }
+
+
+def _apply_rescore_baselines(config: CacheProfileMatrixConfig, cells: Sequence[dict[str, Any]]) -> None:
+    """Attach derived baseline comparisons for cache-only rescore cells.
+
+    In rescore mode the first cell in a shared cache group runs the full
+    uncached/cached/cache-only triplet. Later cells in the same group reuse the
+    eval-reps cache and only run cache-only scoring. Compare those cache-only
+    profiles against the first cell's uncached baseline so they can participate
+    in the matrix gate and leaderboard without repeating model forward passes.
+    """
+    baseline_by_group: dict[str, dict[str, Any]] = {}
+    for cell in cells:
+        group = cell.get("shared_cache_group")
+        if not group or group in baseline_by_group:
+            continue
+        profiles = dict(dict(cell.get("triplet", {})).get("profiles", {}))
+        uncached_profile = profiles.get("uncached")
+        if uncached_profile:
+            baseline_by_group[str(group)] = cell
+
+    for cell in cells:
+        group = cell.get("shared_cache_group")
+        summary = dict(cell.get("summary", {}))
+        if not group or summary.get("dry_run") or summary.get("regression_gate") is not None:
+            continue
+        baseline_cell = baseline_by_group.get(str(group))
+        if baseline_cell is None or baseline_cell is cell:
+            continue
+        _apply_rescore_baseline(config, cell, baseline_cell)
+
+
+def _apply_rescore_baseline(
+    config: CacheProfileMatrixConfig,
+    cell: dict[str, Any],
+    baseline_cell: Mapping[str, Any],
+) -> None:
+    profiles = dict(dict(cell.get("triplet", {})).get("profiles", {}))
+    baseline_profiles = dict(dict(baseline_cell.get("triplet", {})).get("profiles", {}))
+    cache_only_profile = profiles.get("cache_only")
+    uncached_profile = baseline_profiles.get("uncached")
+    if not cache_only_profile or not uncached_profile:
+        return
+    cache_only_name = f"{cell.get('id')}.cache_only"
+    baseline_name = f"{baseline_cell.get('id')}.uncached"
+    comparison = build_profile_comparison(
+        [
+            (baseline_name, Path(str(uncached_profile))),
+            (cache_only_name, Path(str(cache_only_profile))),
+        ],
+        baseline=baseline_name,
+        notes=["rescore cache-only profile compared against first shared-cache uncached baseline"],
+        max_run_total_ratios={cache_only_name: config.cache_only_max_total_ratio},
+    )
+    cache_only_run = next(run for run in comparison["runs"] if run["name"] == cache_only_name)
+    summary = dict(cell.get("summary", {}))
+    totals = dict(summary.get("totals", {}))
+    cache_only_total = dict(totals.get("cache_only", {}))
+    cache_only_total.update({
+        "total_seconds": cache_only_run["total_seconds"],
+        "bottleneck": cache_only_run.get("bottleneck"),
+        "speedup_vs_baseline": cache_only_run["total_delta"].get("speedup_vs_baseline"),
+        "ratio_to_baseline": cache_only_run["total_delta"].get("ratio_to_baseline"),
+    })
+    totals["cache_only"] = cache_only_total
+    summary.update({
+        "regression_gate": comparison.get("regression_gate"),
+        "fastest": comparison.get("fastest"),
+        "rescore_baseline": {
+            "baseline_cell": baseline_cell.get("id"),
+            "baseline_profile": str(uncached_profile),
+            "cache_only_profile": str(cache_only_profile),
+        },
+        "totals": totals,
+    })
+    cell["summary"] = summary
 
 
 def _run_bottleneck(run: Mapping[str, Any]) -> Any:

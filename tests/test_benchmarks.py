@@ -2602,7 +2602,13 @@ def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, m
         for name in config.run_names:
             profile_path = config.profile_path(name)
             result_path = config.result_path(name)
-            write_profile(profile_path, 100.0 if name == "uncached" else 10.0 + config.batch_size)
+            if name == "uncached":
+                total = 100.0
+            elif name == "cache_only" and config.batch_size == 2:
+                total = 8.0
+            else:
+                total = 10.0 + config.batch_size
+            write_profile(profile_path, total)
             result_path.write_text(json.dumps({"auroc": {"truth_proj": 0.91}}), encoding="utf-8")
             profiles[name] = str(profile_path)
             results[name] = str(result_path)
@@ -2666,15 +2672,19 @@ def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, m
     assert seen[1]["uncached_cache_mode"] == "warm_start"
     assert seen[0]["eval_reps_cache"] == seen[1]["eval_reps_cache"]
     assert first["shared_cache_group"] == second["shared_cache_group"]
-    assert second["summary"]["regression_gate"] is None
+    assert second["summary"]["regression_gate"]["passed"] is True
+    assert second["summary"]["rescore_baseline"]["baseline_cell"] == "layer_m2_batch_1_capture_outputs"
     assert second["summary"]["comparison_skipped_reason"] == "baseline run 'uncached' was not executed"
-    assert second["summary"]["totals"]["cache_only"]["total_seconds"] == pytest.approx(12.0)
+    assert second["summary"]["totals"]["cache_only"]["total_seconds"] == pytest.approx(8.0)
+    assert second["summary"]["totals"]["cache_only"]["ratio_to_baseline"] == pytest.approx(0.08)
     assert second["summary"]["truth_proj_auroc"] == pytest.approx(0.91)
+    assert report["leaderboard"][0]["id"] == "layer_m2_batch_2_capture_outputs"
     assert report["leaderboard"][0]["gate_passed"] is True
-    assert report["leaderboard"][1]["gate_passed"] is None
+    assert report["leaderboard"][1]["gate_passed"] is True
     assert report["matrix_decision"]["status"] == "promote"
-    assert report["matrix_decision"]["checked_cell_count"] == 1
-    assert report["matrix_decision"]["unchecked_cells"] == ("layer_m2_batch_2_capture_outputs",)
+    assert report["matrix_decision"]["recommended_cell"] == "layer_m2_batch_2_capture_outputs"
+    assert report["matrix_decision"]["checked_cell_count"] == 2
+    assert report["matrix_decision"]["unchecked_cells"] == ()
 
 
 def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
