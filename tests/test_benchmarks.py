@@ -379,6 +379,60 @@ def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     assert alpha["verified"]["detection"] == pytest.approx(1.0)
 
 
+def test_eval_verifier_ensemble_run_can_write_compact_json(tmp_path):
+    module = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    qa_path = tmp_path / "qa.json"
+    output_path = tmp_path / "compact-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+                {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+                {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "source": "qa:q2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        scores=[f"synthetic={scores_path}"],
+        claims=None,
+        qa_corpus=str(qa_path),
+        state_source=None,
+        signal="truth_proj",
+        direction=None,
+        alphas="0.2",
+        repeats=1,
+        seed=0,
+        best_alpha=0.2,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=0.2,
+        retrieval_limit=5,
+        json=str(output_path),
+        compact_json=True,
+    ))
+    written = output_path.read_text(encoding="utf-8")
+
+    assert payload["runs"][0]["route_quality"]["structured_qa"]["decision_accuracy"] == pytest.approx(1.0)
+    assert json.loads(written)["runs"][0]["cache_stats"]["qa_verifier"]["requests"] == 4
+    assert "\n  " not in written
+    assert ": " not in written
+
+
 def test_eval_verifier_ensemble_uses_structured_state_checks(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -1201,13 +1255,18 @@ def test_run_adapter_promotion_workflow_promotes_gated_route(tmp_path):
             max_mean_attempted_route_count=1.1,
             max_retrieval_use_rate=0.0,
             min_cache_hit_rate=0.80,
+            compact_json=True,
         )
     )
+    written_route_report = route_report_path.read_text(encoding="utf-8")
 
     assert payload["decision"]["status"] == "promote"
     assert payload["decision"]["recommended_route"] == "structured_state"
     assert payload["route_comparison"]["promotion_decision"]["status"] == "promote"
     assert route_report_path.exists()
+    assert json.loads(written_route_report)["promotion_decision"]["status"] == "promote"
+    assert "\n  " not in written_route_report
+    assert ": " not in written_route_report
 
 
 def test_run_adapter_promotion_workflow_cli_fails_on_blocked_route(tmp_path):
@@ -1410,10 +1469,14 @@ def test_refresh_verifier_route_artifacts_promotes_structured_state_route(tmp_pa
             max_max_duration_seconds=1.0,
             max_mean_attempted_route_count=1.1,
             max_retrieval_use_rate=0.0,
+            compact_json=True,
         )
     )
-    verifier_report = json.loads(verifier_report_path.read_text(encoding="utf-8"))
-    promotion_report = json.loads(promotion_report_path.read_text(encoding="utf-8"))
+    verifier_report_text = verifier_report_path.read_text(encoding="utf-8")
+    route_report_text = route_report_path.read_text(encoding="utf-8")
+    promotion_report_text = promotion_report_path.read_text(encoding="utf-8")
+    verifier_report = json.loads(verifier_report_text)
+    promotion_report = json.loads(promotion_report_text)
     run = verifier_report["runs"][0]
     route_quality = run["route_quality"]["structured_state"]
 
@@ -1434,6 +1497,9 @@ def test_refresh_verifier_route_artifacts_promotes_structured_state_route(tmp_pa
     assert payload["promotion"]["decision"]["status"] == "promote"
     assert promotion_report["decision"]["recommended_route"] == "structured_state"
     assert route_report_path.exists()
+    assert "\n  " not in verifier_report_text
+    assert "\n  " not in route_report_text
+    assert "\n  " not in promotion_report_text
 
 
 def test_compare_profiles_builds_regression_gate_report(tmp_path):

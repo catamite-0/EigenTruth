@@ -1292,7 +1292,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2)
+            if args.compact_json:
+                json.dump(payload, f, separators=(",", ":"))
+            else:
+                json.dump(payload, f, indent=2)
         print(f"Wrote verifier ensemble report to {output_path}")
     for run_payload in payload["runs"]:
         alpha_key = str(float(args.best_alpha))
@@ -1329,6 +1332,8 @@ def main() -> None:
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified JSON for lower artifact size and write latency")
     run(parser.parse_args())
 
 

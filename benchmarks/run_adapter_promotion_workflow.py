@@ -52,6 +52,7 @@ class AdapterPromotionWorkflowConfig:
     max_run_total_ratios: Mapping[str, float] | None = None
     max_phase_ratios: Mapping[str, float] | None = None
     min_throughput_ratios: Mapping[str, float] | None = None
+    compact_json: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "reports", tuple((str(name), Path(path)) for name, path in self.reports))
@@ -90,7 +91,10 @@ def run_adapter_promotion_workflow(config: AdapterPromotionWorkflowConfig) -> di
         min_cache_hit_rate=config.min_cache_hit_rate,
     )
     config.route_report_path.parent.mkdir(parents=True, exist_ok=True)
-    config.route_report_path.write_text(json.dumps(route_comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    config.route_report_path.write_text(
+        _json_text(route_comparison, compact=config.compact_json, sort_keys=True),
+        encoding="utf-8",
+    )
 
     registry_comparison = None
     if config.candidate_profiles:
@@ -121,6 +125,12 @@ def run_adapter_promotion_workflow(config: AdapterPromotionWorkflowConfig) -> di
         "registry_baseline_comparison": registry_comparison,
         "decision": decision,
     }
+
+
+def _json_text(payload: Mapping[str, Any], *, compact: bool, sort_keys: bool) -> str:
+    if compact:
+        return json.dumps(payload, sort_keys=sort_keys, separators=(",", ":")) + "\n"
+    return json.dumps(payload, indent=2, sort_keys=sort_keys) + "\n"
 
 
 def _workflow_decision(
@@ -236,6 +246,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionWorkflowConfi
             _parse_named_float(value, flag="--min-throughput-ratio")
             for value in args.min_throughput_ratio
         ),
+        compact_json=bool(args.compact_json),
     )
 
 
@@ -245,7 +256,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output_path.write_text(
+            _json_text(payload, compact=bool(args.compact_json), sort_keys=True),
+            encoding="utf-8",
+        )
         print(f"Wrote adapter promotion workflow report to {output_path}")
     return payload
 
@@ -298,6 +312,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-throughput-ratio", action="append", default=[],
                         help="fail registry gate when throughput drops below this ratio, formatted as metric=ratio")
     parser.add_argument("--json", default=None, help="optional path to write the final workflow report")
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified JSON artifacts for lower artifact size and write latency")
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the workflow decision status is promote")
     args = parser.parse_args(argv)

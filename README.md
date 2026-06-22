@@ -140,8 +140,13 @@ python benchmarks/refresh_verifier_route_artifacts.py \
   --min-decision-accuracy 1.0 \
   --max-false-supported-rate 0.0 \
   --min-false-refuted-rate 1.0 \
+  --compact-json \
   --fail-on-blocked
 ```
+
+Use `--compact-json` on verifier ensemble, refresh, and adapter-promotion
+workflow commands when reports are generated for automated gates rather than
+manual inspection.
 
 Score directions are explicit: use `higher` for scores where larger values are more anomalous and `lower` for scores where smaller values are more anomalous. The shared directional conformal helpers keep thresholds, trigger rates, and selective reports in the same native score units. Control-plane diagnostics fail closed on invalid numeric inputs such as `NaN` or `Inf`, returning `clarify/unknown` instead of silently accepting the output.
 

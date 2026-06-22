@@ -66,6 +66,7 @@ class VerifierRouteArtifactRefreshConfig:
     max_run_total_ratios: Mapping[str, float] | None = None
     max_phase_ratios: Mapping[str, float] | None = None
     min_throughput_ratios: Mapping[str, float] | None = None
+    compact_json: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "score_dumps", tuple((str(name), Path(path)) for name, path in self.score_dumps))
@@ -114,7 +115,7 @@ def refresh_verifier_route_artifacts(config: VerifierRouteArtifactRefreshConfig)
     )
     config.verifier_report_path.parent.mkdir(parents=True, exist_ok=True)
     config.verifier_report_path.write_text(
-        json.dumps(verifier_report, indent=2, sort_keys=True) + "\n",
+        _json_text(verifier_report, compact=config.compact_json, sort_keys=True),
         encoding="utf-8",
     )
 
@@ -153,11 +154,12 @@ def refresh_verifier_route_artifacts(config: VerifierRouteArtifactRefreshConfig)
                 max_run_total_ratios=config.max_run_total_ratios,
                 max_phase_ratios=config.max_phase_ratios,
                 min_throughput_ratios=config.min_throughput_ratios,
+                compact_json=config.compact_json,
             )
         )
         config.promotion_report_path.parent.mkdir(parents=True, exist_ok=True)
         config.promotion_report_path.write_text(
-            json.dumps(promotion, indent=2, sort_keys=True) + "\n",
+            _json_text(promotion, compact=config.compact_json, sort_keys=True),
             encoding="utf-8",
         )
 
@@ -169,6 +171,12 @@ def refresh_verifier_route_artifacts(config: VerifierRouteArtifactRefreshConfig)
         "promotion_report_path": None if config.promotion_report_path is None else str(config.promotion_report_path),
         "promotion": promotion,
     }
+
+
+def _json_text(payload: Mapping[str, Any], *, compact: bool, sort_keys: bool) -> str:
+    if compact:
+        return json.dumps(payload, sort_keys=sort_keys, separators=(",", ":")) + "\n"
+    return json.dumps(payload, indent=2, sort_keys=sort_keys) + "\n"
 
 
 def _verifier_report_summary(report: Mapping[str, Any]) -> dict[str, Any]:
@@ -306,6 +314,7 @@ def _config_from_args(args: argparse.Namespace) -> VerifierRouteArtifactRefreshC
             _parse_named_float(value, flag="--min-throughput-ratio")
             for value in args.min_throughput_ratio
         ),
+        compact_json=bool(args.compact_json),
     )
 
 
@@ -315,7 +324,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output_path.write_text(
+            _json_text(payload, compact=bool(args.compact_json), sort_keys=True),
+            encoding="utf-8",
+        )
         print(f"Wrote verifier route refresh workflow report to {output_path}")
     return payload
 
@@ -372,6 +384,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-phase-ratio", action="append", default=[])
     parser.add_argument("--min-throughput-ratio", action="append", default=[])
     parser.add_argument("--json", default=None, help="optional path to write refresh workflow summary")
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified JSON artifacts for lower artifact size and write latency")
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero when --promotion-json is set and promotion does not pass")
     args = parser.parse_args(argv)

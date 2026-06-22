@@ -314,6 +314,9 @@ python benchmarks/eval_verifier_ensemble.py \
   --json artifacts/verifier_ensemble_report.json
 ```
 
+Add `--compact-json` for large automated runs when the report is consumed by
+tools and does not need human-readable indentation.
+
 If the score dump does not contain `statements`, provide a fixture with one
 record per score:
 
@@ -465,6 +468,8 @@ baseline gate used by `run_adapter_promotion_workflow.py`.
 The refresh workflow summary mirrors the route promotion metrics needed for
 audit, including mean/p95/p99/max duration, attempted-route count, retrieval use
 rate, and compact cache hit/miss/request stats.
+Add `--compact-json` to write minified verifier, route-comparison, promotion,
+and workflow JSON artifacts.
 
 For structured state or database-like adapters, use the same refresh workflow
 with `--claims` and `--state-source` so promotion gates cover the actual
@@ -595,6 +600,9 @@ python benchmarks/run_adapter_promotion_workflow.py \
   --json artifacts/qwen05_adapter_promotion_workflow.json \
   --fail-on-blocked
 ```
+
+Add `--compact-json` when route-comparison and workflow reports are produced for
+automation rather than manual review.
 
 The final report includes:
 
