@@ -151,7 +151,10 @@ compatible with `--cache-only`; old single-file `.pt` caches remain the default
 and continue to load normally.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
-not run sampled INSIDE.
+not run sampled INSIDE. New eval reps caches also store eval statement metadata,
+so cache-only runs can restore labels/statements directly from the cache and skip
+dataset loading. Older caches remain readable; when statement metadata is absent,
+cache-only falls back to the original dataset load for validation and labels.
 Use `--inside-trigger-signal` with either `--inside-trigger-threshold` or
 `--inside-trigger-top-fraction` to run sampled INSIDE only on suspicious
 statements. In this budgeted mode, untriggered statements receive

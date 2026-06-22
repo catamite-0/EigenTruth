@@ -1751,6 +1751,49 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
     assert loaded[2]["nll"] == pytest.approx(2.5)
 
 
+def test_eval_truthfulqa_eval_reps_cache_metadata_embeds_eval_statements(tmp_path):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("q1", "a1", 0),
+        module.Statement("q2", "a2", 1),
+    ]
+    args = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        eigenscore_alpha=1e-3,
+        length_bucketed_batches=False,
+    )
+
+    metadata = module._eval_reps_cache_metadata(
+        args,
+        layers=[-1],
+        n_layers=2,
+        eval_statements=statements,
+    )
+    restored = module._eval_statements_from_cache_metadata(metadata)
+
+    assert metadata["eval_statements"] == [
+        {"question": "q1", "answer": "a1", "is_false": 0},
+        {"question": "q2", "answer": "a2", "is_false": 1},
+    ]
+    assert restored == statements
+
+    legacy_metadata = dict(metadata)
+    legacy_metadata.pop("eval_statements")
+    cache_path = tmp_path / "legacy-eval-reps.pt"
+    module.save_eval_reps_cache(cache_path, [None, None], metadata=legacy_metadata)
+    loaded, loaded_metadata = module.load_eval_reps_cache(
+        cache_path,
+        expected_metadata=metadata,
+        expected_records=2,
+    )
+
+    assert loaded == [None, None]
+    assert loaded_metadata == legacy_metadata
+
+
 def test_eval_truthfulqa_eval_reps_cache_rejects_metadata_mismatch(tmp_path):
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     args = SimpleNamespace(
@@ -1777,6 +1820,116 @@ def test_eval_truthfulqa_eval_reps_cache_rejects_metadata_mismatch(tmp_path):
             expected_metadata=expected,
             expected_records=1,
         )
+
+
+def test_eval_truthfulqa_cache_only_can_skip_dataset_load_from_eval_reps_metadata(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("q1", "a1", 0),
+        module.Statement("q2", "a2", 1),
+    ]
+    args_for_metadata = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        subspace_rank=2,
+        eigenscore_alpha=1e-3,
+        length_bucketed_batches=False,
+    )
+    stats_metadata = module._layer_stats_cache_metadata(
+        args_for_metadata,
+        layers=[-1],
+        n_layers=2,
+        true_texts=["t1", "t2"],
+        false_texts=["f1"],
+    )
+    eval_metadata = module._eval_reps_cache_metadata(
+        args_for_metadata,
+        layers=[-1],
+        n_layers=2,
+        eval_statements=statements,
+    )
+    manifold = module.TruthManifold()
+    manifold.update(torch.tensor([0.0, 0.0]))
+    manifold.update(torch.tensor([1.0, 0.0]))
+    manifold.contrastive_direction = torch.tensor([1.0, 0.0])
+    stats_cache = tmp_path / "layer-stats.pt"
+    eval_reps_cache = tmp_path / "eval-reps.pt"
+    module.save_layer_stats_cache(stats_cache, {-1: manifold}, {}, metadata=stats_metadata)
+    module.save_eval_reps_cache(
+        eval_reps_cache,
+        [
+            {
+                "last": {-1: torch.tensor([0.0, 0.0])},
+                "ans_hs": torch.tensor([[0.0, 0.0], [0.1, 0.0]]),
+                "eigenscore_by_layer": {-1: 0.1},
+                "nll": 1.0,
+            },
+            {
+                "last": {-1: torch.tensor([2.0, 0.0])},
+                "ans_hs": torch.tensor([[1.0, 0.0], [2.0, 0.0]]),
+                "eigenscore_by_layer": {-1: 0.2},
+                "nll": 2.0,
+            },
+        ],
+        metadata=eval_metadata,
+    )
+
+    def fail_load_data(*_args, **_kwargs):
+        raise AssertionError("cache-only run should restore eval statements from cache metadata")
+
+    monkeypatch.setattr(module, "load_offline", fail_load_data)
+    monkeypatch.setattr(module, "load_truthfulqa", fail_load_data)
+
+    result = module.run(SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        layer=-1,
+        sweep=False,
+        sweep_layers=None,
+        limit=None,
+        manifold_questions=None,
+        max_length=32,
+        batch_size=1,
+        auto_batch_size=False,
+        length_bucketed_batches=False,
+        hidden_state_capture="outputs",
+        subspace_rank=2,
+        eigenscore_alpha=1e-3,
+        inside_samples=0,
+        inside_batch_size=1,
+        inside_max_new_tokens=8,
+        inside_temperature=0.7,
+        inside_top_p=0.9,
+        inside_pooling="last",
+        inside_trigger_signal=None,
+        inside_trigger_threshold=None,
+        inside_trigger_top_fraction=None,
+        seed=0,
+        offline=True,
+        cache_only=True,
+        statement_encoding_cache=None,
+        refresh_statement_encoding_cache=False,
+        layer_stats_cache=str(stats_cache),
+        refresh_layer_stats_cache=False,
+        warmup_checkpoint=None,
+        warmup_checkpoint_every=0,
+        eval_reps_cache=str(eval_reps_cache),
+        eval_reps_cache_shard_size=0,
+        refresh_eval_reps_cache=False,
+        progress_every=0,
+        profile=True,
+        profile_json=None,
+        json=None,
+        dump_scores=None,
+    ))
+
+    assert result["config"]["cache_only_restored_eval_statements"] is True
+    assert result["config"]["n_pos"] == 1
+    assert result["config"]["n_neg"] == 1
+    assert "load_data" not in result["profile"]["phases"]
+    assert result["profile"]["summary"]["bottleneck"] != "load_data"
 
 
 def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():

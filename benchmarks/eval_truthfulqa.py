@@ -747,6 +747,52 @@ def _statement_fingerprint(statements: Sequence[Statement]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _statement_cache_payload(statements: Sequence[Statement]) -> list[dict[str, object]]:
+    return [
+        {
+            "question": stmt.question,
+            "answer": stmt.answer,
+            "is_false": int(stmt.is_false),
+        }
+        for stmt in statements
+    ]
+
+
+def _eval_statements_from_cache_metadata(metadata: Mapping) -> list[Statement] | None:
+    raw_statements = metadata.get("eval_statements")
+    if raw_statements is None:
+        return None
+    if not isinstance(raw_statements, list):
+        raise ValueError("eval reps cache metadata eval_statements must be a list.")
+    statements = []
+    for idx, raw in enumerate(raw_statements):
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"eval reps cache metadata statement {idx} must be an object.")
+        is_false = int(raw.get("is_false", 0))
+        if is_false not in {0, 1}:
+            raise ValueError(f"eval reps cache metadata statement {idx} has invalid is_false={is_false!r}.")
+        statements.append(
+            Statement(
+                question=str(raw.get("question", "")),
+                answer=str(raw.get("answer", "")),
+                is_false=is_false,
+            )
+        )
+    if len(statements) != int(metadata.get("n_eval", len(statements))):
+        raise ValueError("eval reps cache metadata eval_statements count does not match n_eval.")
+    expected_fingerprint = metadata.get("eval_fingerprint")
+    if expected_fingerprint and _statement_fingerprint(statements) != expected_fingerprint:
+        raise ValueError("eval reps cache metadata eval_statements do not match eval_fingerprint.")
+    return statements
+
+
+def _eval_reps_validation_metadata(metadata: Mapping) -> dict:
+    """Return metadata fields that participate in cache compatibility checks."""
+    payload = dict(metadata)
+    payload.pop("eval_statements", None)
+    return payload
+
+
 def _layer_stats_cache_metadata(
     args,
     *,
@@ -1075,7 +1121,40 @@ def _eval_reps_cache_metadata(
         "length_bucketed_batches": bool(args.length_bucketed_batches),
         "n_eval": len(eval_statements),
         "eval_fingerprint": _statement_fingerprint(eval_statements),
+        "eval_statements": _statement_cache_payload(eval_statements),
     }
+
+
+def _validate_cache_only_metadata(
+    *,
+    args,
+    stats_metadata: Mapping,
+    eval_reps_metadata: Mapping,
+    layers: Sequence[int],
+    n_layers: int,
+) -> None:
+    base_expected = {
+        "model": args.model,
+        "dtype": args.dtype,
+        "offline": bool(args.offline),
+        "n_layers": int(n_layers),
+        "layers": [int(layer) for layer in layers],
+        "max_length": int(args.max_length),
+        "length_bucketed_batches": bool(args.length_bucketed_batches),
+    }
+    _validate_cache_metadata(
+        stats_metadata,
+        {**base_expected, "subspace_rank": int(args.subspace_rank)},
+        cache_name="layer stats cache",
+    )
+    _validate_cache_metadata(
+        _eval_reps_validation_metadata(eval_reps_metadata),
+        {
+            **base_expected,
+            "eigenscore_alpha": float(args.eigenscore_alpha),
+        },
+        cache_name="eval reps cache",
+    )
 
 
 def _reps_to_cache_state(reps: Optional[Mapping]) -> Optional[dict]:
@@ -1163,7 +1242,11 @@ class EvalRepsCacheReader:
         if _is_sharded_eval_reps_cache(self.path):
             manifest = _load_eval_reps_manifest(self.path)
             self.metadata = dict(manifest.get("metadata", {}))
-            _validate_cache_metadata(self.metadata, expected_metadata, cache_name="eval reps cache")
+            _validate_cache_metadata(
+                _eval_reps_validation_metadata(self.metadata),
+                _eval_reps_validation_metadata(expected_metadata),
+                cache_name="eval reps cache",
+            )
             _validate_eval_reps_manifest(manifest, expected_records)
             self.record_count = int(manifest["record_count"])
             self._shards = [dict(shard) for shard in manifest.get("shards", [])]
@@ -1172,7 +1255,11 @@ class EvalRepsCacheReader:
                 raise ValueError(f"eval reps cache directory is missing manifest.json: {self.path}")
             cache = torch.load(self.path, map_location="cpu", weights_only=True)
             self.metadata = dict(cache.get("metadata", {}))
-            _validate_cache_metadata(self.metadata, expected_metadata, cache_name="eval reps cache")
+            _validate_cache_metadata(
+                _eval_reps_validation_metadata(self.metadata),
+                _eval_reps_validation_metadata(expected_metadata),
+                cache_name="eval reps cache",
+            )
             self._records = [_reps_from_cache_state(record) for record in cache.get("records", [])]
             if len(self._records) != int(expected_records):
                 raise ValueError(
@@ -2170,15 +2257,6 @@ def run(args) -> dict:
     torch.manual_seed(args.seed)
     batch_fallback_state = BatchSizeFallbackState(args.batch_size, enabled=args.auto_batch_size)
 
-    with _profile_phase(profile, "load_data"):
-        if args.offline:
-            manifold_true, manifold_false, eval_stmts = load_offline()
-            print("[!] OFFLINE SMOKE MODE - pipeline check only, NOT a benchmark.\n")
-        else:
-            manifold_true, manifold_false, eval_stmts = load_truthfulqa(
-                args.manifold_questions, args.limit
-            )
-
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
     statement_encoding_cache_path = Path(args.statement_encoding_cache) if args.statement_encoding_cache else None
@@ -2188,6 +2266,9 @@ def run(args) -> dict:
     eval_encodings: list[Optional[StatementEncoding]] | None = None
     model = None
     tokenizer = None
+    stats_meta: dict | None = None
+    eval_meta: dict | None = None
+    restored_eval_statements = False
     if args.cache_only:
         if stats_cache_path is None or eval_reps_cache_path is None:
             raise ValueError("cache-only mode requires both layer-stats and eval-reps caches.")
@@ -2198,8 +2279,32 @@ def run(args) -> dict:
         if stats_meta.get("n_layers") != eval_meta.get("n_layers"):
             raise ValueError("cache-only mode requires layer-stats and eval-reps caches with matching n_layers.")
         n_layers = int(stats_meta["n_layers"])
+        cached_eval_stmts = _eval_statements_from_cache_metadata(eval_meta)
+        if cached_eval_stmts is not None:
+            manifold_true = [""] * int(stats_meta.get("n_true", 0))
+            manifold_false = [""] * int(stats_meta.get("n_false", 0))
+            eval_stmts = cached_eval_stmts
+            restored_eval_statements = True
+            print("Cache-only scoring: restored eval statements from eval reps cache metadata.")
+        else:
+            with _profile_phase(profile, "load_data"):
+                if args.offline:
+                    manifold_true, manifold_false, eval_stmts = load_offline()
+                    print("[!] OFFLINE SMOKE MODE - pipeline check only, NOT a benchmark.\n")
+                else:
+                    manifold_true, manifold_false, eval_stmts = load_truthfulqa(
+                        args.manifold_questions, args.limit
+                    )
         print("Cache-only scoring: skipping model load and forced-answer forward.")
     else:
+        with _profile_phase(profile, "load_data"):
+            if args.offline:
+                manifold_true, manifold_false, eval_stmts = load_offline()
+                print("[!] OFFLINE SMOKE MODE - pipeline check only, NOT a benchmark.\n")
+            else:
+                manifold_true, manifold_false, eval_stmts = load_truthfulqa(
+                    args.manifold_questions, args.limit
+                )
         print(f"Loading {args.model} on {device} (dtype={args.dtype}) ...")
         with _profile_phase(profile, "load_model"):
             model, tokenizer = load_model(args.model, device, args.dtype)
@@ -2213,6 +2318,14 @@ def run(args) -> dict:
         sweep=args.sweep,
         sweep_layers=args.sweep_layers,
     )
+    if args.cache_only and stats_meta is not None and eval_meta is not None:
+        _validate_cache_only_metadata(
+            args=args,
+            stats_metadata=stats_meta,
+            eval_reps_metadata=eval_meta,
+            layers=layers,
+            n_layers=n_layers,
+        )
     if model is not None and args.hidden_state_capture == "hooks":
         _hook_capture_layer_map(model, layers)
         print("Using hook-based hidden-state capture for selected non-final layers.")
@@ -2256,13 +2369,16 @@ def run(args) -> dict:
 
     print(f"Building per-layer truth stats from {len(manifold_true)} true / "
           f"{len(manifold_false)} false statements ({len(layers)} layer(s)) ...")
-    stats_cache_metadata = _layer_stats_cache_metadata(
-        args,
-        layers=layers,
-        n_layers=n_layers,
-        true_texts=manifold_true,
-        false_texts=manifold_false,
-    )
+    if restored_eval_statements and stats_meta is not None:
+        stats_cache_metadata = dict(stats_meta)
+    else:
+        stats_cache_metadata = _layer_stats_cache_metadata(
+            args,
+            layers=layers,
+            n_layers=n_layers,
+            true_texts=manifold_true,
+            false_texts=manifold_false,
+        )
     if stats_cache_path and stats_cache_path.exists() and not args.refresh_layer_stats_cache:
         with _profile_phase(profile, "load_layer_stats_cache"):
             manifolds, subspaces, _ = load_layer_stats_cache(
@@ -2323,12 +2439,15 @@ def run(args) -> dict:
         length_bucketed=args.length_bucketed_batches,
     )
     expected_eval_records = len(eval_pairs)
-    eval_reps_cache_metadata = _eval_reps_cache_metadata(
-        args,
-        layers=layers,
-        n_layers=n_layers,
-        eval_statements=eval_stmts,
-    )
+    if restored_eval_statements and eval_meta is not None:
+        eval_reps_cache_metadata = dict(eval_meta)
+    else:
+        eval_reps_cache_metadata = _eval_reps_cache_metadata(
+            args,
+            layers=layers,
+            n_layers=n_layers,
+            eval_statements=eval_stmts,
+        )
     eval_reps_reader: EvalRepsCacheReader | None = None
     eval_reps_writer: EvalRepsCacheWriter | None = None
     new_eval_reps: list[Optional[Mapping]] = []
@@ -2548,6 +2667,7 @@ def run(args) -> dict:
                    "length_bucketed_batches": args.length_bucketed_batches,
                    "hidden_state_capture": args.hidden_state_capture,
                    "cache_only": args.cache_only,
+                   "cache_only_restored_eval_statements": restored_eval_statements,
                    "statement_encoding_cache": args.statement_encoding_cache,
                    "refresh_statement_encoding_cache": args.refresh_statement_encoding_cache,
                    "layer_stats_cache": args.layer_stats_cache,
