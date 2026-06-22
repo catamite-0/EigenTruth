@@ -167,7 +167,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
 | `directional_conformal_threshold` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
-| `ArtifactRegistry` / `build_artifact_manifest` / `fingerprint_path` | Records local artifact metadata and dependency-free file/directory SHA-256 provenance for reproducible benchmark chains. |
+| `ArtifactRegistry` / `build_artifact_manifest` / `fingerprint_path` / `verify_artifact_manifest` | Records and verifies local artifact metadata with dependency-free file/directory SHA-256 provenance for reproducible benchmark chains. |
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, and route summaries expose selected/matched/skipped verifier tools. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations, including generic `execute_tool` requests. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback and best-effort timeout wrapping for local traces. |

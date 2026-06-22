@@ -910,6 +910,38 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
+    module = importlib.import_module("benchmarks.verify_artifact_manifest")
+    from eigentruth.registry import build_artifact_manifest
+
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"ok": true}\n', encoding="utf-8")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": data_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+
+    clean = module.verify_manifest_file(manifest_path)
+    assert clean["passed"] is True
+
+    data_path.write_text('{"ok": false, "changed": true}\n', encoding="utf-8")
+    report_path = tmp_path / "verification.json"
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--manifest",
+            str(manifest_path),
+            "--json",
+            str(report_path),
+        ])
+
+    assert exc_info.value.code == 1
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["passed"] is False
+    assert report["failures"][0]["name"] == "result"
+    assert {failure["field"] for failure in report["failures"]} >= {"sha256", "size_bytes"}
+
+
 def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(

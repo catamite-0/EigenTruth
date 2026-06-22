@@ -13,7 +13,13 @@ from eigentruth.control import (
     RiskLevel,
     TraceEvent,
 )
-from eigentruth.registry import ArtifactRegistry, RegistryRecord, build_artifact_manifest, fingerprint_path
+from eigentruth.registry import (
+    ArtifactRegistry,
+    RegistryRecord,
+    build_artifact_manifest,
+    fingerprint_path,
+    load_and_verify_artifact_manifest,
+)
 from eigentruth.verify import (
     InMemoryVerifier,
     VerificationResult,
@@ -122,6 +128,47 @@ def test_artifact_fingerprint_hashes_files_and_directories(tmp_path):
     before = directory_record["sha256"]
     (cache_dir / "records-00000.pt").write_bytes(b"changed")
     assert fingerprint_path(cache_dir, root=tmp_path).to_dict()["sha256"] != before
+
+
+def test_artifact_manifest_verification_detects_drift_and_nested_drift(tmp_path):
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": data_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+
+    clean = load_and_verify_artifact_manifest(manifest_path)
+    assert clean.passed is True
+    assert clean.checked == 1
+
+    data_path.write_text('{"score": 200}\n', encoding="utf-8")
+    drifted = load_and_verify_artifact_manifest(manifest_path)
+    assert drifted.passed is False
+    assert drifted.failures[0].name == "result"
+    assert {failure.field for failure in drifted.failures} == {"sha256", "size_bytes"}
+
+    child_dir = tmp_path / "child"
+    child_dir.mkdir()
+    child_data = child_dir / "result.json"
+    child_data.write_text('{"score": 1}\n', encoding="utf-8")
+    child_manifest_path = child_dir / "artifact-manifest.json"
+    child_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": child_data}, root=child_dir)),
+        encoding="utf-8",
+    )
+    root_manifest_path = tmp_path / "root-manifest.json"
+    root_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"child_manifest": child_manifest_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    child_data.write_text('{"score": 3}\n', encoding="utf-8")
+
+    assert load_and_verify_artifact_manifest(root_manifest_path).passed is True
+    recursive = load_and_verify_artifact_manifest(root_manifest_path, recursive=True)
+    assert recursive.passed is False
+    assert recursive.nested[0].failures[0].name == "result"
 
 
 def test_product_trace_action_execution_summary_counts_results():

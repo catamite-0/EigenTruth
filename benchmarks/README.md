@@ -793,6 +793,17 @@ are deterministic over relative file names, sizes, and content hashes. This is
 intended for local reproducibility and artifact registry handoff; on very large
 eval-reps cache directories it adds one linear read pass after the run.
 
+Use `verify_artifact_manifest.py` to validate that local artifacts still match
+the saved fingerprints. Add `--recursive` for matrix reports so each cell's
+triplet manifest is verified as well:
+
+```bash
+python benchmarks/verify_artifact_manifest.py \
+  --manifest /tmp/eigentruth-qwen05-profile-rescore/artifact-manifest.json \
+  --recursive \
+  --json /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
+```
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
 to verify that the gates pass acceptable candidates and catch expected
