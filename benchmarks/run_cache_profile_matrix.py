@@ -11,6 +11,7 @@ import argparse
 import hashlib
 import itertools
 import json
+import math
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -476,6 +477,7 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
         "dry_run": False,
         "regression_gate": comparison.get("regression_gate"),
         "fastest": comparison.get("fastest"),
+        "quality_signals": auroc,
         "truth_proj_auroc": auroc.get("truth_proj"),
         "totals": {
             name: _run_summary(run, profiles.get(name))
@@ -501,6 +503,7 @@ def _cell_summary_without_comparison(triplet_payload: dict[str, Any]) -> dict[st
         "dry_run": False,
         "regression_gate": None,
         "fastest": None,
+        "quality_signals": auroc,
         "truth_proj_auroc": auroc.get("truth_proj"),
         "comparison_skipped_reason": triplet_payload.get("comparison_skipped_reason"),
         "totals": totals,
@@ -638,7 +641,12 @@ def _result_auroc(triplet_payload: dict[str, Any]) -> dict[str, float]:
     auroc = payload.get("auroc", {})
     if not isinstance(auroc, dict):
         return {}
-    return {str(name): float(value) for name, value in auroc.items() if isinstance(value, int | float)}
+    signals = {}
+    for name, value in auroc.items():
+        numeric = _float_or_none(value)
+        if numeric is not None:
+            signals[str(name)] = numeric
+    return signals
 
 
 def _leaderboard_sort_metric(config: CacheProfileMatrixConfig) -> str:
@@ -829,7 +837,10 @@ def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, A
 def _float_or_none(value: Any) -> float | None:
     if not isinstance(value, int | float) or isinstance(value, bool):
         return None
-    return float(value)
+    numeric = float(value)
+    if not math.isfinite(numeric):
+        return None
+    return numeric
 
 
 def _safe_ratio(numerator: float | None, denominator: float | None) -> float | None:

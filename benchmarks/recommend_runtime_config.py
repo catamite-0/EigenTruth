@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -43,6 +44,7 @@ def build_runtime_recommendation(
             matrix_decision=matrix_decision,
             worker_sweep_report=worker_sweep_report,
             worker_decision=worker_decision,
+            matrix_report_path=matrix_report_path,
         )
         if recommended is None:
             status = "no_candidate"
@@ -80,6 +82,7 @@ def _recommendation(
     matrix_decision: Mapping[str, Any],
     worker_sweep_report: Mapping[str, Any] | None,
     worker_decision: Mapping[str, Any],
+    matrix_report_path: str | Path | None,
 ) -> dict[str, Any] | None:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     if not matrix_recommended or any(
@@ -91,6 +94,11 @@ def _recommendation(
         matrix_report,
         worker_sweep_report=worker_sweep_report,
         worker_decision=worker_decision,
+    )
+    quality = _quality_signal_summary(
+        matrix_report,
+        matrix_recommended,
+        matrix_report_path=matrix_report_path,
     )
     recommendation = {
         "cell_id": matrix_recommended.get("id") or matrix_decision.get("recommended_cell"),
@@ -106,8 +114,92 @@ def _recommendation(
             "uncached_forced_answer_forward_seconds"
         ),
         "truth_proj_auroc": matrix_recommended.get("truth_proj_auroc"),
+        "quality_signals": quality["signals"],
+        "best_quality_signal": quality["best"],
     }
     return recommendation
+
+
+def _quality_signal_summary(
+    matrix_report: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+    *,
+    matrix_report_path: str | Path | None = None,
+) -> dict[str, Any]:
+    cell_id = matrix_recommended.get("id")
+    cell = _find_by_id(matrix_report.get("cells"), cell_id) if cell_id is not None else {}
+    signals, source = _quality_signals_from_cell(cell, matrix_report_path=matrix_report_path)
+    if not signals:
+        truth_proj = _float_or_none(matrix_recommended.get("truth_proj_auroc"))
+        if truth_proj is not None:
+            signals = {"truth_proj": truth_proj}
+            source = "leaderboard"
+    signals = {name: signals[name] for name in sorted(signals)}
+    best = _best_quality_signal(signals)
+    return {
+        "signals": signals,
+        "best": best,
+        "source": source,
+        "count": len(signals),
+    }
+
+
+def _quality_signals_from_cell(
+    cell: Mapping[str, Any],
+    *,
+    matrix_report_path: str | Path | None,
+) -> tuple[dict[str, float], str | None]:
+    triplet = _mapping(cell.get("triplet"))
+    results = _mapping(triplet.get("results"))
+    for run_name in ("cache_only", "cached", "uncached"):
+        result_path = results.get(run_name)
+        if not result_path:
+            continue
+        signals, source = _quality_signals_from_result_path(
+            Path(str(result_path)),
+            base_dir=None if matrix_report_path is None else Path(str(matrix_report_path)).parent,
+        )
+        if signals:
+            return signals, source
+    summary_signals = _finite_float_mapping(_mapping(_mapping(cell.get("summary")).get("quality_signals")))
+    if summary_signals:
+        return summary_signals, "matrix_cell_summary"
+    return {}, None
+
+
+def _quality_signals_from_result_path(
+    path: Path,
+    *,
+    base_dir: Path | None,
+) -> tuple[dict[str, float], str | None]:
+    candidates = [path]
+    if base_dir is not None and not path.is_absolute():
+        candidates.append(base_dir / path)
+    for candidate in candidates:
+        try:
+            payload = _load_json(candidate)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+        signals = _finite_float_mapping(_mapping(payload.get("auroc")))
+        if signals:
+            return signals, str(candidate)
+    return {}, None
+
+
+def _finite_float_mapping(values: Mapping[str, Any]) -> dict[str, float]:
+    signals = {}
+    for key, value in values.items():
+        numeric = _float_or_none(value)
+        if numeric is not None:
+            signals[str(key)] = numeric
+    return signals
+
+
+def _best_quality_signal(signals: Mapping[str, float]) -> dict[str, Any] | None:
+    if not signals:
+        return None
+    name, auroc = sorted(signals.items(), key=lambda item: (-item[1], item[0]))[0]
+    return {"name": name, "auroc": auroc}
 
 
 def _recommended_runtime_row(
@@ -208,6 +300,11 @@ def _evidence(
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     worker_recommended = _mapping(worker_decision.get("recommended"))
     prefix_comparison = _prefix_comparison_for_recommendation(matrix_report, matrix_recommended)
+    quality = _quality_signal_summary(
+        matrix_report,
+        matrix_recommended,
+        matrix_report_path=matrix_report_path,
+    )
     config = _mapping(matrix_report.get("config"))
     evidence = {
         "matrix_report": None if matrix_report_path is None else str(matrix_report_path),
@@ -221,6 +318,8 @@ def _evidence(
         "configured_matrix_workers": config.get("max_workers"),
         "length_bucketed_batches": config.get("length_bucketed_batches"),
         "prefix_kv_comparison": prefix_comparison,
+        "quality_signal_source": quality["source"],
+        "quality_signal_count": quality["count"],
         "worker_sweep_report": None if worker_sweep_report_path is None else str(worker_sweep_report_path),
         "worker_sweep_status": None if worker_sweep_report is None else worker_decision.get("status"),
         "worker_recommended_worker_count": worker_decision.get("recommended_worker_count"),
@@ -302,6 +401,21 @@ def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _float_or_none(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        numeric = float(value)
+    else:
+        try:
+            numeric = float(str(value))
+        except (TypeError, ValueError):
+            return None
+    if not math.isfinite(numeric):
+        return None
+    return numeric
 
 
 def _load_json(path: Path) -> dict[str, Any]:

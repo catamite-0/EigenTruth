@@ -1506,6 +1506,17 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     def fake_run_matrix(config, *, clean, dry_run):
         config.output_dir.mkdir(parents=True, exist_ok=True)
         config.report_path.write_text("{}", encoding="utf-8")
+        result_path = config.output_dir / "cache-only-result.json"
+        result_path.write_text(
+            json.dumps({
+                "auroc": {
+                    "truth_proj": 0.8,
+                    "subspace_resid": 0.91,
+                    "nll_answer": 0.76,
+                },
+            }),
+            encoding="utf-8",
+        )
         return {
             "dry_run": False,
             "report_path": str(config.report_path),
@@ -1528,6 +1539,22 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
                     "truth_proj_auroc": 0.8,
                 },
             },
+            "cells": [
+                {
+                    "id": "layer_m1_batch_2_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "summary": {
+                        "quality_signals": {
+                            "truth_proj": 0.8,
+                            "subspace_resid": 0.91,
+                        },
+                        "truth_proj_auroc": 0.8,
+                    },
+                    "triplet": {"results": {"cache_only": str(result_path)}},
+                }
+            ],
             "execution": {"wall_clock_seconds": 1.2, "max_workers": config.max_workers},
         }
 
@@ -1552,6 +1579,10 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert payload["readiness_decision"]["recommended_performance_cell"] == "layer_m1_batch_2_capture_outputs"
     assert payload["runtime_recommendation"]["status"] == "promote"
     assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
+    assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
+        "name": "subspace_resid",
+        "auroc": pytest.approx(0.91),
+    }
     assert payload["runtime_recommendation"]["benchmark_flags"]["run_adapter_readiness_workflow"] == [
         "--layers",
         "-1",
@@ -1568,6 +1599,8 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
     assert manifest["metadata"]["runtime_recommendation_status"] == "promote"
     assert manifest["metadata"]["recommended_batch_size"] == 2
+    assert manifest["metadata"]["recommended_best_quality_signal"] == "subspace_resid"
+    assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.91)
 
 
 def test_run_adapter_readiness_workflow_blocks_when_performance_blocks(tmp_path, monkeypatch):
@@ -1675,6 +1708,8 @@ def test_run_adapter_readiness_registry_workflow_promotes_manifest(tmp_path, mon
     assert record.metadata["readiness_status"] == "promote"
     assert record.metadata["runtime_recommendation_status"] == "promote"
     assert record.metadata["recommended_batch_size"] == 2
+    assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
+    assert record.metadata["recommended_best_quality_auroc"] == pytest.approx(0.91)
     assert record.metadata["scope"] == "unit"
     assert (tmp_path / "workflow.json").exists()
 
@@ -1726,6 +1761,14 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
                 "max_batch_tokens": 0,
                 "prefix_kv_cache": False,
                 "max_workers": 1,
+                "quality_signals": {
+                    "truth_proj": 0.8,
+                    "subspace_resid": 0.91,
+                },
+                "best_quality_signal": {
+                    "name": "subspace_resid",
+                    "auroc": 0.91,
+                },
             }
             if runtime_status == "promote"
             else None
@@ -3450,6 +3493,17 @@ def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, mon
 
 def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path):
     module = importlib.import_module("benchmarks.recommend_runtime_config")
+    result_path = tmp_path / "cache-only-result.json"
+    result_path.write_text(
+        json.dumps({
+            "auroc": {
+                "truth_proj": 0.88,
+                "subspace_resid": 0.93,
+                "nll_answer": 0.72,
+            },
+        }),
+        encoding="utf-8",
+    )
     matrix_report = {
         "config": {
             "max_workers": 1,
@@ -3485,6 +3539,22 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
                 "truth_proj_auroc": 0.88,
             },
         },
+        "cells": [
+            {
+                "id": "layer_m12_batch_2_capture_outputs_token_budget_96_prefix_kv_off",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "summary": {
+                    "quality_signals": {
+                        "truth_proj": 0.88,
+                        "subspace_resid": 0.93,
+                    },
+                    "truth_proj_auroc": 0.88,
+                },
+                "triplet": {"results": {"cache_only": str(result_path)}},
+            }
+        ],
     }
     worker_report = {
         "worker_sweep_decision": {
@@ -3511,7 +3581,18 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
     assert report["recommendation"]["batch_size"] == 2
     assert report["recommendation"]["max_batch_tokens"] == 96
     assert report["recommendation"]["max_workers"] == 2
+    assert report["recommendation"]["quality_signals"] == {
+        "nll_answer": pytest.approx(0.72),
+        "subspace_resid": pytest.approx(0.93),
+        "truth_proj": pytest.approx(0.88),
+    }
+    assert report["recommendation"]["best_quality_signal"] == {
+        "name": "subspace_resid",
+        "auroc": pytest.approx(0.93),
+    }
     assert report["evidence"]["prefix_kv_comparison"]["status"] == "prefix_kv_slower"
+    assert report["evidence"]["quality_signal_source"] == str(result_path)
+    assert report["evidence"]["quality_signal_count"] == 3
     assert report["evidence"]["worker_matrix_report_matches"] is True
     assert report["benchmark_flags"]["eval_truthfulqa"] == [
         "--layer",

@@ -140,6 +140,7 @@ def _promotion_metadata(
     decision = dict(readiness_report.get("readiness_decision") or {})
     runtime = dict(readiness_report.get("runtime_recommendation") or {})
     runtime_config = dict(runtime.get("recommendation") or {})
+    best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     metadata = {
         "workflow": "run_adapter_readiness_registry_workflow",
         "readiness_status": decision.get("status"),
@@ -154,6 +155,9 @@ def _promotion_metadata(
         "recommended_max_batch_tokens": runtime_config.get("max_batch_tokens"),
         "recommended_prefix_kv_cache": runtime_config.get("prefix_kv_cache"),
         "recommended_max_workers": runtime_config.get("max_workers"),
+        "recommended_best_quality_signal": best_quality_signal.get("name"),
+        "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
+        "recommended_quality_signals": runtime_config.get("quality_signals"),
     }
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))

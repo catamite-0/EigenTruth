@@ -738,8 +738,9 @@ the readiness report, adapter-family matrix, route-comparison report,
 cache-profile matrix report, nested cache-profile matrix manifest, and
 `runtime-recommendation.json`. The runtime recommendation is generated from the
 saved performance matrix without rerunning model work; when the matrix promotes
-it includes deployable layer, batch-size, token-budget, prefix-KV, and worker
-flags for the next run. Use `verify_artifact_manifest.py --recursive` and
+it includes deployable layer, batch-size, token-budget, prefix-KV, worker flags,
+all available AUROC quality signals, and the best quality signal for the next
+run. Use `verify_artifact_manifest.py --recursive` and
 `promote_artifact_manifest.py` on that manifest to register a readiness
 baseline.
 
@@ -1065,7 +1066,7 @@ python benchmarks/run_cache_profile_matrix.py \
 
 Remove `--dry-run` only when the full matrix cost is acceptable. The matrix
 report includes each triplet's command log, gate summary, cache-only timing,
-per-run bottleneck phase, `truth_proj` AUROC when result JSON is available, and
+per-run bottleneck phase, AUROC quality signals when result JSON is available, and
 a matrix-level `matrix_decision`. The decision is `promote` only when at least
 one checked cell passes its regression gate and no checked cell fails; use
 `--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
@@ -1116,8 +1117,9 @@ python benchmarks/recommend_runtime_config.py \
 ```
 
 The recommendation records the selected layer, batch size, hidden-state capture
-mode, padded-token budget, prefix-KV mode, and worker count, plus equivalent
-flags for `eval_truthfulqa.py`, `run_cache_profile_matrix.py`, and
+mode, padded-token budget, prefix-KV mode, worker count, all finite AUROC
+quality signals from the promoted cell, and the best quality signal, plus
+equivalent flags for `eval_truthfulqa.py`, `run_cache_profile_matrix.py`, and
 `run_adapter_readiness_workflow.py`. Treat it as the deployment handoff from
 same-machine performance evidence; it does not replace a promoted matrix or
 worker-sweep decision.

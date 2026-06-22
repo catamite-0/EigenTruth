@@ -282,6 +282,7 @@ def _write_artifact_manifest(
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
     runtime_config = dict(runtime_recommendation.get("recommendation") or {})
+    best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -320,6 +321,9 @@ def _write_artifact_manifest(
             "recommended_max_batch_tokens": runtime_config.get("max_batch_tokens"),
             "recommended_prefix_kv_cache": runtime_config.get("prefix_kv_cache"),
             "recommended_max_workers": runtime_config.get("max_workers"),
+            "recommended_best_quality_signal": best_quality_signal.get("name"),
+            "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
+            "recommended_quality_signals": runtime_config.get("quality_signals"),
         },
     )
     config.artifact_manifest_path.write_text(

@@ -226,9 +226,9 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache-aware route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
 | `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, and state-transition fixtures, then compares their promotion metrics in one local matrix. |
-| `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision. |
+| `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision with per-cell AUROC quality signals. |
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
-| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, and worker count. |
+| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, and best available AUROC quality signal. |
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
@@ -275,8 +275,9 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache-aware route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
 | `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition fixtures，并在一个本地矩阵里比较 promotion 指标。 |
-| `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision。 |
+| `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision 和每个 cell 的 AUROC quality signals。 |
 | `run_cache_worker_sweep.py` | 用多个 worker count 运行同一 cache-profile matrix，并按 wall-clock 推荐最快的已 promoted worker count。 |
+| `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count 和最佳 AUROC quality signal。 |
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛和 cache-profile 性能门槛合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
