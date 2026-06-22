@@ -1639,6 +1639,8 @@ def _write_route_baseline_manifest(
     false_refuted_rate: float,
     mean_duration_seconds: float,
     p99_duration_seconds: float,
+    mean_attempted_route_count: float = 1.0,
+    retrieval_use_rate: float = 0.0,
     invalid_metric_counts: dict[str, int] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
@@ -1661,8 +1663,8 @@ def _write_route_baseline_manifest(
                     "p95_duration_seconds": p99_duration_seconds,
                     "p99_duration_seconds": p99_duration_seconds,
                     "max_duration_seconds": p99_duration_seconds,
-                    "mean_attempted_route_count": 1.0,
-                    "retrieval_use_rate": 0.0,
+                    "mean_attempted_route_count": mean_attempted_route_count,
+                    "retrieval_use_rate": retrieval_use_rate,
                     "invalid_metric_counts": invalid_metric_counts or {},
                 }
             },
@@ -2384,6 +2386,74 @@ def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
     assert "p99_duration_seconds above 0.01" in payload["decision"]["blocking_reasons"][0]["reasons"][0]
 
 
+def test_compare_release_candidates_applies_retrieval_cost_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.02,
+        p99_duration_seconds=0.03,
+        mean_attempted_route_count=2.0,
+        retrieval_use_rate=1.0,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="retrieval-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        max_mean_attempted_route_count=2.1,
+        max_retrieval_use_rate=0.0,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        max_mean_attempted_route_count=2.1,
+        max_retrieval_use_rate=1.0,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "route_baseline"
+    assert "retrieval_use_rate above 0.0" in blocked["decision"]["blocking_reasons"][0]["reasons"][0]
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["release_candidate"]["verifier_route"]["route"] == "retrieval_groundedness"
+    assert promoted["release_candidate"]["verifier_route"]["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert promoted["release_candidate"]["verifier_route"]["retrieval_use_rate"] == pytest.approx(1.0)
+
+
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     from eigentruth.registry import ArtifactRegistry
@@ -2451,12 +2521,19 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_candidate_status"] == "promote"
     assert manifest["metadata"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
     assert manifest["metadata"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
+    assert manifest["metadata"]["recommended_route_verified_false_alarm"] == pytest.approx(0.0)
+    assert manifest["metadata"]["recommended_route_verified_detection"] == pytest.approx(1.0)
+    assert manifest["metadata"]["recommended_route_mean_duration_seconds"] == pytest.approx(0.01)
+    assert manifest["metadata"]["recommended_route_max_duration_seconds"] == pytest.approx(0.02)
+    assert manifest["metadata"]["recommended_route_mean_attempted_route_count"] == pytest.approx(1.0)
+    assert manifest["metadata"]["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
     registry = ArtifactRegistry.load_json(release_registry_path)
     record = registry.get("benchmark_manifest:qwen-release-candidate:0.7")
     assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
     assert record.metadata["release_candidate_status"] == "promote"
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"
+    assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
     assert record.metadata["scope"] == "unit"
 
 

@@ -258,8 +258,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_decision_accuracy": verifier_route.get("decision_accuracy"),
         "recommended_route_false_supported_rate": verifier_route.get("false_supported_rate"),
         "recommended_route_false_refuted_rate": verifier_route.get("false_refuted_rate"),
+        "recommended_route_verified_false_alarm": verifier_route.get("verified_false_alarm"),
+        "recommended_route_verified_detection": verifier_route.get("verified_detection"),
+        "recommended_route_mean_duration_seconds": verifier_route.get("mean_duration_seconds"),
         "recommended_route_p99_duration_seconds": verifier_route.get("p99_duration_seconds"),
+        "recommended_route_max_duration_seconds": verifier_route.get("max_duration_seconds"),
         "recommended_route_mean_attempted_route_count": verifier_route.get("mean_attempted_route_count"),
+        "recommended_route_retrieval_use_rate": verifier_route.get("retrieval_use_rate"),
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
     }

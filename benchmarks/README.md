@@ -890,6 +890,7 @@ python benchmarks/compare_release_candidates.py \
   --min-false-refuted-rate 0.90 \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
+  --max-retrieval-use-rate 0.50 \
   --json artifacts/release-candidate-comparison.json \
   --fail-on-blocked
 ```
