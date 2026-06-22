@@ -14,6 +14,7 @@ Implemented today:
 - `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, and confidence intervals.
 - `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, and layer/score sweep reports.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
+- `eigentruth.core.internal_eigenscore`: INSIDE/EigenScore-style spectral diversity score for hidden-state embeddings.
 - `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/abstain/clarify flows.
 - `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution for local control-loop traces.

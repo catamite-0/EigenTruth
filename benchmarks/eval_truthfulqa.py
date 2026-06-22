@@ -20,15 +20,16 @@ EigenTruth benchmark — can hidden-state geometry separate true vs. false state
     - 对其余题目的每条候选答案（正确=负类, 错误=正类/幻觉）做单次前向，提取目标层隐状态。
       For each candidate answer of the remaining questions (correct=negative, incorrect=positive),
       run a single forward pass and read the target-layer hidden states.
-    - 每条陈述计算 4 个信号的分数，分别报告 AUROC。
-      Score each statement with 4 signals and report AUROC per signal.
+    - 每条陈述计算多种内部诊断分数，分别报告 AUROC。
+      Score each statement with multiple internal diagnostics and report AUROC per signal.
 
 局限 / Limitations:
     - 强制候选答案的"陈述级"打分是开放生成幻觉的*代理*，干净地检验表征假设但不等同于在线检测。
       Forced-answer statement scoring is a *proxy* for open-generation hallucination; it cleanly
       tests the representation hypothesis but is not the same as online detection.
-    - 句内 token 离散度是基于多次采样的语义熵 (Farquhar et al.) 的廉价代理。
-      Within-statement token dispersion is a cheap proxy for sample-based semantic entropy.
+    - 句内 token 离散度和 eigenscore 是基于多次采样语义不确定性 / INSIDE EigenScore 的廉价代理。
+      Within-statement token dispersion and eigenscore are cheap proxies for sample-based
+      semantic uncertainty / INSIDE EigenScore.
     - 小模型 + 几百条样本 → AUROC 置信区间较宽，结果仅供参考，非定论。
       Small model + a few hundred items → wide AUROC CIs; results are indicative, not conclusive.
 
@@ -50,7 +51,7 @@ from typing import List, Mapping, Optional, Sequence
 import torch
 
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
-from eigentruth.core import TruthSubspace
+from eigentruth.core import TruthSubspace, internal_eigenscore
 from eigentruth.core.math_engine import (
     TruthManifold,
     hyperbolic_semantic_entropy,
@@ -60,7 +61,15 @@ from eigentruth.core.math_engine import (
 from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
 
-SIGNALS = ["maha_last", "truth_proj", "subspace_resid", "disp_euclid", "disp_hse", "nll_answer"]
+SIGNALS = [
+    "maha_last",
+    "truth_proj",
+    "subspace_resid",
+    "disp_euclid",
+    "disp_hse",
+    "eigenscore",
+    "nll_answer",
+]
 REPORT_ALPHA = 0.10
 
 
@@ -216,7 +225,8 @@ def resolve_target_layer(layer: int, n_layers: int, *, offline: bool) -> int:
 
 @torch.no_grad()
 def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
-                   device: torch.device, max_length: int) -> Optional[dict]:
+                   device: torch.device, max_length: int, *,
+                   compute_answer_metrics: bool = True) -> Optional[dict]:
     """单次前向：各目标层的末 token 隐状态、主层 (layers[0]) 答案 token 隐状态、答案 NLL。
     Single forward pass: last-token hidden state per requested layer, answer-token hidden
     states for the primary layer (layers[0]), and the answer NLL. output_hidden_states
@@ -239,7 +249,14 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
     last_by_layer = {
         layer: out.hidden_states[layer][0][-1, :].float().cpu() for layer in layers
     }
+    if not compute_answer_metrics:
+        return {"last": last_by_layer}
+
     ans_hs = out.hidden_states[layers[0]][0][-n_ans:, :].float().cpu()
+    eigenscore_by_layer = {
+        layer: float(internal_eigenscore(out.hidden_states[layer][0][-n_ans:, :].float()).item())
+        for layer in layers
+    }
 
     # 答案 token 的平均负对数似然（困惑度基线）
     logits = out.logits[0].float()  # [T, V]
@@ -249,7 +266,12 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
     ans_logp = tok_logp[-n_ans:] if n_ans <= tok_logp.shape[0] else tok_logp
     nll = float((-ans_logp.mean()).item())
 
-    return {"last": last_by_layer, "ans_hs": ans_hs, "nll": nll}
+    return {
+        "last": last_by_layer,
+        "ans_hs": ans_hs,
+        "eigenscore_by_layer": eigenscore_by_layer,
+        "nll": nll,
+    }
 
 
 def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List[str],
@@ -266,7 +288,15 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     n_false = 0
 
     for t in true_texts:
-        reps = statement_reps(model, tokenizer, Statement("", t, 0), layers, device, max_length)
+        reps = statement_reps(
+            model,
+            tokenizer,
+            Statement("", t, 0),
+            layers,
+            device,
+            max_length,
+            compute_answer_metrics=False,
+        )
         if reps is None:
             continue
         for layer in layers:
@@ -275,7 +305,15 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
             true_state_lists[layer].append(h)
 
     for t in false_texts:
-        reps = statement_reps(model, tokenizer, Statement("", t, 1), layers, device, max_length)
+        reps = statement_reps(
+            model,
+            tokenizer,
+            Statement("", t, 1),
+            layers,
+            device,
+            max_length,
+            compute_answer_metrics=False,
+        )
         if reps is None:
             continue
         n_false += 1
@@ -353,7 +391,7 @@ def run(args) -> dict:
 
     scores: dict[str, List[float]] = {s: [] for s in SIGNALS}
     sweep_scores: dict = {
-        layer: {"maha_last": [], "truth_proj": [], "subspace_resid": []} for layer in layers
+        layer: {"maha_last": [], "truth_proj": [], "subspace_resid": [], "eigenscore": []} for layer in layers
     }
     labels: List[int] = []
 
@@ -382,6 +420,7 @@ def run(args) -> dict:
             else:
                 resid = 0.0
             sweep_scores[layer]["subspace_resid"].append(resid)
+            sweep_scores[layer]["eigenscore"].append(reps["eigenscore_by_layer"][layer])
 
         ans = reps["ans_hs"]
         scores["maha_last"].append(sweep_scores[args.layer]["maha_last"][-1])
@@ -391,6 +430,7 @@ def run(args) -> dict:
         scores["disp_hse"].append(
             float(hyperbolic_semantic_entropy(poincare_map(ans)).item())
         )
+        scores["eigenscore"].append(sweep_scores[args.layer]["eigenscore"][-1])
         scores["nll_answer"].append(reps["nll"])
         labels.append(stmt.is_false)
 
@@ -429,13 +469,19 @@ def run(args) -> dict:
     if args.sweep:
         sweep_payload = {}
         print("\n  Layer sweep (AUROC):")
-        print(f"  {'layer':>6} {'maha_last':>11} {'truth_proj':>11} {'subspace':>11}")
+        print(f"  {'layer':>6} {'maha_last':>11} {'truth_proj':>11} {'subspace':>11} {'eigenscore':>11}")
         for layer in sorted(layers):
             r_m = roc_auc(sweep_scores[layer]["maha_last"], labels)
             r_p = roc_auc(sweep_scores[layer]["truth_proj"], labels)
             r_s = roc_auc(sweep_scores[layer]["subspace_resid"], labels)
-            sweep_payload[str(layer)] = {"maha_last": r_m, "truth_proj": r_p, "subspace_resid": r_s}
-            print(f"  {layer:>6} {r_m:>11.3f} {r_p:>11.3f} {r_s:>11.3f}")
+            r_e = roc_auc(sweep_scores[layer]["eigenscore"], labels)
+            sweep_payload[str(layer)] = {
+                "maha_last": r_m,
+                "truth_proj": r_p,
+                "subspace_resid": r_s,
+                "eigenscore": r_e,
+            }
+            print(f"  {layer:>6} {r_m:>11.3f} {r_p:>11.3f} {r_s:>11.3f} {r_e:>11.3f}")
 
     payload = {
         "config": {"model": args.model, "layer": args.layer, "offline": args.offline,

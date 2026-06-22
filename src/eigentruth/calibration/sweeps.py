@@ -25,6 +25,7 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "subspace_resid": "higher",
     "disp_euclid": "higher",
     "disp_hse": "higher",
+    "eigenscore": "higher",
     "nll_answer": "higher",
 }
 
