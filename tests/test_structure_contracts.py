@@ -5,6 +5,7 @@ import pytest
 from eigentruth.adapters import WorldModelPrediction
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.control import (
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionRequest,
     ActionResult,
@@ -84,6 +85,28 @@ def test_execute_tool_action_request_roundtrip():
     assert payload["action"] == "execute_tool"
     assert loaded.action is ControlAction.EXECUTE_TOOL
     assert loaded.payload["tool"] == "reserve_inventory"
+
+
+def test_action_execution_policy_json_roundtrip():
+    policy = ActionExecutionPolicy(
+        side_effecting=True,
+        require_request_id=True,
+        require_idempotency_key=True,
+        default_timeout_seconds=2.5,
+        max_timeout_seconds=10.0,
+        required_metadata_keys=("tenant_id",),
+    )
+
+    payload = policy.to_dict()
+    loaded = ActionExecutionPolicy.from_dict(payload)
+
+    assert payload["side_effecting"] is True
+    assert loaded.side_effecting is True
+    assert loaded.require_request_id is True
+    assert loaded.require_idempotency_key is True
+    assert loaded.default_timeout_seconds == 2.5
+    assert loaded.max_timeout_seconds == 10.0
+    assert loaded.required_metadata_keys == ("tenant_id",)
 
 
 def test_action_result_json_roundtrip():

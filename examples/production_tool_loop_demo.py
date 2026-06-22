@@ -31,11 +31,13 @@ from eigentruth.adapters import (
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutorRegistry,
     ActionRequest,
     ActionResult,
     ControlAction,
+    PolicyGuardedActionExecutor,
     ProductTrace,
     RiskController,
     TraceEvent,
@@ -367,6 +369,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
     post_claims = post_tool_claims()
     pre_results = tuple(database_verifier.verify_many(pre_claims))
     initial_decision = RiskController(artifact).decide(diagnostics, verification_results=pre_results)
+    order_id = str(tool_input.get("order_id", "")).strip() or "<missing>"
     tool_request = ActionRequest(
         action=ControlAction.EXECUTE_TOOL,
         reason="pre-tool verification supported reservation",
@@ -375,11 +378,24 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             "input": tool_input,
             "instruction": "reserve inventory only after pre-tool state checks pass",
         },
+        metadata={
+            "idempotency_key": f"reserve_inventory:{args.request_id}:{order_id}",
+            "timeout_seconds": 5.0,
+        },
         request_id="reserve-ord-1",
     )
     registry = ActionExecutorRegistry().register(
         ControlAction.EXECUTE_TOOL,
-        SQLiteReserveInventoryExecutor(database_path),
+        PolicyGuardedActionExecutor(
+            SQLiteReserveInventoryExecutor(database_path),
+            policy=ActionExecutionPolicy(
+                side_effecting=True,
+                require_request_id=True,
+                require_idempotency_key=True,
+                default_timeout_seconds=5.0,
+                max_timeout_seconds=30.0,
+            ),
+        ),
     )
     action_results = (
         registry.execute_many((tool_request,), context={"request_id": args.request_id})

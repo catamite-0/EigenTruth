@@ -170,6 +170,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, and route summaries expose selected/matched/skipped verifier tools. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations, including generic `execute_tool` requests. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
+| `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | Adds dependency-free request validation and audit metadata for side-effecting executors, including request ids, idempotency keys, and timeout bounds. |
 | `run_verification_loop` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops and converts retrieval action results into verifier-ready evidence context. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
 | `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims and simple symbolic equations. |
@@ -183,7 +184,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
-| `production_tool_loop_demo.py` | Demonstrates a local production-like loop: SQLite pre-check, side-effecting local `execute_tool`, tool-output state mapping, post-tool verification, and route summary in one trace. |
+| `production_tool_loop_demo.py` | Demonstrates a local production-like loop: SQLite pre-check, guarded side-effecting local `execute_tool`, tool-output state mapping, post-tool verification, action audit metadata, and route summary in one trace. |
 | `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression and refutation policies. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into route leaderboards and by-route control-impact metrics. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures for structured-state verifier benchmarks. |
@@ -209,6 +210,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload，包括通用 `execute_tool` 请求。 |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
+| `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | 为有副作用 executor 增加无依赖请求校验和审计元数据，包括 request id、idempotency key 与 timeout 上限。 |
 | `run_verification_loop` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
 | `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim 和简单符号等式。 |
@@ -222,7 +224,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |
-| `production_tool_loop_demo.py` | 演示本地 production-like 闭环：SQLite 前置校验、有副作用本地 `execute_tool`、工具输出状态映射、工具后校验和 trace route summary。 |
+| `production_tool_loop_demo.py` | 演示本地 production-like 闭环：SQLite 前置校验、受 guard 约束的有副作用本地 `execute_tool`、工具输出状态映射、工具后校验、action audit metadata 和 trace route summary。 |
 | `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为 route 排行榜与分 route 控制收益指标。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，用于结构化状态 verifier benchmark。 |

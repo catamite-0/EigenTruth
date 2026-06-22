@@ -40,9 +40,10 @@ false claim about the action consequence drives a dry-run `abstain` decision.
 
 A dependency-free production-like local tool loop. It checks pre-tool business
 state from SQLite, executes a deterministic reserve-inventory `execute_tool`
-action, maps the returned `ActionResult.output` into `ToolOutputStateSource`,
-verifies post-tool claims, and stores selected/matched/skipped verifier route
-counts in the final `ProductTrace` metadata.
+action through `PolicyGuardedActionExecutor`, maps the returned
+`ActionResult.output` into `ToolOutputStateSource`, verifies post-tool claims,
+and stores selected/matched/skipped verifier route counts plus action audit
+metadata in the final `ProductTrace`.
 
 ## Running An Example
 
@@ -146,9 +147,9 @@ despite low internal diagnostics.
 
 `production_tool_loop_demo.py` also avoids model loading and network access. It
 shows the local integration shape for product tools: pre-check database state,
-execute a reserve-inventory tool through `ActionExecutorRegistry`, map
-`ActionResult.output` into verifier state, and verify post-tool claims with
-route-summary observability.
+execute a reserve-inventory tool through `ActionExecutorRegistry` and
+`PolicyGuardedActionExecutor`, map `ActionResult.output` into verifier state,
+and verify post-tool claims with route-summary observability.
 
 ```bash
 python examples/production_tool_loop_demo.py \
@@ -160,8 +161,8 @@ The default tool execution reserves five units and leaves seven available, but
 does not capture payment. The trace therefore supports the pre-check and
 inventory postcondition, refutes the payment claim, records
 `database_state=1` / `tool_output_state=2` in `route_summary`, marks the action
-execution summary as side-effecting, and abstains despite low internal
-diagnostics.
+execution summary as side-effecting, records idempotency and timeout audit
+metadata, and abstains despite low internal diagnostics.
 
 ## Structure For New Example Scripts
 

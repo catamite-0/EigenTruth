@@ -27,6 +27,7 @@ from eigentruth.adapters import (
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutorRegistry,
     ActionRequest,
@@ -35,6 +36,7 @@ from eigentruth.control import (
     ControlPolicyConfig,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
+    PolicyGuardedActionExecutor,
     RiskController,
     RiskDecision,
     RiskLevel,
@@ -909,6 +911,71 @@ def test_action_executor_registry_uses_fallback_and_registered_executor():
     assert retrieve_result.output["queries"][0]["claim_id"] == "c1"
     assert retrieve_result.output["hits"][0]["text"] == "Paris is the capital of France."
     assert retrieve_result.metadata["executor"] == "RetrievalActionExecutor"
+
+
+def test_policy_guarded_action_executor_validates_side_effect_contract():
+    class RecordingExecutor:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, request, context=None):
+            self.calls += 1
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "context": dict(context or {}), "side_effects": True},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    wrapped = RecordingExecutor()
+    executor = PolicyGuardedActionExecutor(
+        wrapped,
+        policy=ActionExecutionPolicy(
+            side_effecting=True,
+            require_request_id=True,
+            require_idempotency_key=True,
+            max_timeout_seconds=5.0,
+        ),
+    )
+    missing_key = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        request_id="reserve-1",
+    )
+    blocked = executor.execute(missing_key)
+    too_slow = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 30.0},
+            request_id="reserve-1",
+        )
+    )
+    allowed = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
+        context={"request_id": "req-1"},
+    )
+
+    assert blocked.status is ActionExecutionStatus.FAILED
+    assert "idempotency_key is required" in blocked.error
+    assert blocked.metadata["side_effects"] is False
+    assert too_slow.status is ActionExecutionStatus.FAILED
+    assert "timeout_seconds exceeds max_timeout_seconds" in too_slow.error
+    assert wrapped.calls == 1
+    assert allowed.status is ActionExecutionStatus.SUCCEEDED
+    assert allowed.metadata["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert allowed.metadata["idempotency_key"] == "reserve-1"
+    assert allowed.metadata["timeout_seconds"] == 3.0
+    assert allowed.metadata["timeout_enforced"] is False
 
 
 def test_risk_controller_uses_configurable_control_policy():

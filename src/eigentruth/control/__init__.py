@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from eigentruth.control.actions import (
+    ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutor,
     ActionExecutorRegistry,
@@ -11,6 +12,7 @@ from eigentruth.control.actions import (
     CorrectionPolicy,
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
+    PolicyGuardedActionExecutor,
 )
 from eigentruth.control.controller import ControlPolicyConfig, RiskController
 from eigentruth.control.loop import (
@@ -24,6 +26,7 @@ from eigentruth.control.trace import ProductTrace, TraceEvent
 
 __all__ = [
     "ActionExecutionStatus",
+    "ActionExecutionPolicy",
     "ActionExecutorRegistry",
     "ActionExecutor",
     "ActionRequest",
@@ -34,6 +37,7 @@ __all__ = [
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
     "EvidenceBundle",
+    "PolicyGuardedActionExecutor",
     "ProductTrace",
     "RiskController",
     "RiskDecision",

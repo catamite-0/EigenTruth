@@ -86,6 +86,121 @@ class ActionRequest:
         )
 
 
+@dataclass(frozen=True)
+class ActionExecutionPolicy:
+    """Request-level execution contract for action executors.
+
+    The policy validates side-effecting action requests and records audit
+    metadata. It intentionally does not enforce runtime cancellation; adapters
+    that need hard timeouts should enforce them in the wrapped executor.
+    """
+
+    side_effecting: bool = False
+    require_request_id: bool = False
+    require_idempotency_key: bool = False
+    default_timeout_seconds: float | None = None
+    max_timeout_seconds: float | None = None
+    required_metadata_keys: Sequence[str] = ()
+
+    def __post_init__(self) -> None:
+        default_timeout = _coerce_optional_positive_float(
+            self.default_timeout_seconds,
+            name="default_timeout_seconds",
+        )
+        max_timeout = _coerce_optional_positive_float(
+            self.max_timeout_seconds,
+            name="max_timeout_seconds",
+        )
+        if default_timeout is not None and max_timeout is not None and default_timeout > max_timeout:
+            raise ValueError("default_timeout_seconds cannot exceed max_timeout_seconds.")
+        required_keys = tuple(
+            key
+            for key in (str(item).strip() for item in self.required_metadata_keys)
+            if key
+        )
+        object.__setattr__(self, "default_timeout_seconds", default_timeout)
+        object.__setattr__(self, "max_timeout_seconds", max_timeout)
+        object.__setattr__(self, "required_metadata_keys", required_keys)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready policy description."""
+        return {
+            "side_effecting": self.side_effecting,
+            "require_request_id": self.require_request_id,
+            "require_idempotency_key": self.require_idempotency_key,
+            "default_timeout_seconds": self.default_timeout_seconds,
+            "max_timeout_seconds": self.max_timeout_seconds,
+            "required_metadata_keys": tuple(self.required_metadata_keys),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ActionExecutionPolicy":
+        """Build an execution policy from JSON-like data."""
+        return cls(
+            side_effecting=_parse_policy_bool(data.get("side_effecting", False), name="side_effecting"),
+            require_request_id=_parse_policy_bool(data.get("require_request_id", False), name="require_request_id"),
+            require_idempotency_key=_parse_policy_bool(
+                data.get("require_idempotency_key", False),
+                name="require_idempotency_key",
+            ),
+            default_timeout_seconds=data.get("default_timeout_seconds"),
+            max_timeout_seconds=data.get("max_timeout_seconds"),
+            required_metadata_keys=_as_tuple(data.get("required_metadata_keys", ())),
+        )
+
+    def validate_request(self, request: ActionRequest) -> tuple[str, ...]:
+        """Return policy violation messages for a request."""
+        violations: list[str] = []
+        if self.require_request_id and not _non_empty_string(request.request_id):
+            violations.append("request_id is required.")
+        if self.require_idempotency_key and self.idempotency_key(request) is None:
+            violations.append("idempotency_key is required for this action.")
+        metadata = dict(request.metadata)
+        for key in self.required_metadata_keys:
+            if key not in metadata or metadata[key] is None:
+                violations.append(f"metadata.{key} is required.")
+        try:
+            timeout_seconds = self.timeout_seconds(request)
+        except ValueError as exc:
+            violations.append(str(exc))
+        else:
+            if (
+                timeout_seconds is not None
+                and self.max_timeout_seconds is not None
+                and timeout_seconds > self.max_timeout_seconds
+            ):
+                violations.append(
+                    "timeout_seconds exceeds max_timeout_seconds "
+                    f"({timeout_seconds} > {self.max_timeout_seconds})."
+                )
+        return tuple(violations)
+
+    def audit_metadata(self, request: ActionRequest) -> dict[str, Any]:
+        """Return standardized execution-audit metadata for a request."""
+        try:
+            timeout_seconds = self.timeout_seconds(request)
+        except ValueError:
+            timeout_seconds = None
+        return {
+            "execution_policy": self.to_dict(),
+            "idempotency_key": self.idempotency_key(request),
+            "timeout_seconds": timeout_seconds,
+            "timeout_enforced": False,
+            "side_effecting_executor": self.side_effecting,
+        }
+
+    def idempotency_key(self, request: ActionRequest) -> str | None:
+        """Resolve the idempotency key from request metadata or payload."""
+        return _non_empty_string(_request_value(request, "idempotency_key"))
+
+    def timeout_seconds(self, request: ActionRequest) -> float | None:
+        """Resolve the requested timeout, falling back to the policy default."""
+        value = _request_value(request, "timeout_seconds")
+        if value is None:
+            return self.default_timeout_seconds
+        return _coerce_optional_positive_float(value, name="timeout_seconds")
+
+
 @runtime_checkable
 class ActionExecutor(Protocol):
     """Interface for executing planned action requests."""
@@ -253,6 +368,61 @@ class DryRunActionExecutor:
         return tuple(self.execute(request, context=context) for request in requests)
 
 
+@dataclass(frozen=True)
+class PolicyGuardedActionExecutor:
+    """Validate requests and attach audit metadata around another executor."""
+
+    executor: ActionExecutor
+    policy: ActionExecutionPolicy = field(default_factory=ActionExecutionPolicy)
+
+    def execute(
+        self,
+        request: ActionRequest,
+        context: Mapping[str, Any] | None = None,
+    ) -> ActionResult:
+        """Validate and execute one action request."""
+        violations = self.policy.validate_request(request)
+        audit_metadata = self.policy.audit_metadata(request)
+        if violations:
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.FAILED,
+                output={},
+                metadata={
+                    "executor": type(self).__name__,
+                    "wrapped_executor": type(self.executor).__name__,
+                    "side_effects": False,
+                    **audit_metadata,
+                    "violations": violations,
+                },
+                request_id=request.request_id,
+                error="action execution policy violation: " + "; ".join(violations),
+            )
+
+        result = self.executor.execute(request, context=context)
+        metadata = dict(result.metadata)
+        metadata.update({
+            "policy_guard": type(self).__name__,
+            **audit_metadata,
+        })
+        return ActionResult(
+            action=result.action,
+            status=result.status,
+            output=result.output,
+            metadata=metadata,
+            request_id=result.request_id,
+            error=result.error,
+        )
+
+    def execute_many(
+        self,
+        requests: Sequence[ActionRequest],
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionResult, ...]:
+        """Validate and execute multiple action requests."""
+        return tuple(self.execute(request, context=context) for request in requests)
+
+
 @dataclass
 class ActionExecutorRegistry:
     """Route action requests to registered executors with a dry-run fallback."""
@@ -299,6 +469,55 @@ def _coerce_action(action: ControlAction | str) -> ControlAction:
     if isinstance(action, ControlAction):
         return action
     return ControlAction(str(action))
+
+
+def _request_value(request: ActionRequest, key: str) -> Any:
+    if key in request.metadata:
+        return request.metadata[key]
+    if key in request.payload:
+        return request.payload[key]
+    return None
+
+
+def _coerce_optional_positive_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    try:
+        number = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive number.") from exc
+    if number <= 0.0:
+        raise ValueError(f"{name} must be a positive number.")
+    return number
+
+
+def _non_empty_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _parse_policy_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean.")
+
+
+def _as_tuple(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return tuple(value)
+    return (value,)
 
 
 def _dry_run_output(request: ActionRequest) -> dict[str, Any]:

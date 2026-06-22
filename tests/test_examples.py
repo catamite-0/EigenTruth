@@ -158,6 +158,13 @@ def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):
     assert payload["actions"][0]["payload"]["tool"] == "reserve_inventory"
     assert payload["action_results"][0]["status"] == "succeeded"
     assert payload["action_results"][0]["metadata"]["side_effects"] is True
+    assert payload["action_results"][0]["metadata"]["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert payload["action_results"][0]["metadata"]["idempotency_key"] == (
+        "reserve_inventory:test-production-tool-loop:ord_1"
+    )
+    assert payload["action_results"][0]["metadata"]["timeout_seconds"] == 5.0
+    assert payload["action_results"][0]["metadata"]["timeout_enforced"] is False
+    assert payload["action_results"][0]["metadata"]["execution_policy"]["require_idempotency_key"] is True
     assert payload["action_results"][0]["output"]["remaining"] == 7
     assert statuses == ["supported", "supported", "refuted"]
     assert selected_routes == ["database_state", "tool_output_state", "tool_output_state"]
@@ -192,6 +199,10 @@ def test_production_tool_loop_demo_records_failed_tool_without_side_effect(tmp_p
 
     assert payload["action_results"][0]["status"] == "failed"
     assert payload["action_results"][0]["metadata"]["side_effects"] is False
+    assert payload["action_results"][0]["metadata"]["policy_guard"] == "PolicyGuardedActionExecutor"
+    assert payload["action_results"][0]["metadata"]["idempotency_key"] == (
+        "reserve_inventory:test-production-tool-loop-failed-tool:missing"
+    )
     assert payload["metadata"]["action_execution_summary"]["side_effects"] is False
     assert tool_event["payload"]["status"] == "failed"
     assert tool_event["payload"]["side_effects"] is False
