@@ -216,7 +216,7 @@ def test_production_tool_loop_demo_records_failed_tool_without_side_effect(tmp_p
 def test_production_tool_loop_demo_replays_from_execution_ledger_without_second_mutation(tmp_path):
     demo = importlib.import_module("examples.production_tool_loop_demo")
     database_path = tmp_path / "orders.db"
-    ledger_path = tmp_path / "action-ledger.json"
+    ledger_path = tmp_path / "action-ledger.sqlite"
 
     first = demo.run(
         SimpleNamespace(
@@ -226,6 +226,7 @@ def test_production_tool_loop_demo_replays_from_execution_ledger_without_second_
             tool_input=None,
             request_id="test-production-tool-loop-replay",
             execution_ledger=str(ledger_path),
+            execution_ledger_backend="sqlite",
             output=None,
         )
     )
@@ -237,6 +238,7 @@ def test_production_tool_loop_demo_replays_from_execution_ledger_without_second_
             tool_input=None,
             request_id="test-production-tool-loop-replay",
             execution_ledger=str(ledger_path),
+            execution_ledger_backend="sqlite",
             output=None,
         )
     )
@@ -248,6 +250,7 @@ def test_production_tool_loop_demo_replays_from_execution_ledger_without_second_
 
     assert first["action_results"][0]["metadata"]["idempotency_replayed"] is False
     assert first["action_results"][0]["metadata"]["side_effects"] is True
+    assert first["metadata"]["execution_ledger_backend"] == "sqlite"
     assert second["action_results"][0]["metadata"]["idempotency_replayed"] is True
     assert second["action_results"][0]["metadata"]["side_effects"] is False
     assert second["action_results"][0]["metadata"]["original_side_effects"] is True

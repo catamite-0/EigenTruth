@@ -6,7 +6,7 @@ how EigenTruth can sit around a normal product workflow:
 1. Check pre-tool business state from a read-only SQLite source.
 2. Execute a local SQLite-backed reserve-inventory tool.
 3. Map selected tool-output fields into structured verifier state.
-4. Optionally replay repeated executions from a JSON idempotency ledger.
+4. Optionally replay repeated executions from a JSON or SQLite idempotency ledger.
 5. Verify post-tool claims and emit a route-auditable ``ProductTrace``.
 
 The demo intentionally keeps the tool local and deterministic so the integration
@@ -42,6 +42,7 @@ from eigentruth.control import (
     PolicyGuardedActionExecutor,
     ProductTrace,
     RiskController,
+    SQLiteActionExecutionLedger,
     TraceEvent,
 )
 from eigentruth.verify import Claim, RoutedVerifier, VerificationResult, VerificationStatus, VerifierRoute
@@ -386,6 +387,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
         },
         request_id="reserve-ord-1",
     )
+    execution_ledger_backend = _execution_ledger_backend(args)
     registry = ActionExecutorRegistry().register(
         ControlAction.EXECUTE_TOOL,
         PolicyGuardedActionExecutor(
@@ -397,11 +399,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
                 default_timeout_seconds=5.0,
                 max_timeout_seconds=30.0,
             ),
-            idempotency_ledger=(
-                JsonActionExecutionLedger(args.execution_ledger)
-                if getattr(args, "execution_ledger", None)
-                else None
-            ),
+            idempotency_ledger=_execution_ledger(args, backend=execution_ledger_backend),
         ),
     )
     action_results = (
@@ -468,6 +466,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
             "execution_ledger_path": (
                 None if not getattr(args, "execution_ledger", None) else str(args.execution_ledger)
             ),
+            "execution_ledger_backend": execution_ledger_backend,
             "tool": "reserve_inventory",
             "business_domain": "order_reservation",
             "route_summary": route_summary,
@@ -480,6 +479,27 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
+
+
+def _execution_ledger(args: argparse.Namespace, *, backend: str | None = None):
+    path = getattr(args, "execution_ledger", None)
+    if not path:
+        return None
+    backend = _execution_ledger_backend(args) if backend is None else backend
+    if backend == "json":
+        return JsonActionExecutionLedger(path)
+    if backend == "sqlite":
+        return SQLiteActionExecutionLedger(path)
+    raise ValueError("--execution-ledger-backend must be 'json' or 'sqlite'.")
+
+
+def _execution_ledger_backend(args: argparse.Namespace) -> str | None:
+    if not getattr(args, "execution_ledger", None):
+        return None
+    backend = str(getattr(args, "execution_ledger_backend", "json")).strip().lower()
+    if backend not in {"json", "sqlite"}:
+        raise ValueError("--execution-ledger-backend must be 'json' or 'sqlite'.")
+    return backend
 
 
 def _result_payload(result: VerificationResult) -> dict[str, Any]:
@@ -529,7 +549,9 @@ def main() -> None:
     parser.add_argument("--request-id", default="production-tool-loop-demo",
                         help="request id stored in ProductTrace")
     parser.add_argument("--execution-ledger", default=None,
-                        help="optional JSON idempotency ledger for local tool execution")
+                        help="optional idempotency ledger path for local tool execution")
+    parser.add_argument("--execution-ledger-backend", choices=("json", "sqlite"), default="json",
+                        help="ledger backend for --execution-ledger")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     payload = run(parser.parse_args())
     print(json.dumps(payload, indent=2, sort_keys=True))

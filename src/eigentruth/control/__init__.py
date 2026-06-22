@@ -16,6 +16,7 @@ from eigentruth.control.actions import (
     InMemoryActionExecutionLedger,
     JsonActionExecutionLedger,
     PolicyGuardedActionExecutor,
+    SQLiteActionExecutionLedger,
 )
 from eigentruth.control.controller import ControlPolicyConfig, RiskController
 from eigentruth.control.loop import (
@@ -44,6 +45,7 @@ __all__ = [
     "InMemoryActionExecutionLedger",
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
+    "SQLiteActionExecutionLedger",
     "ProductTrace",
     "RiskController",
     "RiskDecision",

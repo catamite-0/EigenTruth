@@ -13,6 +13,7 @@ from eigentruth.control import (
     JsonActionExecutionLedger,
     RiskDecision,
     RiskLevel,
+    SQLiteActionExecutionLedger,
 )
 from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus
@@ -138,12 +139,50 @@ def test_json_action_execution_ledger_roundtrip(tmp_path):
         metadata={"side_effects": True},
         request_id="reserve-1",
     )
+    replacement = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={"reserved": 99},
+        metadata={"side_effects": True},
+        request_id="reserve-2",
+    )
 
     ledger.record("reserve:1", result)
+    ledger.record("reserve:1", replacement)
     loaded = JsonActionExecutionLedger(ledger_path).get("reserve:1")
 
     assert loaded == result
     assert JsonActionExecutionLedger(ledger_path).get("missing") is None
+
+
+def test_sqlite_action_execution_ledger_roundtrip(tmp_path):
+    ledger_path = tmp_path / "action-ledger.sqlite"
+    ledger = SQLiteActionExecutionLedger(ledger_path)
+    result = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={"reserved": 5},
+        metadata={"side_effects": True},
+        request_id="reserve-1",
+    )
+    replacement = ActionResult(
+        action=ControlAction.EXECUTE_TOOL,
+        status=ActionExecutionStatus.SUCCEEDED,
+        output={"reserved": 99},
+        metadata={"side_effects": True},
+        request_id="reserve-2",
+    )
+
+    ledger.record("reserve:1", result)
+    ledger.record("reserve:1", replacement)
+    loaded = SQLiteActionExecutionLedger(ledger_path).get("reserve:1")
+
+    assert loaded == result
+    assert SQLiteActionExecutionLedger(ledger_path).get("missing") is None
+    with pytest.raises(ValueError, match="table_name"):
+        SQLiteActionExecutionLedger(ledger_path, table_name="bad-name")
+    with pytest.raises(ValueError, match="timeout_seconds"):
+        SQLiteActionExecutionLedger(ledger_path, timeout_seconds=None)  # type: ignore[arg-type]
 
 
 def test_verification_result_and_world_model_prediction_validate_confidence():

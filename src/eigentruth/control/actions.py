@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
 from pathlib import Path
@@ -234,7 +235,7 @@ class InMemoryActionExecutionLedger:
 
     def record(self, idempotency_key: str, result: ActionResult) -> None:
         """Persist a result for an idempotency key."""
-        self._records[str(idempotency_key)] = result
+        self._records.setdefault(str(idempotency_key), result)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-ready ledger snapshot."""
@@ -264,7 +265,7 @@ class JsonActionExecutionLedger:
     def record(self, idempotency_key: str, result: ActionResult) -> None:
         """Persist a result for an idempotency key."""
         data = self._load()
-        data[str(idempotency_key)] = result.to_dict()
+        data.setdefault(str(idempotency_key), result.to_dict())
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
@@ -275,6 +276,68 @@ class JsonActionExecutionLedger:
         if not isinstance(payload, dict):
             raise ValueError("action execution ledger must contain a JSON object.")
         return dict(payload)
+
+
+@dataclass(frozen=True)
+class SQLiteActionExecutionLedger:
+    """SQLite-backed idempotency ledger for durable local action replay."""
+
+    path: str | Path
+    table_name: str = "action_execution_ledger"
+    timeout_seconds: float = 5.0
+
+    def __post_init__(self) -> None:
+        table_name = _sqlite_identifier(self.table_name, name="table_name")
+        timeout_seconds = _coerce_optional_positive_float(self.timeout_seconds, name="timeout_seconds")
+        if timeout_seconds is None:
+            raise ValueError("timeout_seconds is required.")
+        object.__setattr__(self, "path", Path(self.path))
+        object.__setattr__(self, "table_name", table_name)
+        object.__setattr__(self, "timeout_seconds", timeout_seconds)
+
+    def get(self, idempotency_key: str) -> ActionResult | None:
+        """Return a recorded result for an idempotency key, if present."""
+        with self._connect() as connection:
+            self._ensure_table(connection)
+            row = connection.execute(
+                f"select result_json from {self.table_name} where idempotency_key = ?",
+                (str(idempotency_key),),
+            ).fetchone()
+        if row is None:
+            return None
+        payload = json.loads(str(row[0]))
+        if not isinstance(payload, Mapping):
+            raise ValueError("sqlite action execution ledger row must contain a JSON object.")
+        return _coerce_action_result(payload)
+
+    def record(self, idempotency_key: str, result: ActionResult) -> None:
+        """Persist a result for an idempotency key with first-write-wins semantics."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            self._ensure_table(connection)
+            connection.execute(
+                f"""
+                insert or ignore into {self.table_name} (idempotency_key, result_json)
+                values (?, ?)
+                """,
+                (str(idempotency_key), json.dumps(result.to_dict(), sort_keys=True)),
+            )
+            connection.commit()
+
+    def _connect(self) -> sqlite3.Connection:
+        return sqlite3.connect(str(self.path), timeout=float(self.timeout_seconds))
+
+    def _ensure_table(self, connection: sqlite3.Connection) -> None:
+        connection.execute(
+            f"""
+            create table if not exists {self.table_name} (
+                idempotency_key text primary key,
+                result_json text not null,
+                created_at text not null default current_timestamp
+            )
+            """
+        )
+        connection.commit()
 
 
 @runtime_checkable
@@ -602,6 +665,15 @@ def _coerce_action_result(value: ActionResult | Mapping[str, Any]) -> ActionResu
     if isinstance(value, Mapping):
         return ActionResult.from_dict(value)
     raise ValueError("ledger result must be an ActionResult or JSON object.")
+
+
+def _sqlite_identifier(value: Any, *, name: str) -> str:
+    text = str(value).strip()
+    if not text or not all(part.isalnum() or part == "_" for part in text):
+        raise ValueError(f"{name} must contain only letters, numbers, and underscores.")
+    if text[0].isdigit():
+        raise ValueError(f"{name} cannot start with a number.")
+    return text
 
 
 def _request_value(request: ActionRequest, key: str) -> Any:
