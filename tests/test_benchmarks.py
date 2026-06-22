@@ -1913,6 +1913,42 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     )
     assert baseline["decision"]["status"] == "promote"
 
+    blocked = module.run_local_retrieval_route_workflow(
+        module.LocalRetrievalRouteWorkflowConfig(
+            scores_path=scores_path,
+            corpus_paths=(corpus_path,),
+            output_dir=tmp_path / "workflow-budget-blocked",
+            registry_path=registry_path,
+            name="local-retrieval-route-budget",
+            version="0.8",
+            alpha=0.2,
+            retriever_backend="auto",
+            retriever_index_path=tmp_path / "workflow-budget-blocked" / "retriever.sqlite",
+            retrieval_limit=1,
+            retriever_min_overlap=0.6,
+            min_selected=4,
+            gate_min_selected=4,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_attempted_route_count=2.1,
+            max_retrieval_use_rate=1.0,
+            max_retrieval_hit_count=0.0,
+            compact_json=True,
+        )
+    )
+    registry_after_block = ArtifactRegistry.load_json(registry_path)
+
+    assert blocked["adapter_promotion"]["decision"]["status"] == "promote"
+    assert blocked["runtime_budget"]["passed"] is False
+    assert blocked["runtime_budget"]["failures"][0]["metric"] == "retrieval_hit_count"
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["manifest_promoted"] is False
+    assert all(
+        record.key() != "benchmark_manifest:local-retrieval-route-budget:0.8"
+        for record in registry_after_block.list_records()
+    )
+
 
 def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_local_retrieval_route_workflow")
@@ -2088,6 +2124,13 @@ def _write_route_baseline_manifest(
     mean_attempted_route_count: float = 1.0,
     retrieval_use_rate: float = 0.0,
     invalid_metric_counts: dict[str, int] | None = None,
+    runtime_total_seconds: float | None = None,
+    runtime_n_retrieval_hits: int | None = None,
+    claims_cache_enabled: bool | None = None,
+    claims_cache_hit: bool | None = None,
+    verifier_trace_cache_enabled: bool | None = None,
+    verifier_trace_cache_hit_count: int | None = None,
+    verifier_trace_cache_run_count: int | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -2117,16 +2160,31 @@ def _write_route_baseline_manifest(
         }),
         encoding="utf-8",
     )
+    metadata = {
+        "runner": "run_adapter_promotion_workflow",
+        "workflow": "adapter_promotion_workflow",
+        "promotion_status": "promote",
+        "route_promotion_status": "promote",
+        "recommended_route": route,
+    }
+    optional_metadata = {
+        "runtime_total_seconds": runtime_total_seconds,
+        "runtime_n_retrieval_hits": runtime_n_retrieval_hits,
+        "claims_cache_enabled": claims_cache_enabled,
+        "claims_cache_hit": claims_cache_hit,
+        "verifier_trace_cache_enabled": verifier_trace_cache_enabled,
+        "verifier_trace_cache_hit_count": verifier_trace_cache_hit_count,
+        "verifier_trace_cache_run_count": verifier_trace_cache_run_count,
+    }
+    metadata.update({
+        key: value
+        for key, value in optional_metadata.items()
+        if value is not None
+    })
     manifest = build_artifact_manifest(
         {"route_comparison_report": route_report_path},
         root=tmp_path,
-        metadata={
-            "runner": "run_adapter_promotion_workflow",
-            "workflow": "adapter_promotion_workflow",
-            "promotion_status": "promote",
-            "route_promotion_status": "promote",
-            "recommended_route": route,
-        },
+        metadata=metadata,
     )
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest_path
@@ -2213,6 +2271,92 @@ def test_compare_route_baselines_blocks_invalid_source_metrics(tmp_path):
     assert payload["decision"]["status"] == "blocked"
     assert payload["summary"]["passing_count"] == 0
     assert "invalid source metrics" in payload["leaderboard"][0]["gate"]["blocking_reasons"][0]
+
+
+def test_runtime_budget_policy_fails_closed_for_missing_or_nonfinite_metrics():
+    module = importlib.import_module("benchmarks.runtime_budget_policy")
+
+    passing = module.evaluate_runtime_budget(
+        {
+            "total_seconds": 1.2,
+            "retrieval_hit_count": 3,
+            "claims_cache_hit_rate": 1.0,
+            "verifier_trace_cache_hit_rate": 0.5,
+        },
+        module.RuntimeBudgetPolicy(
+            max_total_seconds=2.0,
+            max_retrieval_hit_count=3,
+            min_claims_cache_hit_rate=1.0,
+            min_verifier_trace_cache_hit_rate=0.5,
+        ),
+    )
+    nonfinite = module.evaluate_runtime_budget(
+        {"total_seconds": float("nan")},
+        module.RuntimeBudgetPolicy(max_total_seconds=2.0),
+    )
+    missing_cache = module.evaluate_runtime_budget(
+        {},
+        module.RuntimeBudgetPolicy(min_verifier_trace_cache_hit_rate=0.9),
+    )
+
+    assert passing["passed"] is True
+    assert nonfinite["passed"] is False
+    assert nonfinite["failures"][0]["metric"] == "total_seconds"
+    assert nonfinite["failures"][0]["reason"] == "missing or non-finite"
+    assert missing_cache["passed"] is False
+    assert missing_cache["failures"][0]["metric"] == "verifier_trace_cache_hit_rate"
+
+
+def test_compare_route_baselines_applies_runtime_budget_metadata(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="retrieval-runtime",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        mean_attempted_route_count=2.0,
+        retrieval_use_rate=1.0,
+        runtime_total_seconds=5.0,
+        runtime_n_retrieval_hits=12,
+        claims_cache_enabled=True,
+        claims_cache_hit=False,
+        verifier_trace_cache_enabled=True,
+        verifier_trace_cache_hit_count=0,
+        verifier_trace_cache_run_count=1,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="retrieval-runtime-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.compare_route_baselines(
+        registry_path=registry_path,
+        max_runtime_total_seconds=1.0,
+        max_retrieval_hit_count=5,
+        min_claims_cache_hit_rate=0.5,
+        min_verifier_trace_cache_hit_rate=0.9,
+    )
+
+    row = payload["leaderboard"][0]
+    reasons = row["gate"]["blocking_reasons"]
+    assert payload["decision"]["status"] == "blocked"
+    assert row["runtime_total_seconds"] == pytest.approx(5.0)
+    assert row["runtime_retrieval_hit_count"] == pytest.approx(12.0)
+    assert row["claims_cache_hit_rate"] == pytest.approx(0.0)
+    assert row["verifier_trace_cache_hit_rate"] == pytest.approx(0.0)
+    assert "runtime_budget: total_seconds above 1.0" in reasons
+    assert "runtime_budget: retrieval_hit_count above 5.0" in reasons
+    assert "runtime_budget: claims_cache_hit_rate below 0.5" in reasons
+    assert "runtime_budget: verifier_trace_cache_hit_rate below 0.9" in reasons
 
 
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
@@ -2455,6 +2599,25 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert manifest["metadata"]["recommended_batch_size"] == 2
     assert manifest["metadata"]["recommended_best_quality_signal"] == "subspace_resid"
     assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.91)
+
+
+def test_adapter_readiness_decision_blocks_on_runtime_budget():
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    decision = module.build_readiness_decision(
+        {"promotion_decision": {"status": "promote", "recommended_route": "structured_qa"}},
+        {"matrix_decision": {"status": "promote", "recommended_cell": "layer_m1_batch_2_capture_outputs"}},
+        {"status": "promote"},
+        runtime_budget={
+            "enabled": True,
+            "passed": False,
+            "failures": ({"metric": "total_seconds"},),
+        },
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["runtime_budget_passed"] is False
+    assert "runtime budget did not pass: total_seconds" in decision["blocking_reasons"]
 
 
 def test_run_adapter_readiness_workflow_blocks_when_performance_blocks(tmp_path, monkeypatch):
@@ -2746,6 +2909,13 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         false_refuted_rate=1.0,
         mean_duration_seconds=0.01,
         p99_duration_seconds=0.02,
+        runtime_total_seconds=0.8,
+        runtime_n_retrieval_hits=0,
+        claims_cache_enabled=True,
+        claims_cache_hit=True,
+        verifier_trace_cache_enabled=True,
+        verifier_trace_cache_hit_count=1,
+        verifier_trace_cache_run_count=1,
     )
     ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
         name="structured-route",
@@ -2763,8 +2933,23 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         max_p99_duration_seconds=0.03,
+        max_runtime_total_seconds=1.0,
+        max_retrieval_hit_count=0,
+        min_claims_cache_hit_rate=1.0,
+        min_verifier_trace_cache_hit_rate=1.0,
     )
     candidate = payload["release_candidate"]
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        max_p99_duration_seconds=0.03,
+        max_runtime_total_seconds=0.1,
+    )
 
     assert payload["decision"]["status"] == "promote"
     assert payload["decision"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
@@ -2775,6 +2960,14 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     assert candidate["quality"]["best_quality_signal"] == {"name": "truth_proj", "auroc": pytest.approx(0.72)}
     assert candidate["verifier_route"]["route"] == "structured_state"
     assert candidate["verifier_route"]["decision_accuracy"] == pytest.approx(1.0)
+    assert candidate["verifier_route"]["runtime_total_seconds"] == pytest.approx(0.8)
+    assert candidate["verifier_route"]["claims_cache_hit_rate"] == pytest.approx(1.0)
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert any(
+        "runtime_budget: total_seconds above 0.1" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
 
 
 def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):

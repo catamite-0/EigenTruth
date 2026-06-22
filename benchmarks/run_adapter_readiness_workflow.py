@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from dataclasses import dataclass
@@ -32,6 +33,7 @@ from benchmarks.run_cache_profile_matrix import (  # noqa: E402
     _parse_prefix_kv_cache_modes,
     run_matrix,
 )
+from benchmarks.runtime_budget_policy import RuntimeBudgetPolicy, evaluate_runtime_budget  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
@@ -77,6 +79,7 @@ class AdapterReadinessWorkflowConfig:
     performance_max_workers: int = 1
     performance_clean: bool = False
     performance_dry_run: bool = False
+    max_runtime_total_seconds: float | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -186,8 +189,14 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         _json_text(runtime_recommendation, compact=config.compact_json, sort_keys=True),
         encoding="utf-8",
     )
-    decision = build_readiness_decision(adapter_report, performance_report, runtime_recommendation)
     wall_clock_seconds = time.perf_counter() - started_at
+    runtime_budget = _runtime_budget_report(config, wall_clock_seconds=wall_clock_seconds)
+    decision = build_readiness_decision(
+        adapter_report,
+        performance_report,
+        runtime_recommendation,
+        runtime_budget=runtime_budget,
+    )
     report = {
         "schema_version": 1,
         "workflow": "adapter_readiness_workflow",
@@ -198,6 +207,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
         "runtime_recommendation": runtime_recommendation,
+        "runtime_budget": runtime_budget,
         "readiness_decision": decision,
         "execution": {
             "wall_clock_seconds": wall_clock_seconds,
@@ -220,6 +230,7 @@ def build_readiness_decision(
     adapter_report: Mapping[str, Any],
     performance_report: Mapping[str, Any],
     runtime_recommendation: Mapping[str, Any] | None = None,
+    runtime_budget: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the final fail-closed readiness decision."""
     adapter_decision = dict(adapter_report.get("promotion_decision") or {})
@@ -228,6 +239,8 @@ def build_readiness_decision(
     adapter_status = str(adapter_decision.get("status"))
     performance_status = str(performance_decision.get("status"))
     runtime_status = str(runtime_recommendation.get("status") or "missing")
+    runtime_budget = dict(runtime_budget or {"enabled": False, "passed": True})
+    runtime_budget_passed = (not runtime_budget.get("enabled")) or bool(runtime_budget.get("passed"))
     blocking_reasons = []
     if adapter_status != "promote":
         blocking_reasons.append("adapter-family quality gate did not promote")
@@ -237,8 +250,20 @@ def build_readiness_decision(
         blocking_reasons.append("performance matrix decision did not promote")
     elif runtime_status != "promote":
         blocking_reasons.append("runtime recommendation did not produce deployable settings")
+    if not runtime_budget_passed:
+        metrics = ", ".join(
+            str(failure.get("metric"))
+            for failure in runtime_budget.get("failures", ())
+            if isinstance(failure, Mapping)
+        )
+        blocking_reasons.append(f"runtime budget did not pass: {metrics or 'unknown metric'}")
 
-    if adapter_status == "promote" and performance_status == "promote" and runtime_status == "promote":
+    if (
+        adapter_status == "promote"
+        and performance_status == "promote"
+        and runtime_status == "promote"
+        and runtime_budget_passed
+    ):
         status = "promote"
     elif adapter_status == "promote" and performance_status == "dry_run":
         status = "needs_performance_evidence"
@@ -250,6 +275,7 @@ def build_readiness_decision(
         "adapter_family_status": adapter_status,
         "performance_status": performance_status,
         "runtime_recommendation_status": runtime_status,
+        "runtime_budget_passed": None if not runtime_budget.get("enabled") else bool(runtime_budget.get("passed")),
         "recommended_route": adapter_decision.get("recommended_route"),
         "recommended_performance_cell": performance_decision.get("recommended_cell"),
         "adapter_family_promoted": adapter_status == "promote",
@@ -257,6 +283,17 @@ def build_readiness_decision(
         "runtime_recommendation_promoted": runtime_status == "promote",
         "blocking_reasons": tuple(blocking_reasons),
     }
+
+
+def _runtime_budget_report(
+    config: AdapterReadinessWorkflowConfig,
+    *,
+    wall_clock_seconds: float,
+) -> dict[str, Any]:
+    return evaluate_runtime_budget(
+        {"total_seconds": wall_clock_seconds},
+        RuntimeBudgetPolicy(max_total_seconds=config.max_runtime_total_seconds),
+    )
 
 
 def _write_artifact_manifest(
@@ -281,6 +318,7 @@ def _write_artifact_manifest(
     }
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
+    runtime_budget = dict(report.get("runtime_budget") or {})
     runtime_config = dict(runtime_recommendation.get("recommendation") or {})
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     manifest = build_artifact_manifest(
@@ -305,6 +343,7 @@ def _write_artifact_manifest(
             "matrix_mode": config.matrix_mode,
             "performance_max_workers": config.performance_max_workers,
             "performance_dry_run": config.performance_dry_run,
+            "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
             "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
                 "performance_wall_clock_seconds"
@@ -315,6 +354,10 @@ def _write_artifact_manifest(
             "recommended_route": decision.get("recommended_route"),
             "recommended_performance_cell": decision.get("recommended_performance_cell"),
             "runtime_recommendation_status": runtime_recommendation.get("status"),
+            "runtime_budget_enabled": runtime_budget.get("enabled"),
+            "runtime_budget_passed": runtime_budget.get("passed"),
+            "runtime_budget_policy": runtime_budget.get("policy"),
+            "runtime_budget_failures": runtime_budget.get("failures"),
             "recommended_layer": runtime_config.get("layer"),
             "recommended_batch_size": runtime_config.get("batch_size"),
             "recommended_hidden_state_capture": runtime_config.get("hidden_state_capture"),
@@ -351,6 +394,13 @@ def _parse_str_list(value: str, *, flag: str) -> tuple[str, ...]:
     if not values:
         raise ValueError(f"{flag} must not be empty.")
     return values
+
+
+def _parse_non_negative_float(value: str, *, flag: str) -> float:
+    numeric = float(value)
+    if not math.isfinite(numeric) or numeric < 0:
+        raise ValueError(f"{flag} must be a non-negative finite number.")
+    return numeric
 
 
 def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfig:
@@ -393,6 +443,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         performance_max_workers=args.performance_max_workers,
         performance_clean=bool(args.performance_clean),
         performance_dry_run=bool(args.performance_dry_run),
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
     )
 
 
@@ -456,6 +507,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="maximum cache-profile matrix cells to execute concurrently")
     parser.add_argument("--performance-clean", action="store_true")
     parser.add_argument("--performance-dry-run", action="store_true")
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless readiness_decision.status is promote")
     run(parser.parse_args(argv))

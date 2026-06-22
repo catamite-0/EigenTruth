@@ -739,6 +739,10 @@ python benchmarks/compare_route_baselines.py \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.2 \
+  --max-runtime-total-seconds 60 \
+  --max-retrieval-hit-count 1000 \
+  --min-claims-cache-hit-rate 0.9 \
+  --min-verifier-trace-cache-hit-rate 0.9 \
   --json artifacts/route-baseline-comparison.json \
   --fail-on-blocked
 ```
@@ -746,7 +750,10 @@ python benchmarks/compare_route_baselines.py \
 The comparison recursively verifies each registered manifest by default, reloads
 the saved `route_comparison_report`, fails closed on non-promoted route
 decisions or `invalid_metric_counts`, and recommends the passing baseline with
-the best quality/cost ordering.
+the best quality/cost ordering. Optional runtime-budget flags read
+`runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
+verifier-trace-cache metadata from the route manifest or registry record; when a
+threshold is configured, missing or non-finite evidence blocks that baseline.
 
 ## `run_adapter_family_matrix.py`
 
@@ -846,6 +853,7 @@ python benchmarks/run_adapter_readiness_registry_workflow.py \
   --layers=-12 \
   --batch-sizes=1,2 \
   --hidden-state-captures=outputs \
+  --max-runtime-total-seconds 900 \
   --fail-on-blocked
 ```
 
@@ -869,6 +877,8 @@ forced-answer forward cost and then lower cache-only time. For legacy matrix
 reports that predate forced-answer phase timing, the uncached total time is used
 as a conservative forward-cost fallback and reported as
 `uncached_forward_cost_source=uncached_total_seconds_fallback`.
+Use `--max-runtime-total-seconds` on the readiness workflow or registry workflow
+when end-to-end readiness wall clock time itself is part of the promotion budget.
 
 ## `compare_release_candidates.py`
 
@@ -892,6 +902,10 @@ python benchmarks/compare_release_candidates.py \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.50 \
+  --max-runtime-total-seconds 60 \
+  --max-retrieval-hit-count 1000 \
+  --min-claims-cache-hit-rate 0.9 \
+  --min-verifier-trace-cache-hit-rate 0.9 \
   --json artifacts/release-candidate-comparison.json \
   --fail-on-blocked
 ```
@@ -899,6 +913,9 @@ python benchmarks/compare_release_candidates.py \
 Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
+Release-candidate runtime-budget flags are delegated to the route-baseline
+comparison, so the final release blocks when the selected route baseline exceeds
+the configured total runtime, retrieval-hit, or cache-reuse budgets.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`:
@@ -1021,6 +1038,12 @@ with phase timings, input/output artifact byte sizes, dataset scale, retrieval
 hit counts, and route-count metadata. The same runtime summary is copied into
 the artifact manifest and registry metadata so route baselines can be compared
 later without rerunning the workflow.
+Add `--max-runtime-total-seconds`, `--max-retrieval-hit-count`,
+`--min-claims-cache-hit-rate`, or `--min-verifier-trace-cache-hit-rate` when
+route promotion must also satisfy an explicit runtime/cache budget. These gates
+fail closed when the corresponding metric is missing or non-finite, block final
+workflow promotion, and prevent registry promotion when the pre-registration
+budget has already failed.
 
 `--claims-cache-dir` is optional. When set, the workflow caches generated
 claims fixtures by score-dump fingerprint, corpus fingerprints, query field,

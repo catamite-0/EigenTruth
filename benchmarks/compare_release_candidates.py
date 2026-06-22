@@ -40,6 +40,10 @@ def compare_release_candidates(
     max_max_duration_seconds: float | None = None,
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
+    max_runtime_total_seconds: float | None = None,
+    max_retrieval_hit_count: float | None = None,
+    min_claims_cache_hit_rate: float | None = None,
+    min_verifier_trace_cache_hit_rate: float | None = None,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
@@ -70,6 +74,10 @@ def compare_release_candidates(
         max_max_duration_seconds=max_max_duration_seconds,
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
+        max_runtime_total_seconds=max_runtime_total_seconds,
+        max_retrieval_hit_count=max_retrieval_hit_count,
+        min_claims_cache_hit_rate=min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         notes=("release candidate route comparison",),
     )
     candidate = _release_candidate(readiness, route)
@@ -98,6 +106,10 @@ def compare_release_candidates(
             "max_max_duration_seconds": max_max_duration_seconds,
             "max_mean_attempted_route_count": max_mean_attempted_route_count,
             "max_retrieval_use_rate": max_retrieval_use_rate,
+            "max_runtime_total_seconds": max_runtime_total_seconds,
+            "max_retrieval_hit_count": max_retrieval_hit_count,
+            "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
+            "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
         },
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
@@ -156,6 +168,10 @@ def _release_candidate(
             "max_duration_seconds": route_row.get("max_duration_seconds"),
             "mean_attempted_route_count": route_row.get("mean_attempted_route_count"),
             "retrieval_use_rate": route_row.get("retrieval_use_rate"),
+            "runtime_total_seconds": route_row.get("runtime_total_seconds"),
+            "runtime_retrieval_hit_count": route_row.get("runtime_retrieval_hit_count"),
+            "claims_cache_hit_rate": route_row.get("claims_cache_hit_rate"),
+            "verifier_trace_cache_hit_rate": route_row.get("verifier_trace_cache_hit_rate"),
         },
         "manifests": {
             "readiness_manifest": readiness_row.get("manifest_path"),
@@ -263,6 +279,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
+        max_retrieval_hit_count=args.max_retrieval_hit_count,
+        min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         notes=args.note,
     )
     if args.json:
@@ -354,6 +374,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-retrieval-use-rate",
+    ), default=None)
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--min-verifier-trace-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate promotes")

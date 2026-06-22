@@ -14,6 +14,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.runtime_budget_policy import (  # noqa: E402
+    RuntimeBudgetPolicy,
+    evaluate_runtime_budget,
+    runtime_metrics_from_metadata,
+)
 from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
 
 
@@ -34,6 +39,10 @@ def compare_route_baselines(
     max_max_duration_seconds: float | None = None,
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
+    max_runtime_total_seconds: float | None = None,
+    max_retrieval_hit_count: float | None = None,
+    min_claims_cache_hit_rate: float | None = None,
+    min_verifier_trace_cache_hit_rate: float | None = None,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered route-promotion baselines."""
@@ -55,6 +64,10 @@ def compare_route_baselines(
             max_max_duration_seconds=max_max_duration_seconds,
             max_mean_attempted_route_count=max_mean_attempted_route_count,
             max_retrieval_use_rate=max_retrieval_use_rate,
+            max_runtime_total_seconds=max_runtime_total_seconds,
+            max_retrieval_hit_count=max_retrieval_hit_count,
+            min_claims_cache_hit_rate=min_claims_cache_hit_rate,
+            min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         )
         for record in records
     ]
@@ -80,6 +93,10 @@ def compare_route_baselines(
             "max_max_duration_seconds": max_max_duration_seconds,
             "max_mean_attempted_route_count": max_mean_attempted_route_count,
             "max_retrieval_use_rate": max_retrieval_use_rate,
+            "max_runtime_total_seconds": max_runtime_total_seconds,
+            "max_retrieval_hit_count": max_retrieval_hit_count,
+            "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
+            "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
         },
         "summary": {
             "record_count": len(rows),
@@ -139,6 +156,10 @@ def _route_baseline_row(
     max_max_duration_seconds: float | None,
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
+    max_runtime_total_seconds: float | None,
+    max_retrieval_hit_count: float | None,
+    min_claims_cache_hit_rate: float | None,
+    min_verifier_trace_cache_hit_rate: float | None,
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
     manifest, manifest_error = _load_optional_json(manifest_path)
@@ -169,6 +190,15 @@ def _route_baseline_row(
         or manifest_metadata.get("route_promotion_status")
         or manifest_metadata.get("promotion_status")
     )
+    runtime_budget = evaluate_runtime_budget(
+        runtime_metrics_from_metadata(manifest_metadata),
+        RuntimeBudgetPolicy(
+            max_total_seconds=max_runtime_total_seconds,
+            max_retrieval_hit_count=max_retrieval_hit_count,
+            min_claims_cache_hit_rate=min_claims_cache_hit_rate,
+            min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        ),
+    )
     gate = _gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -188,7 +218,9 @@ def _route_baseline_row(
         max_max_duration_seconds=max_max_duration_seconds,
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
+        runtime_budget=runtime_budget,
     )
+    runtime_metrics = dict(runtime_budget.get("metrics") or {})
     return {
         "record_key": record.key(),
         "name": record.name,
@@ -212,6 +244,11 @@ def _route_baseline_row(
         "mean_attempted_route_count": _float_or_none(metrics.get("mean_attempted_route_count")),
         "retrieval_use_rate": _float_or_none(metrics.get("retrieval_use_rate")),
         "invalid_metric_counts": _mapping(metrics.get("invalid_metric_counts")),
+        "runtime_total_seconds": _float_or_none(runtime_metrics.get("total_seconds")),
+        "runtime_retrieval_hit_count": _float_or_none(runtime_metrics.get("retrieval_hit_count")),
+        "claims_cache_hit_rate": _float_or_none(runtime_metrics.get("claims_cache_hit_rate")),
+        "verifier_trace_cache_hit_rate": _float_or_none(runtime_metrics.get("verifier_trace_cache_hit_rate")),
+        "runtime_budget": runtime_budget,
     }
 
 
@@ -263,6 +300,7 @@ def _gate(
     max_max_duration_seconds: float | None,
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
+    runtime_budget: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -338,10 +376,23 @@ def _gate(
         _float_or_none(metrics.get("retrieval_use_rate")),
         max_retrieval_use_rate,
     )
+    if runtime_budget.get("enabled") and not runtime_budget.get("passed"):
+        failures.extend(_runtime_budget_reasons(runtime_budget))
     return {
         "passed": not failures,
         "blocking_reasons": failures,
     }
+
+
+def _runtime_budget_reasons(runtime_budget: Mapping[str, Any]) -> list[str]:
+    reasons = []
+    for failure in runtime_budget.get("failures", ()):
+        if not isinstance(failure, Mapping):
+            continue
+        metric = failure.get("metric")
+        reason = failure.get("reason") or "failed"
+        reasons.append(f"runtime_budget: {metric} {reason}")
+    return reasons
 
 
 def _check_min(failures: list[str], metric: str, value: float | int | None, limit: float | int | None) -> None:
@@ -396,6 +447,7 @@ def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         _float_or_none(row.get("p99_duration_seconds")) if row.get("p99_duration_seconds") is not None else math.inf,
         _float_or_none(row.get("mean_duration_seconds")) if row.get("mean_duration_seconds") is not None else math.inf,
         _float_or_none(row.get("retrieval_use_rate")) if row.get("retrieval_use_rate") is not None else math.inf,
+        _float_or_none(row.get("runtime_total_seconds")) if row.get("runtime_total_seconds") is not None else math.inf,
         -(_int_or_none(row.get("selected")) or -1),
         str(row.get("record_key")),
     )
@@ -403,9 +455,7 @@ def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
 
 def _manifest_metadata(record: RegistryRecord, manifest: Mapping[str, Any]) -> dict[str, Any]:
     metadata = dict(record.metadata)
-    manifest_metadata = _mapping(metadata.get("manifest_metadata"))
-    if not manifest_metadata:
-        manifest_metadata = _mapping(manifest.get("metadata"))
+    manifest_metadata = _mapping(manifest.get("metadata"))
     merged = dict(manifest_metadata)
     merged.update(metadata)
     nested = _mapping(metadata.get("manifest_metadata"))
@@ -525,6 +575,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
+        max_retrieval_hit_count=args.max_retrieval_hit_count,
+        min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         notes=args.note,
     )
     if args.json:
@@ -600,6 +654,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-retrieval-use-rate",
+    ), default=None)
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--min-verifier-trace-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless a route baseline promotes")

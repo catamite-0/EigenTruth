@@ -30,6 +30,11 @@ from benchmarks.run_adapter_promotion_workflow import (  # noqa: E402
     AdapterPromotionWorkflowConfig,
     run_adapter_promotion_workflow,
 )
+from benchmarks.runtime_budget_policy import (  # noqa: E402
+    RuntimeBudgetPolicy,
+    evaluate_runtime_budget,
+    runtime_metrics_from_profile,
+)
 from eigentruth.registry import build_artifact_manifest, fingerprint_path  # noqa: E402
 
 
@@ -70,6 +75,10 @@ class LocalRetrievalRouteWorkflowConfig:
     max_mean_attempted_route_count: float | None = None
     max_retrieval_use_rate: float | None = None
     min_cache_hit_rate: float | None = None
+    max_runtime_total_seconds: float | None = None
+    max_retrieval_hit_count: float | None = None
+    min_claims_cache_hit_rate: float | None = None
+    min_verifier_trace_cache_hit_rate: float | None = None
     claims_path: Path | None = None
     verifier_report_path: Path | None = None
     route_report_path: Path | None = None
@@ -261,6 +270,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
+    runtime_budget = _runtime_budget_report(config, runtime_profile)
 
     metadata = _manifest_metadata(
         config,
@@ -268,6 +278,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         verifier_report=verifier_report,
         promotion_report=promotion_report,
         runtime_profile=runtime_profile,
+        runtime_budget=runtime_budget,
         claims_cache=claims_cache,
     )
     with _profile_phase(profile, "write_artifact_manifest"):
@@ -283,9 +294,15 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
+    runtime_budget = _runtime_budget_report(config, runtime_profile)
 
     with _profile_phase(profile, "register_manifest"):
-        manifest_promotion = _maybe_register_manifest(config, promotion_report, metadata)
+        manifest_promotion = _maybe_register_manifest(
+            config,
+            promotion_report,
+            metadata,
+            runtime_budget=runtime_budget,
+        )
     runtime_profile = _runtime_profile_payload(
         profile,
         total_seconds=time.perf_counter() - workflow_started,
@@ -297,9 +314,11 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
+    runtime_budget = _runtime_budget_report(config, runtime_profile)
     decision = _workflow_decision(
         promotion_report=promotion_report,
         manifest_promotion=manifest_promotion,
+        runtime_budget=runtime_budget,
         registry_requested=config.registry_path is not None,
     )
     payload = {
@@ -325,6 +344,10 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "verifier_trace_cache_dir": (
                 None if config.verifier_trace_cache_dir is None else str(config.verifier_trace_cache_dir)
             ),
+            "max_runtime_total_seconds": config.max_runtime_total_seconds,
+            "max_retrieval_hit_count": config.max_retrieval_hit_count,
+            "min_claims_cache_hit_rate": config.min_claims_cache_hit_rate,
+            "min_verifier_trace_cache_hit_rate": config.min_verifier_trace_cache_hit_rate,
             "registry": None if config.registry_path is None else str(config.registry_path),
             "name": config.name,
             "version": config.version,
@@ -339,6 +362,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         "manifest_promotion": manifest_promotion,
         "claims_cache": _public_claims_cache(claims_cache),
         "profile": runtime_profile,
+        "runtime_budget": runtime_budget,
         "decision": decision,
     }
     _write_json(config.resolved_workflow_report_path, payload, compact=config.compact_json)
@@ -349,8 +373,12 @@ def _maybe_register_manifest(
     config: LocalRetrievalRouteWorkflowConfig,
     promotion_report: Mapping[str, Any],
     metadata: Mapping[str, Any],
+    *,
+    runtime_budget: Mapping[str, Any],
 ) -> dict[str, Any] | None:
     if config.registry_path is None:
+        return None
+    if runtime_budget.get("enabled") and not runtime_budget.get("passed"):
         return None
     decision = dict(promotion_report.get("decision") or {})
     if decision.get("status") != "promote" and not config.allow_non_promote:
@@ -409,6 +437,7 @@ def _manifest_metadata(
     verifier_report: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
     runtime_profile: Mapping[str, Any],
+    runtime_budget: Mapping[str, Any],
     claims_cache: Mapping[str, Any],
 ) -> dict[str, Any]:
     decision = dict(promotion_report.get("decision") or {})
@@ -425,6 +454,7 @@ def _manifest_metadata(
     runtime_scale = dict(runtime_profile.get("scale") or {})
     runtime_artifacts = dict(runtime_profile.get("artifacts") or {})
     output_bytes = dict(runtime_artifacts.get("output_bytes") or {})
+    runtime_budget_metrics = dict(runtime_budget.get("metrics") or {})
     metadata = {
         "runner": "run_local_retrieval_route_workflow",
         "workflow": "local_retrieval_route_workflow",
@@ -468,6 +498,12 @@ def _manifest_metadata(
         "runtime_n_corpus_documents": runtime_scale.get("n_corpus_documents"),
         "runtime_n_claim_records": runtime_scale.get("n_claim_records"),
         "runtime_n_retrieval_hits": runtime_scale.get("n_retrieval_hits"),
+        "runtime_budget_enabled": runtime_budget.get("enabled"),
+        "runtime_budget_passed": runtime_budget.get("passed"),
+        "runtime_budget_policy": runtime_budget.get("policy"),
+        "runtime_budget_failures": runtime_budget.get("failures"),
+        "runtime_claims_cache_hit_rate": runtime_budget_metrics.get("claims_cache_hit_rate"),
+        "runtime_verifier_trace_cache_hit_rate": runtime_budget_metrics.get("verifier_trace_cache_hit_rate"),
         "runtime_claims_json_bytes": output_bytes.get("retrieval_claims"),
         "runtime_verifier_report_json_bytes": output_bytes.get("verifier_report"),
         "runtime_route_report_json_bytes": output_bytes.get("route_comparison_report"),
@@ -715,6 +751,21 @@ def _runtime_profile_payload(
     }
 
 
+def _runtime_budget_report(
+    config: LocalRetrievalRouteWorkflowConfig,
+    runtime_profile: Mapping[str, Any],
+) -> dict[str, Any]:
+    return evaluate_runtime_budget(
+        runtime_metrics_from_profile(runtime_profile),
+        RuntimeBudgetPolicy(
+            max_total_seconds=config.max_runtime_total_seconds,
+            max_retrieval_hit_count=config.max_retrieval_hit_count,
+            min_claims_cache_hit_rate=config.min_claims_cache_hit_rate,
+            min_verifier_trace_cache_hit_rate=config.min_verifier_trace_cache_hit_rate,
+        ),
+    )
+
+
 def _runtime_scale(
     *,
     config: LocalRetrievalRouteWorkflowConfig,
@@ -789,6 +840,7 @@ def _workflow_decision(
     *,
     promotion_report: Mapping[str, Any],
     manifest_promotion: Mapping[str, Any] | None,
+    runtime_budget: Mapping[str, Any],
     registry_requested: bool,
 ) -> dict[str, Any]:
     adapter_decision = dict(promotion_report.get("decision") or {})
@@ -796,6 +848,13 @@ def _workflow_decision(
     blocking_reasons = []
     if adapter_status != "promote":
         blocking_reasons.append("adapter promotion decision did not promote")
+    if runtime_budget.get("enabled") and not runtime_budget.get("passed"):
+        metrics = ", ".join(
+            str(failure.get("metric"))
+            for failure in runtime_budget.get("failures", ())
+            if isinstance(failure, Mapping)
+        )
+        blocking_reasons.append(f"runtime budget did not pass: {metrics or 'unknown metric'}")
     verification = {} if manifest_promotion is None else dict(manifest_promotion.get("verification") or {})
     manifest_verified = bool(verification.get("passed", False))
     if registry_requested and manifest_promotion is None:
@@ -806,6 +865,7 @@ def _workflow_decision(
     return {
         "status": status,
         "adapter_promotion_status": adapter_status,
+        "runtime_budget_passed": None if not runtime_budget.get("enabled") else bool(runtime_budget.get("passed")),
         "manifest_promoted": manifest_promotion is not None,
         "manifest_verified": manifest_verified,
         "registry_record": None if manifest_promotion is None else dict(manifest_promotion.get("records") or {}).get(
@@ -901,6 +961,10 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
+        max_retrieval_hit_count=args.max_retrieval_hit_count,
+        min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         claims_path=None if args.claims_json is None else Path(args.claims_json),
         verifier_report_path=None if args.verifier_report_json is None else Path(args.verifier_report_json),
         route_report_path=None if args.route_report_json is None else Path(args.route_report_json),
@@ -1023,6 +1087,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-cache-hit-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--min-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--min-verifier-trace-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument("--claims-json", default=None)
     parser.add_argument("--verifier-report-json", default=None)

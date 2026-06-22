@@ -51,6 +51,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
     max_max_duration_seconds: float | None = None
     max_mean_attempted_route_count: float | None = None
     max_retrieval_use_rate: float | None = None
+    max_runtime_total_seconds: float | None = None
+    max_retrieval_hit_count: float | None = None
+    min_claims_cache_hit_rate: float | None = None
+    min_verifier_trace_cache_hit_rate: float | None = None
     promotion_metadata: Mapping[str, Any] | None = None
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -123,6 +127,10 @@ def run_release_candidate_registry_workflow(
         max_max_duration_seconds=config.max_max_duration_seconds,
         max_mean_attempted_route_count=config.max_mean_attempted_route_count,
         max_retrieval_use_rate=config.max_retrieval_use_rate,
+        max_runtime_total_seconds=config.max_runtime_total_seconds,
+        max_retrieval_hit_count=config.max_retrieval_hit_count,
+        min_claims_cache_hit_rate=config.min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=config.min_verifier_trace_cache_hit_rate,
         notes=("release candidate registry workflow",),
     )
     config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
@@ -265,6 +273,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_max_duration_seconds": verifier_route.get("max_duration_seconds"),
         "recommended_route_mean_attempted_route_count": verifier_route.get("mean_attempted_route_count"),
         "recommended_route_retrieval_use_rate": verifier_route.get("retrieval_use_rate"),
+        "recommended_route_runtime_total_seconds": verifier_route.get("runtime_total_seconds"),
+        "recommended_route_runtime_retrieval_hit_count": verifier_route.get("runtime_retrieval_hit_count"),
+        "recommended_route_claims_cache_hit_rate": verifier_route.get("claims_cache_hit_rate"),
+        "recommended_route_verifier_trace_cache_hit_rate": verifier_route.get("verifier_trace_cache_hit_rate"),
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
     }
@@ -339,6 +351,10 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
+        max_retrieval_hit_count=args.max_retrieval_hit_count,
+        min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         promotion_metadata=_parse_metadata(args.metadata or ()),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -438,6 +454,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-retrieval-use-rate",
+    ), default=None)
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--min-verifier-trace-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate registry workflow promotes")

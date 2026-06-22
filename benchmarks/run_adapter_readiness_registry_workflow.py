@@ -18,6 +18,7 @@ from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # no
 from benchmarks.run_adapter_readiness_workflow import (  # noqa: E402
     AdapterReadinessWorkflowConfig,
     _parse_int_list,
+    _parse_non_negative_float,
     _parse_str_list,
     run_adapter_readiness_workflow,
 )
@@ -217,6 +218,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
         performance_max_workers=args.performance_max_workers,
         performance_clean=bool(args.performance_clean),
         performance_dry_run=bool(args.performance_dry_run),
+        max_runtime_total_seconds=args.max_runtime_total_seconds,
     )
     return AdapterReadinessRegistryWorkflowConfig(
         readiness=readiness,
@@ -296,6 +298,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--performance-max-workers", type=int, default=1)
     parser.add_argument("--performance-clean", action="store_true")
     parser.add_argument("--performance-dry-run", action="store_true")
+    parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-runtime-total-seconds",
+    ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless registry workflow decision is promote")
     run(parser.parse_args(argv))
