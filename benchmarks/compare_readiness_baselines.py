@@ -119,6 +119,8 @@ def _readiness_row(
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _best_quality(recommendation, manifest_metadata)
     quality_signals = _quality_signals(recommendation, manifest_metadata)
+    uncached_cost = _uncached_forward_cost(recommendation)
+    cache_only_seconds = _float_or_none(recommendation.get("cache_only_total_seconds"))
     gate = _gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -126,10 +128,8 @@ def _readiness_row(
         readiness_status=manifest_metadata.get("readiness_status"),
         runtime_status=runtime_recommendation.get("status"),
         best_quality=best_quality,
-        uncached_forward_seconds=_float_or_none(
-            recommendation.get("uncached_forced_answer_forward_seconds")
-        ),
-        cache_only_seconds=_float_or_none(recommendation.get("cache_only_total_seconds")),
+        uncached_forward_seconds=uncached_cost["seconds"],
+        cache_only_seconds=cache_only_seconds,
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
@@ -168,10 +168,13 @@ def _readiness_row(
         "quality_signals": quality_signals,
         "best_quality_signal": best_quality,
         "truth_proj_auroc": _float_or_none(recommendation.get("truth_proj_auroc")),
+        "uncached_total_seconds": _float_or_none(recommendation.get("uncached_total_seconds")),
         "uncached_forced_answer_forward_seconds": _float_or_none(
             recommendation.get("uncached_forced_answer_forward_seconds")
         ),
-        "cache_only_total_seconds": _float_or_none(recommendation.get("cache_only_total_seconds")),
+        "uncached_forward_cost_seconds": uncached_cost["seconds"],
+        "uncached_forward_cost_source": uncached_cost["source"],
+        "cache_only_total_seconds": cache_only_seconds,
         "performance_wall_clock_seconds": _float_or_none(
             manifest_metadata.get("performance_wall_clock_seconds")
         ),
@@ -304,7 +307,7 @@ def _gate(
     if max_uncached_forward_seconds is not None and (
         uncached_forward_seconds is None or uncached_forward_seconds > max_uncached_forward_seconds
     ):
-        failures.append(f"uncached forced-answer forward seconds above {max_uncached_forward_seconds}")
+        failures.append(f"uncached forward cost seconds above {max_uncached_forward_seconds}")
     if max_cache_only_seconds is not None and (
         cache_only_seconds is None or cache_only_seconds > max_cache_only_seconds
     ):
@@ -347,7 +350,7 @@ def _decision(
 def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     best_quality = _mapping(row.get("best_quality_signal"))
     best_auroc = _float_or_none(best_quality.get("auroc"))
-    forward = _float_or_none(row.get("uncached_forced_answer_forward_seconds"))
+    forward = _float_or_none(row.get("uncached_forward_cost_seconds"))
     cache_only = _float_or_none(row.get("cache_only_total_seconds"))
     return (
         not _mapping(row.get("gate")).get("passed", False),
@@ -419,6 +422,25 @@ def _quality_signals(
     if truth_proj is not None and "truth_proj" not in signals:
         signals["truth_proj"] = truth_proj
     return {name: signals[name] for name in sorted(signals)}
+
+
+def _uncached_forward_cost(recommendation: Mapping[str, Any]) -> dict[str, Any]:
+    forced = _float_or_none(recommendation.get("uncached_forced_answer_forward_seconds"))
+    if forced is not None:
+        return {
+            "seconds": forced,
+            "source": "uncached_forced_answer_forward_seconds",
+        }
+    total = _float_or_none(recommendation.get("uncached_total_seconds"))
+    if total is not None:
+        return {
+            "seconds": total,
+            "source": "uncached_total_seconds_fallback",
+        }
+    return {
+        "seconds": None,
+        "source": None,
+    }
 
 
 def _finite_float_mapping(values: Mapping[str, Any]) -> dict[str, float]:
@@ -506,7 +528,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-uncached-forward-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-uncached-forward-seconds",
-    ), default=None)
+    ), default=None,
+                        help="max uncached forward cost; uses uncached total as fallback for legacy reports")
     parser.add_argument("--max-cache-only-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-cache-only-seconds",

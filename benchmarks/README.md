@@ -778,7 +778,10 @@ The comparison verifies each registered readiness manifest recursively, reloads
 the saved performance matrix to recover all available AUROC quality signals for
 older records, applies optional quality/performance gates, and recommends the
 passing baseline with the best quality signal, breaking ties by lower
-forced-answer forward time and then lower cache-only time.
+forced-answer forward cost and then lower cache-only time. For legacy matrix
+reports that predate forced-answer phase timing, the uncached total time is used
+as a conservative forward-cost fallback and reported as
+`uncached_forward_cost_source=uncached_total_seconds_fallback`.
 
 ## `build_truthfulqa_corpus.py`
 
@@ -1144,7 +1147,9 @@ worker-sweep decision.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
-best AUROC quality signal, and explicit runtime gates.
+best AUROC quality signal, and explicit runtime gates. Its uncached forward gate
+uses forced-answer phase timing when available and falls back to uncached total
+time for older reports.
 
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path

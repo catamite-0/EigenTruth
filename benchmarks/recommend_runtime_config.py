@@ -100,6 +100,7 @@ def _recommendation(
         matrix_recommended,
         matrix_report_path=matrix_report_path,
     )
+    totals = _runtime_totals(matrix_recommended)
     recommendation = {
         "cell_id": matrix_recommended.get("id") or matrix_decision.get("recommended_cell"),
         "layer": matrix_recommended.get("layer"),
@@ -109,15 +110,47 @@ def _recommendation(
         "prefix_kv_cache": bool(matrix_recommended.get("prefix_kv_cache", False)),
         "max_workers": worker_count,
         "recommendation_metric": matrix_decision.get("recommendation_metric"),
-        "cache_only_total_seconds": matrix_recommended.get("cache_only_total_seconds"),
-        "uncached_forced_answer_forward_seconds": matrix_recommended.get(
-            "uncached_forced_answer_forward_seconds"
-        ),
+        "uncached_total_seconds": totals["uncached_total_seconds"],
+        "cached_total_seconds": totals["cached_total_seconds"],
+        "cache_only_total_seconds": totals["cache_only_total_seconds"],
+        "uncached_forced_answer_forward_seconds": totals["uncached_forced_answer_forward_seconds"],
         "truth_proj_auroc": matrix_recommended.get("truth_proj_auroc"),
         "quality_signals": quality["signals"],
         "best_quality_signal": quality["best"],
     }
     return recommendation
+
+
+def _runtime_totals(matrix_recommended: Mapping[str, Any]) -> dict[str, Any]:
+    totals = _mapping(_mapping(matrix_recommended.get("summary")).get("totals"))
+    uncached = _mapping(totals.get("uncached"))
+    cached = _mapping(totals.get("cached"))
+    cache_only = _mapping(totals.get("cache_only"))
+    return {
+        "uncached_total_seconds": _first_present(
+            matrix_recommended.get("uncached_total_seconds"),
+            uncached.get("total_seconds"),
+        ),
+        "cached_total_seconds": _first_present(
+            matrix_recommended.get("cached_total_seconds"),
+            cached.get("total_seconds"),
+        ),
+        "cache_only_total_seconds": _first_present(
+            matrix_recommended.get("cache_only_total_seconds"),
+            cache_only.get("total_seconds"),
+        ),
+        "uncached_forced_answer_forward_seconds": _first_present(
+            matrix_recommended.get("uncached_forced_answer_forward_seconds"),
+            uncached.get("forced_answer_forward_seconds"),
+        ),
+    }
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _quality_signal_summary(

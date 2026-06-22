@@ -1790,6 +1790,7 @@ def test_compare_readiness_baselines_recommends_best_quality_signal_from_matrix(
         "auroc": pytest.approx(0.64),
     }
     assert first["runtime_recommendation_source"].endswith("performance-matrix.json")
+    assert first["uncached_forward_cost_source"] == "uncached_forced_answer_forward_seconds"
     assert first["quality_signals"] == {
         "subspace_resid": pytest.approx(0.64),
         "truth_proj": pytest.approx(0.55),
@@ -1833,7 +1834,37 @@ def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
     assert payload["decision"]["recommended_record"] == "benchmark_manifest:fast-acceptable-quality:0.5"
     blocked = next(row for row in payload["leaderboard"] if row["record_key"].endswith("slow-high-quality:0.5"))
     assert blocked["gate"]["passed"] is False
-    assert "uncached forced-answer forward seconds above 20.0" in blocked["gate"]["blocking_reasons"]
+    assert "uncached forward cost seconds above 20.0" in blocked["gate"]["blocking_reasons"]
+
+
+def test_compare_readiness_baselines_uses_uncached_total_fallback_for_legacy_matrix(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "legacy",
+        registry_path=registry_path,
+        name="legacy-readiness",
+        version="0.4",
+        model="legacy-model",
+        layer=-16,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=30.0,
+        cache_only_seconds=0.18,
+        include_forced_forward=False,
+    )
+
+    payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        max_uncached_forward_seconds=40.0,
+    )
+
+    row = payload["leaderboard"][0]
+    assert payload["decision"]["status"] == "promote"
+    assert row["uncached_forced_answer_forward_seconds"] is None
+    assert row["uncached_total_seconds"] == pytest.approx(30.0)
+    assert row["uncached_forward_cost_seconds"] == pytest.approx(30.0)
+    assert row["uncached_forward_cost_source"] == "uncached_total_seconds_fallback"
 
 
 def _write_readiness_baseline_manifest(
@@ -1847,6 +1878,7 @@ def _write_readiness_baseline_manifest(
     quality_signals,
     uncached_forward_seconds,
     cache_only_seconds,
+    include_forced_forward=True,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -1877,8 +1909,13 @@ def _write_readiness_baseline_manifest(
                     "hidden_state_capture": "outputs",
                     "max_batch_tokens": 0,
                     "prefix_kv_cache": False,
+                    "uncached_total_seconds": uncached_forward_seconds,
                     "cache_only_total_seconds": cache_only_seconds,
-                    "uncached_forced_answer_forward_seconds": uncached_forward_seconds,
+                    **(
+                        {"uncached_forced_answer_forward_seconds": uncached_forward_seconds}
+                        if include_forced_forward
+                        else {}
+                    ),
                     "truth_proj_auroc": quality_signals.get("truth_proj"),
                 },
             },
@@ -1891,6 +1928,10 @@ def _write_readiness_baseline_manifest(
                     "summary": {
                         "quality_signals": dict(quality_signals),
                         "truth_proj_auroc": quality_signals.get("truth_proj"),
+                        "totals": {
+                            "uncached": {"total_seconds": uncached_forward_seconds},
+                            "cache_only": {"total_seconds": cache_only_seconds},
+                        },
                     },
                     "triplet": {"results": {"cache_only": str(result_path)}},
                 }
