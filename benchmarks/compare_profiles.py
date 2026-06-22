@@ -23,6 +23,22 @@ def _parse_named_path(value: str) -> tuple[str, Path]:
     return name, Path(path)
 
 
+def _parse_named_float(value: str, *, flag: str) -> tuple[str, float]:
+    if "=" not in value:
+        raise ValueError(f"{flag} must be formatted as name=value.")
+    name, raw_value = value.split("=", 1)
+    name = name.strip()
+    if not name:
+        raise ValueError(f"{flag} name cannot be empty.")
+    try:
+        threshold = float(raw_value)
+    except ValueError as exc:
+        raise ValueError(f"{flag} value for {name!r} must be numeric.") from exc
+    if threshold < 0:
+        raise ValueError(f"{flag} value for {name!r} must be non-negative.")
+    return name, threshold
+
+
 def _load_profile(path: Path) -> dict[str, Any]:
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
@@ -122,14 +138,160 @@ def _throughput_deltas(
     return payload
 
 
+def _check_max_ratio(
+    *,
+    ratio: float | None,
+    current: float,
+    baseline: float,
+    maximum: float,
+) -> bool:
+    if ratio is not None:
+        return ratio <= maximum
+    return current <= baseline
+
+
+def _check_min_ratio(*, ratio: float | None, minimum: float, current: float, baseline: float) -> bool:
+    if ratio is not None:
+        return ratio >= minimum
+    return current >= baseline
+
+
+def _build_regression_gate(
+    runs: Sequence[dict[str, Any]],
+    *,
+    baseline: str,
+    max_total_ratio: float | None,
+    max_phase_ratios: Mapping[str, float],
+    min_throughput_ratios: Mapping[str, float],
+) -> dict[str, Any] | None:
+    if max_total_ratio is None and not max_phase_ratios and not min_throughput_ratios:
+        return None
+    failures = []
+    checked_runs = [run for run in runs if run["name"] != baseline]
+
+    for run in checked_runs:
+        name = run["name"]
+        if max_total_ratio is not None:
+            total = run["total_delta"]
+            if not _check_max_ratio(
+                ratio=total["ratio_to_baseline"],
+                current=total["seconds"],
+                baseline=total["baseline_seconds"],
+                maximum=max_total_ratio,
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": "total_seconds",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": max_total_ratio,
+                    "value": total["ratio_to_baseline"],
+                    "seconds": total["seconds"],
+                    "baseline_seconds": total["baseline_seconds"],
+                })
+
+        for phase_name, limit in max_phase_ratios.items():
+            phase = run["phase_deltas"].get(phase_name)
+            if phase is None:
+                failures.append({
+                    "run": name,
+                    "metric": f"phase:{phase_name}",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": limit,
+                    "value": None,
+                    "reason": "phase missing from comparison",
+                })
+                continue
+            if not _check_max_ratio(
+                ratio=phase["ratio_to_baseline"],
+                current=phase["seconds"],
+                baseline=phase["baseline_seconds"],
+                maximum=limit,
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": f"phase:{phase_name}",
+                    "limit_type": "max_ratio_to_baseline",
+                    "limit": limit,
+                    "value": phase["ratio_to_baseline"],
+                    "seconds": phase["seconds"],
+                    "baseline_seconds": phase["baseline_seconds"],
+                })
+
+        for metric_name, limit in min_throughput_ratios.items():
+            throughput = run["throughput_deltas"].get(metric_name)
+            if throughput is None:
+                failures.append({
+                    "run": name,
+                    "metric": f"throughput:{metric_name}",
+                    "limit_type": "min_ratio_to_baseline",
+                    "limit": limit,
+                    "value": None,
+                    "reason": "throughput metric missing from comparison",
+                })
+                continue
+            if not _check_min_ratio(
+                ratio=throughput["ratio_to_baseline"],
+                minimum=limit,
+                current=throughput["value"],
+                baseline=throughput["baseline_value"],
+            ):
+                failures.append({
+                    "run": name,
+                    "metric": f"throughput:{metric_name}",
+                    "limit_type": "min_ratio_to_baseline",
+                    "limit": limit,
+                    "value": throughput["ratio_to_baseline"],
+                    "throughput": throughput["value"],
+                    "baseline_throughput": throughput["baseline_value"],
+                })
+
+    return {
+        "enabled": True,
+        "passed": not failures,
+        "checked_runs": [run["name"] for run in checked_runs],
+        "config": {
+            "max_total_ratio": max_total_ratio,
+            "max_phase_ratios": dict(max_phase_ratios),
+            "min_throughput_ratios": dict(min_throughput_ratios),
+        },
+        "failures": failures,
+    }
+
+
+def _validate_non_negative_thresholds(
+    *,
+    max_total_ratio: float | None,
+    max_phase_ratios: Mapping[str, float],
+    min_throughput_ratios: Mapping[str, float],
+) -> None:
+    if max_total_ratio is not None and max_total_ratio < 0:
+        raise ValueError("max_total_ratio must be non-negative.")
+    for name, value in max_phase_ratios.items():
+        if value < 0:
+            raise ValueError(f"max_phase_ratios[{name!r}] must be non-negative.")
+    for name, value in min_throughput_ratios.items():
+        if value < 0:
+            raise ValueError(f"min_throughput_ratios[{name!r}] must be non-negative.")
+
+
 def build_profile_comparison(
     profiles: Sequence[tuple[str, Path]],
     *,
     baseline: str | None = None,
     notes: Sequence[str] = (),
+    max_total_ratio: float | None = None,
+    max_phase_ratios: Mapping[str, float] | None = None,
+    min_throughput_ratios: Mapping[str, float] | None = None,
 ) -> dict[str, Any]:
     if not profiles:
         raise ValueError("at least one profile is required.")
+    max_phase_ratios = dict(max_phase_ratios or {})
+    min_throughput_ratios = dict(min_throughput_ratios or {})
+    _validate_non_negative_thresholds(
+        max_total_ratio=max_total_ratio,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+    )
     loaded = []
     seen = set()
     for name, path in profiles:
@@ -171,7 +333,7 @@ def build_profile_comparison(
 
     fastest = min(runs, key=lambda run: float(run["total_seconds"]))
     slowest = max(runs, key=lambda run: float(run["total_seconds"]))
-    return {
+    payload = {
         "baseline": baseline_name,
         "n_profiles": len(runs),
         "fastest": {
@@ -187,11 +349,32 @@ def build_profile_comparison(
         "runs": runs,
         "notes": list(notes),
     }
+    gate = _build_regression_gate(
+        runs,
+        baseline=baseline_name,
+        max_total_ratio=max_total_ratio,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+    )
+    if gate is not None:
+        payload["regression_gate"] = gate
+    return payload
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     profiles = [_parse_named_path(value) for value in args.profile]
-    payload = build_profile_comparison(profiles, baseline=args.baseline, notes=args.note)
+    max_phase_ratios = dict(_parse_named_float(value, flag="--max-phase-ratio")
+                            for value in args.max_phase_ratio)
+    min_throughput_ratios = dict(_parse_named_float(value, flag="--min-throughput-ratio")
+                                 for value in args.min_throughput_ratio)
+    payload = build_profile_comparison(
+        profiles,
+        baseline=args.baseline,
+        notes=args.note,
+        max_total_ratio=args.max_total_ratio,
+        max_phase_ratios=max_phase_ratios,
+        min_throughput_ratios=min_throughput_ratios,
+    )
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -210,7 +393,15 @@ def main() -> None:
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the output report; repeatable")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
+    parser.add_argument("--max-total-ratio", type=float, default=None,
+                        help="fail when any non-baseline run exceeds this total-time ratio")
+    parser.add_argument("--max-phase-ratio", action="append", default=[],
+                        help="fail when a phase exceeds this ratio, formatted as phase=ratio; repeatable")
+    parser.add_argument("--min-throughput-ratio", action="append", default=[],
+                        help="fail when throughput drops below this ratio, formatted as metric=ratio; repeatable")
     args = parser.parse_args()
+    if args.max_total_ratio is not None and args.max_total_ratio < 0:
+        raise ValueError("--max-total-ratio must be non-negative.")
     payload = run(args)
     for item in payload["runs"]:
         delta = item["total_delta"]
@@ -221,6 +412,12 @@ def main() -> None:
             f"speedup={speedup if speedup is not None else 'n/a'} "
             f"bottleneck={item['bottleneck']}"
         )
+    gate = payload.get("regression_gate")
+    if gate is not None:
+        status = "passed" if gate["passed"] else "failed"
+        print(f"regression_gate={status}")
+        if not gate["passed"]:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":

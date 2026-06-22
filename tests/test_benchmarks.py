@@ -2,6 +2,7 @@
 
 import importlib
 import json
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -505,6 +506,88 @@ def test_compare_profiles_accepts_legacy_profile_without_summary(tmp_path):
     assert run["bottleneck"] == "forced_answer_forward"
     assert run["top_phases"][0]["name"] == "forced_answer_forward"
     assert run["total_delta"]["ratio_to_baseline"] == pytest.approx(1.0)
+
+
+def test_compare_profiles_builds_regression_gate_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    baseline_path.write_text(
+        json.dumps({
+            "total_seconds": 100.0,
+            "phases": {"forced_answer_forward": 80.0},
+            "summary": {
+                "bottleneck": "forced_answer_forward",
+                "groups": {},
+                "throughput": {"forced_answer_records_per_second": 10.0},
+            },
+        }),
+        encoding="utf-8",
+    )
+    candidate_path.write_text(
+        json.dumps({
+            "total_seconds": 112.0,
+            "phases": {"forced_answer_forward": 92.0},
+            "summary": {
+                "bottleneck": "forced_answer_forward",
+                "groups": {},
+                "throughput": {"forced_answer_records_per_second": 8.0},
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_profile_comparison(
+        [("baseline", baseline_path), ("candidate", candidate_path)],
+        max_total_ratio=1.10,
+        max_phase_ratios={"forced_answer_forward": 1.10},
+        min_throughput_ratios={"forced_answer_records_per_second": 0.90},
+    )
+    gate = payload["regression_gate"]
+
+    assert gate["passed"] is False
+    assert gate["checked_runs"] == ["candidate"]
+    assert {failure["metric"] for failure in gate["failures"]} == {
+        "total_seconds",
+        "phase:forced_answer_forward",
+        "throughput:forced_answer_records_per_second",
+    }
+
+
+def test_compare_profiles_cli_exits_nonzero_on_regression_gate_failure(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    baseline_path = tmp_path / "baseline.json"
+    candidate_path = tmp_path / "candidate.json"
+    report_path = tmp_path / "comparison.json"
+    baseline_path.write_text(
+        json.dumps({"total_seconds": 10.0, "phases": {"score_postprocess": 5.0}}),
+        encoding="utf-8",
+    )
+    candidate_path.write_text(
+        json.dumps({"total_seconds": 13.0, "phases": {"score_postprocess": 5.0}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sys, "argv", [
+        "compare_profiles.py",
+        "--profile",
+        f"baseline={baseline_path}",
+        "--profile",
+        f"candidate={candidate_path}",
+        "--baseline",
+        "baseline",
+        "--max-total-ratio",
+        "1.10",
+        "--json",
+        str(report_path),
+    ])
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main()
+
+    assert exc_info.value.code == 1
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["regression_gate"]["passed"] is False
+    assert payload["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):

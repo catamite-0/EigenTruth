@@ -610,6 +610,21 @@ deltas, grouped time deltas, and throughput ratios. Older profile payloads that
 only contain `total_seconds` and `phases` remain readable, but grouped deltas are
 available only when the newer `summary` field exists.
 
+For CI or local regression checks, add optional gate thresholds. The command
+exits non-zero and writes `regression_gate.failures` when any non-baseline run
+exceeds the allowed slowdown or drops below the required throughput ratio:
+
+```bash
+python benchmarks/compare_profiles.py \
+  --profile baseline=/tmp/eigentruth-profile-baseline.json \
+  --profile candidate=/tmp/eigentruth-profile-candidate.json \
+  --baseline baseline \
+  --max-total-ratio 1.10 \
+  --max-phase-ratio forced_answer_forward=1.10 \
+  --min-throughput-ratio forced_answer_records_per_second=0.90 \
+  --json artifacts/truthfulqa_profile_gate.json
+```
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use
