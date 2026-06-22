@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -24,7 +25,7 @@ from benchmarks.run_adapter_promotion_workflow import (  # noqa: E402
     AdapterPromotionWorkflowConfig,
     run_adapter_promotion_workflow,
 )
-from eigentruth.registry import build_artifact_manifest  # noqa: E402
+from eigentruth.registry import build_artifact_manifest, fingerprint_path  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,7 @@ class LocalRetrievalRouteWorkflowConfig:
     artifact_manifest_path: Path | None = None
     verification_report_path: Path | None = None
     workflow_report_path: Path | None = None
+    claims_cache_dir: Path | None = None
     compact_json: bool = False
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -87,6 +89,7 @@ class LocalRetrievalRouteWorkflowConfig:
             "artifact_manifest_path",
             "verification_report_path",
             "workflow_report_path",
+            "claims_cache_dir",
         ):
             value = getattr(self, attr)
             if value is not None:
@@ -139,18 +142,50 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
     profile: dict[str, float] = {}
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
-    with _profile_phase(profile, "load_inputs"):
-        score_dump = load_score_dump(config.scores_path)
-        corpus_documents = load_corpus(config.corpus_paths)
+    with _profile_phase(profile, "resolve_claims_cache"):
+        claims_cache = _resolve_claims_cache(config)
 
-    with _profile_phase(profile, "build_claims"):
-        claims_fixture = build_evidence_fixture(
-            score_dump,
-            corpus_documents,
-            retriever_min_overlap=config.retriever_min_overlap,
-            retrieval_limit=config.retrieval_limit,
-            query_field=config.query_field,
-        )
+    score_dump: Mapping[str, Any] | None = None
+    corpus_documents: Sequence[Any] | None = None
+    claims_fixture = None
+    if claims_cache["enabled"]:
+        with _profile_phase(profile, "load_claims_cache"):
+            cached = _load_claims_cache(claims_cache)
+        claims_fixture = cached["fixture"]
+        claims_cache = {**claims_cache, **cached["metadata"]}
+
+    if claims_fixture is None:
+        with _profile_phase(profile, "load_inputs"):
+            score_dump = load_score_dump(config.scores_path)
+            corpus_documents = load_corpus(config.corpus_paths)
+        with _profile_phase(profile, "build_claims"):
+            claims_fixture = build_evidence_fixture(
+                score_dump,
+                corpus_documents,
+                retriever_min_overlap=config.retriever_min_overlap,
+                retrieval_limit=config.retrieval_limit,
+                query_field=config.query_field,
+            )
+        claims_cache = {
+            **claims_cache,
+            "hit": False,
+            "status": (
+                "disabled"
+                if not claims_cache["enabled"]
+                else "rebuilt_after_invalid"
+                if claims_cache.get("status") == "invalid"
+                else "miss"
+            ),
+            "scale": _claims_cache_scale(
+                score_dump=score_dump,
+                corpus_documents=corpus_documents,
+                claims_fixture=claims_fixture,
+            ),
+        }
+        if claims_cache["enabled"]:
+            with _profile_phase(profile, "write_claims_cache"):
+                _write_claims_cache(claims_cache, claims_fixture, compact=config.compact_json)
+
     with _profile_phase(profile, "write_claims"):
         _write_json(config.resolved_claims_path, claims_fixture, compact=config.compact_json)
 
@@ -206,6 +241,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
+        claims_cache=claims_cache,
     )
 
     metadata = _manifest_metadata(
@@ -213,9 +249,10 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
         runtime_profile=runtime_profile,
+        claims_cache=claims_cache,
     )
     with _profile_phase(profile, "write_artifact_manifest"):
-        _write_artifact_manifest(config, metadata=metadata)
+        _write_artifact_manifest(config, metadata=metadata, claims_cache=claims_cache)
     runtime_profile = _runtime_profile_payload(
         profile,
         total_seconds=time.perf_counter() - workflow_started,
@@ -224,6 +261,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
+        claims_cache=claims_cache,
     )
 
     with _profile_phase(profile, "register_manifest"):
@@ -236,6 +274,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
+        claims_cache=claims_cache,
     )
     decision = _workflow_decision(
         promotion_report=promotion_report,
@@ -259,6 +298,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
             "gate_routes": list(config.gate_routes),
+            "claims_cache_dir": None if config.claims_cache_dir is None else str(config.claims_cache_dir),
             "registry": None if config.registry_path is None else str(config.registry_path),
             "name": config.name,
             "version": config.version,
@@ -271,6 +311,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         "claims_summary": claims_fixture["summary"],
         "adapter_promotion": promotion_report,
         "manifest_promotion": manifest_promotion,
+        "claims_cache": _public_claims_cache(claims_cache),
         "profile": runtime_profile,
         "decision": decision,
     }
@@ -307,6 +348,7 @@ def _write_artifact_manifest(
     config: LocalRetrievalRouteWorkflowConfig,
     *,
     metadata: Mapping[str, Any],
+    claims_cache: Mapping[str, Any],
 ) -> None:
     artifacts: dict[str, str | Path | None] = {
         "score_dump": config.scores_path,
@@ -315,6 +357,9 @@ def _write_artifact_manifest(
         "route_comparison_report": config.resolved_route_report_path,
         "promotion_report": config.resolved_promotion_report_path,
     }
+    cache_path = claims_cache.get("path")
+    if cache_path is not None:
+        artifacts["claims_cache_record"] = Path(str(cache_path))
     for idx, path in enumerate(config.corpus_paths, start=1):
         artifacts[f"retrieval_corpora.{idx}.{path.stem}"] = path
     manifest = build_artifact_manifest(
@@ -331,6 +376,7 @@ def _manifest_metadata(
     claims_fixture: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
     runtime_profile: Mapping[str, Any],
+    claims_cache: Mapping[str, Any],
 ) -> dict[str, Any]:
     decision = dict(promotion_report.get("decision") or {})
     route_comparison = dict(promotion_report.get("route_comparison") or {})
@@ -364,6 +410,11 @@ def _manifest_metadata(
         "claims_records_with_hits": summary.get("records_with_hits"),
         "claims_total_hits": summary.get("total_hits"),
         "claims_average_hits_per_record": summary.get("average_hits_per_record"),
+        "claims_cache_enabled": bool(claims_cache.get("enabled", False)),
+        "claims_cache_hit": bool(claims_cache.get("hit", False)),
+        "claims_cache_status": claims_cache.get("status"),
+        "claims_cache_key": claims_cache.get("key"),
+        "claims_cache_path": claims_cache.get("path"),
         "runtime_total_seconds": runtime_profile.get("total_seconds"),
         "runtime_bottleneck": runtime_summary.get("bottleneck"),
         "runtime_accounted_share": runtime_summary.get("accounted_share"),
@@ -394,6 +445,139 @@ def _manifest_metadata(
     return metadata
 
 
+def _resolve_claims_cache(config: LocalRetrievalRouteWorkflowConfig) -> dict[str, Any]:
+    if config.claims_cache_dir is None:
+        return {
+            "enabled": False,
+            "hit": False,
+            "status": "disabled",
+            "key": None,
+            "path": None,
+            "scale": {},
+        }
+    material = _claims_cache_material(config)
+    key = hashlib.sha256(_stable_json_bytes(material)).hexdigest()
+    path = config.claims_cache_dir / f"local-retrieval-claims-{key}.json"
+    return {
+        "enabled": True,
+        "hit": False,
+        "status": "miss",
+        "key": key,
+        "path": str(path),
+        "material": material,
+        "scale": {},
+    }
+
+
+def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "cache_type": "local_retrieval_claims",
+        "builder": "build_evidence_fixture:v1",
+        "score_dump": fingerprint_path(config.scores_path).to_dict(),
+        "corpora": [fingerprint_path(path).to_dict() for path in config.corpus_paths],
+        "retrieval": {
+            "query_field": config.query_field,
+            "retriever_min_overlap": float(config.retriever_min_overlap),
+            "retrieval_limit": int(config.retrieval_limit),
+        },
+    }
+
+
+def _load_claims_cache(cache: Mapping[str, Any]) -> dict[str, Any]:
+    path_text = cache.get("path")
+    if not path_text:
+        return {"fixture": None, "metadata": {"hit": False, "status": "disabled"}}
+    path = Path(str(path_text))
+    if not path.exists():
+        return {"fixture": None, "metadata": {"hit": False, "status": "miss"}}
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(record, Mapping):
+            raise ValueError("cache record must be a JSON object")
+        if record.get("schema_version") != 1:
+            raise ValueError("unsupported cache schema_version")
+        if record.get("cache_type") != "local_retrieval_claims":
+            raise ValueError("unexpected cache_type")
+        if record.get("cache_key") != cache.get("key"):
+            raise ValueError("cache key mismatch")
+        fixture = record.get("fixture")
+        if not isinstance(fixture, Mapping):
+            raise ValueError("cache fixture must be a JSON object")
+        scale = record.get("scale")
+        return {
+            "fixture": dict(fixture),
+            "metadata": {
+                "hit": True,
+                "status": "hit",
+                "scale": dict(scale) if isinstance(scale, Mapping) else {},
+            },
+        }
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "fixture": None,
+            "metadata": {
+                "hit": False,
+                "status": "invalid",
+                "load_error": str(exc),
+            },
+        }
+
+
+def _write_claims_cache(cache: Mapping[str, Any], claims_fixture: Mapping[str, Any], *, compact: bool) -> None:
+    path_text = cache.get("path")
+    if not cache.get("enabled") or not path_text:
+        return
+    record = {
+        "schema_version": 1,
+        "cache_type": "local_retrieval_claims",
+        "cache_key": cache.get("key"),
+        "key_material": cache.get("material"),
+        "scale": dict(cache.get("scale") or {}),
+        "fixture": dict(claims_fixture),
+    }
+    _write_json(Path(str(path_text)), record, compact=compact)
+
+
+def _claims_cache_scale(
+    *,
+    score_dump: Mapping[str, Any],
+    corpus_documents: Sequence[Any],
+    claims_fixture: Mapping[str, Any],
+) -> dict[str, Any]:
+    labels = tuple(score_dump.get("labels", ()))
+    statements = tuple(score_dump.get("statements", ()))
+    records = tuple(claims_fixture.get("records", ()))
+    summary = dict(claims_fixture.get("summary") or {})
+    return {
+        "n_labels": len(labels),
+        "n_statements": len(statements),
+        "n_corpus_documents": len(corpus_documents),
+        "n_claim_records": len(records),
+        "n_records_with_hits": summary.get("records_with_hits"),
+        "n_retrieval_hits": summary.get("total_hits"),
+        "average_hits_per_record": summary.get("average_hits_per_record"),
+    }
+
+
+def _public_claims_cache(cache: Mapping[str, Any]) -> dict[str, Any]:
+    payload = {
+        "enabled": bool(cache.get("enabled", False)),
+        "hit": bool(cache.get("hit", False)),
+        "status": cache.get("status"),
+        "key": cache.get("key"),
+        "path": cache.get("path"),
+        "scale": dict(cache.get("scale") or {}),
+    }
+    if cache.get("load_error") is not None:
+        payload["load_error"] = cache.get("load_error")
+    return payload
+
+
+def _stable_json_bytes(payload: Mapping[str, Any]) -> bytes:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
 @contextmanager
 def _profile_phase(profile: dict[str, float], name: str) -> Iterator[None]:
     started = time.perf_counter()
@@ -408,10 +592,11 @@ def _runtime_profile_payload(
     *,
     total_seconds: float,
     config: LocalRetrievalRouteWorkflowConfig,
-    score_dump: Mapping[str, Any],
-    corpus_documents: Sequence[Any],
+    score_dump: Mapping[str, Any] | None,
+    corpus_documents: Sequence[Any] | None,
     claims_fixture: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
+    claims_cache: Mapping[str, Any],
 ) -> dict[str, Any]:
     phases = {name: _round_seconds(seconds) for name, seconds in sorted(profile.items())}
     scale = _runtime_scale(
@@ -420,7 +605,19 @@ def _runtime_profile_payload(
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
         promotion_report=promotion_report,
+        claims_cache=claims_cache,
     )
+    output_bytes = {
+        "retrieval_claims": _path_size(config.resolved_claims_path),
+        "verifier_report": _path_size(config.resolved_verifier_report_path),
+        "route_comparison_report": _path_size(config.resolved_route_report_path),
+        "promotion_report": _path_size(config.resolved_promotion_report_path),
+        "artifact_manifest": _path_size(config.resolved_artifact_manifest_path),
+        "manifest_verification": _path_size(config.resolved_verification_report_path),
+    }
+    cache_path = claims_cache.get("path")
+    if cache_path is not None:
+        output_bytes["claims_cache_record"] = _path_size(Path(str(cache_path)))
     artifacts = {
         "input_bytes": {
             "score_dump": _path_size(config.scores_path),
@@ -429,20 +626,14 @@ def _runtime_profile_payload(
                 for idx, path in enumerate(config.corpus_paths, start=1)
             },
         },
-        "output_bytes": {
-            "retrieval_claims": _path_size(config.resolved_claims_path),
-            "verifier_report": _path_size(config.resolved_verifier_report_path),
-            "route_comparison_report": _path_size(config.resolved_route_report_path),
-            "promotion_report": _path_size(config.resolved_promotion_report_path),
-            "artifact_manifest": _path_size(config.resolved_artifact_manifest_path),
-            "manifest_verification": _path_size(config.resolved_verification_report_path),
-        },
+        "output_bytes": output_bytes,
     }
     return {
         "total_seconds": _round_seconds(total_seconds),
         "phases": phases,
         "summary": _runtime_profile_summary(phases, total_seconds=total_seconds),
         "scale": scale,
+        "cache": {"claims": _public_claims_cache(claims_cache)},
         "artifacts": artifacts,
     }
 
@@ -450,21 +641,25 @@ def _runtime_profile_payload(
 def _runtime_scale(
     *,
     config: LocalRetrievalRouteWorkflowConfig,
-    score_dump: Mapping[str, Any],
-    corpus_documents: Sequence[Any],
+    score_dump: Mapping[str, Any] | None,
+    corpus_documents: Sequence[Any] | None,
     claims_fixture: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
+    claims_cache: Mapping[str, Any],
 ) -> dict[str, Any]:
-    labels = tuple(score_dump.get("labels", ()))
-    statements = tuple(score_dump.get("statements", ()))
+    cache_scale = dict(claims_cache.get("scale") or {})
+    labels = tuple(score_dump.get("labels", ())) if score_dump is not None else ()
+    statements = tuple(score_dump.get("statements", ())) if score_dump is not None else ()
     records = tuple(claims_fixture.get("records", ()))
     summary = dict(claims_fixture.get("summary") or {})
     route_comparison = dict(promotion_report.get("route_comparison") or {})
     by_route = dict(route_comparison.get("by_route") or {})
     return {
-        "n_labels": len(labels),
-        "n_statements": len(statements),
-        "n_corpus_documents": len(corpus_documents),
+        "n_labels": len(labels) if score_dump is not None else cache_scale.get("n_labels"),
+        "n_statements": len(statements) if score_dump is not None else cache_scale.get("n_statements"),
+        "n_corpus_documents": (
+            len(corpus_documents) if corpus_documents is not None else cache_scale.get("n_corpus_documents")
+        ),
         "n_claim_records": len(records),
         "n_records_with_hits": summary.get("records_with_hits"),
         "n_retrieval_hits": summary.get("total_hits"),
@@ -634,6 +829,7 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
         workflow_report_path=None if args.json is None else Path(args.json),
+        claims_cache_dir=None if args.claims_cache_dir is None else Path(args.claims_cache_dir),
         compact_json=bool(args.compact_json),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -747,6 +943,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--verification-report", default=None)
     parser.add_argument("--json", default=None, help="optional workflow report path")
+    parser.add_argument(
+        "--claims-cache-dir",
+        default=None,
+        help="optional cache directory for generated claims fixtures",
+    )
     parser.add_argument("--metadata", action="append", default=[], help="extra promotion metadata as key=value")
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--allow-non-promote", action="store_true")

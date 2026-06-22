@@ -990,6 +990,7 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --query-field answer \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3 \
+  --claims-cache-dir artifacts/cache/local_retrieval_claims \
   --min-selected 100 \
   --min-decision-accuracy 0.90 \
   --max-false-supported-rate 0.05 \
@@ -1006,6 +1007,12 @@ with phase timings, input/output artifact byte sizes, dataset scale, retrieval
 hit counts, and route-count metadata. The same runtime summary is copied into
 the artifact manifest and registry metadata so route baselines can be compared
 later without rerunning the workflow.
+
+`--claims-cache-dir` is optional. When set, the workflow caches generated
+claims fixtures by score-dump fingerprint, corpus fingerprints, query field,
+retriever overlap threshold, and retrieval limit. A cache hit skips local score
+dump/corpus parsing for claim construction, then still reruns verifier-route
+metrics and promotion against the current score dump and emitted claims file.
 
 Current l80 local-corpus baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:
