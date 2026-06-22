@@ -50,7 +50,7 @@ class RegistryBaselineWorkflowConfig:
     promotion_metadata: Mapping[str, Any] | None = None
     allow_promotion_failures: bool = False
     candidate_profiles: Sequence[tuple[str, Path]] = ()
-    baseline_profile_artifact: str = "profiles.uncached"
+    baseline_profile_artifact: str = "auto"
     allow_unverified_compare: bool = False
     max_total_ratio: float | None = None
     max_run_total_ratios: Mapping[str, float] | None = None
@@ -115,11 +115,15 @@ def run_registry_baseline_workflow(config: RegistryBaselineWorkflowConfig) -> di
     )
     comparison = None
     if config.candidate_profiles:
+        baseline_profile_artifact = _resolve_workflow_baseline_profile_artifact(
+            config.baseline_profile_artifact,
+            matrix_report,
+        )
         comparison = compare_registry_baseline(
             registry_path=config.registry_path,
             baseline_name=config.name,
             baseline_version=config.version,
-            baseline_profile_artifact=config.baseline_profile_artifact,
+            baseline_profile_artifact=baseline_profile_artifact,
             candidate_profiles=config.candidate_profiles,
             recursive=True,
             allow_unverified=config.allow_unverified_compare,
@@ -137,12 +141,35 @@ def run_registry_baseline_workflow(config: RegistryBaselineWorkflowConfig) -> di
             "version": config.version,
             "dry_run": config.dry_run,
             "matrix_mode": config.matrix_mode,
-            "baseline_profile_artifact": config.baseline_profile_artifact,
+            "baseline_profile_artifact": (
+                config.baseline_profile_artifact
+                if comparison is None
+                else comparison["registry_baseline"]["profile_artifact"]
+            ),
         },
         "matrix": matrix_report,
         "promotion": promotion,
         "comparison": comparison,
     }
+
+
+def _resolve_workflow_baseline_profile_artifact(
+    artifact: str,
+    matrix_report: Mapping[str, Any],
+) -> str:
+    if artifact != "auto":
+        return artifact
+    for cell in matrix_report.get("cells", ()):
+        if not isinstance(cell, Mapping):
+            continue
+        cell_id = str(cell.get("id", "")).strip()
+        triplet = cell.get("triplet", {})
+        if not cell_id or not isinstance(triplet, Mapping):
+            continue
+        profiles = triplet.get("profiles", {})
+        if isinstance(profiles, Mapping) and "uncached" in profiles:
+            return f"cells.{cell_id}.triplet_manifest::profiles.uncached"
+    raise ValueError("could not auto-resolve a workflow baseline profile artifact.")
 
 
 def _promotion_metadata(
@@ -317,8 +344,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="register the manifest even if verification fails")
     parser.add_argument("--candidate-profile", action="append", default=[],
                         help="candidate profile JSON path, optionally named as name=path; repeatable")
-    parser.add_argument("--baseline-profile-artifact", default="profiles.uncached",
-                        help="baseline profile artifact reference; use root::nested for matrix manifests")
+    parser.add_argument("--baseline-profile-artifact", default="auto",
+                        help="baseline profile artifact reference; 'auto' uses the first uncached matrix cell")
     parser.add_argument("--allow-unverified-compare", action="store_true",
                         help="compare even if the registered baseline verification fails")
     parser.add_argument("--max-total-ratio", type=float, default=None)

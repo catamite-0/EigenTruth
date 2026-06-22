@@ -1256,6 +1256,33 @@ def test_run_registry_baseline_workflow_dry_run_promotes_matrix_manifest(tmp_pat
     assert report_path.exists()
 
 
+def test_run_registry_baseline_workflow_auto_resolves_first_uncached_cell():
+    module = importlib.import_module("benchmarks.run_registry_baseline_workflow")
+
+    artifact = module._resolve_workflow_baseline_profile_artifact(
+        "auto",
+        {
+            "cells": [
+                {
+                    "id": "layer_m12_batch_2_capture_outputs",
+                    "triplet": {"profiles": {"cache_only": "/tmp/profile-cache-only.json"}},
+                },
+                {
+                    "id": "layer_m12_batch_1_capture_outputs",
+                    "triplet": {
+                        "profiles": {
+                            "uncached": "/tmp/profile-uncached.json",
+                            "cached": "/tmp/profile-cached.json",
+                        }
+                    },
+                },
+            ]
+        },
+    )
+
+    assert artifact == "cells.layer_m12_batch_1_capture_outputs.triplet_manifest::profiles.uncached"
+
+
 def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(

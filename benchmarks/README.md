@@ -851,7 +851,9 @@ python benchmarks/compare_registry_baseline.py \
 `run_registry_baseline_workflow.py` combines the matrix run, recursive manifest
 verification, promotion, and optional registry-backed comparison in one command.
 Run it with `--dry-run` first to inspect the generated commands and registry
-records without loading a model:
+records without loading a model. When candidate profiles are provided, the
+workflow default `--baseline-profile-artifact auto` uses the first matrix cell
+that includes an uncached profile:
 
 ```bash
 python benchmarks/run_registry_baseline_workflow.py \
