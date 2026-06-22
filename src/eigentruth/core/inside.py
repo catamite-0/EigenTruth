@@ -11,9 +11,10 @@ def internal_eigenscore(embeddings: Tensor, *, alpha: float = 1e-3) -> Tensor:
 
     `embeddings` has shape [K, D], where rows can be sampled response embeddings
     or a local sequence of token embeddings. The score follows the INSIDE
-    EigenScore form: feature-center embeddings, form the K x K Gram covariance,
-    add alpha * I for full rank, and average log eigenvalues. Higher values mean
-    more internal-state diversity and are treated as more anomalous.
+    EigenScore form: center each feature across the embedding set, form the K x K
+    Gram covariance, add alpha * I for full rank, and average log eigenvalues.
+    Higher values mean more internal-state diversity and are treated as more
+    anomalous.
     """
     states = _as_embedding_matrix(embeddings)
     if alpha <= 0.0:
@@ -21,7 +22,7 @@ def internal_eigenscore(embeddings: Tensor, *, alpha: float = 1e-3) -> Tensor:
     if states.shape[0] < 2:
         return states.new_tensor(0.0)
 
-    centered = states - states.mean(dim=1, keepdim=True)
+    centered = states - states.mean(dim=0, keepdim=True)
     gram = centered @ centered.T
     eye = torch.eye(gram.shape[0], dtype=gram.dtype, device=gram.device)
     regularized = gram + float(alpha) * eye

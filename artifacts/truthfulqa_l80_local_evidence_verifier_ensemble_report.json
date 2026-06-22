@@ -1,0 +1,458 @@
+{
+  "schema_version": 1,
+  "signal": "truth_proj",
+  "direction": null,
+  "alphas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "repeats": 50,
+  "seed": 0,
+  "policy": {
+    "name": "refute_or_internal_unless_supported",
+    "refuted": "trigger",
+    "supported": "suppress_internal_trigger",
+    "otherwise": "preserve_internal_trigger",
+    "tolerance": 0.03
+  },
+  "verifier": {
+    "type": "GroundednessVerifier",
+    "min_overlap": 0.65
+  },
+  "qa_verifier": {
+    "type": "QuestionAnswerVerifier",
+    "enabled": false,
+    "corpus_path": null
+  },
+  "retriever": {
+    "type": "InMemoryRetriever",
+    "min_overlap": 0.2,
+    "limit": 5
+  },
+  "runs": [
+    {
+      "name": "qwen-l80",
+      "scores_path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json",
+      "config": {
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 896,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 4,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/eval-reps-cache",
+        "eval_reps_cache_shard_size": 128,
+        "refresh_eval_reps_cache": false,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signal": "truth_proj",
+      "direction": "higher",
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "verification_status_counts": {
+        "supported": 240,
+        "refuted": 1,
+        "insufficient_evidence": 315,
+        "not_applicable": 0,
+        "error": 0
+      },
+      "verification_quality": {
+        "label_status_matrix": {
+          "true": {
+            "supported": 227,
+            "refuted": 0,
+            "insufficient_evidence": 23,
+            "not_applicable": 0,
+            "error": 0
+          },
+          "false": {
+            "supported": 13,
+            "refuted": 1,
+            "insufficient_evidence": 292,
+            "not_applicable": 0,
+            "error": 0
+          }
+        },
+        "true_supported_rate": 0.908,
+        "true_refuted_rate": 0.0,
+        "false_refuted_rate": 0.0032679738562091504,
+        "false_supported_rate": 0.042483660130718956,
+        "insufficient_evidence_rate": 0.5665467625899281,
+        "decision_accuracy": 0.946058091286307,
+        "decision_error_rate": 0.05394190871369295,
+        "n_decided_supported_or_refuted": 241
+      },
+      "route_summary": {
+        "selected_counts": {
+          "groundedness": 287,
+          "retrieval_groundedness": 269
+        },
+        "attempted_counts": {
+          "groundedness": 556,
+          "retrieval_groundedness": 274
+        },
+        "by_route": {
+          "groundedness": {
+            "selected": 287,
+            "statuses": {
+              "supported": 0,
+              "refuted": 0,
+              "insufficient_evidence": 287,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 4,
+              "false": 283
+            },
+            "used_retrieval": 0,
+            "rates": {
+              "supported": 0.0,
+              "refuted": 0.0,
+              "insufficient_evidence": 1.0,
+              "error": 0.0
+            }
+          },
+          "retrieval_groundedness": {
+            "selected": 269,
+            "statuses": {
+              "supported": 240,
+              "refuted": 1,
+              "insufficient_evidence": 28,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 246,
+              "false": 23
+            },
+            "used_retrieval": 269,
+            "rates": {
+              "supported": 0.8921933085501859,
+              "refuted": 0.0037174721189591076,
+              "insufficient_evidence": 0.10408921933085502,
+              "error": 0.0
+            }
+          }
+        }
+      },
+      "qa": {
+        "enabled": false,
+        "decided_records": 0
+      },
+      "retrieval": {
+        "records_with_hits": 269,
+        "total_hits": 392,
+        "retrieval_limit": 5
+      },
+      "alphas": {
+        "0.05": {
+          "alpha": 0.05,
+          "internal": {
+            "false_alarm": 0.0424,
+            "coverage": 0.9576,
+            "detection": 0.14516339869281045,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.00656,
+            "coverage": 0.99344,
+            "detection": 0.1418954248366013,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.03584,
+            "detection": -0.0032679738562091387,
+            "suppressed_false_alarm_rate": 0.035840000000000004,
+            "rescued_detection_rate": 0.0032679738562091504
+          },
+          "repeats": 50
+        },
+        "0.1": {
+          "alpha": 0.1,
+          "internal": {
+            "false_alarm": 0.09087999999999999,
+            "coverage": 0.90912,
+            "detection": 0.27908496732026145,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.00784,
+            "coverage": 0.99216,
+            "detection": 0.27385620915032677,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.08303999999999999,
+            "detection": -0.0052287581699346775,
+            "suppressed_false_alarm_rate": 0.08304,
+            "rescued_detection_rate": 0.0032679738562091504
+          },
+          "repeats": 50
+        },
+        "0.2": {
+          "alpha": 0.2,
+          "internal": {
+            "false_alarm": 0.1912,
+            "coverage": 0.8088,
+            "detection": 0.4896078431372549,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.00784,
+            "coverage": 0.99216,
+            "detection": 0.4637908496732026,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.18336000000000002,
+            "detection": -0.025816993464052307,
+            "suppressed_false_alarm_rate": 0.18336,
+            "rescued_detection_rate": 0.0032679738562091504
+          },
+          "repeats": 50
+        }
+      }
+    },
+    {
+      "name": "smollm2-l80",
+      "scores_path": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json",
+      "config": {
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 576,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 8,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-smollm2-l80/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-smollm2-l80/eval-reps-cache",
+        "eval_reps_cache_shard_size": 256,
+        "refresh_eval_reps_cache": false,
+        "progress_every": 50,
+        "warmup_checkpoint": "/tmp/eigentruth-smollm2-l80/warmup-checkpoint.pt",
+        "warmup_checkpoint_every": 50,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signal": "truth_proj",
+      "direction": "higher",
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "verification_status_counts": {
+        "supported": 240,
+        "refuted": 1,
+        "insufficient_evidence": 315,
+        "not_applicable": 0,
+        "error": 0
+      },
+      "verification_quality": {
+        "label_status_matrix": {
+          "true": {
+            "supported": 227,
+            "refuted": 0,
+            "insufficient_evidence": 23,
+            "not_applicable": 0,
+            "error": 0
+          },
+          "false": {
+            "supported": 13,
+            "refuted": 1,
+            "insufficient_evidence": 292,
+            "not_applicable": 0,
+            "error": 0
+          }
+        },
+        "true_supported_rate": 0.908,
+        "true_refuted_rate": 0.0,
+        "false_refuted_rate": 0.0032679738562091504,
+        "false_supported_rate": 0.042483660130718956,
+        "insufficient_evidence_rate": 0.5665467625899281,
+        "decision_accuracy": 0.946058091286307,
+        "decision_error_rate": 0.05394190871369295,
+        "n_decided_supported_or_refuted": 241
+      },
+      "route_summary": {
+        "selected_counts": {
+          "groundedness": 287,
+          "retrieval_groundedness": 269
+        },
+        "attempted_counts": {
+          "groundedness": 556,
+          "retrieval_groundedness": 274
+        },
+        "by_route": {
+          "groundedness": {
+            "selected": 287,
+            "statuses": {
+              "supported": 0,
+              "refuted": 0,
+              "insufficient_evidence": 287,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 4,
+              "false": 283
+            },
+            "used_retrieval": 0,
+            "rates": {
+              "supported": 0.0,
+              "refuted": 0.0,
+              "insufficient_evidence": 1.0,
+              "error": 0.0
+            }
+          },
+          "retrieval_groundedness": {
+            "selected": 269,
+            "statuses": {
+              "supported": 240,
+              "refuted": 1,
+              "insufficient_evidence": 28,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 246,
+              "false": 23
+            },
+            "used_retrieval": 269,
+            "rates": {
+              "supported": 0.8921933085501859,
+              "refuted": 0.0037174721189591076,
+              "insufficient_evidence": 0.10408921933085502,
+              "error": 0.0
+            }
+          }
+        }
+      },
+      "qa": {
+        "enabled": false,
+        "decided_records": 0
+      },
+      "retrieval": {
+        "records_with_hits": 269,
+        "total_hits": 392,
+        "retrieval_limit": 5
+      },
+      "alphas": {
+        "0.05": {
+          "alpha": 0.05,
+          "internal": {
+            "false_alarm": 0.04992,
+            "coverage": 0.95008,
+            "detection": 0.11398692810457517,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0064,
+            "coverage": 0.9936,
+            "detection": 0.1096078431372549,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.043519999999999996,
+            "detection": -0.004379084967320271,
+            "suppressed_false_alarm_rate": 0.04352,
+            "rescued_detection_rate": 0.0032026143790849677
+          },
+          "repeats": 50
+        },
+        "0.1": {
+          "alpha": 0.1,
+          "internal": {
+            "false_alarm": 0.09504,
+            "coverage": 0.90496,
+            "detection": 0.22941176470588234,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.00784,
+            "coverage": 0.99216,
+            "detection": 0.21901960784313726,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.0872,
+            "detection": -0.010392156862745083,
+            "suppressed_false_alarm_rate": 0.0872,
+            "rescued_detection_rate": 0.0004575163398692811
+          },
+          "repeats": 50
+        },
+        "0.2": {
+          "alpha": 0.2,
+          "internal": {
+            "false_alarm": 0.18975999999999998,
+            "coverage": 0.8102400000000001,
+            "detection": 0.4054248366013072,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.01168,
+            "coverage": 0.98832,
+            "detection": 0.37686274509803924,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.17808,
+            "detection": -0.02856209150326794,
+            "suppressed_false_alarm_rate": 0.17808,
+            "rescued_detection_rate": 0.0
+          },
+          "repeats": 50
+        }
+      }
+    }
+  ]
+}

@@ -172,7 +172,17 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
 | `run_verification_loop` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops and converts retrieval action results into verifier-ready evidence context. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
+| `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims and simple symbolic equations. |
+| `QuestionAnswerVerifier` | Provides a dependency-free structured QA/domain-state verifier adapter for exact question and candidate-answer facts. |
+| `StructuredStateVerifier` / `StateCheck` | Provides a dependency-free structured state and business-rule verifier for database, policy, and domain-state checks. |
+| `SQLiteStateSource` / `SQLiteStateQuery` | Loads read-only SQLite query results into structured verifier state without adding non-stdlib dependencies. |
+| `CompositeVerifier` / `RoutedVerifier` | Compose deterministic tools with lexical, retrieval, database, or world-model verifiers; routing can use claim metadata, context, or text patterns. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
+| `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
+| `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression and refutation policies. |
+| `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
+| `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora. |
+| `backfill_truthfulqa_statements.py` | Rebuilds deterministic TruthfulQA statement metadata for older score dumps and can emit label-derived oracle evidence for verifier upper-bound checks. |
 
 ### 主要组件
 
@@ -193,7 +203,17 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
 | `run_verification_loop` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
+| `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim 和简单符号等式。 |
+| `QuestionAnswerVerifier` | 提供无依赖结构化 QA/领域状态 verifier adapter，用于精确问题与候选答案事实。 |
+| `StructuredStateVerifier` / `StateCheck` | 提供无依赖结构化状态与业务规则 verifier，用于数据库、策略和领域状态校验。 |
+| `SQLiteStateSource` / `SQLiteStateQuery` | 将只读 SQLite 查询结果加载为 verifier 可消费的结构化状态，不增加非标准库依赖。 |
+| `CompositeVerifier` / `RoutedVerifier` | 组合确定性工具与词面、检索、数据库或 world-model verifier；路由可依据 claim metadata、context 或文本模式。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
+| `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
+| `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略。 |
+| `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |
+| `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
+| `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |
 
 ## Experimental Model Compatibility
 

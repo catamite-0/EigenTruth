@@ -18,6 +18,20 @@ def test_internal_eigenscore_increases_for_diverse_embeddings():
     assert internal_eigenscore(diverse) > internal_eigenscore(repeated)
 
 
+def test_internal_eigenscore_is_invariant_to_common_feature_shift():
+    embeddings = torch.tensor([
+        [1.0, 0.0, 2.0],
+        [0.0, 1.0, 3.0],
+        [2.0, 1.0, 0.0],
+    ])
+    shifted = embeddings + torch.tensor([10.0, -7.0, 4.0])
+
+    assert internal_eigenscore(shifted).item() == pytest.approx(
+        internal_eigenscore(embeddings).item(),
+        abs=1e-4,
+    )
+
+
 def test_internal_eigenscore_single_embedding_is_zero():
     score = internal_eigenscore(torch.tensor([[1.0, 2.0, 3.0]]))
 

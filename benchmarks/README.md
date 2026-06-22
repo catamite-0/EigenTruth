@@ -52,20 +52,122 @@ python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct --layer 
 python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
   --batch-size 4 --dump-scores benchmarks/scores.json
 
+# Sweep only a candidate layer band to control cost on larger models:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --length-bucketed-batches --profile --progress-every 50
+
+# Experimental memory mode: capture only selected non-final layer states via hooks:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --hidden-state-capture hooks --length-bucketed-batches --profile
+
+# Reuse warmup manifolds/subspaces across repeated runs with the same config:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --layer-stats-cache artifacts/qwen05-layer-stats.pt
+
+# Long warmup with restart safety: periodically save resumable warmup state:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --layer-stats-cache artifacts/qwen05-layer-stats.pt \
+  --warmup-checkpoint artifacts/qwen05-warmup-checkpoint.pt \
+  --warmup-checkpoint-every 50 --progress-every 50
+
+# Reuse both warmup stats and eval hidden states for repeated score/report runs:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --layer-stats-cache artifacts/qwen05-layer-stats.pt \
+  --eval-reps-cache artifacts/qwen05-eval-reps.pt
+
+# Sharded eval reps cache: lower peak memory for larger eval splits:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --batch-size 4 \
+  --layer-stats-cache artifacts/qwen05-layer-stats.pt \
+  --eval-reps-cache artifacts/qwen05-eval-reps-cache \
+  --eval-reps-cache-shard-size 256
+
+# Cache-only rescoring: skip model loading and forced-answer forward entirely:
+python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 --sweep-layers=-16,-14,-12,-10,-8 --cache-only \
+  --layer-stats-cache artifacts/qwen05-layer-stats.pt \
+  --eval-reps-cache artifacts/qwen05-eval-reps.pt
+
 # Fast pipeline self-check (tiny model, bundled statements, no dataset download):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
 
 # Optional multi-response INSIDE proxy (slower: samples K continuations per statement):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
   --batch-size 4 --inside-samples 3 --inside-batch-size 2 --inside-max-new-tokens 6
+
+# Budgeted INSIDE: sample only the most suspicious half of each eval batch:
+python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
+  --batch-size 4 --inside-samples 3 --inside-trigger-signal truth_proj \
+  --inside-trigger-top-fraction 0.5 --inside-max-new-tokens 6
 ```
 
 Use `--json results.json` to save structured output (config + AUROC per signal) for
 the record. Use `--subspace-rank` to tune `TruthSubspace` residual scoring; fitting
 requires at least two factual warmup states, and rank is clipped to the available
-warmup states and hidden dimension. Increase `--batch-size` to batch forced-answer
-forward passes, and increase `--inside-batch-size` to batch sampled INSIDE prompts;
-higher values improve throughput but raise memory use.
+centered sample rank (`N - 1`) and hidden dimension. Increase `--batch-size` to
+batch forced-answer forward passes, and increase `--inside-batch-size` to batch
+sampled INSIDE prompts; higher values improve throughput but raise memory use.
+Use `--sweep-layers=-16,-14,-12,-10,-8` to restrict layer sweeps to a candidate
+band; this is the preferred mode for larger models and INSIDE runs where full
+layer sweeps are not needed.
+Use `--length-bucketed-batches` to sort statements by approximate text length
+before batching, reducing padding waste without changing default behavior.
+Use `--hidden-state-capture hooks` to collect only the selected non-final
+decoder-layer hidden states via forward hooks instead of requesting the full
+`output_hidden_states` tuple. This can reduce peak memory on targeted layer-band
+runs, but it intentionally rejects embedding and final post-norm hidden-state
+indexes because block hooks are not semantically identical for those positions.
+Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
+bundle or create one when missing. The cache is validated against model, dtype,
+layer list, max length, subspace rank, warmup mode, and warmup text fingerprint;
+use `--refresh-layer-stats-cache` to rebuild it intentionally.
+Use `--warmup-checkpoint path.pt` when building layer stats for long runs. The
+checkpoint stores partial warmup manifold state plus factual/false hidden states
+and resumes automatically when the same validated config is rerun; pair it with
+`--layer-stats-cache` so a completed run still produces the compact final cache.
+`--warmup-checkpoint-every N` controls checkpoint write frequency, and
+`--refresh-layer-stats-cache` intentionally ignores an existing warmup checkpoint.
+Use `--eval-reps-cache path.pt` to load or create cached forced-answer hidden
+states, answer-token states, EigenScore proxy values, and answer NLLs for the
+eval split. The eval cache is validated against model, dtype, layer list, max
+length, EigenScore alpha, length-bucketing mode, and eval text fingerprint; use
+`--refresh-eval-reps-cache` to rebuild it intentionally. This cache is independent
+of INSIDE sampling, which still runs only when `--inside-samples` is enabled.
+Use `--statement-encoding-cache path.json` to persist tokenizer outputs for
+warmup/eval statements: token ids plus answer-span lengths. The cache is
+validated against model id, max length, offline flag, warmup text fingerprint,
+and eval statement fingerprint. It is most useful when rebuilding layer/eval
+caches or comparing batch/layer settings without paying repeated tokenizer and
+answer-span setup cost; use `--refresh-statement-encoding-cache` to rebuild it.
+Use `--eval-reps-cache-shard-size N` to write the eval reps cache as a directory
+containing a JSON manifest and `records-*.pt` shards. Existing sharded caches are
+loaded batch-by-batch and remain compatible with `--cache-only`; old single-file
+`.pt` caches remain the default and continue to load normally.
+Use `--cache-only` with both cache paths to skip model loading and forced-answer
+forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
+not run sampled INSIDE.
+Use `--inside-trigger-signal` with either `--inside-trigger-threshold` or
+`--inside-trigger-top-fraction` to run sampled INSIDE only on suspicious
+statements. In this budgeted mode, untriggered statements receive
+`inside_eigenscore=0.0`; read it as a two-stage policy score, not as a full
+INSIDE-only AUROC. The JSON output includes `inside_sampling` counts.
+
+Use `--profile` to include phase timings in stdout and `--json` output, or
+`--profile-json profile.json` to write only the timing payload. This is the
+recommended way to compare batch-size, layer-sweep, and INSIDE sampling changes
+before treating a benchmark run as faster. The profile payload includes raw
+`phases` plus a `summary` with the bottleneck phase, top phases, grouped time
+shares for startup/tokenization/model-forward/cache/postprocess work, and
+throughput fields for warmup and forced-answer eval records when counts are
+available.
+Use `--progress-every N` to print warmup and eval progress every N statements
+during long runs; the default is 50, and `--progress-every 0` disables periodic
+progress output.
 
 ### How to read the results
 
@@ -88,6 +190,13 @@ End-to-end runs on real TruthfulQA, committed as `results_gpt2_l-8.json` (first 
 base model), manifold from 266 true / direction from 338 false statements (80 held-out
 questions), 1075 eval statements (592 false / 483 true), seed 0.
 
+For the first Qwen 0.5B instruction-model smoke run, see
+[`docs/qwen05-truthfulqa-results.md`](../docs/qwen05-truthfulqa-results.md). The
+short version: `truth_proj` remains the strongest signal, peaking at AUROC 0.711
+around layer `-12`; the tiny multi-sample INSIDE smoke confirms the
+`inside_eigenscore` path runs on a real instruction model, but needs a larger run
+before it supports a statistical claim.
+
 At the default layer −8:
 
 | signal | AUROC |
@@ -98,9 +207,10 @@ At the default layer −8:
 | `disp_hse` | 0.474 |
 | `nll_answer` | 0.411 |
 
-Layer sweep (free: one forward pass returns all hidden states) — `truth_proj` AUROC by
-layer: peaks at **0.753 (layer −6)**, stays above 0.72 across the −8…−2 band, and collapses
-at the last layer (0.546). `maha_last` peaks at 0.638 (layer −4) and also collapses at −1.
+Layer sweep with default hidden-state output capture uses one forward pass that
+returns all hidden states. `truth_proj` AUROC by layer: peaks at **0.753 (layer
+−6)**, stays above 0.72 across the −8…−2 band, and collapses at the last layer
+(0.546). `maha_last` peaks at 0.638 (layer −4) and also collapses at −1.
 
 Takeaways, all consistent with the project's stated caveats:
 
@@ -182,6 +292,326 @@ score's `higher` or `lower` anomalous direction while score dumps remain unchang
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
+
+## `eval_verifier_ensemble.py`
+
+Compares a single calibrated internal diagnostic against a retrieval/verifier
+ensemble policy from saved score dumps plus claim/evidence metadata. This is the
+benchmark entry point for the product hypothesis: keep `truth_proj` as the
+primary internal monitor, but let evidence-backed verification suppress supported
+internal alarms and add detections for refuted claims.
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores run=artifacts/scores-with-statements.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --json artifacts/verifier_ensemble_report.json
+```
+
+If the score dump does not contain `statements`, provide a fixture with one
+record per score:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores.json \
+  --claims artifacts/qwen05_truthfulqa_l80_claims.json \
+  --signal truth_proj \
+  --json artifacts/qwen05_verifier_ensemble_report.json
+```
+
+For structured QA or database-like sources, pass a corpus containing
+`question`/`answer` facts. `QuestionAnswerVerifier` checks the structured source
+before falling back to lexical evidence retrieval:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --json artifacts/truthfulqa_l80_structured_qa_verifier_ensemble_report.json
+```
+
+For structured state, business rules, policy checks, or tool-output checks,
+provide explicit `state_check` metadata in the claim fixture and pass a local
+state JSON file. `StructuredStateVerifier` checks these deterministic rules
+after structured QA and before lexical retrieval:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores run=artifacts/scores-with-statements.json \
+  --claims artifacts/state_checked_claims.json \
+  --state-source artifacts/domain_state.json \
+  --signal truth_proj \
+  --json artifacts/state_verifier_ensemble_report.json
+```
+
+The state source may be a raw JSON object used as state, or an object with
+`state` and optional `state_checks` fields. A claim fixture record can provide
+`state_check` directly or under `claim_metadata.state_check`; top-level
+`state_checks` keyed by `claim_id` are also supported.
+
+The current policy is deliberately simple and auditable: `refuted` always
+triggers, `supported` suppresses an internal trigger, and
+`insufficient_evidence` preserves the internal trigger. The verifier and
+retriever are dependency-free lexical baselines (`GroundednessVerifier` and
+`InMemoryRetriever`), so results are only a controlled adapter test until a real
+retrieval/verifier backend is plugged in.
+
+Reports include `verification_quality`, a label-conditioned matrix over
+`supported` / `refuted` / `insufficient_evidence` outcomes. Use
+`true_supported_rate`, `false_refuted_rate`, `decision_accuracy`, and
+`decision_error_rate` to evaluate evidence fixture quality separately from the
+final control-policy detection and false-alarm rates. Reports also include
+`route_summary`, which breaks verification outcomes down by selected route
+(`structured_qa`, `structured_state`, `groundedness`, or `retrieval_groundedness`) and records
+attempted-route counts, status counts, and per-route supported/refuted/error
+rates.
+
+## `build_truthfulqa_corpus.py`
+
+Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
+baselines. It uses the same deterministic TruthfulQA split parameters as
+`eval_truthfulqa.py`, writes only correct-answer statements as evidence
+documents, and does not create per-false-claim oracle refutations.
+
+```bash
+python benchmarks/build_truthfulqa_corpus.py \
+  --manifold-questions 80 \
+  --limit 80 \
+  --output artifacts/truthfulqa_l80_correct_answer_corpus.json
+```
+
+## `build_evidence_fixture.py`
+
+Builds a non-oracle claim/evidence fixture from a statement-bearing score dump
+and local evidence corpus files. It supports JSON, JSONL, and plain text corpora,
+uses dependency-free token-overlap retrieval, and copies labels only into audit
+metadata; retrieval is driven by claim text.
+
+```bash
+python benchmarks/build_evidence_fixture.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --output artifacts/truthfulqa_l80_local_evidence_claims.json \
+  --query-field answer \
+  --retriever-min-overlap 0.95 \
+  --retrieval-limit 3
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --claims artifacts/truthfulqa_l80_local_evidence_claims.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --json artifacts/truthfulqa_l80_local_evidence_verifier_ensemble_report.json
+```
+
+Use this before wiring a real search/RAG backend: it gives the same downstream
+fixture schema and `verification_quality` fields while keeping evidence source
+and retrieval behavior fully reproducible.
+
+Current l80 local-corpus baseline with `--query-field answer`,
+`--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:
+
+| Run | Verified false alarm | Verified detection | true supported | false supported | decision accuracy |
+|---|---:|---:|---:|---:|---:|
+| Qwen l80 | 0.008 | 0.274 | 0.908 | 0.042 | 0.946 |
+| SmolLM2 l80 | 0.008 | 0.219 | 0.908 | 0.042 | 0.946 |
+
+Interpretation: this conservative lexical corpus strongly suppresses false
+alarms by supporting most true claims, but it rarely refutes false claims. It is
+a reproducible non-oracle baseline, not a replacement for stronger retrieval,
+database, calculator, or domain-world-model evidence.
+
+For both Qwen l80 and SmolLM2 l80, `route_summary.selected_counts` is
+`groundedness=287` and `retrieval_groundedness=269`, which separates direct
+lexical evidence decisions from decisions after local retrieval hits.
+
+Structured QA/database adapter baseline using the same correct-answer corpus
+directly as `--qa-corpus`:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --json artifacts/truthfulqa_l80_structured_qa_verifier_ensemble_report.json
+```
+
+Current l80 structured QA baseline at alpha 0.100:
+
+| Run | Verified false alarm | Verified detection | true supported | false refuted | false supported | decision accuracy |
+|---|---:|---:|---:|---:|---:|---:|
+| Qwen l80 | 0.000 | 1.000 | 1.000 | 1.000 | 0.000 | 1.000 |
+| SmolLM2 l80 | 0.000 | 1.000 | 1.000 | 1.000 | 0.000 | 1.000 |
+
+Interpretation: this is a structured database/domain-state adapter check over
+the same TruthfulQA questions, not an open-domain verifier. It shows the control
+plane can exploit exact external state when a trusted structured source provides
+the relevant question and correct answer.
+
+For both runs, `route_summary.selected_counts` is `structured_qa=556`.
+
+
+## `backfill_truthfulqa_statements.py`
+
+Adds statement metadata to older `eval_truthfulqa.py --dump-scores` artifacts
+without loading a model. It rebuilds the deterministic TruthfulQA eval split,
+applies the original scoring order, validates exact label alignment, and can
+write a label-derived oracle claim fixture for verifier-ensemble upper-bound
+tests.
+
+```bash
+python benchmarks/backfill_truthfulqa_statements.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --output artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --manifold-questions 80 \
+  --limit 80 \
+  --save-oracle-claims artifacts/truthfulqa_l80_oracle_claims.json
+
+python benchmarks/backfill_truthfulqa_statements.py \
+  --scores artifacts/smollm2_truthfulqa_l80_scores.json \
+  --output artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --manifold-questions 80 \
+  --limit 80
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --claims artifacts/truthfulqa_l80_oracle_claims.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --json artifacts/truthfulqa_l80_oracle_verifier_ensemble_report.json
+```
+
+Current l80 oracle upper-bound result at alpha 0.100:
+
+| Run | Internal false alarm | Internal detection | Oracle verified false alarm | Oracle verified detection |
+|---|---:|---:|---:|---:|
+| Qwen l80 | 0.091 | 0.279 | 0.000 | 1.000 |
+| SmolLM2 l80 | 0.095 | 0.229 | 0.000 | 1.000 |
+
+Both oracle runs have `true_supported_rate=1.000`, `false_refuted_rate=1.000`,
+and `decision_accuracy=1.000` in `verification_quality`.
+
+This is not a real factual verification result. The oracle fixture is derived
+from TruthfulQA labels, so it proves the control-plane and verifier benchmark can
+consume perfect evidence and gives an upper bound. Replace it with real
+retrieval, database, calculator, or domain/world-model evidence before making a
+product-performance claim.
+
+## `eval_score_ensemble.py`
+
+Compares single diagnostic signals against simple calibrated rank ensembles from
+saved score dumps. This is a post-processing benchmark for the question:
+"Should the product combine internal signals by default, or keep the strongest
+single calibrated signal?"
+
+```bash
+python benchmarks/eval_score_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores.json \
+  --signals truth_proj,maha_last,subspace_resid,eigenscore \
+  --methods max_rank,mean_rank \
+  --repeats 50 \
+  --json artifacts/truthfulqa_score_ensemble_report.json
+```
+
+Each selected signal is converted to a direction-aware anomaly percentile using
+the split calibration true set. `max_rank` takes the most anomalous normalized
+signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
+then thresholded with the same split-conformal false-alarm check as the single
+signals.
+
+Current Qwen l80 / SmolLM2 l80 result: simple internal-score ensembles do not
+beat `truth_proj`. At alpha 0.100, Qwen's best single signal detects 0.279 while
+the best ensemble detects 0.235; SmolLM2's best single detects 0.229 while the
+best ensemble detects 0.196. Treat this as a negative result for naive score
+fusion, not as evidence against richer verifier/retrieval ensembles.
+
+## `eval_calibration_transfer.py`
+
+Applies saved `CalibrationArtifact` thresholds to saved score dumps from other
+runs. Use it after `compare_transfer.py`: AUROC transfer asks whether a detector
+family remains useful; calibration transfer asks whether a specific threshold
+still controls false alarms under model/domain shift.
+
+```bash
+python benchmarks/eval_calibration_transfer.py \
+  --artifact qwen-l80=artifacts/qwen05_truthfulqa_l80_best_calibration.json \
+  --artifact smollm2-l80=artifacts/smollm2_truthfulqa_l80_best_calibration.json \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores.json \
+  --json artifacts/truthfulqa_calibration_transfer_report.json
+```
+
+The script uses each artifact's `target_layer` and score name. If the target dump
+contains matching `sweep_scores`, those layer-specific scores are used; otherwise
+the primary `scores` payload is used only when its configured layer matches the
+artifact. The report includes self-application and cross-application false alarm,
+detection, coverage, selective accuracy, and a pass/fail flag for
+`false_alarm <= conformal_alpha + tolerance`.
+
+Current Qwen l80 / SmolLM2 l80 result: self-application controls false alarms for
+both artifacts, but cross-application controls 0/2. Qwen's l80 threshold applied
+to SmolLM2 has false alarm 0.160 at alpha 0.100; SmolLM2's l80 threshold applied
+to Qwen has false alarm 0.452 at alpha 0.100. Treat thresholds as model-specific
+until a stronger transfer study proves otherwise.
+
+## `compare_profiles.py`
+
+Compares `eval_truthfulqa.py --profile-json` payloads, or full `--json` result
+files containing a `profile` field, without loading a model. Use it to compare
+baseline, statement-encoding-cache, eval-reps-cache, and cache-only runs before
+claiming a benchmark path is faster.
+
+```bash
+python benchmarks/compare_profiles.py \
+  --profile baseline=/tmp/eigentruth-profile-baseline.json \
+  --profile enc-cache=/tmp/eigentruth-profile-enc-cache.json \
+  --profile cache-only=/tmp/eigentruth-profile-cache-only.json \
+  --baseline baseline \
+  --json artifacts/truthfulqa_profile_comparison.json
+```
+
+The report includes total time deltas, speedup versus the baseline, phase
+deltas, grouped time deltas, and throughput ratios. Older profile payloads that
+only contain `total_seconds` and `phases` remain readable, but grouped deltas are
+available only when the newer `summary` field exists.
+
+## `compare_transfer.py`
+
+Compares saved layer/score sweep reports across runs without loading a model. Use
+it to test whether a detector is stable across sample sizes, model families, or
+candidate layer bands before treating a calibration as broadly transferable.
+
+```bash
+python benchmarks/compare_transfer.py \
+  --report qwen05-l20=artifacts/qwen05_truthfulqa_l20_sweep_report.json \
+  --report qwen05-l80=artifacts/qwen05_truthfulqa_l80_sweep_report.json \
+  --report smollm2-l80=artifacts/smollm2_truthfulqa_l80_sweep_report.json \
+  --report gpt2-base=artifacts/gpt2-0-2-sweep-report.json \
+  --score truth_proj \
+  --layers=-16,-14,-12,-10,-8 \
+  --json artifacts/truthfulqa_transfer_truth_proj_report.json
+```
+
+The report includes each run's selected-layer AUROCs, mean/best AUROC over the
+requested layer set, and simple counts for layers above 0.6 and 0.7 AUROC. This
+is evidence for detector stability, not a license to reuse thresholds: conformal
+thresholds still need per-model/domain calibration unless a separate calibration
+transfer study proves otherwise.
+
+If Hugging Face downloads stall in the Xet path for small transfer models, retry
+with `HF_HUB_DISABLE_XET=1` in the environment before the Python command.
 
 ## 说明
 

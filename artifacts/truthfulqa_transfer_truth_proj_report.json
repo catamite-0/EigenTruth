@@ -1,0 +1,315 @@
+{
+  "score_name": "truth_proj",
+  "layer_filter": [
+    -16,
+    -14,
+    -12,
+    -10,
+    -8
+  ],
+  "n_reports": 4,
+  "n_reports_with_score": 4,
+  "best_overall": {
+    "name": "smollm2-l80",
+    "layer": -16,
+    "auroc": 0.7819869281045752
+  },
+  "runs": [
+    {
+      "name": "qwen05-l20",
+      "source": "artifacts/qwen05_truthfulqa_l20_sweep_report.json",
+      "report_best": {
+        "auroc": 0.7111679454390452,
+        "conformal_alpha": 0.1,
+        "detection": 0.09411764705882353,
+        "direction": "higher",
+        "false_alarm": 0.08695652173913043,
+        "layer": -12,
+        "n_false": 85,
+        "n_true": 69,
+        "score_name": "truth_proj",
+        "threshold": 4.510312080383301
+      },
+      "selected_layers": [
+        {
+          "layer": -16,
+          "auroc": 0.680306905370844,
+          "detection": 0.10588235294117647,
+          "false_alarm": 0.08695652173913043,
+          "threshold": 2.889859676361084,
+          "n_true": 69,
+          "n_false": 85,
+          "direction": "higher"
+        },
+        {
+          "layer": -14,
+          "auroc": 0.6966751918158568,
+          "detection": 0.08235294117647059,
+          "false_alarm": 0.08695652173913043,
+          "threshold": 3.1882009506225586,
+          "n_true": 69,
+          "n_false": 85,
+          "direction": "higher"
+        },
+        {
+          "layer": -12,
+          "auroc": 0.7111679454390452,
+          "detection": 0.09411764705882353,
+          "false_alarm": 0.08695652173913043,
+          "threshold": 4.510312080383301,
+          "n_true": 69,
+          "n_false": 85,
+          "direction": "higher"
+        },
+        {
+          "layer": -10,
+          "auroc": 0.6861040068201194,
+          "detection": 0.047058823529411764,
+          "false_alarm": 0.08695652173913043,
+          "threshold": 4.335841655731201,
+          "n_true": 69,
+          "n_false": 85,
+          "direction": "higher"
+        },
+        {
+          "layer": -8,
+          "auroc": 0.6845694799658995,
+          "detection": 0.07058823529411765,
+          "false_alarm": 0.08695652173913043,
+          "threshold": 4.215353012084961,
+          "n_true": 69,
+          "n_false": 85,
+          "direction": "higher"
+        }
+      ],
+      "summary": {
+        "n_layers": 5,
+        "mean_auroc": 0.691764705882353,
+        "min_auroc": 0.680306905370844,
+        "max_auroc": 0.7111679454390452,
+        "best_layer": -12,
+        "best_auroc": 0.7111679454390452,
+        "layers_above_0_6": 5,
+        "layers_above_0_7": 1
+      }
+    },
+    {
+      "name": "qwen05-l80",
+      "source": "artifacts/qwen05_truthfulqa_l80_sweep_report.json",
+      "report_best": {
+        "auroc": 0.7644575163398692,
+        "conformal_alpha": 0.1,
+        "detection": 0.24183006535947713,
+        "direction": "higher",
+        "false_alarm": 0.096,
+        "layer": -10,
+        "n_false": 306,
+        "n_true": 250,
+        "score_name": "truth_proj",
+        "threshold": 3.6069278717041016
+      },
+      "selected_layers": [
+        {
+          "layer": -16,
+          "auroc": 0.7159084967320262,
+          "detection": 0.20588235294117646,
+          "false_alarm": 0.096,
+          "threshold": 2.393725872039795,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -14,
+          "auroc": 0.7517385620915032,
+          "detection": 0.2647058823529412,
+          "false_alarm": 0.096,
+          "threshold": 2.8992490768432617,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -12,
+          "auroc": 0.7613333333333333,
+          "detection": 0.2973856209150327,
+          "false_alarm": 0.096,
+          "threshold": 3.657128095626831,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -10,
+          "auroc": 0.7644575163398692,
+          "detection": 0.24183006535947713,
+          "false_alarm": 0.096,
+          "threshold": 3.6069278717041016,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -8,
+          "auroc": 0.7490196078431373,
+          "detection": 0.21895424836601307,
+          "false_alarm": 0.096,
+          "threshold": 2.916769027709961,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        }
+      ],
+      "summary": {
+        "n_layers": 5,
+        "mean_auroc": 0.7484915032679739,
+        "min_auroc": 0.7159084967320262,
+        "max_auroc": 0.7644575163398692,
+        "best_layer": -10,
+        "best_auroc": 0.7644575163398692,
+        "layers_above_0_6": 5,
+        "layers_above_0_7": 5
+      }
+    },
+    {
+      "name": "smollm2-l80",
+      "source": "artifacts/smollm2_truthfulqa_l80_sweep_report.json",
+      "report_best": {
+        "auroc": 0.7819869281045752,
+        "conformal_alpha": 0.1,
+        "detection": 0.2647058823529412,
+        "direction": "higher",
+        "false_alarm": 0.096,
+        "layer": -16,
+        "n_false": 306,
+        "n_true": 250,
+        "score_name": "truth_proj",
+        "threshold": 1.1314295530319214
+      },
+      "selected_layers": [
+        {
+          "layer": -16,
+          "auroc": 0.7819869281045752,
+          "detection": 0.2647058823529412,
+          "false_alarm": 0.096,
+          "threshold": 1.1314295530319214,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -14,
+          "auroc": 0.7549150326797386,
+          "detection": 0.238562091503268,
+          "false_alarm": 0.096,
+          "threshold": 21.109073638916016,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -12,
+          "auroc": 0.739764705882353,
+          "detection": 0.23202614379084968,
+          "false_alarm": 0.096,
+          "threshold": 10.911161422729492,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -10,
+          "auroc": 0.7306274509803922,
+          "detection": 0.1830065359477124,
+          "false_alarm": 0.096,
+          "threshold": 7.502295017242432,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        },
+        {
+          "layer": -8,
+          "auroc": 0.7387320261437909,
+          "detection": 0.19607843137254902,
+          "false_alarm": 0.096,
+          "threshold": 31.110538482666016,
+          "n_true": 250,
+          "n_false": 306,
+          "direction": "higher"
+        }
+      ],
+      "summary": {
+        "n_layers": 5,
+        "mean_auroc": 0.74920522875817,
+        "min_auroc": 0.7306274509803922,
+        "max_auroc": 0.7819869281045752,
+        "best_layer": -16,
+        "best_auroc": 0.7819869281045752,
+        "layers_above_0_6": 5,
+        "layers_above_0_7": 5
+      }
+    },
+    {
+      "name": "gpt2-base",
+      "source": "artifacts/gpt2-0-2-sweep-report.json",
+      "report_best": {
+        "auroc": 0.7487702603047087,
+        "conformal_alpha": 0.2,
+        "detection": 0.4884910485933504,
+        "direction": "higher",
+        "false_alarm": 0.19785276073619631,
+        "layer": -6,
+        "n_false": 782,
+        "n_true": 652,
+        "score_name": "truth_proj",
+        "threshold": 4.664583683013916
+      },
+      "selected_layers": [
+        {
+          "layer": -12,
+          "auroc": 0.5739118666938635,
+          "detection": 0.2774936061381074,
+          "false_alarm": 0.19785276073619631,
+          "threshold": -1.4942318201065063,
+          "n_true": 652,
+          "n_false": 782,
+          "direction": "higher"
+        },
+        {
+          "layer": -10,
+          "auroc": 0.6672642116329061,
+          "detection": 0.3593350383631714,
+          "false_alarm": 0.19785276073619631,
+          "threshold": -8.081849098205566,
+          "n_true": 652,
+          "n_false": 782,
+          "direction": "higher"
+        },
+        {
+          "layer": -8,
+          "auroc": 0.7206098096747368,
+          "detection": 0.46035805626598464,
+          "false_alarm": 0.19785276073619631,
+          "threshold": -2.2733917236328125,
+          "n_true": 652,
+          "n_false": 782,
+          "direction": "higher"
+        }
+      ],
+      "summary": {
+        "n_layers": 3,
+        "mean_auroc": 0.6539286293338354,
+        "min_auroc": 0.5739118666938635,
+        "max_auroc": 0.7206098096747368,
+        "best_layer": -8,
+        "best_auroc": 0.7206098096747368,
+        "layers_above_0_6": 2,
+        "layers_above_0_7": 1
+      }
+    }
+  ],
+  "notes": [
+    "SmolLM2-135M-Instruct transfer completed after setting HF_HUB_DISABLE_XET=1 to avoid the stalled Xet download path.",
+    "gpt2-base is included as a cached base-model contrast, not as instruction-model transfer evidence."
+  ]
+}

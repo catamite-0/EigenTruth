@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "signal": "truth_proj",
+  "direction": null,
+  "alphas": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "repeats": 50,
+  "seed": 0,
+  "policy": {
+    "name": "refute_or_internal_unless_supported",
+    "refuted": "trigger",
+    "supported": "suppress_internal_trigger",
+    "otherwise": "preserve_internal_trigger",
+    "tolerance": 0.03
+  },
+  "verifier": {
+    "type": "GroundednessVerifier",
+    "min_overlap": 0.65
+  },
+  "qa_verifier": {
+    "type": "QuestionAnswerVerifier",
+    "enabled": true,
+    "corpus_path": "artifacts/truthfulqa_l80_correct_answer_corpus.json"
+  },
+  "retriever": {
+    "type": "InMemoryRetriever",
+    "min_overlap": 0.2,
+    "limit": 5
+  },
+  "runs": [
+    {
+      "name": "qwen-l80",
+      "scores_path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json",
+      "config": {
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 896,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 4,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/eval-reps-cache",
+        "eval_reps_cache_shard_size": 128,
+        "refresh_eval_reps_cache": false,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signal": "truth_proj",
+      "direction": "higher",
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "verification_status_counts": {
+        "supported": 250,
+        "refuted": 306,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "error": 0
+      },
+      "verification_quality": {
+        "label_status_matrix": {
+          "true": {
+            "supported": 250,
+            "refuted": 0,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "error": 0
+          },
+          "false": {
+            "supported": 0,
+            "refuted": 306,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "error": 0
+          }
+        },
+        "true_supported_rate": 1.0,
+        "true_refuted_rate": 0.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "insufficient_evidence_rate": 0.0,
+        "decision_accuracy": 1.0,
+        "decision_error_rate": 0.0,
+        "n_decided_supported_or_refuted": 556
+      },
+      "route_summary": {
+        "selected_counts": {
+          "structured_qa": 556
+        },
+        "attempted_counts": {
+          "structured_qa": 556
+        },
+        "by_route": {
+          "structured_qa": {
+            "selected": 556,
+            "statuses": {
+              "supported": 250,
+              "refuted": 306,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 250,
+              "false": 306
+            },
+            "used_retrieval": 0,
+            "rates": {
+              "supported": 0.44964028776978415,
+              "refuted": 0.5503597122302158,
+              "insufficient_evidence": 0.0,
+              "error": 0.0
+            }
+          }
+        }
+      },
+      "qa": {
+        "enabled": true,
+        "decided_records": 556
+      },
+      "retrieval": {
+        "records_with_hits": 0,
+        "total_hits": 0,
+        "retrieval_limit": 5
+      },
+      "alphas": {
+        "0.05": {
+          "alpha": 0.05,
+          "internal": {
+            "false_alarm": 0.0424,
+            "coverage": 0.9576,
+            "detection": 0.14516339869281045,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.0424,
+            "detection": 0.8548366013071895,
+            "suppressed_false_alarm_rate": 0.0424,
+            "rescued_detection_rate": 0.8548366013071896
+          },
+          "repeats": 50
+        },
+        "0.1": {
+          "alpha": 0.1,
+          "internal": {
+            "false_alarm": 0.09087999999999999,
+            "coverage": 0.90912,
+            "detection": 0.27908496732026145,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.09087999999999999,
+            "detection": 0.7209150326797386,
+            "suppressed_false_alarm_rate": 0.09087999999999999,
+            "rescued_detection_rate": 0.7209150326797384
+          },
+          "repeats": 50
+        },
+        "0.2": {
+          "alpha": 0.2,
+          "internal": {
+            "false_alarm": 0.1912,
+            "coverage": 0.8088,
+            "detection": 0.4896078431372549,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.1912,
+            "detection": 0.5103921568627451,
+            "suppressed_false_alarm_rate": 0.1912,
+            "rescued_detection_rate": 0.5103921568627451
+          },
+          "repeats": 50
+        }
+      }
+    },
+    {
+      "name": "smollm2-l80",
+      "scores_path": "artifacts/smollm2_truthfulqa_l80_scores_with_statements.json",
+      "config": {
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 576,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 8,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-smollm2-l80/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-smollm2-l80/eval-reps-cache",
+        "eval_reps_cache_shard_size": 256,
+        "refresh_eval_reps_cache": false,
+        "progress_every": 50,
+        "warmup_checkpoint": "/tmp/eigentruth-smollm2-l80/warmup-checkpoint.pt",
+        "warmup_checkpoint_every": 50,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "signal": "truth_proj",
+      "direction": "higher",
+      "n_total": 556,
+      "n_true": 250,
+      "n_false": 306,
+      "verification_status_counts": {
+        "supported": 250,
+        "refuted": 306,
+        "insufficient_evidence": 0,
+        "not_applicable": 0,
+        "error": 0
+      },
+      "verification_quality": {
+        "label_status_matrix": {
+          "true": {
+            "supported": 250,
+            "refuted": 0,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "error": 0
+          },
+          "false": {
+            "supported": 0,
+            "refuted": 306,
+            "insufficient_evidence": 0,
+            "not_applicable": 0,
+            "error": 0
+          }
+        },
+        "true_supported_rate": 1.0,
+        "true_refuted_rate": 0.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "insufficient_evidence_rate": 0.0,
+        "decision_accuracy": 1.0,
+        "decision_error_rate": 0.0,
+        "n_decided_supported_or_refuted": 556
+      },
+      "route_summary": {
+        "selected_counts": {
+          "structured_qa": 556
+        },
+        "attempted_counts": {
+          "structured_qa": 556
+        },
+        "by_route": {
+          "structured_qa": {
+            "selected": 556,
+            "statuses": {
+              "supported": 250,
+              "refuted": 306,
+              "insufficient_evidence": 0,
+              "not_applicable": 0,
+              "error": 0
+            },
+            "labels": {
+              "true": 250,
+              "false": 306
+            },
+            "used_retrieval": 0,
+            "rates": {
+              "supported": 0.44964028776978415,
+              "refuted": 0.5503597122302158,
+              "insufficient_evidence": 0.0,
+              "error": 0.0
+            }
+          }
+        }
+      },
+      "qa": {
+        "enabled": true,
+        "decided_records": 556
+      },
+      "retrieval": {
+        "records_with_hits": 0,
+        "total_hits": 0,
+        "retrieval_limit": 5
+      },
+      "alphas": {
+        "0.05": {
+          "alpha": 0.05,
+          "internal": {
+            "false_alarm": 0.04992,
+            "coverage": 0.95008,
+            "detection": 0.11398692810457517,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.04992,
+            "detection": 0.8860130718954249,
+            "suppressed_false_alarm_rate": 0.04992,
+            "rescued_detection_rate": 0.8860130718954248
+          },
+          "repeats": 50
+        },
+        "0.1": {
+          "alpha": 0.1,
+          "internal": {
+            "false_alarm": 0.09504,
+            "coverage": 0.90496,
+            "detection": 0.22941176470588234,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.09504,
+            "detection": 0.7705882352941177,
+            "suppressed_false_alarm_rate": 0.09504,
+            "rescued_detection_rate": 0.7705882352941177
+          },
+          "repeats": 50
+        },
+        "0.2": {
+          "alpha": 0.2,
+          "internal": {
+            "false_alarm": 0.18975999999999998,
+            "coverage": 0.8102400000000001,
+            "detection": 0.4054248366013072,
+            "pass": true
+          },
+          "verified": {
+            "false_alarm": 0.0,
+            "coverage": 1.0,
+            "detection": 1.0,
+            "pass": true
+          },
+          "delta": {
+            "false_alarm": -0.18975999999999998,
+            "detection": 0.5945751633986929,
+            "suppressed_false_alarm_rate": 0.18975999999999998,
+            "rescued_detection_rate": 0.5945751633986928
+          },
+          "repeats": 50
+        }
+      }
+    }
+  ]
+}

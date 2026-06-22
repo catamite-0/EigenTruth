@@ -206,6 +206,9 @@ class RiskController:
                 missing.append(score.name)
                 continue
             raw_value = diagnostics[score.name]
+            if isinstance(raw_value, bool):
+                invalid[score.name] = _diagnostic_value_for_trace(raw_value)
+                continue
             try:
                 value = float(raw_value)
             except (TypeError, ValueError):

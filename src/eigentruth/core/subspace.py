@@ -35,7 +35,10 @@ class TruthSubspace:
             raise ValueError("rank must be >= 1.")
         mean = states.mean(dim=0).to(torch.float32)
         centered = states.to(torch.float32) - mean
-        max_rank = min(rank, centered.shape[0], centered.shape[1])
+        # Centering caps the informative PCA rank at N - 1. Keeping the extra
+        # SVD vectors would introduce arbitrary null-space directions for tiny
+        # warmups, which can make residual scores look more stable than they are.
+        max_rank = min(rank, centered.shape[0] - 1, centered.shape[1])
         if max_rank < 1:
             raise ValueError("at least one state and one dimension are required.")
         _, _, vh = torch.linalg.svd(centered, full_matrices=False)
@@ -106,4 +109,6 @@ def _as_state_matrix(states: Tensor) -> Tensor:
         raise ValueError(f"expected states with shape [N, D], got {tuple(states.shape)}.")
     if states.shape[0] < 1 or states.shape[1] < 1:
         raise ValueError("states must be non-empty.")
+    if not torch.isfinite(states).all():
+        raise ValueError("states must contain only finite values.")
     return states

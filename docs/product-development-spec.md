@@ -238,14 +238,37 @@ For product features:
 - Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output.
 - `EvidenceBundle` conversion from retrieval `ActionResult` payloads into claim-scoped verifier evidence context.
 - Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
+- `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies.
+- `build_truthfulqa_corpus.py` for creating a local TruthfulQA correct-answer evidence corpus.
+- `build_evidence_fixture.py` for building non-oracle verifier fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora.
+- `backfill_truthfulqa_statements.py` for adding statement metadata to older TruthfulQA score dumps without rerunning models.
+- Qwen l80 / SmolLM2 l80 oracle verifier-ensemble upper-bound report: label-derived perfect evidence drives verified false alarm to 0.000 and detection to 1.000 at alpha 0.100.
+- Verifier ensemble reports include label-conditioned `verification_quality`, so evidence fixture quality can be measured separately from downstream control-policy metrics.
+- Qwen l80 / SmolLM2 l80 local-corpus verifier baseline: conservative correct-answer retrieval drives verified false alarm to 0.008 at alpha 0.100, with true-supported rate 0.908 and false-supported rate 0.042.
+- `QuestionAnswerVerifier` structured QA/domain-state adapter and Qwen l80 / SmolLM2 l80 structured QA baseline: exact question-answer facts drive verified false alarm to 0.000 and detection to 1.000 at alpha 0.100 on covered TruthfulQA questions.
+- `CalculatorVerifier` deterministic tool adapter for structured arithmetic claims and simple symbolic equations, using a restricted local arithmetic evaluator with no new mandatory dependencies.
+- `StructuredStateVerifier` / `StateCheck` structured state and business-rule adapter for database, policy, and domain-state checks. It can be routed through `state_check` claim metadata or context and returns supported, refuted, insufficient-evidence, or error results with explicit decision rules.
+- `SQLiteStateSource` / `SQLiteStateQuery` load read-only SQLite query results into nested verifier state, giving the structured-state path a real database integration without new mandatory dependencies.
+- `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
+- `CompositeVerifier`, `RoutedVerifier`, and `calibrated_control_demo.py --enable-calculator` show a tool-first product trace path: claim metadata, context, or text patterns can route calculator-supported/refuted claims before lexical verifier fallback.
+- `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` routes, and reports `route_summary` for structured QA, structured state, lexical groundedness, and retrieval-backed groundedness.
+- `eval_truthfulqa.py --profile` now emits a structured performance summary with bottleneck phase, top phases, grouped time shares, and warmup/eval throughput fields for reproducible optimization comparisons.
+- `eval_truthfulqa.py --statement-encoding-cache` persists tokenizer outputs and answer-span lengths as validated JSON so repeated benchmark/cache rebuilds avoid redundant tokenizer setup without changing scoring semantics.
+- `compare_profiles.py` compares profile JSON payloads across baseline/cache/cache-only runs, reporting speedup, phase deltas, grouped time deltas, and throughput ratios without loading models.
 
 ### Next Verification Adapter Work
 
+- Connect `StructuredStateVerifier` to additional live database, business-rule, tool-output, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources and stdlib SQLite.
+- Extend claim extraction or upstream tool calls to provide structured `expression` / `expected` metadata for calculator-verifiable claims beyond simple symbolic equations.
+- Add route policies for QA/database/world-model adapters so product traces explain why each tool was selected or skipped.
+- Track route-level metrics in future adapter benchmarks so new tools are judged by route hit rate, false support, false refutation, and downstream conformal control impact.
+- Replace label-derived oracle evidence with real retrieval/database/calculator evidence and rerun verifier/retrieval ensemble reports on Qwen/SmolLM2.
+- Use local corpus fixtures from `build_evidence_fixture.py` as the reproducible baseline before adding networked retrieval extras.
 - Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.
 - Add concrete domain/world-model adapters beyond the in-memory test double.
 - Add semantic-entropy sampling probes, RAG groundedness adapters, and optional SAE/ReFT integrations behind extras.
 - Add domain examples where facts depend on state transitions, physical constraints, or business rules.
-- Benchmark hybrid internal-diagnostics + external-verification pipelines.
+- Compare real verifier/retrieval ensembles against the current `truth_proj` baseline under the same conformal false-alarm budget.
 
 ### Later Control-Plane Hardening
 

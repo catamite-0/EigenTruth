@@ -1,0 +1,247 @@
+"""Build local retrieval evidence fixtures for verifier-ensemble benchmarks.
+
+This is a no-network bridge from statement-bearing score dumps to
+``eval_verifier_ensemble.py`` claim fixtures. It retrieves evidence from local
+JSON/JSONL/text corpora using the dependency-free ``InMemoryRetriever`` and
+writes one fixture record per score row.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from eigentruth.adapters import InMemoryRetriever, RetrievalHit, RetrievalQuery
+
+
+def load_score_dump(path: Path) -> dict[str, Any]:
+    """Load and validate a statement-bearing score dump."""
+    with open(path, encoding="utf-8") as f:
+        dump = json.load(f)
+    labels = tuple(int(label) for label in dump.get("labels", ()))
+    statements = tuple(dump.get("statements", ()))
+    if not labels:
+        raise ValueError("score dump must contain non-empty labels.")
+    if len(statements) != len(labels):
+        raise ValueError(
+            "score dump must contain a 'statements' list with one record per label; "
+            f"got {len(statements)} statements and {len(labels)} labels."
+        )
+    return dump
+
+
+def load_corpus(paths: Sequence[Path]) -> tuple[RetrievalHit, ...]:
+    """Load local evidence documents from JSON, JSONL, or text files."""
+    documents: list[RetrievalHit] = []
+    for path in paths:
+        if path.suffix.lower() == ".json":
+            documents.extend(_documents_from_json(path))
+        elif path.suffix.lower() == ".jsonl":
+            documents.extend(_documents_from_jsonl(path))
+        else:
+            documents.extend(_documents_from_text(path))
+    if not documents:
+        raise ValueError("corpus must contain at least one non-empty document.")
+    return tuple(documents)
+
+
+def build_evidence_fixture(
+    dump: Mapping[str, Any],
+    corpus_documents: Sequence[RetrievalHit | Mapping[str, Any] | str],
+    *,
+    retriever_min_overlap: float = 0.2,
+    retrieval_limit: int = 5,
+    query_field: str = "text",
+) -> dict[str, Any]:
+    """Build a claim/evidence fixture using only local retrieval over claim text."""
+    if retrieval_limit <= 0:
+        raise ValueError("retrieval_limit must be positive.")
+    if query_field not in {"text", "answer", "question", "question_answer"}:
+        raise ValueError("query_field must be one of: text, answer, question, question_answer.")
+    labels = tuple(int(label) for label in dump.get("labels", ()))
+    statements = tuple(dict(statement) for statement in dump.get("statements", ()))
+    if len(labels) != len(statements):
+        raise ValueError("labels and statements must have the same length.")
+
+    documents = tuple(corpus_documents)
+    retriever = InMemoryRetriever(documents, min_overlap=retriever_min_overlap)
+    records = []
+    total_hits = 0
+    for idx, (label, statement) in enumerate(zip(labels, statements), start=1):
+        claim_text = _statement_text(statement)
+        query_text = _query_text(statement, query_field=query_field)
+        claim_id = str(statement.get("claim_id") or f"c{idx}")
+        hits = tuple(retriever.retrieve(
+            RetrievalQuery(query=query_text, claim_id=claim_id),
+            limit=retrieval_limit,
+        ))
+        total_hits += len(hits)
+        records.append({
+            "claim": claim_text,
+            "claim_id": claim_id,
+            "claim_metadata": dict(statement.get("metadata", {})),
+            "retrieval_documents": [hit.to_dict() for hit in hits],
+            "metadata": {
+                "index": idx - 1,
+                "score_label": label,
+                "statement": statement,
+                "retrieval": {
+                    "n_hits": len(hits),
+                    "retriever": "InMemoryRetriever",
+                    "min_overlap": retriever_min_overlap,
+                    "limit": retrieval_limit,
+                    "query_field": query_field,
+                    "query": query_text,
+                },
+            },
+        })
+
+    return {
+        "schema_version": 1,
+        "fixture_type": "local_retrieval_evidence",
+        "description": (
+            "Evidence fixture built by local token-overlap retrieval over a supplied corpus. "
+            "Labels are copied only for audit metadata; retrieval uses claim text only."
+        ),
+        "retriever": {
+            "type": "InMemoryRetriever",
+            "min_overlap": retriever_min_overlap,
+            "limit": retrieval_limit,
+            "query_field": query_field,
+            "n_corpus_documents": len(documents),
+        },
+        "summary": {
+            "n_records": len(records),
+            "records_with_hits": sum(1 for record in records if record["retrieval_documents"]),
+            "total_hits": total_hits,
+            "average_hits_per_record": float(total_hits) / len(records) if records else 0.0,
+        },
+        "records": records,
+    }
+
+
+def run(args: argparse.Namespace) -> dict[str, Any]:
+    """Run the CLI command."""
+    dump = load_score_dump(Path(args.scores))
+    corpus = load_corpus(tuple(Path(path) for path in args.corpus))
+    fixture = build_evidence_fixture(
+        dump,
+        corpus,
+        retriever_min_overlap=args.retriever_min_overlap,
+        retrieval_limit=args.retrieval_limit,
+        query_field=args.query_field,
+    )
+    output_path = Path(args.output)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(fixture, f, indent=2)
+    summary = fixture["summary"]
+    print(
+        f"Wrote local evidence fixture to {output_path} "
+        f"({summary['records_with_hits']}/{summary['n_records']} records with hits)"
+    )
+    return fixture
+
+
+def _statement_text(statement: Mapping[str, Any]) -> str:
+    text = str(statement.get("claim") or statement.get("text") or statement.get("answer") or "").strip()
+    if not text:
+        raise ValueError("statement record is missing claim/text/answer.")
+    return text
+
+
+def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
+    if query_field == "text":
+        return _statement_text(statement)
+    if query_field == "answer":
+        text = str(statement.get("answer", "")).strip()
+    elif query_field == "question":
+        text = str(statement.get("question", "")).strip()
+    elif query_field == "question_answer":
+        text = f"{statement.get('question', '')} {statement.get('answer', '')}".strip()
+    else:
+        raise ValueError("query_field must be one of: text, answer, question, question_answer.")
+    if not text:
+        raise ValueError(f"statement record is missing query field {query_field!r}.")
+    return text
+
+
+def _documents_from_json(path: Path) -> list[RetrievalHit]:
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+    if isinstance(payload, Mapping):
+        raw_documents = payload.get("documents", payload.get("records", ()))
+    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        raw_documents = payload
+    else:
+        raise ValueError(f"{path} must contain a JSON object or list.")
+    return [_coerce_document(item, source_default=str(path)) for item in raw_documents]
+
+
+def _documents_from_jsonl(path: Path) -> list[RetrievalHit]:
+    documents = []
+    with open(path, encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                item = json.loads(line)
+            except json.JSONDecodeError:
+                item = {"text": line, "source": f"{path}:{line_no}"}
+            documents.append(_coerce_document(item, source_default=f"{path}:{line_no}"))
+    return documents
+
+
+def _documents_from_text(path: Path) -> list[RetrievalHit]:
+    text = path.read_text(encoding="utf-8")
+    chunks = [chunk.strip() for chunk in re.split(r"\n\s*\n", text) if chunk.strip()]
+    if len(chunks) == 1:
+        chunks = [line.strip() for line in text.splitlines() if line.strip()]
+    return [
+        RetrievalHit(
+            text=chunk,
+            source=f"{path}#{idx}",
+            metadata={"loader": "text", "path": str(path), "chunk_index": idx},
+        )
+        for idx, chunk in enumerate(chunks, start=1)
+    ]
+
+
+def _coerce_document(value: Any, *, source_default: str) -> RetrievalHit:
+    if isinstance(value, str):
+        return RetrievalHit(value, source=source_default, metadata={"loader": "json"})
+    if not isinstance(value, Mapping):
+        raise ValueError("corpus documents must be strings or mappings.")
+    raw_source = value.get("source")
+    source = source_default if raw_source is None else str(raw_source)
+    metadata = {"loader": "json", **dict(value.get("metadata", {}))}
+    return RetrievalHit(
+        text=str(value.get("text", value.get("content", ""))),
+        source=source,
+        score=float(value.get("score", 1.0)),
+        metadata=metadata,
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Build local evidence fixture for verifier ensemble benchmarks")
+    parser.add_argument("--scores", required=True, help="statement-bearing score dump")
+    parser.add_argument("--corpus", action="append", required=True,
+                        help="local evidence corpus path; supports JSON, JSONL, and text; repeatable")
+    parser.add_argument("--output", required=True, help="path to write claim/evidence fixture JSON")
+    parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
+    parser.add_argument("--retrieval-limit", type=int, default=5)
+    parser.add_argument("--query-field", choices=("text", "answer", "question", "question_answer"), default="text",
+                        help="statement field used for retrieval query; claim text remains unchanged")
+    run(parser.parse_args())
+
+
+if __name__ == "__main__":
+    main()

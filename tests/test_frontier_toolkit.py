@@ -1,11 +1,23 @@
 """Tests for the frontier-toolkit MVP modules."""
 
 import math
+import sqlite3
 
 import pytest
 import torch
 
-from eigentruth.adapters import InMemoryRetriever, InMemoryWorldModelAdapter, RetrievalActionExecutor
+from eigentruth.adapters import (
+    CalculatorVerifier,
+    InMemoryRetriever,
+    InMemoryWorldModelAdapter,
+    QuestionAnswerFact,
+    QuestionAnswerVerifier,
+    RetrievalActionExecutor,
+    SQLiteStateQuery,
+    SQLiteStateSource,
+    StateCheck,
+    StructuredStateVerifier,
+)
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutionStatus,
@@ -21,11 +33,15 @@ from eigentruth.control import (
 )
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
+    Claim,
+    CompositeVerifier,
     EvidenceDocument,
     GroundednessVerifier,
     InMemoryVerifier,
+    RoutedVerifier,
     VerificationResult,
     VerificationStatus,
+    VerifierRoute,
     extract_claims,
     normalize_claim_text,
 )
@@ -62,6 +78,25 @@ def test_truth_subspace_contrastive_projection():
 def test_truth_subspace_rejects_single_factual_state():
     with pytest.raises(ValueError, match="at least two factual states"):
         TruthSubspace.fit(torch.tensor([[1.0, 2.0, 3.0]]), rank=1)
+
+
+def test_truth_subspace_clamps_rank_to_centered_sample_rank():
+    states = torch.tensor([
+        [0.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+    ])
+
+    subspace = TruthSubspace.fit(states, rank=3)
+
+    assert subspace.rank == 1
+    assert subspace.basis.shape == (3, 1)
+
+
+def test_truth_subspace_rejects_non_finite_states():
+    states = torch.tensor([[1.0, 2.0], [float("nan"), 3.0]])
+
+    with pytest.raises(ValueError, match="finite"):
+        TruthSubspace.fit(states, rank=1)
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
@@ -240,6 +275,337 @@ def test_groundedness_verifier_returns_insufficient_evidence_for_low_overlap():
     assert result.metadata["best_overlap"] < 0.8
 
 
+def test_question_answer_verifier_checks_structured_question_answers():
+    verifier = QuestionAnswerVerifier([
+        QuestionAnswerFact(
+            question="What is the capital of France?",
+            answer="Paris",
+            source="qa:facts",
+        )
+    ])
+
+    supported = verifier.verify(
+        Claim("Paris", metadata={"question": "What is the capital of France?", "answer": "Paris"})
+    )
+    refuted = verifier.verify(
+        Claim("Lyon"),
+        context={"statement": {"question": "What is the capital of France?", "answer": "Lyon"}},
+    )
+    unknown = verifier.verify(
+        Claim("Madrid"),
+        context={"statement": {"question": "What is the capital of Spain?", "answer": "Madrid"}},
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "answer_match"
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "answer_mismatch"
+    assert "Paris" in refuted.evidence[0]
+    assert unknown.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert unknown.metadata["decision_rule"] == "question_not_found"
+
+
+def test_calculator_verifier_supports_and_refutes_arithmetic_claims():
+    verifier = CalculatorVerifier()
+
+    supported = verifier.verify(Claim("2 + 2 = 4."))
+    refuted = verifier.verify(Claim("2 + 2 = 5."))
+    structured = verifier.verify(
+        Claim("The computed total is 12.", metadata={"calculation": {"expression": "3 * 4", "expected": 12}})
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "calculation_match"
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "calculation_mismatch"
+    assert refuted.metadata["actual"] == pytest.approx(4.0)
+    assert structured.status is VerificationStatus.SUPPORTED
+    assert structured.evidence[0].startswith("calculator: 3 * 4 = 12")
+
+
+def test_calculator_verifier_handles_non_applicable_and_unsafe_expressions():
+    verifier = CalculatorVerifier()
+
+    not_applicable = verifier.verify(Claim("Paris is the capital of France."))
+    unsafe = verifier.verify(
+        Claim("Bad calculation.", metadata={"expression": "__import__('os').system('true')", "expected": 0})
+    )
+    divided_by_zero = verifier.verify(Claim("1 / 0 = 0."))
+
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_calculation"
+    assert unsafe.status is VerificationStatus.ERROR
+    assert unsafe.metadata["decision_rule"] == "calculation_error"
+    assert divided_by_zero.status is VerificationStatus.ERROR
+    assert divided_by_zero.explanation == "division by zero"
+
+
+def test_structured_state_verifier_supports_and_refutes_business_rules():
+    verifier = StructuredStateVerifier(
+        state={
+            "inventory": {"sku_123": {"available": 12}},
+            "account": {"status": "active", "tier": "enterprise"},
+        }
+    )
+
+    supported = verifier.verify(
+        Claim(
+            "SKU 123 has enough available inventory.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": ">=", "value": 10}},
+        )
+    )
+    refuted = verifier.verify(
+        Claim(
+            "Account is suspended.",
+            metadata={"state_check": {"path": "account.status", "operator": "eq", "value": "suspended"}},
+        )
+    )
+    membership = verifier.verify(
+        Claim(
+            "Account tier is allowed.",
+            metadata={"state_check": {"path": "account.tier", "operator": "in", "value": ["pro", "enterprise"]}},
+        )
+    )
+
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert supported.metadata["decision_rule"] == "state_check_passed"
+    assert supported.metadata["actual"] == 12
+    assert refuted.status is VerificationStatus.REFUTED
+    assert refuted.metadata["decision_rule"] == "state_check_failed"
+    assert "suspended" in refuted.evidence[0]
+    assert membership.status is VerificationStatus.SUPPORTED
+
+
+def test_structured_state_verifier_uses_context_state_and_claim_specific_checks():
+    verifier = StructuredStateVerifier(state={"inventory": {"sku_123": {"available": 2}}})
+    claim = Claim("Inventory is updated.", claim_id="c1")
+
+    result = verifier.verify(
+        claim,
+        context={
+            "state": {"inventory": {"sku_123": {"available": 5}}},
+            "state_checks": {
+                "c1": StateCheck(path="inventory.sku_123.available", operator="between", value=[3, 6])
+            },
+        },
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["actual"] == 5
+    assert result.metadata["operator"] == "between"
+
+
+def test_structured_state_verifier_reports_missing_and_invalid_checks():
+    verifier = StructuredStateVerifier(state={"account": {"balance": 10}})
+
+    not_applicable = verifier.verify(Claim("No structured state check."))
+    missing = verifier.verify(
+        Claim("Missing state.", metadata={"state_check": {"path": "account.limit", "operator": "exists"}})
+    )
+    invalid = verifier.verify(
+        Claim(
+            "Invalid numeric check.",
+            metadata={"state_check": {"path": "account.balance", "operator": ">", "value": "x"}},
+        )
+    )
+
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
+    assert not_applicable.metadata["decision_rule"] == "no_state_check"
+    assert missing.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert missing.metadata["decision_rule"] == "state_path_missing"
+    assert invalid.status is VerificationStatus.ERROR
+    assert invalid.metadata["decision_rule"] == "evaluation_error"
+
+
+def test_sqlite_state_source_loads_database_state_for_verifier(tmp_path):
+    db_path = tmp_path / "state.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute("create table inventory (sku text primary key, available integer)")
+    connection.execute("create table accounts (id text primary key, status text, tier text)")
+    connection.execute("insert into inventory values (?, ?)", ("sku_123", 12))
+    connection.execute("insert into accounts values (?, ?, ?)", ("acct_1", "active", "enterprise"))
+    connection.commit()
+    connection.close()
+
+    source = SQLiteStateSource(
+        db_path,
+        queries=(
+            SQLiteStateQuery(
+                path="inventory.sku_123.available",
+                sql="select available from inventory where sku = ?",
+                params=("sku_123",),
+            ),
+            {
+                "path": "account.status",
+                "sql": "select status from accounts where id = ?",
+                "params": ("acct_1",),
+                "column": "status",
+            },
+            {
+                "path": "account.profile",
+                "sql": "select status, tier from accounts where id = ?",
+                "params": ("acct_1",),
+            },
+        ),
+    )
+
+    state = source.load_state()
+    verifier = StructuredStateVerifier.from_source(source)
+    supported = verifier.verify(
+        Claim(
+            "SKU 123 has enough inventory.",
+            metadata={"state_check": {"path": "inventory.sku_123.available", "operator": ">=", "value": 10}},
+        )
+    )
+    refuted = verifier.verify(
+        Claim("Account is suspended.", metadata={"state_check": {"path": "account.status", "value": "suspended"}})
+    )
+
+    assert state["inventory"]["sku_123"]["available"] == 12
+    assert state["account"]["status"] == "active"
+    assert state["account"]["profile"] == {"status": "active", "tier": "enterprise"}
+    assert supported.status is VerificationStatus.SUPPORTED
+    assert refuted.status is VerificationStatus.REFUTED
+    assert "sqlite" not in supported.metadata
+
+
+def test_sqlite_state_source_handles_missing_required_queries(tmp_path):
+    db_path = tmp_path / "state.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute("create table inventory (sku text primary key, available integer)")
+    connection.commit()
+    connection.close()
+
+    optional = SQLiteStateSource(
+        db_path,
+        queries=(
+            {
+                "path": "inventory.missing.available",
+                "sql": "select available from inventory where sku = ?",
+                "params": ("missing",),
+                "required": "false",
+            },
+        ),
+    )
+    required = SQLiteStateSource(
+        db_path,
+        queries=(
+            {
+                "path": "inventory.missing.available",
+                "sql": "select available from inventory where sku = ?",
+                "params": ("missing",),
+                "required": True,
+            },
+        ),
+    )
+
+    assert optional.load_state() == {}
+    with pytest.raises(ValueError, match="returned no rows"):
+        required.load_state()
+    with pytest.raises(ValueError, match="required must be"):
+        SQLiteStateQuery.from_mapping({"path": "x", "sql": "select 1", "required": "maybe"})
+
+
+def test_composite_verifier_skips_not_applicable_tool_results():
+    fallback = InMemoryVerifier({normalize_claim_text("Paris is the capital of France"): VerificationStatus.SUPPORTED})
+    verifier = CompositeVerifier((CalculatorVerifier(), fallback))
+
+    arithmetic = verifier.verify(Claim("2 + 2 = 5."))
+    factual = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert arithmetic.status is VerificationStatus.REFUTED
+    assert arithmetic.metadata["selected_verifier"] == "CalculatorVerifier"
+    assert factual.status is VerificationStatus.SUPPORTED
+    assert factual.metadata["selected_verifier"] == "InMemoryVerifier"
+    assert factual.metadata["skipped_verifiers"][0]["verifier"] == "CalculatorVerifier"
+
+
+def test_routed_verifier_selects_routes_from_metadata_context_and_text():
+    fallback = InMemoryVerifier({normalize_claim_text("Paris is the capital of France"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "calculator",
+            CalculatorVerifier(),
+            metadata_keys=("calculation", "expression"),
+            context_keys=("calculation", "expression"),
+            text_patterns=(r"\d\s*[+*/-]\s*\d\s*=",),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    text_route = verifier.verify(Claim("2 + 2 = 5."))
+    context_route = verifier.verify(
+        Claim("The computed total is wrong."),
+        context={"calculation": {"expression": "6 / 3", "expected": 3}},
+    )
+    fallback_route = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert text_route.status is VerificationStatus.REFUTED
+    assert text_route.metadata["selected_route"] == "calculator"
+    assert context_route.status is VerificationStatus.REFUTED
+    assert context_route.metadata["selected_route"] == "calculator"
+    assert fallback_route.status is VerificationStatus.SUPPORTED
+    assert fallback_route.metadata["selected_route"] == "fallback"
+
+
+def test_routed_verifier_can_prioritize_structured_state_adapter():
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "state",
+            StructuredStateVerifier(state={"quota": {"remaining": 0}}),
+            metadata_keys=("state_check",),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    state_route = verifier.verify(
+        Claim("Quota remains.", metadata={"state_check": {"path": "quota.remaining", "operator": ">", "value": 0}})
+    )
+    fallback_route = verifier.verify(Claim("Fallback fact."))
+
+    assert state_route.status is VerificationStatus.REFUTED
+    assert state_route.metadata["selected_route"] == "state"
+    assert state_route.metadata["selected_verifier"] == "StructuredStateVerifier"
+    assert fallback_route.status is VerificationStatus.SUPPORTED
+    assert fallback_route.metadata["selected_route"] == "fallback"
+
+
+def test_routed_verifier_reports_not_applicable_when_no_route_matches():
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",)),
+    ))
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.metadata["matched_routes"] == ()
+
+
+def test_routed_verifier_can_fall_through_on_insufficient_evidence():
+    qa = QuestionAnswerVerifier([QuestionAnswerFact(question="Q?", answer="A")])
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier((
+        VerifierRoute(
+            "structured_qa",
+            qa,
+            context_keys=("statement.question", "statement.answer"),
+            fallthrough_statuses=(VerificationStatus.INSUFFICIENT_EVIDENCE,),
+        ),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    result = verifier.verify(
+        Claim("Fallback fact."),
+        context={"statement": {"question": "Unknown?", "answer": "A"}},
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "fallback"
+    assert result.metadata["skipped_routes"][0]["route"] == "structured_qa"
+    assert result.metadata["skipped_routes"][0]["status"] == "insufficient_evidence"
+
+
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():
     verifier = InMemoryVerifier({normalize_claim_text("Inventory is 10"): VerificationStatus.SUPPORTED})
     adapter = InMemoryWorldModelAdapter(verifier=verifier)
@@ -354,6 +720,23 @@ def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
     assert unsupported.diagnostics["verification"]["counts"]["insufficient_evidence"] == 1
 
 
+def test_risk_controller_routes_bool_diagnostics_to_unknown():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    decision = controller.decide({"maha": True})
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.diagnostics["invalid_scores"] == ("maha",)
+    assert decision.diagnostics["invalid_values"]["maha"] is True
+
+
 def test_claim_extraction_adds_rule_based_metadata():
     claim = extract_claims("As of 2026, revenue is not 10 dollars [1].")[0]
 
@@ -374,4 +757,3 @@ def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["claim_features"]["is_time_sensitive"] is True
     assert "time-sensitive" in result.explanation
-

@@ -6,17 +6,19 @@ diagnostics with `RiskController`, verify simple claims, execute actions through
 `ActionExecutorRegistry`, and emit a JSON `ProductTrace`.
 
 The output is a trace for routing and debugging. It is not proof that a response
-is true, and the built-in thresholds are only toy values for demonstration.
+is true. When the repository's Qwen l80 calibration artifact is present, it is
+used by default; otherwise the script falls back to toy thresholds.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
-from eigentruth.adapters import InMemoryRetriever, RetrievalActionExecutor
+from eigentruth.adapters import CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutorRegistry,
@@ -28,17 +30,22 @@ from eigentruth.registry import ArtifactRegistry
 from eigentruth.verify import (
     GroundednessVerifier,
     InMemoryVerifier,
+    RoutedVerifier,
     VerificationStatus,
     Verifier,
+    VerifierRoute,
     extract_claims,
     normalize_claim_text,
 )
 
 DEFAULT_TEXT = "Paris is the capital of France. The moon is made of cheese."
-DEFAULT_DIAGNOSTICS = {"maha_last": 4.2, "subspace_resid": 0.4}
+DEFAULT_QWEN_ARTIFACT_PATH = (
+    Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
+)
+ARITHMETIC_TEXT_PATTERN = r"\d[\d\s().%+*/-]*[+*/%-][\d\s().%+*/-]*(?:=|equals|is)\s*[-+]?\d"
 
 
-def default_artifact() -> CalibrationArtifact:
+def toy_artifact() -> CalibrationArtifact:
     """Return a tiny artifact for running the demo without benchmark outputs."""
     return CalibrationArtifact(
         model_id="demo-model",
@@ -55,11 +62,48 @@ def default_artifact() -> CalibrationArtifact:
     )
 
 
+def default_artifact_path() -> Path | None:
+    """Return the preferred repository calibration artifact when available."""
+    return DEFAULT_QWEN_ARTIFACT_PATH if DEFAULT_QWEN_ARTIFACT_PATH.exists() else None
+
+
+def default_artifact() -> CalibrationArtifact:
+    """Return the preferred demo artifact, falling back to toy thresholds."""
+    path = default_artifact_path()
+    if path is not None:
+        return CalibrationArtifact.load_json(path)
+    return toy_artifact()
+
+
 def load_artifact(path: str | None) -> CalibrationArtifact:
     """Load a calibration artifact or return the built-in demo artifact."""
     if path is None:
         return default_artifact()
     return CalibrationArtifact.load_json(path)
+
+
+def artifact_source(path: str | None) -> str:
+    """Return a stable source label for trace metadata."""
+    if path is not None:
+        return str(Path(path))
+    default_path = default_artifact_path()
+    if default_path is not None:
+        return str(default_path.relative_to(Path(__file__).resolve().parents[1]))
+    return "builtin-toy-artifact"
+
+
+def default_diagnostics_for_artifact(artifact: CalibrationArtifact) -> dict[str, float]:
+    """Return diagnostics that cross each finite artifact threshold."""
+    diagnostics = {}
+    for score in artifact.scores:
+        if not math.isfinite(score.threshold):
+            continue
+        margin = max(abs(score.threshold) * 0.10, 1e-3)
+        if score.direction == "higher":
+            diagnostics[score.name] = float(score.threshold + margin)
+        else:
+            diagnostics[score.name] = float(score.threshold - margin)
+    return diagnostics
 
 
 def parse_json_mapping(value: str, *, name: str) -> dict[str, Any]:
@@ -82,11 +126,14 @@ def build_verifier(
     facts: dict[str, Any] | None,
     evidence: list[Any] | None,
     refutations: dict[str, Any] | None,
+    *,
+    enable_calculator: bool = False,
 ) -> Verifier:
     """Build a deterministic verifier from exact-match facts or grounded evidence."""
     if evidence is not None or refutations is not None:
         evidence_documents = () if evidence is None else tuple(evidence)
-        return GroundednessVerifier(evidence=evidence_documents, refutations=refutations or {})
+        base_verifier: Verifier = GroundednessVerifier(evidence=evidence_documents, refutations=refutations or {})
+        return _with_optional_calculator(base_verifier, enabled=enable_calculator)
     if facts is None:
         facts = {
             "Paris is the capital of France": VerificationStatus.SUPPORTED.value,
@@ -96,16 +143,40 @@ def build_verifier(
         normalize_claim_text(text): VerificationStatus(str(status))
         for text, status in facts.items()
     }
-    return InMemoryVerifier(facts=normalized)
+    return _with_optional_calculator(InMemoryVerifier(facts=normalized), enabled=enable_calculator)
+
+
+def _with_optional_calculator(verifier: Verifier, *, enabled: bool) -> Verifier:
+    if not enabled:
+        return verifier
+    return RoutedVerifier((
+        VerifierRoute(
+            "calculator",
+            CalculatorVerifier(),
+            metadata_keys=("calculation", "expression"),
+            context_keys=("calculation", "expression"),
+            text_patterns=(ARITHMETIC_TEXT_PATTERN,),
+        ),
+        VerifierRoute("fallback", verifier, fallback=True),
+    ))
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
-    diagnostics = parse_json_mapping(args.diagnostics, name="--diagnostics")
+    diagnostics = (
+        default_diagnostics_for_artifact(artifact)
+        if args.diagnostics is None
+        else parse_json_mapping(args.diagnostics, name="--diagnostics")
+    )
     facts = None if args.facts is None else parse_json_mapping(args.facts, name="--facts")
     evidence = None if args.evidence is None else parse_json_sequence(args.evidence, name="--evidence")
     refutations = None if args.refutations is None else parse_json_mapping(args.refutations, name="--refutations")
+    calculator_context = (
+        {}
+        if args.calculator_context is None
+        else parse_json_mapping(args.calculator_context, name="--calculator-context")
+    )
     retrieval_evidence = (
         None
         if args.retrieval_evidence is None
@@ -113,7 +184,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     claims = extract_claims(args.text)
-    verifier = build_verifier(facts, evidence, refutations)
+    verifier = build_verifier(facts, evidence, refutations, enable_calculator=args.enable_calculator)
     controller = RiskController(artifact)
     executor_registry = ActionExecutorRegistry()
     if retrieval_evidence is not None:
@@ -129,12 +200,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier=verifier,
         controller=controller,
         executor_registry=executor_registry,
+        context=calculator_context,
         metadata={
             "artifact_model_id": artifact.model_id,
+            "artifact_source": artifact_source(args.artifact),
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
             "verifier_type": type(verifier).__name__,
+            "calculator_enabled": args.enable_calculator,
             "action_executor_type": "ActionExecutorRegistry",
             "registered_actions": tuple(action.value for action in executor_registry.executors),
         },
@@ -164,12 +238,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description="EigenTruth calibrated control-plane demo")
     parser.add_argument("--artifact", default=None, help="optional CalibrationArtifact JSON path")
-    parser.add_argument("--diagnostics", default=json.dumps(DEFAULT_DIAGNOSTICS), help="diagnostics JSON object")
+    parser.add_argument("--diagnostics", default=None,
+                        help="diagnostics JSON object; defaults to values that cross artifact thresholds")
     parser.add_argument("--text", default=DEFAULT_TEXT, help="draft text to extract and verify claims from")
     parser.add_argument("--facts", default=None, help="optional exact-match facts JSON object")
     parser.add_argument("--evidence", default=None, help="optional groundedness evidence JSON list")
     parser.add_argument("--refutations", default=None, help="optional groundedness refutations JSON object")
     parser.add_argument("--retrieval-evidence", default=None, help="optional retrieval documents JSON list")
+    parser.add_argument("--enable-calculator", action="store_true",
+                        help="run CalculatorVerifier before the selected lexical verifier")
+    parser.add_argument("--calculator-context", default=None,
+                        help="optional calculator context JSON object, e.g. {'calculation': {...}}")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

@@ -1,0 +1,527 @@
+{
+  "config": {
+    "scores": "artifacts/smollm2_truthfulqa_l80_scores.json",
+    "signal": "truth_proj",
+    "direction": "higher",
+    "repeats": 50,
+    "seed": 0,
+    "n_true": 250,
+    "n_false": 306
+  },
+  "results": {
+    "0.05": {
+      "false_alarm": 0.04992000000000003,
+      "coverage": 0.9500799999999999,
+      "detection": 0.11398692810457511,
+      "pass": true,
+      "threshold": 15.105768203735352,
+      "selective_report": {
+        "threshold": 15.105768203735352,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 43,
+        "n_accepted": 513,
+        "coverage": 0.9226618705035972,
+        "coverage_ci": {
+          "estimate": 0.9226618705035972,
+          "lower": 0.9004575854367581,
+          "upper": 0.9448661555704362,
+          "successes": 513,
+          "total": 556
+        },
+        "selective_accuracy": 0.46588693957115007,
+        "selective_accuracy_ci": {
+          "estimate": 0.46588693957115007,
+          "lower": 0.4227197021874457,
+          "upper": 0.5090541769548544,
+          "successes": 239,
+          "total": 513
+        },
+        "accuracy": 0.48741007194244607,
+        "accuracy_ci": {
+          "estimate": 0.48741007194244607,
+          "lower": 0.4458619919185403,
+          "upper": 0.5289581519663519,
+          "successes": 271,
+          "total": 556
+        },
+        "detection": 0.10457516339869281,
+        "detection_ci": {
+          "estimate": 0.10457516339869281,
+          "lower": 0.07028858065844107,
+          "upper": 0.13886174613894456,
+          "successes": 32,
+          "total": 306
+        },
+        "false_alarm": 0.044,
+        "false_alarm_ci": {
+          "estimate": 0.044,
+          "lower": 0.018576148018052022,
+          "upper": 0.06942385198194798,
+          "successes": 11,
+          "total": 250
+        }
+      }
+    },
+    "0.1": {
+      "false_alarm": 0.09504000000000005,
+      "coverage": 0.90496,
+      "detection": 0.22941176470588226,
+      "pass": true,
+      "threshold": 10.911161422729492,
+      "selective_report": {
+        "threshold": 10.911161422729492,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 95,
+        "n_accepted": 461,
+        "coverage": 0.829136690647482,
+        "coverage_ci": {
+          "estimate": 0.829136690647482,
+          "lower": 0.7978502506065563,
+          "upper": 0.8604231306884076,
+          "successes": 461,
+          "total": 556
+        },
+        "selective_accuracy": 0.49023861171366595,
+        "selective_accuracy_ci": {
+          "estimate": 0.49023861171366595,
+          "lower": 0.4446041603129369,
+          "upper": 0.535873063114395,
+          "successes": 226,
+          "total": 461
+        },
+        "accuracy": 0.5341726618705036,
+        "accuracy_ci": {
+          "estimate": 0.5341726618705036,
+          "lower": 0.4927085859825071,
+          "upper": 0.5756367377585001,
+          "successes": 297,
+          "total": 556
+        },
+        "detection": 0.23202614379084968,
+        "detection_ci": {
+          "estimate": 0.23202614379084968,
+          "lower": 0.1847287688968147,
+          "upper": 0.27932351868488464,
+          "successes": 71,
+          "total": 306
+        },
+        "false_alarm": 0.096,
+        "false_alarm_ci": {
+          "estimate": 0.096,
+          "lower": 0.05948209127564942,
+          "upper": 0.1325179087243506,
+          "successes": 24,
+          "total": 250
+        }
+      }
+    },
+    "0.2": {
+      "false_alarm": 0.18976000000000007,
+      "coverage": 0.81024,
+      "detection": 0.4054248366013073,
+      "pass": true,
+      "threshold": 6.374507904052734,
+      "selective_report": {
+        "threshold": 6.374507904052734,
+        "direction": "higher",
+        "n_total": 556,
+        "n_true": 250,
+        "n_false": 306,
+        "n_flagged": 179,
+        "n_accepted": 377,
+        "coverage": 0.6780575539568345,
+        "coverage_ci": {
+          "estimate": 0.6780575539568345,
+          "lower": 0.6392209653545339,
+          "upper": 0.7168941425591352,
+          "successes": 377,
+          "total": 556
+        },
+        "selective_accuracy": 0.53315649867374,
+        "selective_accuracy_ci": {
+          "estimate": 0.53315649867374,
+          "lower": 0.4827950274641669,
+          "upper": 0.5835179698833132,
+          "successes": 201,
+          "total": 377
+        },
+        "accuracy": 0.5953237410071942,
+        "accuracy_ci": {
+          "estimate": 0.5953237410071942,
+          "lower": 0.5545247765702959,
+          "upper": 0.6361227054440926,
+          "successes": 331,
+          "total": 556
+        },
+        "detection": 0.42483660130718953,
+        "detection_ci": {
+          "estimate": 0.42483660130718953,
+          "lower": 0.36945035385268993,
+          "upper": 0.48022284876168914,
+          "successes": 130,
+          "total": 306
+        },
+        "false_alarm": 0.196,
+        "false_alarm_ci": {
+          "estimate": 0.196,
+          "lower": 0.14679127335929126,
+          "upper": 0.24520872664070875,
+          "successes": 49,
+          "total": 250
+        }
+      }
+    }
+  },
+  "verdict": "ACCEPT",
+  "sweep_report": {
+    "schema_version": 1,
+    "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "model_revision": null,
+    "conformal_alpha": 0.1,
+    "best_by": "auroc",
+    "best": {
+      "layer": -16,
+      "score_name": "truth_proj",
+      "direction": "higher",
+      "threshold": 1.1314295530319214,
+      "conformal_alpha": 0.1,
+      "auroc": 0.7819869281045752,
+      "false_alarm": 0.096,
+      "detection": 0.2647058823529412,
+      "n_true": 250,
+      "n_false": 306
+    },
+    "layers": [
+      {
+        "layer": -16,
+        "scores": [
+          {
+            "layer": -16,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.012343406677246,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5317908496732026,
+            "false_alarm": 0.096,
+            "detection": 0.1111111111111111,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 38.8486328125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6384183006535947,
+            "false_alarm": 0.096,
+            "detection": 0.14705882352941177,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 44.590667724609375,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6098431372549019,
+            "false_alarm": 0.096,
+            "detection": 0.19281045751633988,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -16,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 1.1314295530319214,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7819869281045752,
+            "false_alarm": 0.096,
+            "detection": 0.2647058823529412,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -14,
+        "scores": [
+          {
+            "layer": -14,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.239726066589355,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5101699346405228,
+            "false_alarm": 0.096,
+            "detection": 0.08169934640522876,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 40.50196838378906,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6336470588235295,
+            "false_alarm": 0.096,
+            "detection": 0.16013071895424835,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 61.50415802001953,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5907581699346405,
+            "false_alarm": 0.096,
+            "detection": 0.1568627450980392,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -14,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 21.109073638916016,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7549150326797386,
+            "false_alarm": 0.096,
+            "detection": 0.238562091503268,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -12,
+        "scores": [
+          {
+            "layer": -12,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.440770149230957,
+            "conformal_alpha": 0.1,
+            "auroc": 0.533437908496732,
+            "false_alarm": 0.096,
+            "detection": 0.08496732026143791,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 38.74064254760742,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6308496732026144,
+            "false_alarm": 0.096,
+            "detection": 0.12745098039215685,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "nll_answer",
+            "direction": "higher",
+            "threshold": 4.352286338806152,
+            "conformal_alpha": 0.1,
+            "auroc": 0.3982352941176471,
+            "false_alarm": 0.096,
+            "detection": 0.0457516339869281,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 66.94371795654297,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5685359477124183,
+            "false_alarm": 0.096,
+            "detection": 0.12091503267973856,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -12,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 10.911161422729492,
+            "conformal_alpha": 0.1,
+            "auroc": 0.739764705882353,
+            "false_alarm": 0.096,
+            "detection": 0.23202614379084968,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -10,
+        "scores": [
+          {
+            "layer": -10,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 8.767752647399902,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5279346405228759,
+            "false_alarm": 0.096,
+            "detection": 0.10130718954248366,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 36.53255844116211,
+            "conformal_alpha": 0.1,
+            "auroc": 0.6115032679738562,
+            "false_alarm": 0.096,
+            "detection": 0.1503267973856209,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 87.647216796875,
+            "conformal_alpha": 0.1,
+            "auroc": 0.559124183006536,
+            "false_alarm": 0.096,
+            "detection": 0.10784313725490197,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -10,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 7.502295017242432,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7306274509803922,
+            "false_alarm": 0.096,
+            "detection": 0.1830065359477124,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      },
+      {
+        "layer": -8,
+        "scores": [
+          {
+            "layer": -8,
+            "score_name": "eigenscore",
+            "direction": "higher",
+            "threshold": 9.261728286743164,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5481437908496732,
+            "false_alarm": 0.096,
+            "detection": 0.11764705882352941,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "maha_last",
+            "direction": "higher",
+            "threshold": 37.86252975463867,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5578823529411765,
+            "false_alarm": 0.096,
+            "detection": 0.0915032679738562,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "subspace_resid",
+            "direction": "higher",
+            "threshold": 131.2149658203125,
+            "conformal_alpha": 0.1,
+            "auroc": 0.5083790849673203,
+            "false_alarm": 0.096,
+            "detection": 0.08169934640522876,
+            "n_true": 250,
+            "n_false": 306
+          },
+          {
+            "layer": -8,
+            "score_name": "truth_proj",
+            "direction": "higher",
+            "threshold": 31.110538482666016,
+            "conformal_alpha": 0.1,
+            "auroc": 0.7387320261437909,
+            "false_alarm": 0.096,
+            "detection": 0.19607843137254902,
+            "n_true": 250,
+            "n_false": 306
+          }
+        ]
+      }
+    ],
+    "eigentruth_version": "0.1.0",
+    "scores_path": "artifacts/smollm2_truthfulqa_l80_scores.json",
+    "created_at": "2026-06-22T06:46:58.952183+00:00",
+    "commit_sha": null,
+    "metadata": {
+      "source": "eval_conformal.py",
+      "config": {
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "layer": -12,
+        "offline": false,
+        "manifold_n": 266,
+        "n_manifold_false": 338,
+        "hidden_dim": 576,
+        "subspace_rank": 2,
+        "n_pos": 306,
+        "n_neg": 250,
+        "seed": 0,
+        "eigenscore_alpha": 0.001,
+        "batch_size": 8,
+        "inside_samples": 0,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "length_bucketed_batches": true,
+        "cache_only": false,
+        "layer_stats_cache": "/tmp/eigentruth-smollm2-l80/layer-stats.pt",
+        "refresh_layer_stats_cache": false,
+        "eval_reps_cache": "/tmp/eigentruth-smollm2-l80/eval-reps-cache",
+        "eval_reps_cache_shard_size": 256,
+        "refresh_eval_reps_cache": false,
+        "progress_every": 50,
+        "warmup_checkpoint": "/tmp/eigentruth-smollm2-l80/warmup-checkpoint.pt",
+        "warmup_checkpoint_every": 50,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      }
+    }
+  }
+}

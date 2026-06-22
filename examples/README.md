@@ -15,10 +15,19 @@ A larger qualitative comparison over several prompts. It prints generated text w
 ### `calibrated_control_demo.py`
 
 A dependency-light control-plane demonstration. It loads a `CalibrationArtifact`
-or uses built-in toy thresholds, verifies simple claims, combines diagnostics
-and verification results through `RiskController`, plans an `ActionRequest`,
-executes it through `ActionExecutorRegistry`, feeds retrieval hits back into
-verification when available, and prints a final JSON `ProductTrace`.
+or uses built-in toy thresholds when no repository artifact is present, verifies
+simple claims, combines diagnostics and verification results through
+`RiskController`, plans an `ActionRequest`, executes it through
+`ActionExecutorRegistry`, feeds retrieval hits back into verification when
+available, and prints a final JSON `ProductTrace`.
+
+### `sqlite_state_control_demo.py`
+
+A dependency-free structured-state control demonstration. It creates a local
+SQLite order/inventory/account fixture, maps read-only SQL query results into
+`StructuredStateVerifier`, and emits a `ProductTrace` where database state
+refutes one business claim even though internal diagnostics are below the toy
+threshold.
 
 ## Running An Example
 
@@ -28,19 +37,25 @@ Install EigenTruth in editable mode and run a script from the repository root:
 python -m pip install -e ".[examples]"
 python examples/qwen_truth_demo.py
 python examples/calibrated_control_demo.py
+python examples/sqlite_state_control_demo.py
 ```
 
 The examples may download model weights from Hugging Face. Review model licenses, download sizes, and any requirements for remote code before running a new model.
 
-`calibrated_control_demo.py` does not load a model or download data. It is a
-small product-flow check for artifact-driven diagnostics, claim verification,
+`calibrated_control_demo.py` does not load a model or download data. In this
+repository it defaults to
+`artifacts/qwen05_truthfulqa_l80_best_calibration.json` (`truth_proj`, layer
+`-10`) and auto-generates diagnostics that cross the configured threshold. It is
+a small product-flow check for artifact-driven diagnostics, claim verification,
 action planning, dry-run execution, and trace output:
 
 ```bash
-python examples/calibrated_control_demo.py \
-  --diagnostics '{"maha_last": 4.2, "subspace_resid": 0.4}'
+python examples/calibrated_control_demo.py
 ```
 
+This default path produces a dry-run `abstain` trace for the built-in mixed
+claim text because the artifact diagnostic threshold is exceeded and the second
+claim is refuted.
 
 The demo can also route unsupported claims to the dependency-free in-memory
 retrieval executor, feed retrieval hits back into the groundedness verifier, and
@@ -68,6 +83,35 @@ python examples/calibrated_control_demo.py \
   --text "Paris is the capital of France. The moon is made of cheese." \
   --evidence '[{"source": "atlas", "text": "Paris is the capital of France."}, {"source": "nasa", "text": "The moon is not made of cheese; lunar samples are rock."}]'
 ```
+
+For deterministic arithmetic claims, enable the local calculator verifier. The
+demo routes arithmetic-looking claims or structured calculation context to
+`CalculatorVerifier`, then falls back to the lexical verifier for ordinary
+claims:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --enable-calculator \
+  --text "2 + 2 = 5." \
+  --diagnostics '{"truth_proj": 0.0}'
+```
+
+This path produces a refuted claim and an `abstain` decision even when internal
+diagnostics are low, because the calculator result contradicts the claim.
+
+`sqlite_state_control_demo.py` also avoids model loading and network access. It
+shows the structured-state product path using only stdlib SQLite:
+
+```bash
+python examples/sqlite_state_control_demo.py \
+  --database /tmp/eigentruth_orders.db \
+  --output /tmp/eigentruth_sqlite_trace.json
+```
+
+The demo seeds two orders. `ord_1` is supported as shippable; `ord_2` is refuted
+because the account is suspended and inventory is insufficient. The final trace
+therefore records low internal diagnostics, a `structured_state` refutation, and
+a dry-run `abstain` action.
 
 ## Structure For New Example Scripts
 
