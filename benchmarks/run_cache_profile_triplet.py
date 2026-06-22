@@ -25,6 +25,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.compare_profiles import build_profile_comparison  # noqa: E402
 
+TRIPLET_RUN_NAMES = ("uncached", "cached", "cache_only")
+
 
 @dataclass(frozen=True)
 class CacheProfileTripletConfig:
@@ -50,6 +52,7 @@ class CacheProfileTripletConfig:
     layer_stats_cache_path: Path | None = None
     eval_reps_cache_path: Path | None = None
     uncached_cache_mode: str = "refresh"
+    run_names: Sequence[str] = TRIPLET_RUN_NAMES
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -75,9 +78,11 @@ class CacheProfileTripletConfig:
             raise ValueError("cache_only_max_total_ratio must be non-negative.")
         if self.uncached_cache_mode not in {"refresh", "warm_start", "none"}:
             raise ValueError("uncached_cache_mode must be one of: refresh, warm_start, none.")
+        run_names = _normalize_run_names(self.run_names)
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "uncached_cache_mode", str(self.uncached_cache_mode))
+        object.__setattr__(self, "run_names", run_names)
 
     @property
     def statement_encoding_cache(self) -> Path:
@@ -183,12 +188,8 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
 
 
 def build_triplet_commands(config: CacheProfileTripletConfig) -> dict[str, list[str]]:
-    """Return commands for all profile triplet runs in execution order."""
-    return {
-        "uncached": build_eval_command(config, "uncached"),
-        "cached": build_eval_command(config, "cached"),
-        "cache_only": build_eval_command(config, "cache_only"),
-    }
+    """Return commands for configured profile triplet runs in execution order."""
+    return {name: build_eval_command(config, name) for name in config.run_names}
 
 
 def run_triplet(
@@ -214,41 +215,22 @@ def run_triplet(
             "dry_run": True,
             "output_dir": str(config.output_dir),
             "commands": command_log,
+            "run_names": tuple(command_log),
             "caches": _cache_paths(config),
             "uncached_cache_mode": config.uncached_cache_mode,
         }
     else:
-        comparison = build_profile_comparison(
-            [
-                ("uncached", config.profile_path("uncached")),
-                ("cached", config.profile_path("cached")),
-                ("cache_only", config.profile_path("cache_only")),
-            ],
-            baseline="uncached",
-            notes=["same-machine uncached/cached/cache-only TruthfulQA profile triplet"],
-            max_run_total_ratios={
-                "cached": config.cached_max_total_ratio,
-                "cache_only": config.cache_only_max_total_ratio,
-            },
-        )
-        with open(config.comparison_report, "w", encoding="utf-8") as f:
-            json.dump(comparison, f, indent=2)
+        comparison = _build_comparison_if_available(config)
         payload = {
             "dry_run": False,
             "output_dir": str(config.output_dir),
             "commands": command_log,
-            "profiles": {
-                "uncached": str(config.profile_path("uncached")),
-                "cached": str(config.profile_path("cached")),
-                "cache_only": str(config.profile_path("cache_only")),
-            },
-            "results": {
-                "uncached": str(config.result_path("uncached")),
-                "cached": str(config.result_path("cached")),
-                "cache_only": str(config.result_path("cache_only")),
-            },
-            "comparison_report": str(config.comparison_report),
-            "regression_gate": comparison.get("regression_gate"),
+            "run_names": tuple(command_log),
+            "profiles": {name: str(config.profile_path(name)) for name in command_log},
+            "results": {name: str(config.result_path(name)) for name in command_log},
+            "comparison_report": str(config.comparison_report) if comparison is not None else None,
+            "comparison_skipped_reason": None if comparison is not None else "baseline run 'uncached' was not executed",
+            "regression_gate": comparison.get("regression_gate") if comparison is not None else None,
             "caches": _cache_paths(config),
             "uncached_cache_mode": config.uncached_cache_mode,
         }
@@ -260,12 +242,50 @@ def run_triplet(
     return payload
 
 
+def _normalize_run_names(run_names: Sequence[str]) -> tuple[str, ...]:
+    requested = tuple(str(name).strip() for name in run_names if str(name).strip())
+    if not requested:
+        raise ValueError("run_names must not be empty.")
+    unknown = tuple(name for name in requested if name not in TRIPLET_RUN_NAMES)
+    if unknown:
+        expected = ", ".join(TRIPLET_RUN_NAMES)
+        raise ValueError(f"unknown triplet run name(s): {', '.join(unknown)}; expected one of: {expected}.")
+    if len(requested) != len(set(requested)):
+        raise ValueError("run_names must not contain duplicates.")
+    selected = tuple(name for name in TRIPLET_RUN_NAMES if name in set(requested))
+    return selected
+
+
+def _build_comparison_if_available(config: CacheProfileTripletConfig) -> dict[str, Any] | None:
+    if "uncached" not in config.run_names:
+        return None
+    profiles = [(name, config.profile_path(name)) for name in config.run_names]
+    max_run_total_ratios = {}
+    if "cached" in config.run_names:
+        max_run_total_ratios["cached"] = config.cached_max_total_ratio
+    if "cache_only" in config.run_names:
+        max_run_total_ratios["cache_only"] = config.cache_only_max_total_ratio
+    comparison = build_profile_comparison(
+        profiles,
+        baseline="uncached",
+        notes=["same-machine uncached/cached/cache-only TruthfulQA profile triplet"],
+        max_run_total_ratios=max_run_total_ratios,
+    )
+    with open(config.comparison_report, "w", encoding="utf-8") as f:
+        json.dump(comparison, f, indent=2)
+    return comparison
+
+
 def _cache_paths(config: CacheProfileTripletConfig) -> dict[str, str]:
     return {
         "statement_encoding_cache": str(config.statement_encoding_cache),
         "layer_stats_cache": str(config.layer_stats_cache),
         "eval_reps_cache": str(config.eval_reps_cache),
     }
+
+
+def _parse_run_names(value: str) -> tuple[str, ...]:
+    return _normalize_run_names(tuple(item.strip() for item in value.split(",") if item.strip()))
 
 
 def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
@@ -290,6 +310,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         layer_stats_cache_path=Path(args.layer_stats_cache) if args.layer_stats_cache else None,
         eval_reps_cache_path=Path(args.eval_reps_cache) if args.eval_reps_cache else None,
         uncached_cache_mode=args.uncached_cache_mode,
+        run_names=_parse_run_names(args.runs),
     )
 
 
@@ -345,6 +366,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--uncached-cache-mode", default="refresh", choices=["refresh", "warm_start", "none"],
                         help="cache behavior for the uncached run: refresh all caches, warm-start from "
                              "statement/layer caches without eval reps, or avoid caches")
+    parser.add_argument("--runs", default="uncached,cached,cache_only",
+                        help="comma-list of triplet runs to execute in canonical order: "
+                             "uncached,cached,cache_only")
     parser.add_argument("--clean", action="store_true",
                         help="remove --output-dir before running")
     parser.add_argument("--dry-run", action="store_true",

@@ -999,6 +999,25 @@ def test_run_cache_profile_triplet_supports_warm_start_cache_overrides(tmp_path)
     assert cache_only[cache_only.index("--eval-reps-cache") + 1] == str(shared / "eval-reps-cache")
 
 
+def test_run_cache_profile_triplet_can_run_cache_only_subset(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path / "cell",
+        model="tiny-local",
+        layer=-2,
+        batch_size=2,
+        run_names=("cache_only",),
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+
+    assert payload["run_names"] == ("cache_only",)
+    assert tuple(payload["commands"]) == ("cache_only",)
+    assert "--cache-only" in payload["commands"]["cache_only"]
+    assert "uncached" not in payload["commands"]
+
+
 def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(
@@ -1132,6 +1151,105 @@ def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_p
         second_commands["cache_only"][second_commands["cache_only"].index("--eval-reps-cache") + 1]
         == second_eval_cache
     )
+
+
+def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    seen = []
+
+    def write_profile(path: Path, total: float) -> None:
+        path.write_text(
+            json.dumps({
+                "total_seconds": total,
+                "phases": {"score_postprocess": total},
+                "summary": {"bottleneck": "score_postprocess"},
+            }),
+            encoding="utf-8",
+        )
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        seen.append({
+            "batch_size": config.batch_size,
+            "run_names": tuple(config.run_names),
+            "uncached_cache_mode": config.uncached_cache_mode,
+            "eval_reps_cache": str(config.eval_reps_cache),
+        })
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        profiles = {}
+        results = {}
+        for name in config.run_names:
+            profile_path = config.profile_path(name)
+            result_path = config.result_path(name)
+            write_profile(profile_path, 100.0 if name == "uncached" else 10.0 + config.batch_size)
+            result_path.write_text(json.dumps({"auroc": {"truth_proj": 0.91}}), encoding="utf-8")
+            profiles[name] = str(profile_path)
+            results[name] = str(result_path)
+        comparison_path = None
+        regression_gate = None
+        if "uncached" in config.run_names:
+            comparison_path = config.comparison_report
+            comparison_path.write_text(
+                json.dumps({
+                    "runs": [
+                        {"name": "uncached", "total_seconds": 100.0, "bottleneck": "forward"},
+                        {
+                            "name": "cache_only",
+                            "total_seconds": 10.0 + config.batch_size,
+                            "bottleneck": "score_postprocess",
+                            "total_delta": {
+                                "speedup_vs_baseline": 100.0 / (10.0 + config.batch_size),
+                                "ratio_to_baseline": (10.0 + config.batch_size) / 100.0,
+                            },
+                        },
+                    ],
+                    "fastest": {"name": "cache_only"},
+                    "regression_gate": {"passed": True},
+                }),
+                encoding="utf-8",
+            )
+            regression_gate = {"passed": True}
+        return {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "profiles": profiles,
+            "results": results,
+            "comparison_report": str(comparison_path) if comparison_path is not None else None,
+            "comparison_skipped_reason": (
+                None if comparison_path is not None else "baseline run 'uncached' was not executed"
+            ),
+            "regression_gate": regression_gate,
+            "caches": {"eval_reps_cache": str(config.eval_reps_cache)},
+            "uncached_cache_mode": config.uncached_cache_mode,
+            "run_names": tuple(config.run_names),
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(1, 2),
+        hidden_state_captures=("outputs",),
+        matrix_mode="rescore",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=False)
+    first, second = report["cells"]
+
+    assert report["config"]["matrix_mode"] == "rescore"
+    assert seen[0]["run_names"] == ("uncached", "cached", "cache_only")
+    assert seen[0]["uncached_cache_mode"] == "refresh"
+    assert seen[1]["run_names"] == ("cache_only",)
+    assert seen[1]["uncached_cache_mode"] == "warm_start"
+    assert seen[0]["eval_reps_cache"] == seen[1]["eval_reps_cache"]
+    assert first["shared_cache_group"] == second["shared_cache_group"]
+    assert second["summary"]["regression_gate"] is None
+    assert second["summary"]["comparison_skipped_reason"] == "baseline run 'uncached' was not executed"
+    assert second["summary"]["totals"]["cache_only"]["total_seconds"] == pytest.approx(12.0)
+    assert second["summary"]["truth_proj_auroc"] == pytest.approx(0.91)
+    assert report["leaderboard"][0]["gate_passed"] is True
+    assert report["leaderboard"][1]["gate_passed"] is None
 
 
 def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):

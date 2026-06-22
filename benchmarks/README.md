@@ -762,6 +762,30 @@ run that reuses statement/layer caches but still omits the eval-reps cache, so
 forced-answer forward timing remains visible while repeated warmup/tokenization
 cost is reduced.
 
+For faster report/calibration iteration on an already shared layer/capture
+group, add `--matrix-mode rescore`. In that mode the first cell in each shared
+cache group runs the full uncached/cached/cache-only triplet and later cells in
+the same group run only `cache_only` against the shared eval-reps cache:
+
+```bash
+python benchmarks/run_cache_profile_matrix.py \
+  --output-dir /tmp/eigentruth-qwen05-profile-rescore \
+  --shared-cache-dir /tmp/eigentruth-qwen05-profile-cache \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --real-truthfulqa \
+  --limit 24 \
+  --manifold-questions 12 \
+  --layers=-12 \
+  --batch-sizes=1,2,4 \
+  --hidden-state-captures=outputs \
+  --matrix-mode rescore \
+  --dry-run
+```
+
+Use `rescore` only when the question is post-processing/report behavior over
+the same cached representations. It deliberately skips repeated forward timing,
+so it should not be used to compare batch-size runtime performance.
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
 to verify that the gates pass acceptable candidates and catch expected

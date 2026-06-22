@@ -23,6 +23,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.run_cache_profile_triplet import CacheProfileTripletConfig, run_triplet  # noqa: E402
 
+MATRIX_MODES = ("triplet", "rescore")
+
 
 @dataclass(frozen=True)
 class CacheProfileMatrixConfig:
@@ -45,6 +47,7 @@ class CacheProfileMatrixConfig:
     length_bucketed_batches: bool = True
     offline: bool = True
     shared_cache_dir: Path | None = None
+    matrix_mode: str = "triplet"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -61,9 +64,15 @@ class CacheProfileMatrixConfig:
             raise ValueError("batch_sizes must be >=1.")
         if not captures:
             raise ValueError("hidden_state_captures must not be empty.")
+        matrix_mode = str(self.matrix_mode)
+        if matrix_mode not in MATRIX_MODES:
+            raise ValueError("matrix_mode must be one of: triplet, rescore.")
+        if matrix_mode == "rescore" and self.shared_cache_dir is None:
+            raise ValueError("matrix_mode='rescore' requires shared_cache_dir.")
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
+        object.__setattr__(self, "matrix_mode", matrix_mode)
 
     @property
     def report_path(self) -> Path:
@@ -93,6 +102,7 @@ def triplet_config_for_cell(
     cell: dict[str, Any],
     *,
     uncached_cache_mode: str = "refresh",
+    run_names: Sequence[str] = ("uncached", "cached", "cache_only"),
 ) -> CacheProfileTripletConfig:
     """Build a triplet config for one matrix cell."""
     shared_paths = _shared_cache_paths(config, cell)
@@ -117,6 +127,7 @@ def triplet_config_for_cell(
         layer_stats_cache_path=shared_paths.get("layer_stats_cache"),
         eval_reps_cache_path=shared_paths.get("eval_reps_cache"),
         uncached_cache_mode=uncached_cache_mode,
+        run_names=run_names,
     )
 
 
@@ -132,13 +143,16 @@ def run_matrix(
     seen_shared_cache_groups: set[str] = set()
     for cell in matrix_cells(config):
         shared_cache_group = _shared_cache_group(config, cell)
-        uncached_cache_mode = "refresh"
-        if shared_cache_group is not None and shared_cache_group in seen_shared_cache_groups:
-            uncached_cache_mode = "warm_start"
+        first_shared_group_run = shared_cache_group is None or shared_cache_group not in seen_shared_cache_groups
+        uncached_cache_mode, run_names = _cell_execution_plan(
+            config,
+            first_shared_group_run=first_shared_group_run,
+        )
         triplet_config = triplet_config_for_cell(
             config,
             cell,
             uncached_cache_mode=uncached_cache_mode,
+            run_names=run_names,
         )
         triplet_payload = run_triplet(triplet_config, clean=clean, dry_run=dry_run)
         if shared_cache_group is not None:
@@ -148,6 +162,7 @@ def run_matrix(
             "output_dir": str(triplet_config.output_dir),
             "shared_cache_group": shared_cache_group,
             "uncached_cache_mode": uncached_cache_mode,
+            "run_names": tuple(run_names),
             "triplet": triplet_payload,
             "summary": _cell_summary(triplet_payload),
         })
@@ -168,6 +183,7 @@ def run_matrix(
             "length_bucketed_batches": config.length_bucketed_batches,
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
             "shared_cache_root": None if config.shared_cache_dir is None else str(_shared_cache_root(config)),
+            "matrix_mode": config.matrix_mode,
         },
         "cells": cells,
         "leaderboard": _leaderboard(cells),
@@ -176,6 +192,19 @@ def run_matrix(
     with open(config.report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
     return report
+
+
+def _cell_execution_plan(
+    config: CacheProfileMatrixConfig,
+    *,
+    first_shared_group_run: bool,
+) -> tuple[str, tuple[str, ...]]:
+    if config.matrix_mode == "triplet":
+        uncached_cache_mode = "refresh" if first_shared_group_run else "warm_start"
+        return uncached_cache_mode, ("uncached", "cached", "cache_only")
+    if first_shared_group_run:
+        return "refresh", ("uncached", "cached", "cache_only")
+    return "warm_start", ("cache_only",)
 
 
 def _shared_cache_paths(config: CacheProfileMatrixConfig, cell: Mapping[str, Any]) -> dict[str, Path]:
@@ -242,7 +271,7 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
         }
     comparison_path = triplet_payload.get("comparison_report")
     if not comparison_path:
-        return {"dry_run": False}
+        return _cell_summary_without_comparison(triplet_payload)
     comparison = json.loads(Path(str(comparison_path)).read_text(encoding="utf-8"))
     runs = {str(run["name"]): run for run in comparison.get("runs", [])}
     auroc = _result_auroc(triplet_payload)
@@ -260,6 +289,34 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
             }
             for name, run in runs.items()
         },
+    }
+
+
+def _cell_summary_without_comparison(triplet_payload: dict[str, Any]) -> dict[str, Any]:
+    profiles = {
+        str(name): str(path)
+        for name, path in dict(triplet_payload.get("profiles", {})).items()
+        if path
+    }
+    auroc = _result_auroc(triplet_payload)
+    totals = {}
+    for name, path in profiles.items():
+        if not Path(path).exists():
+            continue
+        run = json.loads(Path(path).read_text(encoding="utf-8"))
+        totals[name] = {
+            "total_seconds": run.get("total_seconds"),
+            "bottleneck": _run_bottleneck(run),
+            "speedup_vs_baseline": None,
+            "ratio_to_baseline": None,
+        }
+    return {
+        "dry_run": False,
+        "regression_gate": None,
+        "fastest": None,
+        "truth_proj_auroc": auroc.get("truth_proj"),
+        "comparison_skipped_reason": triplet_payload.get("comparison_skipped_reason"),
+        "totals": totals,
     }
 
 
@@ -304,9 +361,15 @@ def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
             "cache_only_total_seconds": total_seconds,
             "cache_only_speedup_vs_baseline": cache_only.get("speedup_vs_baseline"),
             "truth_proj_auroc": summary.get("truth_proj_auroc"),
-            "gate_passed": bool(dict(summary.get("regression_gate") or {}).get("passed", False)),
+            "gate_passed": _gate_passed(summary.get("regression_gate")),
         })
     return tuple(sorted(scored, key=lambda item: (item["cache_only_total_seconds"], str(item["id"]))))
+
+
+def _gate_passed(regression_gate: Any) -> bool | None:
+    if regression_gate is None:
+        return None
+    return bool(dict(regression_gate).get("passed", False))
 
 
 def _shell_join(command: Sequence[str]) -> str:
@@ -355,6 +418,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         length_bucketed_batches=not args.no_length_bucketed_batches,
         offline=not args.real_truthfulqa,
         shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
+        matrix_mode=args.matrix_mode,
     )
 
 
@@ -367,6 +431,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             cell
             for cell in report["cells"]
             if not cell["summary"].get("dry_run")
+            and cell["summary"].get("regression_gate") is not None
             and not dict(cell["summary"].get("regression_gate") or {}).get("passed", False)
         ]
         if failures:
@@ -397,6 +462,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--shared-cache-dir", default=None,
                         help="optional directory for caches shared across cells with the same layer/capture; "
                              "later batch-size cells warm-start from statement/layer caches")
+    parser.add_argument("--matrix-mode", default="triplet", choices=MATRIX_MODES,
+                        help="triplet runs every cell as uncached/cached/cache-only; rescore runs the first shared "
+                             "cache group cell as a full triplet and repeated group cells as cache-only")
     parser.add_argument("--real-truthfulqa", action="store_true")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
