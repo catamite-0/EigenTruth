@@ -910,6 +910,23 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_registry_baseline_smoke_writes_pass_and_expected_failure_reports(tmp_path):
+    module = importlib.import_module("benchmarks.registry_baseline_smoke")
+
+    payload = module.build_registry_baseline_smoke(tmp_path)
+    pass_report = payload["pass_report"]
+    failure_report = payload["expected_failure_report"]
+
+    assert (tmp_path / "artifact-manifest.json").exists()
+    assert (tmp_path / "registry.json").exists()
+    assert (tmp_path / "registry_baseline_gate_pass_report.json").exists()
+    assert (tmp_path / "registry_baseline_gate_expected_failure_report.json").exists()
+    assert pass_report["registry_baseline"]["verification"]["passed"] is True
+    assert pass_report["comparison"]["regression_gate"]["passed"] is True
+    assert failure_report["comparison"]["regression_gate"]["passed"] is False
+    assert failure_report["comparison"]["regression_gate"]["failures"][0]["run"] == "regression"
+
+
 def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
     module = importlib.import_module("benchmarks.verify_artifact_manifest")
     from eigentruth.registry import build_artifact_manifest
@@ -1004,6 +1021,135 @@ def test_promote_artifact_manifest_rejects_drift_by_default(tmp_path):
 
     assert verification_path.exists()
     assert ArtifactRegistry.load_json(registry_path).list_records() == ()
+
+
+def test_compare_registry_baseline_uses_verified_manifest_profile(tmp_path):
+    module = importlib.import_module("benchmarks.compare_registry_baseline")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    baseline_profile = tmp_path / "profile-uncached.json"
+    candidate_profile = tmp_path / "profile-candidate.json"
+    baseline_profile.write_text(
+        json.dumps({"total_seconds": 100.0, "phases": {"forced_answer_forward": 80.0}}),
+        encoding="utf-8",
+    )
+    candidate_profile.write_text(
+        json.dumps({"total_seconds": 105.0, "phases": {"forced_answer_forward": 82.0}}),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"profiles.uncached": baseline_profile}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="unit-baseline",
+        path=manifest_path,
+        version="0.3",
+    ).save_json()
+
+    payload = module.compare_registry_baseline(
+        registry_path=registry_path,
+        baseline_name="unit-baseline",
+        baseline_version="0.3",
+        candidate_profiles=(("candidate", candidate_profile),),
+        max_total_ratio=1.10,
+    )
+
+    assert payload["registry_baseline"]["verification"]["passed"] is True
+    assert payload["registry_baseline"]["profile_path"] == str(baseline_profile)
+    assert payload["comparison"]["regression_gate"]["passed"] is True
+    assert payload["comparison"]["runs"][1]["total_delta"]["ratio_to_baseline"] == pytest.approx(1.05)
+
+
+def test_compare_registry_baseline_rejects_drift_by_default(tmp_path):
+    module = importlib.import_module("benchmarks.compare_registry_baseline")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    baseline_profile = tmp_path / "profile-uncached.json"
+    candidate_profile = tmp_path / "profile-candidate.json"
+    baseline_profile.write_text(
+        json.dumps({"total_seconds": 100.0, "phases": {"forced_answer_forward": 80.0}}),
+        encoding="utf-8",
+    )
+    candidate_profile.write_text(
+        json.dumps({"total_seconds": 101.0, "phases": {"forced_answer_forward": 81.0}}),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"profiles.uncached": baseline_profile}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    baseline_profile.write_text(
+        json.dumps({"total_seconds": 200.0, "phases": {"forced_answer_forward": 180.0}}),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="unit-baseline",
+        path=manifest_path,
+        version="0.3",
+    ).save_json()
+
+    with pytest.raises(ValueError, match="verification failed"):
+        module.compare_registry_baseline(
+            registry_path=registry_path,
+            baseline_name="unit-baseline",
+            baseline_version="0.3",
+            candidate_profiles=(("candidate", candidate_profile),),
+        )
+
+
+def test_compare_registry_baseline_cli_exits_on_regression(tmp_path):
+    module = importlib.import_module("benchmarks.compare_registry_baseline")
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    baseline_profile = tmp_path / "profile-uncached.json"
+    candidate_profile = tmp_path / "profile-candidate.json"
+    report_path = tmp_path / "reports" / "registry-comparison.json"
+    baseline_profile.write_text(
+        json.dumps({"total_seconds": 100.0, "phases": {"forced_answer_forward": 80.0}}),
+        encoding="utf-8",
+    )
+    candidate_profile.write_text(
+        json.dumps({"total_seconds": 130.0, "phases": {"forced_answer_forward": 100.0}}),
+        encoding="utf-8",
+    )
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"profiles.uncached": baseline_profile}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="unit-baseline",
+        path=manifest_path,
+        version="0.3",
+    ).save_json()
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--registry",
+            str(registry_path),
+            "--baseline-name",
+            "unit-baseline",
+            "--baseline-version",
+            "0.3",
+            "--candidate-profile",
+            f"candidate={candidate_profile}",
+            "--max-total-ratio",
+            "1.10",
+            "--json",
+            str(report_path),
+            "--fail-on-regression",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    assert payload["comparison"]["regression_gate"]["passed"] is False
+    assert payload["comparison"]["regression_gate"]["failures"][0]["run"] == "candidate"
 
 
 def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):

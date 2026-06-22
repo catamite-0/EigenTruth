@@ -816,13 +816,32 @@ python benchmarks/promote_artifact_manifest.py \
   --verification-report /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
 ```
 
-`make perf-check` runs `benchmarks/profile_gate_smoke.py` and
-`benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
-to verify that the gates pass acceptable candidates and catch expected
-regressions. They are stable enough for default local/CI checks because they do
-not load a model or measure machine speed. Use real `eval_truthfulqa.py
---profile-json` artifacts, or `run_cache_profile_triplet.py`, before making
-actual runtime claims.
+After promotion, `compare_registry_baseline.py` can use the registered manifest
+as a fail-closed performance baseline. It verifies the manifest before reading
+the baseline profile artifact, then delegates the regression gate to
+`compare_profiles.py`:
+
+```bash
+python benchmarks/compare_registry_baseline.py \
+  --registry artifacts/registry.json \
+  --baseline-name qwen05-profile-rescore \
+  --baseline-version 0.3 \
+  --baseline-profile-artifact profiles.uncached \
+  --candidate-profile candidate=/tmp/eigentruth-current-profile.json \
+  --max-total-ratio 1.10 \
+  --json artifacts/qwen05_registry_profile_gate.json \
+  --fail-on-regression
+```
+
+`make perf-check` runs `benchmarks/profile_gate_smoke.py`,
+`benchmarks/cache_profile_smoke.py`, and
+`benchmarks/registry_baseline_smoke.py`. These use fixed synthetic profile
+payloads to verify that direct gates, cache-profile gates, and registry-backed
+baseline gates pass acceptable candidates and catch expected regressions. They
+are stable enough for default local/CI checks because they do not load a model
+or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
+artifacts, or `run_cache_profile_triplet.py`, before making actual runtime
+claims.
 
 ## `compare_transfer.py`
 
