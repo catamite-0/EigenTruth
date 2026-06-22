@@ -1301,6 +1301,69 @@ def test_run_adapter_promotion_workflow_can_include_registry_baseline_gate(tmp_p
     assert payload["registry_baseline_comparison"]["comparison"]["regression_gate"]["passed"] is True
 
 
+def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_path):
+    module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
+    scores_path = tmp_path / "scores.json"
+    qa_path = tmp_path / "qa.json"
+    verifier_report_path = tmp_path / "verifier-report.json"
+    route_report_path = tmp_path / "route-comparison.json"
+    promotion_report_path = tmp_path / "promotion.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+                {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+                {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "source": "qa:q2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.refresh_verifier_route_artifacts(
+        module.VerifierRouteArtifactRefreshConfig(
+            score_dumps=(("synthetic", scores_path),),
+            verifier_report_path=verifier_report_path,
+            qa_corpus_path=qa_path,
+            alphas=(0.2,),
+            repeats=1,
+            promotion_report_path=promotion_report_path,
+            route_report_path=route_report_path,
+            promotion_gate_routes=("structured_qa",),
+            promotion_gate_min_selected=4,
+            min_decision_accuracy=1.0,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=1.0,
+            max_mean_duration_seconds=1.0,
+            max_p99_duration_seconds=1.0,
+            max_max_duration_seconds=1.0,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+        )
+    )
+    verifier_report = json.loads(verifier_report_path.read_text(encoding="utf-8"))
+    promotion_report = json.loads(promotion_report_path.read_text(encoding="utf-8"))
+
+    assert payload["verifier_report_summary"]["runs"][0]["routes"]["structured_qa"]["selected"] == 4
+    assert verifier_report["runs"][0]["route_quality"]["structured_qa"]["decision_accuracy"] == pytest.approx(1.0)
+    assert verifier_report["runs"][0]["cache_stats"]["qa_verifier"]["requests"] == 4
+    assert payload["promotion"]["decision"]["status"] == "promote"
+    assert promotion_report["decision"]["recommended_route"] == "structured_qa"
+    assert route_report_path.exists()
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"

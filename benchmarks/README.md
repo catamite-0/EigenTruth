@@ -427,6 +427,42 @@ false alarm, detection, suppression, and rescued-detection rates. New reports
 also include route-level `p95_duration_seconds` and `p99_duration_seconds`
 tail-latency fields for promotion gates.
 
+## `refresh_verifier_route_artifacts.py`
+
+Regenerates current-schema verifier route reports from saved score dumps,
+claims, and local verifier corpora without rerunning model forward passes. Use
+this when older committed reports lack `route_quality`, `cache_stats`, or
+tail-latency fields required by route promotion gates.
+
+```bash
+python benchmarks/refresh_verifier_route_artifacts.py \
+  --scores qwen=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smol=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.1 \
+  --repeats 5 \
+  --verifier-report-json artifacts/truthfulqa_l80_structured_qa_verifier_ensemble_report_v2.json \
+  --promotion-json artifacts/qwen_smol_structured_qa_promotion_workflow.json \
+  --route-report-json artifacts/qwen_smol_structured_qa_route_comparison.json \
+  --gate-route structured_qa \
+  --gate-min-selected 500 \
+  --min-decision-accuracy 0.99 \
+  --max-false-supported-rate 0.0 \
+  --min-false-refuted-rate 0.99 \
+  --max-mean-duration-seconds 0.001 \
+  --max-p95-duration-seconds 0.001 \
+  --max-p99-duration-seconds 0.001 \
+  --max-max-duration-seconds 0.005 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --fail-on-blocked
+```
+
+Add `--registry`, `--baseline-*`, `--candidate-profile`, and
+`--max-total-ratio` flags when the refresh should also run the same registry
+baseline gate used by `run_adapter_promotion_workflow.py`.
+
 ## `compare_verifier_routes.py`
 
 Aggregates `route_quality` and per-alpha `route_control_impact` from one or more
