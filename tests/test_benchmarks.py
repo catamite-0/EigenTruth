@@ -1481,6 +1481,179 @@ def test_run_adapter_promotion_workflow_can_include_registry_baseline_gate(tmp_p
     assert payload["registry_baseline_comparison"]["comparison"]["regression_gate"]["passed"] is True
 
 
+def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_promotion_workflow")
+    route_source_path = tmp_path / "routes.json"
+    route_report_path = tmp_path / "route-comparison.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    _write_adapter_promotion_route_report(route_source_path)
+
+    payload = module.run_adapter_promotion_workflow(
+        module.AdapterPromotionWorkflowConfig(
+            reports=(("routes", route_source_path),),
+            route_report_path=route_report_path,
+            gate_routes=("structured_state",),
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_duration_seconds=0.02,
+            max_p95_duration_seconds=0.02,
+            max_p99_duration_seconds=0.02,
+            max_max_duration_seconds=0.03,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+            min_cache_hit_rate=0.80,
+            artifact_manifest_path=manifest_path,
+        )
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["artifact_manifest"] == str(manifest_path)
+    assert manifest["metadata"]["runner"] == "run_adapter_promotion_workflow"
+    assert manifest["metadata"]["promotion_status"] == "promote"
+    assert manifest["metadata"]["recommended_route"] == "structured_state"
+    assert manifest["artifacts"]["route_comparison_report"]["exists"] is True
+    assert manifest["artifacts"]["verifier_reports.routes"]["exists"] is True
+
+
+def _write_route_baseline_manifest(
+    tmp_path: Path,
+    *,
+    name: str,
+    route: str,
+    decision_accuracy: float,
+    false_supported_rate: float,
+    false_refuted_rate: float,
+    mean_duration_seconds: float,
+    p99_duration_seconds: float,
+    invalid_metric_counts: dict[str, int] | None = None,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    route_report_path = tmp_path / f"{name}-route-comparison.json"
+    manifest_path = tmp_path / f"{name}-artifact-manifest.json"
+    route_report_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "promotion_decision": {"status": "promote", "recommended_route": route},
+            "by_route": {
+                route: {
+                    "selected": 8,
+                    "decision_accuracy": decision_accuracy,
+                    "false_supported_rate": false_supported_rate,
+                    "false_refuted_rate": false_refuted_rate,
+                    "verified_false_alarm": 0.0,
+                    "verified_detection": false_refuted_rate,
+                    "mean_duration_seconds": mean_duration_seconds,
+                    "p95_duration_seconds": p99_duration_seconds,
+                    "p99_duration_seconds": p99_duration_seconds,
+                    "max_duration_seconds": p99_duration_seconds,
+                    "mean_attempted_route_count": 1.0,
+                    "retrieval_use_rate": 0.0,
+                    "invalid_metric_counts": invalid_metric_counts or {},
+                }
+            },
+        }),
+        encoding="utf-8",
+    )
+    manifest = build_artifact_manifest(
+        {"route_comparison_report": route_report_path},
+        root=tmp_path,
+        metadata={
+            "runner": "run_adapter_promotion_workflow",
+            "workflow": "adapter_promotion_workflow",
+            "promotion_status": "promote",
+            "route_promotion_status": "promote",
+            "recommended_route": route,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest_path
+
+
+def test_compare_route_baselines_recommends_registered_route_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    fast_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="fast",
+        route="structured_state",
+        decision_accuracy=0.95,
+        false_supported_rate=0.02,
+        false_refuted_rate=0.90,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    accurate_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="accurate",
+        route="state_transition",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.05,
+        p99_duration_seconds=0.10,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="fast-route",
+        path=fast_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).record_benchmark_manifest(
+        name="accurate-route",
+        path=accurate_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    ungated = module.compare_route_baselines(registry_path=registry_path)
+    gated = module.compare_route_baselines(
+        registry_path=registry_path,
+        max_p99_duration_seconds=0.03,
+        min_decision_accuracy=0.90,
+    )
+
+    assert ungated["decision"]["status"] == "promote"
+    assert ungated["decision"]["recommended_record"] == "benchmark_manifest:accurate-route:0.1"
+    assert ungated["decision"]["recommended_route"] == "state_transition"
+    assert gated["decision"]["status"] == "promote"
+    assert gated["decision"]["recommended_record"] == "benchmark_manifest:fast-route:0.1"
+    assert gated["leaderboard"][0]["p99_duration_seconds"] == pytest.approx(0.02)
+    assert gated["leaderboard"][1]["gate"]["passed"] is False
+
+
+def test_compare_route_baselines_blocks_invalid_source_metrics(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="invalid",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        invalid_metric_counts={"mean_duration_seconds": 1},
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="invalid-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.compare_route_baselines(registry_path=registry_path)
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["summary"]["passing_count"] == 0
+    assert "invalid source metrics" in payload["leaderboard"][0]["gate"]["blocking_reasons"][0]
+
+
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
     module = importlib.import_module("benchmarks.run_adapter_family_matrix")
     matrix_path = tmp_path / "matrix.json"

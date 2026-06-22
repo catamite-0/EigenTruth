@@ -669,6 +669,7 @@ python benchmarks/run_adapter_promotion_workflow.py \
   --candidate-profile candidate=/tmp/eigentruth-current-profile.json \
   --max-total-ratio 1.10 \
   --json artifacts/qwen05_adapter_promotion_workflow.json \
+  --artifact-manifest artifacts/qwen05_adapter_promotion_manifest.json \
   --fail-on-blocked
 ```
 
@@ -679,11 +680,41 @@ The final report includes:
 
 - `route_comparison_path` and embedded `route_comparison` for route-quality
   audit.
+- `artifact_manifest` when `--artifact-manifest` is provided. This manifest
+  fingerprints the route-comparison report, source verifier reports, and
+  candidate profiles so a promoted route baseline can be registered and
+  rechecked without rerunning verification.
 - `registry_baseline_comparison` when candidate profiles are provided.
 - `decision`: final workflow status. It is `promote` only when route promotion
   passes and every configured registry baseline gate passes. Missing route
   gates, failed route gates, missing registry gates, or failed registry gates
   produce `blocked` plus explicit `blocking_reasons`.
+
+## `compare_route_baselines.py`
+
+Compares registered route-promotion manifests from `ArtifactRegistry` without
+rerunning models or verifier adapters. Use it after promoting one or more
+`run_adapter_promotion_workflow.py --artifact-manifest` outputs with
+`promote_artifact_manifest.py`.
+
+```bash
+python benchmarks/compare_route_baselines.py \
+  --registry artifacts/registry.json \
+  --min-selected 100 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-p99-duration-seconds 0.20 \
+  --max-mean-attempted-route-count 1.5 \
+  --max-retrieval-use-rate 0.2 \
+  --json artifacts/route-baseline-comparison.json \
+  --fail-on-blocked
+```
+
+The comparison recursively verifies each registered manifest by default, reloads
+the saved `route_comparison_report`, fails closed on non-promoted route
+decisions or `invalid_metric_counts`, and recommends the passing baseline with
+the best quality/cost ordering.
 
 ## `run_adapter_family_matrix.py`
 

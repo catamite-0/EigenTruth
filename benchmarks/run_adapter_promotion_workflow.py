@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.compare_registry_baseline import compare_registry_baseline  # noqa: E402
 from benchmarks.compare_verifier_routes import build_route_comparison_report  # noqa: E402
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -53,12 +54,15 @@ class AdapterPromotionWorkflowConfig:
     max_phase_ratios: Mapping[str, float] | None = None
     min_throughput_ratios: Mapping[str, float] | None = None
     compact_json: bool = False
+    artifact_manifest_path: Path | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "reports", tuple((str(name), Path(path)) for name, path in self.reports))
         object.__setattr__(self, "route_report_path", Path(self.route_report_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        if self.artifact_manifest_path is not None:
+            object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         object.__setattr__(self, "notes", tuple(str(note) for note in self.notes))
         object.__setattr__(self, "gate_routes", tuple(str(route) for route in self.gate_routes))
         object.__setattr__(
@@ -117,14 +121,78 @@ def run_adapter_promotion_workflow(config: AdapterPromotionWorkflowConfig) -> di
         )
 
     decision = _workflow_decision(route_comparison, registry_comparison)
-    return {
+    payload = {
         "schema_version": 1,
         "workflow": "adapter_promotion_workflow",
         "route_comparison_path": str(config.route_report_path),
+        "artifact_manifest": None if config.artifact_manifest_path is None else str(config.artifact_manifest_path),
         "route_comparison": route_comparison,
         "registry_baseline_comparison": registry_comparison,
         "decision": decision,
     }
+    if config.artifact_manifest_path is not None:
+        _write_artifact_manifest(config, payload)
+    return payload
+
+
+def _write_artifact_manifest(
+    config: AdapterPromotionWorkflowConfig,
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    artifacts: dict[str, str | Path | None] = {
+        "route_comparison_report": config.route_report_path,
+    }
+    for name, path in config.reports:
+        artifacts[f"verifier_reports.{name}"] = path
+    for name, path in config.candidate_profiles:
+        artifacts[f"candidate_profiles.{name}"] = path
+
+    route_comparison = dict(payload.get("route_comparison") or {})
+    decision = dict(payload.get("decision") or {})
+    route_decision = dict(route_comparison.get("promotion_decision") or {})
+    recommended_route = route_decision.get("recommended_route") or decision.get("recommended_route")
+    by_route = dict(route_comparison.get("by_route") or {})
+    recommended_metrics = (
+        dict(by_route.get(str(recommended_route)) or {})
+        if recommended_route is not None
+        else {}
+    )
+    quality_gate = dict(route_comparison.get("quality_gate") or {})
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=config.artifact_manifest_path.parent,
+        metadata={
+            "runner": "run_adapter_promotion_workflow",
+            "workflow": payload.get("workflow"),
+            "promotion_status": decision.get("status"),
+            "route_promotion_status": route_decision.get("status"),
+            "recommended_route": recommended_route,
+            "route_promotion_passed": decision.get("route_promotion_passed"),
+            "registry_baseline_checked": decision.get("registry_baseline_checked"),
+            "registry_baseline_passed": decision.get("registry_baseline_passed"),
+            "quality_gate_passed": quality_gate.get("passed"),
+            "quality_gate_checked_routes": quality_gate.get("checked_routes"),
+            "recommended_selected": recommended_metrics.get("selected"),
+            "recommended_decision_accuracy": recommended_metrics.get("decision_accuracy"),
+            "recommended_false_supported_rate": recommended_metrics.get("false_supported_rate"),
+            "recommended_false_refuted_rate": recommended_metrics.get("false_refuted_rate"),
+            "recommended_verified_false_alarm": recommended_metrics.get("verified_false_alarm"),
+            "recommended_verified_detection": recommended_metrics.get("verified_detection"),
+            "recommended_mean_duration_seconds": recommended_metrics.get("mean_duration_seconds"),
+            "recommended_p95_duration_seconds": recommended_metrics.get("p95_duration_seconds"),
+            "recommended_p99_duration_seconds": recommended_metrics.get("p99_duration_seconds"),
+            "recommended_max_duration_seconds": recommended_metrics.get("max_duration_seconds"),
+            "recommended_mean_attempted_route_count": recommended_metrics.get("mean_attempted_route_count"),
+            "recommended_retrieval_use_rate": recommended_metrics.get("retrieval_use_rate"),
+            "recommended_invalid_metric_counts": recommended_metrics.get("invalid_metric_counts"),
+        },
+    )
+    config.artifact_manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    config.artifact_manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def _json_text(payload: Mapping[str, Any], *, compact: bool, sort_keys: bool) -> str:
@@ -247,6 +315,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionWorkflowConfi
             for value in args.min_throughput_ratio
         ),
         compact_json=bool(args.compact_json),
+        artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
     )
 
 
@@ -312,6 +381,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-throughput-ratio", action="append", default=[],
                         help="fail registry gate when throughput drops below this ratio, formatted as metric=ratio")
     parser.add_argument("--json", default=None, help="optional path to write the final workflow report")
+    parser.add_argument("--artifact-manifest", default=None,
+                        help="optional path to write a registry-ready artifact manifest")
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified JSON artifacts for lower artifact size and write latency")
     parser.add_argument("--fail-on-blocked", action="store_true",
