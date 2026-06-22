@@ -129,6 +129,26 @@ def _route_row(
         "insufficient_evidence_rate": _as_float(route_quality.get("insufficient_evidence_rate")),
         "decision_accuracy": _as_float(route_quality.get("decision_accuracy")),
         "decision_error_rate": _as_float(route_quality.get("decision_error_rate")),
+        "duration_observations": int(route_quality.get("duration_observations", 0)),
+        "total_duration_seconds": _as_float(route_quality.get("total_duration_seconds")),
+        "mean_duration_seconds": _as_float(route_quality.get("mean_duration_seconds")),
+        "max_duration_seconds": _as_float(route_quality.get("max_duration_seconds")),
+        "selected_route_duration_observations": int(
+            route_quality.get("selected_route_duration_observations", 0)
+        ),
+        "total_selected_route_duration_seconds": _as_float(
+            route_quality.get("total_selected_route_duration_seconds")
+        ),
+        "mean_selected_route_duration_seconds": _as_float(
+            route_quality.get("mean_selected_route_duration_seconds")
+        ),
+        "attempted_route_count_observations": int(route_quality.get("attempted_route_count_observations", 0)),
+        "total_attempted_route_count": _as_float(route_quality.get("total_attempted_route_count")),
+        "mean_attempted_route_count": _as_float(route_quality.get("mean_attempted_route_count")),
+        "used_retrieval_count": int(route_quality.get("used_retrieval_count", 0)),
+        "retrieval_use_rate": _as_float(route_quality.get("retrieval_use_rate")),
+        "retrieval_hit_count": int(route_quality.get("retrieval_hit_count", 0)),
+        "mean_retrieval_hits": _as_float(route_quality.get("mean_retrieval_hits")),
         "internal_false_alarm": _as_float(internal.get("false_alarm")),
         "verified_false_alarm": _as_float(verified.get("false_alarm")),
         "delta_false_alarm": _as_float(delta.get("false_alarm")),
@@ -189,11 +209,34 @@ def _leaderboard_rows(rows: Sequence[Mapping[str, Any]], *, min_selected: int) -
             -_none_high(row.get("false_supported_rate")),
             _none_low(row.get("verified_detection")),
             -_none_high(row.get("verified_false_alarm")),
+            -_none_high(row.get("mean_duration_seconds")),
             int(row.get("selected", 0)),
         ),
         reverse=True,
     )
     return eligible
+
+
+def _sum_finite_metric(rows: Sequence[Mapping[str, Any]], metric: str) -> float | None:
+    values = [_finite_float(row.get(metric)) for row in rows]
+    present = [value for value in values if value is not None]
+    if not present:
+        return None
+    return float(sum(present))
+
+
+def _max_finite_metric(rows: Sequence[Mapping[str, Any]], metric: str) -> float | None:
+    values = [_finite_float(row.get(metric)) for row in rows]
+    present = [value for value in values if value is not None]
+    if not present:
+        return None
+    return max(present)
+
+
+def _mean_from_total(total: float | None, observations: int) -> float | None:
+    if observations == 0 or total is None:
+        return None
+    return _safe_div(total, observations)
 
 
 def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
@@ -207,6 +250,18 @@ def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str,
     decided = true_supported + true_refuted + false_supported + false_refuted
     correct = true_supported + false_refuted
     wrong = true_refuted + false_supported
+    duration_observations = sum(int(row.get("duration_observations", 0)) for row in rows)
+    selected_route_duration_observations = sum(
+        int(row.get("selected_route_duration_observations", 0)) for row in rows
+    )
+    attempted_route_count_observations = sum(
+        int(row.get("attempted_route_count_observations", 0)) for row in rows
+    )
+    total_duration = _sum_finite_metric(rows, "total_duration_seconds")
+    total_selected_route_duration = _sum_finite_metric(rows, "total_selected_route_duration_seconds")
+    total_attempted_route_count = _sum_finite_metric(rows, "total_attempted_route_count")
+    used_retrieval_count = sum(int(row.get("used_retrieval_count", 0)) for row in rows)
+    retrieval_hit_count = sum(int(row.get("retrieval_hit_count", 0)) for row in rows)
     best = _leaderboard_rows(rows, min_selected=0)[0] if rows else None
     return {
         "route": route,
@@ -221,6 +276,26 @@ def _aggregate_route(route: str, rows: Sequence[Mapping[str, Any]]) -> dict[str,
         "false_supported_rate": _safe_div(false_supported, n_false),
         "decision_accuracy": _safe_div(correct, decided),
         "decision_error_rate": _safe_div(wrong, decided),
+        "duration_observations": duration_observations,
+        "total_duration_seconds": total_duration,
+        "mean_duration_seconds": _mean_from_total(total_duration, duration_observations),
+        "max_duration_seconds": _max_finite_metric(rows, "max_duration_seconds"),
+        "selected_route_duration_observations": selected_route_duration_observations,
+        "total_selected_route_duration_seconds": total_selected_route_duration,
+        "mean_selected_route_duration_seconds": _mean_from_total(
+            total_selected_route_duration,
+            selected_route_duration_observations,
+        ),
+        "attempted_route_count_observations": attempted_route_count_observations,
+        "total_attempted_route_count": total_attempted_route_count,
+        "mean_attempted_route_count": _mean_from_total(
+            total_attempted_route_count,
+            attempted_route_count_observations,
+        ),
+        "used_retrieval_count": used_retrieval_count,
+        "retrieval_use_rate": _safe_div(used_retrieval_count, selected),
+        "retrieval_hit_count": retrieval_hit_count,
+        "mean_retrieval_hits": _safe_div(retrieval_hit_count, selected),
         "verified_false_alarm": _weighted_mean(
             [(row.get("verified_false_alarm"), row.get("n_true", 0)) for row in rows]
         ),
@@ -267,6 +342,10 @@ def _thresholds_enabled(
     min_false_refuted_rate: float | None,
     max_verified_false_alarm: float | None,
     min_verified_detection: float | None,
+    max_mean_duration_seconds: float | None,
+    max_max_duration_seconds: float | None,
+    max_mean_attempted_route_count: float | None,
+    max_retrieval_use_rate: float | None,
 ) -> bool:
     return any(
         value is not None
@@ -276,6 +355,10 @@ def _thresholds_enabled(
             min_false_refuted_rate,
             max_verified_false_alarm,
             min_verified_detection,
+            max_mean_duration_seconds,
+            max_max_duration_seconds,
+            max_mean_attempted_route_count,
+            max_retrieval_use_rate,
         )
     )
 
@@ -349,6 +432,10 @@ def build_route_quality_gate(
     min_false_refuted_rate: float | None = None,
     max_verified_false_alarm: float | None = None,
     min_verified_detection: float | None = None,
+    max_mean_duration_seconds: float | None = None,
+    max_max_duration_seconds: float | None = None,
+    max_mean_attempted_route_count: float | None = None,
+    max_retrieval_use_rate: float | None = None,
 ) -> dict[str, Any] | None:
     """Build a fail-closed route quality gate over aggregate route metrics."""
     if min_selected < 0:
@@ -358,12 +445,23 @@ def build_route_quality_gate(
     min_false_refuted_rate = _validated_limit("min_false_refuted_rate", min_false_refuted_rate)
     max_verified_false_alarm = _validated_limit("max_verified_false_alarm", max_verified_false_alarm)
     min_verified_detection = _validated_limit("min_verified_detection", min_verified_detection)
+    max_mean_duration_seconds = _validated_limit("max_mean_duration_seconds", max_mean_duration_seconds)
+    max_max_duration_seconds = _validated_limit("max_max_duration_seconds", max_max_duration_seconds)
+    max_mean_attempted_route_count = _validated_limit(
+        "max_mean_attempted_route_count",
+        max_mean_attempted_route_count,
+    )
+    max_retrieval_use_rate = _validated_limit("max_retrieval_use_rate", max_retrieval_use_rate)
     enabled = bool(routes) or _thresholds_enabled(
         min_decision_accuracy=min_decision_accuracy,
         max_false_supported_rate=max_false_supported_rate,
         min_false_refuted_rate=min_false_refuted_rate,
         max_verified_false_alarm=max_verified_false_alarm,
         min_verified_detection=min_verified_detection,
+        max_mean_duration_seconds=max_mean_duration_seconds,
+        max_max_duration_seconds=max_max_duration_seconds,
+        max_mean_attempted_route_count=max_mean_attempted_route_count,
+        max_retrieval_use_rate=max_retrieval_use_rate,
     )
     if not enabled:
         return None
@@ -413,6 +511,10 @@ def build_route_quality_gate(
             ("false_refuted_rate", min_false_refuted_rate, _check_min_metric),
             ("verified_false_alarm", max_verified_false_alarm, _check_max_metric),
             ("verified_detection", min_verified_detection, _check_min_metric),
+            ("mean_duration_seconds", max_mean_duration_seconds, _check_max_metric),
+            ("max_duration_seconds", max_max_duration_seconds, _check_max_metric),
+            ("mean_attempted_route_count", max_mean_attempted_route_count, _check_max_metric),
+            ("retrieval_use_rate", max_retrieval_use_rate, _check_max_metric),
         )
         for metric, limit, checker in metric_checks:
             if limit is None:
@@ -433,6 +535,10 @@ def build_route_quality_gate(
             "min_false_refuted_rate": min_false_refuted_rate,
             "max_verified_false_alarm": max_verified_false_alarm,
             "min_verified_detection": min_verified_detection,
+            "max_mean_duration_seconds": max_mean_duration_seconds,
+            "max_max_duration_seconds": max_max_duration_seconds,
+            "max_mean_attempted_route_count": max_mean_attempted_route_count,
+            "max_retrieval_use_rate": max_retrieval_use_rate,
         },
         "failures": failures,
     }
@@ -451,6 +557,10 @@ def build_route_comparison_report(
     min_false_refuted_rate: float | None = None,
     max_verified_false_alarm: float | None = None,
     min_verified_detection: float | None = None,
+    max_mean_duration_seconds: float | None = None,
+    max_max_duration_seconds: float | None = None,
+    max_mean_attempted_route_count: float | None = None,
+    max_retrieval_use_rate: float | None = None,
 ) -> dict[str, Any]:
     """Build a route comparison report from verifier-ensemble JSON files."""
     if not reports:
@@ -484,6 +594,10 @@ def build_route_comparison_report(
         min_false_refuted_rate=min_false_refuted_rate,
         max_verified_false_alarm=max_verified_false_alarm,
         min_verified_detection=min_verified_detection,
+        max_mean_duration_seconds=max_mean_duration_seconds,
+        max_max_duration_seconds=max_max_duration_seconds,
+        max_mean_attempted_route_count=max_mean_attempted_route_count,
+        max_retrieval_use_rate=max_retrieval_use_rate,
     )
     if gate is not None:
         payload["quality_gate"] = gate
@@ -504,6 +618,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_false_refuted_rate=args.min_false_refuted_rate,
         max_verified_false_alarm=args.max_verified_false_alarm,
         min_verified_detection=args.min_verified_detection,
+        max_mean_duration_seconds=args.max_mean_duration_seconds,
+        max_max_duration_seconds=args.max_max_duration_seconds,
+        max_mean_attempted_route_count=args.max_mean_attempted_route_count,
+        max_retrieval_use_rate=args.max_retrieval_use_rate,
     )
     if args.json:
         output_path = Path(args.json)
@@ -539,6 +657,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="fail gate when verified_false_alarm exceeds this value")
     parser.add_argument("--min-verified-detection", type=float, default=None,
                         help="fail gate when verified_detection is below this value")
+    parser.add_argument("--max-mean-duration-seconds", type=float, default=None,
+                        help="fail gate when aggregate mean_duration_seconds exceeds this value")
+    parser.add_argument("--max-max-duration-seconds", type=float, default=None,
+                        help="fail gate when aggregate max_duration_seconds exceeds this value")
+    parser.add_argument("--max-mean-attempted-route-count", type=float, default=None,
+                        help="fail gate when mean_attempted_route_count exceeds this value")
+    parser.add_argument("--max-retrieval-use-rate", type=float, default=None,
+                        help="fail gate when retrieval_use_rate exceeds this value")
     parser.add_argument("--fail-on-gate", action="store_true",
                         help="exit non-zero when the route quality gate fails")
     args = parser.parse_args(argv)

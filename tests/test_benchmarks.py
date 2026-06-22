@@ -158,9 +158,12 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
         verifier_min_overlap=0.65,
         retriever_min_overlap=0.6,
     )
-    quality = payload["runs"][0]["verification_quality"]
-    routes = payload["runs"][0]["route_summary"]
-    cache_stats = payload["runs"][0]["cache_stats"]
+    run = payload["runs"][0]
+    quality = run["verification_quality"]
+    routes = run["route_summary"]
+    cache_stats = run["cache_stats"]
+    retrieval_route_quality = run["route_quality"]["retrieval_groundedness"]
+    groundedness_route_quality = run["route_quality"]["groundedness"]
 
     assert fixture["fixture_type"] == "local_retrieval_evidence"
     assert fixture["summary"]["records_with_hits"] == 2
@@ -176,7 +179,19 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert routes["selected_counts"] == {"retrieval_groundedness": 2, "groundedness": 1}
     assert routes["by_route"]["retrieval_groundedness"]["statuses"]["supported"] == 1
     assert routes["by_route"]["retrieval_groundedness"]["statuses"]["refuted"] == 1
+    assert routes["by_route"]["retrieval_groundedness"]["duration_observations"] == 2
+    assert routes["by_route"]["retrieval_groundedness"]["mean_duration_seconds"] >= 0.0
+    assert routes["by_route"]["retrieval_groundedness"]["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert routes["by_route"]["retrieval_groundedness"]["retrieval_use_rate"] == pytest.approx(1.0)
     assert routes["by_route"]["groundedness"]["statuses"]["insufficient_evidence"] == 1
+    assert routes["by_route"]["groundedness"]["duration_observations"] == 1
+    assert routes["by_route"]["groundedness"]["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert retrieval_route_quality["duration_observations"] == 2
+    assert retrieval_route_quality["mean_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["mean_selected_route_duration_seconds"] >= 0.0
+    assert retrieval_route_quality["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert retrieval_route_quality["retrieval_use_rate"] == pytest.approx(1.0)
+    assert groundedness_route_quality["duration_observations"] == 1
     assert cache_stats["groundedness_verifiers"]["requests"] >= 3
     assert cache_stats["retrievers"]["requests"] == 2
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
@@ -816,6 +831,107 @@ def test_compare_verifier_routes_builds_quality_gate(tmp_path):
         "decision_accuracy",
         "false_supported_rate",
         "false_refuted_rate",
+    }
+
+
+def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "route-cost.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "costs",
+                    "route_quality": {
+                        "structured_state": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "duration_observations": 4,
+                            "total_duration_seconds": 0.04,
+                            "mean_duration_seconds": 0.01,
+                            "max_duration_seconds": 0.02,
+                            "selected_route_duration_observations": 4,
+                            "total_selected_route_duration_seconds": 0.04,
+                            "mean_selected_route_duration_seconds": 0.01,
+                            "attempted_route_count_observations": 4,
+                            "total_attempted_route_count": 4,
+                            "mean_attempted_route_count": 1.0,
+                            "used_retrieval_count": 0,
+                            "retrieval_use_rate": 0.0,
+                            "retrieval_hit_count": 0,
+                            "mean_retrieval_hits": 0.0,
+                        },
+                        "retrieval_groundedness": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "duration_observations": 4,
+                            "total_duration_seconds": 0.40,
+                            "mean_duration_seconds": 0.10,
+                            "max_duration_seconds": 0.20,
+                            "selected_route_duration_observations": 4,
+                            "total_selected_route_duration_seconds": 0.32,
+                            "mean_selected_route_duration_seconds": 0.08,
+                            "attempted_route_count_observations": 4,
+                            "total_attempted_route_count": 8,
+                            "mean_attempted_route_count": 2.0,
+                            "used_retrieval_count": 4,
+                            "retrieval_use_rate": 1.0,
+                            "retrieval_hit_count": 6,
+                            "mean_retrieval_hits": 1.5,
+                        },
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    passing = module.build_route_comparison_report(
+        [("costs", report_path)],
+        gate_routes=("structured_state",),
+        max_mean_duration_seconds=0.02,
+        max_max_duration_seconds=0.03,
+        max_mean_attempted_route_count=1.1,
+        max_retrieval_use_rate=0.0,
+    )
+    failing = module.build_route_comparison_report(
+        [("costs", report_path)],
+        gate_routes=("retrieval_groundedness",),
+        max_mean_duration_seconds=0.02,
+        max_max_duration_seconds=0.03,
+        max_mean_attempted_route_count=1.1,
+        max_retrieval_use_rate=0.5,
+    )
+
+    aggregate = passing["by_route"]["structured_state"]
+    assert aggregate["mean_duration_seconds"] == pytest.approx(0.01)
+    assert aggregate["max_duration_seconds"] == pytest.approx(0.02)
+    assert aggregate["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert aggregate["retrieval_use_rate"] == pytest.approx(0.0)
+    assert passing["quality_gate"]["passed"] is True
+    assert failing["quality_gate"]["passed"] is False
+    assert {failure["metric"] for failure in failing["quality_gate"]["failures"]} == {
+        "mean_duration_seconds",
+        "max_duration_seconds",
+        "mean_attempted_route_count",
+        "retrieval_use_rate",
     }
 
 

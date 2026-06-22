@@ -440,6 +440,8 @@ python benchmarks/compare_verifier_routes.py \
   --min-decision-accuracy 0.90 \
   --max-false-supported-rate 0.05 \
   --min-false-refuted-rate 0.80 \
+  --max-mean-duration-seconds 0.05 \
+  --max-mean-attempted-route-count 1.5 \
   --fail-on-gate \
   --json artifacts/verifier_route_comparison.json
 ```
@@ -448,15 +450,19 @@ The output includes:
 
 - `leaderboard`: individual report/run/route rows sorted by decision accuracy,
   false-refutation rate, low false-support rate, verified detection, and low
-  verified false alarm.
+  verified false alarm, then lower mean route duration.
 - `by_route`: aggregate counts and weighted rates across all reports for each
   route, useful for comparing route families such as `structured_qa`,
-  `structured_state`, and `state_transition`.
+  `structured_state`, and `state_transition`. New verifier-ensemble reports
+  include cost fields such as `mean_duration_seconds`, `max_duration_seconds`,
+  `mean_attempted_route_count`, and `retrieval_use_rate`.
 - `quality_gate`: optional fail-closed adapter promotion gate when any
   `--gate-*` or threshold flag is set. It checks aggregate route metrics such
   as `decision_accuracy`, `false_supported_rate`, `false_refuted_rate`,
-  `verified_false_alarm`, and `verified_detection`; missing routes, missing
-  metrics, non-finite values, or no eligible routes fail the gate.
+  `verified_false_alarm`, `verified_detection`, `mean_duration_seconds`,
+  `max_duration_seconds`, `mean_attempted_route_count`, and
+  `retrieval_use_rate`; missing routes, missing metrics, non-finite values, or
+  no eligible routes fail the gate.
 - `rows`: the unaggregated route entries for audit and follow-up slicing.
 
 Use `--min-selected` to keep tiny route samples out of the leaderboard while

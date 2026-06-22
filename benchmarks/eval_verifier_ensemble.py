@@ -15,9 +15,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Mapping, Sequence
 
 import torch
@@ -295,9 +297,16 @@ def _verify_records(
         qa_result = None
         state_result = None
         attempted_routes = []
+        route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
             attempted_routes.append("structured_qa")
-            qa_result = qa_runner.verify(record.claim, context={"statement": record.metadata.get("statement", {})})
+            qa_result = _timed_verify(
+                route_timings,
+                route="structured_qa",
+                runner=qa_runner,
+                claim=record.claim,
+                context={"statement": record.metadata.get("statement", {})},
+            )
             if qa_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
                 verified.append({
                     "claim": {
@@ -316,6 +325,7 @@ def _verify_records(
                         selected_verifier="QuestionAnswerVerifier",
                         attempted_routes=attempted_routes,
                         used_retrieval=False,
+                        route_timings=route_timings,
                     ),
                     "metadata": dict(record.metadata),
                 })
@@ -323,8 +333,11 @@ def _verify_records(
 
         if transition_runner is not None and _record_has_state_transition(record, state_transitions):
             attempted_routes.append("state_transition")
-            transition_result = transition_runner.verify(
-                record.claim,
+            transition_result = _timed_verify(
+                route_timings,
+                route="state_transition",
+                runner=transition_runner,
+                claim=record.claim,
                 context=_transition_context(record, state_transitions),
             )
             if transition_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
@@ -345,6 +358,7 @@ def _verify_records(
                         selected_verifier="StateTransitionVerifier",
                         attempted_routes=attempted_routes,
                         used_retrieval=False,
+                        route_timings=route_timings,
                     ),
                     "metadata": dict(record.metadata),
                 })
@@ -352,8 +366,11 @@ def _verify_records(
 
         if state_runner is not None and _record_has_state_check(record, state_checks):
             attempted_routes.append("structured_state")
-            state_result = state_runner.verify(
-                record.claim,
+            state_result = _timed_verify(
+                route_timings,
+                route="structured_state",
+                runner=state_runner,
+                claim=record.claim,
                 context=_state_context(record, state_checks),
             )
             if state_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
@@ -374,25 +391,38 @@ def _verify_records(
                         selected_verifier="StructuredStateVerifier",
                         attempted_routes=attempted_routes,
                         used_retrieval=False,
+                        route_timings=route_timings,
                     ),
                     "metadata": dict(record.metadata),
                 })
                 continue
 
         attempted_routes.append("groundedness")
-        initial = groundedness_runner(record.initial_evidence, record.refutations).verify(record.claim)
+        initial = _timed_verify(
+            route_timings,
+            route="groundedness",
+            runner=groundedness_runner(record.initial_evidence, record.refutations),
+            claim=record.claim,
+        )
         hits = ()
         final = initial
         if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.retrieval_documents:
             attempted_routes.append("retrieval_groundedness")
             retriever = retriever_for(record.retrieval_documents)
-            hits = tuple(retriever.retrieve(
-                RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
+            hits = _timed_retrieve(
+                route_timings,
+                retriever=retriever,
+                query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
                 limit=retrieval_limit,
-            ))
+            )
             if hits:
                 final_evidence = tuple(record.initial_evidence) + tuple(hit.to_dict() for hit in hits)
-                final = groundedness_runner(final_evidence, record.refutations).verify(record.claim)
+                final = _timed_verify(
+                    route_timings,
+                    route="retrieval_groundedness",
+                    runner=groundedness_runner(final_evidence, record.refutations),
+                    claim=record.claim,
+                )
         selected_route = "retrieval_groundedness" if hits else "groundedness"
         verified.append({
             "claim": {
@@ -411,6 +441,7 @@ def _verify_records(
                 selected_verifier="GroundednessVerifier",
                 attempted_routes=attempted_routes,
                 used_retrieval=bool(hits),
+                route_timings=route_timings,
             ),
             "metadata": dict(record.metadata),
         })
@@ -505,13 +536,89 @@ def _route_metadata(
     selected_verifier: str,
     attempted_routes: Sequence[str],
     used_retrieval: bool,
+    route_timings: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "selected_route": selected_route,
         "selected_verifier": selected_verifier,
         "attempted_routes": tuple(attempted_routes),
+        "attempted_route_count": len(tuple(attempted_routes)),
         "used_retrieval": used_retrieval,
     }
+    if route_timings is not None:
+        timings = tuple(dict(item) for item in route_timings)
+        payload.update({
+            "attempted_route_timings": timings,
+            "total_duration_seconds": _sum_timing_durations(timings),
+            "selected_route_duration_seconds": _sum_timing_durations(timings, route=selected_route),
+        })
+    return payload
+
+
+def _timed_verify(
+    route_timings: list[dict[str, Any]],
+    *,
+    route: str,
+    runner: Any,
+    claim: Claim,
+    context: Mapping[str, Any] | None = None,
+) -> VerificationResult:
+    started = perf_counter()
+    result = runner.verify(claim, context=context)
+    duration = perf_counter() - started
+    route_timings.append({
+        "route": route,
+        "operation": "verify",
+        "duration_seconds": duration,
+        "status": result.status.value,
+    })
+    return result
+
+
+def _timed_retrieve(
+    route_timings: list[dict[str, Any]],
+    *,
+    retriever: CachedRetriever,
+    query: RetrievalQuery,
+    limit: int,
+) -> tuple[Any, ...]:
+    started = perf_counter()
+    hits = tuple(retriever.retrieve(query, limit=limit))
+    duration = perf_counter() - started
+    route_timings.append({
+        "route": "retrieval_groundedness",
+        "operation": "retrieve",
+        "duration_seconds": duration,
+        "hit_count": len(hits),
+    })
+    return hits
+
+
+def _sum_timing_durations(
+    route_timings: Sequence[Mapping[str, Any]],
+    *,
+    route: str | None = None,
+) -> float | None:
+    durations = []
+    for item in route_timings:
+        if route is not None and item.get("route") != route:
+            continue
+        duration = _finite_float(item.get("duration_seconds"))
+        if duration is not None:
+            durations.append(duration)
+    if not durations:
+        return None
+    return float(sum(durations))
+
+
+def _finite_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        return None
+    return result if math.isfinite(result) else None
 
 
 def _verification_to_dict(result: VerificationResult) -> dict[str, Any]:
@@ -588,11 +695,13 @@ def _route_summary(
     selected_counts: dict[str, int] = {}
     attempted_counts: dict[str, int] = {}
     by_route: dict[str, dict[str, Any]] = {}
+    records_by_route: dict[str, list[Mapping[str, Any]]] = {}
     for label, record in zip(labels.tolist(), verified_records):
         route = record.get("route", {})
         if not isinstance(route, Mapping):
             route = {}
         selected_route = str(route.get("selected_route", "unknown"))
+        records_by_route.setdefault(selected_route, []).append(record)
         selected_counts[selected_route] = selected_counts.get(selected_route, 0) + 1
         for attempted in route.get("attempted_routes", ()):
             route_name = str(attempted)
@@ -614,7 +723,7 @@ def _route_summary(
         if route.get("used_retrieval"):
             payload["used_retrieval"] += 1
 
-    for payload in by_route.values():
+    for route_name, payload in by_route.items():
         selected = int(payload["selected"])
         payload["rates"] = {
             "supported": _safe_div(payload["statuses"].get(VerificationStatus.SUPPORTED.value, 0), selected),
@@ -625,6 +734,7 @@ def _route_summary(
             ),
             "error": _safe_div(payload["statuses"].get(VerificationStatus.ERROR.value, 0), selected),
         }
+        payload.update(_route_cost_metrics(records_by_route.get(route_name, ())))
     return {
         "selected_counts": selected_counts,
         "attempted_counts": attempted_counts,
@@ -658,8 +768,56 @@ def _route_quality(
             "n_true": int((route_labels == 0).sum().item()),
             "n_false": int((route_labels == 1).sum().item()),
             **route_quality,
+            **_route_cost_metrics(payload["records"]),
         }
     return quality
+
+
+def _route_cost_metrics(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize route-level verification cost from per-record route metadata."""
+    total_durations = []
+    selected_route_durations = []
+    attempted_route_counts = []
+    used_retrieval_count = 0
+    retrieval_hit_count = 0
+    for record in records:
+        route = record.get("route", {})
+        if not isinstance(route, Mapping):
+            route = {}
+        total_duration = _finite_float(route.get("total_duration_seconds"))
+        if total_duration is not None:
+            total_durations.append(total_duration)
+        selected_duration = _finite_float(route.get("selected_route_duration_seconds"))
+        if selected_duration is not None:
+            selected_route_durations.append(selected_duration)
+        attempted_count = _finite_float(route.get("attempted_route_count"))
+        if attempted_count is not None:
+            attempted_route_counts.append(attempted_count)
+        if route.get("used_retrieval"):
+            used_retrieval_count += 1
+        hits = record.get("retrieval_hits", ())
+        if isinstance(hits, Sequence) and not isinstance(hits, (str, bytes, bytearray)):
+            retrieval_hit_count += len(hits)
+
+    selected = len(records)
+    return {
+        "duration_observations": len(total_durations),
+        "total_duration_seconds": None if not total_durations else float(sum(total_durations)),
+        "mean_duration_seconds": _mean_or_none(total_durations),
+        "max_duration_seconds": None if not total_durations else max(total_durations),
+        "selected_route_duration_observations": len(selected_route_durations),
+        "total_selected_route_duration_seconds": (
+            None if not selected_route_durations else float(sum(selected_route_durations))
+        ),
+        "mean_selected_route_duration_seconds": _mean_or_none(selected_route_durations),
+        "attempted_route_count_observations": len(attempted_route_counts),
+        "total_attempted_route_count": None if not attempted_route_counts else float(sum(attempted_route_counts)),
+        "mean_attempted_route_count": _mean_or_none(attempted_route_counts),
+        "used_retrieval_count": used_retrieval_count,
+        "retrieval_use_rate": _safe_div(used_retrieval_count, selected),
+        "retrieval_hit_count": retrieval_hit_count,
+        "mean_retrieval_hits": _safe_div(retrieval_hit_count, selected),
+    }
 
 
 def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
