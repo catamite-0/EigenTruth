@@ -92,3 +92,11 @@ def test_eval_truthfulqa_candidate_verification_prompt_includes_context():
     assert "Question: What is the capital of France?" in prompt
     assert "Candidate answer: Paris" in prompt
     assert "factually correct" in prompt
+
+
+def test_eval_truthfulqa_chunked_preserves_order():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    assert list(module._chunked([1, 2, 3, 4, 5], 2)) == [[1, 2], [3, 4], [5]]
+    with pytest.raises(ValueError, match="batch size"):
+        list(module._chunked([1], 0))

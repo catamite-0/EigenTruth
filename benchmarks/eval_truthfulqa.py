@@ -133,6 +133,13 @@ def _candidate_verification_prompt(stmt: Statement) -> str:
     )
 
 
+def _chunked(items: Sequence, size: int):
+    if size < 1:
+        raise ValueError("batch size must be >= 1.")
+    for start in range(0, len(items), size):
+        yield items[start:start + size]
+
+
 # ---------------------------------------------------------------------------
 # 离线烟雾集（仅用于验证管线，不构成基准）/ Offline smoke set (pipeline check only)
 # ---------------------------------------------------------------------------
@@ -255,16 +262,7 @@ def resolve_target_layer(layer: int, n_layers: int, *, offline: bool) -> int:
     )
 
 
-@torch.no_grad()
-def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
-                   device: torch.device, max_length: int, *,
-                   compute_answer_metrics: bool = True,
-                   eigenscore_alpha: float = 1e-3) -> Optional[dict]:
-    """单次前向：各目标层的末 token 隐状态、主层 (layers[0]) 答案 token 隐状态、答案 NLL。
-    Single forward pass: last-token hidden state per requested layer, answer-token hidden
-    states for the primary layer (layers[0]), and the answer NLL. output_hidden_states
-    returns every layer at once, so a layer sweep costs no extra forward passes.
-    """
+def _statement_token_ids(tokenizer, stmt: Statement, max_length: int) -> Optional[tuple[list[int], int]]:
     q_ids = tokenizer(stmt.question, add_special_tokens=True).input_ids if stmt.question \
         else tokenizer(tokenizer.bos_token or tokenizer.eos_token or " ").input_ids
     a_ids = tokenizer(" " + stmt.answer.strip(), add_special_tokens=False).input_ids
@@ -274,40 +272,93 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
     n_ans = len(ids) - len(q_ids)
     if n_ans <= 0:
         return None
+    return ids, n_ans
 
-    input_ids = torch.tensor([ids], device=device)
-    out = model(input_ids=input_ids, output_hidden_states=True)
 
-    # hidden_states[-k] 对应 layers[-k] 的输出（负索引对齐，与 wrapper 约定一致）
-    last_by_layer = {
-        layer: out.hidden_states[layer][0][-1, :].float().cpu() for layer in layers
-    }
-    if not compute_answer_metrics:
-        return {"last": last_by_layer}
+@torch.no_grad()
+def batched_statement_reps(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    compute_answer_metrics: bool = True,
+    eigenscore_alpha: float = 1e-3,
+) -> list[Optional[dict]]:
+    """Batch forced-answer forwards while preserving per-statement result shape."""
+    encoded: list[tuple[int, list[int], int]] = []
+    results: list[Optional[dict]] = [None] * len(statements)
+    for idx, stmt in enumerate(statements):
+        tokenized = _statement_token_ids(tokenizer, stmt, max_length)
+        if tokenized is None:
+            continue
+        ids, n_ans = tokenized
+        encoded.append((idx, ids, n_ans))
+    if not encoded:
+        return results
 
-    ans_hs = out.hidden_states[layers[0]][0][-n_ans:, :].float().cpu()
-    eigenscore_by_layer = {
-        layer: float(internal_eigenscore(
-            out.hidden_states[layer][0][-n_ans:, :].float(),
-            alpha=eigenscore_alpha,
-        ).item())
-        for layer in layers
-    }
+    pad_token_id = _pad_token_id(tokenizer)
+    batch_len = max(len(ids) for _, ids, _ in encoded)
+    input_ids = torch.full((len(encoded), batch_len), pad_token_id, dtype=torch.long, device=device)
+    attention_mask = torch.zeros_like(input_ids)
+    for row, (_, ids, _) in enumerate(encoded):
+        ids_t = torch.tensor(ids, dtype=torch.long, device=device)
+        input_ids[row, :len(ids)] = ids_t
+        attention_mask[row, :len(ids)] = 1
 
-    # 答案 token 的平均负对数似然（困惑度基线）
-    logits = out.logits[0].float()  # [T, V]
-    logp = torch.log_softmax(logits[:-1], dim=-1)  # 由位置 t 预测 t+1
-    targets = input_ids[0, 1:]
-    tok_logp = logp[torch.arange(logp.shape[0]), targets]  # [T-1]
-    ans_logp = tok_logp[-n_ans:] if n_ans <= tok_logp.shape[0] else tok_logp
-    nll = float((-ans_logp.mean()).item())
+    out = model(input_ids=input_ids, attention_mask=attention_mask, output_hidden_states=True)
+    for row, (original_idx, ids, n_ans) in enumerate(encoded):
+        seq_len = len(ids)
+        last_by_layer = {
+            layer: out.hidden_states[layer][row, seq_len - 1, :].float().cpu()
+            for layer in layers
+        }
+        if not compute_answer_metrics:
+            results[original_idx] = {"last": last_by_layer}
+            continue
 
-    return {
-        "last": last_by_layer,
-        "ans_hs": ans_hs,
-        "eigenscore_by_layer": eigenscore_by_layer,
-        "nll": nll,
-    }
+        ans_start = seq_len - n_ans
+        ans_hs = out.hidden_states[layers[0]][row, ans_start:seq_len, :].float().cpu()
+        eigenscore_by_layer = {
+            layer: float(internal_eigenscore(
+                out.hidden_states[layer][row, ans_start:seq_len, :].float(),
+                alpha=eigenscore_alpha,
+            ).item())
+            for layer in layers
+        }
+
+        logits = out.logits[row, :seq_len, :].float()
+        logp = torch.log_softmax(logits[:-1], dim=-1)
+        targets = input_ids[row, 1:seq_len]
+        tok_logp = logp[torch.arange(logp.shape[0], device=device), targets]
+        ans_logp = tok_logp[-n_ans:] if n_ans <= tok_logp.shape[0] else tok_logp
+        nll = float((-ans_logp.mean()).item())
+        results[original_idx] = {
+            "last": last_by_layer,
+            "ans_hs": ans_hs,
+            "eigenscore_by_layer": eigenscore_by_layer,
+            "nll": nll,
+        }
+    return results
+
+
+def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
+                   device: torch.device, max_length: int, *,
+                   compute_answer_metrics: bool = True,
+                   eigenscore_alpha: float = 1e-3) -> Optional[dict]:
+    """Single-statement compatibility wrapper around batched_statement_reps."""
+    return batched_statement_reps(
+        model,
+        tokenizer,
+        [stmt],
+        layers,
+        device,
+        max_length,
+        compute_answer_metrics=compute_answer_metrics,
+        eigenscore_alpha=eigenscore_alpha,
+    )[0]
 
 
 def _pad_token_id(tokenizer) -> int:
@@ -326,10 +377,10 @@ def _fork_rng_devices(device: torch.device) -> list[int]:
 
 
 @torch.no_grad()
-def sampled_response_embeddings(
+def sampled_response_embeddings_batch(
     model,
     tokenizer,
-    stmt: Statement,
+    statements: Sequence[Statement],
     layers: List[int],
     device: torch.device,
     max_length: int,
@@ -340,10 +391,10 @@ def sampled_response_embeddings(
     top_p: float,
     pooling: str,
     seed: int,
-) -> Optional[dict[int, torch.Tensor]]:
-    """Generate multiple verifier-style continuations and return one embedding per sample."""
+) -> list[Optional[dict[int, torch.Tensor]]]:
+    """Generate multiple continuations per statement and pool response embeddings."""
     if n_samples < 2:
-        return None
+        return [None] * len(statements)
     if max_new_tokens < 1:
         raise ValueError("inside max_new_tokens must be >= 1.")
     if temperature <= 0.0:
@@ -352,16 +403,25 @@ def sampled_response_embeddings(
         raise ValueError("inside top_p must be in (0, 1].")
     if pooling not in {"last", "mean"}:
         raise ValueError("inside pooling must be 'last' or 'mean'.")
+    if not statements:
+        return []
 
-    prompt = _candidate_verification_prompt(stmt)
+    prompts = [_candidate_verification_prompt(stmt) for stmt in statements]
     pad_token_id = _pad_token_id(tokenizer)
-    encoded = tokenizer(
-        prompt,
-        add_special_tokens=True,
-        return_tensors="pt",
-        truncation=True,
-        max_length=max_length,
-    )
+    original_padding_side = getattr(tokenizer, "padding_side", "right")
+    tokenizer.padding_side = "left"
+    try:
+        encoded = tokenizer(
+            prompts,
+            add_special_tokens=True,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=max_length,
+        )
+    finally:
+        tokenizer.padding_side = original_padding_side
+
     input_ids = encoded.input_ids.to(device)
     attention_mask = encoded.attention_mask.to(device)
     with torch.random.fork_rng(devices=_fork_rng_devices(device)):
@@ -379,30 +439,111 @@ def sampled_response_embeddings(
             pad_token_id=pad_token_id,
             eos_token_id=tokenizer.eos_token_id,
         )
-    generated_attention = generated.ne(pad_token_id).long()
+
+    prompt_width = input_ids.shape[1]
+    new_width = max(generated.shape[1] - prompt_width, 1)
+    generated_attention = torch.cat([
+        attention_mask.repeat_interleave(n_samples, dim=0),
+        torch.ones((len(statements) * n_samples, new_width), dtype=attention_mask.dtype, device=device),
+    ], dim=1)
+    if generated_attention.shape[1] != generated.shape[1]:
+        generated_attention = torch.ones_like(generated, dtype=attention_mask.dtype, device=device)
+
     out = model(
         input_ids=generated,
-        attention_mask=generated_attention.to(device),
+        attention_mask=generated_attention,
         output_hidden_states=True,
     )
-    prompt_len = input_ids.shape[1]
-    embeddings_by_layer: dict[int, torch.Tensor] = {}
+    results: list[Optional[dict[int, torch.Tensor]]] = [{layer: torch.empty(0) for layer in layers}
+                                                        for _ in statements]
+    response_start = min(prompt_width, generated.shape[1] - 1)
+    response_end = generated.shape[1]
     for layer in layers:
         states = out.hidden_states[layer].float()
-        pooled = []
-        for sample_idx in range(states.shape[0]):
-            valid_len = int(generated_attention[sample_idx].sum().item())
-            if valid_len <= 0:
-                continue
-            start_idx = min(prompt_len, max(valid_len - 1, 0))
-            if pooling == "mean" and valid_len > start_idx:
-                pooled.append(states[sample_idx, start_idx:valid_len, :].mean(dim=0))
-            else:
-                pooled.append(states[sample_idx, valid_len - 1, :])
-        if not pooled:
-            return None
-        embeddings_by_layer[layer] = torch.stack(pooled).cpu()
-    return embeddings_by_layer
+        for stmt_idx in range(len(statements)):
+            pooled = []
+            for sample_idx in range(n_samples):
+                row = stmt_idx * n_samples + sample_idx
+                if pooling == "mean" and response_end > response_start:
+                    pooled.append(states[row, response_start:response_end, :].mean(dim=0))
+                else:
+                    pooled.append(states[row, response_end - 1, :])
+            results[stmt_idx][layer] = torch.stack(pooled).cpu()
+    return results
+
+
+@torch.no_grad()
+def sampled_response_embeddings(
+    model,
+    tokenizer,
+    stmt: Statement,
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+) -> Optional[dict[int, torch.Tensor]]:
+    return sampled_response_embeddings_batch(
+        model,
+        tokenizer,
+        [stmt],
+        layers,
+        device,
+        max_length,
+        n_samples=n_samples,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        pooling=pooling,
+        seed=seed,
+    )[0]
+
+
+def sampled_inside_scores_batch(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    max_length: int,
+    *,
+    n_samples: int,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+    pooling: str,
+    seed: int,
+    eigenscore_alpha: float,
+) -> list[Optional[dict[int, float]]]:
+    embeddings_batch = sampled_response_embeddings_batch(
+        model,
+        tokenizer,
+        statements,
+        layers,
+        device,
+        max_length,
+        n_samples=n_samples,
+        max_new_tokens=max_new_tokens,
+        temperature=temperature,
+        top_p=top_p,
+        pooling=pooling,
+        seed=seed,
+    )
+    scores_batch: list[Optional[dict[int, float]]] = []
+    for embeddings in embeddings_batch:
+        if embeddings is None:
+            scores_batch.append(None)
+            continue
+        scores_batch.append({
+            layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
+            for layer, values in embeddings.items()
+        })
+    return scores_batch
 
 
 def sampled_inside_scores(
@@ -421,10 +562,10 @@ def sampled_inside_scores(
     seed: int,
     eigenscore_alpha: float,
 ) -> Optional[dict[int, float]]:
-    embeddings = sampled_response_embeddings(
+    return sampled_inside_scores_batch(
         model,
         tokenizer,
-        stmt,
+        [stmt],
         layers,
         device,
         max_length,
@@ -434,18 +575,13 @@ def sampled_inside_scores(
         top_p=top_p,
         pooling=pooling,
         seed=seed,
-    )
-    if embeddings is None:
-        return None
-    return {
-        layer: float(internal_eigenscore(values, alpha=eigenscore_alpha).item())
-        for layer, values in embeddings.items()
-    }
+        eigenscore_alpha=eigenscore_alpha,
+    )[0]
 
 
 def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List[str],
                       layers: List[int], device: torch.device, max_length: int,
-                      subspace_rank: int) -> tuple[dict, dict]:
+                      subspace_rank: int, batch_size: int) -> tuple[dict, dict]:
     """逐层构建真值流形与 mass-mean 对比方向（与 EigenTruthWrapper.warmup 同构）。
     Per-layer truth manifolds plus the mass-mean contrastive direction
     (mirrors EigenTruthWrapper.warmup; cf. Marks & Tegmark mass-mean probing).
@@ -456,40 +592,44 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     false_sums: dict = {layer: None for layer in layers}
     n_false = 0
 
-    for t in true_texts:
-        reps = statement_reps(
+    true_statements = [Statement("", text, 0) for text in true_texts]
+    for batch in _chunked(true_statements, batch_size):
+        reps_batch = batched_statement_reps(
             model,
             tokenizer,
-            Statement("", t, 0),
+            batch,
             layers,
             device,
             max_length,
             compute_answer_metrics=False,
         )
-        if reps is None:
-            continue
-        for layer in layers:
-            h = reps["last"][layer]
-            manifolds[layer].update(h)
-            true_state_lists[layer].append(h)
+        for reps in reps_batch:
+            if reps is None:
+                continue
+            for layer in layers:
+                h = reps["last"][layer]
+                manifolds[layer].update(h)
+                true_state_lists[layer].append(h)
 
-    for t in false_texts:
-        reps = statement_reps(
+    false_statements = [Statement("", text, 1) for text in false_texts]
+    for batch in _chunked(false_statements, batch_size):
+        reps_batch = batched_statement_reps(
             model,
             tokenizer,
-            Statement("", t, 1),
+            batch,
             layers,
             device,
             max_length,
             compute_answer_metrics=False,
         )
-        if reps is None:
-            continue
-        n_false += 1
-        for layer in layers:
-            h = reps["last"][layer]
-            false_state_lists[layer].append(h)
-            false_sums[layer] = h if false_sums[layer] is None else false_sums[layer] + h
+        for reps in reps_batch:
+            if reps is None:
+                continue
+            n_false += 1
+            for layer in layers:
+                h = reps["last"][layer]
+                false_state_lists[layer].append(h)
+                false_sums[layer] = h if false_sums[layer] is None else false_sums[layer] + h
 
     subspaces = {}
     for layer in layers:
@@ -548,7 +688,8 @@ def run(args) -> dict:
     print(f"Building per-layer truth stats from {len(manifold_true)} true / "
           f"{len(manifold_false)} false statements ({len(layers)} layer(s)) ...")
     manifolds, subspaces = build_layer_stats(
-        model, tokenizer, manifold_true, manifold_false, layers, device, args.max_length, args.subspace_rank
+        model, tokenizer, manifold_true, manifold_false, layers, device, args.max_length,
+        args.subspace_rank, args.batch_size
     )
     primary = manifolds[args.layer]
     if not primary.is_ready():
@@ -567,77 +708,81 @@ def run(args) -> dict:
     labels: List[int] = []
 
     print(f"Scoring {len(eval_stmts)} eval statements ...")
-    for k, stmt in enumerate(eval_stmts):
-        reps = statement_reps(
+    scored = 0
+    for batch_idx, batch in enumerate(_chunked(eval_stmts, args.batch_size)):
+        reps_batch = batched_statement_reps(
             model,
             tokenizer,
-            stmt,
+            batch,
             layers,
             device,
             args.max_length,
             eigenscore_alpha=args.eigenscore_alpha,
         )
-        if reps is None:
-            continue
-        inside_scores = None
+        inside_scores_batch = [None] * len(batch)
         if _inside_enabled(args):
-            inside_scores = sampled_inside_scores(
-                model,
-                tokenizer,
-                stmt,
-                layers,
-                device,
-                args.max_length,
-                n_samples=args.inside_samples,
-                max_new_tokens=args.inside_max_new_tokens,
-                temperature=args.inside_temperature,
-                top_p=args.inside_top_p,
-                pooling=args.inside_pooling,
-                seed=args.seed + k,
-                eigenscore_alpha=args.eigenscore_alpha,
-            )
-            if inside_scores is None:
+            inside_scores_batch = []
+            for inside_batch in _chunked(batch, args.inside_batch_size):
+                inside_scores_batch.extend(sampled_inside_scores_batch(
+                    model,
+                    tokenizer,
+                    inside_batch,
+                    layers,
+                    device,
+                    args.max_length,
+                    n_samples=args.inside_samples,
+                    max_new_tokens=args.inside_max_new_tokens,
+                    temperature=args.inside_temperature,
+                    top_p=args.inside_top_p,
+                    pooling=args.inside_pooling,
+                    seed=args.seed + batch_idx,
+                    eigenscore_alpha=args.eigenscore_alpha,
+                ))
+
+        for stmt, reps, inside_scores in zip(batch, reps_batch, inside_scores_batch):
+            if reps is None or (_inside_enabled(args) and inside_scores is None):
                 continue
 
-        for layer in layers:
-            m = manifolds[layer]
-            h = reps["last"][layer]
-            sweep_scores[layer]["maha_last"].append(
-                float(mahalanobis_distance(h, m.mean, m.cov_inv).item())
+            for layer in layers:
+                m = manifolds[layer]
+                h = reps["last"][layer]
+                sweep_scores[layer]["maha_last"].append(
+                    float(mahalanobis_distance(h, m.mean, m.cov_inv).item())
+                )
+                # 沿真值方向的投影越小越可疑：score = -(h · direction)
+                # Lower projection onto the truth direction = more suspect
+                if m.contrastive_direction is not None:
+                    proj = -float(torch.dot(h, m.contrastive_direction).item())
+                else:
+                    proj = 0.0
+                sweep_scores[layer]["truth_proj"].append(proj)
+                subspace = subspaces.get(layer)
+                if subspace is not None and subspace.is_ready():
+                    resid = float(subspace.residual_distance(h).item())
+                else:
+                    resid = 0.0
+                sweep_scores[layer]["subspace_resid"].append(resid)
+                sweep_scores[layer]["eigenscore"].append(reps["eigenscore_by_layer"][layer])
+                if inside_scores is not None:
+                    sweep_scores[layer][INSIDE_SIGNAL].append(inside_scores[layer])
+
+            ans = reps["ans_hs"]
+            scores["maha_last"].append(sweep_scores[args.layer]["maha_last"][-1])
+            scores["truth_proj"].append(sweep_scores[args.layer]["truth_proj"][-1])
+            scores["subspace_resid"].append(sweep_scores[args.layer]["subspace_resid"][-1])
+            scores["disp_euclid"].append(float(euclidean_dispersion(ans).item()))
+            scores["disp_hse"].append(
+                float(hyperbolic_semantic_entropy(poincare_map(ans)).item())
             )
-            # 沿真值方向的投影越小越可疑：score = -(h · direction)
-            # Lower projection onto the truth direction = more suspect
-            if m.contrastive_direction is not None:
-                proj = -float(torch.dot(h, m.contrastive_direction).item())
-            else:
-                proj = 0.0
-            sweep_scores[layer]["truth_proj"].append(proj)
-            subspace = subspaces.get(layer)
-            if subspace is not None and subspace.is_ready():
-                resid = float(subspace.residual_distance(h).item())
-            else:
-                resid = 0.0
-            sweep_scores[layer]["subspace_resid"].append(resid)
-            sweep_scores[layer]["eigenscore"].append(reps["eigenscore_by_layer"][layer])
+            scores["eigenscore"].append(sweep_scores[args.layer]["eigenscore"][-1])
             if inside_scores is not None:
-                sweep_scores[layer][INSIDE_SIGNAL].append(inside_scores[layer])
+                scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
+            scores["nll_answer"].append(reps["nll"])
+            labels.append(stmt.is_false)
+            scored += 1
 
-        ans = reps["ans_hs"]
-        scores["maha_last"].append(sweep_scores[args.layer]["maha_last"][-1])
-        scores["truth_proj"].append(sweep_scores[args.layer]["truth_proj"][-1])
-        scores["subspace_resid"].append(sweep_scores[args.layer]["subspace_resid"][-1])
-        scores["disp_euclid"].append(float(euclidean_dispersion(ans).item()))
-        scores["disp_hse"].append(
-            float(hyperbolic_semantic_entropy(poincare_map(ans)).item())
-        )
-        scores["eigenscore"].append(sweep_scores[args.layer]["eigenscore"][-1])
-        if inside_scores is not None:
-            scores[INSIDE_SIGNAL].append(sweep_scores[args.layer][INSIDE_SIGNAL][-1])
-        scores["nll_answer"].append(reps["nll"])
-        labels.append(stmt.is_false)
-
-        if (k + 1) % 50 == 0:
-            print(f"   {k + 1}/{len(eval_stmts)}")
+            if scored % 50 == 0:
+                print(f"   {scored}/{len(eval_stmts)}")
 
     n_pos = sum(labels)
     n_neg = len(labels) - n_pos
@@ -687,7 +832,9 @@ def run(args) -> dict:
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
                    "eigenscore_alpha": args.eigenscore_alpha,
+                   "batch_size": args.batch_size,
                    "inside_samples": args.inside_samples,
+                   "inside_batch_size": args.inside_batch_size,
                    "inside_max_new_tokens": args.inside_max_new_tokens,
                    "inside_temperature": args.inside_temperature,
                    "inside_top_p": args.inside_top_p,
@@ -727,6 +874,8 @@ def main():
     p.add_argument("--manifold-questions", type=int, default=80,
                    help="held-out questions whose correct answers build the manifold")
     p.add_argument("--max-length", type=int, default=64)
+    p.add_argument("--batch-size", type=int, default=1,
+                   help="forced-answer forward batch size; increase for faster benchmarks if memory allows")
     p.add_argument("--subspace-rank", type=int, default=2,
                    help="rank for TruthSubspace residual scoring")
     p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
@@ -734,6 +883,8 @@ def main():
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore")
+    p.add_argument("--inside-batch-size", type=int, default=1,
+                   help="number of prompts to sample in one generate() call for --inside-samples")
     p.add_argument("--inside-max-new-tokens", type=int, default=12,
                    help="max sampled continuation length for --inside-samples")
     p.add_argument("--inside-temperature", type=float, default=0.7,
@@ -750,6 +901,10 @@ def main():
                         "(enables post-hoc analyses, e.g. conformal calibration)")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
+    if args.batch_size < 1:
+        p.error("--batch-size must be >=1")
+    if args.inside_batch_size < 1:
+        p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:
         p.error("--inside-samples must be 0 or >=2")
     run(args)
