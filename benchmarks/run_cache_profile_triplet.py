@@ -15,7 +15,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EVAL_SCRIPT = REPO_ROOT / "benchmarks" / "eval_truthfulqa.py"
@@ -24,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.compare_profiles import build_profile_comparison  # noqa: E402
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 TRIPLET_RUN_NAMES = ("uncached", "cached", "cache_only")
 
@@ -99,6 +100,10 @@ class CacheProfileTripletConfig:
     @property
     def comparison_report(self) -> Path:
         return self.output_dir / "cache-profile-comparison.json"
+
+    @property
+    def artifact_manifest(self) -> Path:
+        return self.output_dir / "artifact-manifest.json"
 
     def profile_path(self, name: str) -> Path:
         return self.output_dir / f"profile-{name}.json"
@@ -239,6 +244,9 @@ def run_triplet(
     with open(command_log_path, "w", encoding="utf-8") as f:
         json.dump(command_log, f, indent=2)
     payload["command_log"] = str(command_log_path)
+    manifest = _write_artifact_manifest(config, payload)
+    payload["artifact_manifest"] = str(config.artifact_manifest)
+    payload["artifact_manifest_summary"] = manifest["summary"]
     return payload
 
 
@@ -282,6 +290,34 @@ def _cache_paths(config: CacheProfileTripletConfig) -> dict[str, str]:
         "layer_stats_cache": str(config.layer_stats_cache),
         "eval_reps_cache": str(config.eval_reps_cache),
     }
+
+
+def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping[str, Any]) -> dict[str, Any]:
+    artifacts: dict[str, str | Path | None] = {
+        "command_log": payload.get("command_log"),
+        "comparison_report": payload.get("comparison_report"),
+    }
+    for group_name in ("profiles", "results", "caches"):
+        for name, path in dict(payload.get(group_name, {})).items():
+            artifacts[f"{group_name}.{name}"] = path
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=config.output_dir,
+        metadata={
+            "runner": "run_cache_profile_triplet",
+            "model": config.model,
+            "dtype": config.dtype,
+            "layer": config.layer,
+            "batch_size": config.batch_size,
+            "hidden_state_capture": config.hidden_state_capture,
+            "offline": config.offline,
+            "run_names": tuple(config.run_names),
+            "uncached_cache_mode": config.uncached_cache_mode,
+            "dry_run": bool(payload.get("dry_run")),
+        },
+    )
+    config.artifact_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
 
 
 def _parse_run_names(value: str) -> tuple[str, ...]:

@@ -22,6 +22,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.run_cache_profile_triplet import CacheProfileTripletConfig, run_triplet  # noqa: E402
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 MATRIX_MODES = ("triplet", "rescore")
 
@@ -77,6 +78,10 @@ class CacheProfileMatrixConfig:
     @property
     def report_path(self) -> Path:
         return self.output_dir / "cache-profile-matrix-report.json"
+
+    @property
+    def artifact_manifest(self) -> Path:
+        return self.output_dir / "artifact-manifest.json"
 
 
 def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]:
@@ -188,9 +193,11 @@ def run_matrix(
         "cells": cells,
         "leaderboard": _leaderboard(cells),
         "report_path": str(config.report_path),
+        "artifact_manifest": str(config.artifact_manifest),
     }
     with open(config.report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2)
+    _write_artifact_manifest(config, report)
     return report
 
 
@@ -217,6 +224,34 @@ def _shared_cache_paths(config: CacheProfileMatrixConfig, cell: Mapping[str, Any
         "layer_stats_cache": root / group / "layer-stats.pt",
         "eval_reps_cache": root / group / "eval-reps-cache",
     }
+
+
+def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[str, Any]) -> dict[str, Any]:
+    artifacts: dict[str, str | Path | None] = {"matrix_report": config.report_path}
+    for cell in report.get("cells", ()):
+        if not isinstance(cell, Mapping):
+            continue
+        triplet = cell.get("triplet", {})
+        if isinstance(triplet, Mapping):
+            artifacts[f"cells.{cell.get('id')}.triplet_manifest"] = triplet.get("artifact_manifest")
+    manifest = build_artifact_manifest(
+        artifacts,
+        root=config.output_dir,
+        metadata={
+            "runner": "run_cache_profile_matrix",
+            "model": config.model,
+            "dtype": config.dtype,
+            "layers": tuple(config.layers),
+            "batch_sizes": tuple(config.batch_sizes),
+            "hidden_state_captures": tuple(config.hidden_state_captures),
+            "offline": config.offline,
+            "matrix_mode": config.matrix_mode,
+            "dry_run": bool(report.get("dry_run")),
+            "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+        },
+    )
+    config.artifact_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
 
 
 def _shared_cache_group(config: CacheProfileMatrixConfig, cell: Mapping[str, Any]) -> str | None:

@@ -13,7 +13,7 @@ from eigentruth.control import (
     RiskLevel,
     TraceEvent,
 )
-from eigentruth.registry import ArtifactRegistry, RegistryRecord
+from eigentruth.registry import ArtifactRegistry, RegistryRecord, build_artifact_manifest, fingerprint_path
 from eigentruth.verify import (
     InMemoryVerifier,
     VerificationResult,
@@ -90,6 +90,38 @@ def test_artifact_registry_json_roundtrip(tmp_path):
     assert loaded.get(record.key()) == record
     assert loaded.list_records(artifact_type="calibration_report") == (record,)
     assert loaded.to_dict()["schema_version"] == 1
+
+
+def test_artifact_fingerprint_hashes_files_and_directories(tmp_path):
+    file_path = tmp_path / "result.json"
+    file_path.write_text('{"ok": true}\n', encoding="utf-8")
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "manifest.json").write_text('{"records": 2}\n', encoding="utf-8")
+    (cache_dir / "records-00000.pt").write_bytes(b"tensor-bytes")
+
+    file_record = fingerprint_path(file_path, root=tmp_path).to_dict()
+    directory_record = fingerprint_path(cache_dir, root=tmp_path).to_dict()
+    manifest = build_artifact_manifest(
+        {"result": file_path, "cache": cache_dir, "missing": tmp_path / "missing.json"},
+        root=tmp_path,
+        metadata={"runner": "unit-test"},
+    )
+
+    assert file_record["path"] == "result.json"
+    assert file_record["kind"] == "file"
+    assert file_record["sha256"]
+    assert directory_record["path"] == "cache"
+    assert directory_record["kind"] == "directory"
+    assert directory_record["file_count"] == 2
+    assert directory_record["size_bytes"] == len('{"records": 2}\n') + len(b"tensor-bytes")
+    assert manifest["metadata"]["runner"] == "unit-test"
+    assert manifest["summary"]["artifact_count"] == 3
+    assert manifest["summary"]["missing_count"] == 1
+
+    before = directory_record["sha256"]
+    (cache_dir / "records-00000.pt").write_bytes(b"changed")
+    assert fingerprint_path(cache_dir, root=tmp_path).to_dict()["sha256"] != before
 
 
 def test_product_trace_action_execution_summary_counts_results():

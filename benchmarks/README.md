@@ -786,6 +786,13 @@ Use `rescore` only when the question is post-processing/report behavior over
 the same cached representations. It deliberately skips repeated forward timing,
 so it should not be used to compare batch-size runtime performance.
 
+Both cache-profile runners write an `artifact-manifest.json` next to their
+outputs. The manifest records SHA-256 fingerprints for command logs, profile
+JSON, result JSON, comparison reports, and cache paths. Directory fingerprints
+are deterministic over relative file names, sizes, and content hashes. This is
+intended for local reproducibility and artifact registry handoff; on very large
+eval-reps cache directories it adds one linear read pass after the run.
+
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
 to verify that the gates pass acceptable candidates and catch expected

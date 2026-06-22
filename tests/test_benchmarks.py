@@ -927,6 +927,12 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
 
     assert payload["dry_run"] is True
     assert Path(payload["command_log"]).exists()
+    assert Path(payload["artifact_manifest"]).exists()
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert manifest["metadata"]["runner"] == "run_cache_profile_triplet"
+    assert manifest["artifacts"]["command_log"]["exists"] is True
+    assert manifest["artifacts"]["caches.eval_reps_cache"]["exists"] is False
+    assert payload["artifact_manifest_summary"]["missing_count"] == 3
     assert commands["uncached"][0] == "/python"
     assert "--offline" in commands["uncached"]
     assert commands["uncached"][commands["uncached"].index("--dtype") + 1] == "float32"
@@ -1057,9 +1063,13 @@ def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatc
 
     payload = module.run_triplet(config, clean=True, dry_run=False)
     report = json.loads(Path(payload["comparison_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
 
     assert [call["check"] for call in calls] == [True, True, True]
     assert payload["dry_run"] is False
+    assert manifest["artifacts"]["comparison_report"]["exists"] is True
+    assert manifest["artifacts"]["profiles.cache_only"]["sha256"]
+    assert manifest["artifacts"]["results.cache_only"]["sha256"]
     assert payload["regression_gate"]["passed"] is True
     assert report["baseline"] == "uncached"
     assert report["regression_gate"]["config"]["max_run_total_ratios"] == {
@@ -1106,6 +1116,11 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
 
     assert report["dry_run"] is True
     assert Path(report["report_path"]).exists()
+    assert Path(report["artifact_manifest"]).exists()
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert manifest["metadata"]["runner"] == "run_cache_profile_matrix"
+    assert manifest["artifacts"]["matrix_report"]["exists"] is True
+    assert manifest["artifacts"]["cells.layer_m2_batch_2_capture_outputs.triplet_manifest"]["exists"] is True
     assert [cell["id"] for cell in report["cells"]] == [
         "layer_m2_batch_2_capture_outputs",
         "layer_m2_batch_2_capture_hooks",
