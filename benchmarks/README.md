@@ -968,6 +968,7 @@ python benchmarks/eval_verifier_ensemble.py \
   --signal truth_proj \
   --alphas 0.05,0.1,0.2 \
   --repeats 50 \
+  --verification-cache-dir artifacts/cache/verifier_traces \
   --json artifacts/truthfulqa_l80_local_evidence_verifier_ensemble_report.json
 ```
 
@@ -977,7 +978,9 @@ and retrieval behavior fully reproducible. The default retriever backend is
 `memory`; `auto` tries SQLite FTS5 and falls back to memory when unavailable.
 When `--retriever-index-path` is provided with `auto` or `sqlite_fts`, the FTS
 index is persisted and reused when its stored corpus fingerprint matches the
-current corpus.
+current corpus. `--verification-cache-dir` is optional and stores verified-record
+traces keyed by score dump, claims/evidence content, verifier parameters, and
+state/QA sources so repeated alpha/repeat sweeps can skip claim verification.
 
 ## `run_local_retrieval_route_workflow.py`
 
@@ -1001,6 +1004,7 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3 \
   --claims-cache-dir artifacts/cache/local_retrieval_claims \
+  --verifier-trace-cache-dir artifacts/cache/verifier_traces \
   --min-selected 100 \
   --min-decision-accuracy 0.90 \
   --max-false-supported-rate 0.05 \
@@ -1024,6 +1028,11 @@ retriever backend, retriever overlap threshold, and retrieval limit. A cache hit
 skips local score dump/corpus parsing for claim construction, then still reruns
 verifier-route metrics and promotion against the current score dump and emitted
 claims file.
+
+`--verifier-trace-cache-dir` is optional. It caches verifier ensemble
+`verified_records`, so repeated workflow runs can reuse claim verification and
+retrieval route traces while still recalculating alpha-specific control metrics,
+promotion gates, manifests, and registry output.
 
 `--retriever-backend` defaults to `memory`. Use `auto` to try the standard-library
 SQLite FTS5 candidate index and fall back to memory when FTS5 is unavailable in

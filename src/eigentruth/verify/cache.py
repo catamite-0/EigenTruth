@@ -6,6 +6,7 @@ import json
 from collections import OrderedDict
 from dataclasses import asdict, dataclass, field, is_dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Mapping, MutableMapping, Sequence
 
 from eigentruth.verify.protocols import Claim, VerificationResult, Verifier
@@ -40,6 +41,130 @@ class VerifierCacheStats:
             "requests": self.requests,
             "hit_rate": self.hit_rate,
         }
+
+
+@dataclass(frozen=True)
+class TraceCacheRecord:
+    """One JSON-ready cached trace payload."""
+
+    key: str
+    payload: Any
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    schema_version: int = 1
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable cache record."""
+        return {
+            "schema_version": int(self.schema_version),
+            "key": self.key,
+            "payload": _normalize_cache_value(self.payload),
+            "metadata": _normalize_cache_value(dict(self.metadata)),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "TraceCacheRecord":
+        """Build a trace cache record from JSON-like data."""
+        key = data.get("key")
+        if key is None:
+            raise ValueError("trace cache record must contain a key.")
+        if "payload" not in data:
+            raise ValueError("trace cache record must contain a payload.")
+        metadata = data.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            raise ValueError("trace cache record metadata must be a JSON object.")
+        return cls(
+            key=str(key),
+            payload=data["payload"],
+            metadata=dict(metadata),
+            schema_version=int(data.get("schema_version", 1)),
+        )
+
+
+@dataclass(frozen=True)
+class JsonTraceCache:
+    """Small file-backed JSON trace cache for reproducible local workflows."""
+
+    path: str | Path
+    cache_type: str = "trace_cache"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "path", Path(self.path))
+        if not str(self.cache_type).strip():
+            raise ValueError("cache_type must be non-empty.")
+
+    def get(self, key: str) -> Any | None:
+        """Return a cached payload for ``key``, if present."""
+        record = self.get_record(key)
+        return None if record is None else record.payload
+
+    def get_record(self, key: str) -> TraceCacheRecord | None:
+        """Return a cached record for ``key``, if present."""
+        records = self._load_records()
+        payload = records.get(str(key))
+        if payload is None:
+            return None
+        if not isinstance(payload, Mapping):
+            raise ValueError("trace cache record must be a JSON object.")
+        record = TraceCacheRecord.from_dict(payload)
+        if record.key != str(key):
+            raise ValueError("trace cache record key mismatch.")
+        return record
+
+    def put(self, key: str, payload: Any, *, metadata: Mapping[str, Any] | None = None) -> TraceCacheRecord:
+        """Persist a payload for ``key`` and return the stored record."""
+        key_text = str(key)
+        record = TraceCacheRecord(key=key_text, payload=payload, metadata=dict(metadata or {}))
+        data = self._load()
+        records = data.setdefault("records", {})
+        if not isinstance(records, MutableMapping):
+            raise ValueError("trace cache records must be a JSON object.")
+        records[key_text] = record.to_dict()
+        self._write(data)
+        return record
+
+    def summary(self) -> dict[str, Any]:
+        """Return a JSON-ready cache summary."""
+        records = self._load_records()
+        return {
+            "path": str(self.path),
+            "cache_type": self.cache_type,
+            "records": len(records),
+        }
+
+    def _load_records(self) -> dict[str, Any]:
+        return dict(self._load().get("records", {}))
+
+    def _load(self) -> dict[str, Any]:
+        if not self.path.exists():
+            return {
+                "schema_version": 1,
+                "cache_type": self.cache_type,
+                "records": {},
+            }
+        payload = json.loads(self.path.read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError("trace cache must contain a JSON object.")
+        if int(payload.get("schema_version", 1)) != 1:
+            raise ValueError("unsupported trace cache schema_version.")
+        if str(payload.get("cache_type", self.cache_type)) != self.cache_type:
+            raise ValueError("trace cache_type mismatch.")
+        records = payload.get("records", {})
+        if not isinstance(records, Mapping):
+            raise ValueError("trace cache records must be a JSON object.")
+        return {
+            "schema_version": 1,
+            "cache_type": self.cache_type,
+            "records": dict(records),
+        }
+
+    def _write(self, payload: Mapping[str, Any]) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        temp_path = self.path.with_suffix(f"{self.path.suffix}.tmp")
+        temp_path.write_text(
+            json.dumps(_normalize_cache_value(payload), indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        temp_path.replace(self.path)
 
 
 @dataclass

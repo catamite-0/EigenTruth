@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from eigentruth.verify.cache import CachedVerifier, VerifierCacheStats, stable_cache_key, verifier_cache_key
+from eigentruth.verify.cache import (
+    CachedVerifier,
+    JsonTraceCache,
+    TraceCacheRecord,
+    VerifierCacheStats,
+    stable_cache_key,
+    verifier_cache_key,
+)
 from eigentruth.verify.claims import ClaimExtractor, SentenceClaimExtractor, claim_features, extract_claims
 from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, VerifierRoute
 from eigentruth.verify.groundedness import EvidenceDocument, GroundednessVerifier
@@ -17,7 +24,9 @@ __all__ = [
     "EvidenceDocument",
     "GroundednessVerifier",
     "InMemoryVerifier",
+    "JsonTraceCache",
     "RoutedVerifier",
+    "TraceCacheRecord",
     "VerificationResult",
     "VerificationStatus",
     "VerifierCacheStats",

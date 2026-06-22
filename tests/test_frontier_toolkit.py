@@ -53,6 +53,7 @@ from eigentruth.verify import (
     EvidenceDocument,
     GroundednessVerifier,
     InMemoryVerifier,
+    JsonTraceCache,
     RoutedVerifier,
     VerificationResult,
     VerificationStatus,
@@ -317,6 +318,25 @@ def test_cached_verifier_reuses_identical_claim_context_results():
     assert base.calls == 2
     assert verifier.stats.to_dict()["hits"] == 1
     assert verifier.stats.to_dict()["misses"] == 2
+
+
+def test_json_trace_cache_roundtrip(tmp_path):
+    cache = JsonTraceCache(tmp_path / "trace-cache.json", cache_type="unit_trace")
+
+    stored = cache.put(
+        "k1",
+        {"results": (VerificationResult(VerificationStatus.SUPPORTED, 0.9),)},
+        metadata={"source": "unit"},
+    )
+    loaded = JsonTraceCache(tmp_path / "trace-cache.json", cache_type="unit_trace").get_record("k1")
+
+    assert stored.key == "k1"
+    assert loaded is not None
+    assert loaded.payload["results"][0]["status"] == "supported"
+    assert loaded.metadata["source"] == "unit"
+    assert cache.summary()["records"] == 1
+    with pytest.raises(ValueError, match="cache_type"):
+        JsonTraceCache(tmp_path / "trace-cache.json", cache_type="other").get_record("k1")
 
 
 def test_cached_state_source_loads_once_and_copies_state():

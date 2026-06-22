@@ -78,6 +78,7 @@ class LocalRetrievalRouteWorkflowConfig:
     verification_report_path: Path | None = None
     workflow_report_path: Path | None = None
     claims_cache_dir: Path | None = None
+    verifier_trace_cache_dir: Path | None = None
     compact_json: bool = False
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -98,6 +99,7 @@ class LocalRetrievalRouteWorkflowConfig:
             "workflow_report_path",
             "claims_cache_dir",
             "retriever_index_path",
+            "verifier_trace_cache_dir",
         ):
             value = getattr(self, attr)
             if value is not None:
@@ -215,6 +217,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             verifier_min_overlap=config.verifier_min_overlap,
             retriever_min_overlap=config.retriever_min_overlap,
             retrieval_limit=config.retrieval_limit,
+            verification_cache_dir=config.verifier_trace_cache_dir,
         )
     with _profile_phase(profile, "write_verifier_report"):
         _write_json(config.resolved_verifier_report_path, verifier_report, compact=config.compact_json)
@@ -254,6 +257,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         score_dump=score_dump,
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
+        verifier_report=verifier_report,
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
@@ -261,6 +265,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
     metadata = _manifest_metadata(
         config,
         claims_fixture=claims_fixture,
+        verifier_report=verifier_report,
         promotion_report=promotion_report,
         runtime_profile=runtime_profile,
         claims_cache=claims_cache,
@@ -274,6 +279,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         score_dump=score_dump,
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
+        verifier_report=verifier_report,
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
@@ -287,6 +293,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
         score_dump=score_dump,
         corpus_documents=corpus_documents,
         claims_fixture=claims_fixture,
+        verifier_report=verifier_report,
         promotion_report=promotion_report,
         claims_cache=claims_cache,
     )
@@ -315,6 +322,9 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "retrieval_limit": int(config.retrieval_limit),
             "gate_routes": list(config.gate_routes),
             "claims_cache_dir": None if config.claims_cache_dir is None else str(config.claims_cache_dir),
+            "verifier_trace_cache_dir": (
+                None if config.verifier_trace_cache_dir is None else str(config.verifier_trace_cache_dir)
+            ),
             "registry": None if config.registry_path is None else str(config.registry_path),
             "name": config.name,
             "version": config.version,
@@ -396,6 +406,7 @@ def _manifest_metadata(
     config: LocalRetrievalRouteWorkflowConfig,
     *,
     claims_fixture: Mapping[str, Any],
+    verifier_report: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
     runtime_profile: Mapping[str, Any],
     claims_cache: Mapping[str, Any],
@@ -409,6 +420,7 @@ def _manifest_metadata(
     quality_gate = dict(route_comparison.get("quality_gate") or {})
     summary = dict(claims_fixture.get("summary") or {})
     retriever_info = dict(claims_fixture.get("retriever") or {})
+    trace_cache = _verifier_trace_cache_summary(verifier_report)
     runtime_summary = dict(runtime_profile.get("summary") or {})
     runtime_scale = dict(runtime_profile.get("scale") or {})
     runtime_artifacts = dict(runtime_profile.get("artifacts") or {})
@@ -445,6 +457,10 @@ def _manifest_metadata(
         "claims_cache_status": claims_cache.get("status"),
         "claims_cache_key": claims_cache.get("key"),
         "claims_cache_path": claims_cache.get("path"),
+        "verifier_trace_cache_enabled": trace_cache["enabled"],
+        "verifier_trace_cache_hit_count": trace_cache["hit_count"],
+        "verifier_trace_cache_run_count": trace_cache["run_count"],
+        "verifier_trace_cache_path": trace_cache["path"],
         "runtime_total_seconds": runtime_profile.get("total_seconds"),
         "runtime_bottleneck": runtime_summary.get("bottleneck"),
         "runtime_accounted_share": runtime_summary.get("accounted_share"),
@@ -605,6 +621,32 @@ def _public_claims_cache(cache: Mapping[str, Any]) -> dict[str, Any]:
     return payload
 
 
+def _verifier_trace_cache_summary(verifier_report: Mapping[str, Any]) -> dict[str, Any]:
+    runs = tuple(verifier_report.get("runs", ()))
+    trace_entries = []
+    for run in runs:
+        if not isinstance(run, Mapping):
+            continue
+        cache_stats = run.get("cache_stats", {})
+        if not isinstance(cache_stats, Mapping):
+            continue
+        trace_cache = cache_stats.get("trace_cache", {})
+        if isinstance(trace_cache, Mapping):
+            trace_entries.append(dict(trace_cache))
+    enabled = any(bool(entry.get("enabled")) for entry in trace_entries)
+    hit_count = sum(1 for entry in trace_entries if entry.get("hit"))
+    paths = [entry.get("path") for entry in trace_entries if entry.get("path") is not None]
+    keys = [entry.get("key") for entry in trace_entries if entry.get("key") is not None]
+    return {
+        "enabled": enabled,
+        "hit": bool(trace_entries) and hit_count == len(trace_entries),
+        "hit_count": hit_count,
+        "run_count": len(trace_entries),
+        "path": paths[0] if paths else None,
+        "keys": tuple(keys),
+    }
+
+
 def _stable_json_bytes(payload: Mapping[str, Any]) -> bytes:
     return json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
@@ -626,6 +668,7 @@ def _runtime_profile_payload(
     score_dump: Mapping[str, Any] | None,
     corpus_documents: Sequence[Any] | None,
     claims_fixture: Mapping[str, Any],
+    verifier_report: Mapping[str, Any],
     promotion_report: Mapping[str, Any],
     claims_cache: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -664,7 +707,10 @@ def _runtime_profile_payload(
         "phases": phases,
         "summary": _runtime_profile_summary(phases, total_seconds=total_seconds),
         "scale": scale,
-        "cache": {"claims": _public_claims_cache(claims_cache)},
+        "cache": {
+            "claims": _public_claims_cache(claims_cache),
+            "verifier_trace": _verifier_trace_cache_summary(verifier_report),
+        },
         "artifacts": artifacts,
     }
 
@@ -863,6 +909,9 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
         workflow_report_path=None if args.json is None else Path(args.json),
         claims_cache_dir=None if args.claims_cache_dir is None else Path(args.claims_cache_dir),
+        verifier_trace_cache_dir=(
+            None if args.verifier_trace_cache_dir is None else Path(args.verifier_trace_cache_dir)
+        ),
         compact_json=bool(args.compact_json),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -986,6 +1035,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--claims-cache-dir",
         default=None,
         help="optional cache directory for generated claims fixtures",
+    )
+    parser.add_argument(
+        "--verifier-trace-cache-dir",
+        default=None,
+        help="optional cache directory for verified-record traces",
     )
     parser.add_argument("--metadata", action="append", default=[], help="extra promotion metadata as key=value")
     parser.add_argument("--compact-json", action="store_true")

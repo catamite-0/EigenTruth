@@ -206,6 +206,83 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
+def test_eval_verifier_ensemble_reuses_verification_trace_cache(tmp_path, monkeypatch):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    cache_dir = tmp_path / "verification-cache"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"claim_id": "c1", "text": "Paris is the capital of France."},
+                {"claim_id": "c2", "text": "The sky is blue."},
+                {"claim_id": "c3", "text": "The moon is made of cheese."},
+                {"claim_id": "c4", "text": "Paris is the capital of Germany."},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "Paris is the capital of France.",
+                    "claim_id": "c1",
+                    "initial_evidence": ["Paris is the capital of France."],
+                },
+                {
+                    "claim": "The sky is blue.",
+                    "claim_id": "c2",
+                    "initial_evidence": ["The sky is blue."],
+                },
+                {
+                    "claim": "The moon is made of cheese.",
+                    "claim_id": "c3",
+                    "refutations": {"The moon is made of cheese.": ["Lunar samples are rock."]},
+                },
+                {
+                    "claim": "Paris is the capital of Germany.",
+                    "claim_id": "c4",
+                    "refutations": {"Paris is the capital of Germany.": ["Berlin is the capital of Germany."]},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    first = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verification_cache_dir=cache_dir,
+    )
+
+    def fail_verify_records(*args, **kwargs):
+        raise AssertionError("verification trace cache hit should skip _verify_records")
+
+    monkeypatch.setattr(verifier, "_verify_records", fail_verify_records)
+    second = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verification_cache_dir=cache_dir,
+    )
+
+    assert first["runs"][0]["cache_stats"]["trace_cache"]["hit"] is False
+    assert second["runs"][0]["cache_stats"]["trace_cache"]["hit"] is True
+    assert second["runs"][0]["verification_status_counts"] == first["runs"][0]["verification_status_counts"]
+    assert second["verification_trace_cache"]["path"] == str(cache_dir / "verifier-ensemble-verified-records.json")
+
+
 def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     scores_path = tmp_path / "scores.json"
@@ -1843,6 +1920,7 @@ def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkey
     scores_path = tmp_path / "scores.json"
     corpus_path = tmp_path / "corpus.json"
     cache_dir = tmp_path / "claims-cache"
+    trace_cache_dir = tmp_path / "verifier-trace-cache"
     statements = [
         {
             "claim_id": "order_true_1",
@@ -1906,6 +1984,7 @@ def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkey
         "max_mean_attempted_route_count": 2.1,
         "max_retrieval_use_rate": 1.0,
         "claims_cache_dir": cache_dir,
+        "verifier_trace_cache_dir": trace_cache_dir,
         "compact_json": True,
     }
 
@@ -1915,6 +1994,7 @@ def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkey
     cache_path = Path(first["claims_cache"]["path"])
     assert first["claims_cache"]["status"] == "miss"
     assert first["claims_cache"]["hit"] is False
+    assert first["profile"]["cache"]["verifier_trace"]["hit"] is False
     assert cache_path.exists()
     assert "load_inputs" in first["profile"]["phases"]
     assert "build_claims" in first["profile"]["phases"]
@@ -1937,6 +2017,8 @@ def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkey
     assert second["claims_cache"]["status"] == "hit"
     assert second["claims_cache"]["hit"] is True
     assert second["claims_cache"]["key"] == first["claims_cache"]["key"]
+    assert second["profile"]["cache"]["verifier_trace"]["hit"] is True
+    assert second["profile"]["cache"]["verifier_trace"]["hit_count"] == 1
     assert second["claims_cache"]["scale"]["n_corpus_documents"] == 4
     assert second["claims_summary"] == first["claims_summary"]
     assert "load_claims_cache" in second["profile"]["phases"]
@@ -1947,6 +2029,8 @@ def test_run_local_retrieval_route_workflow_reuses_claims_cache(tmp_path, monkey
     assert "claims_cache_record" in second_manifest["artifacts"]
     assert second_manifest["metadata"]["claims_cache_hit"] is True
     assert second_manifest["metadata"]["claims_cache_status"] == "hit"
+    assert second_manifest["metadata"]["verifier_trace_cache_enabled"] is True
+    assert second_manifest["metadata"]["verifier_trace_cache_hit_count"] == 1
 
 
 def test_run_adapter_promotion_registry_workflow_cli_blocks_non_promoted_route(tmp_path):

@@ -14,6 +14,7 @@ later production verifiers, not a replacement for a real search/RAG backend.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import statistics
@@ -41,6 +42,7 @@ from eigentruth.verify import (
     CachedVerifier,
     Claim,
     GroundednessVerifier,
+    JsonTraceCache,
     VerificationResult,
     VerificationStatus,
     stable_cache_key,
@@ -1115,6 +1117,128 @@ def _optional_delta(after: float | None, before: float | None) -> float | None:
     return after - before
 
 
+def _verification_trace_cache(cache_dir: Path | None) -> JsonTraceCache | None:
+    if cache_dir is None:
+        return None
+    return JsonTraceCache(
+        Path(cache_dir) / "verifier-ensemble-verified-records.json",
+        cache_type="verifier_ensemble_verified_records",
+    )
+
+
+def _verification_trace_cache_key(
+    *,
+    name: str,
+    score_path: Path,
+    signal: str,
+    claims_path: Path | None,
+    qa_corpus_path: Path | None,
+    state_path: Path | None,
+    records: Sequence[ClaimEvidenceRecord],
+    global_state: Mapping[str, Any],
+    global_state_checks: Mapping[str, Any],
+    global_state_transitions: Mapping[str, Any],
+    verifier_min_overlap: float,
+    retriever_min_overlap: float,
+    retrieval_limit: int,
+) -> tuple[str, dict[str, Any]]:
+    material = {
+        "schema_version": 1,
+        "cache_type": "verifier_ensemble_verified_records",
+        "builder": "eval_verifier_ensemble:verified_records:v1",
+        "name": name,
+        "signal": signal,
+        "score_dump": _path_fingerprint(score_path),
+        "claims_fixture": _path_fingerprint(claims_path),
+        "qa_corpus": _path_fingerprint(qa_corpus_path),
+        "state_source": _path_fingerprint(state_path),
+        "records": tuple(_record_cache_material(record) for record in records),
+        "global_state": dict(global_state),
+        "global_state_checks": dict(global_state_checks),
+        "global_state_transitions": dict(global_state_transitions),
+        "verifier": {
+            "min_overlap": float(verifier_min_overlap),
+        },
+        "retriever": {
+            "type": "InMemoryRetriever",
+            "min_overlap": float(retriever_min_overlap),
+            "limit": int(retrieval_limit),
+        },
+    }
+    key = hashlib.sha256(stable_cache_key(material).encode("utf-8")).hexdigest()
+    return key, material
+
+
+def _record_cache_material(record: ClaimEvidenceRecord) -> dict[str, Any]:
+    return {
+        "claim": {
+            "text": record.claim.text,
+            "claim_id": record.claim.claim_id,
+            "span": record.claim.span,
+            "metadata": dict(record.claim.metadata),
+        },
+        "initial_evidence": tuple(record.initial_evidence),
+        "retrieval_documents": tuple(record.retrieval_documents),
+        "refutations": dict(record.refutations),
+        "state": dict(record.state),
+        "metadata": dict(record.metadata),
+    }
+
+
+def _path_fingerprint(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    path = Path(path)
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        return {
+            "path": str(path),
+            "missing": True,
+            "error": str(exc),
+        }
+    return {
+        "size": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+    }
+
+
+def _load_verified_records_from_cache(
+    cache: JsonTraceCache | None,
+    key: str,
+) -> tuple[tuple[dict[str, Any], ...], dict[str, Any]] | None:
+    if cache is None:
+        return None
+    record = cache.get_record(key)
+    if record is None:
+        return None
+    if not isinstance(record.payload, Mapping):
+        return None
+    raw_records = record.payload.get("verified_records")
+    if not isinstance(raw_records, Sequence) or isinstance(raw_records, (str, bytes, bytearray)):
+        return None
+    cache_stats = record.payload.get("cache_stats", {})
+    if not isinstance(cache_stats, Mapping):
+        cache_stats = {}
+    return tuple(dict(item) for item in raw_records if isinstance(item, Mapping)), dict(cache_stats)
+
+
+def _trace_cache_stats(
+    *,
+    enabled: bool,
+    hit: bool,
+    cache: JsonTraceCache | None,
+    key: str | None,
+) -> dict[str, Any]:
+    return {
+        "enabled": enabled,
+        "hit": hit,
+        "key": key,
+        "path": None if cache is None else str(cache.path),
+        "records": None if cache is None else cache.summary()["records"],
+    }
+
+
 def build_verifier_ensemble_report(
     score_dumps: Sequence[tuple[str, Path]],
     *,
@@ -1129,6 +1253,7 @@ def build_verifier_ensemble_report(
     verifier_min_overlap: float = 0.65,
     retriever_min_overlap: float = 0.2,
     retrieval_limit: int = 5,
+    verification_cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
         raise ValueError("at least one score dump is required.")
@@ -1152,6 +1277,7 @@ def build_verifier_ensemble_report(
     global_state = _merge_state_mappings(source_state, fixture_state)
     global_state_checks = {**dict(source_state_checks), **dict(fixture_state_checks)}
     global_state_transitions = {**dict(source_state_transitions), **dict(fixture_state_transitions)}
+    trace_cache = _verification_trace_cache(verification_cache_dir)
     runs = []
     any_state_enabled = False
     any_transition_enabled = False
@@ -1179,18 +1305,64 @@ def build_verifier_ensemble_report(
         )
         state_verifier = StructuredStateVerifier(global_state) if state_enabled else None
         run_cache_stats: dict[str, Any] = {}
-        verified_records = _verify_records(
-            records,
+        trace_key, trace_material = _verification_trace_cache_key(
+            name=name,
+            score_path=path,
+            signal=signal,
+            claims_path=claims_path,
+            qa_corpus_path=qa_corpus_path,
+            state_path=state_path,
+            records=records,
+            global_state=global_state,
+            global_state_checks=global_state_checks,
+            global_state_transitions=global_state_transitions,
             verifier_min_overlap=verifier_min_overlap,
             retriever_min_overlap=retriever_min_overlap,
             retrieval_limit=retrieval_limit,
-            qa_verifier=qa_verifier,
-            state_verifier=state_verifier,
-            state_checks=global_state_checks,
-            transition_verifier=transition_verifier,
-            state_transitions=global_state_transitions,
-            cache_stats=run_cache_stats,
         )
+        cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
+        if cached_trace is not None:
+            verified_records, cached_stats = cached_trace
+            run_cache_stats.update(cached_stats)
+            run_cache_stats["trace_cache"] = _trace_cache_stats(
+                enabled=True,
+                hit=True,
+                cache=trace_cache,
+                key=trace_key,
+            )
+        else:
+            verified_records = _verify_records(
+                records,
+                verifier_min_overlap=verifier_min_overlap,
+                retriever_min_overlap=retriever_min_overlap,
+                retrieval_limit=retrieval_limit,
+                qa_verifier=qa_verifier,
+                state_verifier=state_verifier,
+                state_checks=global_state_checks,
+                transition_verifier=transition_verifier,
+                state_transitions=global_state_transitions,
+                cache_stats=run_cache_stats,
+            )
+            if trace_cache is not None:
+                trace_cache.put(
+                    trace_key,
+                    {
+                        "verified_records": tuple(verified_records),
+                        "cache_stats": dict(run_cache_stats),
+                    },
+                    metadata={
+                        "builder": "eval_verifier_ensemble:verified_records:v1",
+                        "name": name,
+                        "signal": signal,
+                        "material": trace_material,
+                    },
+                )
+            run_cache_stats["trace_cache"] = _trace_cache_stats(
+                enabled=trace_cache is not None,
+                hit=False,
+                cache=trace_cache,
+                key=trace_key if trace_cache is not None else None,
+            )
         alpha_results = {
             str(alpha): _evaluate_alpha(
                 scores=scores,
@@ -1302,6 +1474,10 @@ def build_verifier_ensemble_report(
             "min_overlap": retriever_min_overlap,
             "limit": retrieval_limit,
         },
+        "verification_trace_cache": {
+            "enabled": trace_cache is not None,
+            "path": None if trace_cache is None else str(trace_cache.path),
+        },
         "runs": runs,
     }
 
@@ -1320,6 +1496,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
+        verification_cache_dir=(
+            None
+            if getattr(args, "verification_cache_dir", None) is None
+            else Path(args.verification_cache_dir)
+        ),
     )
     if args.json:
         output_path = Path(args.json)
@@ -1364,6 +1545,8 @@ def main() -> None:
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
+    parser.add_argument("--verification-cache-dir", default=None,
+                        help="optional directory for file-backed verified-record trace cache")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified JSON for lower artifact size and write latency")
