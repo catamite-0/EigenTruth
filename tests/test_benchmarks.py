@@ -2657,6 +2657,95 @@ def test_run_cache_profile_matrix_compares_prefix_kv_cache_modes(tmp_path):
         )
 
 
+def test_run_cache_profile_matrix_prefix_modes_recommend_by_uncached_forward(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+
+    def write_profile(path: Path, *, total: float, forced_answer: float = 0.0) -> None:
+        path.write_text(
+            json.dumps({
+                "total_seconds": total,
+                "phases": {
+                    "forced_answer_forward": forced_answer,
+                    "score_postprocess": max(total - forced_answer, 0.0),
+                },
+                "summary": {
+                    "bottleneck": "forced_answer_forward" if forced_answer else "score_postprocess",
+                    "groups": {"model_forward": {"seconds": forced_answer}},
+                },
+            }),
+            encoding="utf-8",
+        )
+
+    def fake_run_triplet(config, *, clean, dry_run):
+        del clean, dry_run
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        is_prefix_on = bool(config.prefix_kv_cache)
+        uncached_total = 140.0 if is_prefix_on else 120.0
+        forced_answer = 100.0 if is_prefix_on else 80.0
+        cache_only_total = 0.30 if is_prefix_on else 0.31
+        profiles = {}
+        for name, total, forced in (
+            ("uncached", uncached_total, forced_answer),
+            ("cached", 16.0, 0.0),
+            ("cache_only", cache_only_total, 0.0),
+        ):
+            path = config.profile_path(name)
+            write_profile(path, total=total, forced_answer=forced)
+            profiles[name] = str(path)
+        result_path = config.result_path("cache_only")
+        result_path.write_text(json.dumps({"auroc": {"truth_proj": 0.88}}), encoding="utf-8")
+        comparison_path = config.comparison_report
+        comparison_path.write_text(
+            json.dumps({
+                "runs": [
+                    {"name": "uncached", "total_seconds": uncached_total, "bottleneck": "forced_answer_forward"},
+                    {"name": "cached", "total_seconds": 16.0, "bottleneck": "load_model"},
+                    {
+                        "name": "cache_only",
+                        "total_seconds": cache_only_total,
+                        "bottleneck": "score_postprocess",
+                        "total_delta": {
+                            "speedup_vs_baseline": uncached_total / cache_only_total,
+                            "ratio_to_baseline": cache_only_total / uncached_total,
+                        },
+                    },
+                ],
+                "fastest": {"name": "cache_only", "total_seconds": cache_only_total},
+                "regression_gate": {"passed": True},
+            }),
+            encoding="utf-8",
+        )
+        return {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "comparison_report": str(comparison_path),
+            "profiles": profiles,
+            "results": {"cache_only": str(result_path)},
+            "regression_gate": {"passed": True},
+        }
+
+    monkeypatch.setattr(module, "run_triplet", fake_run_triplet)
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path,
+        layers=(-12,),
+        batch_sizes=(1,),
+        hidden_state_captures=("outputs",),
+        prefix_kv_cache_modes=(False, True),
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=False)
+    comparison = report["prefix_kv_comparisons"][0]
+
+    assert report["leaderboard_sort_metric"] == "uncached_total_seconds"
+    assert report["leaderboard"][0]["id"] == "layer_m12_batch_1_capture_outputs_prefix_kv_off"
+    assert report["matrix_decision"]["recommended_cell"] == "layer_m12_batch_1_capture_outputs_prefix_kv_off"
+    assert report["matrix_decision"]["recommendation_metric"] == "uncached_total_seconds"
+    assert comparison["status"] == "prefix_kv_slower"
+    assert comparison["recommended_prefix_kv_cache"] is False
+    assert comparison["uncached_total_ratio_on_vs_off"] == pytest.approx(140.0 / 120.0)
+    assert comparison["forced_answer_forward_ratio_on_vs_off"] == pytest.approx(100.0 / 80.0)
+
+
 def test_run_cache_profile_matrix_rescore_reuses_group_as_cache_only(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     seen = []

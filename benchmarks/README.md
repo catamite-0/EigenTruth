@@ -1051,7 +1051,10 @@ in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and
 shared eval cache groups include the prefix mode so the two forward paths do not
 silently share eval-reps caches. Because prefix caching changes only the
 uncached/cached model-forward path, cache-only runs omit the flag and replay the
-saved representations.
+saved representations. For prefix on/off comparisons, use the report's
+`prefix_kv_comparisons`, `uncached_total_seconds`, and
+`forced_answer_forward_seconds` fields; cache-only speedup is a cache-replay
+metric and is not evidence that prefix KV forward is faster.
 When `--shared-cache-dir` is set, cells with the same layer and hidden-state
 capture share statement/layer/eval cache paths. The first cell for each group
 refreshes the shared caches; later batch-size cells use a warm-start uncached

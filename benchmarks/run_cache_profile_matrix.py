@@ -195,8 +195,10 @@ def run_matrix(
 
     if config.matrix_mode == "rescore":
         _apply_rescore_baselines(config, cells)
-    leaderboard = _leaderboard(cells)
-    matrix_decision = _matrix_decision(cells, leaderboard)
+    leaderboard_sort_metric = _leaderboard_sort_metric(config)
+    leaderboard = _leaderboard(cells, sort_metric=leaderboard_sort_metric)
+    matrix_decision = _matrix_decision(cells, leaderboard, recommendation_metric=leaderboard_sort_metric)
+    prefix_kv_comparisons = _prefix_kv_comparisons(cells)
     report = {
         "dry_run": dry_run,
         "config": {
@@ -219,6 +221,8 @@ def run_matrix(
         },
         "cells": cells,
         "leaderboard": leaderboard,
+        "leaderboard_sort_metric": leaderboard_sort_metric,
+        "prefix_kv_comparisons": prefix_kv_comparisons,
         "matrix_decision": matrix_decision,
         "report_path": str(config.report_path),
         "artifact_manifest": str(config.artifact_manifest),
@@ -343,6 +347,7 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
         return _cell_summary_without_comparison(triplet_payload)
     comparison = json.loads(Path(str(comparison_path)).read_text(encoding="utf-8"))
     runs = {str(run["name"]): run for run in comparison.get("runs", [])}
+    profiles = dict(triplet_payload.get("profiles", {}))
     auroc = _result_auroc(triplet_payload)
     return {
         "dry_run": False,
@@ -350,12 +355,7 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
         "fastest": comparison.get("fastest"),
         "truth_proj_auroc": auroc.get("truth_proj"),
         "totals": {
-            name: {
-                "total_seconds": run.get("total_seconds"),
-                "bottleneck": _run_bottleneck(run),
-                "speedup_vs_baseline": run.get("total_delta", {}).get("speedup_vs_baseline"),
-                "ratio_to_baseline": run.get("total_delta", {}).get("ratio_to_baseline"),
-            }
+            name: _run_summary(run, profiles.get(name))
             for name, run in runs.items()
         },
     }
@@ -373,12 +373,7 @@ def _cell_summary_without_comparison(triplet_payload: dict[str, Any]) -> dict[st
         if not Path(path).exists():
             continue
         run = json.loads(Path(path).read_text(encoding="utf-8"))
-        totals[name] = {
-            "total_seconds": run.get("total_seconds"),
-            "bottleneck": _run_bottleneck(run),
-            "speedup_vs_baseline": None,
-            "ratio_to_baseline": None,
-        }
+        totals[name] = _run_summary(run, path)
     return {
         "dry_run": False,
         "regression_gate": None,
@@ -465,6 +460,42 @@ def _apply_rescore_baseline(
     cell["summary"] = summary
 
 
+def _run_summary(run: Mapping[str, Any], profile_path: Any) -> dict[str, Any]:
+    summary = {
+        "total_seconds": run.get("total_seconds"),
+        "bottleneck": _run_bottleneck(run),
+        "speedup_vs_baseline": run.get("total_delta", {}).get("speedup_vs_baseline"),
+        "ratio_to_baseline": run.get("total_delta", {}).get("ratio_to_baseline"),
+    }
+    summary.update(_profile_runtime_metrics(profile_path))
+    return summary
+
+
+def _profile_runtime_metrics(profile_path: Any) -> dict[str, float]:
+    if not profile_path:
+        return {}
+    path = Path(str(profile_path))
+    if not path.exists():
+        return {}
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    phases = payload.get("phases", {})
+    profile_summary = payload.get("summary", {})
+    groups = profile_summary.get("groups", {}) if isinstance(profile_summary, Mapping) else {}
+    metrics = {}
+    forced_answer = _float_or_none(dict(phases).get("forced_answer_forward") if isinstance(phases, Mapping) else None)
+    model_forward_group = dict(groups).get("model_forward") if isinstance(groups, Mapping) else None
+    model_forward = (
+        _float_or_none(dict(model_forward_group).get("seconds"))
+        if isinstance(model_forward_group, Mapping)
+        else None
+    )
+    if forced_answer is not None:
+        metrics["forced_answer_forward_seconds"] = forced_answer
+    if model_forward is not None:
+        metrics["model_forward_seconds"] = model_forward
+    return metrics
+
+
 def _run_bottleneck(run: Mapping[str, Any]) -> Any:
     """Return a run bottleneck from current or legacy comparison payloads."""
     if run.get("bottleneck") is not None:
@@ -487,14 +518,29 @@ def _result_auroc(triplet_payload: dict[str, Any]) -> dict[str, float]:
     return {str(name): float(value) for name, value in auroc.items() if isinstance(value, int | float)}
 
 
-def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
+def _leaderboard_sort_metric(config: CacheProfileMatrixConfig) -> str:
+    prefix_modes = tuple(config.prefix_kv_cache_modes or ())
+    if config.matrix_mode == "triplet" and len(prefix_modes) > 1:
+        return "uncached_total_seconds"
+    return "cache_only_total_seconds"
+
+
+def _leaderboard(
+    cells: Sequence[dict[str, Any]],
+    *,
+    sort_metric: str = "cache_only_total_seconds",
+) -> tuple[dict[str, Any], ...]:
     scored = []
     for cell in cells:
         summary = dict(cell.get("summary", {}))
         totals = dict(summary.get("totals", {}))
         cache_only = dict(totals.get("cache_only", {}))
-        total_seconds = cache_only.get("total_seconds")
-        if total_seconds is None:
+        cached = dict(totals.get("cached", {}))
+        uncached = dict(totals.get("uncached", {}))
+        cache_only_total = cache_only.get("total_seconds")
+        uncached_total = uncached.get("total_seconds")
+        sort_value = uncached_total if sort_metric == "uncached_total_seconds" else cache_only_total
+        if sort_value is None:
             continue
         scored.append({
             "id": cell["id"],
@@ -504,17 +550,24 @@ def _leaderboard(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
             "prefix_kv_cache": bool(cell.get("prefix_kv_cache", False)),
             "uncached_cache_mode": cell.get("uncached_cache_mode"),
             "shared_cache_group": cell.get("shared_cache_group"),
-            "cache_only_total_seconds": total_seconds,
+            "uncached_total_seconds": uncached_total,
+            "cached_total_seconds": cached.get("total_seconds"),
+            "cache_only_total_seconds": cache_only_total,
+            "uncached_forced_answer_forward_seconds": uncached.get("forced_answer_forward_seconds"),
+            "uncached_model_forward_seconds": uncached.get("model_forward_seconds"),
             "cache_only_speedup_vs_baseline": cache_only.get("speedup_vs_baseline"),
             "truth_proj_auroc": summary.get("truth_proj_auroc"),
             "gate_passed": _gate_passed(summary.get("regression_gate")),
+            "recommendation_metric": sort_metric,
         })
-    return tuple(sorted(scored, key=lambda item: (item["cache_only_total_seconds"], str(item["id"]))))
+    return tuple(sorted(scored, key=lambda item: (item[sort_metric], str(item["id"]))))
 
 
 def _matrix_decision(
     cells: Sequence[dict[str, Any]],
     leaderboard: Sequence[dict[str, Any]],
+    *,
+    recommendation_metric: str = "cache_only_total_seconds",
 ) -> dict[str, Any]:
     """Return a fail-closed matrix-level decision for automation."""
     material_cells = [
@@ -531,6 +584,7 @@ def _matrix_decision(
             "candidate_count": 0,
             "failed_cells": (),
             "unchecked_cells": (),
+            "recommendation_metric": recommendation_metric,
             "blocking_reasons": ("matrix was run in dry_run mode; no performance profiles were executed",),
         }
 
@@ -571,8 +625,94 @@ def _matrix_decision(
         "candidate_count": len(passing_candidates),
         "failed_cells": tuple(failed_cells),
         "unchecked_cells": tuple(unchecked_cells),
+        "recommendation_metric": recommendation_metric,
         "blocking_reasons": tuple(blocking_reasons),
     }
+
+
+def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
+    grouped: dict[tuple[int, int, str], dict[bool, dict[str, Any]]] = {}
+    for cell in cells:
+        if cell.get("prefix_kv_cache_component") is None:
+            continue
+        key = (
+            int(cell["layer"]),
+            int(cell["batch_size"]),
+            str(cell["hidden_state_capture"]),
+        )
+        grouped.setdefault(key, {})[bool(cell.get("prefix_kv_cache"))] = cell
+
+    comparisons = []
+    for key in sorted(grouped):
+        pair = grouped[key]
+        off = pair.get(False)
+        on = pair.get(True)
+        if off is None or on is None:
+            continue
+        off_summary = dict(off.get("summary", {}))
+        on_summary = dict(on.get("summary", {}))
+        if off_summary.get("dry_run") or on_summary.get("dry_run"):
+            continue
+        off_uncached = dict(dict(off_summary.get("totals", {})).get("uncached", {}))
+        on_uncached = dict(dict(on_summary.get("totals", {})).get("uncached", {}))
+        off_total = _float_or_none(off_uncached.get("total_seconds"))
+        on_total = _float_or_none(on_uncached.get("total_seconds"))
+        off_forward = _float_or_none(off_uncached.get("forced_answer_forward_seconds"))
+        on_forward = _float_or_none(on_uncached.get("forced_answer_forward_seconds"))
+        total_ratio = _safe_ratio(on_total, off_total)
+        forward_ratio = _safe_ratio(on_forward, off_forward)
+        status = "incomplete"
+        recommended_prefix = None
+        if total_ratio is not None:
+            if total_ratio < 1.0:
+                status = "prefix_kv_faster"
+                recommended_prefix = True
+            elif total_ratio > 1.0:
+                status = "prefix_kv_slower"
+                recommended_prefix = False
+            else:
+                status = "tie"
+                recommended_prefix = False
+        comparisons.append({
+            "layer": key[0],
+            "batch_size": key[1],
+            "hidden_state_capture": key[2],
+            "off_cell": off.get("id"),
+            "on_cell": on.get("id"),
+            "status": status,
+            "recommended_prefix_kv_cache": recommended_prefix,
+            "off_uncached_total_seconds": off_total,
+            "on_uncached_total_seconds": on_total,
+            "uncached_total_ratio_on_vs_off": total_ratio,
+            "off_forced_answer_forward_seconds": off_forward,
+            "on_forced_answer_forward_seconds": on_forward,
+            "forced_answer_forward_ratio_on_vs_off": forward_ratio,
+            "truth_proj_auroc_delta_on_minus_off": _numeric_delta(
+                on_summary.get("truth_proj_auroc"),
+                off_summary.get("truth_proj_auroc"),
+            ),
+        })
+    return tuple(comparisons)
+
+
+def _float_or_none(value: Any) -> float | None:
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return None
+    return float(value)
+
+
+def _safe_ratio(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None or denominator == 0:
+        return None
+    return numerator / denominator
+
+
+def _numeric_delta(value: Any, baseline: Any) -> float | None:
+    value_float = _float_or_none(value)
+    baseline_float = _float_or_none(baseline)
+    if value_float is None or baseline_float is None:
+        return None
+    return value_float - baseline_float
 
 
 def _gate_passed(regression_gate: Any) -> bool | None:
