@@ -1364,6 +1364,62 @@ def test_refresh_verifier_route_artifacts_writes_new_schema_and_promotion(tmp_pa
     assert route_report_path.exists()
 
 
+def test_refresh_verifier_route_artifacts_promotes_structured_state_route(tmp_path):
+    builder = importlib.import_module("benchmarks.build_domain_state_fixture")
+    module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
+    scores_path = tmp_path / "domain_scores.json"
+    claims_path = tmp_path / "domain_claims.json"
+    state_path = tmp_path / "domain_state.json"
+    verifier_report_path = tmp_path / "state-verifier-report.json"
+    route_report_path = tmp_path / "state-route-comparison.json"
+    promotion_report_path = tmp_path / "state-promotion.json"
+
+    builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+    ))
+
+    payload = module.refresh_verifier_route_artifacts(
+        module.VerifierRouteArtifactRefreshConfig(
+            score_dumps=(("orders", scores_path),),
+            verifier_report_path=verifier_report_path,
+            claims_path=claims_path,
+            state_path=state_path,
+            alphas=(0.2,),
+            repeats=1,
+            promotion_report_path=promotion_report_path,
+            route_report_path=route_report_path,
+            promotion_gate_routes=("structured_state",),
+            promotion_gate_min_selected=8,
+            min_decision_accuracy=1.0,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=1.0,
+            max_mean_duration_seconds=1.0,
+            max_p99_duration_seconds=1.0,
+            max_max_duration_seconds=1.0,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+        )
+    )
+    verifier_report = json.loads(verifier_report_path.read_text(encoding="utf-8"))
+    promotion_report = json.loads(promotion_report_path.read_text(encoding="utf-8"))
+    run = verifier_report["runs"][0]
+    route_quality = run["route_quality"]["structured_state"]
+
+    assert payload["verifier_report_summary"]["runs"][0]["routes"]["structured_state"]["selected"] == 8
+    assert run["route_summary"]["selected_counts"] == {"structured_state": 8}
+    assert run["cache_stats"]["state_verifier"]["requests"] == 8
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(1.0)
+    assert payload["promotion"]["decision"]["status"] == "promote"
+    assert promotion_report["decision"]["recommended_route"] == "structured_state"
+    assert route_report_path.exists()
+
+
 def test_compare_profiles_builds_regression_gate_report(tmp_path):
     module = importlib.import_module("benchmarks.compare_profiles")
     baseline_path = tmp_path / "baseline.json"

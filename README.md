@@ -118,6 +118,31 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size` to trade memory for benchmark throughput. Add `--auto-batch-size` on long warmup/forced-answer runs to halve and retry the batch size after retriable memory errors, with the final setting recorded in JSON/profile output. For repeated rescoring, pair `--eval-reps-cache` with `--eval-reps-cache-shard-size`; sharded cache readers reuse the active shard across adjacent batch reads and report shard IO counters in JSON output. This produces a layer/score sweep report plus a reusable `CalibrationArtifact` for the best calibrated diagnostic. The artifact can drive `RiskController` decisions, and `RiskController.decide(..., verification_results=...)` can compose calibrated diagnostics with claim-level verification in `ProductTrace` records. The dependency-free `run_verification_loop(...)` helper can also execute retrieve actions, feed retrieved evidence back into verification, and emit a final decision trace.
 
+For structured state or database-like adapters, generate deterministic state
+fixtures and refresh the verifier-route artifact without rerunning model forward
+passes:
+
+```bash
+python benchmarks/build_domain_state_fixture.py \
+  --scores-output artifacts/order_fulfillment_scores.json \
+  --claims-output artifacts/order_fulfillment_claims.json \
+  --state-output artifacts/order_fulfillment_state.json \
+  --n-records 12
+python benchmarks/refresh_verifier_route_artifacts.py \
+  --scores orders=artifacts/order_fulfillment_scores.json \
+  --claims artifacts/order_fulfillment_claims.json \
+  --state-source artifacts/order_fulfillment_state.json \
+  --verifier-report-json artifacts/order_fulfillment_state_verifier_report.json \
+  --promotion-json artifacts/order_fulfillment_state_promotion_workflow.json \
+  --route-report-json artifacts/order_fulfillment_state_route_comparison.json \
+  --gate-route structured_state \
+  --gate-min-selected 12 \
+  --min-decision-accuracy 1.0 \
+  --max-false-supported-rate 0.0 \
+  --min-false-refuted-rate 1.0 \
+  --fail-on-blocked
+```
+
 Score directions are explicit: use `higher` for scores where larger values are more anomalous and `lower` for scores where smaller values are more anomalous. The shared directional conformal helpers keep thresholds, trigger rates, and selective reports in the same native score units. Control-plane diagnostics fail closed on invalid numeric inputs such as `NaN` or `Inf`, returning `clarify/unknown` instead of silently accepting the output.
 
 ## Architecture

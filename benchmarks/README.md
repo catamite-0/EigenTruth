@@ -463,6 +463,40 @@ Add `--registry`, `--baseline-*`, `--candidate-profile`, and
 `--max-total-ratio` flags when the refresh should also run the same registry
 baseline gate used by `run_adapter_promotion_workflow.py`.
 
+For structured state or database-like adapters, use the same refresh workflow
+with `--claims` and `--state-source` so promotion gates cover the actual
+state-check route rather than only open-domain QA evidence:
+
+```bash
+python benchmarks/build_domain_state_fixture.py \
+  --scores-output artifacts/order_fulfillment_scores.json \
+  --claims-output artifacts/order_fulfillment_claims.json \
+  --state-output artifacts/order_fulfillment_state.json \
+  --n-records 12
+
+python benchmarks/refresh_verifier_route_artifacts.py \
+  --scores orders=artifacts/order_fulfillment_scores.json \
+  --claims artifacts/order_fulfillment_claims.json \
+  --state-source artifacts/order_fulfillment_state.json \
+  --signal truth_proj \
+  --alphas 0.2 \
+  --repeats 1 \
+  --verifier-report-json artifacts/order_fulfillment_state_verifier_report.json \
+  --promotion-json artifacts/order_fulfillment_state_promotion_workflow.json \
+  --route-report-json artifacts/order_fulfillment_state_route_comparison.json \
+  --gate-route structured_state \
+  --gate-min-selected 12 \
+  --min-decision-accuracy 1.0 \
+  --max-false-supported-rate 0.0 \
+  --min-false-refuted-rate 1.0 \
+  --max-mean-duration-seconds 0.05 \
+  --max-p99-duration-seconds 0.20 \
+  --max-max-duration-seconds 0.50 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --fail-on-blocked
+```
+
 ## `compare_verifier_routes.py`
 
 Aggregates `route_quality` and per-alpha `route_control_impact` from one or more
