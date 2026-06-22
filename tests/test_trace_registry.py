@@ -14,7 +14,13 @@ from eigentruth.control import (
     TraceEvent,
 )
 from eigentruth.registry import ArtifactRegistry, RegistryRecord
-from eigentruth.verify import InMemoryVerifier, VerificationStatus, extract_claims, normalize_claim_text
+from eigentruth.verify import (
+    InMemoryVerifier,
+    VerificationResult,
+    VerificationStatus,
+    extract_claims,
+    normalize_claim_text,
+)
 
 
 def test_product_trace_serializes_risk_decision_and_verification_results():
@@ -103,6 +109,52 @@ def test_product_trace_action_execution_summary_counts_results():
     assert summary["side_effects"] is False
 
 
+def test_product_trace_verification_route_summary_counts_runtime_routes():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "selected_route": "structured_qa",
+                    "selected_verifier": "QuestionAnswerVerifier",
+                    "matched_routes": ("structured_qa", "fallback"),
+                    "skipped_routes": (),
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.8,
+                metadata={
+                    "selected_route": "fallback",
+                    "selected_verifier": "InMemoryVerifier",
+                    "matched_routes": ("structured_qa", "fallback"),
+                    "skipped_routes": (
+                        {
+                            "route": "structured_qa",
+                            "status": "insufficient_evidence",
+                            "match_reasons": ("context:statement.question",),
+                        },
+                    ),
+                },
+            ),
+            VerificationResult(status=VerificationStatus.NOT_APPLICABLE, confidence=1.0),
+        )
+    )
+
+    summary = trace.verification_route_summary()
+
+    assert summary["total"] == 3
+    assert summary["routed_total"] == 2
+    assert summary["unrouted_total"] == 1
+    assert summary["counts_by_status"] == {"supported": 2, "not_applicable": 1}
+    assert summary["counts_by_selected_route"] == {"structured_qa": 1, "fallback": 1}
+    assert summary["counts_by_matched_route"] == {"structured_qa": 2, "fallback": 2}
+    assert summary["counts_by_skipped_route"] == {"structured_qa": 1}
+    assert summary["skipped_routes"][0]["match_reasons"] == ("context:statement.question",)
+    json.dumps(summary)
+
+
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
     registry_path = tmp_path / "registry.json"
     registry = ArtifactRegistry.load_json(registry_path)
@@ -126,4 +178,3 @@ def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
     assert loaded.list_records(artifact_type="product_trace")[0].metadata["total_actions"] == 1
     assert loaded.list_records(artifact_type="report")[0].name == "tiny-report"
     assert loaded.list_records(artifact_type="action_result")[0].name == "req-1-actions"
-

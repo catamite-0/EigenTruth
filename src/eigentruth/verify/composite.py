@@ -83,22 +83,30 @@ class VerifierRoute:
 
     def matches(self, claim: Claim, context: Mapping[str, Any] | None = None) -> bool:
         """Return whether this route should be tried for a claim."""
+        return bool(self.match_reasons(claim, context=context))
+
+    def match_reasons(self, claim: Claim, context: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+        """Return auditable reasons why this route matches a claim."""
+        reasons = []
         if self.fallback:
-            return True
+            reasons.append("fallback")
         metadata = claim.metadata if isinstance(claim.metadata, Mapping) else {}
         features = metadata.get("features", {})
         if isinstance(features, Mapping):
             for flag in self.feature_flags:
                 if features.get(flag) is True:
-                    return True
+                    reasons.append(f"feature_flag:{flag}")
         for key in self.metadata_keys:
             if _has_path(metadata, key):
-                return True
+                reasons.append(f"metadata:{key}")
         context_mapping = context if isinstance(context, Mapping) else {}
         for key in self.context_keys:
             if _has_path(context_mapping, key):
-                return True
-        return any(re.search(pattern, claim.text, re.IGNORECASE) for pattern in self.text_patterns)
+                reasons.append(f"context:{key}")
+        for pattern in self.text_patterns:
+            if re.search(pattern, claim.text, re.IGNORECASE):
+                reasons.append(f"text_pattern:{pattern}")
+        return tuple(reasons)
 
 
 @dataclass(frozen=True)
@@ -115,15 +123,20 @@ class RoutedVerifier:
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim through matching routes."""
-        matched = [route for route in self.routes if route.matches(claim, context=context)]
+        matched = [
+            (route, reasons)
+            for route in self.routes
+            if (reasons := route.match_reasons(claim, context=context))
+        ]
         skipped = []
-        for route in matched:
+        for route, reasons in matched:
             result = route.verifier.verify(claim, context=context)
             if result.status not in route.fallthrough_statuses:
                 return _with_route_metadata(result, route=route, matched=matched, skipped=skipped)
             skipped.append({
                 "route": route.name,
                 "verifier": type(route.verifier).__name__,
+                "match_reasons": tuple(reasons),
                 "status": result.status.value,
                 "explanation": result.explanation,
             })
@@ -133,7 +146,8 @@ class RoutedVerifier:
             explanation="no matched verifier route was applicable to claim",
             metadata={
                 "verifier": type(self).__name__,
-                "matched_routes": tuple(route.name for route in matched),
+                "matched_routes": tuple(route.name for route, _ in matched),
+                "matched_route_details": _route_match_details(matched),
                 "skipped_routes": tuple(skipped),
             },
         )
@@ -172,7 +186,7 @@ def _with_route_metadata(
     result: VerificationResult,
     *,
     route: VerifierRoute,
-    matched: Sequence[VerifierRoute],
+    matched: Sequence[tuple[VerifierRoute, Sequence[str]]],
     skipped: Sequence[Mapping[str, Any]],
 ) -> VerificationResult:
     metadata = {
@@ -180,7 +194,8 @@ def _with_route_metadata(
         "router_verifier": "RoutedVerifier",
         "selected_route": route.name,
         "selected_verifier": type(route.verifier).__name__,
-        "matched_routes": tuple(item.name for item in matched),
+        "matched_routes": tuple(item.name for item, _ in matched),
+        "matched_route_details": _route_match_details(matched),
         "skipped_routes": tuple(dict(item) for item in skipped),
     }
     return VerificationResult(
@@ -189,6 +204,17 @@ def _with_route_metadata(
         evidence=tuple(result.evidence),
         explanation=result.explanation,
         metadata=metadata,
+    )
+
+
+def _route_match_details(matched: Sequence[tuple[VerifierRoute, Sequence[str]]]) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        {
+            "route": route.name,
+            "verifier": type(route.verifier).__name__,
+            "match_reasons": tuple(str(reason) for reason in reasons),
+        }
+        for route, reasons in matched
     )
 
 

@@ -88,6 +88,52 @@ class ProductTrace:
             "side_effects": side_effects,
         }
 
+    def verification_route_summary(self) -> dict[str, Any]:
+        """Summarize verifier route choices recorded in result metadata."""
+        results = [_verification_result_to_dict(result) for result in self.verification_results]
+        counts_by_status: dict[str, int] = {}
+        counts_by_selected_route: dict[str, int] = {}
+        counts_by_selected_verifier: dict[str, int] = {}
+        counts_by_matched_route: dict[str, int] = {}
+        counts_by_skipped_route: dict[str, int] = {}
+        skipped_routes = []
+        routed_total = 0
+        for result in results:
+            status = str(result.get("status", "unknown"))
+            counts_by_status[status] = counts_by_status.get(status, 0) + 1
+            metadata = result.get("metadata", {})
+            if not isinstance(metadata, Mapping):
+                metadata = {}
+            selected_route = metadata.get("selected_route")
+            if selected_route is not None:
+                routed_total += 1
+                route_name = str(selected_route)
+                counts_by_selected_route[route_name] = counts_by_selected_route.get(route_name, 0) + 1
+            selected_verifier = metadata.get("selected_verifier")
+            if selected_verifier is not None:
+                verifier_name = str(selected_verifier)
+                counts_by_selected_verifier[verifier_name] = counts_by_selected_verifier.get(verifier_name, 0) + 1
+            for route in _as_sequence(metadata.get("matched_routes", ())):
+                route_name = str(route)
+                counts_by_matched_route[route_name] = counts_by_matched_route.get(route_name, 0) + 1
+            for skipped in _as_sequence(metadata.get("skipped_routes", ())):
+                if not isinstance(skipped, Mapping):
+                    continue
+                route_name = str(skipped.get("route", "unknown"))
+                counts_by_skipped_route[route_name] = counts_by_skipped_route.get(route_name, 0) + 1
+                skipped_routes.append(dict(_to_jsonable(skipped)))
+        return {
+            "total": len(results),
+            "routed_total": routed_total,
+            "unrouted_total": len(results) - routed_total,
+            "counts_by_status": counts_by_status,
+            "counts_by_selected_route": counts_by_selected_route,
+            "counts_by_selected_verifier": counts_by_selected_verifier,
+            "counts_by_matched_route": counts_by_matched_route,
+            "counts_by_skipped_route": counts_by_skipped_route,
+            "skipped_routes": skipped_routes,
+        }
+
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
@@ -152,3 +198,13 @@ def _to_jsonable(value: Any) -> Any:
     if is_dataclass(value) and hasattr(value, "to_dict"):
         return value.to_dict()
     return value
+
+
+def _as_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, (str, bytes)):
+        return (value,)
+    if isinstance(value, Sequence):
+        return tuple(value)
+    return (value,)

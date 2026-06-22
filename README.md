@@ -167,7 +167,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
 | `directional_conformal_threshold` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
-| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`. |
+| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, and route summaries expose selected/matched/skipped verifier tools. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback for local traces. |
 | `run_verification_loop` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops and converts retrieval action results into verifier-ready evidence context. |
@@ -179,7 +179,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | Maps local tool or action execution outputs into structured verifier state for post-tool checks. |
 | `StateTransitionVerifier` / `StateTransitionCheck` | Uses a world-model adapter to predict next state after an action, then checks structured postconditions. |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | Adds request-scoped in-memory caching and hit/miss stats for repeated verifier, retrieval, and state-source calls. |
-| `CompositeVerifier` / `RoutedVerifier` | Compose deterministic tools with lexical, retrieval, database, or world-model verifiers; routing can use claim metadata, context, or text patterns. |
+| `CompositeVerifier` / `RoutedVerifier` | Compose deterministic tools with lexical, retrieval, database, or world-model verifiers; routing can use claim metadata, context, or text patterns and records match reasons. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
@@ -205,7 +205,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
 | `directional_conformal_threshold` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
-| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`。 |
+| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload。 |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 作为本地 trace fallback。 |
 | `run_verification_loop` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
@@ -217,7 +217,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | 将本地工具或 action 执行输出映射成结构化 verifier state，用于工具调用后的校验。 |
 | `StateTransitionVerifier` / `StateTransitionCheck` | 通过 world-model adapter 预测 action 后的下一状态，再校验结构化 postcondition。 |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | 为重复 verifier、retrieval 和 state-source 调用提供 request-scoped 内存缓存与 hit/miss 统计。 |
-| `CompositeVerifier` / `RoutedVerifier` | 组合确定性工具与词面、检索、数据库或 world-model verifier；路由可依据 claim metadata、context 或文本模式。 |
+| `CompositeVerifier` / `RoutedVerifier` | 组合确定性工具与词面、检索、数据库或 world-model verifier；路由可依据 claim metadata、context 或文本模式，并记录匹配原因。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |

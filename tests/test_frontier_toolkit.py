@@ -716,10 +716,13 @@ def test_routed_verifier_selects_routes_from_metadata_context_and_text():
 
     assert text_route.status is VerificationStatus.REFUTED
     assert text_route.metadata["selected_route"] == "calculator"
+    assert "text_pattern:" in text_route.metadata["matched_route_details"][0]["match_reasons"][0]
     assert context_route.status is VerificationStatus.REFUTED
     assert context_route.metadata["selected_route"] == "calculator"
+    assert context_route.metadata["matched_route_details"][0]["match_reasons"] == ("context:calculation",)
     assert fallback_route.status is VerificationStatus.SUPPORTED
     assert fallback_route.metadata["selected_route"] == "fallback"
+    assert fallback_route.metadata["matched_route_details"][0]["match_reasons"] == ("fallback",)
 
 
 def test_routed_verifier_can_prioritize_structured_state_adapter():
@@ -777,6 +780,10 @@ def test_routed_verifier_can_fall_through_on_insufficient_evidence():
     assert result.status is VerificationStatus.SUPPORTED
     assert result.metadata["selected_route"] == "fallback"
     assert result.metadata["skipped_routes"][0]["route"] == "structured_qa"
+    assert result.metadata["skipped_routes"][0]["match_reasons"] == (
+        "context:statement.question",
+        "context:statement.answer",
+    )
     assert result.metadata["skipped_routes"][0]["status"] == "insufficient_evidence"
 
 

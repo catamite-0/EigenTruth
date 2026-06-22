@@ -18,7 +18,7 @@ Implemented today:
 - `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/abstain/clarify flows.
 - `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution for local control-loop traces.
-- `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, and metadata.
+- `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, verifier-route summaries, and metadata.
 - `eigentruth.control.run_verification_loop` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that feeds retrieval action results back into verifier context.
 - `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, and lexical groundedness checks for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
@@ -256,6 +256,7 @@ For product features:
 - `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
 - `state_transition_control_demo.py` emits a final `ProductTrace` where a world-model predicted postcondition refutes a claim about action consequences despite low internal diagnostics.
 - `CompositeVerifier`, `RoutedVerifier`, and `calibrated_control_demo.py --enable-calculator` show a tool-first product trace path: claim metadata, context, or text patterns can route calculator-supported/refuted claims before lexical verifier fallback.
+- `RoutedVerifier` records route match reasons such as metadata keys, context keys, text patterns, feature flags, or fallback selection; `ProductTrace.verification_route_summary()` aggregates selected, matched, and skipped verifier routes for runtime trace review.
 - `eval_verifier_ensemble.py` now supports `--state-source` plus fixture-level `state_check` and `state_transition` routes, and reports `route_summary`, `route_quality`, and per-alpha `route_control_impact` for structured QA, state transition, structured state, lexical groundedness, and retrieval-backed groundedness.
 - `build_domain_state_fixture.py` generates deterministic order-fulfillment score/claim/state fixtures so structured-state verifier behavior can be benchmarked without relying on label-derived TruthfulQA oracle evidence.
 - `build_transition_fixture.py` generates deterministic order-reservation score/claim/state fixtures so world-model predicted postconditions can be benchmarked without a real simulator or external dependency.
@@ -271,7 +272,7 @@ For product features:
 
 - Connect `StructuredStateVerifier` to additional live database, business-rule, and domain-state sources behind optional adapters; the current reproducible path uses local JSON state sources, stdlib SQLite, and mapped local tool outputs.
 - Extend claim extraction or upstream tool calls to provide structured `expression` / `expected` metadata for calculator-verifiable claims beyond simple symbolic equations.
-- Add route policies for QA/database/world-model adapters so product traces explain why each tool was selected or skipped.
+- Connect additional QA/database/world-model route policies to production adapters while preserving trace-visible match reasons for each selected or skipped tool.
 - Extend route-level metrics to future adapters and real fixtures, then compare them with `compare_verifier_routes.py` so new tools are judged by route hit rate, false support, false refutation, and downstream conformal control impact.
 - Replace label-derived oracle evidence with real retrieval/database/calculator evidence and rerun verifier/retrieval ensemble reports on Qwen/SmolLM2.
 - Use local corpus fixtures from `build_evidence_fixture.py` as the reproducible baseline before adding networked retrieval extras.
