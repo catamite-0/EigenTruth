@@ -321,6 +321,8 @@ def _verify_records(
     selfcheck_min_overlap: float,
     selfcheck_support_threshold: float,
     selfcheck_refute_threshold: float,
+    selfcheck_early_stop: bool,
+    selfcheck_max_samples: int | None,
     qa_verifier: QuestionAnswerVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
@@ -366,6 +368,8 @@ def _verify_records(
             "min_overlap": selfcheck_min_overlap,
             "support_threshold": selfcheck_support_threshold,
             "refute_threshold": selfcheck_refute_threshold,
+            "early_stop": selfcheck_early_stop,
+            "max_samples": selfcheck_max_samples,
         })
         runner = selfcheck_runners.get(key)
         if runner is None:
@@ -376,6 +380,8 @@ def _verify_records(
                     min_overlap=selfcheck_min_overlap,
                     support_threshold=selfcheck_support_threshold,
                     refute_threshold=selfcheck_refute_threshold,
+                    early_stop=selfcheck_early_stop,
+                    max_samples=selfcheck_max_samples,
                 )
             )
             selfcheck_runners[key] = runner
@@ -959,6 +965,51 @@ def _route_cost_metrics(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    """Summarize self-consistency sample processing from verification metadata."""
+    records_with_selfcheck = 0
+    early_stopped_records = 0
+    available_samples = 0
+    considered_samples = 0
+    processed_samples = 0
+    skipped_samples = 0
+    for record in verified_records:
+        payload = record.get("selfcheck")
+        if not isinstance(payload, Mapping):
+            continue
+        metadata = payload.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        records_with_selfcheck += 1
+        considered = _non_negative_int(metadata.get("sample_count"))
+        available = _non_negative_int(metadata.get("available_sample_count"))
+        processed = _non_negative_int(metadata.get("processed_sample_count"))
+        skipped = _non_negative_int(metadata.get("skipped_sample_count"))
+        considered_samples += considered if considered is not None else 0
+        available_samples += available if available is not None else (considered or 0)
+        processed_samples += processed if processed is not None else (considered or 0)
+        skipped_samples += skipped if skipped is not None else 0
+        if metadata.get("early_stop"):
+            early_stopped_records += 1
+    return {
+        "executed_records": records_with_selfcheck,
+        "early_stopped_records": early_stopped_records,
+        "available_samples": available_samples,
+        "considered_samples": considered_samples,
+        "processed_samples": processed_samples,
+        "skipped_samples": skipped_samples,
+        "processing_rate": _safe_div(processed_samples, considered_samples),
+    }
+
+
+def _non_negative_int(value: Any) -> int | None:
+    try:
+        result = int(value)
+    except (TypeError, ValueError):
+        return None
+    return result if result >= 0 else None
+
+
 def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     if denominator == 0:
         return None
@@ -1245,6 +1296,8 @@ def _verification_trace_cache_key(
     selfcheck_min_overlap: float,
     selfcheck_support_threshold: float,
     selfcheck_refute_threshold: float,
+    selfcheck_early_stop: bool,
+    selfcheck_max_samples: int | None,
 ) -> tuple[str, dict[str, Any]]:
     material = {
         "schema_version": 1,
@@ -1274,6 +1327,8 @@ def _verification_trace_cache_key(
             "min_overlap": float(selfcheck_min_overlap),
             "support_threshold": float(selfcheck_support_threshold),
             "refute_threshold": float(selfcheck_refute_threshold),
+            "early_stop": bool(selfcheck_early_stop),
+            "max_samples": selfcheck_max_samples,
         },
     }
     key = hashlib.sha256(stable_cache_key(material).encode("utf-8")).hexdigest()
@@ -1369,6 +1424,8 @@ def build_verifier_ensemble_report(
     selfcheck_min_overlap: float = 0.65,
     selfcheck_support_threshold: float = 0.60,
     selfcheck_refute_threshold: float = 0.50,
+    selfcheck_early_stop: bool = False,
+    selfcheck_max_samples: int | None = None,
     verification_cache_dir: Path | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
@@ -1385,6 +1442,8 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_support_threshold must be in [0, 1].")
     if not (0.0 <= selfcheck_refute_threshold <= 1.0):
         raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
+    if selfcheck_max_samples is not None and selfcheck_max_samples < selfcheck_min_samples:
+        raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
 
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
@@ -1450,6 +1509,8 @@ def build_verifier_ensemble_report(
             selfcheck_min_overlap=selfcheck_min_overlap,
             selfcheck_support_threshold=selfcheck_support_threshold,
             selfcheck_refute_threshold=selfcheck_refute_threshold,
+            selfcheck_early_stop=selfcheck_early_stop,
+            selfcheck_max_samples=selfcheck_max_samples,
         )
         cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
         if cached_trace is not None:
@@ -1471,6 +1532,8 @@ def build_verifier_ensemble_report(
                 selfcheck_min_overlap=selfcheck_min_overlap,
                 selfcheck_support_threshold=selfcheck_support_threshold,
                 selfcheck_refute_threshold=selfcheck_refute_threshold,
+                selfcheck_early_stop=selfcheck_early_stop,
+                selfcheck_max_samples=selfcheck_max_samples,
                 qa_verifier=qa_verifier,
                 state_verifier=state_verifier,
                 state_checks=global_state_checks,
@@ -1510,6 +1573,7 @@ def build_verifier_ensemble_report(
             )
             for alpha in alphas
         }
+        selfcheck_execution = _selfcheck_execution_summary(verified_records)
         runs.append({
             "name": name,
             "scores_path": str(path),
@@ -1560,6 +1624,8 @@ def build_verifier_ensemble_report(
             },
             "selfcheck_verifier": {
                 "enabled": selfcheck_enabled,
+                "early_stop": bool(selfcheck_early_stop),
+                "max_samples": selfcheck_max_samples,
                 "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
                 "decided_records": sum(
                     1 for record in verified_records
@@ -1569,6 +1635,7 @@ def build_verifier_ensemble_report(
                         VerificationStatus.REFUTED.value,
                     }
                 ),
+                **selfcheck_execution,
             },
             "retrieval": {
                 "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
@@ -1604,6 +1671,8 @@ def build_verifier_ensemble_report(
             "min_overlap": selfcheck_min_overlap,
             "support_threshold": selfcheck_support_threshold,
             "refute_threshold": selfcheck_refute_threshold,
+            "early_stop": bool(selfcheck_early_stop),
+            "max_samples": selfcheck_max_samples,
         },
         "qa_verifier": {
             "type": "QuestionAnswerVerifier",
@@ -1655,6 +1724,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_min_overlap=float(getattr(args, "selfcheck_min_overlap", 0.65)),
         selfcheck_support_threshold=float(getattr(args, "selfcheck_support_threshold", 0.60)),
         selfcheck_refute_threshold=float(getattr(args, "selfcheck_refute_threshold", 0.50)),
+        selfcheck_early_stop=bool(getattr(args, "selfcheck_early_stop", False)),
+        selfcheck_max_samples=getattr(args, "selfcheck_max_samples", None),
         verification_cache_dir=(
             None
             if getattr(args, "verification_cache_dir", None) is None
@@ -1712,6 +1783,10 @@ def main() -> None:
                         help="support-rate threshold for self-consistency verification")
     parser.add_argument("--selfcheck-refute-threshold", type=float, default=0.50,
                         help="refute-rate threshold for self-consistency verification")
+    parser.add_argument("--selfcheck-early-stop", action="store_true",
+                        help="stop self-consistency sample judging once the final threshold outcome is fixed")
+    parser.add_argument("--selfcheck-max-samples", type=int, default=None,
+                        help="optional cap on self-consistency samples considered per claim")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")

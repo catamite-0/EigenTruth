@@ -381,6 +381,70 @@ def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
     assert run["retrieval"]["records_with_hits"] == 0
 
 
+def test_eval_verifier_ensemble_reports_selfcheck_early_stop_savings(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [1, 0, 0, 1],
+            "scores": {"truth_proj": [0.9, 0.1, 0.2, 0.8]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "AlphaCorp has 10 offices in Europe.",
+                    "selfcheck_samples": [
+                        "AlphaCorp has 12 offices in Europe.",
+                        "AlphaCorp has 12 offices in Europe as of 2026.",
+                        "AlphaCorp has 10 offices in Europe.",
+                        "AlphaCorp has 10 offices in Europe.",
+                        "AlphaCorp has 10 offices in Europe.",
+                    ],
+                },
+                {
+                    "claim": "Paris is the capital of France.",
+                    "selfcheck_samples": [
+                        "Paris is the capital of France.",
+                        "Paris is the capital of France and a major city.",
+                    ],
+                },
+                {"claim": "Water boils at 100 degrees Celsius."},
+                {"claim": "The moon is made of cheese."},
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        selfcheck_min_overlap=0.55,
+        selfcheck_refute_threshold=0.40,
+        selfcheck_support_threshold=0.80,
+        selfcheck_early_stop=True,
+    )
+    summary = report["runs"][0]["selfcheck_verifier"]
+
+    assert report["selfcheck_verifier"]["early_stop"] is True
+    assert summary["records_with_samples"] == 2
+    assert summary["executed_records"] == 2
+    assert summary["decided_records"] == 2
+    assert summary["early_stopped_records"] == 1
+    assert summary["considered_samples"] == 7
+    assert summary["processed_samples"] == 4
+    assert summary["skipped_samples"] == 3
+    assert summary["processing_rate"] == pytest.approx(4 / 7)
+
+
 def test_eval_verifier_ensemble_reuses_verification_trace_cache(tmp_path, monkeypatch):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

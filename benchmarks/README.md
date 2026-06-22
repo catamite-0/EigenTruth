@@ -501,8 +501,18 @@ python benchmarks/eval_verifier_ensemble.py \
   --scores tiny=artifacts/tiny_scores_with_samples.json \
   --claims artifacts/tiny_selfcheck_claims.json \
   --signal truth_proj \
+  --selfcheck-early-stop \
   --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
 ```
+
+`--selfcheck-early-stop` is opt-in and preserves the default historical
+benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops
+judging samples once the finite sample budget can no longer change the final
+support/refute/insufficient threshold outcome. The report records
+`processed_samples`, `skipped_samples`, `early_stopped_records`, and
+`processing_rate` under each run's `selfcheck_verifier` block. Use
+`--selfcheck-max-samples` to cap per-claim sample use when comparing verifier
+latency/cost budgets.
 
 Reports include `verification_quality`, a label-conditioned matrix over
 `supported` / `refuted` / `insufficient_evidence` outcomes. Use

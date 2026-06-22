@@ -366,6 +366,37 @@ def test_self_consistency_verifier_uses_context_samples():
     assert result.metadata["sample_decisions"][1]["source"] == "sample-2"
 
 
+def test_self_consistency_verifier_early_stops_when_threshold_result_is_fixed():
+    verifier = SelfConsistencyVerifier(
+        samples=(
+            "AlphaCorp has 12 offices in Europe.",
+            "AlphaCorp has 12 offices in Europe as of 2026.",
+            "AlphaCorp has 10 offices in Europe.",
+            "AlphaCorp has 10 offices in Europe.",
+            "AlphaCorp has 10 offices in Europe.",
+        ),
+        min_samples=2,
+        min_overlap=0.55,
+        refute_threshold=0.40,
+        support_threshold=0.80,
+        early_stop=True,
+    )
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["decision_rule"] == "refute_rate"
+    assert result.metadata["early_stop"] is True
+    assert result.metadata["early_stop_reason"] == "refute_threshold_guaranteed"
+    assert result.metadata["sample_count"] == 5
+    assert result.metadata["processed_sample_count"] == 2
+    assert result.metadata["skipped_sample_count"] == 3
+    assert result.metadata["refute_rate"] == pytest.approx(0.40)
+    assert result.metadata["processed_refute_rate"] == pytest.approx(1.0)
+    assert len(result.metadata["sample_decisions"]) == 2
+
+
 def test_cached_verifier_reuses_identical_claim_context_results():
     class CountingVerifier:
         def __init__(self):

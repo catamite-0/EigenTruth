@@ -60,6 +60,8 @@ class SelfConsistencyVerifier:
     min_overlap: float = 0.65
     support_threshold: float = 0.60
     refute_threshold: float = 0.50
+    early_stop: bool = False
+    max_samples: int | None = None
     context_keys: Sequence[str] = ("selfcheck_samples", "sampled_responses", "samples")
 
     def __post_init__(self) -> None:
@@ -71,12 +73,22 @@ class SelfConsistencyVerifier:
             raise ValueError("support_threshold must be in [0, 1].")
         if not (0.0 <= self.refute_threshold <= 1.0):
             raise ValueError("refute_threshold must be in [0, 1].")
+        if not isinstance(self.early_stop, bool):
+            raise ValueError("early_stop must be a bool.")
+        if self.max_samples is not None:
+            max_samples = int(self.max_samples)
+            if max_samples < self.min_samples:
+                raise ValueError("max_samples must be >= min_samples when set.")
+            object.__setattr__(self, "max_samples", max_samples)
         object.__setattr__(self, "samples", tuple(_coerce_sample(item) for item in self.samples))
         object.__setattr__(self, "context_keys", tuple(str(key) for key in self.context_keys))
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against configured and context-provided samples."""
         samples = self._samples_from_context(context)
+        available_sample_count = len(samples)
+        if self.max_samples is not None:
+            samples = samples[:self.max_samples]
         if len(samples) < self.min_samples:
             return VerificationResult(
                 status=VerificationStatus.NOT_APPLICABLE,
@@ -85,6 +97,9 @@ class SelfConsistencyVerifier:
                 metadata={
                     "verifier": "self_consistency",
                     "sample_count": len(samples),
+                    "available_sample_count": available_sample_count,
+                    "processed_sample_count": 0,
+                    "skipped_sample_count": 0,
                     "min_samples": self.min_samples,
                     "decision_rule": "too_few_samples",
                 },
@@ -99,32 +114,50 @@ class SelfConsistencyVerifier:
                 metadata={
                     "verifier": "self_consistency",
                     "sample_count": len(samples),
+                    "available_sample_count": available_sample_count,
+                    "processed_sample_count": 0,
+                    "skipped_sample_count": 0,
                     "decision_rule": "empty_claim_tokens",
                 },
             )
 
-        decisions = tuple(
-            _judge_sample(claim, claim_tokens, sample, min_overlap=self.min_overlap)
-            for sample in samples
+        decisions, early_stop_reason = self._judge_samples(
+            claim,
+            claim_tokens,
+            samples,
         )
         support_count = sum(1 for item in decisions if item.status is VerificationStatus.SUPPORTED)
         refute_count = sum(1 for item in decisions if item.status is VerificationStatus.REFUTED)
         insufficient_count = len(decisions) - support_count - refute_count
-        support_rate = support_count / len(decisions)
-        refute_rate = refute_count / len(decisions)
+        skipped_sample_count = len(samples) - len(decisions)
+        rate_denominator = len(samples) if early_stop_reason is not None else len(decisions)
+        support_rate = support_count / rate_denominator
+        refute_rate = refute_count / rate_denominator
+        processed_support_rate = support_count / len(decisions)
+        processed_refute_rate = refute_count / len(decisions)
         best_overlap = max((item.overlap for item in decisions), default=0.0)
         metadata = {
             "verifier": "self_consistency",
             "sample_count": len(samples),
+            "available_sample_count": available_sample_count,
+            "processed_sample_count": len(decisions),
+            "skipped_sample_count": skipped_sample_count,
+            "max_samples": self.max_samples,
             "support_count": support_count,
             "refute_count": refute_count,
             "insufficient_count": insufficient_count,
             "support_rate": support_rate,
             "refute_rate": refute_rate,
+            "processed_support_rate": processed_support_rate,
+            "processed_refute_rate": processed_refute_rate,
             "best_overlap": best_overlap,
             "min_overlap": self.min_overlap,
             "support_threshold": self.support_threshold,
             "refute_threshold": self.refute_threshold,
+            "early_stop_enabled": self.early_stop,
+            "early_stop": early_stop_reason is not None,
+            "early_stop_reason": early_stop_reason,
+            "sample_decisions_truncated": skipped_sample_count > 0,
             "sample_decisions": tuple(_decision_to_dict(item) for item in decisions),
         }
         if refute_rate >= self.refute_threshold and refute_count > 0:
@@ -166,6 +199,27 @@ class SelfConsistencyVerifier:
                 if key in context:
                     samples.extend(_coerce_samples(context[key]))
         return tuple(samples)
+
+    def _judge_samples(
+        self,
+        claim: Claim,
+        claim_tokens: Sequence[str],
+        samples: Sequence[_Sample],
+    ) -> tuple[tuple[_SampleDecision, ...], str | None]:
+        decisions = []
+        for sample in samples:
+            decisions.append(_judge_sample(claim, claim_tokens, sample, min_overlap=self.min_overlap))
+            if not self.early_stop or len(decisions) < self.min_samples:
+                continue
+            reason = _early_stop_reason(
+                decisions,
+                total_samples=len(samples),
+                support_threshold=self.support_threshold,
+                refute_threshold=self.refute_threshold,
+            )
+            if reason is not None:
+                return tuple(decisions), reason
+        return tuple(decisions), None
 
 
 def _judge_sample(
@@ -248,6 +302,54 @@ def _token_overlap(claim_tokens: Sequence[str], sample_tokens: Sequence[str]) ->
 def _has_negation(tokens: Sequence[str]) -> bool:
     token_set = set(tokens)
     return any(token in token_set for token in _NEGATION_TOKENS)
+
+
+def _early_stop_reason(
+    decisions: Sequence[_SampleDecision],
+    *,
+    total_samples: int,
+    support_threshold: float,
+    refute_threshold: float,
+) -> str | None:
+    """Return a deterministic rate-bound early-stop reason, if one is available."""
+    processed = len(decisions)
+    remaining = total_samples - processed
+    if remaining <= 0:
+        return None
+    support_count = sum(1 for item in decisions if item.status is VerificationStatus.SUPPORTED)
+    refute_count = sum(1 for item in decisions if item.status is VerificationStatus.REFUTED)
+    if _threshold_is_guaranteed(refute_count, total_samples, refute_threshold):
+        return "refute_threshold_guaranteed"
+
+    refute_possible = _threshold_can_still_be_met(
+        refute_count,
+        remaining,
+        total_samples,
+        refute_threshold,
+    )
+    if (
+        not refute_possible
+        and _threshold_is_guaranteed(support_count, total_samples, support_threshold)
+    ):
+        return "support_threshold_guaranteed"
+
+    support_possible = _threshold_can_still_be_met(
+        support_count,
+        remaining,
+        total_samples,
+        support_threshold,
+    )
+    if not refute_possible and not support_possible:
+        return "thresholds_unreachable"
+    return None
+
+
+def _threshold_is_guaranteed(count: int, total: int, threshold: float) -> bool:
+    return count > 0 and count / total >= threshold
+
+
+def _threshold_can_still_be_met(count: int, remaining: int, total: int, threshold: float) -> bool:
+    return (count + remaining) > 0 and (count + remaining) / total >= threshold
 
 
 def _decision_to_dict(decision: _SampleDecision) -> dict[str, Any]:
