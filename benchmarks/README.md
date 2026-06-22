@@ -1214,12 +1214,14 @@ python benchmarks/run_registry_baseline_workflow.py \
 ```
 
 `make perf-check` runs `benchmarks/profile_gate_smoke.py`,
-`benchmarks/cache_profile_smoke.py`, and
+`benchmarks/cache_profile_smoke.py`,
+`benchmarks/cache_worker_sweep_smoke.py`, and
 `benchmarks/registry_baseline_smoke.py`. These use fixed synthetic profile
-payloads to verify that direct gates, cache-profile gates, and registry-backed
-baseline gates pass acceptable candidates and catch expected regressions. They
-are stable enough for default local/CI checks because they do not load a model
-or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
+payloads to verify that direct gates, cache-profile gates, worker-count sweep
+decisions, and registry-backed baseline gates pass acceptable candidates and
+catch expected regressions. They are stable enough for default local/CI checks
+because they do not load a model or measure machine speed. Use real
+`eval_truthfulqa.py --profile-json`
 artifacts, or `run_cache_profile_triplet.py`, before making actual runtime
 claims.
 

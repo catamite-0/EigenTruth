@@ -1954,6 +1954,21 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_cache_worker_sweep_smoke_writes_pass_and_expected_blocked_reports(tmp_path):
+    module = importlib.import_module("benchmarks.cache_worker_sweep_smoke")
+
+    payload = module.build_cache_worker_sweep_smoke(tmp_path)
+    pass_report = payload["pass_report"]
+    blocked_report = payload["expected_blocked_report"]
+
+    assert (tmp_path / "cache_worker_sweep_pass_report.json").exists()
+    assert (tmp_path / "cache_worker_sweep_expected_blocked_report.json").exists()
+    assert pass_report["worker_sweep_decision"]["status"] == "promote"
+    assert pass_report["worker_sweep_decision"]["recommended_worker_count"] == 2
+    assert blocked_report["worker_sweep_decision"]["status"] == "blocked"
+    assert blocked_report["worker_reports"][1]["matrix_status"] == "blocked"
+
+
 def test_registry_baseline_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     module = importlib.import_module("benchmarks.registry_baseline_smoke")
 
