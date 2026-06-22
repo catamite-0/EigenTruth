@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -121,6 +122,7 @@ class AdapterReadinessWorkflowConfig:
 
 def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> dict[str, Any]:
     """Run adapter-family and performance gates, then return readiness status."""
+    started_at = time.perf_counter()
     config.output_dir.mkdir(parents=True, exist_ok=True)
     adapter_report_path = config.output_dir / "adapter-family-matrix.json"
     performance_report_path = config.performance_matrix_dir / "cache-profile-matrix-report.json"
@@ -172,6 +174,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         dry_run=config.performance_dry_run,
     )
     decision = build_readiness_decision(adapter_report, performance_report)
+    wall_clock_seconds = time.perf_counter() - started_at
     report = {
         "schema_version": 1,
         "workflow": "adapter_readiness_workflow",
@@ -181,6 +184,13 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
         "readiness_decision": decision,
+        "execution": {
+            "wall_clock_seconds": wall_clock_seconds,
+            "performance_wall_clock_seconds": dict(performance_report.get("execution") or {}).get(
+                "wall_clock_seconds"
+            ),
+            "performance_max_workers": config.performance_max_workers,
+        },
     }
     config.report_path.parent.mkdir(parents=True, exist_ok=True)
     config.report_path.write_text(
@@ -269,6 +279,10 @@ def _write_artifact_manifest(
             "matrix_mode": config.matrix_mode,
             "performance_max_workers": config.performance_max_workers,
             "performance_dry_run": config.performance_dry_run,
+            "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
+            "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
+                "performance_wall_clock_seconds"
+            ),
             "readiness_status": decision.get("status"),
             "adapter_family_status": decision.get("adapter_family_status"),
             "performance_status": decision.get("performance_status"),

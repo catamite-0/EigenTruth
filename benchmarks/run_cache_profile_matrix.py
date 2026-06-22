@@ -12,6 +12,7 @@ import hashlib
 import itertools
 import json
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
@@ -191,9 +192,11 @@ def run_matrix(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Run all matrix cells and write a matrix report."""
+    started_at = time.perf_counter()
     config.output_dir.mkdir(parents=True, exist_ok=True)
     plans = _build_cell_run_plans(config)
     cells = list(_run_cell_plans(plans, clean=clean, dry_run=dry_run, max_workers=config.max_workers))
+    wall_clock_seconds = time.perf_counter() - started_at
 
     if config.matrix_mode == "rescore":
         _apply_rescore_baselines(config, cells)
@@ -229,6 +232,14 @@ def run_matrix(
         "leaderboard_sort_metric": leaderboard_sort_metric,
         "prefix_kv_comparisons": prefix_kv_comparisons,
         "matrix_decision": matrix_decision,
+        "execution": {
+            "wall_clock_seconds": wall_clock_seconds,
+            "cell_count": len(cells),
+            "max_workers": config.max_workers,
+            "shared_cache_refresh_barrier": any(
+                cell.get("shared_cache_group") is not None for cell in cells
+            ),
+        },
         "report_path": str(config.report_path),
         "artifact_manifest": str(config.artifact_manifest),
     }
@@ -326,13 +337,16 @@ def _run_cell_plan(
     clean: bool,
     dry_run: bool,
 ) -> dict[str, Any]:
+    started_at = time.perf_counter()
     triplet_payload = run_triplet(plan.triplet_config, clean=clean, dry_run=dry_run)
+    execution_seconds = time.perf_counter() - started_at
     return {
         **plan.cell,
         "output_dir": str(plan.triplet_config.output_dir),
         "shared_cache_group": plan.shared_cache_group,
         "uncached_cache_mode": plan.uncached_cache_mode,
         "run_names": tuple(plan.run_names),
+        "execution_seconds": execution_seconds,
         "triplet": triplet_payload,
         "summary": _cell_summary(triplet_payload),
     }
@@ -390,6 +404,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "max_workers": config.max_workers,
             "dry_run": bool(report.get("dry_run")),
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+            "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
         },
     )
     config.artifact_manifest.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")

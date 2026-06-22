@@ -1463,6 +1463,9 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert payload["performance_matrix"]["matrix_decision"]["status"] == "dry_run"
     assert payload["performance_matrix"]["config"]["max_batch_tokens"] == 0
     assert payload["performance_matrix"]["config"]["max_batch_token_budgets"] == (0, 77)
+    assert payload["execution"]["wall_clock_seconds"] >= 0.0
+    assert payload["execution"]["performance_wall_clock_seconds"] >= 0.0
+    assert payload["execution"]["performance_max_workers"] == 1
     assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
     assert payload["readiness_decision"]["recommended_route"] in {
         "structured_qa",
@@ -1481,6 +1484,8 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert manifest["metadata"]["runner"] == "run_adapter_readiness_workflow"
     assert manifest["metadata"]["readiness_status"] == "needs_performance_evidence"
     assert manifest["metadata"]["prefix_kv_cache"] is True
+    assert manifest["metadata"]["wall_clock_seconds"] >= 0.0
+    assert manifest["metadata"]["performance_wall_clock_seconds"] >= 0.0
     assert manifest["artifacts"]["readiness_report"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_matrix"]["exists"] is True
     assert manifest["artifacts"]["adapter_family_route_comparison"]["exists"] is True
@@ -2563,12 +2568,18 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     ]
     first = report["cells"][0]
     assert first["summary"]["dry_run"] is True
+    assert first["execution_seconds"] >= 0.0
     assert "--layer -2" in first["summary"]["commands"]["uncached"]
     assert "--max-batch-tokens 96" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
     assert report["config"]["max_batch_tokens"] == 96
     assert report["config"]["max_workers"] == 1
+    assert report["execution"]["wall_clock_seconds"] >= 0.0
+    assert report["execution"]["cell_count"] == 4
+    assert report["execution"]["max_workers"] == 1
+    assert report["execution"]["shared_cache_refresh_barrier"] is False
     assert manifest["metadata"]["max_batch_tokens"] == 96
+    assert manifest["metadata"]["wall_clock_seconds"] >= 0.0
     assert report["matrix_decision"]["status"] == "dry_run"
     assert report["matrix_decision"]["recommended_cell"] is None
 
@@ -2615,6 +2626,7 @@ def test_run_cache_profile_matrix_can_run_cells_in_parallel(tmp_path, monkeypatc
         "layer_m1_batch_1_capture_outputs",
     ]
     assert report["config"]["max_workers"] == 2
+    assert report["execution"]["max_workers"] == 2
 
 
 def test_run_cache_profile_matrix_parallel_shared_cache_waits_for_refresh_cells(tmp_path, monkeypatch):
@@ -2688,6 +2700,7 @@ def test_run_cache_profile_matrix_shared_cache_warm_starts_repeated_groups(tmp_p
 
     assert report["config"]["shared_cache_dir"] == str(tmp_path / "shared-cache")
     assert report["config"]["shared_cache_root"].startswith(str(tmp_path / "shared-cache"))
+    assert report["execution"]["shared_cache_refresh_barrier"] is True
     assert first["uncached_cache_mode"] == "refresh"
     assert second["uncached_cache_mode"] == "warm_start"
     assert first["shared_cache_group"] == second["shared_cache_group"]

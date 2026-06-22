@@ -1054,10 +1054,12 @@ token-budget matrix recommendations are sorted by uncached forced-answer forward
 time because the budget changes forward batching, not cache-only replay
 semantics.
 Use `--max-workers` to run independent matrix cells concurrently. The default is
-`1` for fully serial/reproducible local runs. When `--shared-cache-dir` is set,
-the runner keeps refresh cells serial until shared statement/layer/eval caches
-exist, then executes dependent warm-start/cache-only cells concurrently up to
-the worker limit.
+`1` for fully serial/reproducible local runs. Matrix reports include
+`execution.wall_clock_seconds` plus per-cell `execution_seconds`, so worker-count
+comparisons should use end-to-end wall-clock time instead of summing profile
+totals. When `--shared-cache-dir` is set, the runner keeps refresh cells serial
+until shared statement/layer/eval caches exist, then executes dependent
+warm-start/cache-only cells concurrently up to the worker limit.
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and
