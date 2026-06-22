@@ -1034,6 +1034,7 @@ python benchmarks/run_cache_profile_matrix.py \
   --manifold-questions 12 \
   --layers=-16,-12,-10 \
   --batch-sizes=1,2,4 \
+  --max-batch-tokens 1024 \
   --hidden-state-captures=outputs,hooks \
   --dry-run
 ```
@@ -1044,7 +1045,9 @@ per-run bottleneck phase, `truth_proj` AUROC when result JSON is available, and
 a matrix-level `matrix_decision`. The decision is `promote` only when at least
 one checked cell passes its regression gate and no checked cell fails; use
 `--fail-on-blocked` on real runs to make non-promoting matrix decisions exit
-non-zero.
+non-zero. Use `--max-batch-tokens` when sequence lengths vary widely: it caps
+the padded token budget per warmup/eval forward while `--batch-size` remains the
+maximum row count, reducing padding spikes without changing score semantics.
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
 in one matrix, use `--prefix-kv-cache-modes off,on`; the generated cell ids and

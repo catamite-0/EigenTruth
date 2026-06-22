@@ -1647,11 +1647,12 @@ def _batched_statement_pairs(
     size: int,
     *,
     length_bucketed: bool,
+    max_batch_tokens: int = 0,
 ):
     if size < 1:
         raise ValueError("batch size must be >= 1.")
     pairs = _statement_pairs(statements, encodings, length_bucketed=length_bucketed)
-    yield from _chunked(pairs, size)
+    yield from _statement_pair_batches(pairs, size, max_batch_tokens=max_batch_tokens)
 
 
 def _statement_pairs(
@@ -1678,10 +1679,17 @@ def _batched_statement_pairs_after_offset(
     *,
     length_bucketed: bool,
     offset: int,
+    max_batch_tokens: int = 0,
 ):
     cursor = 0
     offset = max(0, int(offset))
-    for batch in _batched_statement_pairs(statements, encodings, size, length_bucketed=length_bucketed):
+    for batch in _batched_statement_pairs(
+        statements,
+        encodings,
+        size,
+        length_bucketed=length_bucketed,
+        max_batch_tokens=max_batch_tokens,
+    ):
         end = cursor + len(batch)
         if end <= offset:
             cursor = end
@@ -1691,6 +1699,63 @@ def _batched_statement_pairs_after_offset(
         if remaining:
             yield remaining
         cursor = end
+
+
+def _statement_pair_batches(
+    pairs: Sequence[tuple[Statement, Optional[StatementEncoding]]],
+    size: int,
+    *,
+    max_batch_tokens: int = 0,
+):
+    offset = 0
+    while offset < len(pairs):
+        batch = _next_statement_pair_batch(
+            pairs,
+            offset,
+            size,
+            max_batch_tokens=max_batch_tokens,
+        )
+        if not batch:
+            break
+        yield batch
+        offset += len(batch)
+
+
+def _next_statement_pair_batch(
+    pairs: Sequence[tuple[Statement, Optional[StatementEncoding]]],
+    offset: int,
+    size: int,
+    *,
+    max_batch_tokens: int = 0,
+) -> list[tuple[Statement, Optional[StatementEncoding]]]:
+    """Return the next batch under row-count and padded-token budgets."""
+    if size < 1:
+        raise ValueError("batch size must be >= 1.")
+    offset = max(0, int(offset))
+    if offset >= len(pairs):
+        return []
+    if max_batch_tokens <= 0:
+        return list(pairs[offset:offset + size])
+
+    budget = int(max_batch_tokens)
+    batch: list[tuple[Statement, Optional[StatementEncoding]]] = []
+    max_len = 0
+    for pair in pairs[offset:offset + size]:
+        pair_len = max(1, _statement_pair_length(pair))
+        next_max_len = max(max_len, pair_len)
+        next_padded_tokens = next_max_len * (len(batch) + 1)
+        if batch and next_padded_tokens > budget:
+            break
+        batch.append(pair)
+        max_len = next_max_len
+    return batch or [pairs[offset]]
+
+
+def _statement_pair_length(pair: tuple[Statement, Optional[StatementEncoding]]) -> int:
+    stmt, encoding = pair
+    if encoding is not None:
+        return len(encoding.input_ids)
+    return _statement_length(stmt)
 
 
 @torch.no_grad()
@@ -2197,6 +2262,7 @@ def sampled_inside_scores(
 def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List[str],
                       layers: List[int], device: torch.device, max_length: int,
                       subspace_rank: int, batch_size: int, length_bucketed: bool = False,
+                      max_batch_tokens: int = 0,
                       progress_every: int = 50, checkpoint_path: str | Path | None = None,
                       checkpoint_metadata: Mapping | None = None, resume_checkpoint: bool = True,
                       checkpoint_every: int = 50,
@@ -2246,7 +2312,12 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     true_pair_offset = 0
     while true_pair_offset < len(true_pairs):
         current_batch_size = batch_fallback_state.batch_size() if batch_fallback_state else batch_size
-        batch_pairs = true_pairs[true_pair_offset:true_pair_offset + current_batch_size]
+        batch_pairs = _next_statement_pair_batch(
+            true_pairs,
+            true_pair_offset,
+            current_batch_size,
+            max_batch_tokens=max_batch_tokens,
+        )
         batch = [stmt for stmt, _encoding in batch_pairs]
         reps_batch = _batched_statement_reps_for_pairs(
             model,
@@ -2304,7 +2375,12 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     false_pair_offset = 0
     while false_pair_offset < len(false_pairs):
         current_batch_size = batch_fallback_state.batch_size() if batch_fallback_state else batch_size
-        batch_pairs = false_pairs[false_pair_offset:false_pair_offset + current_batch_size]
+        batch_pairs = _next_statement_pair_batch(
+            false_pairs,
+            false_pair_offset,
+            current_batch_size,
+            max_batch_tokens=max_batch_tokens,
+        )
         batch = [stmt for stmt, _encoding in batch_pairs]
         reps_batch = _batched_statement_reps_for_pairs(
             model,
@@ -2386,6 +2462,7 @@ def run(args) -> dict:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch.manual_seed(args.seed)
     batch_fallback_state = BatchSizeFallbackState(args.batch_size, enabled=args.auto_batch_size)
+    max_batch_tokens = int(getattr(args, "max_batch_tokens", 0))
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -2496,6 +2573,20 @@ def run(args) -> dict:
                     eval_encodings=eval_encodings,
                 )
             print(f"   saved statement encoding cache: {statement_encoding_cache_path}")
+    elif max_batch_tokens > 0 and not args.cache_only:
+        with _profile_phase(profile, "tokenize_statements"):
+            true_encodings = _batch_statement_encodings(
+                tokenizer,
+                [Statement("", text, 0) for text in manifold_true],
+                args.max_length,
+            )
+            false_encodings = _batch_statement_encodings(
+                tokenizer,
+                [Statement("", text, 1) for text in manifold_false],
+                args.max_length,
+            )
+            eval_encodings = _batch_statement_encodings(tokenizer, eval_stmts, args.max_length)
+        print("   tokenized statements for token-budget batching")
 
     print(f"Building per-layer truth stats from {len(manifold_true)} true / "
           f"{len(manifold_false)} false statements ({len(layers)} layer(s)) ...")
@@ -2522,6 +2613,7 @@ def run(args) -> dict:
             manifolds, subspaces = build_layer_stats(
                 model, tokenizer, manifold_true, manifold_false, layers, device, args.max_length,
                 args.subspace_rank, args.batch_size, args.length_bucketed_batches,
+                max_batch_tokens=max_batch_tokens,
                 progress_every=args.progress_every,
                 checkpoint_path=warmup_checkpoint_path,
                 checkpoint_metadata=stats_cache_metadata,
@@ -2608,7 +2700,12 @@ def run(args) -> dict:
     eval_started = time.perf_counter()
     while eval_pair_offset < len(eval_pairs):
         current_batch_size = batch_fallback_state.batch_size()
-        batch_pairs = eval_pairs[eval_pair_offset:eval_pair_offset + current_batch_size]
+        batch_pairs = _next_statement_pair_batch(
+            eval_pairs,
+            eval_pair_offset,
+            current_batch_size,
+            max_batch_tokens=max_batch_tokens,
+        )
         batch = [stmt for stmt, _encoding in batch_pairs]
         if eval_reps_reader is not None:
             with _profile_phase(profile, "read_eval_reps_cache_batch"):
@@ -2784,6 +2881,7 @@ def run(args) -> dict:
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
                    "eigenscore_alpha": args.eigenscore_alpha,
                    "batch_size": args.batch_size,
+                   "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
                    "effective_batch_size": batch_fallback_state.batch_size(),
                    "inside_samples": args.inside_samples,
@@ -2905,6 +3003,9 @@ def main():
     p.add_argument("--max-length", type=int, default=64)
     p.add_argument("--batch-size", type=int, default=1,
                    help="forced-answer forward batch size; increase for faster benchmarks if memory allows")
+    p.add_argument("--max-batch-tokens", type=int, default=0,
+                   help="optional padded-token budget per warmup/eval forward batch; 0 disables token-budget "
+                        "batch splitting while preserving --batch-size as the row-count cap")
     p.add_argument("--auto-batch-size", action="store_true",
                    help="on retriable memory errors during warmup/forced-answer forwards, halve batch size and retry")
     p.add_argument("--length-bucketed-batches", action="store_true",
@@ -2978,6 +3079,8 @@ def main():
     args = p.parse_args()
     if args.batch_size < 1:
         p.error("--batch-size must be >=1")
+    if args.max_batch_tokens < 0:
+        p.error("--max-batch-tokens must be >=0")
     if args.inside_batch_size < 1:
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:

@@ -1451,6 +1451,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
             alpha=0.2,
             performance_dry_run=True,
             prefix_kv_cache=True,
+            max_batch_tokens=77,
             compact_json=True,
         )
     )
@@ -1458,6 +1459,7 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
 
     assert payload["adapter_family_matrix"]["promotion_decision"]["status"] == "promote"
     assert payload["performance_matrix"]["matrix_decision"]["status"] == "dry_run"
+    assert payload["performance_matrix"]["config"]["max_batch_tokens"] == 77
     assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
     assert payload["readiness_decision"]["recommended_route"] in {
         "structured_qa",
@@ -2324,6 +2326,7 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
         model="tiny-local",
         layer=-2,
         batch_size=2,
+        max_batch_tokens=128,
         max_length=32,
         eval_reps_cache_shard_size=3,
         python_executable="/python",
@@ -2337,12 +2340,14 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert Path(payload["artifact_manifest"]).exists()
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
     assert manifest["metadata"]["runner"] == "run_cache_profile_triplet"
+    assert manifest["metadata"]["max_batch_tokens"] == 128
     assert manifest["artifacts"]["command_log"]["exists"] is True
     assert manifest["artifacts"]["caches.eval_reps_cache"]["exists"] is False
     assert payload["artifact_manifest_summary"]["missing_count"] == 3
     assert commands["uncached"][0] == "/python"
     assert "--offline" in commands["uncached"]
     assert commands["uncached"][commands["uncached"].index("--dtype") + 1] == "float32"
+    assert commands["uncached"][commands["uncached"].index("--max-batch-tokens") + 1] == "128"
     assert commands["uncached"][commands["uncached"].index("--hidden-state-capture") + 1] == "outputs"
     assert commands["uncached"].count("--refresh-layer-stats-cache") == 1
     assert commands["uncached"].count("--refresh-eval-reps-cache") == 1
@@ -2534,6 +2539,7 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
         layers=(-2, -1),
         batch_sizes=(2,),
         hidden_state_captures=("outputs", "hooks"),
+        max_batch_tokens=96,
         python_executable="/python",
     )
 
@@ -2555,7 +2561,10 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     first = report["cells"][0]
     assert first["summary"]["dry_run"] is True
     assert "--layer -2" in first["summary"]["commands"]["uncached"]
+    assert "--max-batch-tokens 96" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
+    assert report["config"]["max_batch_tokens"] == 96
+    assert manifest["metadata"]["max_batch_tokens"] == 96
     assert report["matrix_decision"]["status"] == "dry_run"
     assert report["matrix_decision"]["recommended_cell"] is None
 
@@ -3273,6 +3282,43 @@ def test_eval_truthfulqa_length_bucketed_batches_sort_by_statement_length():
 
     assert plain == [statements[:2], statements[2:]]
     assert bucketed == [[statements[1], statements[2]], [statements[0]]]
+
+
+def test_eval_truthfulqa_token_budget_batches_limit_padded_tokens():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("", "a", 0),
+        module.Statement("", "bbbbbbbb", 1),
+        module.Statement("", "ccc", 0),
+        module.Statement("", "ddddd", 1),
+    ]
+    encodings = [
+        module.StatementEncoding((1, 2), 1),
+        module.StatementEncoding(tuple(range(8)), 4),
+        module.StatementEncoding((1, 2, 3), 1),
+        module.StatementEncoding((1, 2, 3, 4, 5), 2),
+    ]
+
+    batches = list(module._batched_statement_pairs(
+        statements,
+        encodings,
+        3,
+        length_bucketed=False,
+        max_batch_tokens=10,
+    ))
+    oversized = module._next_statement_pair_batch(
+        list(zip(statements, encodings)),
+        1,
+        3,
+        max_batch_tokens=5,
+    )
+
+    assert [[stmt.answer for stmt, _encoding in batch] for batch in batches] == [
+        ["a"],
+        ["bbbbbbbb"],
+        ["ccc", "ddddd"],
+    ]
+    assert [stmt.answer for stmt, _encoding in oversized] == ["bbbbbbbb"]
 
 
 def test_eval_truthfulqa_batched_statements_after_offset_slices_current_batch():

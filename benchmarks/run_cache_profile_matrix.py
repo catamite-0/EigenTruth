@@ -41,6 +41,7 @@ class CacheProfileMatrixConfig:
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
+    max_batch_tokens: int = 0
     prefix_kv_cache: bool = False
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
@@ -66,6 +67,8 @@ class CacheProfileMatrixConfig:
             raise ValueError("batch_sizes must not be empty.")
         if any(batch_size < 1 for batch_size in batch_sizes):
             raise ValueError("batch_sizes must be >=1.")
+        if int(self.max_batch_tokens) < 0:
+            raise ValueError("max_batch_tokens must be >=0.")
         if not captures:
             raise ValueError("hidden_state_captures must not be empty.")
         prefix_modes = (
@@ -83,6 +86,7 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
+        object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
         object.__setattr__(self, "prefix_kv_cache", any(prefix_modes))
         object.__setattr__(self, "matrix_mode", matrix_mode)
@@ -139,6 +143,7 @@ def triplet_config_for_cell(
         limit=config.limit,
         manifold_questions=config.manifold_questions,
         batch_size=int(cell["batch_size"]),
+        max_batch_tokens=config.max_batch_tokens,
         max_length=config.max_length,
         hidden_state_capture=str(cell["hidden_state_capture"]),
         prefix_kv_cache=bool(cell.get("prefix_kv_cache", config.prefix_kv_cache)),
@@ -210,6 +215,7 @@ def run_matrix(
             "limit": config.limit,
             "manifold_questions": config.manifold_questions,
             "max_length": config.max_length,
+            "max_batch_tokens": config.max_batch_tokens,
             "prefix_kv_cache": config.prefix_kv_cache,
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
@@ -276,6 +282,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "max_batch_tokens": config.max_batch_tokens,
             "prefix_kv_cache": config.prefix_kv_cache,
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "offline": config.offline,
@@ -790,6 +797,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
+        max_batch_tokens=args.max_batch_tokens,
         prefix_kv_cache=args.prefix_kv_cache,
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
@@ -837,6 +845,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=64)
+    parser.add_argument("--max-batch-tokens", type=int, default=0,
+                        help="padded-token budget passed to eval_truthfulqa.py; 0 disables")
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache through to non-cache-only eval runs; requires outputs capture")
     parser.add_argument("--prefix-kv-cache-modes", default=None,

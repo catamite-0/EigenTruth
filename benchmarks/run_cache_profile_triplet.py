@@ -40,6 +40,7 @@ class CacheProfileTripletConfig:
     limit: int | None = None
     manifold_questions: int | None = None
     batch_size: int = 4
+    max_batch_tokens: int = 0
     max_length: int = 64
     hidden_state_capture: str = "outputs"
     prefix_kv_cache: bool = False
@@ -70,6 +71,8 @@ class CacheProfileTripletConfig:
             raise ValueError("manifold_questions must be >=1.")
         if int(self.batch_size) < 1:
             raise ValueError("batch_size must be >=1.")
+        if int(self.max_batch_tokens) < 0:
+            raise ValueError("max_batch_tokens must be >=0.")
         if int(self.max_length) < 1:
             raise ValueError("max_length must be >=1.")
         if int(self.eval_reps_cache_shard_size) < 1:
@@ -84,6 +87,7 @@ class CacheProfileTripletConfig:
             raise ValueError("prefix_kv_cache requires hidden_state_capture='outputs'.")
         run_names = _normalize_run_names(self.run_names)
         object.__setattr__(self, "dtype", str(self.dtype))
+        object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "uncached_cache_mode", str(self.uncached_cache_mode))
         object.__setattr__(self, "run_names", run_names)
@@ -128,6 +132,8 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         str(config.layer),
         "--batch-size",
         str(config.batch_size),
+        "--max-batch-tokens",
+        str(config.max_batch_tokens),
         "--max-length",
         str(config.max_length),
         "--hidden-state-capture",
@@ -314,6 +320,7 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
             "dtype": config.dtype,
             "layer": config.layer,
             "batch_size": config.batch_size,
+            "max_batch_tokens": config.max_batch_tokens,
             "hidden_state_capture": config.hidden_state_capture,
             "prefix_kv_cache": config.prefix_kv_cache,
             "offline": config.offline,
@@ -339,6 +346,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         batch_size=args.batch_size,
+        max_batch_tokens=args.max_batch_tokens,
         max_length=args.max_length,
         hidden_state_capture=args.hidden_state_capture,
         prefix_kv_cache=args.prefix_kv_cache,
@@ -385,6 +393,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--manifold-questions", type=int, default=None,
                         help="warmup question count passed to eval_truthfulqa.py")
     parser.add_argument("--batch-size", type=int, default=4)
+    parser.add_argument("--max-batch-tokens", type=int, default=0,
+                        help="padded-token budget per eval_truthfulqa.py warmup/eval forward batch; 0 disables")
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--hidden-state-capture", default="outputs",
                         help="hidden state capture mode passed to eval_truthfulqa.py")

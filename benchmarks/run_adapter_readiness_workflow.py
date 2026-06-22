@@ -58,6 +58,7 @@ class AdapterReadinessWorkflowConfig:
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
+    max_batch_tokens: int = 0
     prefix_kv_cache: bool = False
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
@@ -80,6 +81,9 @@ class AdapterReadinessWorkflowConfig:
             object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
         object.__setattr__(self, "layers", tuple(int(layer) for layer in self.layers))
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
+        if int(self.max_batch_tokens) < 0:
+            raise ValueError("max_batch_tokens must be >=0.")
+        object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(
             self,
             "hidden_state_captures",
@@ -137,6 +141,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             limit=config.limit,
             manifold_questions=config.manifold_questions,
             max_length=config.max_length,
+            max_batch_tokens=config.max_batch_tokens,
             prefix_kv_cache=config.prefix_kv_cache,
             prefix_kv_cache_modes=config.prefix_kv_cache_modes,
             eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
@@ -238,6 +243,7 @@ def _write_artifact_manifest(
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "max_batch_tokens": config.max_batch_tokens,
             "prefix_kv_cache": config.prefix_kv_cache,
             "prefix_kv_cache_modes": (
                 None if config.prefix_kv_cache_modes is None else tuple(config.prefix_kv_cache_modes)
@@ -303,6 +309,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
+        max_batch_tokens=args.max_batch_tokens,
         prefix_kv_cache=args.prefix_kv_cache,
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
@@ -358,6 +365,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=64)
+    parser.add_argument("--max-batch-tokens", type=int, default=0,
+                        help="padded-token budget passed to cache-profile performance evals; 0 disables")
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache through to non-cache-only performance eval runs")
     parser.add_argument("--prefix-kv-cache-modes", default=None,
