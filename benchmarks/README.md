@@ -199,6 +199,26 @@ python benchmarks/build_selfcheck_fixture.py \
   --output artifacts/tiny_selfcheck_claims.json
 ```
 
+Use `run_inside_sampling_profile.py` to produce a reproducible cost report for
+fixed sampling, adaptive sampling, and adaptive sampling with self-check
+threshold bounds:
+
+```bash
+python benchmarks/run_inside_sampling_profile.py \
+  --output-dir artifacts/inside_sampling_profile_tiny \
+  --inside-samples 5 \
+  --inside-min-samples 2 \
+  --inside-sample-step 1 \
+  --dump-scores \
+  --fail-on-regression
+```
+
+The workflow writes per-run `result-*.json` and `profile-*.json` files plus
+`inside-sampling-profile-comparison.json`, whose leaderboard reports total
+generated samples, `inside_generation` seconds, ratio-to-fixed baselines, and
+the recommended lowest-sample configuration. `--dry-run` prints the exact
+commands without loading a model.
+
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
 recommended way to compare batch-size, layer-sweep, and INSIDE sampling changes

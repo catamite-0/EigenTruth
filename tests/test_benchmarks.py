@@ -4645,6 +4645,202 @@ def test_run_cache_profile_triplet_cli_can_fail_on_regression(tmp_path, monkeypa
     assert exc_info.value.code == 1
 
 
+def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+    config = module.InsideSamplingProfileConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        layer=-2,
+        inside_samples=6,
+        inside_min_samples=2,
+        inside_sample_step=2,
+        inside_stability_delta=0.01,
+        dump_inside_samples=True,
+        python_executable="/python",
+    )
+
+    payload = module.run_inside_sampling_profile(config, clean=True, dry_run=True)
+    commands = payload["commands"]
+    fixed = commands["fixed"]
+    adaptive = commands["adaptive"]
+    adaptive_selfcheck = commands["adaptive_selfcheck"]
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["dry_run"] is True
+    assert Path(payload["command_log"]).exists()
+    assert manifest["metadata"]["runner"] == "run_inside_sampling_profile"
+    assert manifest["metadata"]["inside_samples"] == 6
+    assert fixed[0] == "/python"
+    assert "--offline" in fixed
+    assert fixed[fixed.index("--inside-samples") + 1] == "6"
+    assert "--inside-adaptive-sampling" not in fixed
+    assert "--inside-adaptive-sampling" in adaptive
+    assert adaptive[adaptive.index("--inside-sample-step") + 1] == "2"
+    assert "--inside-selfcheck-early-stop" not in adaptive
+    assert "--inside-selfcheck-early-stop" in adaptive_selfcheck
+    assert "--dump-scores" in fixed
+    assert "--dump-inside-samples" in fixed
+
+
+def test_inside_sampling_profile_comparison_reports_sample_savings(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+    runs = {}
+    fixtures = {
+        "fixed": {"samples": 20, "seconds": 10.0, "stopped": 0, "reasons": {}},
+        "adaptive": {"samples": 14, "seconds": 7.0, "stopped": 3, "reasons": {"stability_delta": 3}},
+        "adaptive_selfcheck": {
+            "samples": 8,
+            "seconds": 4.5,
+            "stopped": 4,
+            "reasons": {"selfcheck_refute_threshold_guaranteed": 4},
+        },
+    }
+    for name, fixture in fixtures.items():
+        result_path = tmp_path / f"result-{name}.json"
+        profile_path = tmp_path / f"profile-{name}.json"
+        result_path.write_text(
+            json.dumps({
+                "inside_sampling": {
+                    "adaptive": name != "fixed",
+                    "selfcheck_early_stop": name == "adaptive_selfcheck",
+                    "sampled": 4,
+                    "total_generated_samples": fixture["samples"],
+                    "mean_samples_per_record": fixture["samples"] / 4,
+                    "mean_samples_per_sampled_record": fixture["samples"] / 4,
+                    "stopped_early": fixture["stopped"],
+                    "stop_reason_counts": fixture["reasons"],
+                }
+            }),
+            encoding="utf-8",
+        )
+        profile_path.write_text(
+            json.dumps({
+                "total_seconds": fixture["seconds"] + 1.0,
+                "phases": {"inside_generation": fixture["seconds"]},
+            }),
+            encoding="utf-8",
+        )
+        runs[name] = {"result": result_path, "profile": profile_path}
+
+    report = module.build_inside_sampling_comparison(
+        runs,
+        max_sample_ratios={"adaptive": 0.80, "adaptive_selfcheck": 0.50},
+        max_inside_generation_seconds_ratio=0.80,
+    )
+
+    assert report["sample_efficiency_gate"]["passed"] is True
+    assert report["recommendation"]["recommended_run"] == "adaptive_selfcheck"
+    assert report["runs"]["adaptive"]["sample_count_ratio_to_baseline"] == pytest.approx(0.70)
+    assert report["runs"]["adaptive_selfcheck"]["sample_count_ratio_to_baseline"] == pytest.approx(0.40)
+    assert report["runs"]["adaptive_selfcheck"]["inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert report["runs"]["adaptive_selfcheck"]["stop_reason_counts"] == {
+        "selfcheck_refute_threshold_guaranteed": 4
+    }
+
+
+def test_inside_sampling_profile_comparison_fails_closed_on_nonfinite_runtime(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+    runs = {}
+    for name, seconds in {"fixed": 10.0, "adaptive": "NaN"}.items():
+        result_path = tmp_path / f"result-{name}.json"
+        profile_path = tmp_path / f"profile-{name}.json"
+        result_path.write_text(
+            json.dumps({
+                "inside_sampling": {
+                    "sampled": 4,
+                    "total_generated_samples": 8 if name == "adaptive" else 10,
+                    "stop_reason_counts": {},
+                }
+            }),
+            encoding="utf-8",
+        )
+        profile_path.write_text(
+            json.dumps({"total_seconds": seconds, "phases": {"inside_generation": seconds}}),
+            encoding="utf-8",
+        )
+        runs[name] = {"result": result_path, "profile": profile_path}
+
+    report = module.build_inside_sampling_comparison(
+        runs,
+        max_sample_ratios={"adaptive": 1.0},
+        max_inside_generation_seconds_ratio=1.0,
+    )
+
+    assert report["runs"]["adaptive"]["inside_generation_seconds"] is None
+    assert report["runs"]["adaptive"]["inside_generation_seconds_ratio_to_baseline"] is None
+    assert report["sample_efficiency_gate"]["passed"] is False
+    assert report["sample_efficiency_gate"]["failures"] == [{
+        "run": "adaptive",
+        "metric": "inside_generation_seconds_ratio_to_baseline",
+        "value": None,
+        "max_allowed": 1.0,
+    }]
+
+
+def test_run_inside_sampling_profile_writes_comparison_report(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+    config = module.InsideSamplingProfileConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        python_executable="/python",
+        dump_scores=True,
+        adaptive_max_sample_ratio=0.80,
+        adaptive_selfcheck_max_sample_ratio=0.60,
+    )
+    sample_counts = {
+        "fixed": 20,
+        "adaptive": 14,
+        "adaptive_selfcheck": 10,
+    }
+    calls = []
+
+    def fake_run(command, *, cwd, check):
+        calls.append({"command": command, "cwd": cwd, "check": check})
+        result_path = Path(command[command.index("--json") + 1])
+        profile_path = Path(command[command.index("--profile-json") + 1])
+        name = result_path.stem.removeprefix("result-")
+        samples = sample_counts[name]
+        result_path.write_text(
+            json.dumps({
+                "inside_sampling": {
+                    "adaptive": name != "fixed",
+                    "selfcheck_early_stop": name == "adaptive_selfcheck",
+                    "sampled": 4,
+                    "total_generated_samples": samples,
+                    "mean_samples_per_record": samples / 4,
+                    "mean_samples_per_sampled_record": samples / 4,
+                    "stopped_early": 2 if name != "fixed" else 0,
+                    "stop_reason_counts": {"stability_delta": 2} if name == "adaptive" else {},
+                }
+            }),
+            encoding="utf-8",
+        )
+        profile_path.write_text(
+            json.dumps({
+                "total_seconds": float(samples),
+                "phases": {"inside_generation": float(samples) / 2},
+            }),
+            encoding="utf-8",
+        )
+        if "--dump-scores" in command:
+            score_path = Path(command[command.index("--dump-scores") + 1])
+            score_path.write_text(json.dumps({"labels": [], "scores": {}, "inside_sampling": {}}), encoding="utf-8")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module.run_inside_sampling_profile(config, clean=True, dry_run=False)
+    report = json.loads(Path(payload["comparison_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert [call["check"] for call in calls] == [True, True, True]
+    assert payload["dry_run"] is False
+    assert payload["sample_efficiency_gate"]["passed"] is True
+    assert report["recommendation"]["recommended_run"] == "adaptive_selfcheck"
+    assert manifest["artifacts"]["comparison_report"]["exists"] is True
+    assert manifest["artifacts"]["profiles.adaptive_selfcheck"]["sha256"]
+    assert manifest["artifacts"]["score_dumps.fixed"]["sha256"]
+
+
 def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     config = module.CacheProfileMatrixConfig(
