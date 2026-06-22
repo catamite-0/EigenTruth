@@ -206,6 +206,102 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
 
 
+def test_build_selfcheck_fixture_uses_dumped_inside_sample_texts(tmp_path):
+    builder = importlib.import_module("benchmarks.build_selfcheck_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "selfcheck-fixture.json"
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 1, 1],
+        "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        "statements": [
+            {"text": "Paris is the capital of France.", "claim_id": "c1"},
+            {"text": "Water boils at 100 degrees Celsius.", "claim_id": "c2"},
+            {"text": "The moon is made of cheese.", "claim_id": "c3"},
+            {"text": "AlphaCorp has 10 offices in Europe.", "claim_id": "c4"},
+        ],
+        "inside_sample_texts": [
+            ["Paris is the capital of France.", "Paris is the capital of France and a city."],
+            [
+                "Water boils at 100 degrees Celsius at standard pressure.",
+                "At standard pressure, water boils at 100 degrees Celsius.",
+            ],
+            ["The moon is not made of cheese.", "Lunar samples show the moon is not made of cheese."],
+            ["AlphaCorp has 12 offices in Europe.", "As of 2026, AlphaCorp has 12 offices in Europe."],
+        ],
+    }
+    scores_path.write_text(json.dumps(dump), encoding="utf-8")
+
+    fixture = builder.build_selfcheck_fixture(builder.load_score_dump(scores_path), min_samples=2)
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        selfcheck_min_overlap=0.50,
+    )
+
+    assert fixture["fixture_type"] == "selfcheck_samples"
+    assert fixture["summary"]["records_meeting_min_samples"] == 4
+    assert fixture["records"][0]["selfcheck_samples"][0] == "Paris is the capital of France."
+    assert report["runs"][0]["route_summary"]["selected_counts"] == {"self_consistency": 4}
+    assert report["runs"][0]["verification_quality"]["decision_accuracy"] == pytest.approx(1.0)
+
+
+def test_build_selfcheck_fixture_aligns_external_samples(tmp_path):
+    builder = importlib.import_module("benchmarks.build_selfcheck_fixture")
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    scores_path.write_text(
+        json.dumps({
+            "labels": [0, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.8, 0.2]},
+            "statements": [
+                {"text": "Water boils at 100 degrees Celsius.", "claim_id": "boil"},
+                {"text": "AlphaCorp has 10 offices in Europe.", "claim_id": "offices"},
+                {"text": "Unused claim.", "claim_id": "unused"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(
+        json.dumps({
+            "boil": [
+                "Water boils at 100 degrees Celsius at standard pressure.",
+                {"response": "At standard pressure, water boils at 100 degrees Celsius.", "source": "sample-2"},
+            ],
+            "records": [
+                {
+                    "index": 1,
+                    "sampled_responses": [
+                        "AlphaCorp has 12 offices in Europe.",
+                        "AlphaCorp has 12 offices in Europe as of 2026.",
+                    ],
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.build_selfcheck_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_sample_payloads((samples_path,)),
+        min_samples=2,
+        include_empty_records=False,
+    )
+
+    assert fixture["summary"]["n_records"] == 2
+    assert fixture["summary"]["records_dropped_below_min_samples"] == 1
+    assert fixture["records"][0]["claim_id"] == "boil"
+    assert fixture["records"][0]["selfcheck_samples"][1]["source"] == "sample-2"
+    assert fixture["records"][1]["claim_id"] == "offices"
+    assert fixture["records"][1]["metadata"]["selfcheck"]["meets_min_samples"] is True
+
+
 def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -6332,6 +6428,7 @@ def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(mo
     assert diagnostics.semantic_entropy > 0.0
     assert diagnostics.embedding_entropy_by_layer[-1] > 0.99
     assert -1 in diagnostics.eigenscore_by_layer
+    assert diagnostics.sample_texts == ("Paris is correct.", "Paris is correct.", "Lyon is correct.")
 
 
 def test_eval_truthfulqa_adaptive_inside_stops_when_entropy_is_stable(monkeypatch):
@@ -6376,6 +6473,7 @@ def test_eval_truthfulqa_adaptive_inside_stops_when_entropy_is_stable(monkeypatc
     assert diagnostics.n_samples == 3
     assert diagnostics.adaptive_rounds == 2
     assert diagnostics.stopped_early is True
+    assert diagnostics.sample_texts == ("same answer", "same answer", "same answer")
 
 
 def test_eval_truthfulqa_adaptive_inside_rejects_invalid_config():

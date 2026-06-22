@@ -179,6 +179,19 @@ sample budget. The benchmark first draws `--inside-min-samples`, then adds
 are within `--inside-stability-delta` or the maximum budget is reached. The JSON
 output records `inside_sample_counts`, `inside_adaptive_rounds`, and
 `inside_stopped_early` per scored statement.
+Add `--dump-inside-samples` with `--dump-scores` to include sampled continuation
+text in the score dump as `inside_sample_texts`. This is useful for building
+`SelfConsistencyVerifier` fixtures without rerunning generation:
+
+```bash
+python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
+  --inside-samples 3 --dump-scores artifacts/tiny_scores_with_samples.json \
+  --dump-inside-samples
+
+python benchmarks/build_selfcheck_fixture.py \
+  --scores artifacts/tiny_scores_with_samples.json \
+  --output artifacts/tiny_selfcheck_claims.json
+```
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
@@ -470,6 +483,26 @@ retrieval/verifier backend is plugged in. Claim fixtures may include
 insufficient, the ensemble can use these caller-supplied alternative generations
 for FactSelfCheck-style support/refutation rates before falling through to
 retrieval.
+
+`build_selfcheck_fixture.py` converts statement-bearing score dumps and sampled
+generations into those fixtures. It reads `inside_sample_texts` from
+`eval_truthfulqa.py --dump-inside-samples`, or one or more external JSON/JSONL
+files passed with `--samples`. External samples may be keyed by `claim_id`,
+provided as per-record objects with `index` / `claim_id`, or listed one row per
+score-dump statement:
+
+```bash
+python benchmarks/build_selfcheck_fixture.py \
+  --scores artifacts/tiny_scores_with_samples.json \
+  --samples artifacts/external_sampled_generations.json \
+  --output artifacts/tiny_selfcheck_claims.json
+
+python benchmarks/eval_verifier_ensemble.py \
+  --scores tiny=artifacts/tiny_scores_with_samples.json \
+  --claims artifacts/tiny_selfcheck_claims.json \
+  --signal truth_proj \
+  --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
+```
 
 Reports include `verification_quality`, a label-conditioned matrix over
 `supported` / `refuted` / `insufficient_evidence` outcomes. Use

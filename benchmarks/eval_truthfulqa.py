@@ -151,6 +151,7 @@ class SampledInsideDiagnostics:
     eigenscore_by_layer: dict[int, float]
     semantic_entropy: float
     embedding_entropy_by_layer: dict[int, float]
+    sample_texts: tuple[str, ...] = ()
     n_samples: int = 0
     adaptive_rounds: int = 1
     stopped_early: bool = False
@@ -2300,6 +2301,7 @@ def _inside_diagnostics_from_response(
             )
             for layer, values in response_diagnostics.embeddings_by_layer.items()
         },
+        sample_texts=tuple(response_diagnostics.sample_texts),
         n_samples=n_samples,
         adaptive_rounds=adaptive_rounds,
         stopped_early=stopped_early,
@@ -2478,6 +2480,7 @@ def sampled_inside_adaptive_diagnostics_batch(
                     eigenscore_by_layer=current.eigenscore_by_layer,
                     semantic_entropy=current.semantic_entropy,
                     embedding_entropy_by_layer=current.embedding_entropy_by_layer,
+                    sample_texts=current.sample_texts,
                     n_samples=current.n_samples,
                     adaptive_rounds=current.adaptive_rounds,
                     stopped_early=stable and not reached_max,
@@ -2778,6 +2781,7 @@ def run(args) -> dict:
     inside_min_samples = int(getattr(args, "inside_min_samples", 2))
     inside_sample_step = int(getattr(args, "inside_sample_step", 1))
     inside_stability_delta = float(getattr(args, "inside_stability_delta", 0.05))
+    dump_inside_samples = bool(getattr(args, "dump_inside_samples", False))
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -2968,6 +2972,7 @@ def run(args) -> dict:
     inside_sample_counts: List[int] = []
     inside_adaptive_rounds: List[int] = []
     inside_stopped_early: List[bool] = []
+    inside_sample_texts: list[list[str]] = []
     inside_triggered_total = 0
     inside_skipped_total = 0
 
@@ -3130,6 +3135,9 @@ def run(args) -> dict:
                     batch_records[position]["inside_stopped_early"] = (
                         sampled.stopped_early if sampled is not None else False
                     )
+                    batch_records[position]["inside_sample_texts"] = (
+                        tuple(sampled.sample_texts) if sampled is not None else ()
+                    )
                     batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
@@ -3140,6 +3148,7 @@ def run(args) -> dict:
                     record["inside_sample_count"] = 0
                     record["inside_adaptive_rounds"] = 0
                     record["inside_stopped_early"] = False
+                    record["inside_sample_texts"] = ()
 
         with _profile_phase(profile, "score_postprocess"):
             for record in batch_records:
@@ -3185,6 +3194,8 @@ def run(args) -> dict:
                     inside_sample_counts.append(int(record.get("inside_sample_count", 0)))
                     inside_adaptive_rounds.append(int(record.get("inside_adaptive_rounds", 0)))
                     inside_stopped_early.append(bool(record.get("inside_stopped_early", False)))
+                    if dump_inside_samples:
+                        inside_sample_texts.append(list(record.get("inside_sample_texts", ())))
                 scored += 1
 
                 if _progress_report_due(scored, len(eval_stmts), args.progress_every, eval_last_reported):
@@ -3272,6 +3283,7 @@ def run(args) -> dict:
                    "inside_min_samples": inside_min_samples,
                    "inside_sample_step": inside_sample_step,
                    "inside_stability_delta": inside_stability_delta,
+                   "dump_inside_samples": dump_inside_samples,
                    "inside_trigger_signal": args.inside_trigger_signal,
                    "inside_trigger_threshold": args.inside_trigger_threshold,
                    "inside_trigger_top_fraction": args.inside_trigger_top_fraction,
@@ -3376,6 +3388,8 @@ def run(args) -> dict:
             dump["inside_adaptive_rounds"] = inside_adaptive_rounds
             dump["inside_stopped_early"] = inside_stopped_early
             dump["inside_sampling"] = payload["inside_sampling"]
+            if dump_inside_samples:
+                dump["inside_sample_texts"] = inside_sample_texts
         if _sweep_output_enabled(args):
             dump["sweep_scores"] = {str(layer): sweep_scores[layer] for layer in layers}
         with open(args.dump_scores, "w", encoding="utf-8") as f:
@@ -3487,6 +3501,9 @@ def main():
     p.add_argument("--dump-scores", default=None,
                    help="optional path to dump raw per-statement scores+labels "
                         "(enables post-hoc analyses, e.g. conformal calibration)")
+    p.add_argument("--dump-inside-samples", action="store_true",
+                   help="when used with --dump-scores and --inside-samples, include sampled continuation text "
+                        "for downstream self-consistency verifier fixtures")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
     if args.batch_size < 1:
@@ -3522,6 +3539,11 @@ def main():
         p.error("--inside-trigger-signal requires a threshold or top fraction")
     if args.inside_trigger_top_fraction is not None and not (0.0 < args.inside_trigger_top_fraction <= 1.0):
         p.error("--inside-trigger-top-fraction must be in (0, 1]")
+    if args.dump_inside_samples:
+        if not args.dump_scores:
+            p.error("--dump-inside-samples requires --dump-scores")
+        if args.inside_samples < 2:
+            p.error("--dump-inside-samples requires --inside-samples >=2")
     if args.refresh_statement_encoding_cache and not args.statement_encoding_cache:
         p.error("--refresh-statement-encoding-cache requires --statement-encoding-cache")
     if args.refresh_layer_stats_cache and not args.layer_stats_cache:
