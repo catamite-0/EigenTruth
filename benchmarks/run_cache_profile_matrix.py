@@ -13,7 +13,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -175,13 +175,23 @@ def _cell_summary(triplet_payload: dict[str, Any]) -> dict[str, Any]:
         "totals": {
             name: {
                 "total_seconds": run.get("total_seconds"),
-                "bottleneck": run.get("summary", {}).get("bottleneck"),
+                "bottleneck": _run_bottleneck(run),
                 "speedup_vs_baseline": run.get("total_delta", {}).get("speedup_vs_baseline"),
                 "ratio_to_baseline": run.get("total_delta", {}).get("ratio_to_baseline"),
             }
             for name, run in runs.items()
         },
     }
+
+
+def _run_bottleneck(run: Mapping[str, Any]) -> Any:
+    """Return a run bottleneck from current or legacy comparison payloads."""
+    if run.get("bottleneck") is not None:
+        return run.get("bottleneck")
+    summary = run.get("summary")
+    if isinstance(summary, Mapping):
+        return summary.get("bottleneck")
+    return None
 
 
 def _result_auroc(triplet_payload: dict[str, Any]) -> dict[str, float]:

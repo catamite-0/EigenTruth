@@ -1081,11 +1081,11 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
         comparison_path.write_text(
             json.dumps({
                 "runs": [
-                    {"name": "uncached", "total_seconds": 100.0, "summary": {"bottleneck": "forward"}},
+                    {"name": "uncached", "total_seconds": 100.0, "bottleneck": "forward"},
                     {
                         "name": "cache_only",
                         "total_seconds": cache_only_total,
-                        "summary": {"bottleneck": "load_data"},
+                        "bottleneck": "load_data",
                         "total_delta": {
                             "speedup_vs_baseline": 100.0 / cache_only_total,
                             "ratio_to_baseline": cache_only_total / 100.0,
@@ -1127,6 +1127,7 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
     assert saved["leaderboard"][0]["id"] == "layer_m1_batch_2_capture_outputs"
     assert saved["leaderboard"][0]["gate_passed"] is True
     assert saved["cells"][0]["summary"]["truth_proj_auroc"] == pytest.approx(0.82)
+    assert saved["cells"][0]["summary"]["totals"]["cache_only"]["bottleneck"] == "load_data"
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):

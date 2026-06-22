@@ -750,7 +750,7 @@ python benchmarks/run_cache_profile_matrix.py \
 
 Remove `--dry-run` only when the full matrix cost is acceptable. The matrix
 report includes each triplet's command log, gate summary, cache-only timing,
-and `truth_proj` AUROC when result JSON is available.
+per-run bottleneck phase, and `truth_proj` AUROC when result JSON is available.
 
 `make perf-check` runs `benchmarks/profile_gate_smoke.py` and
 `benchmarks/cache_profile_smoke.py`, which use fixed synthetic profile payloads
