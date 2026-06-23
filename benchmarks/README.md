@@ -225,6 +225,25 @@ Pass `--inside-trigger-signal` with `--inside-trigger-threshold` or
 variants under a budgeted two-stage policy where sampled INSIDE runs only on the
 highest-risk statements.
 
+Use `run_inside_trigger_budget_sweep.py` to compare several trigger budgets in
+one reproducible report:
+
+```bash
+python benchmarks/run_inside_trigger_budget_sweep.py \
+  --output-dir artifacts/inside_trigger_budget_sweep \
+  --trigger-signal truth_proj \
+  --top-fractions 0.1,0.2,0.3 \
+  --reference-report artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json \
+  --inside-samples 3 \
+  --inside-max-new-tokens 4 \
+  --runs fixed,adaptive_selfcheck
+```
+
+The sweep writes one child `inside-sampling-profile-comparison.json` per budget
+plus `inside-trigger-budget-sweep.json`, whose leaderboard reports generated
+samples, `inside_generation` seconds, ratios to the optional full-sample
+reference, and inside-score AUROCs from the recommended run.
+
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
 recommended way to compare batch-size, layer-sweep, and INSIDE sampling changes

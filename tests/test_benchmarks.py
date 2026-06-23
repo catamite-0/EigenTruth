@@ -5536,6 +5536,158 @@ def test_run_inside_sampling_profile_writes_comparison_report(tmp_path, monkeypa
     assert reused["sample_efficiency_gate"]["passed"] is True
 
 
+def test_run_inside_trigger_budget_sweep_builds_dry_run_commands(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+    config = module.InsideTriggerBudgetSweepConfig(
+        output_dir=tmp_path,
+        trigger_signal="truth_proj",
+        budgets=(
+            module.TriggerBudgetSpec("top_fraction", 0.1),
+            module.TriggerBudgetSpec("top_fraction", 0.25),
+        ),
+        model="tiny-local",
+        layer=-2,
+        inside_samples=3,
+        python_executable="/python",
+        run_names=("fixed", "adaptive_selfcheck"),
+    )
+
+    report = module.run_inside_trigger_budget_sweep(config, clean=True, dry_run=True)
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+    top10_fixed = report["budgets"]["top_0p1"]["commands"]["fixed"]
+    top25_selfcheck = report["budgets"]["top_0p25"]["commands"]["adaptive_selfcheck"]
+
+    assert report["dry_run"] is True
+    assert report["config"]["trigger_signal"] == "truth_proj"
+    assert top10_fixed[top10_fixed.index("--inside-trigger-signal") + 1] == "truth_proj"
+    assert top10_fixed[top10_fixed.index("--inside-trigger-top-fraction") + 1] == "0.1"
+    assert "--inside-selfcheck-early-stop" in top25_selfcheck
+    assert manifest["metadata"]["runner"] == "run_inside_trigger_budget_sweep"
+    assert manifest["metadata"]["budgets"] == [
+        {"kind": "top_fraction", "value": 0.1},
+        {"kind": "top_fraction", "value": 0.25},
+    ]
+
+
+def test_run_inside_trigger_budget_sweep_cli_accepts_explicit_offline(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+
+    module.main([
+        "--output-dir",
+        str(tmp_path),
+        "--trigger-signal",
+        "truth_proj",
+        "--top-fractions",
+        "0.1",
+        "--runs",
+        "fixed",
+        "--offline",
+        "--dry-run",
+    ])
+
+    report = json.loads(capsys.readouterr().out)
+
+    assert report["dry_run"] is True
+    assert report["config"]["offline"] is True
+    assert Path(report["artifact_manifest"]).exists()
+
+
+def test_run_inside_trigger_budget_sweep_compares_budgets_to_reference(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+    reference_report = tmp_path / "full-reference.json"
+    reference_report.write_text(
+        json.dumps({
+            "runs": {
+                "fixed": {
+                    "total_generated_samples": 300,
+                    "inside_generation_seconds": 120.0,
+                }
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    def fake_profile(config, *, clean, dry_run, skip_existing):
+        del clean, dry_run, skip_existing
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        fraction = float(config.inside_trigger_top_fraction)
+        fixed_result = config.output_dir / "result-fixed.json"
+        adaptive_result = config.output_dir / "result-adaptive_selfcheck.json"
+        fixed_result.write_text(json.dumps({"auroc": {"inside_eigenscore": 0.50}}), encoding="utf-8")
+        adaptive_result.write_text(
+            json.dumps({"auroc": {"inside_eigenscore": 0.50 + fraction}}),
+            encoding="utf-8",
+        )
+        comparison_path = config.output_dir / "inside-sampling-profile-comparison.json"
+        comparison_path.write_text(
+            json.dumps({
+                "runs": {
+                    "fixed": {
+                        "name": "fixed",
+                        "result_path": str(fixed_result),
+                        "sampled": int(100 * fraction),
+                        "skipped_by_trigger": 100 - int(100 * fraction),
+                        "total_generated_samples": int(300 * fraction),
+                        "mean_samples_per_record": 3.0 * fraction,
+                        "inside_generation_seconds": 120.0 * fraction,
+                        "sample_count_ratio_to_baseline": 1.0,
+                        "inside_generation_seconds_ratio_to_baseline": 1.0,
+                    },
+                    "adaptive_selfcheck": {
+                        "name": "adaptive_selfcheck",
+                        "result_path": str(adaptive_result),
+                        "sampled": int(100 * fraction),
+                        "skipped_by_trigger": 100 - int(100 * fraction),
+                        "total_generated_samples": int(250 * fraction),
+                        "mean_samples_per_record": 2.5 * fraction,
+                        "inside_generation_seconds": 100.0 * fraction,
+                        "sample_count_ratio_to_baseline": 5.0 / 6.0,
+                        "inside_generation_seconds_ratio_to_baseline": 5.0 / 6.0,
+                    },
+                },
+                "recommendation": {"recommended_run": "adaptive_selfcheck"},
+                "sample_efficiency_gate": {"passed": True},
+            }),
+            encoding="utf-8",
+        )
+        manifest_path = config.output_dir / "artifact-manifest.json"
+        manifest_path.write_text(json.dumps({"summary": {"artifact_count": 1}}), encoding="utf-8")
+        return {
+            "output_dir": str(config.output_dir),
+            "comparison_report": str(comparison_path),
+            "artifact_manifest": str(manifest_path),
+            "sample_efficiency_gate": {"passed": True},
+            "recommendation": {"recommended_run": "adaptive_selfcheck"},
+        }
+
+    monkeypatch.setattr(module, "run_inside_sampling_profile", fake_profile)
+    config = module.InsideTriggerBudgetSweepConfig(
+        output_dir=tmp_path / "sweep",
+        trigger_signal="truth_proj",
+        budgets=(
+            module.TriggerBudgetSpec("top_fraction", 0.2),
+            module.TriggerBudgetSpec("top_fraction", 0.1),
+        ),
+        reference_report_path=reference_report,
+        run_names=("fixed", "adaptive_selfcheck"),
+    )
+
+    report = module.run_inside_trigger_budget_sweep(config, clean=True, dry_run=False)
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert report["recommendation"] == {
+        "budget_id": "top_0p1",
+        "recommended_run": "adaptive_selfcheck",
+        "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+    }
+    assert [row["budget_id"] for row in report["leaderboard"]] == ["top_0p1", "top_0p2"]
+    assert report["leaderboard"][0]["inside_generation_seconds_ratio_to_reference"] == pytest.approx(1.0 / 12.0)
+    assert report["leaderboard"][0]["sample_count_ratio_to_reference"] == pytest.approx(25 / 300)
+    assert report["leaderboard"][0]["inside_auroc"] == {"inside_eigenscore": pytest.approx(0.60)}
+    assert manifest["artifacts"]["budgets.top_0p1.comparison_report"]["exists"] is True
+    assert manifest["artifacts"]["budgets.top_0p2.profile_manifest"]["exists"] is True
+
+
 def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     config = module.CacheProfileMatrixConfig(
