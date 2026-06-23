@@ -611,6 +611,9 @@ def _inside_sampling_profile_flags(inside_sampling: Mapping[str, Any]) -> list[s
         "--inside-selfcheck-refute-threshold",
         inside_sampling.get("inside_selfcheck_refute_threshold"),
     )
+    _extend_flag(flags, "--inside-trigger-signal", inside_sampling.get("inside_trigger_signal"))
+    _extend_flag(flags, "--inside-trigger-threshold", inside_sampling.get("inside_trigger_threshold"))
+    _extend_flag(flags, "--inside-trigger-top-fraction", inside_sampling.get("inside_trigger_top_fraction"))
     if inside_sampling.get("recommended_run"):
         flags.extend(["--runs", str(inside_sampling["recommended_run"])])
     return flags

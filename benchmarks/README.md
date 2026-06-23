@@ -220,6 +220,10 @@ the recommended lowest-sample configuration. `--dry-run` prints the exact
 commands without loading a model. Use `--skip-existing` after an interrupted
 profile to reuse completed per-run result/profile files and only run missing
 variants before rebuilding the comparison report and manifest.
+Pass `--inside-trigger-signal` with `--inside-trigger-threshold` or
+`--inside-trigger-top-fraction` to profile the same fixed/adaptive/self-check
+variants under a budgeted two-stage policy where sampled INSIDE runs only on the
+highest-risk statements.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
@@ -953,9 +957,12 @@ Remove `--performance-dry-run` only when the local profile matrix cost is
 acceptable. Add `--fail-on-blocked` on real runs to require
 `readiness_decision.status=promote`. Pass `--inside-sampling-report` when a
 promoted `run_inside_sampling_profile.py` comparison should be folded into the
-runtime recommendation and readiness manifest:
+runtime recommendation and readiness manifest. Pass `--performance-report` to
+reuse an existing `cache-profile-matrix-report.json` when only the INSIDE
+sampling evidence or adapter-family evidence changed:
 
 ```bash
+  --performance-report artifacts/readiness/cache-profile-matrix/cache-profile-matrix-report.json \
   --inside-sampling-report artifacts/inside_sampling/inside-sampling-profile-comparison.json
 ```
 
@@ -1321,6 +1328,19 @@ selects `adaptive_selfcheck`, but only reduces generated samples to `0.937` of
 fixed sampling and leaves `inside_generation` at `1.001` of fixed. Treat this as
 evidence that real-model INSIDE should be threshold/top-fraction triggered
 instead of run on every statement by default.
+
+The triggered follow-up records
+`benchmark_manifest:smollm2-l20-readiness-inside-triggered:0.7` and
+`benchmark_manifest:smollm2-l20-inside-triggered-staged-qa-release-candidate:0.7`.
+It uses `--inside-trigger-signal truth_proj --inside-trigger-top-fraction 0.25`
+on the same SmolLM2 l20 setup and reuses the 0.6 cache-profile matrix through
+`--performance-report`. The profile samples 39/154 eval statements, skips 115,
+and cuts fixed `inside_generation` from `467.563s` to `118.513s` (`0.253x`).
+The promoted runtime recommendation selects `adaptive_selfcheck` within that
+triggered budget with 110 generated samples, generated-sample ratio `0.940`
+versus triggered fixed, and `inside_generation` ratio `1.009`; treat the
+trigger gate as the primary performance win and self-check as an auditable
+analysis setting, not as the main speedup source.
 
 ## `build_truthfulqa_corpus.py`
 

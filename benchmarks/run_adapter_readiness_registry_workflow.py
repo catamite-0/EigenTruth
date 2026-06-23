@@ -237,6 +237,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
         inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
+        performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
     return AdapterReadinessRegistryWorkflowConfig(
         readiness=readiness,
@@ -322,6 +323,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     ), default=None)
     parser.add_argument("--inside-sampling-report", default=None,
                         help="optional run_inside_sampling_profile.py comparison report for runtime recommendation")
+    parser.add_argument("--performance-report", default=None,
+                        help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless registry workflow decision is promote")
     run(parser.parse_args(argv))

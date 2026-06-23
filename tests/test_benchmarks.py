@@ -3138,6 +3138,94 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert manifest["metadata"]["recommended_inside_sampling"]["recommended_run"] == "adaptive_selfcheck"
 
 
+def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+    performance_dir = tmp_path / "previous-performance"
+    performance_dir.mkdir()
+    performance_report_path = performance_dir / "cache-profile-matrix-report.json"
+    result_path = performance_dir / "cache-only-result.json"
+    result_path.write_text(
+        json.dumps({
+            "auroc": {
+                "truth_proj": 0.82,
+                "subspace_resid": 0.92,
+                "nll_answer": 0.73,
+            },
+        }),
+        encoding="utf-8",
+    )
+    performance_report_path.write_text(
+        json.dumps({
+            "dry_run": False,
+            "report_path": str(performance_report_path),
+            "config": {
+                "max_workers": 1,
+                "length_bucketed_batches": True,
+            },
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m1_batch_2_capture_outputs",
+                "recommendation_metric": "cache_only_total_seconds",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": "layer_m1_batch_2_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 0,
+                    "prefix_kv_cache": False,
+                    "cache_only_total_seconds": 0.11,
+                    "truth_proj_auroc": 0.82,
+                },
+            },
+            "cells": [
+                {
+                    "id": "layer_m1_batch_2_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "summary": {
+                        "quality_signals": {
+                            "truth_proj": 0.82,
+                            "subspace_resid": 0.92,
+                        },
+                        "truth_proj_auroc": 0.82,
+                    },
+                    "triplet": {"results": {"cache_only": str(result_path)}},
+                }
+            ],
+            "execution": {"wall_clock_seconds": 1.2, "max_workers": 1},
+        }),
+        encoding="utf-8",
+    )
+
+    def fail_run_matrix(*args, **kwargs):
+        raise AssertionError("performance matrix should be reused")
+
+    monkeypatch.setattr(module, "run_matrix", fail_run_matrix)
+    payload = module.run_adapter_readiness_workflow(
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path / "readiness",
+            n_records=8,
+            alpha=0.2,
+            performance_report_path=performance_report_path,
+        )
+    )
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["readiness_decision"]["status"] == "promote"
+    assert payload["performance_matrix_path"] == str(performance_report_path)
+    assert payload["execution"]["performance_report_reused"] is True
+    assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
+    assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
+        "name": "subspace_resid",
+        "auroc": pytest.approx(0.92),
+    }
+    assert manifest["metadata"]["performance_report_reused"] is True
+    assert manifest["metadata"]["performance_report_path"] == str(performance_report_path)
+    assert manifest["artifacts"]["performance_matrix_report"]["exists"] is True
+
+
 def test_adapter_readiness_decision_blocks_on_runtime_budget():
     module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
 
@@ -3946,14 +4034,16 @@ def _write_inside_sampling_profile(
                 "inside_selfcheck_min_overlap": 0.65,
                 "inside_selfcheck_support_threshold": 0.6,
                 "inside_selfcheck_refute_threshold": 0.5,
-                "inside_trigger_signal": None,
+                "inside_trigger_signal": "truth_proj",
                 "inside_trigger_threshold": None,
-                "inside_trigger_top_fraction": None,
+                "inside_trigger_top_fraction": 0.25,
             },
             "inside_sampling": {
-                "mode": "all",
+                "mode": "triggered",
                 "adaptive": True,
                 "selfcheck_early_stop": True,
+                "signal": "truth_proj",
+                "top_fraction": 0.25,
                 "max_samples": 5,
                 "min_samples": 2,
                 "sample_step": 1,
@@ -5214,6 +5304,8 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
         inside_min_samples=2,
         inside_sample_step=2,
         inside_stability_delta=0.01,
+        inside_trigger_signal="truth_proj",
+        inside_trigger_top_fraction=0.25,
         dump_inside_samples=True,
         python_executable="/python",
     )
@@ -5229,10 +5321,14 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert Path(payload["command_log"]).exists()
     assert manifest["metadata"]["runner"] == "run_inside_sampling_profile"
     assert manifest["metadata"]["inside_samples"] == 6
+    assert manifest["metadata"]["inside_trigger_signal"] == "truth_proj"
+    assert manifest["metadata"]["inside_trigger_top_fraction"] == 0.25
     assert fixed[0] == "/python"
     assert fixed[1] == str(Path("benchmarks") / "eval_truthfulqa.py")
     assert "--offline" in fixed
     assert fixed[fixed.index("--inside-samples") + 1] == "6"
+    assert fixed[fixed.index("--inside-trigger-signal") + 1] == "truth_proj"
+    assert fixed[fixed.index("--inside-trigger-top-fraction") + 1] == "0.25"
     assert "--inside-adaptive-sampling" not in fixed
     assert "--inside-adaptive-sampling" in adaptive
     assert adaptive[adaptive.index("--inside-sample-step") + 1] == "2"
@@ -5240,6 +5336,28 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert "--inside-selfcheck-early-stop" in adaptive_selfcheck
     assert "--dump-scores" in fixed
     assert "--dump-inside-samples" in fixed
+
+
+def test_run_inside_sampling_profile_rejects_incomplete_trigger_config(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+
+    with pytest.raises(ValueError, match="inside_trigger_signal"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            inside_trigger_top_fraction=0.25,
+        )
+    with pytest.raises(ValueError, match="requires"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            inside_trigger_signal="truth_proj",
+        )
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            inside_trigger_signal="truth_proj",
+            inside_trigger_threshold=0.5,
+            inside_trigger_top_fraction=0.25,
+        )
 
 
 def test_inside_sampling_profile_comparison_reports_sample_savings(tmp_path):
@@ -5263,7 +5381,13 @@ def test_inside_sampling_profile_comparison_reports_sample_savings(tmp_path):
                 "inside_sampling": {
                     "adaptive": name != "fixed",
                     "selfcheck_early_stop": name == "adaptive_selfcheck",
+                    "mode": "triggered",
+                    "signal": "truth_proj",
+                    "top_fraction": 0.8,
                     "sampled": 4,
+                    "not_sampled": 1,
+                    "triggered": 4,
+                    "skipped_by_trigger": 1,
                     "total_generated_samples": fixture["samples"],
                     "mean_samples_per_record": fixture["samples"] / 4,
                     "mean_samples_per_sampled_record": fixture["samples"] / 4,
@@ -5293,6 +5417,10 @@ def test_inside_sampling_profile_comparison_reports_sample_savings(tmp_path):
     assert report["runs"]["adaptive"]["sample_count_ratio_to_baseline"] == pytest.approx(0.70)
     assert report["runs"]["adaptive_selfcheck"]["sample_count_ratio_to_baseline"] == pytest.approx(0.40)
     assert report["runs"]["adaptive_selfcheck"]["inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert report["runs"]["adaptive_selfcheck"]["mode"] == "triggered"
+    assert report["runs"]["adaptive_selfcheck"]["trigger_signal"] == "truth_proj"
+    assert report["runs"]["adaptive_selfcheck"]["trigger_top_fraction"] == 0.8
+    assert report["runs"]["adaptive_selfcheck"]["skipped_by_trigger"] == 1
     assert report["runs"]["adaptive_selfcheck"]["stop_reason_counts"] == {
         "selfcheck_refute_threshold_guaranteed": 4
     }
@@ -6273,14 +6401,16 @@ def test_runtime_config_recommendation_includes_inside_sampling_profile(tmp_path
                 "inside_selfcheck_min_overlap": 0.65,
                 "inside_selfcheck_support_threshold": 0.6,
                 "inside_selfcheck_refute_threshold": 0.5,
-                "inside_trigger_signal": None,
+                "inside_trigger_signal": "truth_proj",
                 "inside_trigger_threshold": None,
-                "inside_trigger_top_fraction": None,
+                "inside_trigger_top_fraction": 0.25,
             },
             "inside_sampling": {
-                "mode": "all",
+                "mode": "triggered",
                 "adaptive": True,
                 "selfcheck_early_stop": True,
+                "signal": "truth_proj",
+                "top_fraction": 0.25,
                 "max_samples": 5,
                 "min_samples": 2,
                 "sample_step": 1,
@@ -6353,6 +6483,11 @@ def test_runtime_config_recommendation_includes_inside_sampling_profile(tmp_path
     assert "--inside-selfcheck-early-stop" in eval_flags
     assert eval_flags[eval_flags.index("--inside-samples") + 1] == "5"
     assert eval_flags[eval_flags.index("--inside-pooling") + 1] == "mean"
+    assert eval_flags[eval_flags.index("--inside-trigger-signal") + 1] == "truth_proj"
+    assert eval_flags[eval_flags.index("--inside-trigger-top-fraction") + 1] == "0.25"
+    profile_flags = report["benchmark_flags"]["run_inside_sampling_profile"]
+    assert profile_flags[profile_flags.index("--inside-trigger-signal") + 1] == "truth_proj"
+    assert profile_flags[profile_flags.index("--inside-trigger-top-fraction") + 1] == "0.25"
     assert report["benchmark_flags"]["run_inside_sampling_profile"][-2:] == [
         "--runs",
         "adaptive_selfcheck",

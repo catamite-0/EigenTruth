@@ -665,6 +665,25 @@ optimization should therefore use `--inside-trigger-signal` with a conformal
 threshold or `--inside-trigger-top-fraction`, rather than sampling every
 statement.
 
+The triggered replacement is now registered:
+
+- Triggered INSIDE profile: `artifacts/smollm2_l20_inside_trigger_truth_proj_top25/inside-sampling-profile-comparison.json`
+- Triggered readiness record: `benchmark_manifest:smollm2-l20-readiness-inside-triggered:0.7`
+- Triggered release record: `benchmark_manifest:smollm2-l20-inside-triggered-staged-qa-release-candidate:0.7`
+- Triggered release comparison: `artifacts/smollm2_l20_inside_triggered_staged_release_candidate_comparison.json`
+- Triggered release manifest: `artifacts/smollm2_l20_inside_triggered_staged_release_candidate_manifest.json`
+
+The 0.7 comparison keeps the same model, layer, batch size, `truth_proj` AUROC,
+uncached forced-answer cost, cache-only replay cost, and staged structured QA
+route, but changes INSIDE to `--inside-trigger-signal truth_proj
+--inside-trigger-top-fraction 0.25`. It samples 39/154 eval statements, skips
+115, and reduces fixed `inside_generation` from 467.563 seconds to 118.513
+seconds, or 0.253x full-sample fixed. Within the triggered subset the promoted
+`adaptive_selfcheck` run uses 110 generated samples, sample ratio 0.940 versus
+triggered fixed, and `inside_generation` ratio 1.009, so the release evidence
+supports trigger gating as the main runtime optimization rather than adaptive
+sampling alone.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -677,10 +696,10 @@ statement.
 4. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
    peak memory is the bottleneck; keep the default output capture for final-layer
    or full hidden-state semantics.
-5. Run triggered real-model INSIDE on the same layer band, using
-   `--inside-trigger-signal truth_proj` with either a conformal threshold or a
-   top-fraction budget, then compare `inside_eigenscore`/semantic entropy versus
-   `truth_proj` under the same release-gate cost report.
+5. Extend the triggered INSIDE profile from top-25% to a small budget sweep,
+   such as top-10%, top-20%, top-30%, and conformal-threshold triggering, then
+   compare `inside_eigenscore`/semantic entropy versus `truth_proj` under the
+   same release-gate cost report.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.

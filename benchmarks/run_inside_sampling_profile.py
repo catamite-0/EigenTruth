@@ -60,6 +60,9 @@ class InsideSamplingProfileConfig:
     inside_selfcheck_min_overlap: float = 0.65
     inside_selfcheck_support_threshold: float = 0.60
     inside_selfcheck_refute_threshold: float = 0.50
+    inside_trigger_signal: str | None = None
+    inside_trigger_threshold: float | None = None
+    inside_trigger_top_fraction: float | None = None
     dump_scores: bool = False
     dump_inside_samples: bool = False
     adaptive_max_sample_ratio: float = 1.0
@@ -102,6 +105,24 @@ class InsideSamplingProfileConfig:
         _validate_unit_interval(self.inside_selfcheck_min_overlap, "inside_selfcheck_min_overlap")
         _validate_unit_interval(self.inside_selfcheck_support_threshold, "inside_selfcheck_support_threshold")
         _validate_unit_interval(self.inside_selfcheck_refute_threshold, "inside_selfcheck_refute_threshold")
+        trigger_signal = None if self.inside_trigger_signal is None else str(self.inside_trigger_signal).strip()
+        if trigger_signal == "":
+            trigger_signal = None
+        if (self.inside_trigger_threshold is not None or self.inside_trigger_top_fraction is not None) \
+                and trigger_signal is None:
+            raise ValueError("inside_trigger_signal is required when a trigger threshold or top fraction is set.")
+        if trigger_signal is not None and self.inside_trigger_threshold is not None \
+                and self.inside_trigger_top_fraction is not None:
+            raise ValueError("inside_trigger_threshold and inside_trigger_top_fraction are mutually exclusive.")
+        if trigger_signal is not None and self.inside_trigger_threshold is None \
+                and self.inside_trigger_top_fraction is None:
+            raise ValueError("inside_trigger_signal requires inside_trigger_threshold or inside_trigger_top_fraction.")
+        if self.inside_trigger_threshold is not None and not math.isfinite(float(self.inside_trigger_threshold)):
+            raise ValueError("inside_trigger_threshold must be finite when set.")
+        if self.inside_trigger_top_fraction is not None:
+            _validate_unit_interval(self.inside_trigger_top_fraction, "inside_trigger_top_fraction", lower=0.0)
+            if float(self.inside_trigger_top_fraction) == 0.0:
+                raise ValueError("inside_trigger_top_fraction must be >0.")
         if float(self.adaptive_max_sample_ratio) < 0.0:
             raise ValueError("adaptive_max_sample_ratio must be non-negative.")
         if float(self.adaptive_selfcheck_max_sample_ratio) < 0.0:
@@ -113,6 +134,7 @@ class InsideSamplingProfileConfig:
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "inside_pooling", str(self.inside_pooling))
+        object.__setattr__(self, "inside_trigger_signal", trigger_signal)
 
     @property
     def comparison_report(self) -> Path:
@@ -202,6 +224,12 @@ def build_eval_command(config: InsideSamplingProfileConfig, name: str) -> list[s
             "--inside-selfcheck-refute-threshold",
             str(config.inside_selfcheck_refute_threshold),
         ])
+    if config.inside_trigger_signal is not None:
+        command.extend(["--inside-trigger-signal", config.inside_trigger_signal])
+        if config.inside_trigger_threshold is not None:
+            command.extend(["--inside-trigger-threshold", str(config.inside_trigger_threshold)])
+        if config.inside_trigger_top_fraction is not None:
+            command.extend(["--inside-trigger-top-fraction", str(config.inside_trigger_top_fraction)])
     if config.dump_scores or config.dump_inside_samples:
         command.extend(["--dump-scores", str(config.score_dump_path(name))])
     if config.dump_inside_samples:
@@ -363,7 +391,14 @@ def _inside_sampling_row(name: str, paths: Mapping[str, str | Path]) -> dict[str
         "profile_path": str(profile_path),
         "adaptive": inside.get("adaptive"),
         "selfcheck_early_stop": inside.get("selfcheck_early_stop"),
+        "mode": inside.get("mode"),
+        "trigger_signal": inside.get("signal"),
+        "trigger_threshold": _optional_float(inside.get("threshold")),
+        "trigger_top_fraction": _optional_float(inside.get("top_fraction")),
         "sampled": _optional_int(inside.get("sampled")),
+        "not_sampled": _optional_int(inside.get("not_sampled")),
+        "triggered": _optional_int(inside.get("triggered")),
+        "skipped_by_trigger": _optional_int(inside.get("skipped_by_trigger")),
         "total_generated_samples": _optional_int(inside.get("total_generated_samples")),
         "mean_samples_per_record": _optional_float(inside.get("mean_samples_per_record")),
         "mean_samples_per_sampled_record": _optional_float(inside.get("mean_samples_per_sampled_record")),
@@ -470,6 +505,9 @@ def _write_artifact_manifest(config: InsideSamplingProfileConfig, payload: Mappi
             "inside_min_samples": config.inside_min_samples,
             "inside_sample_step": config.inside_sample_step,
             "inside_stability_delta": config.inside_stability_delta,
+            "inside_trigger_signal": config.inside_trigger_signal,
+            "inside_trigger_threshold": config.inside_trigger_threshold,
+            "inside_trigger_top_fraction": config.inside_trigger_top_fraction,
             "run_names": tuple(config.run_names),
             "dry_run": bool(payload.get("dry_run")),
         },
@@ -550,6 +588,9 @@ def _config_from_args(args: argparse.Namespace) -> InsideSamplingProfileConfig:
         inside_selfcheck_min_overlap=args.inside_selfcheck_min_overlap,
         inside_selfcheck_support_threshold=args.inside_selfcheck_support_threshold,
         inside_selfcheck_refute_threshold=args.inside_selfcheck_refute_threshold,
+        inside_trigger_signal=args.inside_trigger_signal,
+        inside_trigger_threshold=args.inside_trigger_threshold,
+        inside_trigger_top_fraction=args.inside_trigger_top_fraction,
         dump_scores=args.dump_scores,
         dump_inside_samples=args.dump_inside_samples,
         adaptive_max_sample_ratio=args.adaptive_max_sample_ratio,
@@ -606,6 +647,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--inside-selfcheck-min-overlap", type=float, default=0.65)
     parser.add_argument("--inside-selfcheck-support-threshold", type=float, default=0.60)
     parser.add_argument("--inside-selfcheck-refute-threshold", type=float, default=0.50)
+    parser.add_argument("--inside-trigger-signal", default=None,
+                        help="optional score name that gates sampled INSIDE to suspicious statements")
+    parser.add_argument("--inside-trigger-threshold", type=float, default=None,
+                        help="sample INSIDE only when the trigger signal crosses this threshold")
+    parser.add_argument("--inside-trigger-top-fraction", type=float, default=None,
+                        help="sample INSIDE only for the top fraction of records by trigger signal")
     parser.add_argument("--dump-scores", action="store_true",
                         help="write per-run score dumps in addition to result/profile JSON")
     parser.add_argument("--dump-inside-samples", action="store_true",

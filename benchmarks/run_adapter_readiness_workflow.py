@@ -81,6 +81,7 @@ class AdapterReadinessWorkflowConfig:
     performance_dry_run: bool = False
     max_runtime_total_seconds: float | None = None
     inside_sampling_report_path: Path | None = None
+    performance_report_path: Path | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -90,6 +91,8 @@ class AdapterReadinessWorkflowConfig:
             object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
         if self.inside_sampling_report_path is not None:
             object.__setattr__(self, "inside_sampling_report_path", Path(self.inside_sampling_report_path))
+        if self.performance_report_path is not None:
+            object.__setattr__(self, "performance_report_path", Path(self.performance_report_path))
         object.__setattr__(self, "layers", tuple(int(layer) for layer in self.layers))
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
         if int(self.max_batch_tokens) < 0:
@@ -136,7 +139,9 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
     started_at = time.perf_counter()
     config.output_dir.mkdir(parents=True, exist_ok=True)
     adapter_report_path = config.output_dir / "adapter-family-matrix.json"
-    performance_report_path = config.performance_matrix_dir / "cache-profile-matrix-report.json"
+    performance_report_path = config.performance_report_path or (
+        config.performance_matrix_dir / "cache-profile-matrix-report.json"
+    )
     adapter_report = run_adapter_family_matrix(
         AdapterFamilyMatrixConfig(
             output_dir=config.adapter_family_dir,
@@ -155,35 +160,38 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             max_retrieval_use_rate=config.max_retrieval_use_rate,
         )
     )
-    performance_report = run_matrix(
-        CacheProfileMatrixConfig(
-            output_dir=config.performance_matrix_dir,
-            model=config.model,
-            dtype=config.dtype,
-            layers=config.layers,
-            batch_sizes=config.batch_sizes,
-            hidden_state_captures=config.hidden_state_captures,
-            limit=config.limit,
-            manifold_questions=config.manifold_questions,
-            max_length=config.max_length,
-            max_batch_tokens=config.max_batch_tokens,
-            max_batch_token_budgets=config.max_batch_token_budgets,
-            prefix_kv_cache=config.prefix_kv_cache,
-            prefix_kv_cache_modes=config.prefix_kv_cache_modes,
-            eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
-            cached_max_total_ratio=config.cached_max_total_ratio,
-            cache_only_max_total_ratio=config.cache_only_max_total_ratio,
-            python_executable=config.python_executable,
-            progress_every=config.progress_every,
-            length_bucketed_batches=config.length_bucketed_batches,
-            offline=config.offline,
-            shared_cache_dir=config.shared_cache_dir,
-            matrix_mode=config.matrix_mode,
-            max_workers=config.performance_max_workers,
-        ),
-        clean=config.performance_clean,
-        dry_run=config.performance_dry_run,
-    )
+    if config.performance_report_path is None:
+        performance_report = run_matrix(
+            CacheProfileMatrixConfig(
+                output_dir=config.performance_matrix_dir,
+                model=config.model,
+                dtype=config.dtype,
+                layers=config.layers,
+                batch_sizes=config.batch_sizes,
+                hidden_state_captures=config.hidden_state_captures,
+                limit=config.limit,
+                manifold_questions=config.manifold_questions,
+                max_length=config.max_length,
+                max_batch_tokens=config.max_batch_tokens,
+                max_batch_token_budgets=config.max_batch_token_budgets,
+                prefix_kv_cache=config.prefix_kv_cache,
+                prefix_kv_cache_modes=config.prefix_kv_cache_modes,
+                eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+                cached_max_total_ratio=config.cached_max_total_ratio,
+                cache_only_max_total_ratio=config.cache_only_max_total_ratio,
+                python_executable=config.python_executable,
+                progress_every=config.progress_every,
+                length_bucketed_batches=config.length_bucketed_batches,
+                offline=config.offline,
+                shared_cache_dir=config.shared_cache_dir,
+                matrix_mode=config.matrix_mode,
+                max_workers=config.performance_max_workers,
+            ),
+            clean=config.performance_clean,
+            dry_run=config.performance_dry_run,
+        )
+    else:
+        performance_report = _load_json(performance_report_path)
     runtime_recommendation = build_runtime_recommendation(
         performance_report,
         inside_sampling_report=(
@@ -222,6 +230,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
                 "wall_clock_seconds"
             ),
             "performance_max_workers": config.performance_max_workers,
+            "performance_report_reused": config.performance_report_path is not None,
         },
     }
     config.report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -316,7 +325,10 @@ def _write_artifact_manifest(
             adapter_report.get("route_comparison_path") if isinstance(adapter_report, Mapping) else None
         ),
         "performance_matrix_report": (
-            performance_report.get("report_path") if isinstance(performance_report, Mapping) else None
+            _first_present(
+                performance_report.get("report_path") if isinstance(performance_report, Mapping) else None,
+                report.get("performance_matrix_path"),
+            )
         ),
         "performance_matrix_manifest": (
             performance_report.get("artifact_manifest") if isinstance(performance_report, Mapping) else None
@@ -351,6 +363,10 @@ def _write_artifact_manifest(
             "matrix_mode": config.matrix_mode,
             "performance_max_workers": config.performance_max_workers,
             "performance_dry_run": config.performance_dry_run,
+            "performance_report_reused": config.performance_report_path is not None,
+            "performance_report_path": None if config.performance_report_path is None else str(
+                config.performance_report_path
+            ),
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "inside_sampling_report": None
             if config.inside_sampling_report_path is None
@@ -399,6 +415,13 @@ def _load_json(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} did not contain a JSON object.")
     return payload
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _parse_int_list(value: str, *, flag: str) -> tuple[int, ...]:
@@ -464,6 +487,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
         inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
+        performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
 
 
@@ -529,6 +553,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--performance-dry-run", action="store_true")
     parser.add_argument("--inside-sampling-report", default=None,
                         help="optional inside-sampling-profile-comparison.json to fold into runtime recommendation")
+    parser.add_argument("--performance-report", default=None,
+                        help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-runtime-total-seconds",
