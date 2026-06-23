@@ -34,6 +34,9 @@ class RuntimeProfileSelectorReplayPolicy:
     """Optional gates for selector replay reports."""
 
     max_estimated_cost_units_mean: float | None = None
+    max_observed_selected_total_seconds_mean: float | None = None
+    max_observed_selected_total_seconds_p95: float | None = None
+    min_observed_runtime_coverage_rate: float | None = None
     min_selected_profile_counts: Mapping[str, int] = field(default_factory=dict)
     max_selected_profile_rates: Mapping[str, float] = field(default_factory=dict)
     min_selected_profile_rates: Mapping[str, float] = field(default_factory=dict)
@@ -45,6 +48,30 @@ class RuntimeProfileSelectorReplayPolicy:
             _optional_non_negative_float(
                 self.max_estimated_cost_units_mean,
                 name="max_estimated_cost_units_mean",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_observed_selected_total_seconds_mean",
+            _optional_non_negative_float(
+                self.max_observed_selected_total_seconds_mean,
+                name="max_observed_selected_total_seconds_mean",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_observed_selected_total_seconds_p95",
+            _optional_non_negative_float(
+                self.max_observed_selected_total_seconds_p95,
+                name="max_observed_selected_total_seconds_p95",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "min_observed_runtime_coverage_rate",
+            _optional_rate_float(
+                self.min_observed_runtime_coverage_rate,
+                name="min_observed_runtime_coverage_rate",
             ),
         )
         object.__setattr__(
@@ -77,6 +104,13 @@ class RuntimeProfileSelectorReplayPolicy:
         """Build a replay policy from a JSON-like mapping."""
         return cls(
             max_estimated_cost_units_mean=payload.get("max_estimated_cost_units_mean"),
+            max_observed_selected_total_seconds_mean=payload.get(
+                "max_observed_selected_total_seconds_mean"
+            ),
+            max_observed_selected_total_seconds_p95=payload.get(
+                "max_observed_selected_total_seconds_p95"
+            ),
+            min_observed_runtime_coverage_rate=payload.get("min_observed_runtime_coverage_rate"),
             min_selected_profile_counts=dict(_mapping(payload.get("min_selected_profile_counts"))),
             max_selected_profile_rates=dict(_mapping(payload.get("max_selected_profile_rates"))),
             min_selected_profile_rates=dict(_mapping(payload.get("min_selected_profile_rates"))),
@@ -86,6 +120,9 @@ class RuntimeProfileSelectorReplayPolicy:
         """Return whether any replay gate is active."""
         return (
             self.max_estimated_cost_units_mean is not None
+            or self.max_observed_selected_total_seconds_mean is not None
+            or self.max_observed_selected_total_seconds_p95 is not None
+            or self.min_observed_runtime_coverage_rate is not None
             or bool(self.min_selected_profile_counts)
             or bool(self.max_selected_profile_rates)
             or bool(self.min_selected_profile_rates)
@@ -95,6 +132,9 @@ class RuntimeProfileSelectorReplayPolicy:
         """Return a JSON-serializable representation."""
         return {
             "max_estimated_cost_units_mean": self.max_estimated_cost_units_mean,
+            "max_observed_selected_total_seconds_mean": self.max_observed_selected_total_seconds_mean,
+            "max_observed_selected_total_seconds_p95": self.max_observed_selected_total_seconds_p95,
+            "min_observed_runtime_coverage_rate": self.min_observed_runtime_coverage_rate,
             "min_selected_profile_counts": dict(self.min_selected_profile_counts),
             "max_selected_profile_rates": dict(self.max_selected_profile_rates),
             "min_selected_profile_rates": dict(self.min_selected_profile_rates),
@@ -170,8 +210,15 @@ def run_runtime_profile_selector_replay(
     config.output_dir.mkdir(parents=True, exist_ok=True)
     replay_policy, replay_policy_source = _load_replay_policy(config)
     traces = tuple((path, _load_trace(path)) for path in config.trace_paths)
+    runtime_pair_index = _runtime_pair_index(traces)
     candidates = [
-        _candidate_record(config, candidate, traces=traces, replay_policy=replay_policy)
+        _candidate_record(
+            config,
+            candidate,
+            traces=traces,
+            replay_policy=replay_policy,
+            runtime_pair_index=runtime_pair_index,
+        )
         for candidate in config.candidates
     ]
     leaderboard = _leaderboard(candidates)
@@ -201,6 +248,10 @@ def run_runtime_profile_selector_replay(
             "trace_count": len(traces),
             "replay_policy_source": replay_policy_source,
             "profile_cost_units": dict(config.profile_cost_units),
+            "runtime_pairing": {
+                "enabled": True,
+                "indexed_pairs": len(runtime_pair_index),
+            },
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
@@ -216,10 +267,17 @@ def _candidate_record(
     *,
     traces: Sequence[tuple[Path, Mapping[str, Any]]],
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
+    runtime_pair_index: Mapping[tuple[str, str], tuple[Path, Mapping[str, Any]]],
 ) -> dict[str, Any]:
     policy_path = _write_candidate_policy(config, candidate)
     trace_records = [
-        _trace_selection_record(path, trace, candidate=candidate, cost_units=config.profile_cost_units)
+        _trace_selection_record(
+            path,
+            trace,
+            candidate=candidate,
+            cost_units=config.profile_cost_units,
+            runtime_pair_index=runtime_pair_index,
+        )
         for path, trace in traces
     ]
     summary = _selection_summary(trace_records, cost_units=config.profile_cost_units)
@@ -243,6 +301,7 @@ def _trace_selection_record(
     *,
     candidate: RuntimeProfileSelectorCandidate,
     cost_units: Mapping[str, float],
+    runtime_pair_index: Mapping[tuple[str, str], tuple[Path, Mapping[str, Any]]],
 ) -> dict[str, Any]:
     risk_decision = trace.get("risk_decision")
     if not isinstance(risk_decision, Mapping):
@@ -255,13 +314,26 @@ def _trace_selection_record(
     )
     original_profile = _nested(trace, "metadata", "runtime_profile")
     selected = selection.selected_profile
+    request_key = _trace_request_key(path, trace)
+    original_total_seconds = _runtime_total_seconds(trace)
+    paired_trace = runtime_pair_index.get((request_key, selected))
+    paired_path = None if paired_trace is None else paired_trace[0]
+    paired_payload = None if paired_trace is None else paired_trace[1]
+    observed_selected_total_seconds = (
+        None if paired_payload is None else _runtime_total_seconds(paired_payload)
+    )
     return {
         "path": str(path),
         "request_id": trace.get("request_id"),
+        "request_key": request_key,
         "original_runtime_profile": None if original_profile is None else str(original_profile),
         "selected_runtime_profile": selected,
         "changed": original_profile is not None and str(original_profile) != selected,
         "estimated_cost_units": cost_units.get(selected),
+        "observed_original_total_seconds": original_total_seconds,
+        "observed_selected_total_seconds": observed_selected_total_seconds,
+        "observed_selected_trace_path": None if paired_path is None else str(paired_path),
+        "observed_runtime_paired": observed_selected_total_seconds is not None,
         "risk_level": risk_decision.get("risk_level"),
         "action": risk_decision.get("action"),
         "claim_count": len(claims),
@@ -279,7 +351,11 @@ def _selection_summary(
     reason_counts: dict[str, int] = {}
     switch_counts: dict[str, int] = {}
     costs = []
+    observed_original_seconds = []
+    observed_selected_seconds = []
+    observed_selected_by_profile: dict[str, list[float]] = {}
     changed = 0
+    paired = 0
     for record in records:
         selected = str(record.get("selected_runtime_profile"))
         selected_counts[selected] = selected_counts.get(selected, 0) + 1
@@ -299,7 +375,17 @@ def _selection_summary(
         cost = _float_or_none(record.get("estimated_cost_units"))
         if cost is not None:
             costs.append(cost)
+        original_seconds = _float_or_none(record.get("observed_original_total_seconds"))
+        if original_seconds is not None:
+            observed_original_seconds.append(original_seconds)
+        selected_seconds = _float_or_none(record.get("observed_selected_total_seconds"))
+        if selected_seconds is not None:
+            paired += 1
+            observed_selected_seconds.append(selected_seconds)
+            observed_selected_by_profile.setdefault(selected, []).append(selected_seconds)
     total = len(records)
+    selected_runtime_stats = _runtime_seconds_stats(observed_selected_seconds)
+    original_runtime_stats = _runtime_seconds_stats(observed_original_seconds)
     return {
         "trace_count": total,
         "selected_counts": selected_counts,
@@ -315,6 +401,23 @@ def _selection_summary(
         "estimated_cost_units_total": None if not costs else sum(costs),
         "estimated_cost_units_mean": None if not costs else sum(costs) / len(costs),
         "profile_cost_units": dict(cost_units),
+        "observed_runtime": {
+            "paired_count": paired,
+            "coverage_rate": _safe_div(paired, total),
+            "selected_total_seconds": selected_runtime_stats,
+            "original_total_seconds": original_runtime_stats,
+            "selected_total_seconds_by_profile": {
+                profile: _runtime_seconds_stats(values)
+                for profile, values in sorted(observed_selected_by_profile.items())
+            },
+        },
+        "observed_runtime_paired_count": paired,
+        "observed_runtime_coverage_rate": _safe_div(paired, total),
+        "observed_selected_total_seconds_mean": selected_runtime_stats["mean_seconds"],
+        "observed_selected_total_seconds_p95": selected_runtime_stats["p95_seconds"],
+        "observed_selected_total_seconds_p99": selected_runtime_stats["p99_seconds"],
+        "observed_selected_total_seconds_max": selected_runtime_stats["max_seconds"],
+        "observed_original_total_seconds_mean": original_runtime_stats["mean_seconds"],
     }
 
 
@@ -337,6 +440,33 @@ def _evaluate_replay_policy(
             summary,
             metric="estimated_cost_units_mean",
             limit=policy.max_estimated_cost_units_mean,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+    if policy.max_observed_selected_total_seconds_mean is not None:
+        check = _max_check(
+            summary,
+            metric="observed_selected_total_seconds_mean",
+            limit=policy.max_observed_selected_total_seconds_mean,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+    if policy.max_observed_selected_total_seconds_p95 is not None:
+        check = _max_check(
+            summary,
+            metric="observed_selected_total_seconds_p95",
+            limit=policy.max_observed_selected_total_seconds_p95,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+    if policy.min_observed_runtime_coverage_rate is not None:
+        check = _min_check(
+            summary,
+            metric="observed_runtime_coverage_rate",
+            limit=policy.min_observed_runtime_coverage_rate,
         )
         checks.append(check)
         if not check["passed"]:
@@ -398,6 +528,15 @@ def _leaderboard(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]
             "status": candidate.get("status"),
             "policy_path": candidate.get("policy_path"),
             "estimated_cost_units_mean": _float_or_none(summary.get("estimated_cost_units_mean")),
+            "observed_runtime_coverage_rate": _float_or_none(
+                summary.get("observed_runtime_coverage_rate")
+            ),
+            "observed_selected_total_seconds_mean": _float_or_none(
+                summary.get("observed_selected_total_seconds_mean")
+            ),
+            "observed_selected_total_seconds_p95": _float_or_none(
+                summary.get("observed_selected_total_seconds_p95")
+            ),
             "audit_rate": _float_or_none(selected_rates.get("audit")),
             "balanced_rate": _float_or_none(selected_rates.get("balanced")),
             "latency_rate": _float_or_none(selected_rates.get("latency")),
@@ -408,6 +547,7 @@ def _leaderboard(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]
         rows,
         key=lambda row: (
             bool(row["blocked"]),
+            _sort_float(row["observed_selected_total_seconds_mean"]),
             _sort_float(row["estimated_cost_units_mean"]),
             _sort_float(row["audit_rate"]),
             str(row["candidate"]),
@@ -437,6 +577,14 @@ def _blocking_reasons(candidates: Sequence[Mapping[str, Any]]) -> tuple[str, ...
                 f"{failure.get('reason')}"
             )
     return tuple(reasons)
+
+
+def _recommended_leaderboard_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    recommended_candidate = _nested(report, "decision", "recommended_candidate")
+    for row in _sequence(report.get("leaderboard")):
+        if isinstance(row, Mapping) and row.get("candidate") == recommended_candidate:
+            return dict(row)
+    return {}
 
 
 def _load_replay_policy(
@@ -482,6 +630,7 @@ def _write_artifact_manifest(
     config: RuntimeProfileSelectorReplayConfig,
     report: Mapping[str, Any],
 ) -> dict[str, Any]:
+    recommended = _recommended_leaderboard_row(report)
     artifacts: dict[str, str | Path | None] = {
         "runtime_profile_selector_replay_report": config.resolved_report_path,
         "replay_policy": config.replay_policy_path,
@@ -501,6 +650,15 @@ def _write_artifact_manifest(
             "status": report.get("status"),
             "recommended_candidate": _nested(report, "decision", "recommended_candidate"),
             "recommended_policy_path": _nested(report, "decision", "recommended_policy_path"),
+            "recommended_observed_selected_total_seconds_mean": recommended.get(
+                "observed_selected_total_seconds_mean"
+            ),
+            "recommended_observed_selected_total_seconds_p95": recommended.get(
+                "observed_selected_total_seconds_p95"
+            ),
+            "recommended_observed_runtime_coverage_rate": recommended.get(
+                "observed_runtime_coverage_rate"
+            ),
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
             "compact_json": config.compact_json,
@@ -514,6 +672,7 @@ def _write_artifact_manifest(
 def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
+    recommended = _recommended_leaderboard_row(report)
     ArtifactRegistry.load_json(config.registry_path).record_report(
         name=str(config.name),
         path=config.resolved_report_path,
@@ -524,6 +683,15 @@ def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "recommended_candidate": _nested(report, "decision", "recommended_candidate"),
             "recommended_policy_path": _nested(report, "decision", "recommended_policy_path"),
+            "recommended_observed_selected_total_seconds_mean": recommended.get(
+                "observed_selected_total_seconds_mean"
+            ),
+            "recommended_observed_selected_total_seconds_p95": recommended.get(
+                "observed_selected_total_seconds_p95"
+            ),
+            "recommended_observed_runtime_coverage_rate": recommended.get(
+                "observed_runtime_coverage_rate"
+            ),
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
             "compact_json": config.compact_json,
@@ -565,6 +733,55 @@ def _load_trace(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload.get("risk_decision"), Mapping):
         raise ValueError(f"ProductTrace JSON is missing risk_decision: {path}")
     return dict(payload)
+
+
+def _runtime_pair_index(
+    traces: Sequence[tuple[Path, Mapping[str, Any]]],
+) -> dict[tuple[str, str], tuple[Path, Mapping[str, Any]]]:
+    index: dict[tuple[str, str], tuple[Path, Mapping[str, Any]]] = {}
+    for path, trace in traces:
+        profile = _trace_runtime_profile(path, trace)
+        if profile is None:
+            continue
+        key = (_trace_request_key(path, trace), profile)
+        index.setdefault(key, (path, trace))
+    return index
+
+
+def _trace_runtime_profile(path: Path, trace: Mapping[str, Any]) -> str | None:
+    metadata_profile = _nested(trace, "metadata", "runtime_profile")
+    if metadata_profile is not None:
+        profile = str(metadata_profile).strip().lower().replace("-", "_")
+        if profile in RUNTIME_PROFILE_NAMES:
+            return profile
+    parent_profile = path.parent.name.strip().lower().replace("-", "_")
+    return parent_profile if parent_profile in RUNTIME_PROFILE_NAMES else None
+
+
+def _trace_request_key(path: Path, trace: Mapping[str, Any]) -> str:
+    metadata_key = _nested(trace, "metadata", "runtime_replay_key")
+    if metadata_key is not None and str(metadata_key).strip():
+        return str(metadata_key).strip()
+    request_id = trace.get("request_id")
+    if request_id is not None and str(request_id).strip():
+        normalized = str(request_id).strip()
+        for prefix in (*RUNTIME_PROFILE_NAMES, "auto"):
+            marker = f"{prefix}-"
+            if normalized.startswith(marker):
+                return normalized[len(marker):]
+        return normalized
+    return path.stem
+
+
+def _runtime_total_seconds(trace: Mapping[str, Any]) -> float | None:
+    runtime_trace = trace.get("runtime_trace")
+    if not isinstance(runtime_trace, Mapping):
+        return None
+    total_seconds = _float_or_none(runtime_trace.get("total_seconds"))
+    if total_seconds is not None:
+        return total_seconds
+    summary = _mapping(runtime_trace.get("summary"))
+    return _float_or_none(summary.get("total_seconds"))
 
 
 def _trace_paths_from_args(values: Sequence[str], globs: Sequence[str]) -> tuple[Path, ...]:
@@ -692,6 +909,12 @@ def _required_rate_float(value: Any, *, name: str) -> float:
     return numeric
 
 
+def _optional_rate_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    return _required_rate_float(value, name=name)
+
+
 def _required_non_negative_int(value: Any, *, name: str) -> int:
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a non-negative integer.")
@@ -740,6 +963,48 @@ def _float_or_none(value: Any) -> float | None:
 def _sort_float(value: Any) -> float:
     numeric = _float_or_none(value)
     return float("inf") if numeric is None else numeric
+
+
+def _runtime_seconds_stats(values: Sequence[float]) -> dict[str, Any]:
+    finite = [float(value) for value in values if _float_or_none(value) is not None]
+    if not finite:
+        return {
+            "count": 0,
+            "total_seconds": None,
+            "mean_seconds": None,
+            "min_seconds": None,
+            "p95_seconds": None,
+            "p99_seconds": None,
+            "max_seconds": None,
+        }
+    total = sum(finite)
+    return {
+        "count": len(finite),
+        "total_seconds": total,
+        "mean_seconds": total / len(finite),
+        "min_seconds": min(finite),
+        "p95_seconds": _percentile_or_none(finite, 95.0),
+        "p99_seconds": _percentile_or_none(finite, 99.0),
+        "max_seconds": max(finite),
+    }
+
+
+def _percentile_or_none(values: Sequence[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    if not (0.0 <= percentile <= 100.0):
+        raise ValueError("percentile must be between 0 and 100.")
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return ordered[0]
+    rank = (percentile / 100.0) * (len(ordered) - 1)
+    lower_index = math.floor(rank)
+    upper_index = math.ceil(rank)
+    if lower_index == upper_index:
+        return ordered[lower_index]
+    lower = ordered[lower_index]
+    upper = ordered[upper_index]
+    return lower + (upper - lower) * (rank - lower_index)
 
 
 def _safe_div(numerator: int | float | None, denominator: int | float | None) -> float | None:

@@ -2287,8 +2287,13 @@ already exist and the selector question should be answered without rerunning
 demo scenarios or verifier work. The replay runner loads each trace's
 `risk_decision` and claim metadata, applies each candidate
 `RuntimeProfileSelectorPolicy`, estimates a configurable profile-cost summary,
-applies optional replay gates, writes a manifest, and can register the replay
-report:
+matches selected profiles back to paired traces when the same logical request
+was saved under multiple runtime profiles, applies optional distribution and
+observed-runtime replay gates, writes a manifest, and can register the replay
+report. The current registered replay report promotes the default selector with
+100% paired runtime coverage, observed mean selected runtime around `0.00045s`,
+and observed p95 selected runtime around `0.00059s` on the local deterministic
+SmolLM2 trace set:
 
 ```bash
 python benchmarks/run_runtime_profile_selector_replay.py \

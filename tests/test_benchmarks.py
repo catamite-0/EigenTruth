@@ -9409,6 +9409,7 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
             },
             "claims": [{"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}}],
             "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
         },
         {
             "request_id": "medium-retrieve",
@@ -9420,6 +9421,7 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
             },
             "claims": [{"claim_id": "c1", "text": "needs evidence", "metadata": {}}],
             "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
         {
             "request_id": "low-sensitive",
@@ -9437,6 +9439,7 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
                 }
             ],
             "metadata": {"runtime_profile": "audit"},
+            "runtime_trace": {"total_seconds": 0.40, "phases": []},
         },
     )
     trace_paths = []
@@ -9463,6 +9466,9 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
             ),
             replay_policy=module.RuntimeProfileSelectorReplayPolicy(
                 max_estimated_cost_units_mean=2.0,
+                max_observed_selected_total_seconds_mean=0.25,
+                max_observed_selected_total_seconds_p95=0.50,
+                min_observed_runtime_coverage_rate=1.0,
                 min_selected_profile_counts={"latency": 1, "balanced": 1, "audit": 1},
             ),
             registry_path=registry_path,
@@ -9484,11 +9490,18 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
         "balanced": 1,
         "latency": 1,
     }
+    assert payload["candidates"][0]["summary"]["observed_runtime_coverage_rate"] == pytest.approx(1.0)
+    assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_mean"] == pytest.approx(
+        (0.10 + 0.20 + 0.40) / 3.0
+    )
+    assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_p95"] == pytest.approx(0.38)
     assert payload["candidates"][1]["summary"]["selected_counts"] == {
         "balanced": 1,
         "latency": 2,
     }
-    assert payload["candidates"][1]["gate"]["failures"][0]["metric"] == "selected_count.audit"
+    assert {
+        failure["metric"] for failure in payload["candidates"][1]["gate"]["failures"]
+    } >= {"selected_count.audit", "observed_runtime_coverage_rate"}
     assert Path(payload["paths"]["artifact_manifest"]).exists()
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert "default_selector_policy" in manifest["artifacts"]

@@ -29,16 +29,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "runtime-profile-selector-replay-policy.json",
-      "sha256": "95f38dec9ae60aa938a0d1c993a6b141c4b0c68d67578f022b0c186ec34a4568",
-      "size_bytes": 191
+      "sha256": "94f8ac64002798864ef9ebabd2909d719151a02e758569f8d17ea4fe54824d1c",
+      "size_bytes": 345
     },
     "runtime_profile_selector_replay_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-profile-selector-replay.json",
-      "sha256": "c0b1d08be12c3df984b87e50e526e4ec59e8bc53a375382fb8aff12ac57715df",
-      "size_bytes": 44356
+      "sha256": "728a1f39ecf3d3474918d2f8f44ccf94d1deebc7ce52aef38376c2bfdf7867c3",
+      "size_bytes": 67970
     },
     "trace_0000_calculator_refuted-r0": {
       "exists": true,
@@ -142,6 +142,9 @@
     "candidate_count": 3,
     "compact_json": false,
     "recommended_candidate": "default",
+    "recommended_observed_runtime_coverage_rate": 1.0,
+    "recommended_observed_selected_total_seconds_mean": 0.0004491710375684003,
+    "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
     "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
     "runner": "run_runtime_profile_selector_replay",
     "status": "promote",
