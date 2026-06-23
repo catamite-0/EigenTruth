@@ -9389,6 +9389,93 @@ def test_run_runtime_profile_selector_tuning_recommends_passing_policy(tmp_path)
     assert record.metadata["candidate_count"] == 2
 
 
+def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tmp_path):
+    module = importlib.import_module("benchmarks.build_product_trace_corpus")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "trace-corpus"
+    registry_path = tmp_path / "registry.json"
+    trace_path = tmp_path / "trace.json"
+    jsonl_path = tmp_path / "traces.jsonl"
+    trace_payload = {
+        "request_id": "latency-low-supported",
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 1.0,
+            "reason": "supported",
+        },
+        "claims": [{"claim_id": "c1", "text": "Private customer fact.", "metadata": {}}],
+        "verification_results": [{
+            "status": "supported",
+            "confidence": 0.9,
+            "evidence": ["Private evidence text."],
+            "explanation": "Private explanation.",
+            "metadata": {"key": "Private customer fact."},
+        }],
+        "metadata": {"runtime_profile": "latency"},
+        "runtime_trace": {"total_seconds": 0.10, "phases": []},
+    }
+    jsonl_payload = {
+        "request_id": "audit-low-sensitive",
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.9,
+            "reason": "numbered claim",
+        },
+        "claims": [{
+            "claim_id": "c1",
+            "text": "The account balance is 42.",
+            "metadata": {"features": {"has_number": True}},
+        }],
+        "metadata": {"runtime_profile": "audit"},
+        "runtime_trace": {"total_seconds": 0.40, "phases": []},
+    }
+    invalid_payload = {"request_id": "bad", "claims": []}
+    trace_path.write_text(json.dumps(trace_payload), encoding="utf-8")
+    jsonl_path.write_text(
+        "\n".join([json.dumps(jsonl_payload), json.dumps(invalid_payload)]) + "\n",
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_path,),
+            jsonl_paths=(jsonl_path,),
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="trace-corpus",
+            version="0.1",
+            require_runtime_trace=True,
+            compact_json=True,
+        )
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:trace-corpus:0.1"
+    )
+    saved_trace = json.loads(Path(payload["traces"][0]["path"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "partial"
+    assert payload["summary"]["accepted_count"] == 2
+    assert payload["summary"]["rejected_count"] == 1
+    assert payload["summary"]["runtime_trace_count"] == 2
+    assert payload["summary"]["redacted_trace_count"] == 2
+    assert payload["summary"]["counts_by_runtime_profile"] == {"audit": 1, "latency": 1}
+    assert payload["summary"]["rejected_reasons"] == {"missing risk_decision object": 1}
+    assert payload["traces"][0]["request_key"] == "low-supported"
+    assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    assert saved_trace["verification_results"][0]["evidence"][0].startswith("[redacted:sha256=")
+    assert saved_trace["verification_results"][0]["metadata"]["key"].startswith("[redacted:sha256=")
+    assert saved_trace["metadata"]["runtime_replay_key"] == "low-supported"
+    assert saved_trace["metadata"]["trace_corpus"]["redacted_text"] is True
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+    assert record.metadata["status"] == "partial"
+    assert record.metadata["accepted_count"] == 2
+    assert record.metadata["rejected_count"] == 1
+
+
 def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")

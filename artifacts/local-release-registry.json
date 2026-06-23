@@ -2341,7 +2341,7 @@
         "compact_json": false,
         "recommended_candidate": "default",
         "recommended_observed_runtime_coverage_rate": 1.0,
-        "recommended_observed_selected_total_seconds_mean": 0.0004491710375684003,
+        "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
         "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
         "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
         "status": "promote",
@@ -2350,6 +2350,22 @@
       },
       "name": "smollm2-runtime-profile-selector-replay",
       "path": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "accepted_count": 12,
+        "artifact_manifest": "artifacts/smollm2_product_trace_corpus/artifact-manifest.json",
+        "compact_json": false,
+        "redact_text": true,
+        "rejected_count": 0,
+        "runtime_trace_count": 12,
+        "status": "ready",
+        "workflow": "build_product_trace_corpus"
+      },
+      "name": "smollm2-product-trace-corpus",
+      "path": "artifacts/smollm2_product_trace_corpus/product-trace-corpus.json",
       "version": "0.1"
     }
   ],

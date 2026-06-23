@@ -2203,6 +2203,32 @@ fast-path verifier savings. Add
 `--compact-json` when the report and manifest are consumed by automation and
 diff readability is less important than artifact size.
 
+Use `build_product_trace_corpus.py` before replaying real product traffic. It
+loads ProductTrace JSON files or JSONL streams, validates the control fields,
+optionally requires runtime traces, redacts text-like fields by default, adds a
+stable `metadata.runtime_replay_key`, writes standardized trace files, builds a
+manifest, and can register the corpus:
+
+```bash
+python benchmarks/build_product_trace_corpus.py \
+  --trace-glob 'artifacts/smollm2_product_runtime_profile_sweep/traces/*/*.json' \
+  --output-dir artifacts/smollm2_product_trace_corpus \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-corpus \
+  --version 0.1 \
+  --require-runtime-trace \
+  --fail-on-blocked
+```
+
+The current registered SmolLM2 trace corpus is
+`report:smollm2-product-trace-corpus:0.1`; it standardizes 12 deterministic
+profile-sweep traces, rejects none, redacts all claim/evidence text, preserves
+three logical replay keys, and keeps four traces per runtime profile. Feed
+`artifacts/smollm2_product_trace_corpus/traces/*.json` into
+`run_product_runtime_baseline.py` or `run_runtime_profile_selector_replay.py`
+when validating control policies against replay-ready traces rather than raw
+product logs.
+
 Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
 the built-in `latency`, `balanced`, and `audit` product profiles plus the
 request-level `auto` selector before choosing which mode to put on the default

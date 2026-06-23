@@ -1,46 +1,6 @@
 {
   "artifacts": {
-    "audit_biased_selector_policy": {
-      "exists": true,
-      "file_count": 1,
-      "kind": "file",
-      "path": "policies/audit_biased.json",
-      "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
-      "size_bytes": 599
-    },
-    "default_selector_policy": {
-      "exists": true,
-      "file_count": 1,
-      "kind": "file",
-      "path": "policies/default.json",
-      "sha256": "eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5",
-      "size_bytes": 583
-    },
-    "latency_biased_selector_policy": {
-      "exists": true,
-      "file_count": 1,
-      "kind": "file",
-      "path": "policies/latency_biased.json",
-      "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
-      "size_bytes": 542
-    },
-    "replay_policy": {
-      "exists": true,
-      "file_count": 1,
-      "kind": "file",
-      "path": "runtime-profile-selector-replay-policy.json",
-      "sha256": "8aeb547d01d8b66c1c7c29851de9a8c7dfc1c63d4c6cce0228bdfcb201f36bdd",
-      "size_bytes": 344
-    },
-    "runtime_profile_selector_replay_report": {
-      "exists": true,
-      "file_count": 1,
-      "kind": "file",
-      "path": "runtime-profile-selector-replay.json",
-      "sha256": "52871929d2afc172f451eacc193b4681a3d8e7bc28c7c3d962f10381f7845d0e",
-      "size_bytes": 91779
-    },
-    "trace_0000_calculator_refuted-r0": {
+    "input_trace_0000_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -48,7 +8,7 @@
       "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
       "size_bytes": 39309
     },
-    "trace_0001_diagnostic_refuted-r0": {
+    "input_trace_0001_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -56,7 +16,7 @@
       "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
       "size_bytes": 40431
     },
-    "trace_0002_low_risk_supported-r0": {
+    "input_trace_0002_low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -64,7 +24,7 @@
       "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
       "size_bytes": 36783
     },
-    "trace_0003_calculator_refuted-r0": {
+    "input_trace_0003_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -72,7 +32,7 @@
       "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
       "size_bytes": 40576
     },
-    "trace_0004_diagnostic_refuted-r0": {
+    "input_trace_0004_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -80,7 +40,7 @@
       "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
       "size_bytes": 46218
     },
-    "trace_0005_low_risk_supported-r0": {
+    "input_trace_0005_low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -88,7 +48,7 @@
       "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
       "size_bytes": 34166
     },
-    "trace_0006_calculator_refuted-r0": {
+    "input_trace_0006_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -96,7 +56,7 @@
       "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
       "size_bytes": 44357
     },
-    "trace_0007_diagnostic_refuted-r0": {
+    "input_trace_0007_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -104,7 +64,7 @@
       "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
       "size_bytes": 45152
     },
-    "trace_0008_low_risk_supported-r0": {
+    "input_trace_0008_low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -112,7 +72,7 @@
       "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
       "size_bytes": 33267
     },
-    "trace_0009_calculator_refuted-r0": {
+    "input_trace_0009_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -120,7 +80,7 @@
       "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
       "size_bytes": 44087
     },
-    "trace_0010_diagnostic_refuted-r0": {
+    "input_trace_0010_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
@@ -128,33 +88,46 @@
       "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
       "size_bytes": 33438
     },
-    "trace_0011_low_risk_supported-r0": {
+    "input_trace_0011_low_risk_supported-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
       "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
       "size_bytes": 33046
+    },
+    "product_trace_corpus_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-trace-corpus.json",
+      "sha256": "61843a7142488925d8b14f6d73840e8eef8a141cbb9d14ac788fce60460a4ca7",
+      "size_bytes": 9664
+    },
+    "product_trace_corpus_traces": {
+      "exists": true,
+      "file_count": 12,
+      "kind": "directory",
+      "path": "traces",
+      "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
+      "size_bytes": 475128
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "candidate_count": 3,
+    "accepted_count": 12,
     "compact_json": false,
-    "recommended_candidate": "default",
-    "recommended_observed_runtime_coverage_rate": 1.0,
-    "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
-    "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
-    "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
-    "runner": "run_runtime_profile_selector_replay",
-    "status": "promote",
-    "trace_count": 12
+    "redact_text": true,
+    "rejected_count": 0,
+    "runner": "build_product_trace_corpus",
+    "runtime_trace_count": 12,
+    "status": "ready"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 17,
-    "directory_count": 0,
-    "file_count": 17,
+    "artifact_count": 14,
+    "directory_count": 1,
+    "file_count": 13,
     "missing_count": 0
   }
 }

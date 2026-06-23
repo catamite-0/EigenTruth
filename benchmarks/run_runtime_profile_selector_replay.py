@@ -267,7 +267,7 @@ def _candidate_record(
     *,
     traces: Sequence[tuple[Path, Mapping[str, Any]]],
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
-    runtime_pair_index: Mapping[tuple[str, str], tuple[Path, Mapping[str, Any]]],
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[tuple[Path, Mapping[str, Any]]]],
 ) -> dict[str, Any]:
     policy_path = _write_candidate_policy(config, candidate)
     trace_records = [
@@ -301,7 +301,7 @@ def _trace_selection_record(
     *,
     candidate: RuntimeProfileSelectorCandidate,
     cost_units: Mapping[str, float],
-    runtime_pair_index: Mapping[tuple[str, str], tuple[Path, Mapping[str, Any]]],
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[tuple[Path, Mapping[str, Any]]]],
 ) -> dict[str, Any]:
     risk_decision = trace.get("risk_decision")
     if not isinstance(risk_decision, Mapping):
@@ -316,12 +316,14 @@ def _trace_selection_record(
     selected = selection.selected_profile
     request_key = _trace_request_key(path, trace)
     original_total_seconds = _runtime_total_seconds(trace)
-    paired_trace = runtime_pair_index.get((request_key, selected))
-    paired_path = None if paired_trace is None else paired_trace[0]
-    paired_payload = None if paired_trace is None else paired_trace[1]
-    observed_selected_total_seconds = (
-        None if paired_payload is None else _runtime_total_seconds(paired_payload)
-    )
+    paired_traces = tuple(runtime_pair_index.get((request_key, selected), ()))
+    paired_totals = [
+        seconds
+        for _paired_path, paired_payload in paired_traces
+        if (seconds := _runtime_total_seconds(paired_payload)) is not None
+    ]
+    paired_stats = _runtime_seconds_stats(paired_totals)
+    observed_selected_total_seconds = paired_stats["mean_seconds"]
     return {
         "path": str(path),
         "request_id": trace.get("request_id"),
@@ -332,7 +334,10 @@ def _trace_selection_record(
         "estimated_cost_units": cost_units.get(selected),
         "observed_original_total_seconds": original_total_seconds,
         "observed_selected_total_seconds": observed_selected_total_seconds,
-        "observed_selected_trace_path": None if paired_path is None else str(paired_path),
+        "observed_selected_trace_path": None if not paired_traces else str(paired_traces[0][0]),
+        "observed_selected_trace_paths": tuple(str(paired_path) for paired_path, _payload in paired_traces),
+        "observed_selected_pair_count": len(paired_totals),
+        "observed_selected_pair_stats": paired_stats,
         "observed_runtime_paired": observed_selected_total_seconds is not None,
         "risk_level": risk_decision.get("risk_level"),
         "action": risk_decision.get("action"),
@@ -737,15 +742,18 @@ def _load_trace(path: str | Path) -> dict[str, Any]:
 
 def _runtime_pair_index(
     traces: Sequence[tuple[Path, Mapping[str, Any]]],
-) -> dict[tuple[str, str], tuple[Path, Mapping[str, Any]]]:
-    index: dict[tuple[str, str], tuple[Path, Mapping[str, Any]]] = {}
+) -> dict[tuple[str, str], tuple[tuple[Path, Mapping[str, Any]], ...]]:
+    grouped: dict[tuple[str, str], list[tuple[Path, Mapping[str, Any]]]] = {}
     for path, trace in traces:
         profile = _trace_runtime_profile(path, trace)
         if profile is None:
             continue
         key = (_trace_request_key(path, trace), profile)
-        index.setdefault(key, (path, trace))
-    return index
+        grouped.setdefault(key, []).append((path, trace))
+    return {
+        key: tuple(sorted(values, key=lambda item: str(item[0])))
+        for key, values in grouped.items()
+    }
 
 
 def _trace_runtime_profile(path: Path, trace: Mapping[str, Any]) -> str | None:
