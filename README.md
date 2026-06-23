@@ -234,8 +234,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
 | `run_inside_sampling_profile.py` | Compares fixed, adaptive, and self-check-bounded INSIDE sampling runs, producing sample-count and `inside_generation` cost evidence for release gates. |
 | `run_inside_trigger_budget_sweep.py` | Runs several triggered INSIDE budgets and compares generated samples, `inside_generation`, reference ratios, inside-score AUROCs, and cost-first / quality-balanced recommendations. |
-| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports plus optional INSIDE sampling evidence into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, sampling flags, and best available AUROC quality signal. |
-| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling profile gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
+| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports plus optional INSIDE sampling and trigger-budget sweep evidence into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, sampling flags, derived-sweep flags, and best available AUROC quality signal. |
+| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling / trigger-budget gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, and runtime cost, then recommends one deployable baseline. |
 | `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, runtime cost, and optional INSIDE sampling cost evidence. |
@@ -292,8 +292,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_cache_worker_sweep.py` | 用多个 worker count 运行同一 cache-profile matrix，并按 wall-clock 推荐最快的已 promoted worker count。 |
 | `run_inside_sampling_profile.py` | 比较 fixed、adaptive 和 self-check-bounded INSIDE sampling，输出 sample-count 与 `inside_generation` 成本证据，供 release gate 使用。 |
 | `run_inside_trigger_budget_sweep.py` | 比较多个 triggered INSIDE budget，输出生成样本数、`inside_generation`、参考全量比例、inside-score AUROC，以及成本优先 / 质量折中的推荐。 |
-| `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 与可选 INSIDE sampling 证据转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count、sampling flags 和最佳 AUROC quality signal。 |
-| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling profile gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
+| `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 与可选 INSIDE sampling / trigger-budget sweep 证据转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count、sampling flags、derived-sweep flags 和最佳 AUROC quality signal。 |
+| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling / trigger-budget gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal 和 runtime cost 比较已注册 readiness baseline，并推荐一个可部署 baseline。 |
 | `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量、runtime cost 和可选 INSIDE sampling 成本证据。 |

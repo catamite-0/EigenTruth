@@ -3144,6 +3144,7 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
     performance_dir.mkdir()
     performance_report_path = performance_dir / "cache-profile-matrix-report.json"
     result_path = performance_dir / "cache-only-result.json"
+    trigger_sweep_path = tmp_path / "inside-trigger-budget-sweep.json"
     result_path.write_text(
         json.dumps({
             "auroc": {
@@ -3198,6 +3199,68 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
         }),
         encoding="utf-8",
     )
+    trigger_sweep_path.write_text(
+        json.dumps({
+            "workflow": "inside_trigger_budget_sweep",
+            "dry_run": False,
+            "derived_from_max_budget": True,
+            "derived_source_budget_id": "top_0p4",
+            "config": {
+                "trigger_signal": "truth_proj",
+                "budgets": [
+                    {"kind": "top_fraction", "value": 0.25, "id": "top_0p25"},
+                    {"kind": "top_fraction", "value": 0.4, "id": "top_0p4"},
+                ],
+                "inside_samples": 5,
+                "inside_batch_size": 1,
+                "inside_max_new_tokens": 12,
+                "inside_min_samples": 2,
+                "inside_sample_step": 1,
+                "inside_stability_delta": 0.05,
+                "inside_selfcheck_min_overlap": 0.65,
+                "inside_selfcheck_support_threshold": 0.6,
+                "inside_selfcheck_refute_threshold": 0.5,
+                "run_names": ["adaptive_selfcheck"],
+                "derive_from_max_budget": True,
+            },
+            "budgets": {
+                "top_0p25": {"sample_efficiency_gate": {"passed": True}},
+                "top_0p4": {"sample_efficiency_gate": {"passed": True}},
+            },
+            "leaderboard": [
+                {
+                    "budget_id": "top_0p25",
+                    "budget_kind": "top_fraction",
+                    "budget_value": 0.25,
+                    "recommended_run": "adaptive_selfcheck",
+                    "total_generated_samples": 108,
+                    "inside_generation_seconds": 116.0,
+                    "inside_auroc": {"inside_semantic_entropy": 0.52},
+                },
+                {
+                    "budget_id": "top_0p4",
+                    "budget_kind": "top_fraction",
+                    "budget_value": 0.4,
+                    "recommended_run": "adaptive_selfcheck",
+                    "total_generated_samples": 218,
+                    "inside_generation_seconds": 235.0,
+                    "inside_auroc": {"inside_semantic_entropy": 0.57},
+                },
+            ],
+            "quality_balanced_recommendation": {
+                "budget_id": "top_0p4",
+                "recommended_run": "adaptive_selfcheck",
+                "reason": "lowest_cost_within_inside_quality_tolerance",
+                "quality_metric": "inside_semantic_entropy",
+                "quality_value": 0.57,
+                "best_quality_value": 0.57,
+                "quality_tolerance": 0.02,
+                "cost_metric": "inside_generation_seconds",
+                "cost_value": 235.0,
+            },
+        }),
+        encoding="utf-8",
+    )
 
     def fail_run_matrix(*args, **kwargs):
         raise AssertionError("performance matrix should be reused")
@@ -3209,6 +3272,7 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
             n_records=8,
             alpha=0.2,
             performance_report_path=performance_report_path,
+            inside_trigger_budget_sweep_report_path=trigger_sweep_path,
         )
     )
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
@@ -3221,9 +3285,19 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
         "name": "subspace_resid",
         "auroc": pytest.approx(0.92),
     }
+    assert payload["runtime_recommendation"]["recommendation"]["inside_trigger_budget_sweep"][
+        "recommended_budget_id"
+    ] == "top_0p4"
+    assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"][
+        "inside_trigger_top_fraction"
+    ] == pytest.approx(0.4)
     assert manifest["metadata"]["performance_report_reused"] is True
     assert manifest["metadata"]["performance_report_path"] == str(performance_report_path)
     assert manifest["artifacts"]["performance_matrix_report"]["exists"] is True
+    assert manifest["artifacts"]["inside_trigger_budget_sweep_report"]["exists"] is True
+    assert manifest["metadata"]["recommended_inside_trigger_budget_sweep"][
+        "recommended_budget_id"
+    ] == "top_0p4"
 
 
 def test_adapter_readiness_decision_blocks_on_runtime_budget():
@@ -6943,6 +7017,156 @@ def test_runtime_config_recommendation_includes_inside_sampling_profile(tmp_path
     assert "--inside-selfcheck-early-stop" not in report["benchmark_flags"]["run_inside_sampling_profile"]
 
 
+def test_runtime_config_recommendation_includes_derived_trigger_budget_sweep(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1, "length_bucketed_batches": True},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_2_capture_outputs",
+            "recommendation_metric": "cache_only_total_seconds",
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_2_capture_outputs",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "max_batch_tokens": 96,
+                "prefix_kv_cache": False,
+            },
+        },
+    }
+    sweep_report = {
+        "workflow": "inside_trigger_budget_sweep",
+        "dry_run": False,
+        "derived_from_max_budget": True,
+        "derived_source_budget_id": "top_0p4",
+        "derived_source_score_dump": str(tmp_path / "scores.json"),
+        "config": {
+            "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "dtype": "float32",
+            "layer": -20,
+            "batch_size": 1,
+            "max_batch_tokens": 128,
+            "max_length": 64,
+            "hidden_state_capture": "outputs",
+            "progress_every": 10,
+            "offline": True,
+            "length_bucketed_batches": True,
+            "trigger_signal": "truth_proj",
+            "budgets": [
+                {"kind": "top_fraction", "value": 0.1, "id": "top_0p1"},
+                {"kind": "top_fraction", "value": 0.4, "id": "top_0p4"},
+            ],
+            "inside_samples": 5,
+            "inside_batch_size": 2,
+            "inside_max_new_tokens": 12,
+            "inside_temperature": 0.7,
+            "inside_top_p": 0.9,
+            "inside_pooling": "mean",
+            "inside_embedding_threshold": 0.88,
+            "inside_min_samples": 2,
+            "inside_sample_step": 1,
+            "inside_stability_delta": 0.03,
+            "inside_selfcheck_min_overlap": 0.65,
+            "inside_selfcheck_support_threshold": 0.6,
+            "inside_selfcheck_refute_threshold": 0.5,
+            "run_names": ["adaptive_selfcheck"],
+            "shared_cache_dir": str(tmp_path / "shared-caches"),
+            "eval_reps_cache_shard_size": 4,
+            "refresh_shared_caches": True,
+            "derive_from_max_budget": True,
+        },
+        "budgets": {
+            "top_0p1": {"sample_efficiency_gate": {"passed": True}},
+            "top_0p4": {"sample_efficiency_gate": {"passed": True}},
+        },
+        "leaderboard": [
+            {
+                "budget_id": "top_0p1",
+                "budget_kind": "top_fraction",
+                "budget_value": 0.1,
+                "recommended_run": "adaptive_selfcheck",
+                "derived": True,
+                "derived_from_budget_id": "top_0p4",
+                "inside_generation_seconds_source": "sample_count_ratio_estimate",
+                "sampled": 55,
+                "skipped_by_trigger": 445,
+                "total_generated_samples": 55,
+                "mean_samples_per_record": 0.11,
+                "inside_generation_seconds": 59.0,
+                "sample_count_ratio_to_reference": 0.13,
+                "inside_generation_seconds_ratio_to_reference": 0.13,
+                "inside_auroc": {"inside_semantic_entropy": 0.49},
+            },
+            {
+                "budget_id": "top_0p4",
+                "budget_kind": "top_fraction",
+                "budget_value": 0.4,
+                "recommended_run": "adaptive_selfcheck",
+                "derived": True,
+                "derived_from_budget_id": "top_0p4",
+                "source_score_dump": str(tmp_path / "scores.json"),
+                "inside_generation_seconds_source": "measured_source_run",
+                "sampled": 218,
+                "skipped_by_trigger": 282,
+                "total_generated_samples": 218,
+                "mean_samples_per_record": 0.436,
+                "mean_samples_per_sampled_record": 1.0,
+                "inside_generation_seconds": 235.0,
+                "sample_count_ratio_to_reference": 0.50,
+                "inside_generation_seconds_ratio_to_reference": 0.50,
+                "inside_auroc": {"inside_semantic_entropy": 0.57},
+                "stop_reason_counts": {"selfcheck_supported": 12},
+            },
+        ],
+        "recommendation": {
+            "budget_id": "top_0p1",
+            "recommended_run": "adaptive_selfcheck",
+            "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+        },
+        "quality_balanced_recommendation": {
+            "budget_id": "top_0p4",
+            "recommended_run": "adaptive_selfcheck",
+            "reason": "lowest_cost_within_inside_quality_tolerance",
+            "quality_metric": "inside_semantic_entropy",
+            "quality_value": 0.57,
+            "best_quality_value": 0.57,
+            "quality_tolerance": 0.02,
+            "cost_metric": "inside_generation_seconds_ratio_to_reference",
+            "cost_value": 0.50,
+        },
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        inside_trigger_budget_sweep_report=sweep_report,
+        inside_trigger_budget_sweep_report_path=tmp_path / "inside-trigger-budget-sweep.json",
+    )
+
+    assert report["status"] == "promote"
+    trigger = report["recommendation"]["inside_trigger_budget_sweep"]
+    inside = report["recommendation"]["inside_sampling"]
+    assert trigger["recommendation_source"] == "quality_balanced_recommendation"
+    assert trigger["recommended_budget_id"] == "top_0p4"
+    assert trigger["derive_from_max_budget"] is True
+    assert trigger["sample_count_ratio_to_reference"] == pytest.approx(0.50)
+    assert inside["inside_trigger_top_fraction"] == pytest.approx(0.4)
+    assert inside["inside_trigger_budget_id"] == "top_0p4"
+    assert inside["adaptive"] is True
+    assert inside["selfcheck_early_stop"] is True
+    assert inside["inside_generation_seconds_source"] == "measured_source_run"
+    assert report["evidence"]["inside_trigger_budget_sweep_status"] == "promote"
+    assert report["evidence"]["inside_trigger_budget_derive_from_max_budget"] is True
+    eval_flags = report["benchmark_flags"]["eval_truthfulqa"]
+    assert eval_flags[eval_flags.index("--inside-trigger-top-fraction") + 1] == "0.4"
+    assert "--inside-adaptive-sampling" in eval_flags
+    sweep_flags = report["benchmark_flags"]["run_inside_trigger_budget_sweep"]
+    assert sweep_flags[sweep_flags.index("--top-fractions") + 1] == "0.1,0.4"
+    assert sweep_flags[sweep_flags.index("--runs") + 1] == "adaptive_selfcheck"
+    assert "--derive-from-max-budget" in sweep_flags
+
+
 def test_runtime_config_recommendation_blocks_failed_inside_sampling_gate():
     module = importlib.import_module("benchmarks.recommend_runtime_config")
 
@@ -7012,6 +7236,7 @@ def test_runtime_config_recommendation_cli_writes_output(tmp_path):
         matrix_report=str(matrix_report_path),
         worker_sweep_report=None,
         inside_sampling_report=None,
+        inside_trigger_budget_sweep_report=None,
         output=str(output_path),
         fail_on_blocked=True,
     ))

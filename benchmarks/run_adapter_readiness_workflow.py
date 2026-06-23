@@ -81,6 +81,7 @@ class AdapterReadinessWorkflowConfig:
     performance_dry_run: bool = False
     max_runtime_total_seconds: float | None = None
     inside_sampling_report_path: Path | None = None
+    inside_trigger_budget_sweep_report_path: Path | None = None
     performance_report_path: Path | None = None
 
     def __post_init__(self) -> None:
@@ -91,6 +92,12 @@ class AdapterReadinessWorkflowConfig:
             object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
         if self.inside_sampling_report_path is not None:
             object.__setattr__(self, "inside_sampling_report_path", Path(self.inside_sampling_report_path))
+        if self.inside_trigger_budget_sweep_report_path is not None:
+            object.__setattr__(
+                self,
+                "inside_trigger_budget_sweep_report_path",
+                Path(self.inside_trigger_budget_sweep_report_path),
+            )
         if self.performance_report_path is not None:
             object.__setattr__(self, "performance_report_path", Path(self.performance_report_path))
         object.__setattr__(self, "layers", tuple(int(layer) for layer in self.layers))
@@ -197,8 +204,14 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         inside_sampling_report=(
             None if config.inside_sampling_report_path is None else _load_json(config.inside_sampling_report_path)
         ),
+        inside_trigger_budget_sweep_report=(
+            None
+            if config.inside_trigger_budget_sweep_report_path is None
+            else _load_json(config.inside_trigger_budget_sweep_report_path)
+        ),
         matrix_report_path=performance_report_path,
         inside_sampling_report_path=config.inside_sampling_report_path,
+        inside_trigger_budget_sweep_report_path=config.inside_trigger_budget_sweep_report_path,
     )
     config.runtime_recommendation_path.write_text(
         _json_text(runtime_recommendation, compact=config.compact_json, sort_keys=True),
@@ -335,6 +348,7 @@ def _write_artifact_manifest(
         ),
         "runtime_recommendation": report.get("runtime_recommendation_path"),
         "inside_sampling_profile_report": config.inside_sampling_report_path,
+        "inside_trigger_budget_sweep_report": config.inside_trigger_budget_sweep_report_path,
     }
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
@@ -371,6 +385,9 @@ def _write_artifact_manifest(
             "inside_sampling_report": None
             if config.inside_sampling_report_path is None
             else str(config.inside_sampling_report_path),
+            "inside_trigger_budget_sweep_report": None
+            if config.inside_trigger_budget_sweep_report_path is None
+            else str(config.inside_trigger_budget_sweep_report_path),
             "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
             "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
                 "performance_wall_clock_seconds"
@@ -395,6 +412,7 @@ def _write_artifact_manifest(
             "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
             "recommended_quality_signals": runtime_config.get("quality_signals"),
             "recommended_inside_sampling": runtime_config.get("inside_sampling"),
+            "recommended_inside_trigger_budget_sweep": runtime_config.get("inside_trigger_budget_sweep"),
         },
     )
     config.artifact_manifest_path.write_text(
@@ -487,6 +505,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
         inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
+        inside_trigger_budget_sweep_report_path=(
+            Path(args.inside_trigger_budget_sweep_report)
+            if args.inside_trigger_budget_sweep_report
+            else None
+        ),
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
 
@@ -553,6 +576,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--performance-dry-run", action="store_true")
     parser.add_argument("--inside-sampling-report", default=None,
                         help="optional inside-sampling-profile-comparison.json to fold into runtime recommendation")
+    parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
+                        help="optional inside-trigger-budget-sweep.json to fold into runtime recommendation")
     parser.add_argument("--performance-report", default=None,
                         help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(

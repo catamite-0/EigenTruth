@@ -1002,20 +1002,25 @@ Remove `--performance-dry-run` only when the local profile matrix cost is
 acceptable. Add `--fail-on-blocked` on real runs to require
 `readiness_decision.status=promote`. Pass `--inside-sampling-report` when a
 promoted `run_inside_sampling_profile.py` comparison should be folded into the
-runtime recommendation and readiness manifest. Pass `--performance-report` to
-reuse an existing `cache-profile-matrix-report.json` when only the INSIDE
-sampling evidence or adapter-family evidence changed:
+runtime recommendation and readiness manifest. Pass
+`--inside-trigger-budget-sweep-report` when a promoted
+`run_inside_trigger_budget_sweep.py` report should provide the trigger budget;
+derived top-fraction reports preserve their `--derive-from-max-budget`
+recommendation in the generated benchmark flags. Pass `--performance-report` to
+reuse an existing `cache-profile-matrix-report.json` when only INSIDE sampling
+evidence or adapter-family evidence changed:
 
 ```bash
   --performance-report artifacts/readiness/cache-profile-matrix/cache-profile-matrix-report.json \
-  --inside-sampling-report artifacts/inside_sampling/inside-sampling-profile-comparison.json
+  --inside-sampling-report artifacts/inside_sampling/inside-sampling-profile-comparison.json \
+  --inside-trigger-budget-sweep-report artifacts/inside_trigger_budget_sweep/inside-trigger-budget-sweep.json
 ```
 
 The workflow also writes a top-level `artifact-manifest.json` that fingerprints
 the readiness report, adapter-family matrix, route-comparison report,
 cache-profile matrix report, nested cache-profile matrix manifest, and
 `runtime-recommendation.json`, plus the optional INSIDE sampling profile report
-when provided. The runtime recommendation is generated from the saved
+and trigger-budget sweep report when provided. The runtime recommendation is generated from the saved
 performance matrix without rerunning model work; when the matrix promotes it
 includes deployable layer, batch-size, token-budget, prefix-KV, worker flags,
 all available AUROC quality signals, optional sampling settings, and the best
@@ -1908,6 +1913,7 @@ python benchmarks/recommend_runtime_config.py \
   --matrix-report /tmp/eigentruth-qwen05-worker-sweep/workers_1/cache-profile-matrix-report.json \
   --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
   --inside-sampling-report /tmp/eigentruth-qwen05-inside/inside-sampling-profile-comparison.json \
+  --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
   --output /tmp/eigentruth-qwen05-worker-sweep/runtime-recommendation.json \
   --fail-on-blocked
 ```
@@ -1918,11 +1924,16 @@ quality signals from the promoted cell, optional promoted INSIDE sampling
 settings, and the best quality signal. With `--inside-sampling-report`, the
 recommended sampling run must pass its sample-efficiency gate and expose a
 readable per-run result JSON; otherwise the runtime recommendation fails closed.
+With `--inside-trigger-budget-sweep-report`, the recommendation uses
+`quality_balanced_recommendation` when present, otherwise the cost-first
+recommendation, and emits `run_inside_trigger_budget_sweep.py` flags including
+`--derive-from-max-budget` for derived nested top-fraction sweeps.
 The report includes equivalent flags for `eval_truthfulqa.py`,
 `run_cache_profile_matrix.py`, `run_adapter_readiness_workflow.py`, and, when
-sampling evidence is provided, `run_inside_sampling_profile.py`. Treat it as the
-deployment handoff from same-machine performance evidence; it does not replace a
-promoted matrix, worker-sweep, or sampling-profile decision.
+sampling evidence is provided, `run_inside_sampling_profile.py` and
+`run_inside_trigger_budget_sweep.py`. Treat it as the deployment handoff from
+same-machine performance evidence; it does not replace a promoted matrix,
+worker-sweep, sampling-profile, or trigger-budget-sweep decision.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

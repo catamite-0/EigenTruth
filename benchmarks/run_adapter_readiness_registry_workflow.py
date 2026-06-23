@@ -177,6 +177,23 @@ def _promotion_metadata(
             ),
             "recommended_inside_sampling_stop_reason_counts": inside_sampling.get("stop_reason_counts"),
         })
+    inside_trigger_budget = dict(runtime_config.get("inside_trigger_budget_sweep") or {})
+    if inside_trigger_budget:
+        metadata.update({
+            "recommended_inside_trigger_budget_sweep": inside_trigger_budget,
+            "recommended_inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
+            "recommended_inside_trigger_budget_run": inside_trigger_budget.get("recommended_run"),
+            "recommended_inside_trigger_budget_source": inside_trigger_budget.get("recommendation_source"),
+            "recommended_inside_trigger_budget_derive_from_max_budget": inside_trigger_budget.get(
+                "derive_from_max_budget"
+            ),
+            "recommended_inside_trigger_budget_sample_count_ratio_to_reference": inside_trigger_budget.get(
+                "sample_count_ratio_to_reference"
+            ),
+            "recommended_inside_trigger_budget_generation_seconds_ratio_to_reference": inside_trigger_budget.get(
+                "inside_generation_seconds_ratio_to_reference"
+            ),
+        })
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
     return metadata
@@ -237,6 +254,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
         inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
+        inside_trigger_budget_sweep_report_path=(
+            Path(args.inside_trigger_budget_sweep_report)
+            if args.inside_trigger_budget_sweep_report
+            else None
+        ),
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
     return AdapterReadinessRegistryWorkflowConfig(
@@ -323,6 +345,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     ), default=None)
     parser.add_argument("--inside-sampling-report", default=None,
                         help="optional run_inside_sampling_profile.py comparison report for runtime recommendation")
+    parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
+                        help="optional run_inside_trigger_budget_sweep.py report for runtime recommendation")
     parser.add_argument("--performance-report", default=None,
                         help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--fail-on-blocked", action="store_true",

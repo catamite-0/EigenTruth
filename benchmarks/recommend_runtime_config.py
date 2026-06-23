@@ -3,7 +3,8 @@
 The cache-profile matrix and worker-count sweep reports are intentionally
 experiment shaped. This helper turns their promotion decisions into one compact
 machine-readable recommendation: layer, batch size, capture mode, token budget,
-prefix-KV mode, worker count, and optional INSIDE sampling configuration.
+prefix-KV mode, worker count, and optional INSIDE sampling / trigger-budget
+configuration.
 """
 
 from __future__ import annotations
@@ -27,9 +28,11 @@ def build_runtime_recommendation(
     *,
     worker_sweep_report: Mapping[str, Any] | None = None,
     inside_sampling_report: Mapping[str, Any] | None = None,
+    inside_trigger_budget_sweep_report: Mapping[str, Any] | None = None,
     matrix_report_path: str | Path | None = None,
     worker_sweep_report_path: str | Path | None = None,
     inside_sampling_report_path: str | Path | None = None,
+    inside_trigger_budget_sweep_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one runtime recommendation from matrix and optional worker evidence."""
     matrix_decision = _mapping(matrix_report.get("matrix_decision"))
@@ -40,6 +43,10 @@ def build_runtime_recommendation(
         inside_sampling_report,
         inside_sampling_report_path=inside_sampling_report_path,
     )
+    inside_trigger_budget_sweep_decision = _inside_trigger_budget_sweep_decision(
+        inside_trigger_budget_sweep_report,
+        inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
+    )
     matrix_status = str(matrix_decision.get("status") or "missing")
     worker_status = None if worker_sweep_report is None else str(worker_decision.get("status") or "missing")
     inside_sampling_status = (
@@ -47,7 +54,17 @@ def build_runtime_recommendation(
         if inside_sampling_report is None
         else str(inside_sampling_decision.get("status") or "missing")
     )
-    status = _combined_status(matrix_status, worker_status, inside_sampling_status)
+    inside_trigger_budget_sweep_status = (
+        None
+        if inside_trigger_budget_sweep_report is None
+        else str(inside_trigger_budget_sweep_decision.get("status") or "missing")
+    )
+    status = _combined_status(
+        matrix_status,
+        worker_status,
+        inside_sampling_status,
+        inside_trigger_budget_sweep_status,
+    )
     recommended = None
     missing_promoted_runtime_cell = False
     if status == "promote":
@@ -57,6 +74,7 @@ def build_runtime_recommendation(
             worker_sweep_report=worker_sweep_report,
             worker_decision=worker_decision,
             inside_sampling_decision=inside_sampling_decision,
+            inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
             matrix_report_path=matrix_report_path,
         )
         if recommended is None:
@@ -68,6 +86,8 @@ def build_runtime_recommendation(
         worker_sweep_report=worker_sweep_report,
         inside_sampling_decision=inside_sampling_decision,
         inside_sampling_report=inside_sampling_report,
+        inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
+        inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report,
     )
     if missing_promoted_runtime_cell:
         blocking_reasons.append("matrix: promoted matrix did not include a recommended runtime cell")
@@ -78,9 +98,12 @@ def build_runtime_recommendation(
         worker_decision=worker_decision,
         inside_sampling_decision=inside_sampling_decision,
         inside_sampling_report=inside_sampling_report,
+        inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
+        inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
+        inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
     )
     report = {
         "schema_version": 1,
@@ -102,6 +125,7 @@ def _recommendation(
     worker_sweep_report: Mapping[str, Any] | None,
     worker_decision: Mapping[str, Any],
     inside_sampling_decision: Mapping[str, Any],
+    inside_trigger_budget_sweep_decision: Mapping[str, Any],
     matrix_report_path: str | Path | None,
 ) -> dict[str, Any] | None:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
@@ -139,8 +163,14 @@ def _recommendation(
         "best_quality_signal": quality["best"],
     }
     inside_sampling = _mapping(inside_sampling_decision.get("recommended"))
+    trigger_sampling = _mapping(inside_trigger_budget_sweep_decision.get("inside_sampling"))
+    if trigger_sampling:
+        inside_sampling.update(trigger_sampling)
     if inside_sampling:
         recommendation["inside_sampling"] = inside_sampling
+    trigger_budget = _mapping(inside_trigger_budget_sweep_decision.get("recommended"))
+    if trigger_budget:
+        recommendation["inside_trigger_budget_sweep"] = trigger_budget
     return recommendation
 
 
@@ -512,6 +542,331 @@ def _inside_sampling_recommendation(
     }
 
 
+def _inside_trigger_budget_sweep_decision(
+    inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
+    *,
+    inside_trigger_budget_sweep_report_path: str | Path | None,
+) -> dict[str, Any]:
+    if inside_trigger_budget_sweep_report is None:
+        return {}
+    if inside_trigger_budget_sweep_report.get("dry_run") is True:
+        return {
+            "status": "dry_run",
+            "blocking_reasons": [
+                "inside_trigger_budget_sweep: report was dry-run only; run real profiles before promotion"
+            ],
+        }
+
+    recommendation_source, recommendation = _inside_trigger_budget_recommendation_candidate(
+        inside_trigger_budget_sweep_report
+    )
+    if not recommendation:
+        return {
+            "status": "no_candidate",
+            "blocking_reasons": [
+                "inside_trigger_budget_sweep: report did not include a budget recommendation"
+            ],
+        }
+    budget_id = recommendation.get("budget_id")
+    if not budget_id:
+        return {
+            "status": "no_candidate",
+            "blocking_reasons": [
+                "inside_trigger_budget_sweep: recommended budget did not include budget_id"
+            ],
+        }
+    row = _inside_trigger_budget_row(
+        inside_trigger_budget_sweep_report,
+        budget_id=str(budget_id),
+        recommended_run=recommendation.get("recommended_run"),
+    )
+    if not row:
+        return {
+            "status": "no_candidate",
+            "recommended_budget_id": str(budget_id),
+            "blocking_reasons": [
+                f"inside_trigger_budget_sweep: recommended budget {budget_id!r} was missing from leaderboard"
+            ],
+        }
+
+    budget_payload = _mapping(_mapping(inside_trigger_budget_sweep_report.get("budgets")).get(str(budget_id)))
+    gate = _mapping(budget_payload.get("sample_efficiency_gate"))
+    if gate and gate.get("passed") is not True:
+        return {
+            "status": "blocked",
+            "recommended_budget_id": str(budget_id),
+            "recommended_run": row.get("recommended_run") or recommendation.get("recommended_run"),
+            "blocking_reasons": _inside_trigger_budget_gate_failures(gate, budget_id=str(budget_id)),
+            "sample_efficiency_gate": gate,
+        }
+
+    config = _mapping(inside_trigger_budget_sweep_report.get("config"))
+    recommended = _inside_trigger_budget_recommendation(
+        row,
+        recommendation=recommendation,
+        recommendation_source=recommendation_source,
+        report=inside_trigger_budget_sweep_report,
+        config=config,
+        inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
+    )
+    return {
+        "status": "promote",
+        "recommended_budget_id": recommended.get("recommended_budget_id"),
+        "recommended_run": recommended.get("recommended_run"),
+        "recommendation_source": recommendation_source,
+        "sample_efficiency_gate": gate,
+        "recommended": recommended,
+        "inside_sampling": _inside_trigger_budget_sampling(recommended, config=config, row=row),
+    }
+
+
+def _inside_trigger_budget_recommendation_candidate(
+    report: Mapping[str, Any],
+) -> tuple[str | None, dict[str, Any]]:
+    quality_balanced = _mapping(report.get("quality_balanced_recommendation"))
+    if quality_balanced:
+        return "quality_balanced_recommendation", quality_balanced
+    cost_first = _mapping(report.get("recommendation"))
+    if cost_first:
+        return "recommendation", cost_first
+    return None, {}
+
+
+def _inside_trigger_budget_row(
+    report: Mapping[str, Any],
+    *,
+    budget_id: str,
+    recommended_run: Any,
+) -> dict[str, Any]:
+    leaderboard = report.get("leaderboard")
+    if not isinstance(leaderboard, Sequence) or isinstance(leaderboard, str):
+        return {}
+    fallback = {}
+    for value in leaderboard:
+        row = _mapping(value)
+        if row.get("budget_id") != budget_id:
+            continue
+        if not fallback:
+            fallback = row
+        if recommended_run is None or row.get("recommended_run") == recommended_run:
+            return row
+    return fallback
+
+
+def _inside_trigger_budget_recommendation(
+    row: Mapping[str, Any],
+    *,
+    recommendation: Mapping[str, Any],
+    recommendation_source: str | None,
+    report: Mapping[str, Any],
+    config: Mapping[str, Any],
+    inside_trigger_budget_sweep_report_path: str | Path | None,
+) -> dict[str, Any]:
+    budget_kind = str(row.get("budget_kind") or "")
+    budget_value = _float_or_none(row.get("budget_value"))
+    trigger_signal = _first_present(config.get("trigger_signal"), row.get("trigger_signal"))
+    derived_from_max_budget = (
+        report.get("derived_from_max_budget") is True
+        or config.get("derive_from_max_budget") is True
+        or row.get("derived") is True
+    )
+    payload = {
+        "report_path": None
+        if inside_trigger_budget_sweep_report_path is None
+        else str(inside_trigger_budget_sweep_report_path),
+        "recommendation_source": recommendation_source,
+        "recommended_budget_id": row.get("budget_id"),
+        "recommended_run": _first_present(row.get("recommended_run"), recommendation.get("recommended_run")),
+        "reason": recommendation.get("reason"),
+        "trigger_signal": trigger_signal,
+        "budget_kind": budget_kind,
+        "budget_value": budget_value,
+        "budgets": _trigger_budget_specs(config, fallback_row=row),
+        "derive_from_max_budget": derived_from_max_budget,
+        "derived_source_budget_id": report.get("derived_source_budget_id"),
+        "derived_source_score_dump": report.get("derived_source_score_dump"),
+        "source_score_dump": row.get("source_score_dump"),
+        "inside_generation_seconds_source": row.get("inside_generation_seconds_source"),
+        "model": config.get("model"),
+        "dtype": config.get("dtype"),
+        "layer": _int_or_none(config.get("layer")),
+        "limit": _int_or_none(config.get("limit")),
+        "manifold_questions": _int_or_none(config.get("manifold_questions")),
+        "batch_size": _int_or_none(config.get("batch_size")),
+        "max_batch_tokens": _int_or_none(config.get("max_batch_tokens")),
+        "max_length": _int_or_none(config.get("max_length")),
+        "hidden_state_capture": config.get("hidden_state_capture"),
+        "progress_every": _int_or_none(config.get("progress_every")),
+        "offline": config.get("offline"),
+        "length_bucketed_batches": config.get("length_bucketed_batches"),
+        "inside_samples": _int_or_none(config.get("inside_samples")),
+        "inside_batch_size": _int_or_none(config.get("inside_batch_size")),
+        "inside_max_new_tokens": _int_or_none(config.get("inside_max_new_tokens")),
+        "inside_temperature": _float_or_none(config.get("inside_temperature")),
+        "inside_top_p": _float_or_none(config.get("inside_top_p")),
+        "inside_pooling": config.get("inside_pooling"),
+        "inside_embedding_threshold": _float_or_none(config.get("inside_embedding_threshold")),
+        "inside_min_samples": _int_or_none(config.get("inside_min_samples")),
+        "inside_sample_step": _int_or_none(config.get("inside_sample_step")),
+        "inside_stability_delta": _float_or_none(config.get("inside_stability_delta")),
+        "inside_selfcheck_min_overlap": _float_or_none(config.get("inside_selfcheck_min_overlap")),
+        "inside_selfcheck_support_threshold": _float_or_none(
+            config.get("inside_selfcheck_support_threshold")
+        ),
+        "inside_selfcheck_refute_threshold": _float_or_none(config.get("inside_selfcheck_refute_threshold")),
+        "run_names": _string_sequence(config.get("run_names")),
+        "reference_report": config.get("reference_report"),
+        "shared_cache_dir": config.get("shared_cache_dir"),
+        "eval_reps_cache_shard_size": _int_or_none(config.get("eval_reps_cache_shard_size")),
+        "refresh_shared_caches": config.get("refresh_shared_caches"),
+        "total_generated_samples": _int_or_none(row.get("total_generated_samples")),
+        "sampled": _int_or_none(row.get("sampled")),
+        "skipped_by_trigger": _int_or_none(row.get("skipped_by_trigger")),
+        "mean_samples_per_record": _float_or_none(row.get("mean_samples_per_record")),
+        "mean_samples_per_sampled_record": _float_or_none(row.get("mean_samples_per_sampled_record")),
+        "inside_generation_seconds": _float_or_none(row.get("inside_generation_seconds")),
+        "sample_count_ratio_to_budget_fixed": _float_or_none(
+            row.get("sample_count_ratio_to_budget_fixed")
+        ),
+        "inside_generation_seconds_ratio_to_budget_fixed": _float_or_none(
+            row.get("inside_generation_seconds_ratio_to_budget_fixed")
+        ),
+        "sample_count_ratio_to_reference": _float_or_none(row.get("sample_count_ratio_to_reference")),
+        "inside_generation_seconds_ratio_to_reference": _float_or_none(
+            row.get("inside_generation_seconds_ratio_to_reference")
+        ),
+        "inside_auroc": _finite_float_mapping(_mapping(row.get("inside_auroc"))),
+        "quality_metric": recommendation.get("quality_metric"),
+        "quality_value": _float_or_none(recommendation.get("quality_value")),
+        "best_quality_value": _float_or_none(recommendation.get("best_quality_value")),
+        "quality_tolerance": _float_or_none(recommendation.get("quality_tolerance")),
+        "cost_metric": recommendation.get("cost_metric"),
+        "cost_value": _float_or_none(recommendation.get("cost_value")),
+        "stop_reason_counts": dict(row.get("stop_reason_counts", {}))
+        if isinstance(row.get("stop_reason_counts", {}), Mapping)
+        else {},
+    }
+    return {key: value for key, value in payload.items() if value is not None}
+
+
+def _inside_trigger_budget_sampling(
+    recommended: Mapping[str, Any],
+    *,
+    config: Mapping[str, Any],
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    run_name = str(recommended.get("recommended_run") or "")
+    budget_kind = str(recommended.get("budget_kind") or "")
+    budget_value = _float_or_none(recommended.get("budget_value"))
+    sampling = {
+        "recommended_run": run_name or None,
+        "mode": "triggered",
+        "adaptive": run_name in {"adaptive", "adaptive_selfcheck"},
+        "selfcheck_early_stop": run_name == "adaptive_selfcheck",
+        "inside_samples": _int_or_none(recommended.get("inside_samples")),
+        "inside_batch_size": _int_or_none(recommended.get("inside_batch_size")),
+        "inside_max_new_tokens": _int_or_none(recommended.get("inside_max_new_tokens")),
+        "inside_temperature": _float_or_none(recommended.get("inside_temperature")),
+        "inside_top_p": _float_or_none(recommended.get("inside_top_p")),
+        "inside_pooling": _first_present(recommended.get("inside_pooling"), "last"),
+        "inside_embedding_threshold": _float_or_none(recommended.get("inside_embedding_threshold")),
+        "inside_min_samples": _int_or_none(recommended.get("inside_min_samples")),
+        "inside_sample_step": _int_or_none(recommended.get("inside_sample_step")),
+        "inside_stability_delta": _float_or_none(recommended.get("inside_stability_delta")),
+        "inside_selfcheck_min_overlap": _float_or_none(recommended.get("inside_selfcheck_min_overlap")),
+        "inside_selfcheck_support_threshold": _float_or_none(
+            recommended.get("inside_selfcheck_support_threshold")
+        ),
+        "inside_selfcheck_refute_threshold": _float_or_none(
+            recommended.get("inside_selfcheck_refute_threshold")
+        ),
+        "inside_trigger_signal": _first_present(
+            recommended.get("trigger_signal"),
+            config.get("trigger_signal"),
+        ),
+        "inside_trigger_threshold": budget_value if budget_kind == "threshold" else None,
+        "inside_trigger_top_fraction": budget_value if budget_kind == "top_fraction" else None,
+        "inside_trigger_budget_id": recommended.get("recommended_budget_id"),
+        "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+        "derive_from_max_budget": recommended.get("derive_from_max_budget"),
+        "derived_source_budget_id": recommended.get("derived_source_budget_id"),
+        "total_generated_samples": _int_or_none(recommended.get("total_generated_samples")),
+        "sample_count_ratio_to_baseline": _float_or_none(
+            recommended.get("sample_count_ratio_to_budget_fixed")
+        ),
+        "inside_generation_seconds": _float_or_none(recommended.get("inside_generation_seconds")),
+        "inside_generation_seconds_ratio_to_baseline": _float_or_none(
+            recommended.get("inside_generation_seconds_ratio_to_budget_fixed")
+        ),
+        "sample_count_ratio_to_reference": _float_or_none(recommended.get("sample_count_ratio_to_reference")),
+        "inside_generation_seconds_ratio_to_reference": _float_or_none(
+            recommended.get("inside_generation_seconds_ratio_to_reference")
+        ),
+        "inside_generation_seconds_source": recommended.get("inside_generation_seconds_source"),
+        "stop_reason_counts": dict(row.get("stop_reason_counts", {}))
+        if isinstance(row.get("stop_reason_counts", {}), Mapping)
+        else {},
+    }
+    return {key: value for key, value in sampling.items() if value is not None}
+
+
+def _inside_trigger_budget_gate_failures(gate: Mapping[str, Any], *, budget_id: str) -> list[str]:
+    failures = gate.get("failures")
+    if not isinstance(failures, Sequence) or isinstance(failures, str) or not failures:
+        return [f"inside_trigger_budget_sweep: selected budget {budget_id} failed sample efficiency gate"]
+    reasons = []
+    for failure in failures:
+        item = _mapping(failure)
+        run = item.get("run", "unknown")
+        metric = item.get("metric", "unknown_metric")
+        value = item.get("value")
+        max_allowed = item.get("max_allowed")
+        reasons.append(
+            f"inside_trigger_budget_sweep: {budget_id}/{run} failed {metric} gate "
+            f"(value={value!r}, max_allowed={max_allowed!r})"
+        )
+    return reasons
+
+
+def _trigger_budget_specs(
+    config: Mapping[str, Any],
+    *,
+    fallback_row: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    raw_budgets = config.get("budgets")
+    budgets = []
+    if isinstance(raw_budgets, Sequence) and not isinstance(raw_budgets, str):
+        for raw_budget in raw_budgets:
+            item = _mapping(raw_budget)
+            kind = item.get("kind")
+            value = _float_or_none(item.get("value"))
+            if kind and value is not None:
+                budgets.append({
+                    "kind": str(kind),
+                    "value": value,
+                    "id": item.get("id") or _trigger_budget_id(str(kind), value),
+                })
+    if budgets:
+        return budgets
+    kind = fallback_row.get("budget_kind")
+    value = _float_or_none(fallback_row.get("budget_value"))
+    if kind and value is not None:
+        return [{"kind": str(kind), "value": value, "id": fallback_row.get("budget_id")}]
+    return []
+
+
+def _trigger_budget_id(kind: str, value: float) -> str:
+    text = f"{value:g}".replace("-", "m").replace(".", "p")
+    prefix = "top" if kind == "top_fraction" else "threshold"
+    return f"{prefix}_{text}"
+
+
+def _string_sequence(value: Any) -> list[str]:
+    if not isinstance(value, Sequence) or isinstance(value, str):
+        return []
+    return [str(item) for item in value]
+
+
 def _benchmark_flags(
     recommendation: Mapping[str, Any],
     matrix_report: Mapping[str, Any],
@@ -550,6 +905,9 @@ def _benchmark_flags(
     inside_sampling = _mapping(recommendation.get("inside_sampling"))
     if inside_sampling:
         flags["run_inside_sampling_profile"] = _inside_sampling_profile_flags(inside_sampling)
+    trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    if trigger_budget:
+        flags["run_inside_trigger_budget_sweep"] = _inside_trigger_budget_sweep_flags(trigger_budget)
     return flags
 
 
@@ -619,6 +977,82 @@ def _inside_sampling_profile_flags(inside_sampling: Mapping[str, Any]) -> list[s
     return flags
 
 
+def _inside_trigger_budget_sweep_flags(trigger_budget: Mapping[str, Any]) -> list[str]:
+    flags = []
+    _extend_flag(flags, "--trigger-signal", trigger_budget.get("trigger_signal"))
+    budgets = _trigger_budget_specs(trigger_budget, fallback_row={})
+    top_fractions = [
+        str(budget["value"])
+        for budget in budgets
+        if budget.get("kind") == "top_fraction"
+    ]
+    thresholds = [
+        str(budget["value"])
+        for budget in budgets
+        if budget.get("kind") == "threshold"
+    ]
+    if not top_fractions and trigger_budget.get("budget_kind") == "top_fraction":
+        value = _float_or_none(trigger_budget.get("budget_value"))
+        if value is not None:
+            top_fractions = [str(value)]
+    if not thresholds and trigger_budget.get("budget_kind") == "threshold":
+        value = _float_or_none(trigger_budget.get("budget_value"))
+        if value is not None:
+            thresholds = [str(value)]
+    if top_fractions:
+        flags.extend(["--top-fractions", ",".join(top_fractions)])
+    if thresholds:
+        flags.extend(["--thresholds", ",".join(thresholds)])
+    _extend_flag(flags, "--reference-report", trigger_budget.get("reference_report"))
+    _extend_flag(flags, "--model", trigger_budget.get("model"))
+    _extend_flag(flags, "--dtype", trigger_budget.get("dtype"))
+    _extend_flag(flags, "--layer", trigger_budget.get("layer"))
+    _extend_flag(flags, "--limit", trigger_budget.get("limit"))
+    _extend_flag(flags, "--manifold-questions", trigger_budget.get("manifold_questions"))
+    _extend_flag(flags, "--batch-size", trigger_budget.get("batch_size"))
+    _extend_flag(flags, "--max-batch-tokens", trigger_budget.get("max_batch_tokens"))
+    _extend_flag(flags, "--max-length", trigger_budget.get("max_length"))
+    _extend_flag(flags, "--hidden-state-capture", trigger_budget.get("hidden_state_capture"))
+    _extend_flag(flags, "--progress-every", trigger_budget.get("progress_every"))
+    if trigger_budget.get("offline") is False:
+        flags.append("--real-truthfulqa")
+    if trigger_budget.get("length_bucketed_batches") is False:
+        flags.append("--no-length-bucketed-batches")
+    _extend_flag(flags, "--inside-samples", trigger_budget.get("inside_samples"))
+    _extend_flag(flags, "--inside-batch-size", trigger_budget.get("inside_batch_size"))
+    _extend_flag(flags, "--inside-max-new-tokens", trigger_budget.get("inside_max_new_tokens"))
+    _extend_flag(flags, "--inside-temperature", trigger_budget.get("inside_temperature"))
+    _extend_flag(flags, "--inside-top-p", trigger_budget.get("inside_top_p"))
+    _extend_flag(flags, "--inside-pooling", trigger_budget.get("inside_pooling"))
+    _extend_flag(flags, "--inside-embedding-threshold", trigger_budget.get("inside_embedding_threshold"))
+    _extend_flag(flags, "--inside-min-samples", trigger_budget.get("inside_min_samples"))
+    _extend_flag(flags, "--inside-sample-step", trigger_budget.get("inside_sample_step"))
+    _extend_flag(flags, "--inside-stability-delta", trigger_budget.get("inside_stability_delta"))
+    _extend_flag(flags, "--inside-selfcheck-min-overlap", trigger_budget.get("inside_selfcheck_min_overlap"))
+    _extend_flag(
+        flags,
+        "--inside-selfcheck-support-threshold",
+        trigger_budget.get("inside_selfcheck_support_threshold"),
+    )
+    _extend_flag(
+        flags,
+        "--inside-selfcheck-refute-threshold",
+        trigger_budget.get("inside_selfcheck_refute_threshold"),
+    )
+    run_names = _string_sequence(trigger_budget.get("run_names"))
+    if not run_names and trigger_budget.get("recommended_run"):
+        run_names = [str(trigger_budget["recommended_run"])]
+    if run_names:
+        flags.extend(["--runs", ",".join(run_names)])
+    _extend_flag(flags, "--shared-cache-dir", trigger_budget.get("shared_cache_dir"))
+    _extend_flag(flags, "--eval-reps-cache-shard-size", trigger_budget.get("eval_reps_cache_shard_size"))
+    if trigger_budget.get("refresh_shared_caches") is True:
+        flags.append("--refresh-shared-caches")
+    if trigger_budget.get("derive_from_max_budget") is True:
+        flags.append("--derive-from-max-budget")
+    return flags
+
+
 def _extend_flag(flags: list[str], flag: str, value: Any) -> None:
     if value is None:
         return
@@ -633,9 +1067,12 @@ def _evidence(
     worker_decision: Mapping[str, Any],
     inside_sampling_report: Mapping[str, Any] | None,
     inside_sampling_decision: Mapping[str, Any],
+    inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
+    inside_trigger_budget_sweep_decision: Mapping[str, Any],
     matrix_report_path: str | Path | None,
     worker_sweep_report_path: str | Path | None,
     inside_sampling_report_path: str | Path | None,
+    inside_trigger_budget_sweep_report_path: str | Path | None,
 ) -> dict[str, Any]:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     worker_recommended = _mapping(worker_decision.get("recommended"))
@@ -646,6 +1083,7 @@ def _evidence(
         matrix_report_path=matrix_report_path,
     )
     config = _mapping(matrix_report.get("config"))
+    trigger_budget = _mapping(inside_trigger_budget_sweep_decision.get("recommended"))
     evidence = {
         "matrix_report": None if matrix_report_path is None else str(matrix_report_path),
         "matrix_status": matrix_decision.get("status"),
@@ -681,6 +1119,26 @@ def _evidence(
         "inside_sampling_gate_passed": None
         if inside_sampling_report is None
         else _mapping(inside_sampling_decision.get("sample_efficiency_gate")).get("passed"),
+        "inside_trigger_budget_sweep_report": None
+        if inside_trigger_budget_sweep_report_path is None
+        else str(inside_trigger_budget_sweep_report_path),
+        "inside_trigger_budget_sweep_status": None
+        if inside_trigger_budget_sweep_report is None
+        else inside_trigger_budget_sweep_decision.get("status"),
+        "inside_trigger_budget_recommended_budget_id": inside_trigger_budget_sweep_decision.get(
+            "recommended_budget_id"
+        ),
+        "inside_trigger_budget_recommended_run": inside_trigger_budget_sweep_decision.get(
+            "recommended_run"
+        ),
+        "inside_trigger_budget_recommendation_source": inside_trigger_budget_sweep_decision.get(
+            "recommendation_source"
+        ),
+        "inside_trigger_budget_derive_from_max_budget": trigger_budget.get("derive_from_max_budget"),
+        "inside_trigger_budget_derived_source_budget_id": trigger_budget.get("derived_source_budget_id"),
+        "inside_trigger_budget_gate_passed": None
+        if inside_trigger_budget_sweep_report is None
+        else _mapping(inside_trigger_budget_sweep_decision.get("sample_efficiency_gate")).get("passed"),
     }
     return evidence
 
@@ -727,6 +1185,8 @@ def _blocking_reasons(
     worker_sweep_report: Mapping[str, Any] | None,
     inside_sampling_decision: Mapping[str, Any],
     inside_sampling_report: Mapping[str, Any] | None,
+    inside_trigger_budget_sweep_decision: Mapping[str, Any],
+    inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons = []
     for reason in matrix_decision.get("blocking_reasons") or ():
@@ -736,6 +1196,9 @@ def _blocking_reasons(
             reasons.append(f"worker_sweep: {reason}")
     if inside_sampling_report is not None:
         for reason in inside_sampling_decision.get("blocking_reasons") or ():
+            reasons.append(str(reason))
+    if inside_trigger_budget_sweep_report is not None:
+        for reason in inside_trigger_budget_sweep_decision.get("blocking_reasons") or ():
             reasons.append(str(reason))
     return reasons
 
@@ -796,15 +1259,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     matrix_report_path = Path(args.matrix_report)
     worker_sweep_report_path = Path(args.worker_sweep_report) if args.worker_sweep_report else None
     inside_sampling_report_path = Path(args.inside_sampling_report) if args.inside_sampling_report else None
+    inside_trigger_budget_sweep_report_arg = getattr(args, "inside_trigger_budget_sweep_report", None)
+    inside_trigger_budget_sweep_report_path = (
+        Path(inside_trigger_budget_sweep_report_arg) if inside_trigger_budget_sweep_report_arg else None
+    )
     report = build_runtime_recommendation(
         _load_json(matrix_report_path),
         worker_sweep_report=None if worker_sweep_report_path is None else _load_json(worker_sweep_report_path),
         inside_sampling_report=(
             None if inside_sampling_report_path is None else _load_json(inside_sampling_report_path)
         ),
+        inside_trigger_budget_sweep_report=(
+            None
+            if inside_trigger_budget_sweep_report_path is None
+            else _load_json(inside_trigger_budget_sweep_report_path)
+        ),
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
+        inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
     )
     output = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
@@ -826,6 +1299,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--inside-sampling-report", default=None,
                         help="optional inside-sampling-profile-comparison.json produced by "
                              "run_inside_sampling_profile.py")
+    parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
+                        help="optional inside-trigger-budget-sweep.json produced by "
+                             "run_inside_trigger_budget_sweep.py")
     parser.add_argument("--output", default=None,
                         help="optional path to write the recommendation JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",
