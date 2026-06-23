@@ -705,6 +705,9 @@ python benchmarks/compare_verifier_routes.py \
   --max-p95-duration-seconds 0.10 \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
+  --min-staged-skip-rate 0.30 \
+  --max-staged-verified-false-alarm 0.10 \
+  --min-staged-verified-detection 0.80 \
   --fail-on-promotion \
   --fail-on-gate \
   --json artifacts/verifier_route_comparison.json
@@ -727,6 +730,12 @@ The output includes:
   compared runs. This is reported separately from route metrics because cache
   hits are global to the benchmark run rather than safely attributable to one
   selected route.
+- `staged_verification`: aggregate skip-rate and alpha-level verified control
+  metrics from `eval_verifier_ensemble.py --staged-verification` reports.
+  Gate flags such as `--min-staged-skip-rate`,
+  `--max-staged-verified-false-alarm`, and
+  `--min-staged-verified-detection` fail closed when staged metrics are missing
+  or when verifier skipping saves cost at unacceptable quality loss.
 - `pareto_frontier`: aggregate route candidates that are not dominated by
   another route across quality, control-impact, sample-size, and cost metrics.
   The `recommended` entry is a deterministic quality/cost ordering over the
@@ -741,8 +750,9 @@ The output includes:
   `verified_false_alarm`, `verified_detection`, `mean_duration_seconds`,
   `p95_duration_seconds`, `p99_duration_seconds`, `max_duration_seconds`,
   `mean_attempted_route_count`, and `retrieval_use_rate`, plus optional global
-  `cache_hit_rate`; missing routes, missing metrics, non-finite values, missing
-  cache evidence, or no eligible routes fail the gate. When multiple reports are
+  `cache_hit_rate` and staged-verification skip/quality thresholds; missing
+  routes, missing metrics, non-finite values, missing cache/staged evidence, or
+  no eligible routes fail the gate. When multiple reports are
   aggregated, any route entry with missing or non-finite source metrics for an
   enabled gate records `invalid_metric_counts` and blocks promotion even if the
   remaining entries produce an aggregate value below the threshold.

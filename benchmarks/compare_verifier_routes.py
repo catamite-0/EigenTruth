@@ -70,6 +70,12 @@ def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
     return float(numerator) / float(denominator)
 
 
+def _optional_delta(after: float | None, before: float | None) -> float | None:
+    if after is None or before is None:
+        return None
+    return float(after) - float(before)
+
+
 def _mean(values: Sequence[float | None]) -> float | None:
     present = [float(value) for value in values if value is not None]
     if not present:
@@ -273,13 +279,52 @@ def _cache_record(
     }
 
 
+def _staged_record(
+    *,
+    report_name: str,
+    source: Path,
+    run: Mapping[str, Any],
+    alpha: float,
+) -> dict[str, Any]:
+    staged = run.get("staged_verification", {})
+    if not isinstance(staged, Mapping):
+        staged = {}
+    alpha_payload = _alpha_payload(run, alpha)
+    internal = alpha_payload.get("internal", {}) if isinstance(alpha_payload.get("internal", {}), Mapping) else {}
+    verified = alpha_payload.get("verified", {}) if isinstance(alpha_payload.get("verified", {}), Mapping) else {}
+    delta = alpha_payload.get("delta", {}) if isinstance(alpha_payload.get("delta", {}), Mapping) else {}
+    return {
+        "report": report_name,
+        "run": str(run.get("name", report_name)),
+        "source": str(source),
+        "enabled": bool(staged.get("enabled")),
+        "alpha": float(alpha),
+        "n_true": _nonnegative_int(run.get("n_true")),
+        "n_false": _nonnegative_int(run.get("n_false")),
+        "total_records": _nonnegative_int(staged.get("total_records")),
+        "verified_records": _nonnegative_int(staged.get("verified_records")),
+        "skipped_records": _nonnegative_int(staged.get("skipped_records")),
+        "skip_rate": _as_float(staged.get("skip_rate")),
+        "threshold": _as_float(staged.get("threshold")),
+        "internal_false_alarm": _as_float(internal.get("false_alarm")),
+        "verified_false_alarm": _as_float(verified.get("false_alarm")),
+        "delta_false_alarm": _as_float(delta.get("false_alarm")),
+        "internal_detection": _as_float(internal.get("detection")),
+        "verified_detection": _as_float(verified.get("detection")),
+        "delta_detection": _as_float(delta.get("detection")),
+        "suppressed_false_alarm_rate": _as_float(delta.get("suppressed_false_alarm_rate")),
+        "rescued_detection_rate": _as_float(delta.get("rescued_detection_rate")),
+    }
+
+
 def _extract_route_rows_and_cache_records(
     reports: Sequence[tuple[str, Path]],
     *,
     alpha: float,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     rows = []
     cache_records = []
+    staged_records = []
     for report_name, path in reports:
         with open(path, encoding="utf-8") as f:
             report = json.load(f)
@@ -290,6 +335,7 @@ def _extract_route_rows_and_cache_records(
             if not isinstance(run, Mapping):
                 continue
             cache_records.append(_cache_record(report_name=report_name, source=path, run=run))
+            staged_records.append(_staged_record(report_name=report_name, source=path, run=run, alpha=alpha))
             route_quality = run.get("route_quality", {})
             if not isinstance(route_quality, Mapping):
                 continue
@@ -304,7 +350,7 @@ def _extract_route_rows_and_cache_records(
                     route_quality=payload,
                     alpha=alpha,
                 ))
-    return rows, cache_records
+    return rows, cache_records, staged_records
 
 
 def _extract_route_rows(
@@ -312,7 +358,7 @@ def _extract_route_rows(
     *,
     alpha: float,
 ) -> list[dict[str, Any]]:
-    rows, _ = _extract_route_rows_and_cache_records(reports, alpha=alpha)
+    rows, _, _ = _extract_route_rows_and_cache_records(reports, alpha=alpha)
     return rows
 
 
@@ -528,6 +574,52 @@ def _aggregate_cache_summary(cache_records: Sequence[Mapping[str, Any]]) -> dict
     }
 
 
+def _aggregate_staged_summary(staged_records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    enabled_records = [row for row in staged_records if row.get("enabled")]
+    total_records = sum(int(row.get("total_records", 0) or 0) for row in enabled_records)
+    verified_records = sum(int(row.get("verified_records", 0) or 0) for row in enabled_records)
+    skipped_records = sum(int(row.get("skipped_records", 0) or 0) for row in enabled_records)
+    n_true = sum(int(row.get("n_true", 0) or 0) for row in enabled_records)
+    n_false = sum(int(row.get("n_false", 0) or 0) for row in enabled_records)
+    internal_false_alarm = _weighted_mean(
+        [(row.get("internal_false_alarm"), row.get("n_true", 0)) for row in enabled_records]
+    )
+    verified_false_alarm = _weighted_mean(
+        [(row.get("verified_false_alarm"), row.get("n_true", 0)) for row in enabled_records]
+    )
+    internal_detection = _weighted_mean(
+        [(row.get("internal_detection"), row.get("n_false", 0)) for row in enabled_records]
+    )
+    verified_detection = _weighted_mean(
+        [(row.get("verified_detection"), row.get("n_false", 0)) for row in enabled_records]
+    )
+    return {
+        "enabled": bool(enabled_records),
+        "n_runs": len(staged_records),
+        "n_enabled_runs": len(enabled_records),
+        "total_records": total_records,
+        "verified_records": verified_records,
+        "skipped_records": skipped_records,
+        "skip_rate": _safe_div(skipped_records, total_records),
+        "mean_run_skip_rate": _mean([row.get("skip_rate") for row in enabled_records]),
+        "n_true": n_true,
+        "n_false": n_false,
+        "internal_false_alarm": internal_false_alarm,
+        "verified_false_alarm": verified_false_alarm,
+        "delta_false_alarm": _optional_delta(verified_false_alarm, internal_false_alarm),
+        "internal_detection": internal_detection,
+        "verified_detection": verified_detection,
+        "delta_detection": _optional_delta(verified_detection, internal_detection),
+        "suppressed_false_alarm_rate": _weighted_mean(
+            [(row.get("suppressed_false_alarm_rate"), row.get("n_true", 0)) for row in enabled_records]
+        ),
+        "rescued_detection_rate": _weighted_mean(
+            [(row.get("rescued_detection_rate"), row.get("n_false", 0)) for row in enabled_records]
+        ),
+        "runs": [dict(row) for row in staged_records],
+    }
+
+
 PARETO_MAXIMIZE_METRICS = (
     "decision_accuracy",
     "false_refuted_rate",
@@ -737,6 +829,11 @@ def _thresholds_enabled(
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
     min_cache_hit_rate: float | None,
+    min_staged_skip_rate: float | None,
+    max_staged_verified_false_alarm: float | None,
+    min_staged_verified_detection: float | None,
+    max_staged_delta_false_alarm: float | None,
+    min_staged_delta_detection: float | None,
 ) -> bool:
     return any(
         value is not None
@@ -753,6 +850,11 @@ def _thresholds_enabled(
             max_mean_attempted_route_count,
             max_retrieval_use_rate,
             min_cache_hit_rate,
+            min_staged_skip_rate,
+            max_staged_verified_false_alarm,
+            min_staged_verified_detection,
+            max_staged_delta_false_alarm,
+            min_staged_delta_detection,
         )
     )
 
@@ -842,6 +944,7 @@ def build_route_quality_gate(
     by_route: Mapping[str, Any],
     *,
     cache_summary: Mapping[str, Any] | None = None,
+    staged_summary: Mapping[str, Any] | None = None,
     routes: Sequence[str] = (),
     min_selected: int = 1,
     min_decision_accuracy: float | None = None,
@@ -856,6 +959,11 @@ def build_route_quality_gate(
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
     min_cache_hit_rate: float | None = None,
+    min_staged_skip_rate: float | None = None,
+    max_staged_verified_false_alarm: float | None = None,
+    min_staged_verified_detection: float | None = None,
+    max_staged_delta_false_alarm: float | None = None,
+    min_staged_delta_detection: float | None = None,
 ) -> dict[str, Any] | None:
     """Build a fail-closed route quality gate over aggregate route metrics."""
     if min_selected < 0:
@@ -875,6 +983,23 @@ def build_route_quality_gate(
     )
     max_retrieval_use_rate = _validated_limit("max_retrieval_use_rate", max_retrieval_use_rate)
     min_cache_hit_rate = _validated_limit("min_cache_hit_rate", min_cache_hit_rate)
+    min_staged_skip_rate = _validated_limit("min_staged_skip_rate", min_staged_skip_rate)
+    max_staged_verified_false_alarm = _validated_limit(
+        "max_staged_verified_false_alarm",
+        max_staged_verified_false_alarm,
+    )
+    min_staged_verified_detection = _validated_limit(
+        "min_staged_verified_detection",
+        min_staged_verified_detection,
+    )
+    max_staged_delta_false_alarm = _validated_limit(
+        "max_staged_delta_false_alarm",
+        max_staged_delta_false_alarm,
+    )
+    min_staged_delta_detection = _validated_limit(
+        "min_staged_delta_detection",
+        min_staged_delta_detection,
+    )
     enabled = bool(routes) or _thresholds_enabled(
         min_decision_accuracy=min_decision_accuracy,
         max_false_supported_rate=max_false_supported_rate,
@@ -888,6 +1013,11 @@ def build_route_quality_gate(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
         min_cache_hit_rate=min_cache_hit_rate,
+        min_staged_skip_rate=min_staged_skip_rate,
+        max_staged_verified_false_alarm=max_staged_verified_false_alarm,
+        min_staged_verified_detection=min_staged_verified_detection,
+        max_staged_delta_false_alarm=max_staged_delta_false_alarm,
+        min_staged_delta_detection=min_staged_delta_detection,
     )
     if not enabled:
         return None
@@ -971,6 +1101,44 @@ def build_route_quality_gate(
             failure["reason"] = "aggregate report cache hit rate is missing or below threshold"
             failures.append(failure)
 
+    staged_limits = (
+        ("staged_skip_rate", min_staged_skip_rate, _check_min_metric),
+        ("staged_verified_false_alarm", max_staged_verified_false_alarm, _check_max_metric),
+        ("staged_verified_detection", min_staged_verified_detection, _check_min_metric),
+        ("staged_delta_false_alarm", max_staged_delta_false_alarm, _check_max_metric),
+        ("staged_delta_detection", min_staged_delta_detection, _check_min_metric),
+    )
+    if any(limit is not None for _, limit, _ in staged_limits):
+        staged = staged_summary if isinstance(staged_summary, Mapping) else {}
+        if not staged.get("enabled"):
+            failures.append({
+                "route": None,
+                "metric": "staged_verification_enabled",
+                "limit_type": "present",
+                "limit": True,
+                "value": False,
+                "reason": "staged verification gate thresholds require staged-verification report metrics",
+            })
+        staged_metric_names = {
+            "staged_skip_rate": "skip_rate",
+            "staged_verified_false_alarm": "verified_false_alarm",
+            "staged_verified_detection": "verified_detection",
+            "staged_delta_false_alarm": "delta_false_alarm",
+            "staged_delta_detection": "delta_detection",
+        }
+        for metric, limit, checker in staged_limits:
+            if limit is None:
+                continue
+            failure = checker(
+                route=None,
+                metric=metric,
+                value=staged.get(staged_metric_names[metric]),
+                limit=float(limit),
+            )
+            if failure is not None:
+                failure["reason"] = "staged verification aggregate metric failed configured gate"
+                failures.append(failure)
+
     return {
         "enabled": True,
         "passed": not failures,
@@ -990,6 +1158,11 @@ def build_route_quality_gate(
             "max_mean_attempted_route_count": max_mean_attempted_route_count,
             "max_retrieval_use_rate": max_retrieval_use_rate,
             "min_cache_hit_rate": min_cache_hit_rate,
+            "min_staged_skip_rate": min_staged_skip_rate,
+            "max_staged_verified_false_alarm": max_staged_verified_false_alarm,
+            "min_staged_verified_detection": min_staged_verified_detection,
+            "max_staged_delta_false_alarm": max_staged_delta_false_alarm,
+            "min_staged_delta_detection": min_staged_delta_detection,
         },
         "failures": failures,
     }
@@ -1134,6 +1307,11 @@ def build_route_comparison_report(
     max_mean_attempted_route_count: float | None = None,
     max_retrieval_use_rate: float | None = None,
     min_cache_hit_rate: float | None = None,
+    min_staged_skip_rate: float | None = None,
+    max_staged_verified_false_alarm: float | None = None,
+    min_staged_verified_detection: float | None = None,
+    max_staged_delta_false_alarm: float | None = None,
+    min_staged_delta_detection: float | None = None,
 ) -> dict[str, Any]:
     """Build a route comparison report from verifier-ensemble JSON files."""
     if not reports:
@@ -1143,14 +1321,16 @@ def build_route_comparison_report(
     if min_selected < 0:
         raise ValueError("min_selected must be >= 0.")
 
-    rows, cache_records = _extract_route_rows_and_cache_records(reports, alpha=float(alpha))
+    rows, cache_records, staged_records = _extract_route_rows_and_cache_records(reports, alpha=float(alpha))
     leaderboard = _leaderboard_rows(rows, min_selected=min_selected)
     by_route = _aggregate_by_route(rows)
     cache_summary = _aggregate_cache_summary(cache_records)
+    staged_summary = _aggregate_staged_summary(staged_records)
     pareto_frontier = build_route_pareto_frontier(by_route, min_selected=min_selected)
     gate = build_route_quality_gate(
         by_route,
         cache_summary=cache_summary,
+        staged_summary=staged_summary,
         routes=gate_routes,
         min_selected=min_selected if gate_min_selected is None else gate_min_selected,
         min_decision_accuracy=min_decision_accuracy,
@@ -1165,6 +1345,11 @@ def build_route_comparison_report(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
         min_cache_hit_rate=min_cache_hit_rate,
+        min_staged_skip_rate=min_staged_skip_rate,
+        max_staged_verified_false_alarm=max_staged_verified_false_alarm,
+        min_staged_verified_detection=min_staged_verified_detection,
+        max_staged_delta_false_alarm=max_staged_delta_false_alarm,
+        min_staged_delta_detection=min_staged_delta_detection,
     )
     promotion_decision = build_adapter_promotion_decision(pareto_frontier, gate)
     payload = {
@@ -1177,6 +1362,7 @@ def build_route_comparison_report(
         "leaderboard": leaderboard,
         "by_route": by_route,
         "cache_summary": cache_summary,
+        "staged_verification": staged_summary,
         "pareto_frontier": pareto_frontier,
         "promotion_decision": promotion_decision,
         "rows": rows,
@@ -1208,6 +1394,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        min_staged_skip_rate=args.min_staged_skip_rate,
+        max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
+        min_staged_verified_detection=args.min_staged_verified_detection,
+        max_staged_delta_false_alarm=args.max_staged_delta_false_alarm,
+        min_staged_delta_detection=args.min_staged_delta_detection,
     )
     if args.json:
         output_path = Path(args.json)
@@ -1257,6 +1448,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="fail gate when retrieval_use_rate exceeds this value")
     parser.add_argument("--min-cache-hit-rate", type=float, default=None,
                         help="fail gate when aggregate report cache hit rate is below this value")
+    parser.add_argument("--min-staged-skip-rate", type=float, default=None,
+                        help="fail gate when staged verification aggregate skip_rate is below this value")
+    parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None,
+                        help="fail gate when staged aggregate verified false_alarm exceeds this value")
+    parser.add_argument("--min-staged-verified-detection", type=float, default=None,
+                        help="fail gate when staged aggregate verified detection is below this value")
+    parser.add_argument("--max-staged-delta-false-alarm", type=float, default=None,
+                        help="fail gate when staged verified false_alarm delta exceeds this value")
+    parser.add_argument("--min-staged-delta-detection", type=float, default=None,
+                        help="fail gate when staged verified detection delta is below this value")
     parser.add_argument("--fail-on-gate", action="store_true",
                         help="exit non-zero when the route quality gate fails")
     parser.add_argument("--fail-on-promotion", action="store_true",

@@ -1618,6 +1618,151 @@ def test_compare_verifier_routes_builds_cost_aware_quality_gate(tmp_path):
     assert cache_failing["promotion_decision"]["status"] == "blocked_by_gate"
 
 
+def test_compare_verifier_routes_builds_staged_verification_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "staged-route.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "staged",
+                    "n_true": 10,
+                    "n_false": 10,
+                    "staged_verification": {
+                        "enabled": True,
+                        "total_records": 20,
+                        "verified_records": 8,
+                        "skipped_records": 12,
+                        "skip_rate": 0.6,
+                        "threshold": 0.2,
+                    },
+                    "route_quality": {
+                        "structured_state": {
+                            "selected": 8,
+                            "n_true": 4,
+                            "n_false": 4,
+                            "label_status_matrix": {
+                                "true": {"supported": 4, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 4, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                            "duration_observations": 8,
+                            "total_duration_seconds": 0.08,
+                            "mean_duration_seconds": 0.01,
+                            "p95_duration_seconds": 0.015,
+                            "p99_duration_seconds": 0.018,
+                            "max_duration_seconds": 0.02,
+                            "attempted_route_count_observations": 8,
+                            "total_attempted_route_count": 8,
+                            "mean_attempted_route_count": 1.0,
+                            "used_retrieval_count": 0,
+                            "retrieval_use_rate": 0.0,
+                        },
+                    },
+                    "alphas": {
+                        "0.1": {
+                            "internal": {"false_alarm": 0.10, "detection": 0.70},
+                            "verified": {"false_alarm": 0.05, "detection": 0.90},
+                            "delta": {
+                                "false_alarm": -0.05,
+                                "detection": 0.20,
+                                "suppressed_false_alarm_rate": 0.05,
+                                "rescued_detection_rate": 0.20,
+                            },
+                            "route_control_impact": {
+                                "structured_state": {
+                                    "verified": {"false_alarm": 0.05, "detection": 0.90},
+                                    "delta": {
+                                        "false_alarm": -0.05,
+                                        "detection": 0.20,
+                                        "rescued_detection_rate": 0.20,
+                                    },
+                                }
+                            },
+                        }
+                    },
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    passing = module.build_route_comparison_report(
+        [("staged", report_path)],
+        gate_routes=("structured_state",),
+        min_decision_accuracy=0.99,
+        min_staged_skip_rate=0.5,
+        max_staged_verified_false_alarm=0.05,
+        min_staged_verified_detection=0.85,
+        max_staged_delta_false_alarm=0.0,
+        min_staged_delta_detection=0.0,
+    )
+    failing = module.build_route_comparison_report(
+        [("staged", report_path)],
+        gate_routes=("structured_state",),
+        min_decision_accuracy=0.99,
+        min_staged_skip_rate=0.75,
+    )
+
+    assert passing["staged_verification"]["enabled"] is True
+    assert passing["staged_verification"]["skip_rate"] == pytest.approx(0.6)
+    assert passing["staged_verification"]["verified_false_alarm"] == pytest.approx(0.05)
+    assert passing["staged_verification"]["verified_detection"] == pytest.approx(0.90)
+    assert passing["quality_gate"]["passed"] is True
+    assert passing["promotion_decision"]["status"] == "promote"
+    assert failing["quality_gate"]["passed"] is False
+    assert failing["promotion_decision"]["status"] == "blocked_by_gate"
+    assert failing["quality_gate"]["failures"][0]["route"] is None
+    assert failing["quality_gate"]["failures"][0]["metric"] == "staged_skip_rate"
+
+
+def test_compare_verifier_routes_staged_gate_fails_closed_without_staged_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_verifier_routes")
+    report_path = tmp_path / "unstaged-route.json"
+    report_path.write_text(
+        json.dumps({
+            "runs": [
+                {
+                    "name": "unstaged",
+                    "route_quality": {
+                        "groundedness": {
+                            "selected": 4,
+                            "n_true": 2,
+                            "n_false": 2,
+                            "label_status_matrix": {
+                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                            },
+                            "false_refuted_rate": 1.0,
+                            "false_supported_rate": 0.0,
+                            "decision_accuracy": 1.0,
+                        },
+                    },
+                    "alphas": {"0.1": {"route_control_impact": {}}},
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_route_comparison_report(
+        [("unstaged", report_path)],
+        gate_routes=("groundedness",),
+        min_decision_accuracy=0.99,
+        min_staged_skip_rate=0.1,
+    )
+
+    assert payload["staged_verification"]["enabled"] is False
+    assert payload["quality_gate"]["passed"] is False
+    assert {failure["metric"] for failure in payload["quality_gate"]["failures"]} >= {
+        "staged_verification_enabled",
+        "staged_skip_rate",
+    }
+    assert payload["promotion_decision"]["status"] == "blocked_by_gate"
+
+
 def test_compare_verifier_routes_gate_fails_on_partially_invalid_aggregate_cost_metrics(tmp_path):
     module = importlib.import_module("benchmarks.compare_verifier_routes")
     valid_report = tmp_path / "valid-cost.json"
