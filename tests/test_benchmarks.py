@@ -8947,6 +8947,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["summary"]["routes"]["by_route"]["retrieval_structured_qa"]["retrieval_use_rate"] == pytest.approx(
         1.0
     )
+    assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
     assert manifest["metadata"]["budget_passed"] is True
@@ -9379,6 +9380,7 @@ def test_run_runtime_profile_selector_tuning_recommends_passing_policy(tmp_path)
     }
     assert Path(payload["paths"]["artifact_manifest"]).exists()
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert "default_selector_policy" in manifest["artifacts"]
     assert "latency-biased_sweep_manifest" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(
@@ -9468,6 +9470,8 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert saved_trace["verification_results"][0]["metadata"]["key"].startswith("[redacted:sha256=")
     assert saved_trace["metadata"]["runtime_replay_key"] == "low-supported"
     assert saved_trace["metadata"]["trace_corpus"]["redacted_text"] is True
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"]
     ).passed is True
@@ -9631,6 +9635,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"],
         recursive=True,

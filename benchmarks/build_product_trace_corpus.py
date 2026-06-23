@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import strict_bool  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -306,17 +306,16 @@ def _write_report_and_manifest(
     config: ProductTraceCorpusConfig,
     report: dict[str, Any],
 ) -> dict[str, Any]:
+    artifacts = _artifact_paths(config)
+    report["artifact_manifest_summary"] = planned_artifact_manifest_summary(
+        artifacts,
+        assume_file_paths=(config.resolved_report_path,),
+    )
     _write_json(config.resolved_report_path, report, compact=config.compact_json)
-    manifest = _write_artifact_manifest(config, report)
-    report["artifact_manifest_summary"] = manifest["summary"]
-    _write_json(config.resolved_report_path, report, compact=config.compact_json)
-    return _write_artifact_manifest(config, report)
+    return _write_artifact_manifest(config, report, artifacts=artifacts)
 
 
-def _write_artifact_manifest(
-    config: ProductTraceCorpusConfig,
-    report: Mapping[str, Any],
-) -> dict[str, Any]:
+def _artifact_paths(config: ProductTraceCorpusConfig) -> dict[str, str | Path | None]:
     artifacts: dict[str, str | Path | None] = {
         "product_trace_corpus_report": config.resolved_report_path,
         "product_trace_corpus_traces": config.resolved_traces_dir,
@@ -325,8 +324,17 @@ def _write_artifact_manifest(
         artifacts[f"input_trace_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
     for index, path in enumerate(config.jsonl_paths):
         artifacts[f"input_jsonl_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
+    return artifacts
+
+
+def _write_artifact_manifest(
+    config: ProductTraceCorpusConfig,
+    report: Mapping[str, Any],
+    *,
+    artifacts: Mapping[str, str | Path | None] | None = None,
+) -> dict[str, Any]:
     manifest = build_artifact_manifest(
-        artifacts,
+        _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
         metadata={
             "runner": "build_product_trace_corpus",

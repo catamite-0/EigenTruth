@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import strict_bool  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
 from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
@@ -123,11 +123,13 @@ def _write_report_and_manifest(
     config: ProductRuntimeBaselineConfig,
     report: dict[str, Any],
 ) -> dict[str, Any]:
+    artifacts = _artifact_paths(config)
+    report["artifact_manifest_summary"] = planned_artifact_manifest_summary(
+        artifacts,
+        assume_file_paths=(config.report_path,),
+    )
     _write_report(config.report_path, report, compact=config.compact_json)
-    manifest = _write_artifact_manifest(config, report)
-    report["artifact_manifest_summary"] = manifest["summary"]
-    _write_report(config.report_path, report, compact=config.compact_json)
-    return _write_artifact_manifest(config, report)
+    return _write_artifact_manifest(config, report, artifacts=artifacts)
 
 
 def _trace_record(
@@ -434,16 +436,11 @@ def _load_policy(config: ProductRuntimeBaselineConfig) -> tuple[ProductRuntimeBu
 def _write_artifact_manifest(
     config: ProductRuntimeBaselineConfig,
     report: Mapping[str, Any],
+    *,
+    artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
-    artifacts: dict[str, str | Path | None] = {
-        "product_runtime_baseline_report": config.report_path,
-        "policy": config.policy_path,
-        "promotion_contract": config.promotion_contract_path,
-    }
-    for index, trace_path in enumerate(config.trace_paths):
-        artifacts[f"trace_{index:04d}_{_safe_artifact_name(trace_path.stem)}"] = trace_path
     manifest = build_artifact_manifest(
-        artifacts,
+        _artifact_paths(config) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
         metadata={
             "runner": "run_product_runtime_baseline",
@@ -457,6 +454,17 @@ def _write_artifact_manifest(
     )
     _write_report(config.resolved_artifact_manifest_path, manifest, compact=config.compact_json)
     return manifest
+
+
+def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Path | None]:
+    artifacts: dict[str, str | Path | None] = {
+        "product_runtime_baseline_report": config.report_path,
+        "policy": config.policy_path,
+        "promotion_contract": config.promotion_contract_path,
+    }
+    for index, trace_path in enumerate(config.trace_paths):
+        artifacts[f"trace_{index:04d}_{_safe_artifact_name(trace_path.stem)}"] = trace_path
+    return artifacts
 
 
 def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, Any]) -> None:

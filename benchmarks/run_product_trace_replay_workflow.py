@@ -24,7 +24,7 @@ from benchmarks.build_product_trace_corpus import (  # noqa: E402
     ProductTraceCorpusConfig,
     build_product_trace_corpus,
 )
-from benchmarks.config_utils import strict_bool  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
     build_product_runtime_baseline,
@@ -354,17 +354,19 @@ def _write_report_and_manifest(
     config: ProductTraceReplayWorkflowConfig,
     report: dict[str, Any],
 ) -> dict[str, Any]:
+    artifacts = _artifact_paths(config, report)
+    report["artifact_manifest_summary"] = planned_artifact_manifest_summary(
+        artifacts,
+        assume_file_paths=(config.resolved_report_path,),
+    )
     _write_json(config.resolved_report_path, report, compact=config.compact_json)
-    manifest = _write_artifact_manifest(config, report)
-    report["artifact_manifest_summary"] = manifest["summary"]
-    _write_json(config.resolved_report_path, report, compact=config.compact_json)
-    return _write_artifact_manifest(config, report)
+    return _write_artifact_manifest(config, report, artifacts=artifacts)
 
 
-def _write_artifact_manifest(
+def _artifact_paths(
     config: ProductTraceReplayWorkflowConfig,
     report: Mapping[str, Any],
-) -> dict[str, Any]:
+) -> dict[str, str | Path | None]:
     artifacts: dict[str, str | Path | None] = {
         "product_trace_replay_workflow_report": config.resolved_report_path,
         "corpus_report": _nested(report, "paths", "corpus_report"),
@@ -382,8 +384,17 @@ def _write_artifact_manifest(
         artifacts[f"input_trace_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
     for index, path in enumerate(config.jsonl_paths):
         artifacts[f"input_jsonl_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
+    return artifacts
+
+
+def _write_artifact_manifest(
+    config: ProductTraceReplayWorkflowConfig,
+    report: Mapping[str, Any],
+    *,
+    artifacts: Mapping[str, str | Path | None] | None = None,
+) -> dict[str, Any]:
     manifest = build_artifact_manifest(
-        artifacts,
+        _artifact_paths(config, report) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
         metadata={
             "runner": "run_product_trace_replay_workflow",
