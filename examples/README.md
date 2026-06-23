@@ -95,6 +95,11 @@ The balanced profile enables staged verification but still verifies diagnostic
 risk or sensitive claims; the audit profile disables staging and verifies all
 initial claims:
 
+By default, `ProductTrace.runtime_trace` also records request phase timings for
+diagnostics, verification, action planning/execution, retrieval evidence
+collection, and re-verification. Pass `--no-runtime-trace` when comparing JSON
+payloads that should omit timing noise.
+
 ```bash
 python examples/calibrated_control_demo.py --runtime-profile balanced
 python examples/calibrated_control_demo.py --runtime-profile audit

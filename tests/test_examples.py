@@ -49,6 +49,7 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["runtime_trace"]["summary"]["phase_counts"]["action_execution"] == 1
 
 
 def test_calibrated_control_demo_can_route_calculator_refutations():
@@ -111,6 +112,9 @@ def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_ve
     assert payload["metadata"]["runtime_profile"] == "latency"
     assert payload["metadata"]["staged_verification_enabled"] is True
     assert payload["verification_results"] == []
+    assert "initial_verification" not in {
+        phase["name"] for phase in payload["runtime_trace"]["phases"]
+    }
     assert stage_event["payload"]["run_verifier"] is False
     assert stage_event["payload"]["reason"] == "diagnostics and claim metadata did not require verification"
     assert payload["risk_decision"]["action"] == "accept"

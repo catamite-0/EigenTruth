@@ -62,6 +62,14 @@ def test_verification_loop_uses_retrieval_hits_for_final_accept():
     assert trace["risk_decision"]["action"] == "accept"
     assert trace["verification_results"][0]["status"] == "supported"
     assert trace["events"][-1]["event_type"] == "final_risk_decision"
+    runtime_trace = trace["runtime_trace"]
+    assert runtime_trace is not None
+    phase_names = {phase["name"] for phase in runtime_trace["phases"]}
+    assert "initial_verification" in phase_names
+    assert "action_execution" in phase_names
+    assert "final_verification" in phase_names
+    assert runtime_trace["summary"]["phase_counts"]["action_execution"] == 1
+    assert runtime_trace["summary"]["total_seconds"] >= runtime_trace["summary"]["accounted_seconds"]
     json.dumps(result.to_dict())
 
 
@@ -104,6 +112,23 @@ def test_verification_loop_keeps_retrieve_decision_when_no_hits_are_found():
     assert result.final_decision.action is ControlAction.RETRIEVE
     assert result.final_decision.risk_level is RiskLevel.MEDIUM
     assert result.trace.to_dict()["risk_decision"]["action"] == "retrieve"
+
+
+def test_verification_loop_can_disable_runtime_trace():
+    claims = extract_claims("Paris is the capital of France.")
+    verifier = GroundednessVerifier(evidence=("Paris is the capital of France.",), min_overlap=0.7)
+
+    result = run_verification_loop(
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        profile_runtime=False,
+    )
+
+    assert result.trace.runtime_trace is None
+    assert result.trace.runtime_summary()["measured_phases"] == 0
+    assert result.trace.to_dict()["runtime_trace"] is None
 
 
 def test_verification_loop_preserves_base_context_evidence_when_retrieval_is_claim_scoped():
@@ -189,6 +214,11 @@ def test_staged_verification_loop_skips_expensive_verifier_for_low_risk_claim():
     assert trace["events"][1]["payload"]["run_verifier"] is False
     assert trace["events"][2]["event_type"] == "initial_verification_skipped"
     assert trace["events"][3]["payload"]["skipped"] is True
+    runtime_trace = trace["runtime_trace"]
+    assert runtime_trace is not None
+    phase_names = {phase["name"] for phase in runtime_trace["phases"]}
+    assert "verification_stage_decision" in phase_names
+    assert "initial_verification" not in phase_names
     json.dumps(result.to_dict())
 
 

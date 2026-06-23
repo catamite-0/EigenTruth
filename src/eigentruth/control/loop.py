@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
 from typing import Any, Mapping, Sequence
@@ -17,7 +18,7 @@ from eigentruth.control.actions import (
 from eigentruth.control.controller import RiskController
 from eigentruth.control.policy import RiskDecision
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
-from eigentruth.control.trace import ProductTrace, TraceEvent
+from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
 from eigentruth.verify.protocols import Claim, VerificationResult, Verifier
 
 
@@ -163,28 +164,74 @@ def run_verification_loop(
     context: Mapping[str, Any] | None = None,
     metadata: Mapping[str, Any] | None = None,
     stage_policy: StagedVerificationPolicy | None = None,
+    profile_runtime: bool = True,
 ) -> VerificationLoopResult:
     """Run a dependency-free verification/action/reverification loop."""
     base_context = dict(context or {})
+    runtime_phases: list[RuntimePhaseTiming] = []
+    loop_started_at = _start_runtime_phase(profile_runtime)
     diagnostic_decision: RiskDecision | None = None
     stage_decision: VerificationStageDecision | None = None
     if stage_policy is None:
+        phase_started_at = _start_runtime_phase(profile_runtime)
         initial_results = tuple(verifier.verify_many(claims, context=base_context))
+        _record_runtime_phase(
+            runtime_phases,
+            "initial_verification",
+            phase_started_at,
+            metadata={"n_claims": len(claims), "skipped": False},
+        )
+        phase_started_at = _start_runtime_phase(profile_runtime)
         initial_decision = controller.decide(diagnostics, verification_results=initial_results)
+        _record_runtime_phase(
+            runtime_phases,
+            "initial_risk_decision",
+            phase_started_at,
+            metadata={"verification_results": len(initial_results)},
+        )
     else:
+        phase_started_at = _start_runtime_phase(profile_runtime)
         diagnostic_decision = controller.decide(diagnostics)
+        _record_runtime_phase(
+            runtime_phases,
+            "diagnostic_risk_decision",
+            phase_started_at,
+            metadata={"verification_results": 0},
+        )
+        phase_started_at = _start_runtime_phase(profile_runtime)
         stage_decision = stage_policy.decide(
             diagnostic_decision,
             claims=claims,
             context=base_context,
         )
+        _record_runtime_phase(
+            runtime_phases,
+            "verification_stage_decision",
+            phase_started_at,
+            metadata={"run_verifier": stage_decision.run_verifier},
+        )
         if stage_decision.run_verifier:
+            phase_started_at = _start_runtime_phase(profile_runtime)
             initial_results = tuple(verifier.verify_many(claims, context=base_context))
+            _record_runtime_phase(
+                runtime_phases,
+                "initial_verification",
+                phase_started_at,
+                metadata={"n_claims": len(claims), "skipped": False},
+            )
+            phase_started_at = _start_runtime_phase(profile_runtime)
             initial_decision = controller.decide(diagnostics, verification_results=initial_results)
+            _record_runtime_phase(
+                runtime_phases,
+                "initial_risk_decision",
+                phase_started_at,
+                metadata={"verification_results": len(initial_results)},
+            )
         else:
             initial_results = ()
             initial_decision = diagnostic_decision
 
+    phase_started_at = _start_runtime_phase(profile_runtime)
     policy = correction_policy or DefaultCorrectionPolicy()
     action_requests = policy.plan(
         initial_decision,
@@ -192,23 +239,58 @@ def run_verification_loop(
         verification_results=initial_results,
         context=base_context,
     )
+    _record_runtime_phase(
+        runtime_phases,
+        "action_planning",
+        phase_started_at,
+        metadata={"n_actions": len(action_requests)},
+    )
     registry = executor_registry or ActionExecutorRegistry()
     execution_context = {**base_context, "request_id": request_id}
+    phase_started_at = _start_runtime_phase(profile_runtime)
     action_results = registry.execute_many(action_requests, context=execution_context)
+    _record_runtime_phase(
+        runtime_phases,
+        "action_execution",
+        phase_started_at,
+        metadata={"n_actions": len(action_requests), "n_results": len(action_results)},
+    )
+    phase_started_at = _start_runtime_phase(profile_runtime)
     retrieval_evidence = evidence_bundle_from_action_results(action_results)
+    _record_runtime_phase(
+        runtime_phases,
+        "retrieval_evidence_collection",
+        phase_started_at,
+        metadata={"n_results": len(action_results), "has_evidence": retrieval_evidence.has_evidence()},
+    )
 
     if retrieval_evidence.has_evidence():
+        phase_started_at = _start_runtime_phase(profile_runtime)
         final_results = _verify_with_retrieved_evidence(
             verifier,
             claims,
             base_context=base_context,
             evidence_bundle=retrieval_evidence,
         )
+        _record_runtime_phase(
+            runtime_phases,
+            "final_verification",
+            phase_started_at,
+            metadata={"n_claims": len(claims), "used_retrieval_evidence": True},
+        )
+        phase_started_at = _start_runtime_phase(profile_runtime)
         final_decision = controller.decide(diagnostics, verification_results=final_results)
+        _record_runtime_phase(
+            runtime_phases,
+            "final_risk_decision",
+            phase_started_at,
+            metadata={"verification_results": len(final_results)},
+        )
     else:
         final_results = initial_results
         final_decision = initial_decision
 
+    runtime_trace = _build_runtime_trace(runtime_phases, loop_started_at)
     trace = ProductTrace(
         request_id=request_id,
         diagnostics=diagnostics,
@@ -266,6 +348,7 @@ def run_verification_loop(
             "staged_verification": None if stage_policy is None else stage_policy.to_dict(),
             **dict(metadata or {}),
         },
+        runtime_trace=runtime_trace,
     )
     return VerificationLoopResult(
         initial_verification_results=initial_results,
@@ -277,6 +360,40 @@ def run_verification_loop(
         final_decision=final_decision,
         trace=trace,
         verification_stage_decision=stage_decision,
+    )
+
+
+def _start_runtime_phase(enabled: bool) -> float | None:
+    return time.perf_counter() if enabled else None
+
+
+def _record_runtime_phase(
+    phases: list[RuntimePhaseTiming],
+    name: str,
+    started_at: float | None,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+) -> None:
+    if started_at is None:
+        return
+    phases.append(
+        RuntimePhaseTiming(
+            name=name,
+            seconds=time.perf_counter() - started_at,
+            metadata={} if metadata is None else metadata,
+        )
+    )
+
+
+def _build_runtime_trace(
+    phases: Sequence[RuntimePhaseTiming],
+    started_at: float | None,
+) -> RuntimeTrace | None:
+    if started_at is None:
+        return None
+    return RuntimeTrace(
+        phases=tuple(phases),
+        total_seconds=time.perf_counter() - started_at,
     )
 
 

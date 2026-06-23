@@ -11,6 +11,8 @@ from eigentruth.control import (
     ProductTrace,
     RiskController,
     RiskLevel,
+    RuntimePhaseTiming,
+    RuntimeTrace,
     TraceEvent,
 )
 from eigentruth.registry import (
@@ -202,6 +204,32 @@ def test_product_trace_action_execution_summary_counts_results():
     assert summary["counts_by_status"] == {"succeeded": 2, "dry_run": 1}
     assert summary["counts_by_action"] == {"retrieve": 2, "abstain": 1}
     assert summary["side_effects"] is False
+
+
+def test_product_trace_runtime_summary_counts_phase_timings():
+    trace = ProductTrace(
+        runtime_trace=RuntimeTrace(
+            total_seconds=0.40,
+            phases=(
+                RuntimePhaseTiming("diagnostic_risk_decision", 0.05),
+                RuntimePhaseTiming("initial_verification", 0.20, metadata={"n_claims": 2}),
+                RuntimePhaseTiming("initial_verification", 0.10, metadata={"n_claims": 1}),
+            ),
+        )
+    )
+
+    payload = trace.to_dict()
+    summary = trace.runtime_summary()
+
+    assert payload["runtime_trace"]["summary"]["measured_phases"] == 3
+    assert summary["total_seconds"] == 0.40
+    assert summary["phase_counts"] == {
+        "diagnostic_risk_decision": 1,
+        "initial_verification": 2,
+    }
+    assert round(summary["phase_seconds"]["initial_verification"], 6) == 0.30
+    assert summary["slowest_phase"] == {"name": "initial_verification", "seconds": 0.20}
+    json.dumps(payload)
 
 
 def test_product_trace_verification_route_summary_counts_runtime_routes():

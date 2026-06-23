@@ -34,7 +34,7 @@ from eigentruth.control.runtime_profiles import (
     get_runtime_profile,
 )
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
-from eigentruth.control.trace import ProductTrace, TraceEvent
+from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
 
 __all__ = [
     "ActionExecutionStatus",
@@ -59,7 +59,9 @@ __all__ = [
     "StagedVerificationPolicy",
     "TimeoutActionExecutor",
     "ProductTrace",
+    "RuntimePhaseTiming",
     "RuntimeProfile",
+    "RuntimeTrace",
     "RiskController",
     "RiskDecision",
     "RiskLevel",

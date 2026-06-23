@@ -274,6 +274,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         executor_registry=executor_registry,
         context=calculator_context,
         stage_policy=stage_policy,
+        profile_runtime=getattr(args, "runtime_trace", True),
         metadata={
             "artifact_model_id": artifact.model_id,
             "artifact_source": artifact_source(args.artifact),
@@ -306,6 +307,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 **runtime_profile_metadata(runtime_profile),
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
+                "runtime_summary": trace.runtime_summary(),
                 "verifier_type": type(verifier).__name__,
             },
         ).save_json()
@@ -333,6 +335,9 @@ def main() -> None:
                         help="force staged verification even without a runtime profile")
     parser.add_argument("--no-staged-verification", dest="staged_verification", action="store_false",
                         help="force full initial verification even when a runtime profile enables staging")
+    parser.add_argument("--no-runtime-trace", dest="runtime_trace", action="store_false",
+                        default=True,
+                        help="omit runtime phase timings from ProductTrace output")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

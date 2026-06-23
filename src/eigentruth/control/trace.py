@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field, is_dataclass
 from enum import Enum
 from typing import Any, Mapping, Optional, Sequence
@@ -38,6 +39,100 @@ class TraceEvent:
 
 
 @dataclass(frozen=True)
+class RuntimePhaseTiming:
+    """Wall-clock timing for one phase in a product control trace."""
+
+    name: str
+    seconds: float
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        name = self.name.strip()
+        if not name:
+            raise ValueError("runtime phase name must be non-empty")
+        seconds = float(self.seconds)
+        if not math.isfinite(seconds) or seconds < 0.0:
+            raise ValueError("runtime phase seconds must be finite and non-negative")
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "seconds", seconds)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "name": self.name,
+            "seconds": self.seconds,
+            "metadata": _to_jsonable(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RuntimePhaseTiming":
+        """Build a phase timing from JSON-like data."""
+        return cls(
+            name=str(data["name"]),
+            seconds=float(data["seconds"]),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class RuntimeTrace:
+    """Runtime profiling payload for one product factuality request."""
+
+    phases: Sequence[RuntimePhaseTiming | Mapping[str, Any]] = ()
+    total_seconds: float | None = None
+
+    def __post_init__(self) -> None:
+        phases = tuple(_runtime_phase_to_obj(phase) for phase in self.phases)
+        total_seconds = (
+            sum(phase.seconds for phase in phases)
+            if self.total_seconds is None
+            else float(self.total_seconds)
+        )
+        if not math.isfinite(total_seconds) or total_seconds < 0.0:
+            raise ValueError("runtime trace total_seconds must be finite and non-negative")
+        object.__setattr__(self, "phases", phases)
+        object.__setattr__(self, "total_seconds", total_seconds)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "total_seconds": self.total_seconds,
+            "phases": tuple(phase.to_dict() for phase in self.phases),
+            "summary": self.summary(),
+        }
+
+    def summary(self) -> dict[str, Any]:
+        """Summarize phase timing counts and totals."""
+        phase_seconds: dict[str, float] = {}
+        phase_counts: dict[str, int] = {}
+        slowest_phase: dict[str, Any] | None = None
+        for phase in self.phases:
+            phase_seconds[phase.name] = phase_seconds.get(phase.name, 0.0) + phase.seconds
+            phase_counts[phase.name] = phase_counts.get(phase.name, 0) + 1
+            if slowest_phase is None or phase.seconds > float(slowest_phase["seconds"]):
+                slowest_phase = {"name": phase.name, "seconds": phase.seconds}
+        accounted_seconds = sum(phase.seconds for phase in self.phases)
+        return {
+            "total_seconds": self.total_seconds,
+            "accounted_seconds": accounted_seconds,
+            "unaccounted_seconds": max(float(self.total_seconds) - accounted_seconds, 0.0),
+            "measured_phases": len(self.phases),
+            "phase_seconds": phase_seconds,
+            "phase_counts": phase_counts,
+            "slowest_phase": slowest_phase,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RuntimeTrace":
+        """Build a runtime trace from JSON-like data."""
+        return cls(
+            phases=tuple(data.get("phases", ())),
+            total_seconds=None if data.get("total_seconds") is None else float(data["total_seconds"]),
+        )
+
+
+@dataclass(frozen=True)
 class ProductTrace:
     """Minimal JSON-ready trace for observe/calibrate/control/verify workflows."""
 
@@ -50,6 +145,7 @@ class ProductTrace:
     action_results: Sequence[ActionResult | Mapping[str, Any]] = ()
     events: Sequence[TraceEvent | Mapping[str, Any]] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    runtime_trace: RuntimeTrace | Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -65,6 +161,7 @@ class ProductTrace:
             "action_results": [_action_result_to_dict(result) for result in self.action_results],
             "events": [_event_to_dict(event) for event in self.events],
             "metadata": _to_jsonable(self.metadata),
+            "runtime_trace": _runtime_trace_to_dict(self.runtime_trace),
         }
 
     def action_execution_summary(self) -> dict[str, Any]:
@@ -134,6 +231,22 @@ class ProductTrace:
             "skipped_routes": skipped_routes,
         }
 
+    def runtime_summary(self) -> dict[str, Any]:
+        """Return a compact runtime profile summary for trace/registry metadata."""
+        payload = _runtime_trace_to_dict(self.runtime_trace)
+        if payload is None:
+            return {
+                "total_seconds": 0.0,
+                "accounted_seconds": 0.0,
+                "unaccounted_seconds": 0.0,
+                "measured_phases": 0,
+                "phase_seconds": {},
+                "phase_counts": {},
+                "slowest_phase": None,
+            }
+        summary = payload.get("summary", {})
+        return dict(summary) if isinstance(summary, Mapping) else RuntimeTrace.from_dict(payload).summary()
+
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
@@ -184,6 +297,20 @@ def _event_to_dict(event: TraceEvent | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(event, TraceEvent):
         return event.to_dict()
     return dict(_to_jsonable(event))
+
+
+def _runtime_phase_to_obj(phase: RuntimePhaseTiming | Mapping[str, Any]) -> RuntimePhaseTiming:
+    if isinstance(phase, RuntimePhaseTiming):
+        return phase
+    return RuntimePhaseTiming.from_dict(phase)
+
+
+def _runtime_trace_to_dict(trace: RuntimeTrace | Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if trace is None:
+        return None
+    if isinstance(trace, RuntimeTrace):
+        return trace.to_dict()
+    return RuntimeTrace.from_dict(trace).to_dict()
 
 
 def _to_jsonable(value: Any) -> Any:
