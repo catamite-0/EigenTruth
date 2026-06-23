@@ -27,6 +27,8 @@ def compare_readiness_baselines(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_inside_sample_count_ratio: float | None = None,
+    max_inside_generation_seconds_ratio: float | None = None,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered readiness baselines."""
@@ -40,6 +42,8 @@ def compare_readiness_baselines(
             min_best_quality_auroc=min_best_quality_auroc,
             max_uncached_forward_seconds=max_uncached_forward_seconds,
             max_cache_only_seconds=max_cache_only_seconds,
+            max_inside_sample_count_ratio=max_inside_sample_count_ratio,
+            max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
         )
         for record in records
     ]
@@ -57,6 +61,8 @@ def compare_readiness_baselines(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
+            "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
         },
         "summary": {
             "record_count": len(rows),
@@ -106,6 +112,8 @@ def _readiness_row(
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
+    max_inside_sample_count_ratio: float | None,
+    max_inside_generation_seconds_ratio: float | None,
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
     manifest, manifest_error = _load_optional_json(manifest_path)
@@ -121,6 +129,7 @@ def _readiness_row(
     quality_signals = _quality_signals(recommendation, manifest_metadata)
     uncached_cost = _uncached_forward_cost(recommendation)
     cache_only_seconds = _float_or_none(recommendation.get("cache_only_total_seconds"))
+    inside_sampling = _inside_sampling_summary(recommendation, manifest_metadata)
     gate = _gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -130,9 +139,13 @@ def _readiness_row(
         best_quality=best_quality,
         uncached_forward_seconds=uncached_cost["seconds"],
         cache_only_seconds=cache_only_seconds,
+        inside_sample_count_ratio=inside_sampling["sample_count_ratio_to_baseline"],
+        inside_generation_seconds_ratio=inside_sampling["inside_generation_seconds_ratio_to_baseline"],
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_inside_sample_count_ratio=max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
     )
     return {
         "record_key": record.key(),
@@ -175,6 +188,15 @@ def _readiness_row(
         "uncached_forward_cost_seconds": uncached_cost["seconds"],
         "uncached_forward_cost_source": uncached_cost["source"],
         "cache_only_total_seconds": cache_only_seconds,
+        "inside_sampling": inside_sampling["payload"],
+        "inside_sampling_recommended_run": inside_sampling["recommended_run"],
+        "inside_sampling_total_generated_samples": inside_sampling["total_generated_samples"],
+        "inside_sampling_sample_count_ratio_to_baseline": inside_sampling["sample_count_ratio_to_baseline"],
+        "inside_generation_seconds": inside_sampling["inside_generation_seconds"],
+        "inside_generation_seconds_ratio_to_baseline": inside_sampling[
+            "inside_generation_seconds_ratio_to_baseline"
+        ],
+        "inside_sampling_stop_reason_counts": inside_sampling["stop_reason_counts"],
         "performance_wall_clock_seconds": _float_or_none(
             manifest_metadata.get("performance_wall_clock_seconds")
         ),
@@ -196,10 +218,22 @@ def _runtime_recommendation_from_manifest(
     if performance_matrix_path is not None:
         matrix_report, _ = _load_optional_json(performance_matrix_path)
         if matrix_report:
+            inside_sampling_path = _resolve_artifact_path(
+                manifest_path,
+                manifest,
+                artifact_name="inside_sampling_profile_report",
+            )
+            inside_sampling_report, _ = (
+                ({}, None)
+                if inside_sampling_path is None
+                else _load_optional_json(inside_sampling_path)
+            )
             return (
                 build_runtime_recommendation(
                     matrix_report,
+                    inside_sampling_report=inside_sampling_report or None,
                     matrix_report_path=performance_matrix_path,
+                    inside_sampling_report_path=inside_sampling_path,
                 ),
                 str(performance_matrix_path),
             )
@@ -234,6 +268,7 @@ def _runtime_recommendation_from_manifest(
                 "max_workers": manifest_metadata.get("recommended_max_workers"),
                 "quality_signals": quality_signals,
                 "best_quality_signal": best_quality,
+                "inside_sampling": _mapping(manifest_metadata.get("recommended_inside_sampling")),
             },
         },
         "registry_metadata",
@@ -283,9 +318,13 @@ def _gate(
     best_quality: Mapping[str, Any] | None,
     uncached_forward_seconds: float | None,
     cache_only_seconds: float | None,
+    inside_sample_count_ratio: float | None,
+    inside_generation_seconds_ratio: float | None,
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
+    max_inside_sample_count_ratio: float | None,
+    max_inside_generation_seconds_ratio: float | None,
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -312,6 +351,17 @@ def _gate(
         cache_only_seconds is None or cache_only_seconds > max_cache_only_seconds
     ):
         failures.append(f"cache-only total seconds above {max_cache_only_seconds}")
+    if max_inside_sample_count_ratio is not None and (
+        inside_sample_count_ratio is None or inside_sample_count_ratio > max_inside_sample_count_ratio
+    ):
+        failures.append(f"INSIDE sampling sample-count ratio above {max_inside_sample_count_ratio}")
+    if max_inside_generation_seconds_ratio is not None and (
+        inside_generation_seconds_ratio is None
+        or inside_generation_seconds_ratio > max_inside_generation_seconds_ratio
+    ):
+        failures.append(
+            f"INSIDE sampling generation-seconds ratio above {max_inside_generation_seconds_ratio}"
+        )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
@@ -352,11 +402,15 @@ def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     best_auroc = _float_or_none(best_quality.get("auroc"))
     forward = _float_or_none(row.get("uncached_forward_cost_seconds"))
     cache_only = _float_or_none(row.get("cache_only_total_seconds"))
+    inside_sample_ratio = _float_or_none(row.get("inside_sampling_sample_count_ratio_to_baseline"))
+    inside_seconds_ratio = _float_or_none(row.get("inside_generation_seconds_ratio_to_baseline"))
     return (
         not _mapping(row.get("gate")).get("passed", False),
         -(best_auroc if best_auroc is not None else -math.inf),
         forward if forward is not None else math.inf,
         cache_only if cache_only is not None else math.inf,
+        inside_sample_ratio if inside_sample_ratio is not None else math.inf,
+        inside_seconds_ratio if inside_seconds_ratio is not None else math.inf,
         str(row.get("record_key")),
     )
 
@@ -443,6 +497,29 @@ def _uncached_forward_cost(recommendation: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _inside_sampling_summary(
+    recommendation: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload = _mapping(recommendation.get("inside_sampling"))
+    if not payload:
+        payload = _mapping(manifest_metadata.get("recommended_inside_sampling"))
+    stop_reason_counts = payload.get("stop_reason_counts")
+    if not isinstance(stop_reason_counts, Mapping):
+        stop_reason_counts = {}
+    return {
+        "payload": payload or None,
+        "recommended_run": payload.get("recommended_run"),
+        "total_generated_samples": _int_or_none(payload.get("total_generated_samples")),
+        "sample_count_ratio_to_baseline": _float_or_none(payload.get("sample_count_ratio_to_baseline")),
+        "inside_generation_seconds": _float_or_none(payload.get("inside_generation_seconds")),
+        "inside_generation_seconds_ratio_to_baseline": _float_or_none(
+            payload.get("inside_generation_seconds_ratio_to_baseline")
+        ),
+        "stop_reason_counts": dict(stop_reason_counts),
+    }
+
+
 def _finite_float_mapping(values: Mapping[str, Any]) -> dict[str, float]:
     signals = {}
     for key, value in values.items():
@@ -465,6 +542,15 @@ def _float_or_none(value: Any) -> float | None:
     if not math.isfinite(numeric):
         return None
     return numeric
+
+
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -490,6 +576,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         notes=args.note,
     )
     if args.json:
@@ -533,6 +621,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-cache-only-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-cache-only-seconds",
+    ), default=None)
+    parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-sample-count-ratio",
+    ), default=None)
+    parser.add_argument("--max-inside-generation-seconds-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-generation-seconds-ratio",
     ), default=None)
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless a readiness baseline promotes")

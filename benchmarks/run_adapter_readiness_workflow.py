@@ -80,6 +80,7 @@ class AdapterReadinessWorkflowConfig:
     performance_clean: bool = False
     performance_dry_run: bool = False
     max_runtime_total_seconds: float | None = None
+    inside_sampling_report_path: Path | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -87,6 +88,8 @@ class AdapterReadinessWorkflowConfig:
             object.__setattr__(self, "readiness_report_path", Path(self.readiness_report_path))
         if self.shared_cache_dir is not None:
             object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
+        if self.inside_sampling_report_path is not None:
+            object.__setattr__(self, "inside_sampling_report_path", Path(self.inside_sampling_report_path))
         object.__setattr__(self, "layers", tuple(int(layer) for layer in self.layers))
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
         if int(self.max_batch_tokens) < 0:
@@ -183,7 +186,11 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
     )
     runtime_recommendation = build_runtime_recommendation(
         performance_report,
+        inside_sampling_report=(
+            None if config.inside_sampling_report_path is None else _load_json(config.inside_sampling_report_path)
+        ),
         matrix_report_path=performance_report_path,
+        inside_sampling_report_path=config.inside_sampling_report_path,
     )
     config.runtime_recommendation_path.write_text(
         _json_text(runtime_recommendation, compact=config.compact_json, sort_keys=True),
@@ -315,6 +322,7 @@ def _write_artifact_manifest(
             performance_report.get("artifact_manifest") if isinstance(performance_report, Mapping) else None
         ),
         "runtime_recommendation": report.get("runtime_recommendation_path"),
+        "inside_sampling_profile_report": config.inside_sampling_report_path,
     }
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
@@ -344,6 +352,9 @@ def _write_artifact_manifest(
             "performance_max_workers": config.performance_max_workers,
             "performance_dry_run": config.performance_dry_run,
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
+            "inside_sampling_report": None
+            if config.inside_sampling_report_path is None
+            else str(config.inside_sampling_report_path),
             "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
             "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
                 "performance_wall_clock_seconds"
@@ -367,6 +378,7 @@ def _write_artifact_manifest(
             "recommended_best_quality_signal": best_quality_signal.get("name"),
             "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
             "recommended_quality_signals": runtime_config.get("quality_signals"),
+            "recommended_inside_sampling": runtime_config.get("inside_sampling"),
         },
     )
     config.artifact_manifest_path.write_text(
@@ -380,6 +392,13 @@ def _json_text(payload: Mapping[str, Any], *, compact: bool, sort_keys: bool) ->
     if compact:
         return json.dumps(payload, sort_keys=sort_keys, separators=(",", ":")) + "\n"
     return json.dumps(payload, indent=2, sort_keys=sort_keys) + "\n"
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} did not contain a JSON object.")
+    return payload
 
 
 def _parse_int_list(value: str, *, flag: str) -> tuple[int, ...]:
@@ -444,6 +463,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         performance_clean=bool(args.performance_clean),
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
+        inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
     )
 
 
@@ -507,6 +527,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="maximum cache-profile matrix cells to execute concurrently")
     parser.add_argument("--performance-clean", action="store_true")
     parser.add_argument("--performance-dry-run", action="store_true")
+    parser.add_argument("--inside-sampling-report", default=None,
+                        help="optional inside-sampling-profile-comparison.json to fold into runtime recommendation")
     parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-runtime-total-seconds",

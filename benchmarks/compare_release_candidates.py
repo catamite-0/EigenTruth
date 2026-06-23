@@ -29,6 +29,8 @@ def compare_release_candidates(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_inside_sample_count_ratio: float | None = None,
+    max_inside_generation_seconds_ratio: float | None = None,
     min_selected: int | None = None,
     min_decision_accuracy: float | None = None,
     max_false_supported_rate: float | None = None,
@@ -56,6 +58,8 @@ def compare_release_candidates(
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_inside_sample_count_ratio=max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
         notes=("release candidate readiness comparison",),
     )
     route = compare_route_baselines(
@@ -95,6 +99,8 @@ def compare_release_candidates(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
+            "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
             "min_selected": min_selected,
             "min_decision_accuracy": min_decision_accuracy,
             "max_false_supported_rate": max_false_supported_rate,
@@ -142,6 +148,7 @@ def _release_candidate(
             "max_batch_tokens": readiness_row.get("max_batch_tokens"),
             "prefix_kv_cache": readiness_row.get("prefix_kv_cache"),
             "max_workers": readiness_row.get("max_workers"),
+            "inside_sampling": readiness_row.get("inside_sampling"),
             "performance_cell": readiness_row.get("recommended_performance_cell"),
             "benchmark_flags": readiness_row.get("benchmark_flags"),
         },
@@ -154,6 +161,18 @@ def _release_candidate(
             "uncached_forward_cost_seconds": readiness_row.get("uncached_forward_cost_seconds"),
             "uncached_forward_cost_source": readiness_row.get("uncached_forward_cost_source"),
             "cache_only_total_seconds": readiness_row.get("cache_only_total_seconds"),
+            "inside_sampling_recommended_run": readiness_row.get("inside_sampling_recommended_run"),
+            "inside_sampling_total_generated_samples": readiness_row.get(
+                "inside_sampling_total_generated_samples"
+            ),
+            "inside_sampling_sample_count_ratio_to_baseline": readiness_row.get(
+                "inside_sampling_sample_count_ratio_to_baseline"
+            ),
+            "inside_generation_seconds": readiness_row.get("inside_generation_seconds"),
+            "inside_generation_seconds_ratio_to_baseline": readiness_row.get(
+                "inside_generation_seconds_ratio_to_baseline"
+            ),
+            "inside_sampling_stop_reason_counts": readiness_row.get("inside_sampling_stop_reason_counts"),
         },
         "verifier_route": {
             "route": route_row.get("recommended_route"),
@@ -268,6 +287,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         min_selected=args.min_selected,
         min_decision_accuracy=args.min_decision_accuracy,
         max_false_supported_rate=args.max_false_supported_rate,
@@ -330,6 +351,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-cache-only-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-cache-only-seconds",
+    ), default=None)
+    parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-sample-count-ratio",
+    ), default=None)
+    parser.add_argument("--max-inside-generation-seconds-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-generation-seconds-ratio",
     ), default=None)
     parser.add_argument("--min-selected", type=lambda value: _parse_non_negative_int(
         value,

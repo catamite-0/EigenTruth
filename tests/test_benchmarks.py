@@ -2797,6 +2797,12 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
 
     monkeypatch.setattr(module, "run_matrix", fake_run_matrix)
 
+    inside_report_path = _write_inside_sampling_profile(
+        tmp_path,
+        sample_count_ratio=0.4,
+        generation_seconds_ratio=0.45,
+        total_generated_samples=8,
+    )
     payload = module.run_adapter_readiness_workflow(
         module.AdapterReadinessWorkflowConfig(
             output_dir=tmp_path,
@@ -2804,6 +2810,7 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
             alpha=0.2,
             batch_sizes=(2,),
             performance_dry_run=False,
+            inside_sampling_report_path=inside_report_path,
         )
     )
 
@@ -2820,6 +2827,12 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
         "name": "subspace_resid",
         "auroc": pytest.approx(0.91),
     }
+    assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"]["recommended_run"] == (
+        "adaptive_selfcheck"
+    )
+    assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"][
+        "sample_count_ratio_to_baseline"
+    ] == pytest.approx(0.4)
     assert payload["runtime_recommendation"]["benchmark_flags"]["run_adapter_readiness_workflow"] == [
         "--layers",
         "-1",
@@ -2832,12 +2845,18 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     ]
     runtime_recommendation = json.loads(Path(payload["runtime_recommendation_path"]).read_text(encoding="utf-8"))
     assert runtime_recommendation["status"] == "promote"
+    assert runtime_recommendation["benchmark_flags"]["run_inside_sampling_profile"][:2] == [
+        "--inside-samples",
+        "5",
+    ]
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
     assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
+    assert manifest["artifacts"]["inside_sampling_profile_report"]["exists"] is True
     assert manifest["metadata"]["runtime_recommendation_status"] == "promote"
     assert manifest["metadata"]["recommended_batch_size"] == 2
     assert manifest["metadata"]["recommended_best_quality_signal"] == "subspace_resid"
     assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.91)
+    assert manifest["metadata"]["recommended_inside_sampling"]["recommended_run"] == "adaptive_selfcheck"
 
 
 def test_adapter_readiness_decision_blocks_on_runtime_budget():
@@ -3093,6 +3112,60 @@ def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
     assert "uncached forward cost seconds above 20.0" in blocked["gate"]["blocking_reasons"]
 
 
+def test_compare_readiness_baselines_applies_inside_sampling_cost_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "expensive-sampling",
+        registry_path=registry_path,
+        name="expensive-sampling",
+        version="0.5",
+        model="expensive-model",
+        layer=-12,
+        quality_signals={"truth_proj": 0.79},
+        uncached_forward_seconds=14.0,
+        cache_only_seconds=0.15,
+        inside_sample_ratio=0.9,
+        inside_generation_ratio=0.95,
+    )
+    _write_readiness_baseline_manifest(
+        tmp_path / "efficient-sampling",
+        registry_path=registry_path,
+        name="efficient-sampling",
+        version="0.5",
+        model="efficient-model",
+        layer=-16,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=16.0,
+        cache_only_seconds=0.18,
+        inside_sample_ratio=0.4,
+        inside_generation_ratio=0.45,
+    )
+
+    payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_record"] == "benchmark_manifest:efficient-sampling:0.5"
+    recommended = payload["leaderboard"][0]
+    assert recommended["inside_sampling_recommended_run"] == "adaptive_selfcheck"
+    assert recommended["inside_sampling_total_generated_samples"] == 8
+    assert recommended["inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert recommended["inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert recommended["inside_sampling_stop_reason_counts"] == {
+        "selfcheck_refute_threshold_guaranteed": 4,
+    }
+    blocked = next(row for row in payload["leaderboard"] if row["record_key"].endswith("expensive-sampling:0.5"))
+    assert blocked["gate"]["passed"] is False
+    assert "INSIDE sampling sample-count ratio above 0.6" in blocked["gate"]["blocking_reasons"]
+    assert "INSIDE sampling generation-seconds ratio above 0.8" in blocked["gate"]["blocking_reasons"]
+
+
 def test_compare_readiness_baselines_uses_uncached_total_fallback_for_legacy_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_readiness_baselines")
 
@@ -3138,6 +3211,8 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         quality_signals={"truth_proj": 0.72, "subspace_resid": 0.68},
         uncached_forward_seconds=18.0,
         cache_only_seconds=0.20,
+        inside_sample_ratio=0.4,
+        inside_generation_ratio=0.45,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3167,6 +3242,8 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
         max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
         min_selected=4,
         min_decision_accuracy=0.99,
         max_false_supported_rate=0.0,
@@ -3182,6 +3259,8 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
         max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
         min_selected=4,
         min_decision_accuracy=0.99,
         max_false_supported_rate=0.0,
@@ -3195,6 +3274,12 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     assert payload["decision"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
     assert candidate["model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert candidate["runtime"]["layer"] == -12
+    assert candidate["runtime"]["inside_sampling"]["recommended_run"] == "adaptive_selfcheck"
+    assert candidate["runtime"]["inside_sampling"]["sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert candidate["runtime_cost"]["inside_sampling_recommended_run"] == "adaptive_selfcheck"
+    assert candidate["runtime_cost"]["inside_sampling_total_generated_samples"] == 8
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert candidate["runtime_cost"]["inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
     assert candidate["runtime"]["benchmark_flags"]["eval_truthfulqa"][:4] == ["--layer", "-12", "--batch-size", "1"]
     assert candidate["quality"]["best_quality_signal"] == {"name": "truth_proj", "auroc": pytest.approx(0.72)}
     assert candidate["verifier_route"]["route"] == "structured_state"
@@ -3330,6 +3415,61 @@ def test_compare_release_candidates_applies_retrieval_cost_gate(tmp_path):
     assert promoted["release_candidate"]["verifier_route"]["route"] == "retrieval_groundedness"
     assert promoted["release_candidate"]["verifier_route"]["mean_attempted_route_count"] == pytest.approx(2.0)
     assert promoted["release_candidate"]["verifier_route"]["retrieval_use_rate"] == pytest.approx(1.0)
+
+
+def test_compare_release_candidates_applies_inside_sampling_cost_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_sample_ratio=0.9,
+        inside_generation_ratio=0.95,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["release_candidate"] is None
+    assert payload["decision"]["blocking_reasons"][0]["gate"] == "readiness_baseline"
+    reasons = payload["decision"]["blocking_reasons"][0]["reasons"]
+    assert any("INSIDE sampling sample-count ratio above 0.6" in reason for reason in reasons)
+    assert any("INSIDE sampling generation-seconds ratio above 0.8" in reason for reason in reasons)
 
 
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
@@ -3479,6 +3619,79 @@ def test_run_release_candidate_registry_workflow_cli_blocks_without_registration
     assert ArtifactRegistry.load_json(release_registry_path).records == ()
 
 
+def _write_inside_sampling_profile(
+    output_dir,
+    *,
+    sample_count_ratio,
+    generation_seconds_ratio,
+    total_generated_samples=8,
+):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / "inside-result-adaptive_selfcheck.json"
+    report_path = output_dir / "inside-sampling-profile-comparison.json"
+    stop_reason_counts = {"selfcheck_refute_threshold_guaranteed": 4}
+    result_path.write_text(
+        json.dumps({
+            "config": {
+                "inside_samples": 5,
+                "inside_batch_size": 1,
+                "inside_max_new_tokens": 12,
+                "inside_temperature": 0.7,
+                "inside_top_p": 0.9,
+                "inside_pooling": "last",
+                "inside_embedding_threshold": 0.9,
+                "inside_adaptive_sampling": True,
+                "inside_min_samples": 2,
+                "inside_sample_step": 1,
+                "inside_stability_delta": 0.05,
+                "inside_selfcheck_early_stop": True,
+                "inside_selfcheck_min_overlap": 0.65,
+                "inside_selfcheck_support_threshold": 0.6,
+                "inside_selfcheck_refute_threshold": 0.5,
+                "inside_trigger_signal": None,
+                "inside_trigger_threshold": None,
+                "inside_trigger_top_fraction": None,
+            },
+            "inside_sampling": {
+                "mode": "all",
+                "adaptive": True,
+                "selfcheck_early_stop": True,
+                "max_samples": 5,
+                "min_samples": 2,
+                "sample_step": 1,
+                "stability_delta": 0.05,
+                "embedding_similarity_threshold": 0.9,
+                "selfcheck_min_overlap": 0.65,
+                "selfcheck_support_threshold": 0.6,
+                "selfcheck_refute_threshold": 0.5,
+                "total_generated_samples": total_generated_samples,
+                "stop_reason_counts": stop_reason_counts,
+            },
+        }),
+        encoding="utf-8",
+    )
+    report_path.write_text(
+        json.dumps({
+            "baseline": "fixed",
+            "runs": {
+                "adaptive_selfcheck": {
+                    "name": "adaptive_selfcheck",
+                    "result_path": str(result_path),
+                    "total_generated_samples": total_generated_samples,
+                    "sample_count_ratio_to_baseline": sample_count_ratio,
+                    "inside_generation_seconds": 4.5,
+                    "inside_generation_seconds_ratio_to_baseline": generation_seconds_ratio,
+                    "stop_reason_counts": stop_reason_counts,
+                }
+            },
+            "sample_efficiency_gate": {"passed": True, "failures": []},
+            "recommendation": {"recommended_run": "adaptive_selfcheck"},
+        }),
+        encoding="utf-8",
+    )
+    return report_path
+
+
 def _write_readiness_baseline_manifest(
     output_dir,
     *,
@@ -3491,6 +3704,9 @@ def _write_readiness_baseline_manifest(
     uncached_forward_seconds,
     cache_only_seconds,
     include_forced_forward=True,
+    inside_sample_ratio=None,
+    inside_generation_ratio=None,
+    inside_total_generated_samples=8,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -3498,6 +3714,16 @@ def _write_readiness_baseline_manifest(
     result_path = output_dir / "cache-only-result.json"
     matrix_path = output_dir / "performance-matrix.json"
     manifest_path = output_dir / "artifact-manifest.json"
+    inside_sampling_path = None
+    if inside_sample_ratio is not None:
+        inside_sampling_path = _write_inside_sampling_profile(
+            output_dir,
+            sample_count_ratio=inside_sample_ratio,
+            generation_seconds_ratio=(
+                inside_sample_ratio if inside_generation_ratio is None else inside_generation_ratio
+            ),
+            total_generated_samples=inside_total_generated_samples,
+        )
     cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
     result_path.write_text(
         json.dumps({"auroc": dict(quality_signals)}),
@@ -3561,11 +3787,15 @@ def _write_readiness_baseline_manifest(
         "runtime_recommendation_status": "promote",
         "recommended_route": "structured_qa",
         "recommended_performance_cell": cell_id,
+        "inside_sampling_report": None if inside_sampling_path is None else str(inside_sampling_path),
     }
     manifest_path.write_text(
         json.dumps(
             build_artifact_manifest(
-                {"performance_matrix_report": matrix_path},
+                {
+                    "performance_matrix_report": matrix_path,
+                    "inside_sampling_profile_report": inside_sampling_path,
+                },
                 root=output_dir,
                 metadata=metadata,
             ),

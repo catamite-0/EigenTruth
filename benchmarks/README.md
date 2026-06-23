@@ -920,16 +920,23 @@ python benchmarks/run_adapter_readiness_workflow.py \
 
 Remove `--performance-dry-run` only when the local profile matrix cost is
 acceptable. Add `--fail-on-blocked` on real runs to require
-`readiness_decision.status=promote`.
+`readiness_decision.status=promote`. Pass `--inside-sampling-report` when a
+promoted `run_inside_sampling_profile.py` comparison should be folded into the
+runtime recommendation and readiness manifest:
+
+```bash
+  --inside-sampling-report artifacts/inside_sampling/inside-sampling-profile-comparison.json
+```
 
 The workflow also writes a top-level `artifact-manifest.json` that fingerprints
 the readiness report, adapter-family matrix, route-comparison report,
 cache-profile matrix report, nested cache-profile matrix manifest, and
-`runtime-recommendation.json`. The runtime recommendation is generated from the
-saved performance matrix without rerunning model work; when the matrix promotes
-it includes deployable layer, batch-size, token-budget, prefix-KV, worker flags,
-all available AUROC quality signals, and the best quality signal for the next
-run. Use `verify_artifact_manifest.py --recursive` and
+`runtime-recommendation.json`, plus the optional INSIDE sampling profile report
+when provided. The runtime recommendation is generated from the saved
+performance matrix without rerunning model work; when the matrix promotes it
+includes deployable layer, batch-size, token-budget, prefix-KV, worker flags,
+all available AUROC quality signals, optional sampling settings, and the best
+quality signal for the next run. Use `verify_artifact_manifest.py --recursive` and
 `promote_artifact_manifest.py` on that manifest to register a readiness
 baseline.
 
@@ -960,17 +967,23 @@ python benchmarks/compare_readiness_baselines.py \
   --registry artifacts/registry.json \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
+  --max-inside-sample-count-ratio 0.60 \
+  --max-inside-generation-seconds-ratio 0.80 \
   --json artifacts/readiness-baseline-comparison.json \
   --fail-on-blocked
 ```
 
 The comparison verifies each registered readiness manifest recursively, reloads
 the saved performance matrix to recover all available AUROC quality signals for
-older records, applies optional quality/performance gates, and recommends the
+older records, reloads saved INSIDE sampling profile artifacts when present,
+applies optional quality/performance/sampling-cost gates, and recommends the
 passing baseline with the best quality signal, breaking ties by lower
-forced-answer forward cost and then lower cache-only time. For legacy matrix
-reports that predate forced-answer phase timing, the uncached total time is used
-as a conservative forward-cost fallback and reported as
+forced-answer forward cost, lower cache-only time, and lower sampling ratios.
+If `--max-inside-sample-count-ratio` or
+`--max-inside-generation-seconds-ratio` is set, candidates without readable
+sampling evidence fail closed. For legacy matrix reports that predate
+forced-answer phase timing, the uncached total time is used as a conservative
+forward-cost fallback and reported as
 `uncached_forward_cost_source=uncached_total_seconds_fallback`.
 Use `--max-runtime-total-seconds` on the readiness workflow or registry workflow
 when end-to-end readiness wall clock time itself is part of the promotion budget.
@@ -994,6 +1007,8 @@ python benchmarks/compare_release_candidates.py \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
   --min-false-refuted-rate 0.90 \
+  --max-inside-sample-count-ratio 0.60 \
+  --max-inside-generation-seconds-ratio 0.80 \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.50 \
@@ -1011,6 +1026,10 @@ when readiness and route manifests are stored in the same local registry file.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.
+Readiness-side INSIDE sampling gates are delegated to
+`compare_readiness_baselines.py`, so the final release also blocks when the
+selected runtime lacks sampling profile evidence or exceeds the configured
+sample-count/generation-time ratios.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`:
@@ -1487,7 +1506,10 @@ Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
 best AUROC quality signal, and explicit runtime gates. Its uncached forward gate
 uses forced-answer phase timing when available and falls back to uncached total
-time for older reports.
+time for older reports. When readiness manifests include an
+`inside_sampling_profile_report` artifact, the comparison can also gate on
+promoted INSIDE sample-count and generation-time ratios before a runtime is
+eligible for release.
 
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path
