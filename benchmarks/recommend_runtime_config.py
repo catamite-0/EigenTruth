@@ -3,7 +3,7 @@
 The cache-profile matrix and worker-count sweep reports are intentionally
 experiment shaped. This helper turns their promotion decisions into one compact
 machine-readable recommendation: layer, batch size, capture mode, token budget,
-prefix-KV mode, and worker count.
+prefix-KV mode, worker count, and optional INSIDE sampling configuration.
 """
 
 from __future__ import annotations
@@ -26,42 +26,61 @@ def build_runtime_recommendation(
     matrix_report: Mapping[str, Any],
     *,
     worker_sweep_report: Mapping[str, Any] | None = None,
+    inside_sampling_report: Mapping[str, Any] | None = None,
     matrix_report_path: str | Path | None = None,
     worker_sweep_report_path: str | Path | None = None,
+    inside_sampling_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one runtime recommendation from matrix and optional worker evidence."""
     matrix_decision = _mapping(matrix_report.get("matrix_decision"))
     worker_decision = _mapping(
         None if worker_sweep_report is None else worker_sweep_report.get("worker_sweep_decision")
     )
+    inside_sampling_decision = _inside_sampling_decision(
+        inside_sampling_report,
+        inside_sampling_report_path=inside_sampling_report_path,
+    )
     matrix_status = str(matrix_decision.get("status") or "missing")
     worker_status = None if worker_sweep_report is None else str(worker_decision.get("status") or "missing")
-    status = _combined_status(matrix_status, worker_status)
+    inside_sampling_status = (
+        None
+        if inside_sampling_report is None
+        else str(inside_sampling_decision.get("status") or "missing")
+    )
+    status = _combined_status(matrix_status, worker_status, inside_sampling_status)
     recommended = None
+    missing_promoted_runtime_cell = False
     if status == "promote":
         recommended = _recommendation(
             matrix_report,
             matrix_decision=matrix_decision,
             worker_sweep_report=worker_sweep_report,
             worker_decision=worker_decision,
+            inside_sampling_decision=inside_sampling_decision,
             matrix_report_path=matrix_report_path,
         )
         if recommended is None:
             status = "no_candidate"
+            missing_promoted_runtime_cell = True
     blocking_reasons = _blocking_reasons(
         matrix_decision=matrix_decision,
         worker_decision=worker_decision,
         worker_sweep_report=worker_sweep_report,
+        inside_sampling_decision=inside_sampling_decision,
+        inside_sampling_report=inside_sampling_report,
     )
-    if matrix_status == "promote" and recommended is None:
+    if missing_promoted_runtime_cell:
         blocking_reasons.append("matrix: promoted matrix did not include a recommended runtime cell")
     evidence = _evidence(
         matrix_report,
         matrix_decision=matrix_decision,
         worker_sweep_report=worker_sweep_report,
         worker_decision=worker_decision,
+        inside_sampling_decision=inside_sampling_decision,
+        inside_sampling_report=inside_sampling_report,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
+        inside_sampling_report_path=inside_sampling_report_path,
     )
     report = {
         "schema_version": 1,
@@ -82,6 +101,7 @@ def _recommendation(
     matrix_decision: Mapping[str, Any],
     worker_sweep_report: Mapping[str, Any] | None,
     worker_decision: Mapping[str, Any],
+    inside_sampling_decision: Mapping[str, Any],
     matrix_report_path: str | Path | None,
 ) -> dict[str, Any] | None:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
@@ -118,6 +138,9 @@ def _recommendation(
         "quality_signals": quality["signals"],
         "best_quality_signal": quality["best"],
     }
+    inside_sampling = _mapping(inside_sampling_decision.get("recommended"))
+    if inside_sampling:
+        recommendation["inside_sampling"] = inside_sampling
     return recommendation
 
 
@@ -285,6 +308,210 @@ def _recommended_worker_count(
     return None
 
 
+def _inside_sampling_decision(
+    inside_sampling_report: Mapping[str, Any] | None,
+    *,
+    inside_sampling_report_path: str | Path | None,
+) -> dict[str, Any]:
+    if inside_sampling_report is None:
+        return {}
+    gate = _mapping(inside_sampling_report.get("sample_efficiency_gate"))
+    if gate.get("passed") is not True:
+        return {
+            "status": "blocked",
+            "blocking_reasons": _inside_sampling_gate_failures(gate),
+            "sample_efficiency_gate": gate,
+        }
+    recommendation = _mapping(inside_sampling_report.get("recommendation"))
+    recommended_run = recommendation.get("recommended_run")
+    if not recommended_run:
+        return {
+            "status": "no_candidate",
+            "blocking_reasons": ["inside_sampling: promoted report did not include a recommended run"],
+            "sample_efficiency_gate": gate,
+        }
+    row = _inside_sampling_report_row(inside_sampling_report, str(recommended_run))
+    if not row:
+        return {
+            "status": "no_candidate",
+            "recommended_run": str(recommended_run),
+            "blocking_reasons": [
+                f"inside_sampling: recommended run {recommended_run!r} was missing from report rows"
+            ],
+            "sample_efficiency_gate": gate,
+        }
+    result_payload, result_source = _inside_sampling_result_payload(
+        row,
+        inside_sampling_report_path=inside_sampling_report_path,
+    )
+    if not result_payload:
+        return {
+            "status": "no_candidate",
+            "recommended_run": str(recommended_run),
+            "blocking_reasons": [
+                f"inside_sampling: recommended run {recommended_run!r} did not include a readable result payload"
+            ],
+            "sample_efficiency_gate": gate,
+        }
+    result_config = _mapping(result_payload.get("config"))
+    inside_sampling = _mapping(result_payload.get("inside_sampling"))
+    if not inside_sampling:
+        return {
+            "status": "no_candidate",
+            "recommended_run": str(recommended_run),
+            "blocking_reasons": [
+                f"inside_sampling: recommended run {recommended_run!r} result did not include inside_sampling"
+            ],
+            "sample_efficiency_gate": gate,
+        }
+    return {
+        "status": "promote",
+        "recommended_run": str(recommended_run),
+        "sample_efficiency_gate": gate,
+        "recommended": _inside_sampling_recommendation(
+            str(recommended_run),
+            row=row,
+            result_config=result_config,
+            inside_sampling=inside_sampling,
+            result_source=result_source,
+        ),
+    }
+
+
+def _inside_sampling_gate_failures(gate: Mapping[str, Any]) -> list[str]:
+    failures = gate.get("failures")
+    if not isinstance(failures, Sequence) or isinstance(failures, str) or not failures:
+        return ["inside_sampling: sample efficiency gate did not pass"]
+    reasons = []
+    for failure in failures:
+        item = _mapping(failure)
+        run = item.get("run", "unknown")
+        metric = item.get("metric", "unknown_metric")
+        value = item.get("value")
+        max_allowed = item.get("max_allowed")
+        reasons.append(
+            f"inside_sampling: {run} failed {metric} gate "
+            f"(value={value!r}, max_allowed={max_allowed!r})"
+        )
+    return reasons
+
+
+def _inside_sampling_report_row(
+    inside_sampling_report: Mapping[str, Any],
+    recommended_run: str,
+) -> dict[str, Any]:
+    runs = _mapping(inside_sampling_report.get("runs"))
+    row = _mapping(runs.get(recommended_run))
+    if row:
+        return row
+    leaderboard = inside_sampling_report.get("leaderboard")
+    if isinstance(leaderboard, Sequence) and not isinstance(leaderboard, str):
+        for value in leaderboard:
+            item = _mapping(value)
+            if item.get("name") == recommended_run:
+                return item
+    return {}
+
+
+def _inside_sampling_result_payload(
+    row: Mapping[str, Any],
+    *,
+    inside_sampling_report_path: str | Path | None,
+) -> tuple[dict[str, Any], str | None]:
+    result_path = row.get("result_path")
+    if not result_path:
+        return {}, None
+    path = Path(str(result_path))
+    candidates = [path]
+    if inside_sampling_report_path is not None and not path.is_absolute():
+        candidates.append(Path(str(inside_sampling_report_path)).parent / path)
+    for candidate in candidates:
+        try:
+            return _load_json(candidate), str(candidate)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+    return {}, None
+
+
+def _inside_sampling_recommendation(
+    recommended_run: str,
+    *,
+    row: Mapping[str, Any],
+    result_config: Mapping[str, Any],
+    inside_sampling: Mapping[str, Any],
+    result_source: str | None,
+) -> dict[str, Any]:
+    return {
+        "recommended_run": recommended_run,
+        "result_path": result_source,
+        "mode": inside_sampling.get("mode"),
+        "adaptive": bool(
+            _first_present(result_config.get("inside_adaptive_sampling"), inside_sampling.get("adaptive"))
+        ),
+        "selfcheck_early_stop": bool(
+            _first_present(
+                result_config.get("inside_selfcheck_early_stop"),
+                inside_sampling.get("selfcheck_early_stop"),
+            )
+        ),
+        "inside_samples": _int_or_none(
+            _first_present(result_config.get("inside_samples"), inside_sampling.get("max_samples"))
+        ),
+        "inside_batch_size": _int_or_none(result_config.get("inside_batch_size")),
+        "inside_max_new_tokens": _int_or_none(result_config.get("inside_max_new_tokens")),
+        "inside_temperature": _float_or_none(result_config.get("inside_temperature")),
+        "inside_top_p": _float_or_none(result_config.get("inside_top_p")),
+        "inside_pooling": _first_present(result_config.get("inside_pooling"), "last"),
+        "inside_embedding_threshold": _float_or_none(
+            _first_present(
+                result_config.get("inside_embedding_threshold"),
+                inside_sampling.get("embedding_similarity_threshold"),
+            )
+        ),
+        "inside_min_samples": _int_or_none(
+            _first_present(result_config.get("inside_min_samples"), inside_sampling.get("min_samples"))
+        ),
+        "inside_sample_step": _int_or_none(
+            _first_present(result_config.get("inside_sample_step"), inside_sampling.get("sample_step"))
+        ),
+        "inside_stability_delta": _float_or_none(
+            _first_present(result_config.get("inside_stability_delta"), inside_sampling.get("stability_delta"))
+        ),
+        "inside_selfcheck_min_overlap": _float_or_none(
+            _first_present(
+                result_config.get("inside_selfcheck_min_overlap"),
+                inside_sampling.get("selfcheck_min_overlap"),
+            )
+        ),
+        "inside_selfcheck_support_threshold": _float_or_none(
+            _first_present(
+                result_config.get("inside_selfcheck_support_threshold"),
+                inside_sampling.get("selfcheck_support_threshold"),
+            )
+        ),
+        "inside_selfcheck_refute_threshold": _float_or_none(
+            _first_present(
+                result_config.get("inside_selfcheck_refute_threshold"),
+                inside_sampling.get("selfcheck_refute_threshold"),
+            )
+        ),
+        "inside_trigger_signal": result_config.get("inside_trigger_signal"),
+        "inside_trigger_threshold": _float_or_none(result_config.get("inside_trigger_threshold")),
+        "inside_trigger_top_fraction": _float_or_none(result_config.get("inside_trigger_top_fraction")),
+        "total_generated_samples": _int_or_none(
+            _first_present(row.get("total_generated_samples"), inside_sampling.get("total_generated_samples"))
+        ),
+        "sample_count_ratio_to_baseline": _float_or_none(row.get("sample_count_ratio_to_baseline")),
+        "inside_generation_seconds": _float_or_none(row.get("inside_generation_seconds")),
+        "inside_generation_seconds_ratio_to_baseline": _float_or_none(
+            row.get("inside_generation_seconds_ratio_to_baseline")
+        ),
+        "stop_reason_counts": dict(row.get("stop_reason_counts", {}))
+        if isinstance(row.get("stop_reason_counts", {}), Mapping)
+        else {},
+    }
+
+
 def _benchmark_flags(
     recommendation: Mapping[str, Any],
     matrix_report: Mapping[str, Any],
@@ -304,6 +531,7 @@ def _benchmark_flags(
         eval_flags.append("--prefix-kv-cache")
     if length_bucketed:
         eval_flags.append("--length-bucketed-batches")
+    eval_flags.extend(_inside_sampling_eval_flags(_mapping(recommendation.get("inside_sampling"))))
 
     matrix_flags = ["--layers", layer, "--batch-sizes", batch_size, "--hidden-state-captures", capture]
     if max_batch_tokens > 0:
@@ -314,11 +542,84 @@ def _benchmark_flags(
         matrix_flags.extend(["--max-workers", str(max_workers)])
 
     readiness_flags = list(matrix_flags)
-    return {
+    flags = {
         "eval_truthfulqa": eval_flags,
         "run_cache_profile_matrix": matrix_flags,
         "run_adapter_readiness_workflow": readiness_flags,
     }
+    inside_sampling = _mapping(recommendation.get("inside_sampling"))
+    if inside_sampling:
+        flags["run_inside_sampling_profile"] = _inside_sampling_profile_flags(inside_sampling)
+    return flags
+
+
+def _inside_sampling_eval_flags(inside_sampling: Mapping[str, Any]) -> list[str]:
+    if not inside_sampling:
+        return []
+    flags = []
+    _extend_flag(flags, "--inside-samples", inside_sampling.get("inside_samples"))
+    _extend_flag(flags, "--inside-batch-size", inside_sampling.get("inside_batch_size"))
+    _extend_flag(flags, "--inside-max-new-tokens", inside_sampling.get("inside_max_new_tokens"))
+    _extend_flag(flags, "--inside-temperature", inside_sampling.get("inside_temperature"))
+    _extend_flag(flags, "--inside-top-p", inside_sampling.get("inside_top_p"))
+    _extend_flag(flags, "--inside-pooling", inside_sampling.get("inside_pooling"))
+    _extend_flag(flags, "--inside-embedding-threshold", inside_sampling.get("inside_embedding_threshold"))
+    if inside_sampling.get("adaptive"):
+        flags.append("--inside-adaptive-sampling")
+        _extend_flag(flags, "--inside-min-samples", inside_sampling.get("inside_min_samples"))
+        _extend_flag(flags, "--inside-sample-step", inside_sampling.get("inside_sample_step"))
+        _extend_flag(flags, "--inside-stability-delta", inside_sampling.get("inside_stability_delta"))
+    if inside_sampling.get("selfcheck_early_stop"):
+        flags.append("--inside-selfcheck-early-stop")
+        _extend_flag(flags, "--inside-selfcheck-min-overlap", inside_sampling.get("inside_selfcheck_min_overlap"))
+        _extend_flag(
+            flags,
+            "--inside-selfcheck-support-threshold",
+            inside_sampling.get("inside_selfcheck_support_threshold"),
+        )
+        _extend_flag(
+            flags,
+            "--inside-selfcheck-refute-threshold",
+            inside_sampling.get("inside_selfcheck_refute_threshold"),
+        )
+    _extend_flag(flags, "--inside-trigger-signal", inside_sampling.get("inside_trigger_signal"))
+    _extend_flag(flags, "--inside-trigger-threshold", inside_sampling.get("inside_trigger_threshold"))
+    _extend_flag(flags, "--inside-trigger-top-fraction", inside_sampling.get("inside_trigger_top_fraction"))
+    return flags
+
+
+def _inside_sampling_profile_flags(inside_sampling: Mapping[str, Any]) -> list[str]:
+    flags = []
+    _extend_flag(flags, "--inside-samples", inside_sampling.get("inside_samples"))
+    _extend_flag(flags, "--inside-batch-size", inside_sampling.get("inside_batch_size"))
+    _extend_flag(flags, "--inside-max-new-tokens", inside_sampling.get("inside_max_new_tokens"))
+    _extend_flag(flags, "--inside-temperature", inside_sampling.get("inside_temperature"))
+    _extend_flag(flags, "--inside-top-p", inside_sampling.get("inside_top_p"))
+    _extend_flag(flags, "--inside-pooling", inside_sampling.get("inside_pooling"))
+    _extend_flag(flags, "--inside-embedding-threshold", inside_sampling.get("inside_embedding_threshold"))
+    _extend_flag(flags, "--inside-min-samples", inside_sampling.get("inside_min_samples"))
+    _extend_flag(flags, "--inside-sample-step", inside_sampling.get("inside_sample_step"))
+    _extend_flag(flags, "--inside-stability-delta", inside_sampling.get("inside_stability_delta"))
+    _extend_flag(flags, "--inside-selfcheck-min-overlap", inside_sampling.get("inside_selfcheck_min_overlap"))
+    _extend_flag(
+        flags,
+        "--inside-selfcheck-support-threshold",
+        inside_sampling.get("inside_selfcheck_support_threshold"),
+    )
+    _extend_flag(
+        flags,
+        "--inside-selfcheck-refute-threshold",
+        inside_sampling.get("inside_selfcheck_refute_threshold"),
+    )
+    if inside_sampling.get("recommended_run"):
+        flags.extend(["--runs", str(inside_sampling["recommended_run"])])
+    return flags
+
+
+def _extend_flag(flags: list[str], flag: str, value: Any) -> None:
+    if value is None:
+        return
+    flags.extend([flag, str(value)])
 
 
 def _evidence(
@@ -327,8 +628,11 @@ def _evidence(
     matrix_decision: Mapping[str, Any],
     worker_sweep_report: Mapping[str, Any] | None,
     worker_decision: Mapping[str, Any],
+    inside_sampling_report: Mapping[str, Any] | None,
+    inside_sampling_decision: Mapping[str, Any],
     matrix_report_path: str | Path | None,
     worker_sweep_report_path: str | Path | None,
+    inside_sampling_report_path: str | Path | None,
 ) -> dict[str, Any]:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     worker_recommended = _mapping(worker_decision.get("recommended"))
@@ -361,6 +665,19 @@ def _evidence(
             worker_recommended=worker_recommended,
             matrix_report_path=matrix_report_path,
         ),
+        "inside_sampling_report": None
+        if inside_sampling_report_path is None
+        else str(inside_sampling_report_path),
+        "inside_sampling_status": None
+        if inside_sampling_report is None
+        else inside_sampling_decision.get("status"),
+        "inside_sampling_recommended_run": inside_sampling_decision.get("recommended_run"),
+        "inside_sampling_baseline": None
+        if inside_sampling_report is None
+        else inside_sampling_report.get("baseline"),
+        "inside_sampling_gate_passed": None
+        if inside_sampling_report is None
+        else _mapping(inside_sampling_decision.get("sample_efficiency_gate")).get("passed"),
     }
     return evidence
 
@@ -405,6 +722,8 @@ def _blocking_reasons(
     matrix_decision: Mapping[str, Any],
     worker_decision: Mapping[str, Any],
     worker_sweep_report: Mapping[str, Any] | None,
+    inside_sampling_decision: Mapping[str, Any],
+    inside_sampling_report: Mapping[str, Any] | None,
 ) -> list[str]:
     reasons = []
     for reason in matrix_decision.get("blocking_reasons") or ():
@@ -412,13 +731,14 @@ def _blocking_reasons(
     if worker_sweep_report is not None:
         for reason in worker_decision.get("blocking_reasons") or ():
             reasons.append(f"worker_sweep: {reason}")
+    if inside_sampling_report is not None:
+        for reason in inside_sampling_decision.get("blocking_reasons") or ():
+            reasons.append(str(reason))
     return reasons
 
 
-def _combined_status(matrix_status: str, worker_status: str | None) -> str:
-    statuses = [matrix_status]
-    if worker_status is not None:
-        statuses.append(worker_status)
+def _combined_status(*statuses: str | None) -> str:
+    statuses = [status for status in statuses if status is not None]
     if any(status == "blocked" for status in statuses):
         return "blocked"
     if any(status == "dry_run" for status in statuses):
@@ -451,6 +771,16 @@ def _float_or_none(value: Any) -> float | None:
     return numeric
 
 
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric
+
+
 def _load_json(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -462,11 +792,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     matrix_report_path = Path(args.matrix_report)
     worker_sweep_report_path = Path(args.worker_sweep_report) if args.worker_sweep_report else None
+    inside_sampling_report_path = Path(args.inside_sampling_report) if args.inside_sampling_report else None
     report = build_runtime_recommendation(
         _load_json(matrix_report_path),
         worker_sweep_report=None if worker_sweep_report_path is None else _load_json(worker_sweep_report_path),
+        inside_sampling_report=(
+            None if inside_sampling_report_path is None else _load_json(inside_sampling_report_path)
+        ),
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
+        inside_sampling_report_path=inside_sampling_report_path,
     )
     output = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
@@ -485,6 +820,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="cache-profile-matrix-report.json produced by run_cache_profile_matrix.py")
     parser.add_argument("--worker-sweep-report", default=None,
                         help="optional cache-worker-sweep-report.json produced by run_cache_worker_sweep.py")
+    parser.add_argument("--inside-sampling-report", default=None,
+                        help="optional inside-sampling-profile-comparison.json produced by "
+                             "run_inside_sampling_profile.py")
     parser.add_argument("--output", default=None,
                         help="optional path to write the recommendation JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",

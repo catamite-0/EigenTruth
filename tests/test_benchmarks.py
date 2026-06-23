@@ -5685,6 +5685,155 @@ def test_runtime_config_recommendation_blocks_on_blocked_matrix():
     assert "benchmark_flags" not in report
 
 
+def test_runtime_config_recommendation_includes_inside_sampling_profile(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    inside_result_path = tmp_path / "result-adaptive_selfcheck.json"
+    inside_result_path.write_text(
+        json.dumps({
+            "config": {
+                "inside_samples": 5,
+                "inside_batch_size": 2,
+                "inside_max_new_tokens": 12,
+                "inside_temperature": 0.7,
+                "inside_top_p": 0.9,
+                "inside_pooling": "mean",
+                "inside_embedding_threshold": 0.88,
+                "inside_adaptive_sampling": True,
+                "inside_min_samples": 2,
+                "inside_sample_step": 1,
+                "inside_stability_delta": 0.03,
+                "inside_selfcheck_early_stop": True,
+                "inside_selfcheck_min_overlap": 0.65,
+                "inside_selfcheck_support_threshold": 0.6,
+                "inside_selfcheck_refute_threshold": 0.5,
+                "inside_trigger_signal": None,
+                "inside_trigger_threshold": None,
+                "inside_trigger_top_fraction": None,
+            },
+            "inside_sampling": {
+                "mode": "all",
+                "adaptive": True,
+                "selfcheck_early_stop": True,
+                "max_samples": 5,
+                "min_samples": 2,
+                "sample_step": 1,
+                "stability_delta": 0.03,
+                "embedding_similarity_threshold": 0.88,
+                "selfcheck_min_overlap": 0.65,
+                "selfcheck_support_threshold": 0.6,
+                "selfcheck_refute_threshold": 0.5,
+                "total_generated_samples": 8,
+                "stop_reason_counts": {"selfcheck_refute_threshold_guaranteed": 4},
+            },
+        }),
+        encoding="utf-8",
+    )
+    matrix_report = {
+        "config": {"max_workers": 1, "length_bucketed_batches": True},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_2_capture_outputs",
+            "recommendation_metric": "cache_only_total_seconds",
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_2_capture_outputs",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "max_batch_tokens": 96,
+                "prefix_kv_cache": False,
+            },
+        },
+    }
+    inside_sampling_report = {
+        "baseline": "fixed",
+        "runs": {
+            "adaptive_selfcheck": {
+                "name": "adaptive_selfcheck",
+                "result_path": str(inside_result_path),
+                "total_generated_samples": 8,
+                "sample_count_ratio_to_baseline": 0.4,
+                "inside_generation_seconds": 4.5,
+                "inside_generation_seconds_ratio_to_baseline": 0.45,
+                "stop_reason_counts": {"selfcheck_refute_threshold_guaranteed": 4},
+            }
+        },
+        "sample_efficiency_gate": {
+            "passed": True,
+            "failures": [],
+            "max_sample_ratios": {"adaptive_selfcheck": 0.6},
+        },
+        "recommendation": {"recommended_run": "adaptive_selfcheck"},
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        inside_sampling_report=inside_sampling_report,
+        inside_sampling_report_path=tmp_path / "inside-sampling-profile-comparison.json",
+    )
+
+    inside = report["recommendation"]["inside_sampling"]
+    eval_flags = report["benchmark_flags"]["eval_truthfulqa"]
+    assert report["status"] == "promote"
+    assert inside["recommended_run"] == "adaptive_selfcheck"
+    assert inside["inside_samples"] == 5
+    assert inside["inside_batch_size"] == 2
+    assert inside["sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert inside["stop_reason_counts"] == {"selfcheck_refute_threshold_guaranteed": 4}
+    assert report["evidence"]["inside_sampling_status"] == "promote"
+    assert report["evidence"]["inside_sampling_gate_passed"] is True
+    assert "--inside-adaptive-sampling" in eval_flags
+    assert "--inside-selfcheck-early-stop" in eval_flags
+    assert eval_flags[eval_flags.index("--inside-samples") + 1] == "5"
+    assert eval_flags[eval_flags.index("--inside-pooling") + 1] == "mean"
+    assert report["benchmark_flags"]["run_inside_sampling_profile"][-2:] == [
+        "--runs",
+        "adaptive_selfcheck",
+    ]
+    assert "--inside-adaptive-sampling" not in report["benchmark_flags"]["run_inside_sampling_profile"]
+    assert "--inside-selfcheck-early-stop" not in report["benchmark_flags"]["run_inside_sampling_profile"]
+
+
+def test_runtime_config_recommendation_blocks_failed_inside_sampling_gate():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+
+    report = module.build_runtime_recommendation(
+        {
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m1_batch_1_capture_outputs",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": "layer_m1_batch_1_capture_outputs",
+                    "layer": -1,
+                    "batch_size": 1,
+                    "hidden_state_capture": "outputs",
+                },
+            }
+        },
+        inside_sampling_report={
+            "sample_efficiency_gate": {
+                "passed": False,
+                "failures": [{
+                    "run": "adaptive_selfcheck",
+                    "metric": "sample_count_ratio_to_baseline",
+                    "value": 1.2,
+                    "max_allowed": 0.8,
+                }],
+            },
+            "recommendation": {"recommended_run": "adaptive_selfcheck"},
+        },
+    )
+
+    assert report["status"] == "blocked"
+    assert report["recommendation"] is None
+    assert report["blocking_reasons"] == [
+        "inside_sampling: adaptive_selfcheck failed sample_count_ratio_to_baseline gate "
+        "(value=1.2, max_allowed=0.8)"
+    ]
+    assert "benchmark_flags" not in report
+
+
 def test_runtime_config_recommendation_cli_writes_output(tmp_path):
     module = importlib.import_module("benchmarks.recommend_runtime_config")
     matrix_report_path = tmp_path / "matrix-report.json"
@@ -5713,6 +5862,7 @@ def test_runtime_config_recommendation_cli_writes_output(tmp_path):
     payload = module.run(SimpleNamespace(
         matrix_report=str(matrix_report_path),
         worker_sweep_report=None,
+        inside_sampling_report=None,
         output=str(output_path),
         fail_on_blocked=True,
     ))

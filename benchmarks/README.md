@@ -1466,17 +1466,22 @@ without rerunning any model work:
 python benchmarks/recommend_runtime_config.py \
   --matrix-report /tmp/eigentruth-qwen05-worker-sweep/workers_1/cache-profile-matrix-report.json \
   --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
+  --inside-sampling-report /tmp/eigentruth-qwen05-inside/inside-sampling-profile-comparison.json \
   --output /tmp/eigentruth-qwen05-worker-sweep/runtime-recommendation.json \
   --fail-on-blocked
 ```
 
 The recommendation records the selected layer, batch size, hidden-state capture
 mode, padded-token budget, prefix-KV mode, worker count, all finite AUROC
-quality signals from the promoted cell, and the best quality signal, plus
-equivalent flags for `eval_truthfulqa.py`, `run_cache_profile_matrix.py`, and
-`run_adapter_readiness_workflow.py`. Treat it as the deployment handoff from
-same-machine performance evidence; it does not replace a promoted matrix or
-worker-sweep decision.
+quality signals from the promoted cell, optional promoted INSIDE sampling
+settings, and the best quality signal. With `--inside-sampling-report`, the
+recommended sampling run must pass its sample-efficiency gate and expose a
+readable per-run result JSON; otherwise the runtime recommendation fails closed.
+The report includes equivalent flags for `eval_truthfulqa.py`,
+`run_cache_profile_matrix.py`, `run_adapter_readiness_workflow.py`, and, when
+sampling evidence is provided, `run_inside_sampling_profile.py`. Treat it as the
+deployment handoff from same-machine performance evidence; it does not replace a
+promoted matrix, worker-sweep, or sampling-profile decision.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
