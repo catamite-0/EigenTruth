@@ -631,6 +631,21 @@ forced-answer cost 0.061 seconds, cache-only total 0.032 seconds, and route
 proves the end-to-end registry/release gate plumbing; it is not a claim that
 tiny-gpt2 is the target production runtime for Qwen results.
 
+A second local smoke candidate adds registered INSIDE sampling evidence to the
+same release-gate chain:
+
+- INSIDE profile: `artifacts/tiny_local_inside_sampling/inside-sampling-profile-comparison.json`
+- Readiness record: `benchmark_manifest:tiny-local-readiness-inside:0.5`
+- Release record: `benchmark_manifest:tiny-local-inside-staged-qa-release-candidate:0.5`
+- Release comparison: `artifacts/local_inside_staged_release_candidate_comparison.json`
+- Release manifest: `artifacts/local_inside_staged_release_candidate_manifest.json`
+
+The 0.5 comparison promotes with `adaptive_selfcheck` as the INSIDE sampling
+run, generated-sample ratio 0.667, and `inside_generation` ratio 0.716 versus
+fixed sampling. It is still a tiny offline plumbing artifact; the Qwen-specific
+next step is to replace the readiness half with representative Qwen or SmolLM2
+same-machine profile artifacts.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -646,9 +661,9 @@ tiny-gpt2 is the target production runtime for Qwen results.
 5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
    `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
    budget and shared conformal report.
-6. Replace the tiny-gpt2 local release-candidate readiness half with a real Qwen
-   or SmolLM2 readiness baseline once representative same-machine profile
-   artifacts are available.
+6. Replace the tiny-gpt2 local release-candidate readiness half, including the
+   INSIDE sampling profile, with a real Qwen or SmolLM2 readiness baseline once
+   representative same-machine profile artifacts are available.
 7. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm

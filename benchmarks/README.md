@@ -1148,6 +1148,87 @@ combines a tiny-gpt2 offline readiness/runtime smoke baseline with the
 TruthfulQA l80 staged structured QA route baseline. It is a local release-gate
 plumbing artifact, not a Qwen production readiness claim.
 
+INSIDE-gated local smoke variant:
+
+```bash
+python benchmarks/run_inside_sampling_profile.py \
+  --output-dir artifacts/tiny_local_inside_sampling \
+  --model sshleifer/tiny-gpt2 \
+  --dtype float32 \
+  --layer -1 \
+  --batch-size 4 \
+  --max-length 64 \
+  --hidden-state-capture outputs \
+  --inside-samples 3 \
+  --inside-min-samples 2 \
+  --inside-sample-step 1 \
+  --inside-max-new-tokens 4 \
+  --inside-batch-size 1 \
+  --adaptive-max-sample-ratio 1.0 \
+  --adaptive-selfcheck-max-sample-ratio 1.0 \
+  --python .venv/bin/python \
+  --clean \
+  --fail-on-regression
+
+python benchmarks/run_adapter_readiness_registry_workflow.py \
+  --output-dir artifacts/tiny_local_readiness_inside \
+  --registry artifacts/local-readiness-registry.json \
+  --name tiny-local-readiness-inside \
+  --version 0.5 \
+  --json artifacts/tiny_local_readiness_inside_registry_workflow.json \
+  --verification-report artifacts/tiny_local_readiness_inside_manifest_verification.json \
+  --inside-sampling-report artifacts/tiny_local_inside_sampling/inside-sampling-profile-comparison.json \
+  --alpha 0.2 \
+  --n-records 8 \
+  --model sshleifer/tiny-gpt2 \
+  --layers -1 \
+  --batch-sizes 4 \
+  --hidden-state-captures outputs \
+  --eval-reps-cache-shard-size 4 \
+  --cached-max-total-ratio 1.10 \
+  --cache-only-max-total-ratio 0.35 \
+  --python .venv/bin/python \
+  --performance-clean \
+  --compact-json \
+  --fail-on-blocked
+
+python benchmarks/run_release_candidate_registry_workflow.py \
+  --readiness-registry artifacts/local-readiness-registry.json \
+  --route-registry artifacts/staged-route-registry.json \
+  --release-registry artifacts/local-release-registry.json \
+  --name tiny-local-inside-staged-qa-release-candidate \
+  --version 0.5 \
+  --readiness-baseline-key benchmark_manifest:tiny-local-readiness-inside:0.5 \
+  --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
+  --min-best-quality-auroc 0.60 \
+  --max-uncached-forward-seconds 1.0 \
+  --max-cache-only-seconds 1.0 \
+  --max-inside-sample-count-ratio 0.70 \
+  --max-inside-generation-seconds-ratio 0.80 \
+  --min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --max-p99-duration-seconds 0.01 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --json artifacts/local_inside_staged_release_candidate_registry_workflow.json \
+  --release-report-json artifacts/local_inside_staged_release_candidate_comparison.json \
+  --artifact-manifest artifacts/local_inside_staged_release_candidate_manifest.json \
+  --verification-report artifacts/local_inside_staged_release_candidate_manifest_verification.json \
+  --metadata evidence=tiny_local_readiness_inside_plus_truthfulqa_l80_structured_qa_staged \
+  --fail-on-blocked
+```
+
+This records `benchmark_manifest:tiny-local-readiness-inside:0.5` and
+`benchmark_manifest:tiny-local-inside-staged-qa-release-candidate:0.5`. In the
+current local smoke artifact, `adaptive_selfcheck` is selected with generated
+sample ratio `0.667` and `inside_generation` ratio `0.716` versus fixed
+sampling. This remains a tiny offline plumbing artifact; use representative
+Qwen/SmolLM2 profile artifacts before making model-specific deployment claims.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval

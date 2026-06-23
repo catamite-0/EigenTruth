@@ -232,11 +232,12 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_local_retrieval_route_workflow.py` | Builds local retrieval evidence from score dumps and corpora, promotes the retrieval-groundedness route, fingerprints all source artifacts, records a runtime profile, optionally uses persistent SQLite FTS/cached claims fixtures/verifier traces, and optionally registers the route baseline. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision with per-cell AUROC quality signals. |
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
-| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, and best available AUROC quality signal. |
-| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates and cache-profile performance gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
+| `run_inside_sampling_profile.py` | Compares fixed, adaptive, and self-check-bounded INSIDE sampling runs, producing sample-count and `inside_generation` cost evidence for release gates. |
+| `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports plus optional INSIDE sampling evidence into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, sampling flags, and best available AUROC quality signal. |
+| `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling profile gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, and runtime cost, then recommends one deployable baseline. |
-| `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, and cost evidence. |
+| `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, runtime cost, and optional INSIDE sampling cost evidence. |
 | `run_release_candidate_registry_workflow.py` | Runs the release-candidate gate, writes a manifest covering the candidate report plus selected readiness/route manifests, recursively verifies it, and registers the final candidate. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
@@ -288,11 +289,12 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_local_retrieval_route_workflow.py` | 从 score dump 和本地 corpus 构建 retrieval evidence，promote retrieval-groundedness route，指纹化全部源 artifact，记录运行 profile，可选使用持久化 SQLite FTS/claims fixture/verifier trace 缓存，并可选注册 route baseline。 |
 | `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision 和每个 cell 的 AUROC quality signals。 |
 | `run_cache_worker_sweep.py` | 用多个 worker count 运行同一 cache-profile matrix，并按 wall-clock 推荐最快的已 promoted worker count。 |
-| `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count 和最佳 AUROC quality signal。 |
-| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛和 cache-profile 性能门槛合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
+| `run_inside_sampling_profile.py` | 比较 fixed、adaptive 和 self-check-bounded INSIDE sampling，输出 sample-count 与 `inside_generation` 成本证据，供 release gate 使用。 |
+| `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 与可选 INSIDE sampling 证据转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count、sampling flags 和最佳 AUROC quality signal。 |
+| `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling profile gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal 和 runtime cost 比较已注册 readiness baseline，并推荐一个可部署 baseline。 |
-| `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量和成本证据。 |
+| `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量、runtime cost 和可选 INSIDE sampling 成本证据。 |
 | `run_release_candidate_registry_workflow.py` | 执行 release-candidate gate，写入覆盖 candidate report 与选中 readiness/route manifests 的 manifest，递归验证后登记最终候选。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |

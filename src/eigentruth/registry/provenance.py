@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -181,10 +182,11 @@ def load_and_verify_artifact_manifest(
 def _display_path(path: Path, *, root: str | Path | None) -> str:
     if root is None:
         return str(path)
+    root_path = Path(root)
     try:
-        return path.relative_to(Path(root)).as_posix()
+        return path.relative_to(root_path).as_posix()
     except ValueError:
-        return str(path)
+        return Path(os.path.relpath(path.resolve(), start=root_path.resolve())).as_posix()
 
 
 def _verification_root(*, root: str | Path | None, manifest_path: str | Path | None) -> Path:

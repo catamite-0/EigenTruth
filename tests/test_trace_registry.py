@@ -171,6 +171,22 @@ def test_artifact_manifest_verification_detects_drift_and_nested_drift(tmp_path)
     assert recursive.nested[0].failures[0].name == "result"
 
 
+def test_artifact_manifest_verification_resolves_sibling_artifacts(tmp_path):
+    run_dir = tmp_path / "run"
+    shared_dir = tmp_path / "shared"
+    run_dir.mkdir()
+    shared_dir.mkdir()
+    shared_report = shared_dir / "inside-sampling-profile-comparison.json"
+    shared_report.write_text('{"status": "promote"}\n', encoding="utf-8")
+
+    manifest = build_artifact_manifest({"inside_sampling": shared_report}, root=run_dir)
+    manifest_path = run_dir / "artifact-manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    assert manifest["artifacts"]["inside_sampling"]["path"] == "../shared/inside-sampling-profile-comparison.json"
+    assert load_and_verify_artifact_manifest(manifest_path).passed is True
+
+
 def test_product_trace_action_execution_summary_counts_results():
     trace = ProductTrace(
         action_results=(

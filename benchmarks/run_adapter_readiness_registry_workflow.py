@@ -160,6 +160,23 @@ def _promotion_metadata(
         "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
         "recommended_quality_signals": runtime_config.get("quality_signals"),
     }
+    inside_sampling = dict(runtime_config.get("inside_sampling") or {})
+    if inside_sampling:
+        metadata.update({
+            "recommended_inside_sampling": inside_sampling,
+            "recommended_inside_sampling_run": inside_sampling.get("recommended_run"),
+            "recommended_inside_sampling_total_generated_samples": inside_sampling.get(
+                "total_generated_samples"
+            ),
+            "recommended_inside_sampling_sample_count_ratio_to_baseline": inside_sampling.get(
+                "sample_count_ratio_to_baseline"
+            ),
+            "recommended_inside_generation_seconds": inside_sampling.get("inside_generation_seconds"),
+            "recommended_inside_generation_seconds_ratio_to_baseline": inside_sampling.get(
+                "inside_generation_seconds_ratio_to_baseline"
+            ),
+            "recommended_inside_sampling_stop_reason_counts": inside_sampling.get("stop_reason_counts"),
+        })
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
     return metadata
@@ -219,6 +236,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
         performance_clean=bool(args.performance_clean),
         performance_dry_run=bool(args.performance_dry_run),
         max_runtime_total_seconds=args.max_runtime_total_seconds,
+        inside_sampling_report_path=Path(args.inside_sampling_report) if args.inside_sampling_report else None,
     )
     return AdapterReadinessRegistryWorkflowConfig(
         readiness=readiness,
@@ -302,6 +320,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-runtime-total-seconds",
     ), default=None)
+    parser.add_argument("--inside-sampling-report", default=None,
+                        help="optional run_inside_sampling_profile.py comparison report for runtime recommendation")
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless registry workflow decision is promote")
     run(parser.parse_args(argv))

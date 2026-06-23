@@ -3264,6 +3264,8 @@ def test_run_adapter_readiness_registry_workflow_promotes_manifest(tmp_path, mon
     assert record.metadata["recommended_batch_size"] == 2
     assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
     assert record.metadata["recommended_best_quality_auroc"] == pytest.approx(0.91)
+    assert record.metadata["recommended_inside_sampling_run"] == "adaptive_selfcheck"
+    assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
     assert record.metadata["scope"] == "unit"
     assert (tmp_path / "workflow.json").exists()
 
@@ -4139,6 +4141,14 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
                 "best_quality_signal": {
                     "name": "subspace_resid",
                     "auroc": 0.91,
+                },
+                "inside_sampling": {
+                    "recommended_run": "adaptive_selfcheck",
+                    "total_generated_samples": 8,
+                    "sample_count_ratio_to_baseline": 0.4,
+                    "inside_generation_seconds": 1.25,
+                    "inside_generation_seconds_ratio_to_baseline": 0.45,
+                    "stop_reason_counts": {"stability_delta": 3},
                 },
             }
             if runtime_status == "promote"
@@ -5220,6 +5230,7 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert manifest["metadata"]["runner"] == "run_inside_sampling_profile"
     assert manifest["metadata"]["inside_samples"] == 6
     assert fixed[0] == "/python"
+    assert fixed[1] == str(Path("benchmarks") / "eval_truthfulqa.py")
     assert "--offline" in fixed
     assert fixed[fixed.index("--inside-samples") + 1] == "6"
     assert "--inside-adaptive-sampling" not in fixed
