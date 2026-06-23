@@ -2199,6 +2199,26 @@ This report does not replace the model/cache performance baseline above. It
 checks the actual control-plane trace shape that a product path emits: route
 attempt counts, retrieval use, phase tails, and cache metadata.
 
+Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
+the built-in `latency`, `balanced`, and `audit` product profiles before choosing
+which profile to put on the default path:
+
+```bash
+python benchmarks/run_product_runtime_profile_sweep.py \
+  --output-dir artifacts/product-runtime-profile-sweep \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-runtime-profile-sweep \
+  --version 0.1 \
+  --fail-on-blocked
+```
+
+The sweep runs deterministic calibrated-control demo scenarios, writes one trace
+per profile/scenario/repeat, builds a `run_product_runtime_baseline.py` report
+for each profile, and ranks the non-blocked profiles by request runtime and
+route cost. This is the product-control counterpart to model-side cache/profile
+sweeps.
+
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
 `artifacts/local-readiness-registry.json`. It reuses the promoted real-model

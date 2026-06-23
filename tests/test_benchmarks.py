@@ -8981,6 +8981,84 @@ def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
 
 
+def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "profile-sweep"
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=output_dir,
+            profiles=("latency", "audit"),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="low",
+                    text="Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={"Paris is the capital of France": "supported"},
+                ),
+            ),
+            repeats=1,
+            registry_path=registry_path,
+            name="demo-profile-sweep",
+            version="0.1",
+            metadata={"suite": "unit"},
+        )
+    )
+    latency_trace = json.loads(
+        Path(payload["profiles"][0]["trace_paths"][0]).read_text(encoding="utf-8")
+    )
+    audit_trace = json.loads(
+        Path(payload["profiles"][1]["trace_paths"][0]).read_text(encoding="utf-8")
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:demo-profile-sweep:0.1"
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["decision"]["recommended_profile"] in {"latency", "audit"}
+    assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "audit"}
+    assert payload["profiles"][0]["status"] == "observed"
+    assert payload["profiles"][1]["status"] == "observed"
+    assert latency_trace["metadata"]["runtime_profile"] == "latency"
+    assert audit_trace["metadata"]["runtime_profile"] == "audit"
+    assert "initial_verification" not in {
+        phase["name"] for phase in latency_trace["runtime_trace"]["phases"]
+    }
+    assert "initial_verification" in {
+        phase["name"] for phase in audit_trace["runtime_trace"]["phases"]
+    }
+    assert Path(payload["paths"]["artifact_manifest"]).exists()
+    assert record.metadata["status"] == "observed"
+    assert record.metadata["profile_count"] == 2
+
+
+def test_run_product_runtime_profile_sweep_blocks_when_policy_fails(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("latency",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="low",
+                    text="Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={"Paris is the capital of France": "supported"},
+                ),
+            ),
+            policy={"max_total_seconds": 0.0},
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["profiles"][0]["status"] == "blocked"
+    assert payload["profiles"][0]["budget"]["failed_count"] == 1
+    assert payload["decision"]["blocking_reasons"] == ("latency.total_seconds: failed 1 trace(s)",)
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"
