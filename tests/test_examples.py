@@ -151,6 +151,38 @@ def test_calibrated_control_demo_balanced_profile_verifies_diagnostic_risk():
     assert payload["risk_decision"]["action"] == "abstain"
 
 
+def test_calibrated_control_demo_can_record_runtime_budget_result():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=False,
+            max_runtime_total_seconds=1.0,
+            max_runtime_phase_seconds=None,
+            request_id="test-runtime-budget-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    runtime_budget = payload["metadata"]["runtime_budget"]
+    assert payload["runtime_trace"] is None
+    assert runtime_budget["enabled"] is True
+    assert runtime_budget["passed"] is False
+    assert runtime_budget["failures"][0]["metric"] == "runtime_trace"
+
+
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
     demo = importlib.import_module("examples.sqlite_state_control_demo")
 

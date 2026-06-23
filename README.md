@@ -203,7 +203,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
 | `ArtifactRegistry` / `build_artifact_manifest` / `fingerprint_path` / `verify_artifact_manifest` | Records and verifies local artifact metadata with dependency-free file/directory SHA-256 provenance for reproducible benchmark chains. |
 | `RuntimeProfile` | Defines shared `latency`, `balanced`, and `audit` defaults for release gates and product control-plane staging. |
-| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, route summaries expose selected/matched/skipped verifier tools, and runtime traces summarize request phase timings. |
+| `RiskController` / `ProductTrace` | Converts calibrated diagnostics plus optional verification results into structured routing decisions and JSON-ready traces; invalid diagnostic values route to `clarify/unknown`, route summaries expose selected/matched/skipped verifier tools, and runtime traces summarize request phase timings for optional budget gates. |
 | `DefaultCorrectionPolicy` / `ActionRequest` | Compiles control decisions into executable JSON-ready action payloads for product integrations, including generic `execute_tool` requests. |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult` | Routes action requests to registered executors, with side-effect-free dry-run fallback and best-effort timeout wrapping for local traces. |
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | Adds dependency-free request validation, idempotency replay, and audit metadata for side-effecting executors, including request ids, idempotency keys, and timeout bounds. |
@@ -262,7 +262,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `directional_conformal_threshold` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
 | `RuntimeProfile` | 定义 release gate 和产品控制面共用的 `latency`、`balanced`、`audit` 默认档位。 |
-| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具，runtime trace 会汇总请求阶段耗时。 |
+| `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具，runtime trace 会汇总请求阶段耗时并支持可选预算门禁。 |
 | `DefaultCorrectionPolicy` / `ActionRequest` | 将控制决策编译为面向产品集成的 JSON action payload，包括通用 `execute_tool` 请求。 |
 | `ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult` | 按 action 路由 executor，并用无副作用 dry-run 与 best-effort timeout wrapper 支撑本地 trace。 |
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | 为有副作用 executor 增加无依赖请求校验、idempotency replay 和审计元数据，包括 request id、idempotency key 与 timeout 上限。 |

@@ -8,12 +8,15 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    ProductRuntimeBudgetPolicy,
     ProductTrace,
     RiskController,
     RiskLevel,
     RuntimePhaseTiming,
     RuntimeTrace,
     TraceEvent,
+    evaluate_product_runtime_budget,
+    product_runtime_metrics,
 )
 from eigentruth.registry import (
     ArtifactRegistry,
@@ -230,6 +233,47 @@ def test_product_trace_runtime_summary_counts_phase_timings():
     assert round(summary["phase_seconds"]["initial_verification"], 6) == 0.30
     assert summary["slowest_phase"] == {"name": "initial_verification", "seconds": 0.20}
     json.dumps(payload)
+
+
+def test_product_runtime_budget_evaluates_trace_phase_limits():
+    trace = ProductTrace(
+        runtime_trace=RuntimeTrace(
+            total_seconds=0.40,
+            phases=(
+                RuntimePhaseTiming("diagnostic_risk_decision", 0.05),
+                RuntimePhaseTiming("initial_verification", 0.20),
+            ),
+        )
+    )
+
+    metrics = product_runtime_metrics(trace)
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            max_total_seconds=0.50,
+            max_phase_seconds={"initial_verification": 0.10},
+        ),
+    )
+
+    assert metrics["total_seconds"] == 0.40
+    assert metrics["phase_seconds"]["initial_verification"] == 0.20
+    assert report["enabled"] is True
+    assert report["passed"] is False
+    assert report["failures"][0]["metric"] == "phase_seconds.initial_verification"
+    assert report["failures"][0]["reason"] == "above 0.1"
+    json.dumps(report)
+
+
+def test_product_runtime_budget_fails_closed_when_trace_is_missing():
+    report = evaluate_product_runtime_budget(
+        ProductTrace(runtime_trace=None),
+        ProductRuntimeBudgetPolicy(max_total_seconds=1.0),
+    )
+
+    assert report["enabled"] is True
+    assert report["passed"] is False
+    assert report["failures"][0]["metric"] == "runtime_trace"
+    assert report["failures"][0]["reason"] == "missing"
 
 
 def test_product_trace_verification_route_summary_counts_runtime_routes():

@@ -27,6 +27,11 @@ from eigentruth.control.loop import (
     run_verification_loop,
 )
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
+from eigentruth.control.runtime_budget import (
+    ProductRuntimeBudgetPolicy,
+    evaluate_product_runtime_budget,
+    product_runtime_metrics,
+)
 from eigentruth.control.runtime_profiles import (
     RUNTIME_PROFILE_NAMES,
     RUNTIME_PROFILES,
@@ -59,6 +64,7 @@ __all__ = [
     "StagedVerificationPolicy",
     "TimeoutActionExecutor",
     "ProductTrace",
+    "ProductRuntimeBudgetPolicy",
     "RuntimePhaseTiming",
     "RuntimeProfile",
     "RuntimeTrace",
@@ -69,6 +75,8 @@ __all__ = [
     "VerificationStageDecision",
     "VerificationLoopResult",
     "evidence_bundle_from_action_results",
+    "evaluate_product_runtime_budget",
     "get_runtime_profile",
+    "product_runtime_metrics",
     "run_verification_loop",
 ]

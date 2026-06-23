@@ -24,9 +24,11 @@ from eigentruth.control import (
     RUNTIME_PROFILE_NAMES,
     ActionExecutorRegistry,
     ControlAction,
+    ProductRuntimeBudgetPolicy,
     RiskController,
     RuntimeProfile,
     StagedVerificationPolicy,
+    evaluate_product_runtime_budget,
     get_runtime_profile,
     run_verification_loop,
 )
@@ -124,6 +126,23 @@ def parse_json_sequence(value: str, *, name: str) -> list[Any]:
     if not isinstance(parsed, list):
         raise ValueError(f"{name} must be a JSON list.")
     return parsed
+
+
+def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeBudgetPolicy | None:
+    """Build an optional runtime budget policy from CLI-like arguments."""
+    max_total_seconds = getattr(args, "max_runtime_total_seconds", None)
+    raw_phase_seconds = getattr(args, "max_runtime_phase_seconds", None)
+    if max_total_seconds is None and raw_phase_seconds is None:
+        return None
+    phase_seconds = (
+        {}
+        if raw_phase_seconds is None
+        else parse_json_mapping(raw_phase_seconds, name="--max-runtime-phase-seconds")
+    )
+    return ProductRuntimeBudgetPolicy(
+        max_total_seconds=max_total_seconds,
+        max_phase_seconds={key: float(value) for key, value in phase_seconds.items()},
+    )
 
 
 def low_diagnostics_for_artifact(artifact: CalibrationArtifact) -> dict[str, float]:
@@ -291,6 +310,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     trace = loop_result.trace
     payload = trace.to_dict()
+    runtime_budget_policy = runtime_budget_policy_from_args(args)
+    runtime_budget = (
+        None
+        if runtime_budget_policy is None
+        else evaluate_product_runtime_budget(trace, runtime_budget_policy)
+    )
+    if runtime_budget is not None:
+        payload["metadata"]["runtime_budget"] = runtime_budget
     output_path = Path(args.output) if args.output else None
     if args.registry and output_path is None:
         output_path = Path(args.registry).with_name(f"{args.request_id}_trace.json")
@@ -308,6 +335,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
+                "runtime_budget": runtime_budget,
                 "verifier_type": type(verifier).__name__,
             },
         ).save_json()
@@ -338,6 +366,10 @@ def main() -> None:
     parser.add_argument("--no-runtime-trace", dest="runtime_trace", action="store_false",
                         default=True,
                         help="omit runtime phase timings from ProductTrace output")
+    parser.add_argument("--max-runtime-total-seconds", type=float, default=None,
+                        help="optional ProductTrace runtime budget for total request seconds")
+    parser.add_argument("--max-runtime-phase-seconds", default=None,
+                        help="optional JSON object mapping runtime phase names to max seconds")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
