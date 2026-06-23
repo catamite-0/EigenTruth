@@ -1144,9 +1144,11 @@ To write, verify, and register that release candidate as its own manifest, use
 python benchmarks/run_release_candidate_registry_workflow.py \
   --readiness-registry artifacts/registry.json \
   --route-registry artifacts/registry.json \
+  --performance-registry artifacts/registry.json \
   --release-registry artifacts/release-registry.json \
   --name qwen05-local-release-candidate \
   --version 0.7 \
+  --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -1162,11 +1164,11 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 ```
 
 The generated manifest fingerprints the release-candidate report and the
-selected readiness and route manifests. Recursive verification therefore checks
-the final candidate and both underlying baseline manifests before the release
-candidate is registered. When `--runtime-profile` is used, the selected profile
-and the defaults it filled are written into the release report, manifest
-metadata, and registry record.
+selected readiness, route, and optional performance manifests. Recursive
+verification therefore checks the final candidate and all underlying baseline
+manifests before the release candidate is registered. When `--runtime-profile`
+is used, the selected profile and the defaults it filled are written into the
+release report, manifest metadata, and registry record.
 
 Current local smoke release candidate:
 
@@ -1411,7 +1413,7 @@ versus triggered fixed, and `inside_generation` ratio `1.009`; treat the
 trigger gate as the primary performance win and self-check as an auditable
 analysis setting, not as the main speedup source.
 
-The current derived trigger-budget release records
+The derived trigger-budget release records
 `benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8`
 and
 `benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-staged-qa-release-candidate:0.8`.
@@ -1430,6 +1432,18 @@ INSIDE semantic-entropy quality within the configured tolerance.
 Use `--inside-trigger-budget-policy cost_first` in the release-candidate
 comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
+
+The current performance-gated SmolLM2 default records
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-staged-qa-release-candidate:0.9`.
+It keeps the same 0.8 readiness baseline and 0.4 staged structured-QA route, but
+adds the registered performance handoff
+`performance_baseline:smollm2-l20-performance-baseline:0.9` as a required gate.
+The final manifest now fingerprints the release-candidate report plus the
+readiness, route, and performance manifests; the release comparison verifies
+that the performance baseline recommendation matches the selected runtime:
+layer `-12`, batch size `8`, `outputs` hidden-state capture, no prefix-KV cache,
+worker count `1`, `truth_proj` AUROC `0.682`, and the quality-balanced
+`top_0p4` triggered `adaptive_selfcheck` budget.
 
 ## `build_truthfulqa_corpus.py`
 

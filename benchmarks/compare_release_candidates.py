@@ -629,7 +629,10 @@ def _resolve_path(raw_path: Any, *, base_path: Path) -> Path:
     path = Path(str(raw_path))
     if path.is_absolute():
         return path
-    return base_path.parent / path
+    report_relative = base_path.parent / path
+    if report_relative.exists() or not path.exists():
+        return report_relative
+    return path
 
 
 def _load_optional_json(path: Path) -> tuple[dict[str, Any], str | None]:
