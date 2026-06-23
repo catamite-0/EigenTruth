@@ -126,6 +126,8 @@ def test_runtime_profiles_apply_only_missing_defaults():
     assert isinstance(profile, RuntimeProfile)
     assert RUNTIME_PROFILE_NAMES == ("latency", "balanced", "audit")
     assert RUNTIME_PROFILES["balanced"].defaults["inside_trigger_budget_policy"] == "quality_balanced"
+    assert RUNTIME_PROFILES["latency"].control_defaults["staged_verification"] is True
+    assert RUNTIME_PROFILES["audit"].control_defaults["staged_verification"] is False
 
     merged, applied = profile.apply_defaults({
         "inside_trigger_budget_policy": None,
@@ -144,7 +146,9 @@ def test_runtime_profiles_apply_only_missing_defaults():
         "max_mean_attempted_route_count": 1.1,
         "max_retrieval_use_rate": 0.0,
     }
-    assert profile.to_dict()["defaults"]["max_retrieval_use_rate"] == pytest.approx(0.0)
+    profile_payload = profile.to_dict()
+    assert profile_payload["defaults"]["max_retrieval_use_rate"] == pytest.approx(0.0)
+    assert profile_payload["control_defaults"]["stage_verify_risk_levels"] == ("high", "unknown")
 
     with pytest.raises(ValueError, match="runtime_profile"):
         get_runtime_profile("fast")

@@ -1,6 +1,7 @@
 """Tests for repository example scripts."""
 
 import importlib
+import json
 import sqlite3
 from types import SimpleNamespace
 
@@ -35,6 +36,8 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
             retrieval_evidence=None,
             enable_calculator=False,
             calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
             request_id="test-demo",
             output=None,
             registry=None,
@@ -62,6 +65,8 @@ def test_calibrated_control_demo_can_route_calculator_refutations():
             retrieval_evidence=None,
             enable_calculator=True,
             calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
             request_id="test-calculator-demo",
             output=None,
             registry=None,
@@ -75,6 +80,70 @@ def test_calibrated_control_demo_can_route_calculator_refutations():
     assert result["status"] == "refuted"
     assert result["metadata"]["selected_route"] == "calculator"
     assert result["metadata"]["selected_verifier"] == "CalculatorVerifier"
+    assert payload["risk_decision"]["action"] == "abstain"
+
+
+def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_verification():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=json.dumps(demo.low_diagnostics_for_artifact(artifact)),
+            text="Paris is the capital of France. The moon is made of cheese.",
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="latency",
+            staged_verification=None,
+            request_id="test-latency-profile-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    stage_event = next(event for event in payload["events"] if event["event_type"] == "verification_stage_decision")
+
+    assert payload["metadata"]["runtime_profile"] == "latency"
+    assert payload["metadata"]["staged_verification_enabled"] is True
+    assert payload["verification_results"] == []
+    assert stage_event["payload"]["run_verifier"] is False
+    assert stage_event["payload"]["reason"] == "diagnostics and claim metadata did not require verification"
+    assert payload["risk_decision"]["action"] == "accept"
+
+
+def test_calibrated_control_demo_balanced_profile_verifies_diagnostic_risk():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=None,
+            text=demo.DEFAULT_TEXT,
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="balanced",
+            staged_verification=None,
+            request_id="test-balanced-profile-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    stage_event = next(event for event in payload["events"] if event["event_type"] == "verification_stage_decision")
+
+    assert payload["metadata"]["runtime_profile"] == "balanced"
+    assert payload["metadata"]["staged_verification_enabled"] is True
+    assert stage_event["payload"]["run_verifier"] is True
+    assert payload["verification_results"][1]["status"] == "refuted"
     assert payload["risk_decision"]["action"] == "abstain"
 
 

@@ -21,9 +21,13 @@ from typing import Any
 from eigentruth.adapters import CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
+    RUNTIME_PROFILE_NAMES,
     ActionExecutorRegistry,
     ControlAction,
     RiskController,
+    RuntimeProfile,
+    StagedVerificationPolicy,
+    get_runtime_profile,
     run_verification_loop,
 )
 from eigentruth.registry import ArtifactRegistry
@@ -122,6 +126,69 @@ def parse_json_sequence(value: str, *, name: str) -> list[Any]:
     return parsed
 
 
+def low_diagnostics_for_artifact(artifact: CalibrationArtifact) -> dict[str, float]:
+    """Return diagnostics that stay below each finite artifact threshold."""
+    diagnostics = {}
+    for score in artifact.scores:
+        if not math.isfinite(score.threshold):
+            continue
+        margin = max(abs(score.threshold) * 0.10, 1e-3)
+        if score.direction == "higher":
+            diagnostics[score.name] = float(score.threshold - margin)
+        else:
+            diagnostics[score.name] = float(score.threshold + margin)
+    return diagnostics
+
+
+def runtime_profile_metadata(profile: RuntimeProfile | None) -> dict[str, Any]:
+    """Return trace metadata for the selected runtime profile."""
+    if profile is None:
+        return {
+            "runtime_profile": None,
+            "runtime_profile_control_defaults": None,
+        }
+    return {
+        "runtime_profile": profile.name,
+        "runtime_profile_description": profile.description,
+        "runtime_profile_control_defaults": dict(profile.control_defaults),
+    }
+
+
+def stage_policy_from_runtime_profile(
+    profile: RuntimeProfile | None,
+    *,
+    staged_verification: bool | None = None,
+) -> StagedVerificationPolicy | None:
+    """Build a staged verification policy from profile control defaults."""
+    control_defaults = {} if profile is None else dict(profile.control_defaults)
+    staged_enabled = (
+        bool(control_defaults.get("staged_verification", False))
+        if staged_verification is None
+        else bool(staged_verification)
+    )
+    if not staged_enabled:
+        return None
+    default_policy = StagedVerificationPolicy()
+    return StagedVerificationPolicy(
+        verify_risk_levels=control_defaults.get(
+            "stage_verify_risk_levels",
+            default_policy.verify_risk_levels,
+        ),
+        verify_actions=control_defaults.get(
+            "stage_verify_actions",
+            default_policy.verify_actions,
+        ),
+        verify_claim_feature_flags=control_defaults.get(
+            "stage_verify_claim_feature_flags",
+            default_policy.verify_claim_feature_flags,
+        ),
+        verify_claim_metadata_keys=control_defaults.get(
+            "stage_verify_claim_metadata_keys",
+            default_policy.verify_claim_metadata_keys,
+        ),
+    )
+
+
 def build_verifier(
     facts: dict[str, Any] | None,
     evidence: list[Any] | None,
@@ -164,6 +231,11 @@ def _with_optional_calculator(verifier: Verifier, *, enabled: bool) -> Verifier:
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
+    runtime_profile = get_runtime_profile(args.runtime_profile)
+    stage_policy = stage_policy_from_runtime_profile(
+        runtime_profile,
+        staged_verification=args.staged_verification,
+    )
     diagnostics = (
         default_diagnostics_for_artifact(artifact)
         if args.diagnostics is None
@@ -201,12 +273,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         controller=controller,
         executor_registry=executor_registry,
         context=calculator_context,
+        stage_policy=stage_policy,
         metadata={
             "artifact_model_id": artifact.model_id,
             "artifact_source": artifact_source(args.artifact),
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
+            **runtime_profile_metadata(runtime_profile),
+            "staged_verification_enabled": stage_policy is not None,
             "verifier_type": type(verifier).__name__,
             "calculator_enabled": args.enable_calculator,
             "action_executor_type": "ActionExecutorRegistry",
@@ -228,6 +303,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             metadata={
                 "source": "examples/calibrated_control_demo.py",
                 "loop_version": "0.4",
+                **runtime_profile_metadata(runtime_profile),
+                "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
                 "verifier_type": type(verifier).__name__,
             },
@@ -249,6 +326,13 @@ def main() -> None:
                         help="run CalculatorVerifier before the selected lexical verifier")
     parser.add_argument("--calculator-context", default=None,
                         help="optional calculator context JSON object, e.g. {'calculation': {...}}")
+    parser.add_argument("--runtime-profile", default=None, choices=RUNTIME_PROFILE_NAMES,
+                        help="optional control-plane profile: latency, balanced, or audit")
+    parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
+                        default=None,
+                        help="force staged verification even without a runtime profile")
+    parser.add_argument("--no-staged-verification", dest="staged_verification", action="store_false",
+                        help="force full initial verification even when a runtime profile enables staging")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

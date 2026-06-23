@@ -20,6 +20,11 @@ simple claims, combines diagnostics and verification results through
 `RiskController`, plans an `ActionRequest`, executes it through
 `ActionExecutorRegistry`, feeds retrieval hits back into verification when
 available, and prints a final JSON `ProductTrace`.
+It accepts `--runtime-profile latency|balanced|audit` so the same release
+profiles used by benchmark gates can also drive product-loop staging:
+`latency` skips low-risk, non-sensitive verifier calls, `balanced` verifies
+medium/high/unknown diagnostic risk and sensitive claims, and `audit` runs full
+initial verification.
 
 ### `sqlite_state_control_demo.py`
 
@@ -75,6 +80,25 @@ python examples/calibrated_control_demo.py
 This default path produces a dry-run `abstain` trace for the built-in mixed
 claim text because the artifact diagnostic threshold is exceeded and the second
 claim is refuted.
+
+Use runtime profiles to exercise the product control-plane defaults. The
+latency profile enables staged verification and skips the verifier when
+diagnostics are low and claims lack sensitive metadata:
+
+```bash
+python examples/calibrated_control_demo.py \
+  --runtime-profile latency \
+  --diagnostics '{"truth_proj": 0.0}'
+```
+
+The balanced profile enables staged verification but still verifies diagnostic
+risk or sensitive claims; the audit profile disables staging and verifies all
+initial claims:
+
+```bash
+python examples/calibrated_control_demo.py --runtime-profile balanced
+python examples/calibrated_control_demo.py --runtime-profile audit
+```
 
 The demo can also route unsupported claims to the dependency-free in-memory
 retrieval executor, feed retrieval hits back into the groundedness verifier, and
