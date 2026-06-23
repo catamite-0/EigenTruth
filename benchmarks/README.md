@@ -2217,7 +2217,10 @@ The sweep runs deterministic calibrated-control demo scenarios, writes one trace
 per profile/scenario/repeat, builds a `run_product_runtime_baseline.py` report
 for each profile, and ranks the non-blocked profiles by request runtime and
 route cost. This is the product-control counterpart to model-side cache/profile
-sweeps.
+sweeps. Use the default `--max-workers 1` when profile timing will be used as
+promotion evidence. Use `--max-workers N` to run independent runtime profiles
+concurrently for faster smoke and coverage scans; within each profile, trace
+order remains deterministic before its baseline is built.
 
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in

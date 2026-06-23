@@ -2301,6 +2301,7 @@
       "metadata": {
         "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
         "contract": "smollm2_1_4",
+        "max_workers": 1,
         "profile_count": 3,
         "purpose": "product_runtime_profile_selection",
         "recommended_profile": "audit",

@@ -9007,6 +9007,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
             name="demo-profile-sweep",
             version="0.1",
             metadata={"suite": "unit"},
+            max_workers=2,
         )
     )
     latency_trace = json.loads(
@@ -9020,6 +9021,8 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     )
 
     assert payload["status"] == "observed"
+    assert payload["config"]["max_workers"] == 2
+    assert payload["execution"]["max_workers"] == 2
     assert payload["decision"]["recommended_profile"] in {"latency", "audit"}
     assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "audit"}
     assert payload["profiles"][0]["status"] == "observed"
@@ -9043,6 +9046,16 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     ).passed is True
     assert record.metadata["status"] == "observed"
     assert record.metadata["profile_count"] == 2
+
+
+def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    with pytest.raises(ValueError, match="max_workers"):
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            max_workers=0,
+        )
 
 
 def test_run_product_runtime_profile_sweep_blocks_when_policy_fails(tmp_path):

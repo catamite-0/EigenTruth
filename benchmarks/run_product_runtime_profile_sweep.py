@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from types import SimpleNamespace
@@ -91,6 +93,7 @@ class ProductRuntimeProfileSweepConfig:
     name: str | None = None
     version: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    max_workers: int = 1
 
     def __post_init__(self) -> None:
         output_dir = Path(self.output_dir)
@@ -103,6 +106,9 @@ class ProductRuntimeProfileSweepConfig:
         repeats = int(self.repeats)
         if repeats <= 0:
             raise ValueError("repeats must be positive.")
+        max_workers = int(self.max_workers)
+        if max_workers < 1:
+            raise ValueError("max_workers must be >=1.")
         if self.policy is not None and (self.policy_path is not None or self.promotion_contract_path is not None):
             raise ValueError("policy object is mutually exclusive with policy_path and promotion_contract_path.")
         if self.policy_path is not None and self.promotion_contract_path is not None:
@@ -113,6 +119,7 @@ class ProductRuntimeProfileSweepConfig:
         object.__setattr__(self, "profiles", profiles)
         object.__setattr__(self, "scenarios", scenarios)
         object.__setattr__(self, "repeats", repeats)
+        object.__setattr__(self, "max_workers", max_workers)
         if self.artifact_path is not None:
             object.__setattr__(self, "artifact_path", Path(self.artifact_path))
         if self.promotion_contract_path is not None:
@@ -144,26 +151,10 @@ class ProductRuntimeProfileSweepConfig:
 
 def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) -> dict[str, Any]:
     """Run deterministic demo traces for each runtime profile and compare baselines."""
+    started_at = time.perf_counter()
     config.output_dir.mkdir(parents=True, exist_ok=True)
     artifact = demo.load_artifact(None if config.artifact_path is None else str(config.artifact_path))
-    profiles = []
-    for profile_name in config.profiles:
-        traces = _run_profile_traces(config, profile_name, artifact=artifact)
-        baseline = build_product_runtime_baseline(
-            ProductRuntimeBaselineConfig(
-                trace_paths=tuple(trace["path"] for trace in traces),
-                report_path=_profile_baseline_path(config, profile_name),
-                policy=config.policy,
-                policy_path=config.policy_path,
-                promotion_contract_path=config.promotion_contract_path,
-                metadata={
-                    "source": "run_product_runtime_profile_sweep",
-                    "runtime_profile": profile_name,
-                    **dict(config.metadata),
-                },
-            )
-        )
-        profiles.append(_profile_record(profile_name, traces=traces, baseline=baseline))
+    profiles = _run_profiles(config, artifact=artifact)
 
     leaderboard = _leaderboard(profiles)
     recommendation = leaderboard[0] if leaderboard else None
@@ -193,7 +184,12 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "scenario_names": tuple(scenario.name for scenario in config.scenarios),
             "repeats": config.repeats,
             "artifact_path": None if config.artifact_path is None else str(config.artifact_path),
+            "max_workers": config.max_workers,
             "metadata": dict(config.metadata),
+        },
+        "execution": {
+            "wall_clock_seconds": time.perf_counter() - started_at,
+            "max_workers": config.max_workers,
         },
     }
     _write_report_and_manifest(config, report)
@@ -210,6 +206,50 @@ def _write_report_and_manifest(
     report["artifact_manifest_summary"] = manifest["summary"]
     _write_json(config.resolved_report_path, report)
     return _write_artifact_manifest(config, report)
+
+
+def _run_profiles(
+    config: ProductRuntimeProfileSweepConfig,
+    *,
+    artifact: Any,
+) -> list[dict[str, Any]]:
+    if config.max_workers <= 1 or len(config.profiles) <= 1:
+        return [_run_profile(config, profile_name, artifact=artifact) for profile_name in config.profiles]
+
+    records_by_profile: dict[str, dict[str, Any]] = {}
+    with ThreadPoolExecutor(max_workers=min(config.max_workers, len(config.profiles))) as executor:
+        futures = {
+            executor.submit(_run_profile, config, profile_name, artifact=artifact): profile_name
+            for profile_name in config.profiles
+        }
+        for future in as_completed(futures):
+            profile_name = futures[future]
+            records_by_profile[profile_name] = future.result()
+    return [records_by_profile[profile_name] for profile_name in config.profiles]
+
+
+def _run_profile(
+    config: ProductRuntimeProfileSweepConfig,
+    profile_name: str,
+    *,
+    artifact: Any,
+) -> dict[str, Any]:
+    traces = _run_profile_traces(config, profile_name, artifact=artifact)
+    baseline = build_product_runtime_baseline(
+        ProductRuntimeBaselineConfig(
+            trace_paths=tuple(trace["path"] for trace in traces),
+            report_path=_profile_baseline_path(config, profile_name),
+            policy=config.policy,
+            policy_path=config.policy_path,
+            promotion_contract_path=config.promotion_contract_path,
+            metadata={
+                "source": "run_product_runtime_profile_sweep",
+                "runtime_profile": profile_name,
+                **dict(config.metadata),
+            },
+        )
+    )
+    return _profile_record(profile_name, traces=traces, baseline=baseline)
 
 
 def _run_profile_traces(
@@ -407,6 +447,7 @@ def _write_artifact_manifest(
             "profile_count": len(config.profiles),
             "scenario_count": len(config.scenarios),
             "repeats": config.repeats,
+            "max_workers": config.max_workers,
             **dict(config.metadata),
         },
     )
@@ -429,6 +470,7 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
             "profile_count": len(config.profiles),
             "scenario_count": len(config.scenarios),
             "repeats": config.repeats,
+            "max_workers": config.max_workers,
             **dict(config.metadata),
         },
     ).save_json()
@@ -549,6 +591,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeProfileSweepCon
         name=args.name,
         version=args.version,
         metadata=_parse_metadata(args.metadata or ()),
+        max_workers=args.max_workers,
     )
 
 
@@ -575,6 +618,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
     parser.add_argument("--metadata", action="append", default=[])
+    parser.add_argument("--max-workers", type=int, default=1,
+                        help="run independent runtime profiles concurrently")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 
