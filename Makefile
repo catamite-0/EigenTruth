@@ -25,6 +25,7 @@ perf-check:
 	$(PYTHON) benchmarks/inside_sampling_profile_smoke.py
 	$(PYTHON) benchmarks/cache_worker_sweep_smoke.py
 	$(PYTHON) benchmarks/registry_baseline_smoke.py
+	$(PYTHON) benchmarks/performance_baseline_smoke.py
 
 build:
 	$(PYTHON) -m build

@@ -1971,6 +1971,25 @@ sampling evidence is provided, `run_inside_sampling_profile.py` and
 same-machine performance evidence; it does not replace a promoted matrix,
 worker-sweep, sampling-profile, or trigger-budget-sweep decision.
 
+Use `run_performance_baseline_workflow.py` when the handoff itself should be a
+registered, fingerprinted artifact bundle. It can run the cache-profile matrix
+directly or reuse existing matrix/worker/INSIDE reports, then writes
+`performance-baseline-workflow.json`, `runtime-recommendation.json`, an artifact
+manifest, and an optional `performance_baseline:*:*` registry record:
+
+```bash
+python benchmarks/run_performance_baseline_workflow.py \
+  --output-dir /tmp/eigentruth-qwen05-performance-baseline \
+  --registry artifacts/registry.json \
+  --name qwen05-performance-baseline \
+  --version 0.1 \
+  --matrix-report /tmp/eigentruth-qwen05-worker-sweep/workers_1/cache-profile-matrix-report.json \
+  --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
+  --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
+  --inside-trigger-budget-policy quality_balanced \
+  --fail-on-blocked
+```
+
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
 best AUROC quality signal, and explicit runtime gates. Its uncached forward gate
@@ -2119,7 +2138,8 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/cache_profile_smoke.py`,
 `benchmarks/inside_sampling_profile_smoke.py`,
 `benchmarks/cache_worker_sweep_smoke.py`, and
-`benchmarks/registry_baseline_smoke.py`. These use fixed synthetic profile
+`benchmarks/registry_baseline_smoke.py`, plus
+`benchmarks/performance_baseline_smoke.py`. These use fixed synthetic profile
 payloads to verify that direct gates, cache-profile gates, worker-count sweep
 decisions, INSIDE sampling sample-efficiency gates, and registry-backed
 baseline gates pass acceptable candidates and catch expected regressions. They

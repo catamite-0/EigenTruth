@@ -5299,6 +5299,21 @@ def test_registry_baseline_smoke_writes_pass_and_expected_failure_reports(tmp_pa
     assert failure_report["comparison"]["regression_gate"]["failures"][0]["run"] == "regression"
 
 
+def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
+    module = importlib.import_module("benchmarks.performance_baseline_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    payload = module.build_performance_baseline_smoke(tmp_path)
+    registry = registry_module.ArtifactRegistry.load_json(tmp_path / "registry.json")
+
+    assert payload["status"] == "promote"
+    assert payload["registry_record"] == "performance_baseline:performance-baseline-smoke:0.1"
+    assert Path(payload["paths"]["artifact_manifest"]).exists()
+    assert registry.get("performance_baseline:performance-baseline-smoke:0.1").metadata[
+        "runtime_recommendation_status"
+    ] == "promote"
+
+
 def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
     module = importlib.import_module("benchmarks.verify_artifact_manifest")
     from eigentruth.registry import build_artifact_manifest
@@ -7873,6 +7888,121 @@ def test_runtime_config_recommendation_cli_writes_output(tmp_path):
     assert payload["status"] == "promote"
     assert saved["recommendation"]["prefix_kv_cache"] is True
     assert saved["benchmark_flags"]["eval_truthfulqa"][-1] == "--prefix-kv-cache"
+
+
+def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_performance_baseline_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+    result_path = tmp_path / "cache-only-result.json"
+    matrix_manifest_path = tmp_path / "matrix-artifact-manifest.json"
+    matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
+    workflow_report_path = tmp_path / "workflow.json"
+    registry_path = tmp_path / "registry.json"
+    result_path.write_text(
+        json.dumps({
+            "auroc": {
+                "truth_proj": 0.86,
+                "subspace_resid": 0.94,
+            },
+        }),
+        encoding="utf-8",
+    )
+    matrix_manifest_path.write_text("{}", encoding="utf-8")
+    matrix_report_path.write_text(
+        json.dumps({
+            "artifact_manifest": str(matrix_manifest_path),
+            "report_path": str(matrix_report_path),
+            "config": {"max_workers": 1, "length_bucketed_batches": True},
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m12_batch_2_capture_outputs",
+                "recommendation_metric": "cache_only_total_seconds",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": "layer_m12_batch_2_capture_outputs",
+                    "layer": -12,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 128,
+                    "prefix_kv_cache": False,
+                    "cache_only_total_seconds": 0.2,
+                    "truth_proj_auroc": 0.86,
+                },
+            },
+            "cells": [
+                {
+                    "id": "layer_m12_batch_2_capture_outputs",
+                    "layer": -12,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "triplet": {"results": {"cache_only": str(result_path)}},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_performance_baseline_workflow(
+        module.PerformanceBaselineWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            report_path=workflow_report_path,
+            registry_path=registry_path,
+            name="qwen05-local-performance",
+            version="0.1",
+            matrix_report_path=matrix_report_path,
+        )
+    )
+    saved = json.loads(workflow_report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("performance_baseline:qwen05-local-performance:0.1")
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_cell"] == "layer_m12_batch_2_capture_outputs"
+    assert payload["decision"]["recommended_layer"] == -12
+    assert payload["decision"]["recommended_batch_size"] == 2
+    assert payload["decision"]["recommended_best_quality_signal"] == "subspace_resid"
+    assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
+        "name": "subspace_resid",
+        "auroc": pytest.approx(0.94),
+    }
+    assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"
+    assert manifest["metadata"]["runner"] == "run_performance_baseline_workflow"
+    assert manifest["metadata"]["matrix_report_reused"] is True
+    assert manifest["artifacts"]["performance_baseline_report"]["exists"] is True
+    assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
+    assert manifest["artifacts"]["matrix_report"]["exists"] is True
+    assert record.artifact_type == "performance_baseline"
+    assert record.path == str(workflow_report_path)
+    assert record.metadata["runtime_recommendation_status"] == "promote"
+    assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
+
+
+def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.run_performance_baseline_workflow")
+
+    payload = module.run_performance_baseline_workflow(
+        module.PerformanceBaselineWorkflowConfig(
+            output_dir=tmp_path,
+            model="tiny-local",
+            layers=(-1,),
+            batch_sizes=(1,),
+            run_worker_sweep=True,
+            worker_counts=(1, 2),
+            dry_run=True,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["runtime_recommendation"]["status"] == "needs_evidence"
+    assert payload["execution"]["matrix_report_reused"] is False
+    assert payload["execution"]["worker_sweep_report_reused"] is False
+    assert manifest["metadata"]["dry_run"] is True
+    assert manifest["metadata"]["worker_sweep_enabled"] is True
+    assert Path(payload["paths"]["runtime_recommendation"]).exists()
+    assert Path(payload["paths"]["matrix_report"]).exists()
+    assert Path(payload["paths"]["worker_sweep_report"]).exists()
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
