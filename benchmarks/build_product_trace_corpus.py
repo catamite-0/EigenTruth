@@ -14,13 +14,14 @@ import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.config_utils import strict_bool  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -90,11 +91,15 @@ class ProductTraceCorpusConfig:
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
-        object.__setattr__(self, "redact_text", bool(self.redact_text))
-        object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
-        object.__setattr__(self, "strict", bool(self.strict))
+        object.__setattr__(self, "redact_text", strict_bool(self.redact_text, name="redact_text"))
+        object.__setattr__(
+            self,
+            "require_runtime_trace",
+            strict_bool(self.require_runtime_trace, name="require_runtime_trace"),
+        )
+        object.__setattr__(self, "strict", strict_bool(self.strict, name="strict"))
         object.__setattr__(self, "limit", limit)
-        object.__setattr__(self, "compact_json", bool(self.compact_json))
+        object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
     @property
     def resolved_report_path(self) -> Path:
@@ -122,12 +127,11 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
     """Validate, redact, and standardize saved ProductTrace payloads."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     config.resolved_traces_dir.mkdir(parents=True, exist_ok=True)
-    sources = _load_sources(config)
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     used_names: set[str] = set()
 
-    for source in sources:
+    for source in _iter_sources(config):
         payload = source["payload"]
         reason = _invalid_reason(payload, require_runtime_trace=config.require_runtime_trace)
         if reason is not None:
@@ -180,21 +184,20 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
     return report
 
 
-def _load_sources(config: ProductTraceCorpusConfig) -> tuple[dict[str, Any], ...]:
-    sources = []
+def _iter_sources(config: ProductTraceCorpusConfig) -> Iterator[dict[str, Any]]:
     for path in config.trace_paths:
         payload = _load_json(path)
         if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray, Mapping)):
             for index, item in enumerate(payload):
-                sources.append(_source_record(path, index, item, source_format="json_array"))
+                yield _source_record(path, index, item, source_format="json_array")
             continue
-        sources.append(_source_record(path, 0, payload, source_format="json"))
+        yield _source_record(path, 0, payload, source_format="json")
     for path in config.jsonl_paths:
-        for index, line in enumerate(Path(path).read_text(encoding="utf-8").splitlines()):
-            if not line.strip():
-                continue
-            sources.append(_source_record(path, index, json.loads(line), source_format="jsonl"))
-    return tuple(sources)
+        with Path(path).open("r", encoding="utf-8") as stream:
+            for index, line in enumerate(stream):
+                if not line.strip():
+                    continue
+                yield _source_record(path, index, json.loads(line), source_format="jsonl")
 
 
 def _source_record(path: str | Path, index: int, payload: Any, *, source_format: str) -> dict[str, Any]:

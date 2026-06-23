@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.config_utils import strict_bool  # noqa: E402
 from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
@@ -66,7 +67,7 @@ class ProductRuntimeBaselineConfig:
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
-        object.__setattr__(self, "compact_json", bool(self.compact_json))
+        object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
     @property
     def resolved_artifact_manifest_path(self) -> Path:

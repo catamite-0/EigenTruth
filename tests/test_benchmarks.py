@@ -9476,6 +9476,53 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert record.metadata["rejected_count"] == 1
 
 
+def test_build_product_trace_corpus_streams_jsonl_limit_and_parses_bool_strings(tmp_path):
+    module = importlib.import_module("benchmarks.build_product_trace_corpus")
+    output_dir = tmp_path / "trace-corpus"
+    jsonl_path = tmp_path / "traces.jsonl"
+    trace_payload = {
+        "request_id": "latency-low-supported",
+        "risk_decision": {
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 1.0,
+            "reason": "supported",
+        },
+        "claims": [{"claim_id": "c1", "text": "Keep this visible.", "metadata": {}}],
+        "metadata": {"runtime_profile": "latency"},
+    }
+    jsonl_path.write_text(
+        json.dumps(trace_payload) + "\n{not-valid-json}\n",
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            jsonl_paths=(jsonl_path,),
+            output_dir=output_dir,
+            redact_text="false",
+            require_runtime_trace="false",
+            strict="false",
+            limit=1,
+            compact_json="false",
+        )
+    )
+    saved_trace = json.loads(Path(payload["traces"][0]["path"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["accepted_count"] == 1
+    assert payload["summary"]["rejected_count"] == 0
+    assert saved_trace["claims"][0]["text"] == "Keep this visible."
+    assert saved_trace["metadata"]["trace_corpus"]["redacted_text"] is False
+
+    with pytest.raises(ValueError, match="strict"):
+        module.ProductTraceCorpusConfig(
+            jsonl_paths=(jsonl_path,),
+            output_dir=output_dir,
+            strict="maybe",
+        )
+
+
 def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp_path):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
@@ -9591,6 +9638,49 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["status"] == "promote"
     assert record.metadata["corpus_status"] == "ready"
     assert record.metadata["selector_replay_status"] == "promote"
+
+
+def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
+    workflow_module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    replay_module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    candidate = {"name": "default", "policy": {}}
+
+    workflow_config = workflow_module.ProductTraceReplayWorkflowConfig(
+        trace_paths=("trace.json",),
+        output_dir=tmp_path / "workflow",
+        candidates=(candidate,),
+        redact_text="false",
+        require_runtime_trace="false",
+        strict="false",
+        compact_json="false",
+    )
+    replay_config = replay_module.RuntimeProfileSelectorReplayConfig(
+        trace_paths=("trace.json",),
+        output_dir=tmp_path / "selector",
+        candidates=(candidate,),
+        compact_json="false",
+    )
+    baseline_config = baseline_module.ProductRuntimeBaselineConfig(
+        trace_paths=("trace.json",),
+        report_path=tmp_path / "baseline.json",
+        compact_json="false",
+    )
+
+    assert workflow_config.redact_text is False
+    assert workflow_config.require_runtime_trace is False
+    assert workflow_config.strict is False
+    assert workflow_config.compact_json is False
+    assert replay_config.compact_json is False
+    assert baseline_config.compact_json is False
+
+    with pytest.raises(ValueError, match="compact_json"):
+        replay_module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=("trace.json",),
+            output_dir=tmp_path / "bad-selector",
+            candidates=(candidate,),
+            compact_json="maybe",
+        )
 
 
 def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path):

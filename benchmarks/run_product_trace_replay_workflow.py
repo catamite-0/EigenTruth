@@ -24,6 +24,7 @@ from benchmarks.build_product_trace_corpus import (  # noqa: E402
     ProductTraceCorpusConfig,
     build_product_trace_corpus,
 )
+from benchmarks.config_utils import strict_bool  # noqa: E402
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
     build_product_runtime_baseline,
@@ -91,11 +92,15 @@ class ProductTraceReplayWorkflowConfig:
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
-        object.__setattr__(self, "redact_text", bool(self.redact_text))
-        object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
-        object.__setattr__(self, "strict", bool(self.strict))
+        object.__setattr__(self, "redact_text", strict_bool(self.redact_text, name="redact_text"))
+        object.__setattr__(
+            self,
+            "require_runtime_trace",
+            strict_bool(self.require_runtime_trace, name="require_runtime_trace"),
+        )
+        object.__setattr__(self, "strict", strict_bool(self.strict, name="strict"))
         object.__setattr__(self, "limit", limit)
-        object.__setattr__(self, "compact_json", bool(self.compact_json))
+        object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
     @property
     def resolved_report_path(self) -> Path:
