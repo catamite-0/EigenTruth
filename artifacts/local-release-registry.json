@@ -2301,14 +2301,13 @@
       "metadata": {
         "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
         "compact_json": false,
-        "contract": "smollm2_1_4",
         "max_workers": 1,
         "profile_count": 4,
-        "purpose": "product_runtime_profile_selection",
         "recommended_profile": "auto",
-        "release": "strict_structured_retrieval_audit",
         "repeats": 1,
         "scenario_count": 3,
+        "slo_enabled": true,
+        "slo_passed": true,
         "status": "promote",
         "workflow": "run_product_runtime_profile_sweep"
       },

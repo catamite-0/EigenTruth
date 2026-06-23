@@ -5,39 +5,39 @@
       "file_count": 1,
       "kind": "file",
       "path": "baselines/audit/product-runtime-baseline.json",
-      "sha256": "5b8df20d150cdcd216ed4f086606c19c600e7713e9c0578045cdcb7fe5c7c052",
-      "size_bytes": 62178
+      "sha256": "a1055f7253bd4f37b45a25392bd7178cf96d64a0aa11297432684709cbf21b0e",
+      "size_bytes": 62015
     },
     "audit_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/audit/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "d082b5603b3e86ef7bce768b10b1294228fa51b6574f0ebd4f280d06bfd74b80",
-      "size_bytes": 2113
+      "sha256": "c2202c841d960aa6ea76b9b1ccb20465e07c5080cfc333b88930dd57f89d38c8",
+      "size_bytes": 1978
     },
     "audit_trace_0000": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/low_risk_supported-r0.json",
-      "sha256": "5014b29b1e06248389bcfcd6d2024c786fc84f3bc701281cb57100a85f994153",
-      "size_bytes": 36727
+      "sha256": "8828f4ff9d82db55913410ab9e82ac54eb2ef44a1e93b9d9436af7cedae39d4d",
+      "size_bytes": 36764
     },
     "audit_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/diagnostic_refuted-r0.json",
-      "sha256": "a19e78154594aec33102d9e969c550aca8bbffca41423bce6ee193717b59d116",
-      "size_bytes": 40452
+      "sha256": "37f505ca087a84f779d78c62d3a10ef939feb53aa42d1689a45b40c570a09ce5",
+      "size_bytes": 40401
     },
     "audit_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/calculator_refuted-r0.json",
-      "sha256": "7cb28d3577f93714bad22e7ea98887c320b4f664f70ed63ba2f79cb7a61c58c8",
+      "sha256": "54076e2b6c03f534bc0a5d202f0ae81bf91f7db74ad404a8ba653e5012b6cb11",
       "size_bytes": 39360
     },
     "auto_baseline": {
@@ -45,128 +45,128 @@
       "file_count": 1,
       "kind": "file",
       "path": "baselines/auto/product-runtime-baseline.json",
-      "sha256": "d08bf2ecaefbfeca0d594cff551965aaf4c8f77fc4dbd6748504367b0f319086",
-      "size_bytes": 63611
+      "sha256": "b08803760c1c0985c30167e1bd0db5f2f112263068ab887d95531bc8bbdc2712",
+      "size_bytes": 63440
     },
     "auto_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/auto/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "6096ffba5373bf9693eab2b8e55f6f9362b1666715b17541957fb1d9ea8f6109",
-      "size_bytes": 2109
+      "sha256": "b6df05c47c5b622c69c6b68d33343b1a468c527f9df6b31a38b18c86cdb547a1",
+      "size_bytes": 1974
     },
     "auto_trace_0000": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/auto/low_risk_supported-r0.json",
-      "sha256": "aa2963c9d9b29996de200c14d8e1de98c0b9f234f43c726c348d0efba1181f0f",
-      "size_bytes": 33414
+      "sha256": "63e268e8ad1c6884dcc17d0cf8ab0b1d84b853f5edc947d98a4a73069e844387",
+      "size_bytes": 33400
     },
     "auto_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/auto/diagnostic_refuted-r0.json",
-      "sha256": "28514a5bce1e88fe0ac3c11ecda1ca120f4c4c4cc5aad9b1e6d0375e2bbdf21f",
-      "size_bytes": 45510
+      "sha256": "8a024f7945c181cbfd6eb9cd15f9aa505c8a05fc9ff90dfef1eabd82f27ca257",
+      "size_bytes": 45473
     },
     "auto_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/auto/calculator_refuted-r0.json",
-      "sha256": "21a719e3b29d2b350e86769d427faee652bccbaac293f841eb952c6660421608",
-      "size_bytes": 39803
+      "sha256": "7633a729108782fb842b5ee730db50ae1ef4bb4c9b187c5417829274c2c4ba76",
+      "size_bytes": 39829
     },
     "balanced_baseline": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/balanced/product-runtime-baseline.json",
-      "sha256": "3a681fccaf6fe68a7867bdf2f14b14003a295aabb316f3663364554cb7c4059a",
-      "size_bytes": 65742
+      "sha256": "5e0a00e46228f860fb546d000aca4bc7e50884b5a43ac49877ff64e38cfffacc",
+      "size_bytes": 65690
     },
     "balanced_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/balanced/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "9c557c029c7a8913e2c3a0513cd3f6997e7cdf7631008f1e6f2554fb5bfbef64",
-      "size_bytes": 2125
+      "sha256": "afd237bec84a0ddc0489a8767d8802fa4e50088dec8f217f652f8100af0e1aec",
+      "size_bytes": 1990
     },
     "balanced_trace_0000": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/low_risk_supported-r0.json",
-      "sha256": "da7be473cbc23d98423d414c7ea472db9624ea04f3a40a3977887ac565b3bc27",
-      "size_bytes": 33301
+      "sha256": "584b4e6a2144d29fb41e513db9eea203b38d984684c9cabe94ae1398e540c3ed",
+      "size_bytes": 33282
     },
     "balanced_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/diagnostic_refuted-r0.json",
-      "sha256": "17d9c3139bbbf17ec3e8f486e4bca4a503ea21fb3ad6185b4031aebeeec470c1",
-      "size_bytes": 45084
+      "sha256": "35f44a61644c7328e25efc59a6c55ee613f168e4d44b045b56001450c1f3a247",
+      "size_bytes": 45107
     },
     "balanced_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/calculator_refuted-r0.json",
-      "sha256": "c08f4f18e214cd7d078b308c33c03e3602dad21ef8dd9a38fe2ae2a54691727a",
-      "size_bytes": 44315
+      "sha256": "7781438402436631e29830f5e16171eb61c4d121157b3f16c036f663a37544fe",
+      "size_bytes": 44380
     },
     "latency_baseline": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/latency/product-runtime-baseline.json",
-      "sha256": "9f88764f8b06d9b05b24c65252aa2f70bdcb4a7fd4dba9ee84f7259df27c32ad",
-      "size_bytes": 58927
+      "sha256": "8dd22995af32305f00000ec850912926836d3b7555bf8a450871adb7b239771c",
+      "size_bytes": 58910
     },
     "latency_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/latency/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "092698d25d2e019650f1faaa82505ce2fdc2800eb43469c54c1ab0bbaa7569aa",
-      "size_bytes": 2121
+      "sha256": "80682fa70c2cb5643312771ea7d512ffc07c8cdc4f2afc91c1cff5005ed93426",
+      "size_bytes": 1986
     },
     "latency_trace_0000": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/low_risk_supported-r0.json",
-      "sha256": "72708e2f5d6f60ebd2f786661b58094400520c999851cbc9b91ea3e2127a51a4",
-      "size_bytes": 32994
+      "sha256": "2f618dda3529dc6add60ca43c51f7890d859d10a00c026cfb16c61d6a0191bbc",
+      "size_bytes": 33073
     },
     "latency_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "499694bd054b666c07447cf2694566c996e7e6986299189078eb530fff921423",
-      "size_bytes": 33473
+      "sha256": "0943e151e95ec1bde1d4df102dbd15e0d8e0ec80684712afa1df601839755724",
+      "size_bytes": 33453
     },
     "latency_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/calculator_refuted-r0.json",
-      "sha256": "b6a382607829ad5c1e85ca125c3f9b9292aa6f1bfbbdc2043e103f4ef01754a9",
-      "size_bytes": 44041
+      "sha256": "a1df0fed828bcc17b275218d40ef7da278bb309fa6821af36ba46c5a445f9aca",
+      "size_bytes": 44077
     },
     "product_runtime_profile_sweep_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-profile-sweep.json",
-      "sha256": "c2a94dd5ce6423a47c2e6f6c3d07b528f51495eff965f672d18ad694059a20c3",
-      "size_bytes": 19468
+      "sha256": "334c8a15c560dafd9109e2c4a1c31dfdb47b6968e0cca6fd06b49c81b980bae4",
+      "size_bytes": 30533
     },
     "promotion_contract": {
       "exists": true,
@@ -175,27 +175,34 @@
       "path": "../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
       "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
       "size_bytes": 53344
+    },
+    "slo_policy": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-profile-slo-policy.json",
+      "sha256": "3628f98fa77b8f19f07d0441a46666229b53f1acdad17328f7cda04fa185f380",
+      "size_bytes": 289
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "compact_json": false,
-    "contract": "smollm2_1_4",
     "max_workers": 1,
     "profile_count": 4,
-    "purpose": "product_runtime_profile_selection",
     "recommended_profile": "auto",
-    "release": "strict_structured_retrieval_audit",
     "repeats": 1,
     "runner": "run_product_runtime_profile_sweep",
     "scenario_count": 3,
+    "slo_enabled": true,
+    "slo_passed": true,
     "status": "promote"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 22,
+    "artifact_count": 23,
     "directory_count": 0,
-    "file_count": 22,
+    "file_count": 23,
     "missing_count": 0
   }
 }

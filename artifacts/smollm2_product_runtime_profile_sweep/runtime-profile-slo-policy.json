@@ -1,0 +1,12 @@
+{
+  "max_mean_attempted_route_count": 1.1,
+  "max_retrieval_use_rate": 0.0,
+  "max_total_seconds_p95": 0.05,
+  "max_verified_claim_count_mean": 2.0,
+  "min_auto_selected_profile_counts": {
+    "audit": 1,
+    "balanced": 1,
+    "latency": 1
+  },
+  "min_verification_skip_rate_mean": 0.0
+}

@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-baseline.json",
-      "sha256": "d08bf2ecaefbfeca0d594cff551965aaf4c8f77fc4dbd6748504367b0f319086",
-      "size_bytes": 63611
+      "sha256": "b08803760c1c0985c30167e1bd0db5f2f112263068ab887d95531bc8bbdc2712",
+      "size_bytes": 63440
     },
     "promotion_contract": {
       "exists": true,
@@ -21,24 +21,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/auto/low_risk_supported-r0.json",
-      "sha256": "aa2963c9d9b29996de200c14d8e1de98c0b9f234f43c726c348d0efba1181f0f",
-      "size_bytes": 33414
+      "sha256": "63e268e8ad1c6884dcc17d0cf8ab0b1d84b853f5edc947d98a4a73069e844387",
+      "size_bytes": 33400
     },
     "trace_0001_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/auto/diagnostic_refuted-r0.json",
-      "sha256": "28514a5bce1e88fe0ac3c11ecda1ca120f4c4c4cc5aad9b1e6d0375e2bbdf21f",
-      "size_bytes": 45510
+      "sha256": "8a024f7945c181cbfd6eb9cd15f9aa505c8a05fc9ff90dfef1eabd82f27ca257",
+      "size_bytes": 45473
     },
     "trace_0002_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/auto/calculator_refuted-r0.json",
-      "sha256": "21a719e3b29d2b350e86769d427faee652bccbaac293f841eb952c6660421608",
-      "size_bytes": 39803
+      "sha256": "7633a729108782fb842b5ee730db50ae1ef4bb4c9b187c5417829274c2c4ba76",
+      "size_bytes": 39829
     }
   },
   "digest_algorithm": "sha256",
@@ -46,9 +46,6 @@
     "budget_enabled": true,
     "budget_passed": true,
     "compact_json": false,
-    "contract": "smollm2_1_4",
-    "purpose": "product_runtime_profile_selection",
-    "release": "strict_structured_retrieval_audit",
     "runner": "run_product_runtime_baseline",
     "runtime_profile": "auto",
     "source": "run_product_runtime_profile_sweep",

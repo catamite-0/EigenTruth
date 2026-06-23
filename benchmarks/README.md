@@ -2212,6 +2212,7 @@ path:
 python benchmarks/run_product_runtime_profile_sweep.py \
   --output-dir artifacts/product-runtime-profile-sweep \
   --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --slo-policy artifacts/product-runtime-profile-sweep/runtime-profile-slo-policy.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-profile-sweep \
   --version 0.1 \
@@ -2220,9 +2221,14 @@ python benchmarks/run_product_runtime_profile_sweep.py \
 
 The sweep runs deterministic calibrated-control demo scenarios, writes one trace
 per mode/scenario/repeat, builds a `run_product_runtime_baseline.py` report for
-each mode, records the actual selected runtime profile for `auto`, and ranks the
-non-blocked modes by request runtime and route cost. This is the product-control
-counterpart to model-side cache/profile sweeps. Use the default
+each mode, records the actual selected runtime profile for `auto`, optionally
+applies a sweep-level `--slo-policy`, and ranks the non-blocked modes by request
+runtime and route cost. `--policy` still applies the `ProductRuntimeBudgetPolicy`
+to each trace in each per-mode baseline; `--slo-policy` applies aggregate gates
+such as `max_total_seconds_p95`, `max_mean_attempted_route_count`,
+`min_verification_skip_rate_mean`, `max_verified_claim_count_mean`, and
+`min_auto_selected_profile_counts` to the profile row. This is the
+product-control counterpart to model-side cache/profile sweeps. Use the default
 `--max-workers 1` when timing will be used as promotion evidence. Use
 `--max-workers N` to run independent modes concurrently for faster smoke and
 coverage scans; within each mode, trace order remains deterministic before its
@@ -2235,11 +2241,14 @@ Current registered SmolLM2 product runtime profile sweep:
 `artifacts/local-release-registry.json`. It uses the strict structured-retrieval
 audit 1.4 promotion contract, verifies the artifact manifest, promotes all three
 static profiles plus `auto` under `max_mean_attempted_route_count=1.1`,
-`max_retrieval_use_rate=0.0`, and `max_p99_route_duration_seconds=0.01`, and
-recommends `auto` for the deterministic control-plane scenario set. In that
-registered sweep, `auto` selects `latency`, `balanced`, and `audit` once each
-across the three scenarios. Skipped staged-verification paths with no verifier
-route are counted as zero route cost for route-cost budget checks.
+`max_retrieval_use_rate=0.0`, and `max_p99_route_duration_seconds=0.01`, then
+adds the profile SLO policy at
+`artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json`
+with `max_total_seconds_p95=0.05`, `max_verified_claim_count_mean=2.0`, and an
+auto selector distribution gate requiring one `latency`, `balanced`, and `audit`
+selection across the deterministic scenario set. The sweep recommends `auto`.
+Skipped staged-verification paths with no verifier route are counted as zero
+route cost for route-cost budget checks.
 
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in

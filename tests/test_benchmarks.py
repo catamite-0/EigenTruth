@@ -9192,6 +9192,117 @@ def test_run_product_runtime_profile_sweep_blocks_when_policy_fails(tmp_path):
     assert payload["decision"]["blocking_reasons"] == ("latency.total_seconds: failed 1 trace(s)",)
 
 
+def test_run_product_runtime_profile_sweep_applies_slo_policy(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("auto",),
+            scenarios=module.DEFAULT_SCENARIOS,
+            slo_policy={
+                "max_total_seconds_p95": 1.0,
+                "max_mean_attempted_route_count": 1.1,
+                "max_retrieval_use_rate": 0.0,
+                "min_auto_selected_profile_counts": {
+                    "latency": 1,
+                    "balanced": 1,
+                    "audit": 1,
+                },
+            },
+        )
+    )
+
+    profile = payload["profiles"][0]
+    assert payload["status"] == "promote"
+    assert payload["slo"]["enabled"] is True
+    assert payload["slo"]["passed"] is True
+    assert payload["decision"]["recommended_profile"] == "auto"
+    assert profile["baseline_status"] == "observed"
+    assert profile["status"] == "promote"
+    assert profile["slo"]["passed"] is True
+    assert profile["runtime_profile_selection"]["counts_by_selected_profile"] == {
+        "audit": 1,
+        "balanced": 1,
+        "latency": 1,
+    }
+    assert {
+        check["metric"]
+        for check in profile["slo"]["checks"]
+    } >= {
+        "total_seconds_p95",
+        "mean_attempted_route_count",
+        "retrieval_use_rate",
+        "auto_selected_profile_count.latency",
+        "auto_selected_profile_count.balanced",
+        "auto_selected_profile_count.audit",
+    }
+
+
+def test_run_product_runtime_profile_sweep_blocks_when_slo_policy_fails(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("auto",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="low",
+                    text="Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={"Paris is the capital of France": "supported"},
+                ),
+            ),
+            slo_policy={
+                "min_auto_selected_profile_counts": {
+                    "audit": 1,
+                },
+            },
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["slo"]["passed"] is False
+    assert payload["profiles"][0]["status"] == "blocked"
+    assert payload["profiles"][0]["slo"]["failures"][0]["metric"] == "auto_selected_profile_count.audit"
+    assert payload["decision"]["blocking_reasons"] == (
+        "auto.auto_selected_profile_count.audit: SLO min 1.0 failed",
+    )
+
+
+def test_run_product_runtime_profile_sweep_requires_auto_profile_for_auto_slo(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("latency",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="low",
+                    text="Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={"Paris is the capital of France": "supported"},
+                ),
+            ),
+            slo_policy={
+                "min_auto_selected_profile_counts": {
+                    "latency": 1,
+                },
+            },
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["profiles"][0]["status"] == "promote"
+    assert payload["slo"]["passed"] is False
+    assert payload["slo"]["failures"][0]["metric"] == "auto_profile"
+    assert payload["decision"]["blocking_reasons"] == (
+        "sweep.auto_profile: SLO required True failed",
+    )
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"
