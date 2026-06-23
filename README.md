@@ -302,6 +302,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_inside_trigger_budget_sweep.py` | Runs several triggered INSIDE budgets and compares generated samples, `inside_generation`, reference ratios, inside-score AUROCs, and cost-first / quality-balanced recommendations. |
 | `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports plus optional INSIDE sampling and trigger-budget sweep evidence into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, sampling flags, derived-sweep flags, and best available AUROC quality signal. |
 | `run_performance_baseline_workflow.py` | Builds a registry-ready performance baseline bundle from cache matrix, optional worker sweep, optional INSIDE profile / trigger-budget evidence, runtime recommendation, and artifact manifest. |
+| `run_product_runtime_baseline.py` | Aggregates saved `ProductTrace` JSON files into a request-runtime baseline with phase, cache, verifier-route, retrieval-use, and optional `ProductRuntimeBudgetPolicy` gate metrics. |
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling / trigger-budget gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, runtime cost, and INSIDE profile or trigger-budget cost evidence, then recommends one deployable baseline. |
@@ -363,6 +364,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_inside_trigger_budget_sweep.py` | 比较多个 triggered INSIDE budget，输出生成样本数、`inside_generation`、参考全量比例、inside-score AUROC，以及成本优先 / 质量折中的推荐。 |
 | `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 与可选 INSIDE sampling / trigger-budget sweep 证据转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count、sampling flags、derived-sweep flags 和最佳 AUROC quality signal。 |
 | `run_performance_baseline_workflow.py` | 将 cache matrix、可选 worker sweep、可选 INSIDE profile / trigger-budget 证据、runtime recommendation 和 artifact manifest 打包成可注册 performance baseline。 |
+| `run_product_runtime_baseline.py` | 聚合已保存的 `ProductTrace` JSON，输出请求级 runtime baseline：phase、cache、verifier route、retrieval 使用率，以及可选 `ProductRuntimeBudgetPolicy` gate。 |
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling / trigger-budget gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal、runtime cost 和 INSIDE profile / trigger-budget 成本证据比较已注册 readiness baseline，并推荐一个可部署 baseline。 |

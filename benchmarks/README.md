@@ -2177,6 +2177,28 @@ python benchmarks/run_performance_baseline_workflow.py \
   --fail-on-blocked
 ```
 
+Use `run_product_runtime_baseline.py` for the product-control side of the same
+performance story: aggregate saved `ProductTrace` JSON files, summarize request
+phase timings, route costs, cache hit rates, retrieval use, and optionally apply
+a `ProductRuntimeBudgetPolicy` or promoted `ProductPromotionContract` budget:
+
+```bash
+python benchmarks/run_product_runtime_baseline.py \
+  --trace artifacts/demo-request-a.json \
+  --trace artifacts/demo-request-b.json \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --json artifacts/product-runtime-baseline.json \
+  --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-runtime-baseline \
+  --version 0.1 \
+  --fail-on-blocked
+```
+
+This report does not replace the model/cache performance baseline above. It
+checks the actual control-plane trace shape that a product path emits: route
+attempt counts, retrieval use, phase tails, and cache metadata.
+
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
 `artifacts/local-readiness-registry.json`. It reuses the promoted real-model

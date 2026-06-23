@@ -8851,6 +8851,136 @@ def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
     assert Path(payload["paths"]["worker_sweep_report"]).exists()
 
 
+def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    trace_a.write_text(
+        json.dumps({
+            "request_id": "req-a",
+            "runtime_trace": {
+                "total_seconds": 0.10,
+                "phases": [
+                    {"name": "diagnostic_risk_decision", "seconds": 0.02},
+                    {"name": "initial_verification", "seconds": 0.03},
+                ],
+            },
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_route": "structured_qa",
+                        "total_duration_seconds": 0.01,
+                        "selected_route_duration_seconds": 0.01,
+                        "attempted_route_count": 1,
+                        "used_retrieval": False,
+                    },
+                }
+            ],
+            "metadata": {"cache": {"verifier": {"hits": 1, "misses": 1}}},
+        }),
+        encoding="utf-8",
+    )
+    trace_b.write_text(
+        json.dumps({
+            "request_id": "req-b",
+            "runtime_trace": {
+                "total_seconds": 0.18,
+                "phases": [
+                    {"name": "diagnostic_risk_decision", "seconds": 0.02},
+                    {"name": "initial_verification", "seconds": 0.12},
+                ],
+            },
+            "verification_results": [
+                {
+                    "status": "refuted",
+                    "metadata": {
+                        "selected_route": "retrieval_structured_qa",
+                        "total_duration_seconds": 0.04,
+                        "selected_route_duration_seconds": 0.03,
+                        "attempted_route_count": 2,
+                        "used_retrieval": True,
+                        "retrieval_hit_count": 1,
+                    },
+                }
+            ],
+            "metadata": {"cache": {"verifier": {"hits": 2, "misses": 0}}},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+            registry_path=registry_path,
+            name="demo-product-runtime",
+            version="0.1",
+            policy={
+                "max_total_seconds": 0.2,
+                "max_mean_attempted_route_count": 2.0,
+                "max_retrieval_use_rate": 1.0,
+            },
+            metadata={"suite": "unit"},
+        )
+    )
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:demo-product-runtime:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["budget"]["passed_count"] == 2
+    assert payload["summary"]["n_traces"] == 2
+    assert payload["summary"]["total_seconds"]["mean"] == pytest.approx(0.14)
+    assert payload["summary"]["phases"]["initial_verification"]["phase_count"] == 2
+    assert payload["summary"]["routes"]["overall"]["total"] == 2
+    assert payload["summary"]["routes"]["overall"]["retrieval_use_rate"] == pytest.approx(0.5)
+    assert payload["summary"]["routes"]["by_route"]["retrieval_structured_qa"]["retrieval_use_rate"] == pytest.approx(
+        1.0
+    )
+    assert saved["artifact_manifest_summary"]["artifact_count"] == 3
+    assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
+    assert manifest["metadata"]["budget_passed"] is True
+    assert record.artifact_type == "product_runtime_baseline"
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["trace_count"] == 2
+
+
+def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_path = tmp_path / "trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "slow-req",
+            "runtime_trace": {
+                "total_seconds": 0.25,
+                "phases": [{"name": "initial_verification", "seconds": 0.22}],
+            },
+            "verification_results": [],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_path,),
+            report_path=tmp_path / "product-runtime-baseline.json",
+            policy={"max_total_seconds": 0.1},
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["budget"]["failed_count"] == 1
+    assert payload["budget"]["failure_counts_by_metric"] == {"total_seconds": 1}
+    assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"
