@@ -410,6 +410,10 @@ layer/score reports and best artifacts are built with
 `selective_report` fields for threshold, coverage, selective accuracy, detection,
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
+The report config includes `score_dump` metadata from `eigentruth.eval.ScoreDump`:
+record counts, available score names, sweep layers, file size, and SHA-256. This
+lets later calibration, ensemble, and route-refresh steps confirm they are reusing
+the intended dump without parsing model artifacts again.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
@@ -1938,7 +1942,9 @@ Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
 then thresholded with the same split-conformal false-alarm check as the single
-signals.
+signals. Each run records the same validated score-dump summary and file
+fingerprint used by `eval_conformal.py`, so ensemble comparisons can be checked
+against exact input artifacts.
 
 Current Qwen l80 / SmolLM2 l80 result: simple internal-score ensembles do not
 beat `truth_proj`. At alpha 0.100, Qwen's best single signal detects 0.279 while

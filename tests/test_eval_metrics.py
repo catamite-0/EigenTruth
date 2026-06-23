@@ -3,6 +3,7 @@
 纯函数测试，CPU 可运行，无需模型或网络。
 """
 
+import json
 import math
 
 import pytest
@@ -14,6 +15,7 @@ from eigentruth.eval.metrics import (
     roc_auc,
     selective_classification_report,
 )
+from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
 
 
 class TestRocAuc:
@@ -115,3 +117,60 @@ class TestSelectiveClassificationReport:
 
         assert ci == {"estimate": None, "lower": None, "upper": None, "successes": 0, "total": 0}
 
+
+class TestScoreDump:
+    """Validated score dump loader tests."""
+
+    def test_summary_roundtrip_and_file_metadata(self, tmp_path):
+        path = tmp_path / "scores.json"
+        path.write_text(
+            json.dumps({
+                "config": {"model": "unit-model", "layer": -2},
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+                "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
+                "statements": [{"text": "true"}, {"text": "false"}],
+                "inside_sampling": {"mode": "off"},
+            }),
+            encoding="utf-8",
+        )
+
+        dump = load_score_dump(path, required_scores=("maha_last",))
+        metadata = score_dump_file_metadata(path, dump)
+
+        assert isinstance(dump, ScoreDump)
+        assert dump.summary()["n_total"] == 2
+        assert dump.summary()["n_true"] == 1
+        assert dump.summary()["n_false"] == 1
+        assert dump.summary()["model"] == "unit-model"
+        assert dump.summary()["sweep_score_count"] == 1
+        assert dump.summary()["sweep_score_names"] == ("truth_proj",)
+        assert dump.signal_names() == ("maha_last", "truth_proj")
+        assert dump.to_mapping()["inside_sampling"] == {"mode": "off"}
+        assert metadata["exists"] is True
+        assert metadata["sha256"]
+        assert metadata["summary"]["all_signal_names"] == ("maha_last", "truth_proj")
+
+    def test_validates_lengths_and_required_scores(self, tmp_path):
+        path = tmp_path / "bad-scores.json"
+        path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1]},
+            }),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="length does not match labels"):
+            load_score_dump(path)
+
+        missing_path = tmp_path / "missing-score.json"
+        missing_path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+            }),
+            encoding="utf-8",
+        )
+        with pytest.raises(ValueError, match="missing requested score"):
+            load_score_dump(missing_path, required_scores=("truth_proj",))

@@ -21,6 +21,7 @@ from eigentruth.eval.metrics import (
     roc_auc,
     selective_classification_report,
 )
+from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
 
 __all__ = [
     "roc_auc",
@@ -31,4 +32,7 @@ __all__ = [
     "conformal_threshold",
     "directional_conformal_threshold",
     "directional_trigger_rate",
+    "ScoreDump",
+    "load_score_dump",
+    "score_dump_file_metadata",
 ]

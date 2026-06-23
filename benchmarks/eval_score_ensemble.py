@@ -18,6 +18,7 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
+from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
@@ -107,23 +108,18 @@ def _rate_payload(false_alarms: Sequence[float], detections: Sequence[float], al
 
 
 def _load_scores(path: Path) -> dict[str, Any]:
-    with open(path, encoding="utf-8") as f:
-        dump = json.load(f)
-    labels = torch.tensor(dump["labels"], dtype=torch.int64)
-    if labels.numel() == 0:
-        raise ValueError("score dump labels must be non-empty.")
-    if not torch.logical_or(labels == 0, labels == 1).all():
-        raise ValueError("score dump labels must be binary values in {0, 1}.")
+    dump = load_score_dump(path)
+    labels = torch.tensor(dump.labels, dtype=torch.int64)
     scores = {
         name: torch.tensor(values, dtype=torch.float64)
-        for name, values in dump.get("scores", {}).items()
+        for name, values in dump.scores.items()
     }
-    if not scores:
-        raise ValueError("score dump must contain at least one score family.")
-    for name, values in scores.items():
-        if values.numel() != labels.numel():
-            raise ValueError(f"score {name!r} length does not match labels.")
-    return {"config": dict(dump.get("config", {})), "labels": labels, "scores": scores}
+    return {
+        "config": dict(dump.config),
+        "labels": labels,
+        "scores": scores,
+        "score_dump": dump,
+    }
 
 
 def _score_signal(
@@ -291,6 +287,7 @@ def build_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
+            "score_dump": score_dump_file_metadata(path, dump["score_dump"]),
             "config": dump["config"],
             "signals": list(signals),
             "directions": directions,

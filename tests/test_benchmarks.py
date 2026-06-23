@@ -48,6 +48,9 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     report = payload["results"]["0.2"]["selective_report"]
 
     assert payload["config"]["direction"] == "lower"
+    assert payload["config"]["score_dump"]["summary"]["n_total"] == 12
+    assert payload["config"]["score_dump"]["summary"]["score_names"] == ("support",)
+    assert payload["config"]["score_dump"]["sha256"]
     assert payload["results"]["0.2"]["threshold"] == pytest.approx(10.0)
     assert report["direction"] == "lower"
     assert report["false_alarm"] == pytest.approx(0.0)
@@ -10216,6 +10219,9 @@ def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
 
     assert run["best_single_at_alpha"]["name"] in {"truth_proj", "subspace_resid"}
     assert run["best_ensemble_at_alpha"]["name"] == "max_rank"
+    assert run["score_dump"]["summary"]["n_total"] == len(labels)
+    assert run["score_dump"]["summary"]["score_count"] == 2
+    assert run["score_dump"]["sha256"]
     assert ensemble_detection >= single_detection
     assert run["ensemble_results"]["max_rank"]["alphas"]["0.2"]["false_alarm"] <= 0.23
 

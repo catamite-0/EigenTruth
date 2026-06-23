@@ -32,6 +32,7 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import selective_classification_report
+from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -63,11 +64,11 @@ def run(args) -> dict:
     except Exception:
         pass
 
-    with open(args.scores, encoding="utf-8") as f:
-        dump = json.load(f)
-    labels = torch.tensor(dump["labels"])
-    scores = torch.tensor(dump["scores"][args.signal], dtype=torch.float64)
-    dump_config = dump.get("config", {})
+    score_dump = load_score_dump(args.scores, required_scores=(args.signal,))
+    dump = score_dump.to_mapping()
+    labels = torch.tensor(score_dump.labels)
+    scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
+    dump_config = score_dump.config
     direction = _direction_for(args.signal, args.direction)
 
     true_scores = scores[labels == 0]   # 正常总体（可交换假设的对象）
@@ -120,6 +121,7 @@ def run(args) -> dict:
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
     payload = {"config": {"scores": args.scores, "signal": args.signal,
+                          "score_dump": score_dump_file_metadata(args.scores, score_dump),
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
