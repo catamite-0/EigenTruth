@@ -3809,6 +3809,140 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     )
 
 
+def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72, "subspace_resid": 0.68},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="quality_balanced",
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+    )
+
+    candidate = payload["release_candidate"]
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_performance_baseline_record"] == (
+        "performance_baseline:qwen-performance:0.6"
+    )
+    assert payload["performance_baseline_gate"]["gate"]["passed"] is True
+    assert candidate["performance_baseline_record"] == "performance_baseline:qwen-performance:0.6"
+    assert candidate["manifests"]["performance_manifest"].endswith("artifact-manifest.json")
+
+
+def test_compare_release_candidates_blocks_mismatched_performance_baseline(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        batch_size=2,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="quality_balanced",
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["release_candidate"] is None
+    assert payload["decision"]["blocking_reasons"][0]["gate"] == "performance_baseline"
+    assert any(
+        "runtime batch_size mismatch" in reason
+        for reason in payload["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -4278,6 +4412,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         version="0.6",
         metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
     ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=baseline_registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="cost_first",
+    )
 
     payload = module.run_release_candidate_registry_workflow(
         module.ReleaseCandidateRegistryWorkflowConfig(
@@ -4289,6 +4434,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             release_report_path=tmp_path / "release-candidate.json",
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
+            performance_baseline_key="performance_baseline:qwen-performance:0.6",
             runtime_profile="balanced",
             inside_trigger_budget_policy="cost_first",
             min_best_quality_auroc=0.70,
@@ -4308,6 +4454,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["decision"]["registry_record"] == "benchmark_manifest:qwen-release-candidate:0.7"
     manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
     assert sorted(manifest["artifacts"]) == [
+        "performance_manifest",
         "readiness_manifest",
         "release_candidate_report",
         "route_manifest",
@@ -4315,12 +4462,16 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
     assert manifest["metadata"]["release_candidate_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile"] == "balanced"
+    assert manifest["metadata"]["release_performance_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
         "max_mean_attempted_route_count": 1.5,
         "max_retrieval_use_rate": 0.5,
     }
     assert manifest["metadata"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
     assert manifest["metadata"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
+    assert manifest["metadata"]["recommended_performance_baseline_record"] == (
+        "performance_baseline:qwen-performance:0.6"
+    )
     assert manifest["metadata"]["recommended_route_verified_false_alarm"] == pytest.approx(0.0)
     assert manifest["metadata"]["recommended_route_verified_detection"] == pytest.approx(1.0)
     assert manifest["metadata"]["recommended_route_mean_duration_seconds"] == pytest.approx(0.01)
@@ -4335,7 +4486,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert manifest["metadata"]["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["recommended_inside_trigger_budget_derive_from_max_budget"] is True
+    assert manifest["metadata"]["performance_manifest"].endswith("performance/artifact-manifest.json")
     assert payload["config"]["runtime_profile"] == "balanced"
+    assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
     assert payload["release_candidate_comparison"]["config"]["inside_trigger_budget_policy"] == "cost_first"
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
@@ -4347,6 +4500,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
     assert record.metadata["release_candidate_status"] == "promote"
     assert record.metadata["release_runtime_profile"] == "balanced"
+    assert record.metadata["recommended_performance_baseline_record"] == (
+        "performance_baseline:qwen-performance:0.6"
+    )
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
@@ -4777,6 +4933,126 @@ def _write_readiness_baseline_manifest(
             "readiness_status": "promote",
             "runtime_recommendation_status": "promote",
             "manifest_metadata": metadata,
+        },
+    ).save_json()
+    return manifest_path
+
+
+def _write_performance_baseline_record(
+    output_dir,
+    *,
+    registry_path,
+    name,
+    version,
+    layer,
+    batch_size=1,
+    hidden_state_capture="outputs",
+    max_batch_tokens=0,
+    prefix_kv_cache=False,
+    max_workers=1,
+    best_quality_signal_name="truth_proj",
+    best_quality_auroc=0.72,
+    inside_trigger_budget_id="top_0p4",
+    inside_trigger_budget_policy="quality_balanced",
+):
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    runtime_path = output_dir / "runtime-recommendation.json"
+    report_path = output_dir / "performance-baseline-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    cell_id = f"layer_m{abs(layer)}_batch_{batch_size}_capture_{hidden_state_capture}"
+    recommendation = {
+        "cell_id": cell_id,
+        "layer": layer,
+        "batch_size": batch_size,
+        "hidden_state_capture": hidden_state_capture,
+        "max_batch_tokens": max_batch_tokens,
+        "prefix_kv_cache": prefix_kv_cache,
+        "max_workers": max_workers,
+        "quality_signals": {best_quality_signal_name: best_quality_auroc},
+        "best_quality_signal": {
+            "name": best_quality_signal_name,
+            "auroc": best_quality_auroc,
+        },
+        "inside_sampling": {
+            "recommended_run": "adaptive_selfcheck",
+            "inside_trigger_budget_id": inside_trigger_budget_id,
+            "inside_trigger_budget_policy": inside_trigger_budget_policy,
+        },
+        "inside_trigger_budget_sweep": {
+            "recommended_budget_id": inside_trigger_budget_id,
+            "selection_policy": inside_trigger_budget_policy,
+        },
+    }
+    runtime_payload = {
+        "schema_version": 1,
+        "status": "promote",
+        "recommendation": recommendation,
+        "decision": {
+            "status": "promote",
+            "recommended_cell": cell_id,
+            "recommended_layer": layer,
+            "recommended_batch_size": batch_size,
+            "recommended_best_quality_signal": best_quality_signal_name,
+        },
+    }
+    runtime_path.write_text(json.dumps(runtime_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "performance_baseline_workflow",
+        "status": "promote",
+        "decision": {
+            "status": "promote",
+            "recommended_cell": cell_id,
+            "recommended_layer": layer,
+            "recommended_batch_size": batch_size,
+            "recommended_best_quality_signal": best_quality_signal_name,
+        },
+        "runtime_recommendation": runtime_payload,
+        "paths": {
+            "runtime_recommendation": str(runtime_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "registry_record": f"performance_baseline:{name}:{version}",
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "performance_baseline_report": report_path,
+                    "runtime_recommendation": runtime_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_performance_baseline_workflow",
+                    "status": "promote",
+                    "runtime_recommendation_status": "promote",
+                    "recommended_layer": layer,
+                    "recommended_batch_size": batch_size,
+                    "recommended_best_quality_signal": best_quality_signal_name,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(registry_path).record_performance_baseline(
+        name=name,
+        version=version,
+        path=report_path,
+        metadata={
+            "workflow": "run_performance_baseline_workflow",
+            "status": "promote",
+            "runtime_recommendation_status": "promote",
+            "artifact_manifest": str(manifest_path),
+            "runtime_recommendation": str(runtime_path),
+            "recommended_layer": layer,
+            "recommended_batch_size": batch_size,
+            "recommended_best_quality_signal": best_quality_signal_name,
         },
     ).save_json()
     return manifest_path

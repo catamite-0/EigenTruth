@@ -1089,6 +1089,8 @@ route cost in one report.
 python benchmarks/compare_release_candidates.py \
   --readiness-registry artifacts/registry.json \
   --route-registry artifacts/registry.json \
+  --performance-registry artifacts/registry.json \
+  --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -1108,6 +1110,13 @@ python benchmarks/compare_release_candidates.py \
 Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
+Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
+final candidate must match a registered performance handoff. The comparison
+verifies that performance baseline manifest, reloads its runtime recommendation,
+and fails closed when layer, batch size, capture mode, token budget, prefix cache,
+worker count, trigger budget, trigger policy, or best quality signal differ from
+the readiness-selected runtime. Omit `--performance-registry` when the
+performance record lives in the readiness registry.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.

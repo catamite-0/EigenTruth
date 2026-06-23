@@ -18,6 +18,7 @@ from benchmarks.compare_readiness_baselines import compare_readiness_baselines  
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest  # noqa: E402
 
 
 def compare_release_candidates(
@@ -26,6 +27,8 @@ def compare_release_candidates(
     route_registry_path: str | Path | None = None,
     readiness_baseline_keys: Sequence[str] = (),
     route_baseline_keys: Sequence[str] = (),
+    performance_registry_path: str | Path | None = None,
+    performance_baseline_key: str | None = None,
     recursive: bool = True,
     allow_unverified: bool = False,
     runtime_profile: str | None = None,
@@ -54,6 +57,9 @@ def compare_release_candidates(
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
+    performance_registry_path = (
+        readiness_registry_path if performance_registry_path is None else performance_registry_path
+    )
     profile, profile_values, profile_applied = _apply_runtime_profile(
         runtime_profile,
         {
@@ -107,16 +113,30 @@ def compare_release_candidates(
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         notes=("release candidate route comparison",),
     )
-    candidate = _release_candidate(readiness, route)
-    decision = _decision(readiness, route, candidate)
+    raw_candidate = _release_candidate(readiness, route)
+    performance = _performance_baseline_gate(
+        performance_registry_path=performance_registry_path,
+        performance_baseline_key=performance_baseline_key,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        candidate=raw_candidate,
+    )
+    decision = _decision(readiness, route, raw_candidate, performance)
+    candidate = (
+        _candidate_with_performance(raw_candidate, performance)
+        if decision["status"] == "promote"
+        else None
+    )
     return {
         "schema_version": 1,
         "workflow": "release_candidate_comparison",
         "config": {
             "readiness_registry": str(readiness_registry_path),
             "route_registry": str(route_registry_path),
+            "performance_registry": str(performance_registry_path),
             "readiness_baseline_keys": list(readiness_baseline_keys),
             "route_baseline_keys": list(route_baseline_keys),
+            "performance_baseline_key": performance_baseline_key,
             "recursive": recursive,
             "allow_unverified": allow_unverified,
             "runtime_profile": None if profile is None else profile.name,
@@ -146,6 +166,7 @@ def compare_release_candidates(
         },
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
+        "performance_baseline_gate": performance,
         "release_candidate": candidate,
         "decision": decision,
         "notes": list(notes),
@@ -268,11 +289,14 @@ def _decision(
     readiness: Mapping[str, Any],
     route: Mapping[str, Any],
     candidate: Mapping[str, Any] | None,
+    performance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
     readiness_status = readiness_decision.get("status")
     route_status = route_decision.get("status")
+    performance_gate = _mapping(None if performance is None else performance.get("gate"))
+    performance_status = None if performance is None else performance.get("status")
     blocking_reasons = []
     if readiness_status != "promote":
         blocking_reasons.append({
@@ -286,25 +310,356 @@ def _decision(
             "status": route_status,
             "reasons": list(route_decision.get("blocking_reasons", ())),
         })
+    if performance is not None and performance_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "performance_baseline",
+            "status": performance_status,
+            "reasons": list(performance_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
             "status": "blocked",
             "reasons": ["promoted baseline comparisons did not expose recommended rows"],
         })
-    status = "promote" if candidate is not None else (
+    status = "promote" if candidate is not None and not blocking_reasons else (
         "no_candidate" if "no_candidate" in {readiness_status, route_status} else "blocked"
     )
     return {
         "status": status,
         "readiness_status": readiness_status,
         "route_status": route_status,
+        "performance_status": performance_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
+        "recommended_performance_baseline_record": (
+            None if performance is None or performance_gate.get("passed") is not True else performance.get("record_key")
+        ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
         "blocking_reasons": blocking_reasons,
     }
+
+
+def _performance_baseline_gate(
+    *,
+    performance_registry_path: str | Path,
+    performance_baseline_key: str | None,
+    recursive: bool,
+    allow_unverified: bool,
+    candidate: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if performance_baseline_key is None:
+        return None
+    registry = ArtifactRegistry.load_json(performance_registry_path)
+    record = registry.get(performance_baseline_key)
+    if record.artifact_type != "performance_baseline":
+        raise ValueError(f"registry record {record.key()!r} is not a performance_baseline.")
+    report_path = Path(record.path)
+    report, report_error = _load_optional_json(report_path)
+    manifest_path = _performance_manifest_path(record, report, report_path=report_path)
+    verification = _verify_performance_manifest(manifest_path, recursive=recursive)
+    runtime_recommendation, runtime_source = _performance_runtime_recommendation(
+        record,
+        report,
+        report_path=report_path,
+    )
+    gate = _performance_gate(
+        verification=verification,
+        allow_unverified=allow_unverified,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        runtime_recommendation=runtime_recommendation,
+        candidate=candidate,
+    )
+    recommendation = _mapping(runtime_recommendation.get("recommendation"))
+    best_quality = _mapping(recommendation.get("best_quality_signal"))
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "registry": str(performance_registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "verification": verification,
+        "runtime_recommendation_source": runtime_source,
+        "runtime_recommendation_status": runtime_recommendation.get("status"),
+        "runtime": {
+            "cell_id": recommendation.get("cell_id"),
+            "layer": recommendation.get("layer"),
+            "batch_size": recommendation.get("batch_size"),
+            "hidden_state_capture": recommendation.get("hidden_state_capture"),
+            "max_batch_tokens": recommendation.get("max_batch_tokens"),
+            "prefix_kv_cache": recommendation.get("prefix_kv_cache"),
+            "max_workers": recommendation.get("max_workers"),
+            "inside_trigger_budget_id": _performance_inside_trigger_budget_id(recommendation),
+            "inside_trigger_budget_policy": _performance_inside_trigger_budget_policy(recommendation),
+            "best_quality_signal": (
+                None
+                if not best_quality
+                else {
+                    "name": best_quality.get("name"),
+                    "auroc": _float_or_none(best_quality.get("auroc")),
+                }
+            ),
+        },
+        "gate": gate,
+    }
+
+
+def _performance_gate(
+    *,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+    report_error: str | None,
+    manifest_path: Path | None,
+    runtime_recommendation: Mapping[str, Any],
+    candidate: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"performance baseline report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("performance baseline artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("performance baseline manifest verification failed")
+    if runtime_recommendation.get("status") != "promote":
+        failures.append(
+            f"performance runtime_recommendation_status is {runtime_recommendation.get('status')!r}, "
+            "expected 'promote'"
+        )
+    if candidate is None:
+        failures.append("release candidate is unavailable for performance baseline comparison")
+        return {"passed": False, "blocking_reasons": failures}
+
+    recommendation = _mapping(runtime_recommendation.get("recommendation"))
+    runtime = _mapping(candidate.get("runtime"))
+    quality = _mapping(candidate.get("quality"))
+    runtime_cost = _mapping(candidate.get("runtime_cost"))
+    for field in (
+        "layer",
+        "batch_size",
+        "hidden_state_capture",
+        "max_batch_tokens",
+        "prefix_kv_cache",
+        "max_workers",
+    ):
+        _append_runtime_mismatch(failures, field, recommendation.get(field), runtime.get(field))
+    _append_runtime_mismatch(
+        failures,
+        "inside_trigger_budget_id",
+        _performance_inside_trigger_budget_id(recommendation),
+        runtime_cost.get("inside_trigger_budget_id"),
+    )
+    _append_runtime_mismatch(
+        failures,
+        "inside_trigger_budget_policy",
+        _performance_inside_trigger_budget_policy(recommendation),
+        runtime_cost.get("inside_trigger_budget_policy"),
+    )
+    _append_best_quality_mismatch(
+        failures,
+        expected=_mapping(recommendation.get("best_quality_signal")),
+        observed=_mapping(quality.get("best_quality_signal")),
+    )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _append_runtime_mismatch(
+    failures: list[str],
+    field: str,
+    expected: Any,
+    observed: Any,
+) -> None:
+    if expected is None:
+        return
+    if not _json_value_equal(expected, observed):
+        failures.append(f"performance baseline runtime {field} mismatch: expected {expected!r}, got {observed!r}")
+
+
+def _append_best_quality_mismatch(
+    failures: list[str],
+    *,
+    expected: Mapping[str, Any],
+    observed: Mapping[str, Any],
+) -> None:
+    expected_name = expected.get("name")
+    if expected_name is None:
+        return
+    observed_name = observed.get("name")
+    if expected_name != observed_name:
+        failures.append(
+            "performance baseline best quality signal mismatch: "
+            f"expected {expected_name!r}, got {observed_name!r}"
+        )
+        return
+    expected_auroc = _float_or_none(expected.get("auroc"))
+    observed_auroc = _float_or_none(observed.get("auroc"))
+    if expected_auroc is not None and (
+        observed_auroc is None or abs(expected_auroc - observed_auroc) > 1e-12
+    ):
+        failures.append(
+            "performance baseline best quality AUROC mismatch: "
+            f"expected {expected_auroc!r}, got {observed_auroc!r}"
+        )
+
+
+def _json_value_equal(left: Any, right: Any) -> bool:
+    left_float = _float_or_none(left)
+    right_float = _float_or_none(right)
+    if left_float is not None or right_float is not None:
+        return left_float is not None and right_float is not None and abs(left_float - right_float) <= 1e-12
+    return left == right
+
+
+def _performance_manifest_path(
+    record: Any,
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    metadata = _mapping(record.metadata)
+    raw_path = _first_present(
+        metadata.get("artifact_manifest"),
+        _mapping(report.get("paths")).get("artifact_manifest"),
+    )
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _performance_runtime_recommendation(
+    record: Any,
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> tuple[dict[str, Any], str | None]:
+    runtime = _mapping(report.get("runtime_recommendation"))
+    if runtime:
+        return runtime, str(report_path)
+    metadata = _mapping(record.metadata)
+    raw_path = _first_present(
+        metadata.get("runtime_recommendation"),
+        _mapping(report.get("paths")).get("runtime_recommendation"),
+    )
+    if raw_path is None:
+        return {}, None
+    path = _resolve_path(raw_path, base_path=report_path)
+    payload, _ = _load_optional_json(path)
+    return payload, str(path)
+
+
+def _verify_performance_manifest(
+    manifest_path: Path | None,
+    *,
+    recursive: bool,
+) -> dict[str, Any]:
+    if manifest_path is None:
+        return {
+            "manifest_path": None,
+            "passed": False,
+            "checked": 0,
+            "failures": [{
+                "name": "performance_baseline_manifest",
+                "path": "",
+                "field": "path",
+                "expected": "artifact manifest path",
+                "actual": None,
+            }],
+            "nested": [],
+        }
+    try:
+        return load_and_verify_artifact_manifest(manifest_path, recursive=recursive).to_dict()
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {
+            "manifest_path": str(manifest_path),
+            "passed": False,
+            "checked": 0,
+            "failures": [{
+                "name": "performance_baseline_manifest",
+                "path": str(manifest_path),
+                "field": "load",
+                "expected": "readable artifact manifest",
+                "actual": str(exc),
+            }],
+            "nested": [],
+        }
+
+
+def _candidate_with_performance(
+    candidate: Mapping[str, Any] | None,
+    performance: Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if candidate is None:
+        return None
+    payload = dict(candidate)
+    if performance is None:
+        return payload
+    payload["performance_baseline_record"] = performance.get("record_key")
+    manifests = dict(payload.get("manifests") or {})
+    manifests["performance_manifest"] = performance.get("manifest_path")
+    payload["manifests"] = manifests
+    return payload
+
+
+def _performance_inside_trigger_budget_id(recommendation: Mapping[str, Any]) -> Any:
+    inside_sampling = _mapping(recommendation.get("inside_sampling"))
+    trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    return _first_present(
+        inside_sampling.get("inside_trigger_budget_id"),
+        trigger_budget.get("recommended_budget_id"),
+    )
+
+
+def _performance_inside_trigger_budget_policy(recommendation: Mapping[str, Any]) -> Any:
+    inside_sampling = _mapping(recommendation.get("inside_sampling"))
+    trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    return _first_present(
+        inside_sampling.get("inside_trigger_budget_policy"),
+        trigger_budget.get("selection_policy"),
+        recommendation.get("inside_trigger_budget_policy"),
+    )
+
+
+def _resolve_path(raw_path: Any, *, base_path: Path) -> Path:
+    path = Path(str(raw_path))
+    if path.is_absolute():
+        return path
+    return base_path.parent / path
+
+
+def _load_optional_json(path: Path) -> tuple[dict[str, Any], str | None]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return {}, str(exc)
+    if not isinstance(payload, dict):
+        return {}, f"{path} did not contain a JSON object"
+    return payload, None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _float_or_none(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int | float):
+        numeric = float(value)
+    else:
+        try:
+            numeric = float(str(value))
+        except (TypeError, ValueError):
+            return None
+    return numeric if math.isfinite(numeric) else None
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -355,6 +710,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         route_registry_path=args.route_registry,
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
+        performance_registry_path=args.performance_registry,
+        performance_baseline_key=args.performance_baseline_key,
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
         runtime_profile=args.runtime_profile,
@@ -390,7 +747,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     print(
         "release_candidate_comparison="
         f"{decision['status']} readiness={decision.get('recommended_readiness_record')} "
-        f"route={decision.get('recommended_route_record')}"
+        f"route={decision.get('recommended_route_record')} "
+        f"performance={decision.get('recommended_performance_baseline_record')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -405,10 +763,15 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="ArtifactRegistry JSON path containing readiness baselines")
     parser.add_argument("--route-registry", default=None,
                         help="ArtifactRegistry JSON path containing route baselines; defaults to readiness registry")
+    parser.add_argument("--performance-registry", default=None,
+                        help="ArtifactRegistry JSON path containing performance_baseline records; defaults to "
+                             "readiness registry")
     parser.add_argument("--readiness-baseline-key", action="append", default=[],
                         help="readiness benchmark_manifest registry key to compare; repeatable")
     parser.add_argument("--route-baseline-key", action="append", default=[],
                         help="route benchmark_manifest registry key to compare; repeatable")
+    parser.add_argument("--performance-baseline-key", default=None,
+                        help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the comparison report; repeatable")

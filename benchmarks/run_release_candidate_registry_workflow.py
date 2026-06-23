@@ -31,8 +31,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
     name: str
     version: str
     route_registry_path: Path | None = None
+    performance_registry_path: Path | None = None
     readiness_baseline_keys: Sequence[str] = ()
     route_baseline_keys: Sequence[str] = ()
+    performance_baseline_key: str | None = None
     release_report_path: Path | None = None
     artifact_manifest_path: Path | None = None
     verification_report_path: Path | None = None
@@ -70,6 +72,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
         object.__setattr__(self, "release_registry_path", Path(self.release_registry_path))
         if self.route_registry_path is not None:
             object.__setattr__(self, "route_registry_path", Path(self.route_registry_path))
+        if self.performance_registry_path is not None:
+            object.__setattr__(self, "performance_registry_path", Path(self.performance_registry_path))
         if self.release_report_path is not None:
             object.__setattr__(self, "release_report_path", Path(self.release_report_path))
         if self.artifact_manifest_path is not None:
@@ -126,6 +130,8 @@ def run_release_candidate_registry_workflow(
         route_registry_path=config.route_registry_path,
         readiness_baseline_keys=config.readiness_baseline_keys,
         route_baseline_keys=config.route_baseline_keys,
+        performance_registry_path=config.performance_registry_path,
+        performance_baseline_key=config.performance_baseline_key,
         recursive=config.recursive,
         allow_unverified=config.allow_unverified,
         runtime_profile=config.runtime_profile,
@@ -188,6 +194,8 @@ def run_release_candidate_registry_workflow(
         "config": {
             "readiness_registry": str(config.readiness_registry_path),
             "route_registry": str(config.route_registry_path or config.readiness_registry_path),
+            "performance_registry": str(config.performance_registry_path or config.readiness_registry_path),
+            "performance_baseline_key": config.performance_baseline_key,
             "release_registry": str(config.release_registry_path),
             "name": config.name,
             "version": config.version,
@@ -217,6 +225,7 @@ def _write_artifact_manifest(
         "release_candidate_report": config.comparison_path,
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
+        "performance_manifest": manifests.get("performance_manifest"),
     }
     manifest = build_artifact_manifest(
         artifacts,
@@ -268,11 +277,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_candidate_status": decision.get("status"),
         "release_readiness_status": decision.get("readiness_status"),
         "release_route_status": decision.get("route_status"),
+        "release_performance_status": decision.get("performance_status"),
         "release_runtime_profile": config.get("runtime_profile"),
         "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
         "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
         "recommended_readiness_record": decision.get("recommended_readiness_record"),
         "recommended_route_record": decision.get("recommended_route_record"),
+        "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
         "recommended_model": decision.get("recommended_model"),
         "recommended_route": decision.get("recommended_route"),
         "recommended_layer": runtime.get("layer"),
@@ -339,6 +350,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_verifier_trace_cache_hit_rate": verifier_route.get("verifier_trace_cache_hit_rate"),
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
+        "performance_manifest": manifests.get("performance_manifest"),
     }
 
 
@@ -386,11 +398,13 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
     return ReleaseCandidateRegistryWorkflowConfig(
         readiness_registry_path=Path(args.readiness_registry),
         route_registry_path=None if args.route_registry is None else Path(args.route_registry),
+        performance_registry_path=None if args.performance_registry is None else Path(args.performance_registry),
         release_registry_path=Path(args.release_registry),
         name=args.name,
         version=args.version,
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
+        performance_baseline_key=args.performance_baseline_key,
         release_report_path=None if args.release_report_json is None else Path(args.release_report_json),
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
@@ -444,11 +458,15 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run release candidate gates and register the verified manifest")
     parser.add_argument("--readiness-registry", required=True)
     parser.add_argument("--route-registry", default=None)
+    parser.add_argument("--performance-registry", default=None,
+                        help="registry containing performance_baseline records; defaults to readiness registry")
     parser.add_argument("--release-registry", required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument("--version", required=True)
     parser.add_argument("--readiness-baseline-key", action="append", default=[])
     parser.add_argument("--route-baseline-key", action="append", default=[])
+    parser.add_argument("--performance-baseline-key", default=None,
+                        help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")
     parser.add_argument("--release-report-json", default=None,
                         help="optional path for the release candidate comparison report")
