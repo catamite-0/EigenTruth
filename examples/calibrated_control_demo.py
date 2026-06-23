@@ -8,10 +8,10 @@ diagnostics with `RiskController`, verify simple claims, execute actions through
 The output is a trace for routing and debugging. It is not proof that a response
 is true. When the repository's SmolLM2 l80 calibration artifact is present, it is
 used by default; otherwise the script falls back to the Qwen l80 artifact and
-then toy thresholds. When the SmolLM2 performance-gated release candidate is
-present, its product promotion contract supplies the default verifier route
-metadata; pass it explicitly with `--promotion-contract` to also enforce its
-runtime budget policy.
+then toy thresholds. When the SmolLM2 adapter-gated release candidate is
+present, its product promotion contract supplies the default verifier route and
+adapter-family metadata; pass it explicitly with `--promotion-contract` to also
+enforce its runtime budget policy.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ DEFAULT_QWEN_ARTIFACT_PATH = (
 DEFAULT_PROMOTION_CONTRACT_PATH = (
     Path(__file__).resolve().parents[1]
     / "artifacts"
-    / "smollm2_l20_inside_trigger_budget_derived_performance_gated_staged_release_candidate_registry_workflow.json"
+    / "smollm2_l20_inside_trigger_budget_derived_adapter_gated_staged_release_candidate_registry_workflow.json"
 )
 ARITHMETIC_TEXT_PATTERN = r"\d[\d\s().%+*/-]*[+*/%-][\d\s().%+*/-]*(?:=|equals|is)\s*[-+]?\d"
 

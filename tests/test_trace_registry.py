@@ -558,6 +558,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
             "runtime": {"layer": -12, "batch_size": 2},
             "performance_baseline_record": "performance_baseline:runtime:0.9",
+            "adapter_family_matrix": {
+                "matrix_path": "artifacts/adapter-family-matrix.json",
+                "required_routes": ["structured_state", "state_transition"],
+                "routes": ["structured_qa", "structured_state", "state_transition"],
+                "promoted_routes": ["structured_qa", "structured_state", "state_transition"],
+                "promotion_status": "promote",
+            },
             "verifier_route": {
                 "route": "structured_state",
                 "mean_duration_seconds": 0.01,
@@ -570,6 +577,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
                 "route_manifest": "artifacts/route/artifact-manifest.json",
                 "performance_manifest": "artifacts/performance/artifact-manifest.json",
+                "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
             },
         },
     }
@@ -591,6 +599,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
+    assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
+    assert contract.metadata["adapter_family_required_routes"] == ["structured_state", "state_transition"]
+    assert contract.metadata["adapter_family_promotion_status"] == "promote"
     assert contract.runtime_budget_policy == direct_policy
     assert contract.runtime_budget_policy.max_total_seconds == 1.0
     assert contract.runtime_budget_policy.max_mean_route_duration_seconds == 0.05

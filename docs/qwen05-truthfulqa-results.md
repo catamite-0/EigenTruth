@@ -310,9 +310,10 @@ does not load either model or rerun the benchmark. With the current repository
 artifacts it loads `artifacts/smollm2_truthfulqa_l80_best_calibration.json`,
 auto-generates a `truth_proj` diagnostic that crosses the conformal threshold,
 combines that diagnostic with deterministic claim verification, and emits a
-`ProductTrace`. When the SmolLM2 performance-gated release candidate is present,
-the demo also loads its promotion contract as verifier-route metadata; pass the
-contract explicitly with `--promotion-contract` to enforce its runtime budget.
+`ProductTrace`. When the SmolLM2 adapter-gated release candidate is present, the
+demo also loads its promotion contract as verifier-route and adapter-family
+metadata; pass the contract explicitly with `--promotion-contract` to enforce
+its runtime budget.
 
 Demo command:
 
@@ -769,6 +770,15 @@ compares a trigger-budget sweep against a full-sample fixed reference rather
 than a previous release baseline, the release comparison records the gate source
 as `sample_count_ratio_to_reference` and
 `inside_generation_seconds_ratio_to_reference`.
+
+The current adapter-gated release record is
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-adapter-gated-staged-qa-release-candidate:1.0`.
+It keeps the same readiness, route, and performance evidence, then adds the
+promoted adapter-family matrix as a required gate. The final manifest
+fingerprints the release-candidate report, readiness manifest, route manifest,
+performance manifest, and adapter-family matrix report. Required adapter routes
+are `structured_state` and `state_transition`, both promoted in
+`artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/adapter-family-matrix.json`.
 
 ## Next Steps
 

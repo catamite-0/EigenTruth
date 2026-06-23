@@ -91,6 +91,7 @@ class ProductPromotionContract:
             raise ValueError("release candidate report does not contain a release_candidate.")
         config = _mapping(comparison.get("config"))
         manifests = _mapping(candidate.get("manifests"))
+        adapter_family = _mapping(candidate.get("adapter_family_matrix"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -116,6 +117,12 @@ class ProductPromotionContract:
                 "readiness_manifest": manifests.get("readiness_manifest"),
                 "route_manifest": manifests.get("route_manifest"),
                 "performance_manifest": manifests.get("performance_manifest"),
+                "adapter_family_matrix_report": adapter_family.get("matrix_path"),
+                "adapter_family_routes": adapter_family.get("routes"),
+                "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
+                "adapter_family_required_routes": adapter_family.get("required_routes"),
+                "adapter_family_promotion_status": adapter_family.get("promotion_status"),
+                "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
             },
         )
 

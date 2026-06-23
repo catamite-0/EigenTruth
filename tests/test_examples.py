@@ -55,6 +55,10 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
             "performance_baseline:smollm2-l20-performance-baseline:0.9"
         )
+        assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
+            "structured_state",
+            "state_transition",
+        ]
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
@@ -324,7 +328,7 @@ def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
 
 
-def test_calibrated_control_demo_can_use_default_performance_gated_contract_budget():
+def test_calibrated_control_demo_can_use_default_adapter_gated_contract_budget():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
     assert contract_path is not None
@@ -372,6 +376,11 @@ def test_calibrated_control_demo_can_use_default_performance_gated_contract_budg
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:smollm2-l20-performance-baseline:0.9"
     )
+    assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_promotion_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
+        "structured_state",
+        "state_transition",
+    ]
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0
     assert runtime_budget["passed"] is True
