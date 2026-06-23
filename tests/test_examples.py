@@ -102,6 +102,37 @@ def test_calibrated_control_demo_can_route_calculator_refutations():
     assert payload["risk_decision"]["action"] == "abstain"
 
 
+def test_calibrated_control_demo_can_write_compact_trace_json(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    output_path = tmp_path / "trace.json"
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=None,
+            request_id="compact-demo",
+            output=str(output_path),
+            registry=None,
+            compact_json=True,
+        )
+    )
+    written = output_path.read_text(encoding="utf-8")
+
+    assert json.loads(written)["request_id"] == payload["request_id"]
+    assert "\n  " not in written
+
+
 def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_verification():
     demo = importlib.import_module("examples.calibrated_control_demo")
     artifact = demo.default_artifact()

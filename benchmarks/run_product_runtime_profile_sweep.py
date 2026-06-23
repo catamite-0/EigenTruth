@@ -94,6 +94,7 @@ class ProductRuntimeProfileSweepConfig:
     version: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     max_workers: int = 1
+    compact_json: bool = False
 
     def __post_init__(self) -> None:
         output_dir = Path(self.output_dir)
@@ -120,6 +121,7 @@ class ProductRuntimeProfileSweepConfig:
         object.__setattr__(self, "scenarios", scenarios)
         object.__setattr__(self, "repeats", repeats)
         object.__setattr__(self, "max_workers", max_workers)
+        object.__setattr__(self, "compact_json", bool(self.compact_json))
         if self.artifact_path is not None:
             object.__setattr__(self, "artifact_path", Path(self.artifact_path))
         if self.promotion_contract_path is not None:
@@ -185,6 +187,7 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "repeats": config.repeats,
             "artifact_path": None if config.artifact_path is None else str(config.artifact_path),
             "max_workers": config.max_workers,
+            "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
         "execution": {
@@ -201,10 +204,10 @@ def _write_report_and_manifest(
     config: ProductRuntimeProfileSweepConfig,
     report: dict[str, Any],
 ) -> dict[str, Any]:
-    _write_json(config.resolved_report_path, report)
+    _write_json(config.resolved_report_path, report, compact=config.compact_json)
     manifest = _write_artifact_manifest(config, report)
     report["artifact_manifest_summary"] = manifest["summary"]
-    _write_json(config.resolved_report_path, report)
+    _write_json(config.resolved_report_path, report, compact=config.compact_json)
     return _write_artifact_manifest(config, report)
 
 
@@ -242,6 +245,7 @@ def _run_profile(
             policy=config.policy,
             policy_path=config.policy_path,
             promotion_contract_path=config.promotion_contract_path,
+            compact_json=config.compact_json,
             metadata={
                 "source": "run_product_runtime_profile_sweep",
                 "runtime_profile": profile_name,
@@ -329,6 +333,7 @@ def _demo_args(
         request_id=request_id,
         output=str(output_path),
         registry=None,
+        compact_json=config.compact_json,
     )
 
 
@@ -448,10 +453,11 @@ def _write_artifact_manifest(
             "scenario_count": len(config.scenarios),
             "repeats": config.repeats,
             "max_workers": config.max_workers,
+            "compact_json": config.compact_json,
             **dict(config.metadata),
         },
     )
-    _write_json(config.resolved_artifact_manifest_path, manifest)
+    _write_json(config.resolved_artifact_manifest_path, manifest, compact=config.compact_json)
     return manifest
 
 
@@ -471,6 +477,7 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
             "scenario_count": len(config.scenarios),
             "repeats": config.repeats,
             "max_workers": config.max_workers,
+            "compact_json": config.compact_json,
             **dict(config.metadata),
         },
     ).save_json()
@@ -544,10 +551,16 @@ def _safe_artifact_name(value: str) -> str:
     return cleaned or "artifact"
 
 
-def _write_json(path: str | Path, payload: Mapping[str, Any]) -> None:
+def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool = False) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output_path.write_text(_json_text(payload, compact=compact), encoding="utf-8")
+
+
+def _json_text(payload: Any, *, compact: bool) -> str:
+    if compact:
+        return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _parse_profiles(value: str) -> tuple[str, ...]:
@@ -592,13 +605,14 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeProfileSweepCon
         version=args.version,
         metadata=_parse_metadata(args.metadata or ()),
         max_workers=args.max_workers,
+        compact_json=bool(args.compact_json),
     )
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     report = run_product_runtime_profile_sweep(_config_from_args(args))
-    print(json.dumps(report, indent=2, sort_keys=True))
+    print(_json_text(report, compact=bool(args.compact_json)), end="")
     if args.fail_on_blocked and report["status"] == "blocked":
         raise SystemExit(1)
     return report
@@ -620,6 +634,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--metadata", action="append", default=[])
     parser.add_argument("--max-workers", type=int, default=1,
                         help="run independent runtime profiles concurrently")
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified trace, baseline, report, and manifest JSON")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

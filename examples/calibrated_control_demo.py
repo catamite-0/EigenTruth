@@ -547,7 +547,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.registry and output_path is None:
         output_path = Path(args.registry).with_name(f"{args.request_id}_trace.json")
     if output_path is not None:
-        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output_path.write_text(
+            _json_text(payload, compact=bool(getattr(args, "compact_json", False))),
+            encoding="utf-8",
+        )
     if args.registry:
         ArtifactRegistry.load_json(args.registry).record_trace(
             name=args.request_id,
@@ -572,6 +575,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             },
         ).save_json()
     return payload
+
+
+def _json_text(payload: Any, *, compact: bool) -> str:
+    if compact:
+        return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def main() -> None:
@@ -633,8 +642,11 @@ def main() -> None:
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
-    payload = run(parser.parse_args())
-    print(json.dumps(payload, indent=2, sort_keys=True))
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified ProductTrace JSON for automated artifact runs")
+    parsed = parser.parse_args()
+    payload = run(parsed)
+    print(_json_text(payload, compact=bool(parsed.compact_json)), end="")
 
 
 if __name__ == "__main__":

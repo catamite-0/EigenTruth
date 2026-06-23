@@ -2300,6 +2300,7 @@
       "artifact_type": "report",
       "metadata": {
         "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
+        "compact_json": false,
         "contract": "smollm2_1_4",
         "max_workers": 1,
         "profile_count": 3,

@@ -100,9 +100,11 @@ initial claims:
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence
 collection, and re-verification. Pass `--no-runtime-trace` when comparing JSON
-payloads that should omit timing noise. Optional runtime budget flags evaluate
-those timings fail-closed and write the result into trace metadata. The demo also
-summarizes verifier route cost metadata, can wrap verifier/retriever calls in
+payloads that should omit timing noise. Pass `--compact-json` when trace output
+is consumed by automated artifact workflows and compact size matters more than
+manual diff readability. Optional runtime budget flags evaluate those timings
+fail-closed and write the result into trace metadata. The demo also summarizes
+verifier route cost metadata, can wrap verifier/retriever calls in
 request-local caches, and can gate on route attempts, retrieval use, and cache
 hit rates:
 

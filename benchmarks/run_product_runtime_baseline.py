@@ -43,6 +43,7 @@ class ProductRuntimeBaselineConfig:
     name: str | None = None
     version: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    compact_json: bool = False
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -65,6 +66,7 @@ class ProductRuntimeBaselineConfig:
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(self, "compact_json", bool(self.compact_json))
 
     @property
     def resolved_artifact_manifest_path(self) -> Path:
@@ -107,6 +109,7 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
         "config": {
             "trace_count": len(traces),
             "policy_source": policy_source,
+            "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
     }
@@ -119,10 +122,10 @@ def _write_report_and_manifest(
     config: ProductRuntimeBaselineConfig,
     report: dict[str, Any],
 ) -> dict[str, Any]:
-    _write_report(config.report_path, report)
+    _write_report(config.report_path, report, compact=config.compact_json)
     manifest = _write_artifact_manifest(config, report)
     report["artifact_manifest_summary"] = manifest["summary"]
-    _write_report(config.report_path, report)
+    _write_report(config.report_path, report, compact=config.compact_json)
     return _write_artifact_manifest(config, report)
 
 
@@ -395,10 +398,11 @@ def _write_artifact_manifest(
             "trace_count": len(config.trace_paths),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
+            "compact_json": config.compact_json,
             **dict(config.metadata),
         },
     )
-    _write_report(config.resolved_artifact_manifest_path, manifest)
+    _write_report(config.resolved_artifact_manifest_path, manifest, compact=config.compact_json)
     return manifest
 
 
@@ -418,6 +422,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
+            "compact_json": config.compact_json,
             **dict(config.metadata),
         },
     )
@@ -438,10 +443,16 @@ def _load_json(path: str | Path) -> dict[str, Any]:
     return dict(payload)
 
 
-def _write_report(path: str | Path, payload: Mapping[str, Any]) -> None:
+def _write_report(path: str | Path, payload: Mapping[str, Any], *, compact: bool = False) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    output_path.write_text(_json_text(payload, compact=compact), encoding="utf-8")
+
+
+def _json_text(payload: Any, *, compact: bool) -> str:
+    if compact:
+        return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
 
 
 def _numeric_summary(values: Sequence[Any] | Any) -> dict[str, Any]:
@@ -576,13 +587,14 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeBaselineConfig:
         name=args.name,
         version=args.version,
         metadata=_parse_metadata(args.metadata or ()),
+        compact_json=bool(args.compact_json),
     )
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     report = build_product_runtime_baseline(_config_from_args(args))
-    print(json.dumps(report, indent=2, sort_keys=True))
+    print(_json_text(report, compact=bool(args.compact_json)), end="")
     if args.fail_on_blocked and report["status"] == "blocked":
         raise SystemExit(1)
     return report
@@ -599,6 +611,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default=None, help="registry product runtime baseline name")
     parser.add_argument("--version", default=None, help="registry product runtime baseline version")
     parser.add_argument("--metadata", action="append", default=[], help="metadata key=value; repeatable")
+    parser.add_argument("--compact-json", action="store_true",
+                        help="write minified baseline report and manifest JSON")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

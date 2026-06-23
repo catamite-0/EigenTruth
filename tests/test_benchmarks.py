@@ -8925,8 +8925,11 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "max_retrieval_use_rate": 1.0,
             },
             metadata={"suite": "unit"},
+            compact_json=True,
         )
     )
+    saved_text = report_path.read_text(encoding="utf-8")
+    manifest_text = Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8")
     saved = json.loads(report_path.read_text(encoding="utf-8"))
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
@@ -8934,6 +8937,7 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     )
 
     assert payload["status"] == "promote"
+    assert payload["config"]["compact_json"] is True
     assert payload["budget"]["passed_count"] == 2
     assert payload["summary"]["n_traces"] == 2
     assert payload["summary"]["total_seconds"]["mean"] == pytest.approx(0.14)
@@ -8946,12 +8950,16 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
     assert manifest["metadata"]["budget_passed"] is True
+    assert manifest["metadata"]["compact_json"] is True
+    assert "\n  " not in saved_text
+    assert "\n  " not in manifest_text
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"]
     ).passed is True
     assert record.artifact_type == "product_runtime_baseline"
     assert record.metadata["status"] == "promote"
     assert record.metadata["trace_count"] == 2
+    assert record.metadata["compact_json"] is True
 
 
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
@@ -9008,8 +9016,10 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
             version="0.1",
             metadata={"suite": "unit"},
             max_workers=2,
+            compact_json=True,
         )
     )
+    report_text = Path(payload["paths"]["report"]).read_text(encoding="utf-8")
     latency_trace = json.loads(
         Path(payload["profiles"][0]["trace_paths"][0]).read_text(encoding="utf-8")
     )
@@ -9022,6 +9032,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
 
     assert payload["status"] == "observed"
     assert payload["config"]["max_workers"] == 2
+    assert payload["config"]["compact_json"] is True
     assert payload["execution"]["max_workers"] == 2
     assert payload["decision"]["recommended_profile"] in {"latency", "audit"}
     assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "audit"}
@@ -9041,11 +9052,16 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert "latency_baseline_manifest" in manifest["artifacts"]
     assert "audit_baseline_manifest" in manifest["artifacts"]
+    assert manifest["metadata"]["compact_json"] is True
+    assert "\n  " not in report_text
+    assert "\n  " not in Path(payload["profiles"][0]["trace_paths"][0]).read_text(encoding="utf-8")
+    assert "\n  " not in Path(payload["profiles"][0]["baseline_path"]).read_text(encoding="utf-8")
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"]
     ).passed is True
     assert record.metadata["status"] == "observed"
     assert record.metadata["profile_count"] == 2
+    assert record.metadata["compact_json"] is True
 
 
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):

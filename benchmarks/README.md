@@ -2197,7 +2197,9 @@ python benchmarks/run_product_runtime_baseline.py \
 
 This report does not replace the model/cache performance baseline above. It
 checks the actual control-plane trace shape that a product path emits: route
-attempt counts, retrieval use, phase tails, and cache metadata.
+attempt counts, retrieval use, phase tails, and cache metadata. Add
+`--compact-json` when the report and manifest are consumed by automation and
+diff readability is less important than artifact size.
 
 Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
 the built-in `latency`, `balanced`, and `audit` product profiles before choosing
@@ -2220,7 +2222,9 @@ route cost. This is the product-control counterpart to model-side cache/profile
 sweeps. Use the default `--max-workers 1` when profile timing will be used as
 promotion evidence. Use `--max-workers N` to run independent runtime profiles
 concurrently for faster smoke and coverage scans; within each profile, trace
-order remains deterministic before its baseline is built.
+order remains deterministic before its baseline is built. Add `--compact-json`
+to minify generated traces, per-profile baselines, the top-level report, and
+manifests without changing the payload schema.
 
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in
