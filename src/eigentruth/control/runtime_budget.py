@@ -30,6 +30,8 @@ class ProductRuntimeBudgetPolicy:
     max_retrieval_hit_count: float | None = None
     min_cache_hit_rate: float | None = None
     min_named_cache_hit_rate: Mapping[str, float] = field(default_factory=dict)
+    min_verification_skip_rate: float | None = None
+    max_verified_claim_count: float | None = None
     require_runtime_trace: bool = True
 
     def __post_init__(self) -> None:
@@ -86,6 +88,14 @@ class ProductRuntimeBudgetPolicy:
             self.min_cache_hit_rate,
             name="min_cache_hit_rate",
         )
+        min_verification_skip_rate = _optional_rate_float(
+            self.min_verification_skip_rate,
+            name="min_verification_skip_rate",
+        )
+        max_verified_claim_count = _optional_non_negative_float(
+            self.max_verified_claim_count,
+            name="max_verified_claim_count",
+        )
         min_named_cache_hit_rate = {}
         for raw_name, raw_value in self.min_named_cache_hit_rate.items():
             name = str(raw_name).strip()
@@ -128,6 +138,8 @@ class ProductRuntimeBudgetPolicy:
         object.__setattr__(self, "max_retrieval_hit_count", max_retrieval_hit_count)
         object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
         object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
+        object.__setattr__(self, "min_verification_skip_rate", min_verification_skip_rate)
+        object.__setattr__(self, "max_verified_claim_count", max_verified_claim_count)
         object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
 
     @classmethod
@@ -147,6 +159,8 @@ class ProductRuntimeBudgetPolicy:
             max_retrieval_hit_count=payload.get("max_retrieval_hit_count"),
             min_cache_hit_rate=payload.get("min_cache_hit_rate"),
             min_named_cache_hit_rate=dict(_mapping(payload.get("min_named_cache_hit_rate"))),
+            min_verification_skip_rate=payload.get("min_verification_skip_rate"),
+            max_verified_claim_count=payload.get("max_verified_claim_count"),
             require_runtime_trace=_bool_value(payload.get("require_runtime_trace", True)),
         )
 
@@ -166,6 +180,8 @@ class ProductRuntimeBudgetPolicy:
             or self.max_retrieval_hit_count is not None
             or self.min_cache_hit_rate is not None
             or bool(self.min_named_cache_hit_rate)
+            or self.min_verification_skip_rate is not None
+            or self.max_verified_claim_count is not None
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -184,6 +200,8 @@ class ProductRuntimeBudgetPolicy:
             "max_retrieval_hit_count": self.max_retrieval_hit_count,
             "min_cache_hit_rate": self.min_cache_hit_rate,
             "min_named_cache_hit_rate": dict(self.min_named_cache_hit_rate),
+            "min_verification_skip_rate": self.min_verification_skip_rate,
+            "max_verified_claim_count": self.max_verified_claim_count,
             "require_runtime_trace": self.require_runtime_trace,
         }
 
@@ -283,6 +301,7 @@ def evaluate_product_runtime_budget(
         ("mean_attempted_route_count", resolved.max_mean_attempted_route_count),
         ("retrieval_use_rate", resolved.max_retrieval_use_rate),
         ("retrieval_hit_count", resolved.max_retrieval_hit_count),
+        ("verified_claim_count", resolved.max_verified_claim_count),
     ):
         if limit is None:
             continue
@@ -296,6 +315,16 @@ def evaluate_product_runtime_budget(
             metrics,
             metric="cache_hit_rate",
             limit=resolved.min_cache_hit_rate,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
+    if resolved.min_verification_skip_rate is not None:
+        check = _min_metric_check(
+            metrics,
+            metric="verification_skip_rate",
+            limit=resolved.min_verification_skip_rate,
         )
         checks.append(check)
         if not check["passed"]:
@@ -344,6 +373,12 @@ def evaluate_product_runtime_budget(
             "retrieval_use_rate": metrics.get("retrieval_use_rate"),
             "retrieval_hit_count": metrics.get("retrieval_hit_count"),
             "mean_retrieval_hits": metrics.get("mean_retrieval_hits"),
+            "verification_stage_summary": metrics.get("verification_stage_summary"),
+            "verification_stage_enabled": metrics.get("verification_stage_enabled"),
+            "verification_stage_skipped": metrics.get("verification_stage_skipped"),
+            "verification_skip_rate": metrics.get("verification_skip_rate"),
+            "verified_claim_count": metrics.get("verified_claim_count"),
+            "verifier_saved_claim_count": metrics.get("verifier_saved_claim_count"),
         },
         "checks": checks,
         "failures": failures,
@@ -372,6 +407,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         }
         metrics.update(_cache_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
+        metrics.update(_verification_stage_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
@@ -404,6 +440,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     }
     metrics.update(_cache_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
+    metrics.update(_verification_stage_metrics(trace))
     return metrics
 
 
@@ -488,6 +525,27 @@ def _route_cost_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, An
         "retrieval_use_rate": _finite_float(summary.get("retrieval_use_rate")),
         "retrieval_hit_count": _finite_float(summary.get("retrieval_hit_count")),
         "mean_retrieval_hits": _finite_float(summary.get("mean_retrieval_hits")),
+    }
+
+
+def _verification_stage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.verification_stage_summary()
+    else:
+        payload = dict(trace)
+        summary = ProductTrace(
+            claims=tuple(_sequence(payload.get("claims", ()))),
+            verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+            events=tuple(_sequence(payload.get("events", ()))),
+            metadata=_mapping(payload.get("metadata", {})),
+        ).verification_stage_summary()
+    return {
+        "verification_stage_summary": summary,
+        "verification_stage_enabled": bool(summary.get("enabled")),
+        "verification_stage_skipped": bool(summary.get("skipped")),
+        "verification_skip_rate": _finite_float(summary.get("skip_rate")),
+        "verified_claim_count": _finite_float(summary.get("verified_claim_count")),
+        "verifier_saved_claim_count": _finite_float(summary.get("saved_claim_count")),
     }
 
 

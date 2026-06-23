@@ -263,6 +263,59 @@ def test_product_trace_cache_summary_aggregates_named_cache_stats():
     json.dumps(summary)
 
 
+def test_product_trace_verification_stage_summary_counts_saved_claims():
+    claims = extract_claims("Paris is the capital of France. Lyon is in France.")
+    trace = ProductTrace(
+        claims=claims,
+        verification_results=(),
+        events=(
+            TraceEvent(
+                "verification_stage_decision",
+                {
+                    "run_verifier": False,
+                    "reason": "diagnostics and claim metadata did not require verification",
+                },
+            ),
+            TraceEvent(
+                "initial_verification",
+                {"n_claims": len(claims), "skipped": True, "results": ()},
+            ),
+        ),
+        metadata={"staged_verification_enabled": True},
+    )
+
+    summary = trace.verification_stage_summary()
+    metrics = product_runtime_metrics(trace)
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            min_verification_skip_rate=0.90,
+            max_verified_claim_count=0,
+            require_runtime_trace=False,
+        ),
+    )
+
+    assert summary["enabled"] is True
+    assert summary["skipped"] is True
+    assert summary["claim_count"] == 2
+    assert summary["saved_claim_count"] == 2
+    assert summary["verified_claim_count"] == 0
+    assert summary["skip_rate"] == 1.0
+    assert metrics["verification_skip_rate"] == 1.0
+    assert metrics["verifier_saved_claim_count"] == 2.0
+    assert report["passed"] is True
+    assert report["metrics"]["verification_skip_rate"] == 1.0
+    assert report["policy"]["min_verification_skip_rate"] == 0.9
+    json.dumps(summary)
+
+    stage_only = ProductTrace(
+        claims=claims[:1],
+        events=(TraceEvent("verification_stage_decision", {"run_verifier": False}),),
+    ).verification_stage_summary()
+    assert stage_only["skipped"] is True
+    assert stage_only["saved_claim_count"] == 1
+
+
 def test_product_runtime_budget_evaluates_trace_phase_limits():
     trace = ProductTrace(
         runtime_trace=RuntimeTrace(

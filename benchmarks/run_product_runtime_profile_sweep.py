@@ -330,6 +330,8 @@ def _demo_args(
         max_retrieval_hit_count=None,
         min_cache_hit_rate=None,
         min_named_cache_hit_rate=None,
+        min_verification_skip_rate=None,
+        max_verified_claim_count=None,
         request_id=request_id,
         output=str(output_path),
         registry=None,

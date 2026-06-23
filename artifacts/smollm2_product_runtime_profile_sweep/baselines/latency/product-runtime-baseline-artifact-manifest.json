@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-baseline.json",
-      "sha256": "2e958843145936cef1be33d9ad12397facc32705c0e8301f319f478f6f68d8f2",
-      "size_bytes": 51801
+      "sha256": "bc49916ae9deef52532896ac37e684727edfeacb91805711acb45b4ab85891fe",
+      "size_bytes": 58764
     },
     "promotion_contract": {
       "exists": true,
@@ -21,24 +21,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/latency/low_risk_supported-r0.json",
-      "sha256": "09d74406a09cb04bfe540341e93d07269e27d2d520321e7f0a24ce20b96a92de",
-      "size_bytes": 31565
+      "sha256": "2a19dda20fce33db905251b514a08c0c3fa8de7fe9dbf1d209f3717f026f606c",
+      "size_bytes": 33033
     },
     "trace_0001_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "af9f5193dc0fa7db7f3ba5679b38507511bf7da3e739052d20e0f91247254ae5",
-      "size_bytes": 31994
+      "sha256": "14236dff9e61169ec8b56a9e860b82ca96117f8f58956079d955a63a0aa7ab5c",
+      "size_bytes": 33437
     },
     "trace_0002_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "../../traces/latency/calculator_refuted-r0.json",
-      "sha256": "b5f86c52b5315d6d488a4d046843492ae5f76a390107f18e01e1a9a4f688c01b",
-      "size_bytes": 42392
+      "sha256": "10ef3b0e1df723f92c2d4e59839f19dfbb875252dd7727022233480be748959f",
+      "size_bytes": 43941
     }
   },
   "digest_algorithm": "sha256",

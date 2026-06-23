@@ -166,6 +166,8 @@ def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_ve
     }
     assert stage_event["payload"]["run_verifier"] is False
     assert stage_event["payload"]["reason"] == "diagnostics and claim metadata did not require verification"
+    assert payload["metadata"]["verification_stage_summary"]["skipped"] is True
+    assert payload["metadata"]["verification_stage_summary"]["saved_claim_count"] == 2
     assert payload["risk_decision"]["action"] == "accept"
 
 

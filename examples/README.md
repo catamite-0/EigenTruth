@@ -125,6 +125,10 @@ python examples/calibrated_control_demo.py \
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
+python examples/calibrated_control_demo.py \
+  --runtime-profile latency \
+  --min-verification-skip-rate 0.9 \
+  --max-verified-claim-count 0
 ```
 
 When the SmolLM2 strict structured-retrieval-audit release candidate is present,
@@ -132,7 +136,9 @@ the demo loads its promotion contract by default as route, adapter-family, and
 required-audit metadata. Passing the same file explicitly with
 `--promotion-contract` also enforces its runtime budget, including the
 low-latency product-route gates `max_retrieval_use_rate=0.0` and
-`max_mean_attempted_route_count=1.1`.
+`max_mean_attempted_route_count=1.1`. Staged-verification runs also emit
+`verification_stage_summary`, so low-risk fast-path savings can be gated with
+`--min-verification-skip-rate` and `--max-verified-claim-count`.
 
 The demo can also route unsupported claims to the dependency-free in-memory
 retrieval executor, feed retrieval hits back into the groundedness verifier, and

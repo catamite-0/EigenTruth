@@ -199,6 +199,8 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     max_retrieval_hit_count = getattr(args, "max_retrieval_hit_count", None)
     min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
     raw_named_cache_hit_rate = getattr(args, "min_named_cache_hit_rate", None)
+    min_verification_skip_rate = getattr(args, "min_verification_skip_rate", None)
+    max_verified_claim_count = getattr(args, "max_verified_claim_count", None)
     if (
         base_policy is None
         and max_total_seconds is None
@@ -214,6 +216,8 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         and max_retrieval_hit_count is None
         and min_cache_hit_rate is None
         and raw_named_cache_hit_rate is None
+        and min_verification_skip_rate is None
+        and max_verified_claim_count is None
     ):
         return None
     base_policy = base_policy or ProductRuntimeBudgetPolicy()
@@ -279,6 +283,16 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         ),
         min_cache_hit_rate=base_policy.min_cache_hit_rate if min_cache_hit_rate is None else min_cache_hit_rate,
         min_named_cache_hit_rate={key: float(value) for key, value in named_cache_hit_rate.items()},
+        min_verification_skip_rate=(
+            base_policy.min_verification_skip_rate
+            if min_verification_skip_rate is None
+            else min_verification_skip_rate
+        ),
+        max_verified_claim_count=(
+            base_policy.max_verified_claim_count
+            if max_verified_claim_count is None
+            else max_verified_claim_count
+        ),
     )
 
 
@@ -531,10 +545,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         cache_metadata["retriever"] = retriever_cache.stats.to_dict()
     cache_summary = trace.cache_summary()
     route_cost_summary = trace.verification_route_cost_summary()
+    verification_stage_summary = trace.verification_stage_summary()
     payload = trace.to_dict()
     if cache_metadata:
         payload["metadata"]["cache_summary"] = cache_summary
     payload["metadata"]["route_cost_summary"] = route_cost_summary
+    payload["metadata"]["verification_stage_summary"] = verification_stage_summary
     runtime_budget_policy = runtime_budget_policy_from_args(args)
     runtime_budget = (
         None
@@ -570,6 +586,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "runtime_summary": trace.runtime_summary(),
                 "cache_summary": cache_summary,
                 "route_cost_summary": route_cost_summary,
+                "verification_stage_summary": verification_stage_summary,
                 "runtime_budget": runtime_budget,
                 "verifier_type": type(verifier).__name__,
             },
@@ -639,6 +656,10 @@ def main() -> None:
                         help="optional ProductTrace cache budget for aggregate cache hit rate")
     parser.add_argument("--min-named-cache-hit-rate", default=None,
                         help="optional JSON object mapping cache names to minimum hit rates")
+    parser.add_argument("--min-verification-skip-rate", type=float, default=None,
+                        help="optional ProductTrace budget for staged-verification claim skip rate")
+    parser.add_argument("--max-verified-claim-count", type=float, default=None,
+                        help="optional ProductTrace budget for verifier-checked claim count")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

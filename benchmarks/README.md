@@ -2179,8 +2179,9 @@ python benchmarks/run_performance_baseline_workflow.py \
 
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
-phase timings, route costs, cache hit rates, retrieval use, and optionally apply
-a `ProductRuntimeBudgetPolicy` or promoted `ProductPromotionContract` budget:
+phase timings, route costs, cache hit rates, retrieval use, staged-verification
+skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
+`ProductPromotionContract` budget:
 
 ```bash
 python benchmarks/run_product_runtime_baseline.py \
@@ -2197,7 +2198,8 @@ python benchmarks/run_product_runtime_baseline.py \
 
 This report does not replace the model/cache performance baseline above. It
 checks the actual control-plane trace shape that a product path emits: route
-attempt counts, retrieval use, phase tails, and cache metadata. Add
+attempt counts, retrieval use, phase tails, cache metadata, and low-risk
+fast-path verifier savings. Add
 `--compact-json` when the report and manifest are consumed by automation and
 diff readability is less important than artifact size.
 

@@ -33,7 +33,7 @@
   },
   "execution": {
     "max_workers": 1,
-    "wall_clock_seconds": 0.13638689299114048
+    "wall_clock_seconds": 0.14989821601193398
   },
   "leaderboard": [
     {
@@ -44,8 +44,8 @@
       "profile": "audit",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.00043549167457967997,
-      "total_seconds_p95": 0.000484495866112411
+      "total_seconds_mean": 0.00043574930168688297,
+      "total_seconds_p95": 0.0004817375564016402
     },
     {
       "blocked": false,
@@ -55,8 +55,8 @@
       "profile": "balanced",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.00044437901427348453,
-      "total_seconds_p95": 0.0005660188384354114
+      "total_seconds_mean": 0.00044720802300920087,
+      "total_seconds_p95": 0.0005729173077270389
     },
     {
       "blocked": false,
@@ -66,8 +66,8 @@
       "profile": "latency",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.0005572749845062693,
-      "total_seconds_p95": 0.0009091740590520202
+      "total_seconds_mean": 0.0005417213154335817,
+      "total_seconds_p95": 0.0008871629019267857
     }
   ],
   "paths": {
@@ -99,20 +99,22 @@
           "max_retrieval_use_rate": 0.0,
           "max_route_duration_seconds": null,
           "max_total_seconds": null,
+          "max_verified_claim_count": null,
           "min_cache_hit_rate": null,
           "min_named_cache_hit_rate": {},
+          "min_verification_skip_rate": null,
           "require_runtime_trace": true
         }
       },
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 0.0001015960006043315,
+        "mean_route_duration_seconds": 9.915791451931e-05,
         "measured_phases_mean": 5.666666666666667,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.0005572749845062693,
-        "total_seconds_p95": 0.0009091740590520202
+        "total_seconds_mean": 0.0005417213154335817,
+        "total_seconds_p95": 0.0008871629019267857
       },
       "profile": "latency",
       "status": "promote",
@@ -130,7 +132,7 @@
           "request_id": "latency-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.0004073890158906579,
+          "runtime_total_seconds": 0.00041043199598789215,
           "scenario": "low_risk_supported",
           "staged_verification_enabled": true
         },
@@ -141,7 +143,7 @@
           "request_id": "latency-diagnostic_refuted-r0",
           "risk_action": "retrieve",
           "risk_level": "medium",
-          "runtime_total_seconds": 0.00029950798489153385,
+          "runtime_total_seconds": 0.0002745989477261901,
           "scenario": "diagnostic_refuted",
           "staged_verification_enabled": true
         },
@@ -152,7 +154,7 @@
           "request_id": "latency-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0009649279527366161,
+          "runtime_total_seconds": 0.0009401330025866628,
           "scenario": "calculator_refuted",
           "staged_verification_enabled": true
         }
@@ -179,20 +181,22 @@
           "max_retrieval_use_rate": 0.0,
           "max_route_duration_seconds": null,
           "max_total_seconds": null,
+          "max_verified_claim_count": null,
           "min_cache_hit_rate": null,
           "min_named_cache_hit_rate": {},
+          "min_verification_skip_rate": null,
           "require_runtime_trace": true
         }
       },
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 4.2975686180094876e-05,
+        "mean_route_duration_seconds": 4.2263069190084934e-05,
         "measured_phases_mean": 6.333333333333333,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.00044437901427348453,
-        "total_seconds_p95": 0.0005660188384354114
+        "total_seconds_mean": 0.00044720802300920087,
+        "total_seconds_p95": 0.0005729173077270389
       },
       "profile": "balanced",
       "status": "promote",
@@ -210,7 +214,7 @@
           "request_id": "balanced-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.00023293308913707733,
+          "runtime_total_seconds": 0.00023198698181658983,
           "scenario": "low_risk_supported",
           "staged_verification_enabled": true
         },
@@ -221,7 +225,7 @@
           "request_id": "balanced-diagnostic_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0005699980538338423,
+          "runtime_total_seconds": 0.000577441998757422,
           "scenario": "diagnostic_refuted",
           "staged_verification_enabled": true
         },
@@ -232,7 +236,7 @@
           "request_id": "balanced-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.000530205899849534,
+          "runtime_total_seconds": 0.0005321950884535909,
           "scenario": "calculator_refuted",
           "staged_verification_enabled": true
         }
@@ -259,20 +263,22 @@
           "max_retrieval_use_rate": 0.0,
           "max_route_duration_seconds": null,
           "max_total_seconds": null,
+          "max_verified_claim_count": null,
           "min_cache_hit_rate": null,
           "min_named_cache_hit_rate": {},
+          "min_verification_skip_rate": null,
           "require_runtime_trace": true
         }
       },
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 3.367525641806424e-05,
+        "mean_route_duration_seconds": 3.61605198122561e-05,
         "measured_phases_mean": 5.0,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.00043549167457967997,
-        "total_seconds_p95": 0.000484495866112411
+        "total_seconds_mean": 0.00043574930168688297,
+        "total_seconds_p95": 0.0004817375564016402
       },
       "profile": "audit",
       "status": "promote",
@@ -290,7 +296,7 @@
           "request_id": "audit-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.00035509292501956224,
+          "runtime_total_seconds": 0.0003638799535110593,
           "scenario": "low_risk_supported",
           "staged_verification_enabled": false
         },
@@ -301,7 +307,7 @@
           "request_id": "audit-diagnostic_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.00048669707030057907,
+          "runtime_total_seconds": 0.0004842509515583515,
           "scenario": "diagnostic_refuted",
           "staged_verification_enabled": false
         },
@@ -312,7 +318,7 @@
           "request_id": "audit-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0004646850284188986,
+          "runtime_total_seconds": 0.0004591169999912381,
           "scenario": "calculator_refuted",
           "staged_verification_enabled": false
         }

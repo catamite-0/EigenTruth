@@ -168,6 +168,12 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "retrieval_use_rate": metrics.get("retrieval_use_rate"),
         "retrieval_hit_count": metrics.get("retrieval_hit_count"),
         "mean_retrieval_hits": metrics.get("mean_retrieval_hits"),
+        "verification_stage_summary": dict(_mapping(metrics.get("verification_stage_summary"))),
+        "verification_stage_enabled": bool(metrics.get("verification_stage_enabled")),
+        "verification_stage_skipped": bool(metrics.get("verification_stage_skipped")),
+        "verification_skip_rate": metrics.get("verification_skip_rate"),
+        "verified_claim_count": metrics.get("verified_claim_count"),
+        "verifier_saved_claim_count": metrics.get("verifier_saved_claim_count"),
     }
 
 
@@ -197,6 +203,10 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "retrieval_use_rate": _numeric_summary(item.get("retrieval_use_rate") for item in metrics),
         "retrieval_hit_count": _numeric_summary(item.get("retrieval_hit_count") for item in metrics),
         "cache_hit_rate": _numeric_summary(item.get("cache_hit_rate") for item in metrics),
+        "verification_skip_rate": _numeric_summary(item.get("verification_skip_rate") for item in metrics),
+        "verified_claim_count": _numeric_summary(item.get("verified_claim_count") for item in metrics),
+        "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
+        "verification_stage": _aggregate_verification_stage(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
     }
@@ -260,6 +270,48 @@ def _aggregate_routes(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             for route in by_route_names
         },
     }
+
+
+def _aggregate_verification_stage(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("verification_stage_summary")) for item in metrics]
+    reason_counts: dict[str, int] = {}
+    triggered_feature_counts: dict[str, int] = {}
+    triggered_metadata_counts: dict[str, int] = {}
+    for summary in summaries:
+        reason = summary.get("reason")
+        if reason is not None:
+            reason_key = str(reason)
+            reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
+        _merge_counts(triggered_feature_counts, _mapping(summary.get("triggered_feature_counts")))
+        _merge_counts(triggered_metadata_counts, _mapping(summary.get("triggered_metadata_counts")))
+    enabled_count = sum(1 for summary in summaries if bool(summary.get("enabled")))
+    skipped_count = sum(1 for summary in summaries if bool(summary.get("skipped")))
+    saved_claim_count = _sum_float(summaries, "saved_claim_count")
+    verified_claim_count = _sum_float(summaries, "verified_claim_count")
+    claim_count = _sum_float(summaries, "claim_count")
+    return {
+        "source_trace_count": len(summaries),
+        "enabled_trace_count": enabled_count,
+        "skipped_trace_count": skipped_count,
+        "run_verifier_trace_count": sum(1 for summary in summaries if summary.get("run_verifier") is True),
+        "skip_decision_rate": _safe_div(skipped_count, len(summaries)),
+        "claim_count": claim_count,
+        "saved_claim_count": saved_claim_count,
+        "verified_claim_count": verified_claim_count,
+        "claim_skip_rate": _safe_div(saved_claim_count, claim_count),
+        "per_trace_skip_rate": _numeric_summary(summary.get("skip_rate") for summary in summaries),
+        "reason_counts": reason_counts,
+        "triggered_feature_counts": triggered_feature_counts,
+        "triggered_metadata_counts": triggered_metadata_counts,
+    }
+
+
+def _merge_counts(target: dict[str, int], source: Mapping[str, Any]) -> None:
+    for key, value in source.items():
+        numeric = _finite_float(value)
+        if numeric is None:
+            continue
+        target[str(key)] = target.get(str(key), 0) + int(numeric)
 
 
 def _aggregate_route_summaries(summaries: Sequence[Mapping[str, Any]]) -> dict[str, Any]:

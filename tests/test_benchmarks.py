@@ -8992,6 +8992,90 @@ def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
 
 
+def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    skipped_trace = tmp_path / "skipped-trace.json"
+    verified_trace = tmp_path / "verified-trace.json"
+    skipped_trace.write_text(
+        json.dumps({
+            "request_id": "skip",
+            "claims": [
+                {"claim_id": "c1", "text": "Paris is the capital of France."},
+                {"claim_id": "c2", "text": "Lyon is in France."},
+            ],
+            "events": [
+                {
+                    "event_type": "verification_stage_decision",
+                    "payload": {
+                        "run_verifier": False,
+                        "reason": "diagnostics and claim metadata did not require verification",
+                    },
+                },
+                {
+                    "event_type": "initial_verification",
+                    "payload": {"n_claims": 2, "skipped": True, "results": []},
+                },
+            ],
+            "verification_results": [],
+            "metadata": {"staged_verification_enabled": True},
+        }),
+        encoding="utf-8",
+    )
+    verified_trace.write_text(
+        json.dumps({
+            "request_id": "verify",
+            "claims": [{"claim_id": "c1", "text": "2 + 2 = 4."}],
+            "events": [
+                {
+                    "event_type": "verification_stage_decision",
+                    "payload": {
+                        "run_verifier": True,
+                        "reason": "diagnostic risk level is medium",
+                        "triggered_claim_ids": ["c1"],
+                        "triggered_features": {"c1": ["has_number"]},
+                    },
+                },
+                {
+                    "event_type": "initial_verification",
+                    "payload": {
+                        "n_claims": 1,
+                        "skipped": False,
+                        "results": [{"status": "supported", "metadata": {}}],
+                    },
+                },
+            ],
+            "verification_results": [{"status": "supported", "metadata": {}}],
+            "metadata": {"staged_verification_enabled": True},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(skipped_trace, verified_trace),
+            report_path=tmp_path / "product-runtime-baseline.json",
+            policy={
+                "min_verification_skip_rate": 0.0,
+                "max_verified_claim_count": 1,
+            },
+        )
+    )
+
+    stage = payload["summary"]["verification_stage"]
+    assert payload["status"] == "promote"
+    assert payload["budget"]["passed_count"] == 2
+    assert payload["traces"][0]["metrics"]["verification_skip_rate"] == 1.0
+    assert payload["traces"][1]["metrics"]["verified_claim_count"] == 1
+    assert payload["summary"]["verification_skip_rate"]["mean"] == pytest.approx(0.5)
+    assert stage["enabled_trace_count"] == 2
+    assert stage["skipped_trace_count"] == 1
+    assert stage["saved_claim_count"] == pytest.approx(2.0)
+    assert stage["verified_claim_count"] == pytest.approx(1.0)
+    assert stage["claim_skip_rate"] == pytest.approx(2 / 3)
+    assert stage["triggered_feature_counts"] == {"has_number": 1}
+    assert stage["reason_counts"]["diagnostic risk level is medium"] == 1
+
+
 def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
     registry_module = importlib.import_module("eigentruth.registry")

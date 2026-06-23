@@ -287,6 +287,60 @@ class ProductTrace:
             "caches": caches,
         }
 
+    def verification_stage_summary(self) -> dict[str, Any]:
+        """Summarize staged-verification skip decisions from trace events."""
+        events = [_event_to_dict(event) for event in self.events]
+        metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
+        stage_event = _latest_event_payload(events, "verification_stage_decision")
+        initial_event = _latest_event_payload(events, "initial_verification")
+        skipped_event = _latest_event_payload(events, "initial_verification_skipped")
+        claim_count = _first_non_negative_int(
+            initial_event.get("n_claims"),
+            len(self.claims),
+        )
+        result_count = _initial_verification_result_count(initial_event)
+        if result_count is None:
+            result_count = len(self.verification_results)
+        run_verifier = _optional_bool(stage_event.get("run_verifier"))
+        skipped = _optional_bool(initial_event.get("skipped"))
+        if skipped is None and skipped_event:
+            skipped = True
+        if skipped is None and run_verifier is not None:
+            skipped = not run_verifier
+        if skipped is None:
+            skipped = False
+        saved_claim_count = claim_count if skipped is True and claim_count is not None else 0
+        verified_claim_count = (
+            result_count
+            if result_count is not None
+            else (0 if skipped is True else claim_count)
+        )
+        triggered_claim_ids = tuple(str(item) for item in _as_sequence(stage_event.get("triggered_claim_ids", ())))
+        triggered_features = _string_sequence_mapping(stage_event.get("triggered_features"))
+        triggered_metadata = _string_sequence_mapping(stage_event.get("triggered_metadata"))
+        enabled = (
+            bool(stage_event)
+            or _truthy_flag(metadata.get("staged_verification_enabled"))
+            or isinstance(metadata.get("staged_verification"), Mapping)
+        )
+        return {
+            "enabled": enabled,
+            "run_verifier": run_verifier,
+            "skipped": bool(skipped),
+            "reason": stage_event.get("reason", skipped_event.get("reason")),
+            "claim_count": claim_count,
+            "verification_result_count": result_count,
+            "verified_claim_count": verified_claim_count,
+            "saved_claim_count": saved_claim_count,
+            "skip_rate": _safe_div(saved_claim_count, claim_count or 0),
+            "triggered_claim_count": len(triggered_claim_ids),
+            "triggered_claim_ids": triggered_claim_ids,
+            "triggered_feature_counts": _count_nested_values(triggered_features),
+            "triggered_metadata_counts": _count_nested_values(triggered_metadata),
+            "triggered_features": triggered_features,
+            "triggered_metadata": triggered_metadata,
+        }
+
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
@@ -337,6 +391,60 @@ def _event_to_dict(event: TraceEvent | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(event, TraceEvent):
         return event.to_dict()
     return dict(_to_jsonable(event))
+
+
+def _latest_event_payload(events: Sequence[Mapping[str, Any]], event_type: str) -> dict[str, Any]:
+    for event in reversed(tuple(events)):
+        if str(event.get("event_type")) != event_type:
+            continue
+        payload = event.get("payload", {})
+        return dict(payload) if isinstance(payload, Mapping) else {}
+    return {}
+
+
+def _initial_verification_result_count(initial_event: Mapping[str, Any]) -> int | None:
+    results = initial_event.get("results")
+    if isinstance(results, Sequence) and not isinstance(results, (str, bytes, bytearray)):
+        return len(results)
+    return _non_negative_int(initial_event.get("verification_result_count"))
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
+def _first_non_negative_int(*values: Any) -> int | None:
+    for value in values:
+        numeric = _non_negative_int(value)
+        if numeric is not None:
+            return numeric
+    return None
+
+
+def _string_sequence_mapping(value: Any) -> dict[str, tuple[str, ...]]:
+    if not isinstance(value, Mapping):
+        return {}
+    return {
+        str(key): tuple(str(item) for item in _as_sequence(items))
+        for key, items in value.items()
+    }
+
+
+def _count_nested_values(values: Mapping[str, Sequence[str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for items in values.values():
+        for item in items:
+            counts[str(item)] = counts.get(str(item), 0) + 1
+    return counts
 
 
 def _runtime_phase_to_obj(phase: RuntimePhaseTiming | Mapping[str, Any]) -> RuntimePhaseTiming:
