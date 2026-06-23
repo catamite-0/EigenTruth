@@ -57,10 +57,14 @@ DEFAULT_SMOLLM2_ARTIFACT_PATH = (
 DEFAULT_QWEN_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
 )
+DEFAULT_PROMOTION_CONTRACT_FILENAME = (
+    "smollm2_l20_inside_trigger_budget_derived_retrieval_adapter_gated_"
+    "staged_release_candidate_registry_workflow.json"
+)
 DEFAULT_PROMOTION_CONTRACT_PATH = (
     Path(__file__).resolve().parents[1]
     / "artifacts"
-    / "smollm2_l20_inside_trigger_budget_derived_adapter_gated_staged_release_candidate_registry_workflow.json"
+    / DEFAULT_PROMOTION_CONTRACT_FILENAME
 )
 ARITHMETIC_TEXT_PATTERN = r"\d[\d\s().%+*/-]*[+*/%-][\d\s().%+*/-]*(?:=|equals|is)\s*[-+]?\d"
 

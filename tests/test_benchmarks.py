@@ -3322,6 +3322,9 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
             output_dir=tmp_path / "readiness",
             n_records=8,
             alpha=0.2,
+            include_retrieval=True,
+            max_mean_attempted_route_count=2.1,
+            max_retrieval_use_rate=1.0,
             performance_report_path=performance_report_path,
             inside_trigger_budget_sweep_report_path=trigger_sweep_path,
             inside_trigger_budget_policy="cost_first",
@@ -3330,6 +3333,11 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
 
     assert payload["readiness_decision"]["status"] == "promote"
+    assert payload["adapter_family_matrix"]["include_retrieval"] is True
+    assert "retrieval_groundedness" in payload["adapter_family_matrix"]["routes"]
+    assert payload["adapter_family_matrix"]["route_comparison"]["by_route"]["retrieval_groundedness"][
+        "retrieval_use_rate"
+    ] == pytest.approx(1.0)
     assert payload["performance_matrix_path"] == str(performance_report_path)
     assert payload["execution"]["performance_report_reused"] is True
     assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
@@ -3347,6 +3355,8 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
         "inside_trigger_top_fraction"
     ] == pytest.approx(0.25)
     assert manifest["metadata"]["performance_report_reused"] is True
+    assert manifest["metadata"]["adapter_include_retrieval"] is True
+    assert manifest["metadata"]["adapter_retrieval_limit"] == 1
     assert manifest["metadata"]["inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["performance_report_path"] == str(performance_report_path)
     assert manifest["artifacts"]["performance_matrix_report"]["exists"] is True

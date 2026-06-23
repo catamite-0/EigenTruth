@@ -560,9 +560,14 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "performance_baseline_record": "performance_baseline:runtime:0.9",
             "adapter_family_matrix": {
                 "matrix_path": "artifacts/adapter-family-matrix.json",
-                "required_routes": ["structured_state", "state_transition"],
-                "routes": ["structured_qa", "structured_state", "state_transition"],
-                "promoted_routes": ["structured_qa", "structured_state", "state_transition"],
+                "required_routes": ["structured_state", "state_transition", "retrieval_groundedness"],
+                "routes": ["structured_qa", "structured_state", "state_transition", "retrieval_groundedness"],
+                "promoted_routes": [
+                    "structured_qa",
+                    "structured_state",
+                    "state_transition",
+                    "retrieval_groundedness",
+                ],
                 "promotion_status": "promote",
             },
             "verifier_route": {
@@ -600,7 +605,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
-    assert contract.metadata["adapter_family_required_routes"] == ["structured_state", "state_transition"]
+    assert contract.metadata["adapter_family_required_routes"] == [
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+    ]
     assert contract.metadata["adapter_family_promotion_status"] == "promote"
     assert contract.runtime_budget_policy == direct_policy
     assert contract.runtime_budget_policy.max_total_seconds == 1.0

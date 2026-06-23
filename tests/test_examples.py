@@ -58,6 +58,7 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
         assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
             "structured_state",
             "state_transition",
+            "retrieval_groundedness",
         ]
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
@@ -380,6 +381,7 @@ def test_calibrated_control_demo_can_use_default_adapter_gated_contract_budget()
     assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
         "structured_state",
         "state_transition",
+        "retrieval_groundedness",
     ]
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0

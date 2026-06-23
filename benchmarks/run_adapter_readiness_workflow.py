@@ -58,6 +58,10 @@ class AdapterReadinessWorkflowConfig:
     max_max_duration_seconds: float = 1.0
     max_mean_attempted_route_count: float = 1.1
     max_retrieval_use_rate: float = 0.0
+    include_retrieval: bool = False
+    verifier_min_overlap: float = 0.65
+    retriever_min_overlap: float = 0.6
+    retrieval_limit: int = 1
     model: str = "sshleifer/tiny-gpt2"
     dtype: str = "float32"
     layers: Sequence[int] = (-1,)
@@ -115,8 +119,11 @@ class AdapterReadinessWorkflowConfig:
             raise ValueError("max_batch_tokens must be >=0.")
         if int(self.performance_max_workers) < 1:
             raise ValueError("performance_max_workers must be >=1.")
+        if int(self.retrieval_limit) <= 0:
+            raise ValueError("retrieval_limit must be positive.")
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "performance_max_workers", int(self.performance_max_workers))
+        object.__setattr__(self, "retrieval_limit", int(self.retrieval_limit))
         if self.max_batch_token_budgets is not None:
             object.__setattr__(
                 self,
@@ -174,6 +181,10 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             max_max_duration_seconds=config.max_max_duration_seconds,
             max_mean_attempted_route_count=config.max_mean_attempted_route_count,
             max_retrieval_use_rate=config.max_retrieval_use_rate,
+            include_retrieval=config.include_retrieval,
+            verifier_min_overlap=config.verifier_min_overlap,
+            retriever_min_overlap=config.retriever_min_overlap,
+            retrieval_limit=config.retrieval_limit,
         )
     )
     if config.performance_report_path is None:
@@ -392,6 +403,10 @@ def _write_artifact_manifest(
             "performance_report_path": None if config.performance_report_path is None else str(
                 config.performance_report_path
             ),
+            "adapter_include_retrieval": config.include_retrieval,
+            "adapter_verifier_min_overlap": config.verifier_min_overlap,
+            "adapter_retriever_min_overlap": config.retriever_min_overlap,
+            "adapter_retrieval_limit": config.retrieval_limit,
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "inside_sampling_report": None
             if config.inside_sampling_report_path is None
@@ -494,6 +509,10 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        include_retrieval=bool(args.include_retrieval),
+        verifier_min_overlap=args.verifier_min_overlap,
+        retriever_min_overlap=args.retriever_min_overlap,
+        retrieval_limit=args.retrieval_limit,
         model=args.model,
         dtype=args.dtype,
         layers=_parse_int_list(args.layers, flag="--layers"),
@@ -561,6 +580,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-max-duration-seconds", type=float, default=1.0)
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=1.1)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=0.0)
+    parser.add_argument("--include-retrieval", action="store_true",
+                        help="include the local retrieval-groundedness route in the adapter-family matrix")
+    parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
+    parser.add_argument("--retrieval-limit", type=int, default=1)
     parser.add_argument("--model", default="sshleifer/tiny-gpt2")
     parser.add_argument("--dtype", default="float32")
     parser.add_argument("--layers", default="-1")

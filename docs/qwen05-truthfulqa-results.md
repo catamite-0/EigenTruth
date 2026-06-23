@@ -771,14 +771,18 @@ than a previous release baseline, the release comparison records the gate source
 as `sample_count_ratio_to_reference` and
 `inside_generation_seconds_ratio_to_reference`.
 
-The current adapter-gated release record is
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-adapter-gated-staged-qa-release-candidate:1.0`.
+The current retrieval-adapter-gated release record is
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-retrieval-adapter-gated-staged-qa-release-candidate:1.1`.
 It keeps the same readiness, route, and performance evidence, then adds the
-promoted adapter-family matrix as a required gate. The final manifest
-fingerprints the release-candidate report, readiness manifest, route manifest,
-performance manifest, and adapter-family matrix report. Required adapter routes
-are `structured_state` and `state_transition`, both promoted in
-`artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/adapter-family-matrix.json`.
+retrieval-inclusive promoted adapter-family matrix as a required gate. The final
+manifest fingerprints the release-candidate report, readiness manifest, route
+manifest, performance manifest, and adapter-family matrix report. Required
+adapter routes are `structured_state`, `state_transition`, and
+`retrieval_groundedness`, all promoted in
+`artifacts/smollm2_l20_adapter_family_retrieval/adapter-family-matrix.json`.
+The selected product route remains `structured_qa` with retrieval use gated at
+`0.0`; the retrieval adapter is required as available verification capability
+evidence, not as the default low-latency path.
 
 ## Next Steps
 

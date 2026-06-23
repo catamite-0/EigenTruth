@@ -979,6 +979,9 @@ cache-profile performance matrix. The final `readiness_decision` is `promote`
 only when both the adapter-family `promotion_decision` and the performance
 `matrix_decision` promote and the performance report can produce deployable
 runtime settings.
+Pass `--include-retrieval --max-mean-attempted-route-count 2.1
+--max-retrieval-use-rate 1.0` when the readiness matrix should also prove the
+local retrieval-groundedness adapter family.
 
 Use `--performance-dry-run` to inspect the performance commands without loading
 a model. Dry-run performance evidence produces `needs_performance_evidence`,
@@ -1447,19 +1450,21 @@ Use `--inside-trigger-budget-policy cost_first` in the release-candidate
 comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
-The current adapter-gated SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-adapter-gated-staged-qa-release-candidate:1.0`.
+The current retrieval-adapter-gated SmolLM2 default records
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-retrieval-adapter-gated-staged-qa-release-candidate:1.1`.
 It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA route, and
 registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
-promoted adapter-family matrix with `structured_state` and `state_transition`
-routes present and promoted. The final manifest now fingerprints the
-release-candidate report plus the readiness, route, performance, and
-adapter-family matrix reports; the release comparison verifies that the
-performance baseline recommendation matches the selected runtime: layer `-12`,
-batch size `8`, `outputs` hidden-state capture, no prefix-KV cache, worker count
-`1`, `truth_proj` AUROC `0.682`, and the quality-balanced `top_0p4` triggered
-`adaptive_selfcheck` budget.
+promoted adapter-family matrix with `structured_state`, `state_transition`, and
+`retrieval_groundedness` routes present and promoted. The final manifest now
+fingerprints the release-candidate report plus the readiness, route,
+performance, and adapter-family matrix reports; the release comparison verifies
+that the performance baseline recommendation matches the selected runtime:
+layer `-12`, batch size `8`, `outputs` hidden-state capture, no prefix-KV cache,
+worker count `1`, `truth_proj` AUROC `0.682`, and the quality-balanced
+`top_0p4` triggered `adaptive_selfcheck` budget. The selected product route
+still gates `retrieval_use_rate` at `0.0`; retrieval is required as available
+adapter capability evidence, not as the default low-latency route.
 
 ## `build_truthfulqa_corpus.py`
 
