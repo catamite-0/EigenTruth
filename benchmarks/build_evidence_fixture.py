@@ -299,6 +299,9 @@ def _coerce_document(value: Any, *, source_default: str) -> RetrievalHit:
     raw_source = value.get("source")
     source = source_default if raw_source is None else str(raw_source)
     metadata = {"loader": "json", **dict(value.get("metadata", {}))}
+    for key in ("question", "answer"):
+        if key in value and value[key] is not None:
+            metadata[key] = str(value[key])
     return RetrievalHit(
         text=str(value.get("text", value.get("content", ""))),
         source=source,

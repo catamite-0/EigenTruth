@@ -105,6 +105,8 @@ def test_build_truthfulqa_corpus_outputs_correct_answer_documents(monkeypatch):
     assert payload["summary"]["n_manifold_documents"] == 2
     assert payload["summary"]["n_eval_documents"] == 2
     assert payload["documents"][2]["text"] == "Q1? Correct A."
+    assert payload["documents"][2]["question"] == "Q1?"
+    assert payload["documents"][2]["answer"] == "Correct A."
     assert payload["documents"][2]["metadata"]["split"] == "eval"
     assert payload["documents"][2]["metadata"]["is_false"] == 0
 
@@ -205,6 +207,132 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["groundedness_verifiers"]["requests"] >= 3
     assert cache_stats["retrievers"]["requests"] == 2
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
+
+
+def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    fixture_path = tmp_path / "fixture.json"
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 1, 1],
+        "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        "statements": [
+            {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+            {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+            {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+            {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+        ],
+    }
+    scores_path.write_text(json.dumps(dump), encoding="utf-8")
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2", "source": "qa:q2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+        query_field="question",
+    )
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+    )
+    run = payload["runs"][0]
+    routes = run["route_summary"]
+    quality = run["route_quality"]["retrieval_structured_qa"]
+
+    assert fixture["records"][0]["retrieval_documents"][0]["metadata"]["question"] == "Q1?"
+    assert fixture["records"][1]["retrieval_documents"][0]["metadata"]["answer"] == "A2"
+    assert payload["retrieval_qa_verifier"]["enabled"] is True
+    assert run["retrieval_qa"]["decided_records"] == 4
+    assert run["cache_stats"]["retrieval_qa_verifiers"]["requests"] == 4
+    assert routes["selected_counts"] == {"retrieval_structured_qa": 4}
+    assert routes["by_route"]["retrieval_structured_qa"]["statuses"]["supported"] == 2
+    assert routes["by_route"]["retrieval_structured_qa"]["statuses"]["refuted"] == 2
+    assert routes["by_route"]["retrieval_structured_qa"]["retrieval_use_rate"] == pytest.approx(1.0)
+    assert quality["decision_accuracy"] == pytest.approx(1.0)
+    assert quality["false_supported_rate"] == pytest.approx(0.0)
+    assert quality["false_refuted_rate"] == pytest.approx(1.0)
+
+
+def test_local_retrieval_workflow_can_gate_retrieval_structured_qa(tmp_path):
+    module = importlib.import_module("benchmarks.run_local_retrieval_route_workflow")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    output_dir = tmp_path / "workflow"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+                {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+                {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2", "source": "qa:q2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_local_retrieval_route_workflow(
+        module.LocalRetrievalRouteWorkflowConfig(
+            scores_path=scores_path,
+            corpus_paths=(corpus_path,),
+            output_dir=output_dir,
+            alpha=0.2,
+            query_field="question",
+            retriever_min_overlap=1.0,
+            retrieval_limit=1,
+            gate_routes=("retrieval_structured_qa",),
+            min_selected=4,
+            gate_min_selected=4,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            max_mean_attempted_route_count=2.1,
+            max_retrieval_use_rate=1.0,
+            compact_json=True,
+        )
+    )
+    route = payload["adapter_promotion"]["route_comparison"]["by_route"]["retrieval_structured_qa"]
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["adapter_promotion"]["decision"]["recommended_route"] == "retrieval_structured_qa"
+    assert route["selected"] == 4
+    assert route["decision_accuracy"] == pytest.approx(1.0)
+    assert route["false_supported_rate"] == pytest.approx(0.0)
+    assert route["false_refuted_rate"] == pytest.approx(1.0)
+    assert route["retrieval_use_rate"] == pytest.approx(1.0)
 
 
 def test_build_selfcheck_fixture_uses_dumped_inside_sample_texts(tmp_path):

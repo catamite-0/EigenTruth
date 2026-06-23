@@ -617,7 +617,8 @@ Reports include `verification_quality`, a label-conditioned matrix over
 final control-policy detection and false-alarm rates. Reports also include
 `route_summary`, which breaks verification outcomes down by selected route
 (`structured_qa`, `state_transition`, `structured_state`, `groundedness`,
-`self_consistency`, `retrieval_groundedness`, or `staged_skip`) and records attempted-route
+`self_consistency`, `retrieval_groundedness`, `retrieval_structured_qa`, or
+`staged_skip`) and records attempted-route
 counts, status counts, and per-route supported/refuted/error rates. Use
 `route_quality` for label-conditioned false-support / false-refutation metrics
 per selected route, and use each alpha result's `route_control_impact` to see
@@ -940,6 +941,8 @@ runs each through the same refresh/promotion gate:
 - `state_transition`: action-conditioned world-model postconditions.
 - `retrieval_groundedness`: optional local retrieval evidence plus lexical
   support/refutation checks.
+- `retrieval_structured_qa`: optional local retrieval evidence interpreted as
+  structured question/answer facts before lexical fallback.
 
 It then aggregates the generated verifier reports with
 `compare_verifier_routes.py` so quality, tail latency, attempted-route count,
@@ -1561,10 +1564,11 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --retrieval-limit 3 \
   --claims-cache-dir artifacts/cache/local_retrieval_claims \
   --verifier-trace-cache-dir artifacts/cache/verifier_traces \
+  --gate-route retrieval_structured_qa \
   --min-selected 100 \
   --min-decision-accuracy 0.90 \
   --max-false-supported-rate 0.05 \
-  --max-mean-attempted-route-count 2.1 \
+  --max-mean-attempted-route-count 3.1 \
   --max-retrieval-use-rate 1.0 \
   --fail-on-blocked
 ```
@@ -1586,6 +1590,12 @@ route promotion must also satisfy an explicit runtime/cache budget. These gates
 fail closed when the corresponding metric is missing or non-finite, block final
 workflow promotion, and prevent registry promotion when the pre-registration
 budget has already failed.
+
+For strict false-support gates on TruthfulQA-style local corpora, prefer
+`--gate-route retrieval_structured_qa`. The route uses retrieved documents with
+`question`/`answer` metadata as structured facts before falling back to lexical
+`retrieval_groundedness`, which avoids treating high token overlap between a
+wrong answer and the same-question correct-answer evidence as support.
 
 `--claims-cache-dir` is optional. When set, the workflow caches generated
 claims fixtures by score-dump fingerprint, corpus fingerprints, query field,

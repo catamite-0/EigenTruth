@@ -468,6 +468,7 @@ def _verify_records(
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
+    retrieval_qa_runners: dict[str, CachedVerifier] = {}
     selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
 
@@ -490,6 +491,21 @@ def _verify_records(
                 )
             )
             groundedness_runners[key] = runner
+        return runner
+
+    def retrieval_qa_runner(
+        documents: Sequence[Mapping[str, Any] | str],
+    ) -> CachedVerifier | None:
+        key = stable_cache_key({"documents": documents, "verifier": "QuestionAnswerVerifier"})
+        runner = retrieval_qa_runners.get(key)
+        if runner is not None:
+            return runner
+        try:
+            verifier = QuestionAnswerVerifier.from_corpus({"documents": documents})
+        except ValueError:
+            return None
+        runner = CachedVerifier(verifier)
+        retrieval_qa_runners[key] = runner
         return runner
 
     def selfcheck_runner(samples: Sequence[Mapping[str, Any] | str]) -> CachedVerifier:
@@ -556,6 +572,7 @@ def _verify_records(
         qa_result = None
         state_result = None
         selfcheck_result = None
+        retrieval_qa_result = None
         attempted_routes = []
         route_timings: list[dict[str, Any]] = []
         if qa_runner is not None:
@@ -671,6 +688,7 @@ def _verify_records(
         final = initial
         selected_route = "groundedness"
         selected_verifier = "GroundednessVerifier"
+        selected_retrieval_hits: tuple[Mapping[str, Any], ...] = ()
         if initial.status is VerificationStatus.INSUFFICIENT_EVIDENCE and record.selfcheck_samples:
             attempted_routes.append("self_consistency")
             selfcheck_result = _timed_verify(
@@ -695,7 +713,6 @@ def _verify_records(
             VerificationStatus.INSUFFICIENT_EVIDENCE,
             VerificationStatus.NOT_APPLICABLE,
         } and record.retrieval_documents:
-            attempted_routes.append("retrieval_groundedness")
             retriever = retriever_for(record.retrieval_documents)
             hits = _timed_retrieve(
                 route_timings,
@@ -703,16 +720,52 @@ def _verify_records(
                 query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
                 limit=retrieval_limit,
             )
-            if hits:
-                final_evidence = tuple(record.initial_evidence) + tuple(hit.to_dict() for hit in hits)
-                final = _timed_verify(
-                    route_timings,
-                    route="retrieval_groundedness",
-                    runner=groundedness_runner(final_evidence, record.refutations),
-                    claim=record.claim,
-                )
-                selected_route = "retrieval_groundedness"
-                selected_verifier = "GroundednessVerifier"
+            hit_documents = tuple(hit.to_dict() for hit in hits)
+            qa_documents = hit_documents or _retrieval_document_payloads(record.retrieval_documents)
+            if qa_documents:
+                runner = retrieval_qa_runner(qa_documents)
+                if runner is not None:
+                    attempted_routes.append("retrieval_structured_qa")
+                    retrieval_qa_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_structured_qa",
+                        runner=runner,
+                        claim=record.claim,
+                        context={"statement": record.metadata.get("statement", {})},
+                    )
+                    if retrieval_qa_result.status in {
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.REFUTED,
+                    }:
+                        final = retrieval_qa_result
+                        selected_route = "retrieval_structured_qa"
+                        selected_verifier = "QuestionAnswerVerifier"
+                        selected_retrieval_hits = qa_documents
+                        _retag_retrieval_timings(
+                            route_timings,
+                            from_route="retrieval_groundedness",
+                            to_route="retrieval_structured_qa",
+                        )
+                if final.status in {
+                    VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    VerificationStatus.NOT_APPLICABLE,
+                } and hit_documents:
+                    attempted_routes.append("retrieval_groundedness")
+                    final_evidence = tuple(record.initial_evidence) + hit_documents
+                    final = _timed_verify(
+                        route_timings,
+                        route="retrieval_groundedness",
+                        runner=groundedness_runner(final_evidence, record.refutations),
+                        claim=record.claim,
+                    )
+                    selected_route = "retrieval_groundedness"
+                    selected_verifier = "GroundednessVerifier"
+                    selected_retrieval_hits = hit_documents
+            if not hit_documents and final.status in {
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                VerificationStatus.NOT_APPLICABLE,
+            }:
+                attempted_routes.append("retrieval_groundedness")
         verified.append({
             "claim": {
                 "text": record.claim.text,
@@ -725,12 +778,13 @@ def _verify_records(
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None,
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
-            "retrieval_hits": tuple(hit.to_dict() for hit in hits),
+            "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
+            "retrieval_hits": selected_retrieval_hits,
             "route": _route_metadata(
                 selected_route=selected_route,
                 selected_verifier=selected_verifier,
                 attempted_routes=attempted_routes,
-                used_retrieval=bool(hits),
+                used_retrieval=bool(selected_retrieval_hits),
                 route_timings=route_timings,
             ),
             "metadata": _record_metadata(record, stage_payload),
@@ -741,6 +795,9 @@ def _verify_records(
         transition_stats = {} if transition_runner is None else transition_runner.stats.to_dict()
         groundedness_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in groundedness_runners.values())
+        )
+        retrieval_qa_stats = combine_cache_stats(
+            *(runner.stats.to_dict() for runner in retrieval_qa_runners.values())
         )
         selfcheck_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in selfcheck_runners.values())
@@ -753,6 +810,10 @@ def _verify_records(
             "groundedness_verifiers": {
                 **groundedness_stats,
                 "instances": len(groundedness_runners),
+            },
+            "retrieval_qa_verifiers": {
+                **retrieval_qa_stats,
+                "instances": len(retrieval_qa_runners),
             },
             "selfcheck_verifiers": {
                 **selfcheck_stats,
@@ -767,6 +828,7 @@ def _verify_records(
                 state_stats,
                 transition_stats,
                 groundedness_stats,
+                retrieval_qa_stats,
                 selfcheck_stats,
                 retriever_stats,
             ),
@@ -779,6 +841,34 @@ def _record_has_state_check(record: ClaimEvidenceRecord, state_checks: Mapping[s
     if "state_check" in metadata or any(key in metadata for key in ("path", "key", "field")):
         return True
     return record.claim.claim_id is not None and record.claim.claim_id in state_checks
+
+
+def _retrieval_document_payloads(
+    documents: Sequence[Mapping[str, Any] | str],
+) -> tuple[Mapping[str, Any], ...]:
+    """Return retrieval documents in the same JSON shape as retriever hits."""
+    payloads = []
+    for item in documents:
+        if isinstance(item, str):
+            text = item.strip()
+            if text:
+                payloads.append({"text": text, "source": None, "score": 1.0, "metadata": {}})
+            continue
+        text = item.get("text", item.get("content"))
+        if text is None or not str(text).strip():
+            continue
+        source = item.get("source")
+        try:
+            score = float(item.get("score", 1.0))
+        except (TypeError, ValueError):
+            score = 1.0
+        payloads.append({
+            "text": str(text),
+            "source": None if source is None else str(source),
+            "score": score if math.isfinite(score) else 1.0,
+            "metadata": dict(item.get("metadata", {})),
+        })
+    return tuple(payloads)
 
 
 def _state_context(record: ClaimEvidenceRecord, state_checks: Mapping[str, Any]) -> dict[str, Any]:
@@ -890,6 +980,18 @@ def _timed_retrieve(
         "hit_count": len(hits),
     })
     return hits
+
+
+def _retag_retrieval_timings(
+    route_timings: list[dict[str, Any]],
+    *,
+    from_route: str,
+    to_route: str,
+) -> None:
+    """Assign shared retrieval latency to the route that consumed the hits."""
+    for item in route_timings:
+        if item.get("operation") == "retrieve" and item.get("route") == from_route:
+            item["route"] = to_route
 
 
 def _sum_timing_durations(
@@ -1539,7 +1641,7 @@ def _verification_trace_cache_key(
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v3",
+        "builder": "eval_verifier_ensemble:verified_records:v4",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -1841,7 +1943,7 @@ def build_verifier_ensemble_report(
                         "cache_stats": dict(run_cache_stats),
                     },
                     metadata={
-                        "builder": "eval_verifier_ensemble:verified_records:v3",
+                        "builder": "eval_verifier_ensemble:verified_records:v4",
                         "name": name,
                         "signal": signal,
                         "material": trace_material,
@@ -1889,6 +1991,17 @@ def build_verifier_ensemble_report(
                     1 for record in verified_records
                     if record.get("qa") is not None
                     and record["qa"]["status"] in {
+                        VerificationStatus.SUPPORTED.value,
+                        VerificationStatus.REFUTED.value,
+                    }
+                ),
+            },
+            "retrieval_qa": {
+                "enabled": any(record.get("retrieval_qa") is not None for record in verified_records),
+                "decided_records": sum(
+                    1 for record in verified_records
+                    if record.get("retrieval_qa") is not None
+                    and record["retrieval_qa"]["status"] in {
                         VerificationStatus.SUPPORTED.value,
                         VerificationStatus.REFUTED.value,
                     }
@@ -1980,6 +2093,15 @@ def build_verifier_ensemble_report(
             "type": "QuestionAnswerVerifier",
             "enabled": qa_verifier is not None,
             "corpus_path": None if qa_corpus_path is None else str(qa_corpus_path),
+        },
+        "retrieval_qa_verifier": {
+            "type": "QuestionAnswerVerifier",
+            "enabled": any(
+                bool(run.get("retrieval_qa", {}).get("enabled"))
+                for run in runs
+                if isinstance(run.get("retrieval_qa"), Mapping)
+            ),
+            "source": "retrieval_hits",
         },
         "state_verifier": {
             "type": "StructuredStateVerifier",

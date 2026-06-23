@@ -45,6 +45,8 @@ def build_truthfulqa_corpus(
             if int(statement.is_false) != 0:
                 continue
             documents.append({
+                "question": statement.question,
+                "answer": statement.answer,
                 "text": _statement_text(statement),
                 "source": f"truthfulqa:eval:{idx}",
                 "metadata": {
