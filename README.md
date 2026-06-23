@@ -316,6 +316,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_performance_baseline_workflow.py` | Builds a registry-ready performance baseline bundle from cache matrix, optional worker sweep, optional INSIDE profile / trigger-budget evidence, runtime recommendation, and artifact manifest. |
 | `run_product_runtime_baseline.py` | Aggregates saved `ProductTrace` JSON files into a request-runtime baseline with phase, cache, verifier-route, retrieval-use, staged-verification savings, and optional `ProductRuntimeBudgetPolicy` gate metrics. |
 | `build_product_trace_corpus.py` | Validates saved ProductTrace JSON/JSONL payloads, optionally redacts text fields, writes replay-ready standardized traces, and registers a manifest-backed trace corpus. |
+| `run_product_trace_replay_workflow.py` | Runs the raw-trace handoff end to end: redacted trace corpus, product runtime baseline, selector replay, recursive manifest, and registry-ready workflow report. |
 | `run_product_runtime_profile_sweep.py` | Runs deterministic calibrated-control demo scenarios under `latency`, `balanced`, `audit`, and request-level `auto` selection modes, writes traces, builds per-mode baselines, applies optional aggregate SLO gates, and recommends the lowest-cost non-blocked mode. |
 | `run_runtime_profile_selector_tuning.py` | Compares candidate `RuntimeProfileSelectorPolicy` JSON configs by running auto-profile sweeps under the same SLO gate and recommending the lowest-cost promoted selector. |
 | `run_runtime_profile_selector_replay.py` | Replays candidate `RuntimeProfileSelectorPolicy` JSON configs over saved `ProductTrace` files, estimates profile cost/distribution plus paired observed runtime without rerunning demos, and registers the lowest-cost promoted selector. |
@@ -382,6 +383,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_performance_baseline_workflow.py` | 将 cache matrix、可选 worker sweep、可选 INSIDE profile / trigger-budget 证据、runtime recommendation 和 artifact manifest 打包成可注册 performance baseline。 |
 | `run_product_runtime_baseline.py` | 聚合已保存的 `ProductTrace` JSON，输出请求级 runtime baseline：phase、cache、verifier route、retrieval 使用率、staged-verification 节省量，以及可选 `ProductRuntimeBudgetPolicy` gate。 |
 | `build_product_trace_corpus.py` | 校验已保存的 ProductTrace JSON/JSONL，可选脱敏文本字段，写出 replay-ready 标准化 trace，并登记带 manifest 的 trace corpus。 |
+| `run_product_trace_replay_workflow.py` | 端到端执行 raw trace handoff：脱敏 trace corpus、产品 runtime baseline、selector replay、递归 manifest 和可注册 workflow report。 |
 | `run_product_runtime_profile_sweep.py` | 在 `latency`、`balanced`、`audit` 和请求级 `auto` selection modes 下运行确定性 calibrated-control demo 场景，写 trace、生成每个 mode 的 baseline，应用可选聚合 SLO 门禁，并推荐最低成本的未阻断 mode。 |
 | `run_runtime_profile_selector_tuning.py` | 通过同一套 SLO gate 比较多个 `RuntimeProfileSelectorPolicy` JSON 候选，运行 auto-profile sweep，并推荐成本最低的 promoted selector。 |
 | `run_runtime_profile_selector_replay.py` | 在已保存的 `ProductTrace` 上回放多个 `RuntimeProfileSelectorPolicy` JSON 候选，不重跑 demo 即可估算 profile 成本、分布和配对 observed runtime，并登记成本最低的 promoted selector。 |

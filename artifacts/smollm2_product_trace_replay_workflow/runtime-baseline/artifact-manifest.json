@@ -1,0 +1,125 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "009b16146447338412b42f0b7eab01f3cf325ed6557f6885639fe99a7ccd74ac",
+      "size_bytes": 81435
+    },
+    "trace_0000_audit-calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/audit-calculator_refuted-r0.json",
+      "sha256": "312889f2055ff20fd62d89994c4d04916ed940764a937c75680586607474d872",
+      "size_bytes": 39710
+    },
+    "trace_0001_audit-diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/audit-diagnostic_refuted-r0.json",
+      "sha256": "5a4f51120174e0593bbc4920f5e966e19f25327edd8753ba1b6d4f08ae83b965",
+      "size_bytes": 40831
+    },
+    "trace_0002_audit-low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/audit-low_risk_supported-r0.json",
+      "sha256": "a1295c4841bfcd3fe29112c1170235d14745596ee0cfb7a34658c70681a88880",
+      "size_bytes": 37097
+    },
+    "trace_0003_audit-calculator_refuted-r0-2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/audit-calculator_refuted-r0-2.json",
+      "sha256": "5434c4f569ab23e68461299246d5b5de585572075493b14f2d3529c4266d677a",
+      "size_bytes": 40976
+    },
+    "trace_0004_balanced-diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/balanced-diagnostic_refuted-r0.json",
+      "sha256": "d4b2386082bc8ee0df08194259b2fb8795442cdf4dadb9eb23d37ce7a3f1d9df",
+      "size_bytes": 46617
+    },
+    "trace_0005_latency-low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/latency-low_risk_supported-r0.json",
+      "sha256": "71c2213de42aa79b394173aa0c8a75b4b010484183dd29c008583122802d3ca8",
+      "size_bytes": 34453
+    },
+    "trace_0006_balanced-calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/balanced-calculator_refuted-r0.json",
+      "sha256": "36c70785234fad65ba32767c8d50147c78adf2e752bb73a026acb76f61b4003f",
+      "size_bytes": 44761
+    },
+    "trace_0007_balanced-diagnostic_refuted-r0-2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/balanced-diagnostic_refuted-r0-2.json",
+      "sha256": "ea797a0f4648de3b03139d95eed7b79cdecbbf536acda1f551eea89882949279",
+      "size_bytes": 45555
+    },
+    "trace_0008_balanced-low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/balanced-low_risk_supported-r0.json",
+      "sha256": "983b5fdcff25d7bc7004aca5798b55d2733a7b2122d62c9ea8f3f936302985c3",
+      "size_bytes": 33558
+    },
+    "trace_0009_latency-calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/latency-calculator_refuted-r0.json",
+      "sha256": "1dddad44d2a551457ba60ab840f9eae14115f06d02d5bf6cfb5561ccbf5f793f",
+      "size_bytes": 44490
+    },
+    "trace_0010_latency-diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/latency-diagnostic_refuted-r0.json",
+      "sha256": "c73a82ae967cd8c1dba25b0d7e402598d864992abb85123507ecf8c7da7b2241",
+      "size_bytes": 33744
+    },
+    "trace_0011_latency-low_risk_supported-r0-2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/traces/latency-low_risk_supported-r0-2.json",
+      "sha256": "ee9cacbe6ff66f6ef73f18e99e4c9f8b1ded055d830cada15d0d0c2584c0d464",
+      "size_bytes": 33336
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": false,
+    "budget_passed": null,
+    "compact_json": false,
+    "runner": "run_product_runtime_baseline",
+    "source": "run_product_trace_replay_workflow",
+    "status": "observed",
+    "trace_count": 12
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 13,
+    "directory_count": 0,
+    "file_count": 13,
+    "missing_count": 0
+  }
+}

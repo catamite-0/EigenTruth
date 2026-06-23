@@ -2229,6 +2229,35 @@ three logical replay keys, and keeps four traces per runtime profile. Feed
 when validating control policies against replay-ready traces rather than raw
 product logs.
 
+Use `run_product_trace_replay_workflow.py` when the raw-trace handoff should be
+one reproducible command. It builds the redacted corpus, runs the product
+runtime baseline over the standardized traces, runs selector replay with the
+provided candidate policies, writes a recursive top-level manifest over all
+child reports, and registers one workflow report:
+
+```bash
+python benchmarks/run_product_trace_replay_workflow.py \
+  --trace-glob 'artifacts/smollm2_product_runtime_profile_sweep/traces/*/*.json' \
+  --output-dir artifacts/smollm2_product_trace_replay_workflow \
+  --candidate default=artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json \
+  --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
+  --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
+  --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-trace-replay-workflow \
+  --version 0.1 \
+  --require-runtime-trace \
+  --fail-on-blocked
+```
+
+The current registered workflow is
+`report:smollm2-product-trace-replay-workflow:0.1`. It promotes the default
+selector, observes 12 runtime traces in the baseline report, recursively
+verifies the corpus/runtime-baseline/selector-replay manifests, and keeps the
+same selector replay evidence as the standalone replay: full paired runtime
+coverage, observed selected-runtime mean around `0.00049s`, and p95 around
+`0.00059s`.
+
 Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
 the built-in `latency`, `balanced`, and `audit` product profiles plus the
 request-level `auto` selector before choosing which mode to put on the default

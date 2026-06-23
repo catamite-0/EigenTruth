@@ -2367,6 +2367,23 @@
       "name": "smollm2-product-trace-corpus",
       "path": "artifacts/smollm2_product_trace_corpus/product-trace-corpus.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
+        "compact_json": false,
+        "corpus_status": "ready",
+        "recommended_selector_candidate": "default",
+        "recommended_selector_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+        "runtime_baseline_status": "observed",
+        "selector_replay_status": "promote",
+        "status": "promote",
+        "workflow": "run_product_trace_replay_workflow"
+      },
+      "name": "smollm2-product-trace-replay-workflow",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

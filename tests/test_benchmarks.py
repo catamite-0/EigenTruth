@@ -9476,6 +9476,123 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert record.metadata["rejected_count"] == 1
 
 
+def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    replay_policy_path = tmp_path / "replay-policy.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    replay_policy_path.write_text(
+        json.dumps({
+            "max_estimated_cost_units_mean": 2.0,
+            "min_observed_runtime_coverage_rate": 1.0,
+            "min_selected_profile_counts": {
+                "latency": 1,
+                "balanced": 1,
+                "audit": 1,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    trace_payloads = (
+        {
+            "request_id": "latency-low-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private low-risk fact.", "metadata": {}}],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        },
+        {
+            "request_id": "balanced-medium-retrieve",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.7,
+                "reason": "unsupported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
+        },
+        {
+            "request_id": "audit-low-sensitive",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.9,
+                "reason": "numbered claim",
+            },
+            "claims": [{
+                "claim_id": "c1",
+                "text": "Private account balance is 42.",
+                "metadata": {"features": {"has_number": True}},
+            }],
+            "metadata": {"runtime_profile": "audit"},
+            "runtime_trace": {"total_seconds": 0.40, "phases": []},
+        },
+    )
+    trace_paths = []
+    for index, payload in enumerate(trace_payloads):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(json.dumps(payload), encoding="utf-8")
+        trace_paths.append(trace_path)
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="latency-biased",
+                    policy={
+                        "sensitive_claim_feature_flags": ["has_citation", "is_time_sensitive"],
+                    },
+                ),
+            ),
+            replay_policy_path=replay_policy_path,
+            registry_path=registry_path,
+            name="trace-replay-workflow",
+            version="0.1",
+            require_runtime_trace=True,
+            compact_json=True,
+        )
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:trace-replay-workflow:0.1"
+    )
+    corpus_trace = next((output_dir / "corpus" / "traces").glob("latency-*.json"))
+    saved_trace = json.loads(corpus_trace.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "promote"
+    assert payload["corpus"]["status"] == "ready"
+    assert payload["corpus"]["accepted_count"] == 3
+    assert payload["runtime_baseline"]["status"] == "observed"
+    assert payload["runtime_baseline"]["n_traces"] == 3
+    assert payload["selector_replay"]["status"] == "promote"
+    assert payload["selector_replay"]["recommended_candidate"] == "default"
+    assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"],
+        recursive=True,
+    ).passed is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["corpus_status"] == "ready"
+    assert record.metadata["selector_replay_status"] == "promote"
+
+
 def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
