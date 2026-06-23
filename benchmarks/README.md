@@ -168,6 +168,12 @@ statements. In this budgeted mode, untriggered statements receive
 `inside_eigenscore=0.0`, `inside_semantic_entropy=0.0`, and
 `inside_embedding_entropy=0.0`; read them as two-stage policy scores, not as full
 INSIDE-only AUROC. The JSON output includes `inside_sampling` counts.
+Use `--inside-diagnostics-cache path.json` for repeated triggered INSIDE runs.
+The cache stores sampled INSIDE diagnostics keyed by statement, model, layer,
+sampling settings, and seed, but not by trigger threshold/top fraction. This lets
+nested budgets reuse diagnostics for statements already sampled by an earlier
+budget while preserving a cache miss for changed sampling settings. Use
+`--refresh-inside-diagnostics-cache` to rebuild it intentionally.
 
 Use `--inside-embedding-threshold` to tune the cosine-similarity cluster
 threshold for `inside_embedding_entropy`. It defaults to `0.90`; higher values
@@ -225,7 +231,7 @@ Pass `--inside-trigger-signal` with `--inside-trigger-threshold` or
 variants under a budgeted two-stage policy where sampled INSIDE runs only on the
 highest-risk statements.
 For repeated comparable profile runs, pass `--statement-encoding-cache`,
-`--layer-stats-cache`, and `--eval-reps-cache`; add
+`--layer-stats-cache`, `--eval-reps-cache`, and `--inside-diagnostics-cache`; add
 `--refresh-shared-caches` only to rebuild the first cache-producing run.
 
 Use `run_inside_trigger_budget_sweep.py` to compare several trigger budgets in
@@ -252,8 +258,9 @@ reference, and inside-score AUROCs from the recommended run. The top-level
 the lowest-cost budget within `0.02` AUROC of the best preferred INSIDE quality
 signal, preferring semantic entropy, then embedding entropy, then eigenscore.
 Use `--shared-cache-dir` on long sweeps so budget/profile children reuse one
-statement-encoding cache, layer-stats cache, and eval-reps cache instead of
-repeating warmup and forced-answer forward work. Add
+statement-encoding cache, layer-stats cache, eval-reps cache, and sampled INSIDE
+diagnostics cache instead of repeating warmup, forced-answer forward work, and
+overlapping sampled generation. Add
 `--refresh-shared-caches` only when intentionally rebuilding those shared caches.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or

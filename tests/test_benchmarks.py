@@ -5311,6 +5311,7 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
         layer_stats_cache_path=tmp_path / "shared" / "layer-stats.pt",
         eval_reps_cache_path=tmp_path / "shared" / "eval-reps-cache",
         eval_reps_cache_shard_size=8,
+        inside_diagnostics_cache_path=tmp_path / "shared" / "inside-diagnostics.json",
         refresh_shared_caches=True,
         python_executable="/python",
     )
@@ -5329,6 +5330,7 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert manifest["metadata"]["inside_trigger_signal"] == "truth_proj"
     assert manifest["metadata"]["inside_trigger_top_fraction"] == 0.25
     assert manifest["metadata"]["shared_caches"]["layer_stats_cache"].endswith("layer-stats.pt")
+    assert manifest["metadata"]["shared_caches"]["inside_diagnostics_cache"].endswith("inside-diagnostics.json")
     assert manifest["metadata"]["eval_reps_cache_shard_size"] == 8
     assert manifest["metadata"]["refresh_shared_caches"] is True
     assert fixed[0] == "/python"
@@ -5341,14 +5343,18 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert fixed[fixed.index("--layer-stats-cache") + 1].endswith("layer-stats.pt")
     assert fixed[fixed.index("--eval-reps-cache") + 1].endswith("eval-reps-cache")
     assert fixed[fixed.index("--eval-reps-cache-shard-size") + 1] == "8"
+    assert fixed[fixed.index("--inside-diagnostics-cache") + 1].endswith("inside-diagnostics.json")
     assert "--refresh-statement-encoding-cache" in fixed
     assert "--refresh-layer-stats-cache" in fixed
     assert "--refresh-eval-reps-cache" in fixed
+    assert "--refresh-inside-diagnostics-cache" in fixed
     assert "--inside-adaptive-sampling" not in fixed
     assert "--inside-adaptive-sampling" in adaptive
     assert adaptive[adaptive.index("--inside-sample-step") + 1] == "2"
     assert adaptive[adaptive.index("--eval-reps-cache") + 1].endswith("eval-reps-cache")
     assert "--refresh-eval-reps-cache" not in adaptive
+    assert adaptive[adaptive.index("--inside-diagnostics-cache") + 1].endswith("inside-diagnostics.json")
+    assert "--refresh-inside-diagnostics-cache" not in adaptive
     assert "--inside-selfcheck-early-stop" not in adaptive
     assert "--inside-selfcheck-early-stop" in adaptive_selfcheck
     assert "--dump-scores" in fixed
@@ -5608,11 +5614,19 @@ def test_run_inside_trigger_budget_sweep_builds_dry_run_commands(tmp_path):
     assert top10_fixed[top10_fixed.index("--inside-trigger-top-fraction") + 1] == "0.1"
     assert top10_fixed[top10_fixed.index("--eval-reps-cache") + 1].endswith("shared-caches/eval-reps-cache")
     assert top10_fixed[top10_fixed.index("--eval-reps-cache-shard-size") + 1] == "4"
+    assert top10_fixed[top10_fixed.index("--inside-diagnostics-cache") + 1].endswith(
+        "shared-caches/inside-diagnostics.json"
+    )
     assert "--refresh-eval-reps-cache" in top10_fixed
+    assert "--refresh-inside-diagnostics-cache" in top10_fixed
     assert top25_selfcheck[top25_selfcheck.index("--eval-reps-cache") + 1].endswith(
         "shared-caches/eval-reps-cache"
     )
+    assert top25_selfcheck[top25_selfcheck.index("--inside-diagnostics-cache") + 1].endswith(
+        "shared-caches/inside-diagnostics.json"
+    )
     assert "--refresh-eval-reps-cache" not in top25_selfcheck
+    assert "--refresh-inside-diagnostics-cache" not in top25_selfcheck
     assert "--inside-selfcheck-early-stop" in top25_selfcheck
     assert manifest["metadata"]["runner"] == "run_inside_trigger_budget_sweep"
     assert manifest["metadata"]["shared_cache_dir"].endswith("shared-caches")
@@ -5751,6 +5765,88 @@ def test_run_inside_trigger_budget_sweep_compares_budgets_to_reference(tmp_path,
     assert report["leaderboard"][0]["inside_auroc"] == {"inside_eigenscore": pytest.approx(0.60)}
     assert manifest["artifacts"]["budgets.top_0p1.comparison_report"]["exists"] is True
     assert manifest["artifacts"]["budgets.top_0p2.profile_manifest"]["exists"] is True
+
+
+def test_run_inside_trigger_budget_sweep_refreshes_child_manifests_for_mutable_shared_cache(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+    profile_module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+    manifest_module = importlib.import_module("benchmarks.verify_artifact_manifest")
+
+    def fake_profile(config, *, clean, dry_run, skip_existing):
+        del clean, dry_run, skip_existing
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        cache_path = config.inside_diagnostics_cache_path
+        assert cache_path is not None
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        previous = json.loads(cache_path.read_text(encoding="utf-8")) if cache_path.exists() else {"entries": []}
+        previous["entries"].append(float(config.inside_trigger_top_fraction))
+        cache_path.write_text(json.dumps(previous), encoding="utf-8")
+
+        result_path = config.output_dir / "result-fixed.json"
+        profile_path = config.output_dir / "profile-fixed.json"
+        command_log_path = config.output_dir / "inside-sampling-profile-commands.json"
+        comparison_path = config.output_dir / "inside-sampling-profile-comparison.json"
+        result_path.write_text(json.dumps({"auroc": {"inside_eigenscore": 0.5}}), encoding="utf-8")
+        profile_path.write_text(
+            json.dumps({"total_seconds": 1.0, "phases": {"inside_generation": 1.0}}),
+            encoding="utf-8",
+        )
+        command_log_path.write_text(json.dumps({"fixed": ["python"]}), encoding="utf-8")
+        comparison_path.write_text(
+            json.dumps({
+                "runs": {
+                    "fixed": {
+                        "name": "fixed",
+                        "result_path": str(result_path),
+                        "profile_path": str(profile_path),
+                        "sampled": 1,
+                        "skipped_by_trigger": 0,
+                        "total_generated_samples": 2,
+                        "mean_samples_per_record": 2.0,
+                        "inside_generation_seconds": 1.0,
+                        "sample_count_ratio_to_baseline": 1.0,
+                        "inside_generation_seconds_ratio_to_baseline": 1.0,
+                    }
+                },
+                "recommendation": {"recommended_run": "fixed"},
+                "sample_efficiency_gate": {"passed": True},
+            }),
+            encoding="utf-8",
+        )
+        payload = {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "command_log": str(command_log_path),
+            "comparison_report": str(comparison_path),
+            "results": {"fixed": str(result_path)},
+            "profiles": {"fixed": str(profile_path)},
+            "caches": {"inside_diagnostics_cache": str(cache_path)},
+            "sample_efficiency_gate": {"passed": True},
+            "recommendation": {"recommended_run": "fixed"},
+        }
+        profile_module._write_artifact_manifest(config, payload)
+        payload["artifact_manifest"] = str(config.artifact_manifest)
+        return payload
+
+    monkeypatch.setattr(module, "run_inside_sampling_profile", fake_profile)
+    config = module.InsideTriggerBudgetSweepConfig(
+        output_dir=tmp_path / "sweep",
+        trigger_signal="truth_proj",
+        budgets=(
+            module.TriggerBudgetSpec("top_fraction", 0.5),
+            module.TriggerBudgetSpec("top_fraction", 1.0),
+        ),
+        shared_cache_dir=tmp_path / "sweep" / "shared-caches",
+        run_names=("fixed",),
+    )
+
+    report = module.run_inside_trigger_budget_sweep(config, clean=True)
+    verified = manifest_module.verify_manifest_file(Path(report["artifact_manifest"]), recursive=True)
+
+    assert verified["passed"] is True
+    assert json.loads((config.shared_cache_dir / "inside-diagnostics.json").read_text(encoding="utf-8")) == {
+        "entries": [0.5, 1.0]
+    }
 
 
 def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
@@ -7715,6 +7811,80 @@ def test_eval_truthfulqa_inside_seed_changes_by_inner_batch():
     assert module._inside_seed(7, eval_batch_idx=2, inside_batch_idx=3) == module._inside_seed(
         7, eval_batch_idx=2, inside_batch_idx=3
     )
+
+
+def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_path):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    stmt = module.Statement("Question?", "Answer.", 0)
+    args = SimpleNamespace(
+        model="tiny-local",
+        layer=-1,
+        max_length=64,
+        hidden_state_capture="outputs",
+        seed=11,
+        inside_samples=3,
+        inside_min_samples=2,
+        inside_sample_step=1,
+        inside_stability_delta=0.05,
+        inside_selfcheck_min_overlap=0.65,
+        inside_selfcheck_support_threshold=0.60,
+        inside_selfcheck_refute_threshold=0.50,
+        inside_max_new_tokens=4,
+        inside_temperature=0.7,
+        inside_top_p=0.9,
+        inside_pooling="last",
+        inside_embedding_threshold=0.9,
+        eigenscore_alpha=1e-3,
+        inside_trigger_signal="truth_proj",
+        inside_trigger_top_fraction=0.1,
+        inside_trigger_threshold=None,
+    )
+    key = module._inside_diagnostics_cache_key(
+        stmt,
+        args,
+        layers=(-1,),
+        adaptive=True,
+        selfcheck_early_stop=True,
+    )
+    args.inside_trigger_top_fraction = 0.4
+    same_statement_key = module._inside_diagnostics_cache_key(
+        stmt,
+        args,
+        layers=(-1,),
+        adaptive=True,
+        selfcheck_early_stop=True,
+    )
+    diagnostics = module.SampledInsideDiagnostics(
+        eigenscore_by_layer={-1: 0.25},
+        semantic_entropy=0.5,
+        embedding_entropy_by_layer={-1: 0.75},
+        sample_texts=("one", "two", "three"),
+        n_samples=3,
+        adaptive_rounds=2,
+        stopped_early=True,
+        stop_reason="stability_delta",
+    )
+    cache_path = tmp_path / "inside-diagnostics.json"
+    cache = module.InsideDiagnosticsCache(cache_path)
+
+    assert same_statement_key == key
+    assert cache.get(key) is None
+    cache.put(key, diagnostics)
+    cache.save()
+
+    restored_cache = module.InsideDiagnosticsCache(cache_path)
+    restored = restored_cache.get(key)
+
+    assert restored is not None
+    assert restored.eigenscore_by_layer[-1] == pytest.approx(0.25)
+    assert restored.semantic_entropy == pytest.approx(0.5)
+    assert restored.embedding_entropy_by_layer[-1] == pytest.approx(0.75)
+    assert restored.sample_texts == ("one", "two", "three")
+    assert restored.n_samples == 3
+    assert restored.stopped_early is True
+    assert restored.stop_reason == "stability_delta"
+    assert restored_cache.stats()["hits"] == 1
+    assert restored_cache.stats()["misses"] == 0
 
 
 def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(monkeypatch):

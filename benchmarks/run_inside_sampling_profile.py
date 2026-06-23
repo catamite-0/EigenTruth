@@ -69,6 +69,7 @@ class InsideSamplingProfileConfig:
     layer_stats_cache_path: Path | None = None
     eval_reps_cache_path: Path | None = None
     eval_reps_cache_shard_size: int = 0
+    inside_diagnostics_cache_path: Path | None = None
     refresh_shared_caches: bool = False
     adaptive_max_sample_ratio: float = 1.0
     adaptive_selfcheck_max_sample_ratio: float = 1.0
@@ -150,6 +151,8 @@ class InsideSamplingProfileConfig:
             object.__setattr__(self, "layer_stats_cache_path", Path(self.layer_stats_cache_path))
         if self.eval_reps_cache_path is not None:
             object.__setattr__(self, "eval_reps_cache_path", Path(self.eval_reps_cache_path))
+        if self.inside_diagnostics_cache_path is not None:
+            object.__setattr__(self, "inside_diagnostics_cache_path", Path(self.inside_diagnostics_cache_path))
 
     @property
     def comparison_report(self) -> Path:
@@ -356,6 +359,10 @@ def _append_cache_args(command: list[str], config: InsideSamplingProfileConfig, 
             command.extend(["--eval-reps-cache-shard-size", str(config.eval_reps_cache_shard_size)])
         if refresh:
             command.append("--refresh-eval-reps-cache")
+    if config.inside_diagnostics_cache_path is not None:
+        command.extend(["--inside-diagnostics-cache", str(config.inside_diagnostics_cache_path)])
+        if refresh:
+            command.append("--refresh-inside-diagnostics-cache")
 
 
 def _cache_paths(config: InsideSamplingProfileConfig) -> dict[str, str]:
@@ -366,6 +373,8 @@ def _cache_paths(config: InsideSamplingProfileConfig) -> dict[str, str]:
         paths["layer_stats_cache"] = str(config.layer_stats_cache_path)
     if config.eval_reps_cache_path is not None:
         paths["eval_reps_cache"] = str(config.eval_reps_cache_path)
+    if config.inside_diagnostics_cache_path is not None:
+        paths["inside_diagnostics_cache"] = str(config.inside_diagnostics_cache_path)
     return paths
 
 
@@ -647,6 +656,9 @@ def _config_from_args(args: argparse.Namespace) -> InsideSamplingProfileConfig:
         layer_stats_cache_path=Path(args.layer_stats_cache) if args.layer_stats_cache else None,
         eval_reps_cache_path=Path(args.eval_reps_cache) if args.eval_reps_cache else None,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        inside_diagnostics_cache_path=(
+            Path(args.inside_diagnostics_cache) if args.inside_diagnostics_cache else None
+        ),
         refresh_shared_caches=args.refresh_shared_caches,
         adaptive_max_sample_ratio=args.adaptive_max_sample_ratio,
         adaptive_selfcheck_max_sample_ratio=args.adaptive_selfcheck_max_sample_ratio,
@@ -723,6 +735,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional eval_truthfulqa.py forced-answer representation cache shared by profile runs")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=0,
                         help="write --eval-reps-cache as shards with this many records per shard")
+    parser.add_argument("--inside-diagnostics-cache", default=None,
+                        help="optional eval_truthfulqa.py sampled INSIDE diagnostics cache shared by profile runs")
     parser.add_argument("--refresh-shared-caches", action="store_true",
                         help="refresh shared caches on the first configured run; later runs load them")
     parser.add_argument("--adaptive-max-sample-ratio", type=float, default=1.0,

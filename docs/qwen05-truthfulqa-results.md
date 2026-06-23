@@ -717,7 +717,9 @@ sampled INSIDE generation rather than repeated base scoring.
 2. Pair future long runs with `--warmup-checkpoint`, `--layer-stats-cache`, and
    trigger-sweep `--shared-cache-dir`; the SmolLM2 shared-cache sweep confirms
    that budget children reuse statement encodings, layer stats, and eval reps
-   instead of repeating base forward work.
+   instead of repeating base forward work. New sweeps should also inspect the
+   shared `inside-diagnostics.json` hit rate to verify overlapping sampled
+   INSIDE generation is being reused across nested trigger budgets.
 3. Use sharded `--eval-reps-cache` for long forced-answer runs and cache-only
    rescoring; adjacent batch reads reuse the active shard and expose shard IO
    counters in the structured JSON output.

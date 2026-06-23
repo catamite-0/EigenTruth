@@ -105,6 +105,10 @@ PROFILE_GROUPS = {
         "read_eval_reps_cache_batch",
         "write_eval_reps_cache_batch",
         "save_eval_reps_cache",
+        "load_inside_diagnostics_cache",
+        "read_inside_diagnostics_cache",
+        "write_inside_diagnostics_cache",
+        "save_inside_diagnostics_cache",
     ),
     "postprocess": ("score_postprocess", "reporting", "sweep_reporting"),
 }
@@ -157,6 +161,73 @@ class SampledInsideDiagnostics:
     adaptive_rounds: int = 1
     stopped_early: bool = False
     stop_reason: str | None = None
+
+
+class InsideDiagnosticsCache:
+    """JSON cache for sampled INSIDE diagnostics keyed by statement and sampling config."""
+
+    def __init__(self, path: str | Path, *, refresh: bool = False) -> None:
+        self.path = Path(path)
+        if self.path.exists() and self.path.is_dir():
+            raise ValueError("inside diagnostics cache path must be a JSON file, not a directory.")
+        self.entries: dict[str, dict[str, object]] = {}
+        self.hits = 0
+        self.misses = 0
+        self.writes = 0
+        self._dirty = False
+        if self.path.exists() and not refresh:
+            payload = json.loads(self.path.read_text(encoding="utf-8"))
+            if not isinstance(payload, Mapping) or payload.get("schema_version") != 1:
+                raise ValueError("inside diagnostics cache has an unsupported format.")
+            entries = payload.get("entries", {})
+            if not isinstance(entries, Mapping):
+                raise ValueError("inside diagnostics cache entries must be an object.")
+            self.entries = {str(key): dict(value) for key, value in entries.items() if isinstance(value, Mapping)}
+
+    def get(self, key: str) -> SampledInsideDiagnostics | None:
+        record = self.entries.get(str(key))
+        if record is None:
+            self.misses += 1
+            return None
+        diagnostics = _sampled_inside_diagnostics_from_cache_record(record)
+        if diagnostics is None:
+            self.misses += 1
+            return None
+        self.hits += 1
+        return diagnostics
+
+    def put(self, key: str, diagnostics: SampledInsideDiagnostics | None) -> None:
+        if diagnostics is None:
+            return
+        self.entries[str(key)] = _sampled_inside_diagnostics_to_cache_record(diagnostics)
+        self.writes += 1
+        self._dirty = True
+
+    def save(self) -> None:
+        if not self._dirty and self.path.exists():
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "schema_version": 1,
+            "entries": self.entries,
+            "stats": self.stats(),
+        }
+        tmp_path = self.path.with_suffix(f"{self.path.suffix}.tmp")
+        tmp_path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        tmp_path.replace(self.path)
+        self._dirty = False
+
+    def stats(self) -> dict[str, object]:
+        requests = self.hits + self.misses
+        return {
+            "path": str(self.path),
+            "entries": len(self.entries),
+            "hits": self.hits,
+            "misses": self.misses,
+            "writes": self.writes,
+            "requests": requests,
+            "hit_rate": (self.hits / requests) if requests else None,
+        }
 
 
 @dataclass
@@ -526,6 +597,113 @@ def _batched_statements_after_offset(
 
 def _inside_seed(base_seed: int, eval_batch_idx: int, inside_batch_idx: int) -> int:
     return int(base_seed) + int(eval_batch_idx) * 1_000_003 + int(inside_batch_idx)
+
+
+def _inside_diagnostics_cache_key(
+    stmt: Statement,
+    args,
+    *,
+    layers: Sequence[int],
+    adaptive: bool,
+    selfcheck_early_stop: bool,
+) -> str:
+    payload = {
+        "schema_version": 1,
+        "statement": {
+            "question": stmt.question,
+            "answer": stmt.answer,
+            "is_false": int(stmt.is_false),
+        },
+        "model": args.model,
+        "layers": [int(layer) for layer in layers],
+        "target_layer": int(args.layer),
+        "max_length": int(args.max_length),
+        "hidden_state_capture": args.hidden_state_capture,
+        "seed": int(args.seed),
+        "sampling": {
+            "adaptive": bool(adaptive),
+            "selfcheck_early_stop": bool(selfcheck_early_stop) if adaptive else False,
+            "inside_samples": int(args.inside_samples),
+            "inside_min_samples": int(getattr(args, "inside_min_samples", 2)) if adaptive else None,
+            "inside_sample_step": int(getattr(args, "inside_sample_step", 1)) if adaptive else None,
+            "inside_stability_delta": float(getattr(args, "inside_stability_delta", 0.05)) if adaptive else None,
+            "inside_selfcheck_min_overlap": (
+                float(getattr(args, "inside_selfcheck_min_overlap", 0.65))
+                if adaptive and selfcheck_early_stop
+                else None
+            ),
+            "inside_selfcheck_support_threshold": (
+                float(getattr(args, "inside_selfcheck_support_threshold", 0.60))
+                if adaptive and selfcheck_early_stop
+                else None
+            ),
+            "inside_selfcheck_refute_threshold": (
+                float(getattr(args, "inside_selfcheck_refute_threshold", 0.50))
+                if adaptive and selfcheck_early_stop
+                else None
+            ),
+            "inside_max_new_tokens": int(args.inside_max_new_tokens),
+            "inside_temperature": float(args.inside_temperature),
+            "inside_top_p": float(args.inside_top_p),
+            "inside_pooling": args.inside_pooling,
+            "inside_embedding_threshold": float(args.inside_embedding_threshold),
+            "eigenscore_alpha": float(args.eigenscore_alpha),
+        },
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _sampled_inside_diagnostics_to_cache_record(diagnostics: SampledInsideDiagnostics) -> dict[str, object]:
+    return {
+        "eigenscore_by_layer": {
+            str(layer): float(value) for layer, value in diagnostics.eigenscore_by_layer.items()
+        },
+        "semantic_entropy": float(diagnostics.semantic_entropy),
+        "embedding_entropy_by_layer": {
+            str(layer): float(value) for layer, value in diagnostics.embedding_entropy_by_layer.items()
+        },
+        "sample_texts": list(diagnostics.sample_texts),
+        "n_samples": int(diagnostics.n_samples),
+        "adaptive_rounds": int(diagnostics.adaptive_rounds),
+        "stopped_early": bool(diagnostics.stopped_early),
+        "stop_reason": diagnostics.stop_reason,
+    }
+
+
+def _sampled_inside_diagnostics_from_cache_record(record: Mapping[str, object]) -> SampledInsideDiagnostics | None:
+    try:
+        eigenscore_by_layer = {
+            int(layer): float(value)
+            for layer, value in dict(record.get("eigenscore_by_layer") or {}).items()
+        }
+        embedding_entropy_by_layer = {
+            int(layer): float(value)
+            for layer, value in dict(record.get("embedding_entropy_by_layer") or {}).items()
+        }
+        semantic_entropy = float(record.get("semantic_entropy"))
+        sample_texts = tuple(str(text) for text in record.get("sample_texts") or ())
+        n_samples = int(record.get("n_samples"))
+        adaptive_rounds = int(record.get("adaptive_rounds", 1))
+        stopped_early = bool(record.get("stopped_early", False))
+        stop_reason_raw = record.get("stop_reason")
+        stop_reason = None if stop_reason_raw is None else str(stop_reason_raw)
+    except (TypeError, ValueError):
+        return None
+    if not eigenscore_by_layer or not embedding_entropy_by_layer or n_samples < 2:
+        return None
+    if not math.isfinite(semantic_entropy):
+        return None
+    return SampledInsideDiagnostics(
+        eigenscore_by_layer=eigenscore_by_layer,
+        semantic_entropy=semantic_entropy,
+        embedding_entropy_by_layer=embedding_entropy_by_layer,
+        sample_texts=sample_texts,
+        n_samples=n_samples,
+        adaptive_rounds=adaptive_rounds,
+        stopped_early=stopped_early,
+        stop_reason=stop_reason,
+    )
 
 
 def _profile_requested(args) -> bool:
@@ -2853,6 +3031,11 @@ def run(args) -> dict:
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
     statement_encoding_cache_path = Path(args.statement_encoding_cache) if args.statement_encoding_cache else None
+    inside_diagnostics_cache_path = (
+        Path(getattr(args, "inside_diagnostics_cache", None))
+        if getattr(args, "inside_diagnostics_cache", None)
+        else None
+    )
     warmup_checkpoint_path = Path(args.warmup_checkpoint) if args.warmup_checkpoint else None
     true_encodings: list[Optional[StatementEncoding]] | None = None
     false_encodings: list[Optional[StatementEncoding]] | None = None
@@ -3064,6 +3247,7 @@ def run(args) -> dict:
     eval_reps_reader: EvalRepsCacheReader | None = None
     eval_reps_writer: EvalRepsCacheWriter | None = None
     new_eval_reps: list[Optional[Mapping]] = []
+    inside_diagnostics_cache: InsideDiagnosticsCache | None = None
     if eval_reps_cache_path and eval_reps_cache_path.exists() and not args.refresh_eval_reps_cache:
         with _profile_phase(profile, "load_eval_reps_cache"):
             eval_reps_reader = EvalRepsCacheReader(
@@ -3083,6 +3267,12 @@ def run(args) -> dict:
                     metadata=eval_reps_cache_metadata,
                     shard_size=write_shard_size,
                 )
+    if inside_diagnostics_cache_path and _inside_enabled(args):
+        with _profile_phase(profile, "load_inside_diagnostics_cache"):
+            inside_diagnostics_cache = InsideDiagnosticsCache(
+                inside_diagnostics_cache_path,
+                refresh=bool(getattr(args, "refresh_inside_diagnostics_cache", False)),
+            )
 
     eval_reps_offset = 0
     eval_pair_offset = 0
@@ -3143,7 +3333,28 @@ def run(args) -> dict:
             inside_skipped_total += len(batch_records) - len(triggered)
 
             triggered_positions = [idx for idx in range(len(batch_records)) if idx in triggered]
-            for inside_batch_idx, position_batch in enumerate(_chunked(triggered_positions, args.inside_batch_size)):
+            sampled_by_position: dict[int, SampledInsideDiagnostics | None] = {}
+            cache_keys_by_position: dict[int, str] = {}
+            missing_positions = triggered_positions
+            if inside_diagnostics_cache is not None:
+                with _profile_phase(profile, "read_inside_diagnostics_cache"):
+                    missing_positions = []
+                    for position in triggered_positions:
+                        cache_key = _inside_diagnostics_cache_key(
+                            batch_records[position]["stmt"],
+                            args,
+                            layers=layers,
+                            adaptive=inside_adaptive_sampling,
+                            selfcheck_early_stop=inside_selfcheck_early_stop,
+                        )
+                        cache_keys_by_position[position] = cache_key
+                        cached = inside_diagnostics_cache.get(cache_key)
+                        if cached is None:
+                            missing_positions.append(position)
+                        else:
+                            sampled_by_position[position] = cached
+
+            for inside_batch_idx, position_batch in enumerate(_chunked(missing_positions, args.inside_batch_size)):
                 inside_batch = [batch_records[position]["stmt"] for position in position_batch]
                 with _profile_phase(profile, "inside_generation"):
                     if inside_adaptive_sampling:
@@ -3191,29 +3402,36 @@ def run(args) -> dict:
                             hidden_state_capture=args.hidden_state_capture,
                         )
                 for position, sampled in zip(position_batch, sampled_batch):
-                    batch_records[position]["inside_scores"] = (
-                        sampled.eigenscore_by_layer if sampled is not None else None
-                    )
-                    batch_records[position]["inside_semantic_entropy"] = (
-                        sampled.semantic_entropy if sampled is not None else None
-                    )
-                    batch_records[position]["inside_embedding_entropy"] = (
-                        sampled.embedding_entropy_by_layer if sampled is not None else None
-                    )
-                    batch_records[position]["inside_sample_count"] = sampled.n_samples if sampled is not None else 0
-                    batch_records[position]["inside_adaptive_rounds"] = (
-                        sampled.adaptive_rounds if sampled is not None else 0
-                    )
-                    batch_records[position]["inside_stopped_early"] = (
-                        sampled.stopped_early if sampled is not None else False
-                    )
-                    batch_records[position]["inside_stop_reason"] = (
-                        sampled.stop_reason if sampled is not None else None
-                    )
-                    batch_records[position]["inside_sample_texts"] = (
-                        tuple(sampled.sample_texts) if sampled is not None else ()
-                    )
-                    batch_records[position]["inside_sampled"] = sampled is not None
+                    sampled_by_position[position] = sampled
+                    if inside_diagnostics_cache is not None:
+                        with _profile_phase(profile, "write_inside_diagnostics_cache"):
+                            inside_diagnostics_cache.put(cache_keys_by_position[position], sampled)
+
+            for position in triggered_positions:
+                sampled = sampled_by_position.get(position)
+                batch_records[position]["inside_scores"] = (
+                    sampled.eigenscore_by_layer if sampled is not None else None
+                )
+                batch_records[position]["inside_semantic_entropy"] = (
+                    sampled.semantic_entropy if sampled is not None else None
+                )
+                batch_records[position]["inside_embedding_entropy"] = (
+                    sampled.embedding_entropy_by_layer if sampled is not None else None
+                )
+                batch_records[position]["inside_sample_count"] = sampled.n_samples if sampled is not None else 0
+                batch_records[position]["inside_adaptive_rounds"] = (
+                    sampled.adaptive_rounds if sampled is not None else 0
+                )
+                batch_records[position]["inside_stopped_early"] = (
+                    sampled.stopped_early if sampled is not None else False
+                )
+                batch_records[position]["inside_stop_reason"] = (
+                    sampled.stop_reason if sampled is not None else None
+                )
+                batch_records[position]["inside_sample_texts"] = (
+                    tuple(sampled.sample_texts) if sampled is not None else ()
+                )
+                batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
                 if position not in triggered:
@@ -3294,6 +3512,9 @@ def run(args) -> dict:
                 metadata=eval_reps_cache_metadata,
             )
         print(f"   saved eval reps cache: {eval_reps_cache_path}")
+    if inside_diagnostics_cache is not None:
+        with _profile_phase(profile, "save_inside_diagnostics_cache"):
+            inside_diagnostics_cache.save()
 
     with _profile_phase(profile, "reporting"):
         n_pos = sum(labels)
@@ -3380,6 +3601,10 @@ def run(args) -> dict:
                    "eval_reps_cache": args.eval_reps_cache,
                    "eval_reps_cache_shard_size": args.eval_reps_cache_shard_size,
                    "refresh_eval_reps_cache": args.refresh_eval_reps_cache,
+                   "inside_diagnostics_cache": getattr(args, "inside_diagnostics_cache", None),
+                   "refresh_inside_diagnostics_cache": bool(
+                       getattr(args, "refresh_inside_diagnostics_cache", False)
+                   ),
                    "progress_every": args.progress_every,
                    "warmup_checkpoint": args.warmup_checkpoint,
                    "warmup_checkpoint_every": args.warmup_checkpoint_every,
@@ -3432,10 +3657,13 @@ def run(args) -> dict:
             "stop_reason_counts": stop_reason_counts,
             "fill_value_for_untriggered": 0.0 if _inside_trigger_enabled(args) else None,
         }
+    cache_stats = {}
     if eval_reps_reader is not None:
-        payload["cache_stats"] = {
-            "eval_reps_reader": eval_reps_reader.cache_stats(),
-        }
+        cache_stats["eval_reps_reader"] = eval_reps_reader.cache_stats()
+    if inside_diagnostics_cache is not None:
+        cache_stats["inside_diagnostics"] = inside_diagnostics_cache.stats()
+    if cache_stats:
+        payload["cache_stats"] = cache_stats
     if _profile_requested(args):
         payload["profile"] = _profile_payload(
             profile,
@@ -3605,6 +3833,10 @@ def main():
                    help="write --eval-reps-cache as a sharded directory with this many records per shard")
     p.add_argument("--refresh-eval-reps-cache", action="store_true",
                    help="rebuild and overwrite --eval-reps-cache instead of loading it")
+    p.add_argument("--inside-diagnostics-cache", default=None,
+                   help="optional JSON path to load or create cached sampled INSIDE diagnostics")
+    p.add_argument("--refresh-inside-diagnostics-cache", action="store_true",
+                   help="rebuild and overwrite --inside-diagnostics-cache instead of loading it")
     p.add_argument("--dump-scores", default=None,
                    help="optional path to dump raw per-statement scores+labels "
                         "(enables post-hoc analyses, e.g. conformal calibration)")
@@ -3665,6 +3897,10 @@ def main():
         p.error("--refresh-layer-stats-cache requires --layer-stats-cache")
     if args.refresh_eval_reps_cache and not args.eval_reps_cache:
         p.error("--refresh-eval-reps-cache requires --eval-reps-cache")
+    if args.refresh_inside_diagnostics_cache and not args.inside_diagnostics_cache:
+        p.error("--refresh-inside-diagnostics-cache requires --inside-diagnostics-cache")
+    if args.inside_diagnostics_cache and args.inside_samples < 2:
+        p.error("--inside-diagnostics-cache requires --inside-samples >=2")
     if args.eval_reps_cache_shard_size < 0:
         p.error("--eval-reps-cache-shard-size must be >=0")
     if args.eval_reps_cache_shard_size > 0 and not args.eval_reps_cache:

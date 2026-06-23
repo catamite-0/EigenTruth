@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+import benchmarks.run_inside_sampling_profile as inside_profile  # noqa: E402
 from benchmarks.run_inside_sampling_profile import (  # noqa: E402
     INSIDE_PROFILE_RUN_NAMES,
     InsideSamplingProfileConfig,
@@ -146,6 +147,8 @@ def run_inside_trigger_budget_sweep(
             dry_run=dry_run,
             skip_existing=skip_existing,
         )
+    if not dry_run:
+        _refresh_child_manifests(config, child_payloads)
 
     if dry_run:
         report = _dry_run_report(config, child_payloads)
@@ -156,6 +159,23 @@ def run_inside_trigger_budget_sweep(
     manifest = _write_artifact_manifest(config, report)
     report["artifact_manifest_summary"] = manifest["summary"]
     return report
+
+
+def _refresh_child_manifests(
+    config: InsideTriggerBudgetSweepConfig,
+    child_payloads: Mapping[str, Mapping[str, Any]],
+) -> None:
+    """Refresh child manifests after mutable shared caches reach their final state."""
+    for budget in config.budgets:
+        payload = child_payloads.get(budget.id)
+        if not isinstance(payload, Mapping):
+            continue
+        child_manifest = inside_profile._write_artifact_manifest(
+            _profile_config_for_budget(config, budget),
+            payload,
+        )
+        if isinstance(payload, dict):
+            payload["artifact_manifest_summary"] = child_manifest["summary"]
 
 
 def _profile_config_for_budget(
@@ -201,6 +221,7 @@ def _profile_config_for_budget(
         layer_stats_cache_path=_shared_cache_path(config, "layer-stats.pt"),
         eval_reps_cache_path=_shared_cache_path(config, "eval-reps-cache"),
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+        inside_diagnostics_cache_path=_shared_cache_path(config, "inside-diagnostics.json"),
         refresh_shared_caches=bool(config.refresh_shared_caches and budget.id == config.budgets[0].id),
     )
 
