@@ -5680,6 +5680,17 @@ def test_run_inside_trigger_budget_sweep_compares_budgets_to_reference(tmp_path,
         "recommended_run": "adaptive_selfcheck",
         "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
     }
+    assert report["quality_balanced_recommendation"] == {
+        "budget_id": "top_0p2",
+        "recommended_run": "adaptive_selfcheck",
+        "reason": "lowest_cost_within_inside_quality_tolerance",
+        "quality_metric": "inside_eigenscore",
+        "quality_value": pytest.approx(0.70),
+        "best_quality_value": pytest.approx(0.70),
+        "quality_tolerance": 0.02,
+        "cost_metric": "inside_generation_seconds_ratio_to_reference",
+        "cost_value": pytest.approx(1.0 / 6.0),
+    }
     assert [row["budget_id"] for row in report["leaderboard"]] == ["top_0p1", "top_0p2"]
     assert report["leaderboard"][0]["inside_generation_seconds_ratio_to_reference"] == pytest.approx(1.0 / 12.0)
     assert report["leaderboard"][0]["sample_count_ratio_to_reference"] == pytest.approx(25 / 300)

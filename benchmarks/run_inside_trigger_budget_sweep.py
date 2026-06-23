@@ -209,6 +209,7 @@ def _dry_run_report(
         },
         "leaderboard": [],
         "recommendation": None,
+        "quality_balanced_recommendation": None,
     }
 
 
@@ -260,6 +261,7 @@ def _budget_sweep_report(
         "budgets": budget_payloads,
         "leaderboard": leaderboard,
         "recommendation": recommendation,
+        "quality_balanced_recommendation": _quality_balanced_recommendation(leaderboard),
     }
 
 
@@ -327,6 +329,77 @@ def _budget_sort_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
         float("inf") if seconds is None else float(seconds),
         row.get("budget_id"),
     )
+
+
+def _quality_balanced_recommendation(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    """Recommend the cheapest budget close to the best INSIDE quality signal."""
+    candidates = []
+    for row in rows:
+        quality_metric, quality_value = _inside_quality_signal(row.get("inside_auroc"))
+        if quality_metric is None or quality_value is None:
+            continue
+        cost_value = _optional_float(row.get("inside_generation_seconds_ratio_to_reference"))
+        cost_metric = "inside_generation_seconds_ratio_to_reference"
+        if cost_value is None:
+            cost_value = _optional_float(row.get("inside_generation_seconds"))
+            cost_metric = "inside_generation_seconds"
+        if cost_value is None:
+            cost_value = _optional_float(row.get("total_generated_samples"))
+            cost_metric = "total_generated_samples"
+        if cost_value is None:
+            continue
+        candidates.append((row, quality_metric, quality_value, cost_metric, cost_value))
+    if not candidates:
+        return None
+
+    quality_tolerance = 0.02
+    best_quality = max(item[2] for item in candidates)
+    eligible = [item for item in candidates if item[2] >= best_quality - quality_tolerance]
+    selected = min(
+        eligible,
+        key=lambda item: (
+            item[4],
+            _optional_int(item[0].get("total_generated_samples")) is None,
+            _optional_int(item[0].get("total_generated_samples")) or sys.maxsize,
+            str(item[0].get("budget_id")),
+        ),
+    )
+    row, quality_metric, quality_value, cost_metric, cost_value = selected
+    return {
+        "budget_id": row.get("budget_id"),
+        "recommended_run": row.get("recommended_run"),
+        "reason": "lowest_cost_within_inside_quality_tolerance",
+        "quality_metric": quality_metric,
+        "quality_value": quality_value,
+        "best_quality_value": best_quality,
+        "quality_tolerance": quality_tolerance,
+        "cost_metric": cost_metric,
+        "cost_value": cost_value,
+    }
+
+
+def _inside_quality_signal(inside_auroc: Any) -> tuple[str | None, float | None]:
+    if not isinstance(inside_auroc, Mapping):
+        return None, None
+    preferred = (
+        "inside_semantic_entropy",
+        "inside_embedding_entropy",
+        "inside_eigenscore",
+    )
+    for metric in preferred:
+        value = _optional_float(inside_auroc.get(metric))
+        if value is not None:
+            return metric, value
+    finite_values = [
+        (str(metric), value)
+        for metric, raw_value in inside_auroc.items()
+        if str(metric).startswith("inside_")
+        for value in [_optional_float(raw_value)]
+        if value is not None
+    ]
+    if not finite_values:
+        return None, None
+    return max(finite_values, key=lambda item: (item[1], item[0]))
 
 
 def _write_artifact_manifest(

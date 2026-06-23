@@ -242,7 +242,10 @@ python benchmarks/run_inside_trigger_budget_sweep.py \
 The sweep writes one child `inside-sampling-profile-comparison.json` per budget
 plus `inside-trigger-budget-sweep.json`, whose leaderboard reports generated
 samples, `inside_generation` seconds, ratios to the optional full-sample
-reference, and inside-score AUROCs from the recommended run.
+reference, and inside-score AUROCs from the recommended run. The top-level
+`recommendation` remains cost-first. `quality_balanced_recommendation` selects
+the lowest-cost budget within `0.02` AUROC of the best preferred INSIDE quality
+signal, preferring semantic entropy, then embedding entropy, then eigenscore.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the

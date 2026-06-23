@@ -684,6 +684,17 @@ triggered fixed, and `inside_generation` ratio 1.009, so the release evidence
 supports trigger gating as the main runtime optimization rather than adaptive
 sampling alone.
 
+A follow-up SmolLM2 trigger-budget sweep compares top-10%, top-25%, and top-40%
+budgets in `artifacts/smollm2_l20_inside_trigger_budget_sweep/`. The recursive
+manifest verification passes for the sweep and all three child profile manifests.
+Against the full-sample fixed reference, `adaptive_selfcheck` at top-10% uses 55
+generated samples and 60.917 seconds of `inside_generation` (`0.130x`) with
+semantic-entropy AUROC `0.502`; top-25% uses 110 samples and 129.131 seconds
+(`0.276x`) with semantic-entropy AUROC `0.557`; top-40% uses 217 samples and
+255.041 seconds (`0.545x`) with semantic-entropy AUROC `0.565`. The cost-first
+recommendation is top-10%, while the quality-balanced recommendation is top-25%:
+top-40% roughly doubles top-25% cost for only a small semantic-entropy gain.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -696,10 +707,9 @@ sampling alone.
 4. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
    peak memory is the bottleneck; keep the default output capture for final-layer
    or full hidden-state semantics.
-5. Extend the triggered INSIDE profile from top-25% to a small budget sweep,
-   such as top-10%, top-20%, top-30%, and conformal-threshold triggering, then
-   compare `inside_eigenscore`/semantic entropy versus `truth_proj` under the
-   same release-gate cost report.
+5. Treat top-10% as the cost-first triggered INSIDE default and top-25% as the
+   quality-balanced default until larger model/data runs change the Pareto
+   frontier; do not default to top-40% on current evidence.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.

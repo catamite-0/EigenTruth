@@ -1,0 +1,96 @@
+{
+  "artifacts": {
+    "budgets.top_0p1.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p1/inside-sampling-profile-comparison.json",
+      "sha256": "2bdac9707258ab5e46e1473f249d386a0d202fc11da693635a343c1130d86706",
+      "size_bytes": 4434
+    },
+    "budgets.top_0p1.profile_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p1/artifact-manifest.json",
+      "sha256": "6ae6a1f4a096fbe2b3e1b98199cffaa697e4c2befc5e49a194789dd23b144ec7",
+      "size_bytes": 2253
+    },
+    "budgets.top_0p25.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p25/inside-sampling-profile-comparison.json",
+      "sha256": "494e39158f2cc964c31010409f20b44ade83e820604db0f8e4dbf5dcccc66bdc",
+      "size_bytes": 4478
+    },
+    "budgets.top_0p25.profile_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p25/artifact-manifest.json",
+      "sha256": "60af9ec0a26653b74c0e2be9bded7beca6401635a0405e46f1eefe9af6654a57",
+      "size_bytes": 2254
+    },
+    "budgets.top_0p4.comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/inside-sampling-profile-comparison.json",
+      "sha256": "332cb4dc9e5b8e630050760f40f0a792e5167b444d6965ca474f58da3a71ff57",
+      "size_bytes": 4434
+    },
+    "budgets.top_0p4.profile_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "top_0p4/artifact-manifest.json",
+      "sha256": "35b347582d26ed5e6b921b28e0ef80fce66ae26e7730a46651419ca43875ff91",
+      "size_bytes": 2253
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-trigger-budget-sweep.json",
+      "sha256": "0054b58f11b6ff90aca0d74c35c7bc355de3f3d6dab91a7a3dd98ce846ea208c",
+      "size_bytes": 7621
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budgets": [
+      {
+        "kind": "top_fraction",
+        "value": 0.1
+      },
+      {
+        "kind": "top_fraction",
+        "value": 0.25
+      },
+      {
+        "kind": "top_fraction",
+        "value": 0.4
+      }
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+    "run_names": [
+      "fixed",
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_trigger_budget_sweep",
+    "trigger_signal": "truth_proj"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}
