@@ -10,7 +10,13 @@ from eigentruth.verify.cache import (
     stable_cache_key,
     verifier_cache_key,
 )
-from eigentruth.verify.claims import ClaimExtractor, SentenceClaimExtractor, claim_features, extract_claims
+from eigentruth.verify.claims import (
+    ClaimExtractor,
+    SentenceClaimExtractor,
+    claim_features,
+    extract_calculation,
+    extract_claims,
+)
 from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, VerifierRoute
 from eigentruth.verify.groundedness import EvidenceDocument, GroundednessVerifier
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
@@ -36,6 +42,7 @@ __all__ = [
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
     "claim_features",
+    "extract_calculation",
     "extract_claims",
     "normalize_claim_text",
     "stable_cache_key",

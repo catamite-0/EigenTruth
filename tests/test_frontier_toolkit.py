@@ -63,6 +63,7 @@ from eigentruth.verify import (
     VerificationResult,
     VerificationStatus,
     VerifierRoute,
+    extract_calculation,
     extract_claims,
     normalize_claim_text,
 )
@@ -629,6 +630,7 @@ def test_calculator_verifier_supports_and_refutes_arithmetic_claims():
 
     supported = verifier.verify(Claim("2 + 2 = 4."))
     refuted = verifier.verify(Claim("2 + 2 = 5."))
+    extracted = verifier.verify(extract_claims("2 plus 2 is 5.")[0])
     structured = verifier.verify(
         Claim("The computed total is 12.", metadata={"calculation": {"expression": "3 * 4", "expected": 12}})
     )
@@ -638,6 +640,8 @@ def test_calculator_verifier_supports_and_refutes_arithmetic_claims():
     assert refuted.status is VerificationStatus.REFUTED
     assert refuted.metadata["decision_rule"] == "calculation_mismatch"
     assert refuted.metadata["actual"] == pytest.approx(4.0)
+    assert extracted.status is VerificationStatus.REFUTED
+    assert extracted.metadata["expression"] == "2 + 2"
     assert structured.status is VerificationStatus.SUPPORTED
     assert structured.evidence[0].startswith("calculator: 3 * 4 = 12")
 
@@ -974,6 +978,21 @@ def test_routed_verifier_selects_routes_from_metadata_context_and_text():
         assert math.isfinite(routed.metadata["total_duration_seconds"])
         assert math.isfinite(routed.metadata["selected_route_duration_seconds"])
         assert routed.metadata["total_duration_seconds"] >= routed.metadata["selected_route_duration_seconds"] >= 0.0
+
+
+def test_routed_verifier_uses_extracted_calculation_metadata_without_text_pattern():
+    fallback = InMemoryVerifier({})
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",)),
+        VerifierRoute("fallback", fallback, fallback=True),
+    ))
+
+    result = verifier.verify(extract_claims("2 plus 2 is 5.")[0])
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["selected_route"] == "calculator"
+    assert result.metadata["matched_route_details"][0]["match_reasons"] == ("metadata:calculation",)
+    assert result.metadata["expression"] == "2 + 2"
 
 
 def test_routed_verifier_can_prioritize_structured_state_adapter():
@@ -1444,6 +1463,26 @@ def test_claim_extraction_adds_rule_based_metadata():
     assert features["has_citation"] is True
     assert features["has_negation"] is True
     assert features["is_time_sensitive"] is True
+    assert features["has_calculation"] is False
+
+
+def test_claim_extraction_adds_structured_calculation_metadata():
+    symbolic, word_operator = extract_claims("3 * 4 = 12. 6 divided by 3 is 3.")
+
+    assert symbolic.metadata["features"]["has_calculation"] is True
+    assert symbolic.metadata["calculation"]["expression"] == "3 * 4"
+    assert symbolic.metadata["calculation"]["expected"] == 12.0
+    assert symbolic.metadata["calculation"]["parser"] == "symbolic"
+    assert word_operator.metadata["features"]["has_calculation"] is True
+    assert word_operator.metadata["calculation"]["expression"] == "6 / 3"
+    assert word_operator.metadata["calculation"]["expected"] == 3.0
+    assert word_operator.metadata["calculation"]["parser"] == "word_operator"
+    assert extract_calculation("expression: 10 / 2; expected: 5") == {
+        "expression": "10 / 2",
+        "expected": 5.0,
+        "source": "claim_text",
+        "parser": "labeled",
+    }
 
 
 def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():

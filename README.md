@@ -211,7 +211,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | Stores successful idempotent action results so repeated product requests can replay outputs without repeating side effects. |
 | `run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops, optionally gates expensive verifier routes behind diagnostic risk or sensitive claim metadata, and converts retrieval action results into verifier-ready evidence context. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
-| `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims and simple symbolic equations. |
+| `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims, simple symbolic equations, and calculation metadata extracted from limited arithmetic text. |
 | `QuestionAnswerVerifier` | Provides a dependency-free structured QA/domain-state verifier adapter for exact question and candidate-answer facts. |
 | `StructuredStateVerifier` / `StateCheck` | Provides a dependency-free structured state and business-rule verifier for database, policy, and domain-state checks. |
 | `SQLiteStateSource` / `SQLiteStateQuery` | Loads read-only SQLite query results into structured verifier state without adding non-stdlib dependencies. |
@@ -272,7 +272,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | 保存成功的幂等 action 结果，让重复产品请求可重放输出而不重复执行副作用。 |
 | `run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，可按诊断风险或敏感 claim metadata 延迟触发昂贵 verifier，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
-| `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim 和简单符号等式。 |
+| `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim、简单符号等式，以及从有限算术文本中抽取出的 calculation metadata。 |
 | `QuestionAnswerVerifier` | 提供无依赖结构化 QA/领域状态 verifier adapter，用于精确问题与候选答案事实。 |
 | `StructuredStateVerifier` / `StateCheck` | 提供无依赖结构化状态与业务规则 verifier，用于数据库、策略和领域状态校验。 |
 | `SQLiteStateSource` / `SQLiteStateQuery` | 将只读 SQLite 查询结果加载为 verifier 可消费的结构化状态，不增加非标准库依赖。 |

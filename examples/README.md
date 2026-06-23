@@ -157,14 +157,14 @@ python examples/calibrated_control_demo.py \
 ```
 
 For deterministic arithmetic claims, enable the local calculator verifier. The
-demo routes arithmetic-looking claims or structured calculation context to
-`CalculatorVerifier`, then falls back to the lexical verifier for ordinary
-claims:
+demo routes arithmetic-looking claims, extracted calculation metadata, or
+structured calculation context to `CalculatorVerifier`, then falls back to the
+lexical verifier for ordinary claims:
 
 ```bash
 python examples/calibrated_control_demo.py \
   --enable-calculator \
-  --text "2 + 2 = 5." \
+  --text "2 plus 2 is 5." \
   --diagnostics '{"truth_proj": 0.0}'
 ```
 
