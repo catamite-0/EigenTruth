@@ -235,6 +235,28 @@ def test_product_trace_runtime_summary_counts_phase_timings():
     json.dumps(payload)
 
 
+def test_product_trace_cache_summary_aggregates_named_cache_stats():
+    trace = ProductTrace(
+        metadata={
+            "cache": {
+                "verifier": {"size": 2, "hits": 3, "misses": 1},
+                "retriever": {"size": 1, "hits": 1, "misses": 3},
+            },
+        },
+    )
+
+    summary = trace.cache_summary()
+
+    assert summary["total_caches"] == 2
+    assert summary["aggregate"]["size"] == 3
+    assert summary["aggregate"]["hits"] == 4
+    assert summary["aggregate"]["misses"] == 4
+    assert summary["aggregate"]["requests"] == 8
+    assert summary["aggregate"]["hit_rate"] == 0.5
+    assert summary["caches"]["verifier"]["hit_rate"] == 0.75
+    json.dumps(summary)
+
+
 def test_product_runtime_budget_evaluates_trace_phase_limits():
     trace = ProductTrace(
         runtime_trace=RuntimeTrace(
@@ -262,6 +284,52 @@ def test_product_runtime_budget_evaluates_trace_phase_limits():
     assert report["failures"][0]["metric"] == "phase_seconds.initial_verification"
     assert report["failures"][0]["reason"] == "above 0.1"
     json.dumps(report)
+
+
+def test_product_runtime_budget_checks_cache_hit_rates():
+    trace = ProductTrace(
+        metadata={
+            "cache": {
+                "verifier": {"size": 2, "hits": 1, "misses": 3},
+                "retriever": {"size": 1, "hits": 3, "misses": 1},
+            },
+        },
+        runtime_trace=RuntimeTrace(
+            total_seconds=0.10,
+            phases=(RuntimePhaseTiming("initial_verification", 0.05),),
+        ),
+    )
+
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            min_cache_hit_rate=0.70,
+            min_named_cache_hit_rate={"verifier": 0.50},
+        ),
+    )
+
+    assert report["passed"] is False
+    assert report["metrics"]["cache_hit_rate"] == 0.5
+    assert report["metrics"]["named_cache_hit_rates"]["verifier"] == 0.25
+    assert [failure["metric"] for failure in report["failures"]] == [
+        "cache_hit_rate",
+        "named_cache_hit_rate.verifier",
+    ]
+
+
+def test_product_runtime_budget_cache_only_policy_does_not_require_runtime_trace():
+    trace = ProductTrace(
+        metadata={"cache": {"verifier": {"size": 1, "hits": 1, "misses": 0}}},
+        runtime_trace=None,
+    )
+
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(min_cache_hit_rate=0.90),
+    )
+
+    assert report["passed"] is True
+    assert report["checks"][0]["metric"] == "cache_hit_rate"
 
 
 def test_product_runtime_budget_fails_closed_when_trace_is_missing():

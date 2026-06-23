@@ -247,6 +247,17 @@ class ProductTrace:
         summary = payload.get("summary", {})
         return dict(summary) if isinstance(summary, Mapping) else RuntimeTrace.from_dict(payload).summary()
 
+    def cache_summary(self) -> dict[str, Any]:
+        """Return aggregate cache hit/miss statistics from trace metadata."""
+        metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
+        caches = _cache_stats_from_metadata(metadata)
+        aggregate = _combine_cache_stats(caches.values())
+        return {
+            "total_caches": len(caches),
+            "aggregate": aggregate,
+            "caches": caches,
+        }
+
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
@@ -313,6 +324,69 @@ def _runtime_trace_to_dict(trace: RuntimeTrace | Mapping[str, Any] | None) -> di
     return RuntimeTrace.from_dict(trace).to_dict()
 
 
+def _cache_stats_from_metadata(metadata: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    payload = metadata.get("cache", metadata.get("caches", {}))
+    if not isinstance(payload, Mapping):
+        return {}
+    if _looks_like_cache_stats(payload):
+        return {"default": _normalize_cache_stats(payload)}
+    caches = {}
+    for name, stats in payload.items():
+        if not isinstance(stats, Mapping):
+            continue
+        caches[str(name)] = _normalize_cache_stats(stats)
+    return caches
+
+
+def _looks_like_cache_stats(value: Mapping[str, Any]) -> bool:
+    return any(key in value for key in ("hits", "misses", "requests", "hit_rate", "size"))
+
+
+def _normalize_cache_stats(stats: Mapping[str, Any]) -> dict[str, Any]:
+    hits = _non_negative_int(stats.get("hits"))
+    misses = _non_negative_int(stats.get("misses"))
+    requests = _non_negative_int(stats.get("requests"))
+    if requests is None and hits is not None and misses is not None:
+        requests = hits + misses
+    hit_rate = _finite_float(stats.get("hit_rate"))
+    if hit_rate is None and requests is not None and requests > 0 and hits is not None:
+        hit_rate = hits / requests
+    return {
+        "size": _non_negative_int(stats.get("size")),
+        "hits": hits,
+        "misses": misses,
+        "requests": requests,
+        "hit_rate": hit_rate,
+    }
+
+
+def _combine_cache_stats(stats: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    total_size = 0
+    total_hits = 0
+    total_misses = 0
+    saw_size = False
+    saw_counts = False
+    for item in stats:
+        size = _non_negative_int(item.get("size"))
+        hits = _non_negative_int(item.get("hits"))
+        misses = _non_negative_int(item.get("misses"))
+        if size is not None:
+            saw_size = True
+            total_size += size
+        if hits is not None and misses is not None:
+            saw_counts = True
+            total_hits += hits
+            total_misses += misses
+    requests = total_hits + total_misses if saw_counts else None
+    return {
+        "size": total_size if saw_size else None,
+        "hits": total_hits if saw_counts else None,
+        "misses": total_misses if saw_counts else None,
+        "requests": requests,
+        "hit_rate": None if not requests else total_hits / requests,
+    }
+
+
 def _to_jsonable(value: Any) -> Any:
     if isinstance(value, Enum):
         return value.value
@@ -325,6 +399,23 @@ def _to_jsonable(value: Any) -> Any:
     if is_dataclass(value) and hasattr(value, "to_dict"):
         return value.to_dict()
     return value
+
+
+def _finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def _non_negative_int(value: Any) -> int | None:
+    numeric = _finite_float(value)
+    if numeric is None or numeric < 0:
+        return None
+    return int(numeric)
 
 
 def _as_sequence(value: Any) -> tuple[Any, ...]:

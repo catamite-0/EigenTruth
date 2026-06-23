@@ -18,7 +18,7 @@ import math
 from pathlib import Path
 from typing import Any
 
-from eigentruth.adapters import CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
+from eigentruth.adapters import CachedRetriever, CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     RUNTIME_PROFILE_NAMES,
@@ -34,6 +34,7 @@ from eigentruth.control import (
 )
 from eigentruth.registry import ArtifactRegistry
 from eigentruth.verify import (
+    CachedVerifier,
     GroundednessVerifier,
     InMemoryVerifier,
     RoutedVerifier,
@@ -132,16 +133,30 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     """Build an optional runtime budget policy from CLI-like arguments."""
     max_total_seconds = getattr(args, "max_runtime_total_seconds", None)
     raw_phase_seconds = getattr(args, "max_runtime_phase_seconds", None)
-    if max_total_seconds is None and raw_phase_seconds is None:
+    min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
+    raw_named_cache_hit_rate = getattr(args, "min_named_cache_hit_rate", None)
+    if (
+        max_total_seconds is None
+        and raw_phase_seconds is None
+        and min_cache_hit_rate is None
+        and raw_named_cache_hit_rate is None
+    ):
         return None
     phase_seconds = (
         {}
         if raw_phase_seconds is None
         else parse_json_mapping(raw_phase_seconds, name="--max-runtime-phase-seconds")
     )
+    named_cache_hit_rate = (
+        {}
+        if raw_named_cache_hit_rate is None
+        else parse_json_mapping(raw_named_cache_hit_rate, name="--min-named-cache-hit-rate")
+    )
     return ProductRuntimeBudgetPolicy(
         max_total_seconds=max_total_seconds,
         max_phase_seconds={key: float(value) for key, value in phase_seconds.items()},
+        min_cache_hit_rate=min_cache_hit_rate,
+        min_named_cache_hit_rate={key: float(value) for key, value in named_cache_hit_rate.items()},
     )
 
 
@@ -276,12 +291,22 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     claims = extract_claims(args.text)
     verifier = build_verifier(facts, evidence, refutations, enable_calculator=args.enable_calculator)
+    verifier_cache = None
+    if getattr(args, "cache_verifier", False):
+        verifier_cache = CachedVerifier(verifier)
+        verifier = verifier_cache
     controller = RiskController(artifact)
     executor_registry = ActionExecutorRegistry()
+    cache_metadata: dict[str, Any] = {}
+    retriever_cache = None
     if retrieval_evidence is not None:
+        retriever = InMemoryRetriever(retrieval_evidence)
+        if getattr(args, "cache_retriever", False):
+            retriever_cache = CachedRetriever(retriever)
+            retriever = retriever_cache
         executor_registry.register(
             ControlAction.RETRIEVE,
-            RetrievalActionExecutor(InMemoryRetriever(retrieval_evidence)),
+            RetrievalActionExecutor(retriever),
         )
 
     loop_result = run_verification_loop(
@@ -306,10 +331,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "calculator_enabled": args.enable_calculator,
             "action_executor_type": "ActionExecutorRegistry",
             "registered_actions": tuple(action.value for action in executor_registry.executors),
+            "cache": cache_metadata,
         },
     )
     trace = loop_result.trace
+    if verifier_cache is not None:
+        cache_metadata["verifier"] = verifier_cache.stats.to_dict()
+    if retriever_cache is not None:
+        cache_metadata["retriever"] = retriever_cache.stats.to_dict()
+    cache_summary = trace.cache_summary()
     payload = trace.to_dict()
+    if cache_metadata:
+        payload["metadata"]["cache_summary"] = cache_summary
     runtime_budget_policy = runtime_budget_policy_from_args(args)
     runtime_budget = (
         None
@@ -335,6 +368,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
+                "cache_summary": cache_summary,
                 "runtime_budget": runtime_budget,
                 "verifier_type": type(verifier).__name__,
             },
@@ -366,10 +400,18 @@ def main() -> None:
     parser.add_argument("--no-runtime-trace", dest="runtime_trace", action="store_false",
                         default=True,
                         help="omit runtime phase timings from ProductTrace output")
+    parser.add_argument("--cache-verifier", action="store_true",
+                        help="wrap the selected verifier in request-local CachedVerifier and report cache stats")
+    parser.add_argument("--cache-retriever", action="store_true",
+                        help="wrap the in-memory retriever in request-local CachedRetriever and report cache stats")
     parser.add_argument("--max-runtime-total-seconds", type=float, default=None,
                         help="optional ProductTrace runtime budget for total request seconds")
     parser.add_argument("--max-runtime-phase-seconds", default=None,
                         help="optional JSON object mapping runtime phase names to max seconds")
+    parser.add_argument("--min-cache-hit-rate", type=float, default=None,
+                        help="optional ProductTrace cache budget for aggregate cache hit rate")
+    parser.add_argument("--min-named-cache-hit-rate", default=None,
+                        help="optional JSON object mapping cache names to minimum hit rates")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--request-id", default="demo-request", help="request id stored in the ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")

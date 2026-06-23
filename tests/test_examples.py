@@ -183,6 +183,45 @@ def test_calibrated_control_demo_can_record_runtime_budget_result():
     assert runtime_budget["failures"][0]["metric"] == "runtime_trace"
 
 
+def test_calibrated_control_demo_records_cache_summary_and_budget():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            cache_verifier=True,
+            cache_retriever=False,
+            max_runtime_total_seconds=None,
+            max_runtime_phase_seconds=None,
+            min_cache_hit_rate=0.5,
+            min_named_cache_hit_rate=None,
+            request_id="test-cache-budget-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    cache_summary = payload["metadata"]["cache_summary"]
+    runtime_budget = payload["metadata"]["runtime_budget"]
+
+    assert payload["metadata"]["cache"]["verifier"]["misses"] == 1
+    assert cache_summary["aggregate"]["requests"] == 1
+    assert cache_summary["aggregate"]["hit_rate"] == 0.0
+    assert runtime_budget["passed"] is False
+    assert runtime_budget["failures"][0]["metric"] == "cache_hit_rate"
+
+
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
     demo = importlib.import_module("examples.sqlite_state_control_demo")
 

@@ -19,6 +19,8 @@ class ProductRuntimeBudgetPolicy:
 
     max_total_seconds: float | None = None
     max_phase_seconds: Mapping[str, float] = field(default_factory=dict)
+    min_cache_hit_rate: float | None = None
+    min_named_cache_hit_rate: Mapping[str, float] = field(default_factory=dict)
     require_runtime_trace: bool = True
 
     def __post_init__(self) -> None:
@@ -35,8 +37,23 @@ class ProductRuntimeBudgetPolicy:
                 raw_value,
                 name=f"max_phase_seconds.{name}",
             )
+        min_cache_hit_rate = _optional_rate_float(
+            self.min_cache_hit_rate,
+            name="min_cache_hit_rate",
+        )
+        min_named_cache_hit_rate = {}
+        for raw_name, raw_value in self.min_named_cache_hit_rate.items():
+            name = str(raw_name).strip()
+            if not name:
+                raise ValueError("named cache budget names must be non-empty")
+            min_named_cache_hit_rate[name] = _required_rate_float(
+                raw_value,
+                name=f"min_named_cache_hit_rate.{name}",
+            )
         object.__setattr__(self, "max_total_seconds", max_total_seconds)
         object.__setattr__(self, "max_phase_seconds", max_phase_seconds)
+        object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
+        object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
         object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
 
     @classmethod
@@ -45,18 +62,27 @@ class ProductRuntimeBudgetPolicy:
         return cls(
             max_total_seconds=payload.get("max_total_seconds"),
             max_phase_seconds=dict(_mapping(payload.get("max_phase_seconds"))),
+            min_cache_hit_rate=payload.get("min_cache_hit_rate"),
+            min_named_cache_hit_rate=dict(_mapping(payload.get("min_named_cache_hit_rate"))),
             require_runtime_trace=_bool_value(payload.get("require_runtime_trace", True)),
         )
 
     def enabled(self) -> bool:
         """Return whether any runtime threshold is configured."""
-        return self.max_total_seconds is not None or bool(self.max_phase_seconds)
+        return (
+            self.max_total_seconds is not None
+            or bool(self.max_phase_seconds)
+            or self.min_cache_hit_rate is not None
+            or bool(self.min_named_cache_hit_rate)
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
         return {
             "max_total_seconds": self.max_total_seconds,
             "max_phase_seconds": dict(self.max_phase_seconds),
+            "min_cache_hit_rate": self.min_cache_hit_rate,
+            "min_named_cache_hit_rate": dict(self.min_named_cache_hit_rate),
             "require_runtime_trace": self.require_runtime_trace,
         }
 
@@ -74,8 +100,9 @@ def evaluate_product_runtime_budget(
     metrics = product_runtime_metrics(trace)
     failures = []
     checks = []
+    requires_runtime_trace = resolved.max_total_seconds is not None or bool(resolved.max_phase_seconds)
 
-    if resolved.enabled() and resolved.require_runtime_trace and not metrics["has_runtime_trace"]:
+    if requires_runtime_trace and resolved.require_runtime_trace and not metrics["has_runtime_trace"]:
         check = {
             "metric": "runtime_trace",
             "limit_type": "required",
@@ -112,6 +139,31 @@ def evaluate_product_runtime_budget(
         if not check["passed"]:
             failures.append(_failure_from_check(check))
 
+    if resolved.min_cache_hit_rate is not None:
+        check = _min_metric_check(
+            metrics,
+            metric="cache_hit_rate",
+            limit=resolved.min_cache_hit_rate,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
+    named_cache_hit_rates = _mapping(metrics.get("named_cache_hit_rates"))
+    raw_named_cache_hit_rates = _mapping(metrics.get("raw_named_cache_hit_rates"))
+    for cache_name, limit in resolved.min_named_cache_hit_rate.items():
+        metric = f"named_cache_hit_rate.{cache_name}"
+        check = _min_metric_check(
+            named_cache_hit_rates,
+            metric=cache_name,
+            limit=limit,
+            output_metric=metric,
+            raw_value=raw_named_cache_hit_rates.get(cache_name),
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
     return {
         "enabled": resolved.enabled(),
         "passed": not failures,
@@ -125,6 +177,9 @@ def evaluate_product_runtime_budget(
             "phase_seconds": phase_seconds,
             "phase_counts": _mapping(metrics.get("phase_counts")),
             "slowest_phase": metrics.get("slowest_phase"),
+            "cache_hit_rate": metrics.get("cache_hit_rate"),
+            "cache_summary": metrics.get("cache_summary"),
+            "named_cache_hit_rates": named_cache_hit_rates,
         },
         "checks": checks,
         "failures": failures,
@@ -135,7 +190,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     """Extract runtime-budget metrics from a ProductTrace or trace payload."""
     runtime_trace = _runtime_trace_payload(trace)
     if runtime_trace is None:
-        return {
+        metrics = {
             "has_runtime_trace": False,
             "total_seconds": None,
             "accounted_seconds": None,
@@ -146,9 +201,11 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             "phase_counts": {},
             "slowest_phase": None,
         }
+        metrics.update(_cache_metrics(trace))
+        return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
-    return {
+    metrics = {
         "has_runtime_trace": True,
         "total_seconds": _finite_float(summary.get("total_seconds")),
         "accounted_seconds": _finite_float(summary.get("accounted_seconds")),
@@ -162,6 +219,8 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         "phase_counts": _mapping(summary.get("phase_counts")),
         "slowest_phase": summary.get("slowest_phase"),
     }
+    metrics.update(_cache_metrics(trace))
+    return metrics
 
 
 def _runtime_trace_payload(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any] | None:
@@ -189,6 +248,31 @@ def _runtime_summary(runtime_trace: Mapping[str, Any]) -> dict[str, Any]:
     return RuntimeTrace.from_dict(runtime_trace).summary()
 
 
+def _cache_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.cache_summary()
+    else:
+        payload = dict(trace)
+        metadata = payload.get("metadata", {})
+        summary = ProductTrace(metadata=metadata if isinstance(metadata, Mapping) else {}).cache_summary()
+    aggregate = _mapping(summary.get("aggregate"))
+    caches = _mapping(summary.get("caches"))
+    named_hit_rates = {
+        str(name): _finite_float(_mapping(stats).get("hit_rate"))
+        for name, stats in caches.items()
+    }
+    raw_named_hit_rates = {
+        str(name): _mapping(stats).get("hit_rate")
+        for name, stats in caches.items()
+    }
+    return {
+        "cache_hit_rate": _finite_float(aggregate.get("hit_rate")),
+        "cache_summary": summary,
+        "named_cache_hit_rates": named_hit_rates,
+        "raw_named_cache_hit_rates": raw_named_hit_rates,
+    }
+
+
 def _max_metric_check(
     metrics: Mapping[str, Any],
     *,
@@ -209,11 +293,35 @@ def _max_metric_check(
     }
 
 
+def _min_metric_check(
+    metrics: Mapping[str, Any],
+    *,
+    metric: str,
+    limit: float,
+    output_metric: str | None = None,
+    raw_value: Any = None,
+) -> dict[str, Any]:
+    observed = _finite_float(metrics.get(metric))
+    raw = metrics.get(metric) if raw_value is None else raw_value
+    return {
+        "metric": output_metric or metric,
+        "limit_type": "min",
+        "limit": limit,
+        "value": observed,
+        "raw_value": None if raw is None else repr(raw),
+        "passed": observed is not None and observed >= limit,
+    }
+
+
 def _failure_from_check(check: Mapping[str, Any], *, reason: str | None = None) -> dict[str, Any]:
     if reason is None:
         reason = "missing or non-finite"
         if check.get("value") is not None:
-            reason = f"above {check['limit']}"
+            reason = (
+                f"above {check['limit']}"
+                if check.get("limit_type") == "max"
+                else f"below {check['limit']}"
+            )
     return {
         "metric": check.get("metric"),
         "limit_type": check.get("limit_type"),
@@ -236,6 +344,19 @@ def _required_non_negative_float(value: Any, *, name: str) -> float:
     numeric = float(value)
     if not math.isfinite(numeric) or numeric < 0.0:
         raise ValueError(f"{name} must be a non-negative finite number.")
+    return numeric
+
+
+def _optional_rate_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    return _required_rate_float(value, name=name)
+
+
+def _required_rate_float(value: Any, *, name: str) -> float:
+    numeric = _required_non_negative_float(value, name=name)
+    if numeric > 1.0:
+        raise ValueError(f"{name} must be between 0 and 1.")
     return numeric
 
 
