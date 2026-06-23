@@ -59,6 +59,7 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
             "structured_state",
             "state_transition",
             "retrieval_groundedness",
+            "retrieval_structured_qa",
         ]
         assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
             "retrieval_structured_qa"
@@ -386,6 +387,7 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
         "structured_state",
         "state_transition",
         "retrieval_groundedness",
+        "retrieval_structured_qa",
     ]
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_status"] == "promote"
     assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_records"] == [

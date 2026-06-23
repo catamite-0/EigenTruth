@@ -1491,12 +1491,13 @@ comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
 The current strict structured-retrieval-audit SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`.
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.4`.
 It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA product
 route, and registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
-promoted adapter-family matrix with `structured_state`, `state_transition`, and
-`retrieval_groundedness` routes present and promoted. It also requires
+promoted adapter-family matrix with `structured_state`, `state_transition`,
+`retrieval_groundedness`, and `retrieval_structured_qa` routes present and
+promoted. It also requires
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
 retrieval-structured-QA audit route with its own quality and runtime budget.
 The final manifest fingerprints the release-candidate report plus readiness,
@@ -1516,15 +1517,16 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-registry artifacts/local-readiness-registry.json \
   --release-registry artifacts/local-release-registry.json \
   --name smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate \
-  --version 1.3 \
+  --version 1.4 \
   --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8 \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
-  --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval/adapter-family-matrix.json \
+  --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
   --required-adapter-route retrieval_groundedness \
+  --required-adapter-route retrieval_structured_qa \
   --runtime-profile balanced \
   --min-selected 200 \
   --min-decision-accuracy 0.99 \
@@ -1545,6 +1547,12 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --required-route-max-retrieval-use-rate 1.0 \
   --required-route-max-runtime-total-seconds 8.0 \
   --required-route-max-retrieval-hit-count 450 \
+  --json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --release-report-json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_comparison.json \
+  --artifact-manifest artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest.json \
+  --verification-report artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest_verification.json \
+  --metadata release=strict_structured_retrieval_audit \
+  --metadata adapter_family_retrieval_structured_qa=required \
   --fail-on-blocked
 ```
 

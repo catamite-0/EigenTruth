@@ -128,13 +128,14 @@ leaving `inside_generation` at 1.001 of fixed, while `truth_proj` top-25%
 triggering samples 39/154 statements and cuts fixed `inside_generation` to
 0.253 of full-sample fixed. The current registered SmolLM2 strict
 structured-retrieval-audit release
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.4`
 selects the top-40% quality-balanced budget from a single largest-budget run,
 uses 218 generated samples with sample-count ratio 0.472 and
 `inside_generation` ratio 0.503 against the full-sample fixed reference,
 requires `performance_baseline:smollm2-l20-performance-baseline:0.9` to match
 the final runtime, requires promoted `structured_state`, `state_transition`, and
-`retrieval_groundedness` adapter-family routes, and requires
+`retrieval_groundedness` plus `retrieval_structured_qa` adapter-family routes,
+and requires
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
 retrieval structured-QA audit baseline. That audit route promotes with selected
 238, decision accuracy 0.992, false-supported rate 0.000, false-refuted rate

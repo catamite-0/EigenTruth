@@ -1987,6 +1987,314 @@
       "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate-verification",
       "path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_manifest_verification.json",
       "version": "1.3"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "adapter_family_matrix_manifest": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+        "adapter_family_matrix_report": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+        "adapter_family_promoted_routes": [
+          "structured_qa",
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "adapter_family_required_routes": [
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "adapter_family_retrieval_structured_qa": "required",
+        "adapter_family_routes": [
+          "structured_qa",
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "checked": 6,
+        "failure_count": 0,
+        "manifest_metadata": {
+          "adapter_family_matrix_manifest": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+          "adapter_family_matrix_report": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+          "adapter_family_promoted_routes": [
+            "structured_qa",
+            "structured_state",
+            "state_transition",
+            "retrieval_groundedness",
+            "retrieval_structured_qa"
+          ],
+          "adapter_family_required_routes": [
+            "structured_state",
+            "state_transition",
+            "retrieval_groundedness",
+            "retrieval_structured_qa"
+          ],
+          "adapter_family_routes": [
+            "structured_qa",
+            "structured_state",
+            "state_transition",
+            "retrieval_groundedness",
+            "retrieval_structured_qa"
+          ],
+          "performance_manifest": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+          "readiness_manifest": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+          "recommended_batch_size": 8,
+          "recommended_best_quality_auroc": 0.6823529411764706,
+          "recommended_best_quality_signal": "truth_proj",
+          "recommended_cache_only_total_seconds": 0.339105,
+          "recommended_hidden_state_capture": "outputs",
+          "recommended_inside_generation_seconds": 235.259019,
+          "recommended_inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+          "recommended_inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+          "recommended_inside_generation_seconds_ratio_to_baseline": null,
+          "recommended_inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "recommended_inside_sampling_run": "adaptive_selfcheck",
+          "recommended_inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+          "recommended_inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+          "recommended_inside_sampling_sample_count_ratio_to_baseline": null,
+          "recommended_inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+          "recommended_inside_sampling_stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "recommended_inside_sampling_total_generated_samples": 218,
+          "recommended_inside_trigger_budget_derive_from_max_budget": true,
+          "recommended_inside_trigger_budget_id": "top_0p4",
+          "recommended_inside_trigger_budget_policy": "quality_balanced",
+          "recommended_layer": -12,
+          "recommended_max_batch_tokens": 0,
+          "recommended_max_workers": 1,
+          "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "recommended_performance_baseline_record": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+          "recommended_prefix_kv_cache": false,
+          "recommended_quality_signals": {
+            "disp_euclid": 0.45217391304347826,
+            "disp_hse": 0.4235294117647059,
+            "eigenscore": 0.4792838874680307,
+            "maha_last": 0.5914748508098892,
+            "nll_answer": 0.4584825234441603,
+            "subspace_resid": 0.5087809036658142,
+            "truth_proj": 0.6823529411764706
+          },
+          "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+          "recommended_route": "structured_qa",
+          "recommended_route_claims_cache_hit_rate": null,
+          "recommended_route_decision_accuracy": 1.0,
+          "recommended_route_false_refuted_rate": 1.0,
+          "recommended_route_false_supported_rate": 0.0,
+          "recommended_route_max_duration_seconds": 0.0007935770554468036,
+          "recommended_route_mean_attempted_route_count": 1.0,
+          "recommended_route_mean_duration_seconds": 0.00010692605227675466,
+          "recommended_route_p99_duration_seconds": 0.0001987196248956039,
+          "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+          "recommended_route_retrieval_use_rate": 0.0,
+          "recommended_route_runtime_retrieval_hit_count": null,
+          "recommended_route_runtime_total_seconds": null,
+          "recommended_route_selected": 210,
+          "recommended_route_verified_detection": 1.0,
+          "recommended_route_verified_false_alarm": 0.0,
+          "recommended_route_verifier_trace_cache_hit_rate": null,
+          "recommended_uncached_forward_cost_seconds": 38.786261,
+          "recommended_uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+          "release_adapter_family_status": "promote",
+          "release_candidate_status": "promote",
+          "release_performance_status": "promote",
+          "release_readiness_status": "promote",
+          "release_required_route_baseline_status": "promote",
+          "release_route_status": "promote",
+          "release_runtime_profile": "balanced",
+          "release_runtime_profile_applied_defaults": {
+            "inside_trigger_budget_policy": "quality_balanced",
+            "max_inside_generation_seconds_ratio": 0.8,
+            "max_inside_sample_count_ratio": 0.6
+          },
+          "release_runtime_profile_defaults": {
+            "inside_trigger_budget_policy": "quality_balanced",
+            "max_inside_generation_seconds_ratio": 0.8,
+            "max_inside_sample_count_ratio": 0.6,
+            "max_mean_attempted_route_count": 1.5,
+            "max_retrieval_use_rate": 0.5
+          },
+          "required_adapter_routes": [
+            "structured_state",
+            "state_transition",
+            "retrieval_groundedness",
+            "retrieval_structured_qa"
+          ],
+          "required_route_baseline_manifests": [
+            "artifacts/smollm2_l80_retrieval_structured_qa_route/retrieval-route-artifact-manifest.json"
+          ],
+          "required_route_baseline_records": [
+            "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5"
+          ],
+          "required_route_baseline_registry": "artifacts/staged-route-registry.json",
+          "required_route_baseline_routes": [
+            "retrieval_structured_qa"
+          ],
+          "required_route_budget_policy": {
+            "required_route_max_false_supported_rate": 0.01,
+            "required_route_max_max_duration_seconds": null,
+            "required_route_max_mean_attempted_route_count": 2.1,
+            "required_route_max_mean_duration_seconds": null,
+            "required_route_max_p99_duration_seconds": null,
+            "required_route_max_retrieval_hit_count": 450.0,
+            "required_route_max_retrieval_use_rate": 1.0,
+            "required_route_max_runtime_total_seconds": 8.0,
+            "required_route_max_verified_false_alarm": 0.01,
+            "required_route_min_claims_cache_hit_rate": null,
+            "required_route_min_decision_accuracy": 0.99,
+            "required_route_min_false_refuted_rate": 1.0,
+            "required_route_min_selected": 200,
+            "required_route_min_verified_detection": 1.0,
+            "required_route_min_verifier_trace_cache_hit_rate": null
+          },
+          "route_manifest": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+          "runner": "run_release_candidate_registry_workflow",
+          "workflow": "release_candidate_comparison"
+        },
+        "manifest_summary": {
+          "artifact_count": 6,
+          "directory_count": 0,
+          "file_count": 6,
+          "missing_count": 0
+        },
+        "nested_count": 3,
+        "performance_manifest": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+        "readiness_manifest": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+        "recommended_batch_size": 8,
+        "recommended_best_quality_auroc": 0.6823529411764706,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_cache_only_total_seconds": 0.339105,
+        "recommended_hidden_state_capture": "outputs",
+        "recommended_inside_generation_seconds": 235.259019,
+        "recommended_inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+        "recommended_inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+        "recommended_inside_generation_seconds_ratio_to_baseline": null,
+        "recommended_inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+        "recommended_inside_sampling_run": "adaptive_selfcheck",
+        "recommended_inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+        "recommended_inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+        "recommended_inside_sampling_sample_count_ratio_to_baseline": null,
+        "recommended_inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+        "recommended_inside_sampling_stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 13
+        },
+        "recommended_inside_sampling_total_generated_samples": 218,
+        "recommended_inside_trigger_budget_derive_from_max_budget": true,
+        "recommended_inside_trigger_budget_id": "top_0p4",
+        "recommended_inside_trigger_budget_policy": "quality_balanced",
+        "recommended_layer": -12,
+        "recommended_max_batch_tokens": 0,
+        "recommended_max_workers": 1,
+        "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "recommended_performance_baseline_record": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+        "recommended_prefix_kv_cache": false,
+        "recommended_quality_signals": {
+          "disp_euclid": 0.45217391304347826,
+          "disp_hse": 0.4235294117647059,
+          "eigenscore": 0.4792838874680307,
+          "maha_last": 0.5914748508098892,
+          "nll_answer": 0.4584825234441603,
+          "subspace_resid": 0.5087809036658142,
+          "truth_proj": 0.6823529411764706
+        },
+        "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+        "recommended_route": "structured_qa",
+        "recommended_route_claims_cache_hit_rate": null,
+        "recommended_route_decision_accuracy": 1.0,
+        "recommended_route_false_refuted_rate": 1.0,
+        "recommended_route_false_supported_rate": 0.0,
+        "recommended_route_max_duration_seconds": 0.0007935770554468036,
+        "recommended_route_mean_attempted_route_count": 1.0,
+        "recommended_route_mean_duration_seconds": 0.00010692605227675466,
+        "recommended_route_p99_duration_seconds": 0.0001987196248956039,
+        "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+        "recommended_route_retrieval_use_rate": 0.0,
+        "recommended_route_runtime_retrieval_hit_count": null,
+        "recommended_route_runtime_total_seconds": null,
+        "recommended_route_selected": 210,
+        "recommended_route_verified_detection": 1.0,
+        "recommended_route_verified_false_alarm": 0.0,
+        "recommended_route_verifier_trace_cache_hit_rate": null,
+        "recommended_uncached_forward_cost_seconds": 38.786261,
+        "recommended_uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+        "recursive": true,
+        "release": "strict_structured_retrieval_audit",
+        "release_adapter_family_status": "promote",
+        "release_candidate_status": "promote",
+        "release_performance_status": "promote",
+        "release_readiness_status": "promote",
+        "release_required_route_baseline_status": "promote",
+        "release_route_status": "promote",
+        "release_runtime_profile": "balanced",
+        "release_runtime_profile_applied_defaults": {
+          "inside_trigger_budget_policy": "quality_balanced",
+          "max_inside_generation_seconds_ratio": 0.8,
+          "max_inside_sample_count_ratio": 0.6
+        },
+        "release_runtime_profile_defaults": {
+          "inside_trigger_budget_policy": "quality_balanced",
+          "max_inside_generation_seconds_ratio": 0.8,
+          "max_inside_sample_count_ratio": 0.6,
+          "max_mean_attempted_route_count": 1.5,
+          "max_retrieval_use_rate": 0.5
+        },
+        "required_adapter_routes": [
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "required_route_baseline_manifests": [
+          "artifacts/smollm2_l80_retrieval_structured_qa_route/retrieval-route-artifact-manifest.json"
+        ],
+        "required_route_baseline_records": [
+          "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5"
+        ],
+        "required_route_baseline_registry": "artifacts/staged-route-registry.json",
+        "required_route_baseline_routes": [
+          "retrieval_structured_qa"
+        ],
+        "required_route_budget_policy": {
+          "required_route_max_false_supported_rate": 0.01,
+          "required_route_max_max_duration_seconds": null,
+          "required_route_max_mean_attempted_route_count": 2.1,
+          "required_route_max_mean_duration_seconds": null,
+          "required_route_max_p99_duration_seconds": null,
+          "required_route_max_retrieval_hit_count": 450.0,
+          "required_route_max_retrieval_use_rate": 1.0,
+          "required_route_max_runtime_total_seconds": 8.0,
+          "required_route_max_verified_false_alarm": 0.01,
+          "required_route_min_claims_cache_hit_rate": null,
+          "required_route_min_decision_accuracy": 0.99,
+          "required_route_min_false_refuted_rate": 1.0,
+          "required_route_min_selected": 200,
+          "required_route_min_verified_detection": 1.0,
+          "required_route_min_verifier_trace_cache_hit_rate": null
+        },
+        "route_manifest": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+        "runner": "run_release_candidate_registry_workflow",
+        "verification_report": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest_verification.json",
+        "verified": true,
+        "workflow": "run_release_candidate_registry_workflow"
+      },
+      "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate",
+      "path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest.json",
+      "version": "1.4"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate",
+        "manifest_path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate-verification",
+      "path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest_verification.json",
+      "version": "1.4"
     }
   ],
   "schema_version": 1

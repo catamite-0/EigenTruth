@@ -119,7 +119,7 @@ python examples/calibrated_control_demo.py \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_registry_workflow.json
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5

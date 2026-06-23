@@ -772,7 +772,7 @@ as `sample_count_ratio_to_reference` and
 `inside_generation_seconds_ratio_to_reference`.
 
 The current strict structured-retrieval-audit release record is
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`.
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.4`.
 It keeps the same readiness, staged structured-QA product route, performance
 evidence, and retrieval-inclusive promoted adapter-family matrix, then adds
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a required
@@ -780,8 +780,8 @@ retrieval-structured-QA audit gate. The final manifest fingerprints the
 release-candidate report, readiness manifest, product route manifest,
 performance manifest, adapter-family matrix report, and required retrieval audit
 manifest. Required adapter routes are `structured_state`, `state_transition`,
-and `retrieval_groundedness`, all promoted in
-`artifacts/smollm2_l20_adapter_family_retrieval/adapter-family-matrix.json`.
+`retrieval_groundedness`, and `retrieval_structured_qa`, all promoted in
+`artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json`.
 The required retrieval audit route promotes with selected `238`, decision
 accuracy `0.992`, false-supported rate `0.000`, false-refuted rate `1.000`,
 runtime about `1.05s`, and `410` retrieval hits under a `450` hit budget. The
