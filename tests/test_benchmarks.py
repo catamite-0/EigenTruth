@@ -5400,6 +5400,13 @@ def test_run_inside_sampling_profile_writes_comparison_report(tmp_path, monkeypa
     assert manifest["artifacts"]["profiles.adaptive_selfcheck"]["sha256"]
     assert manifest["artifacts"]["score_dumps.fixed"]["sha256"]
 
+    calls.clear()
+    reused = module.run_inside_sampling_profile(config, clean=False, dry_run=False, skip_existing=True)
+
+    assert calls == []
+    assert reused["reused_runs"] == ("fixed", "adaptive", "adaptive_selfcheck")
+    assert reused["sample_efficiency_gate"]["passed"] is True
+
 
 def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
@@ -7492,6 +7499,64 @@ def test_eval_truthfulqa_adaptive_inside_can_stop_generation_on_selfcheck_bounds
     assert requested_samples == [2]
     assert diagnostics.n_samples == 2
     assert diagnostics.adaptive_rounds == 1
+    assert diagnostics.stopped_early is True
+    assert diagnostics.stop_reason == "selfcheck_refute_threshold_guaranteed"
+
+
+def test_eval_truthfulqa_adaptive_inside_selfcheck_ignores_empty_samples(monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    requested_samples = []
+    sample_rounds = iter([
+        ("", "AlphaCorp has 12 offices in Europe."),
+        ("AlphaCorp has 12 offices in Europe.",),
+    ])
+
+    def fake_response_diagnostics_batch(*_args, **kwargs):
+        n_samples = int(kwargs["n_samples"])
+        requested_samples.append(n_samples)
+        sample_texts = next(sample_rounds)
+        assert len(sample_texts) == n_samples
+        return [
+            module.SampledResponseDiagnostics(
+                embeddings_by_layer={-1: torch.ones(n_samples, 3)},
+                sample_texts=sample_texts,
+            )
+        ]
+
+    monkeypatch.setattr(module, "sampled_response_diagnostics_batch", fake_response_diagnostics_batch)
+
+    diagnostics = module.sampled_inside_adaptive_diagnostics_batch(
+        None,
+        None,
+        [module.Statement("", "AlphaCorp has 10 offices in Europe.", 1)],
+        [-1],
+        torch.device("cpu"),
+        64,
+        min_samples=2,
+        max_samples=5,
+        sample_step=1,
+        stability_delta=0.0,
+        target_layer=-1,
+        max_new_tokens=2,
+        temperature=0.7,
+        top_p=0.9,
+        pooling="last",
+        seed=0,
+        eigenscore_alpha=1e-3,
+        embedding_similarity_threshold=0.95,
+        selfcheck_early_stop=True,
+        selfcheck_min_overlap=0.55,
+        selfcheck_refute_threshold=0.40,
+        selfcheck_support_threshold=0.80,
+    )[0]
+
+    assert diagnostics is not None
+    assert requested_samples == [2, 1]
+    assert diagnostics.sample_texts == (
+        "",
+        "AlphaCorp has 12 offices in Europe.",
+        "AlphaCorp has 12 offices in Europe.",
+    )
     assert diagnostics.stopped_early is True
     assert diagnostics.stop_reason == "selfcheck_refute_threshold_guaranteed"
 

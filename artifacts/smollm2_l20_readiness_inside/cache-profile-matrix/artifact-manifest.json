@@ -1,0 +1,56 @@
+{
+  "artifacts": {
+    "cells.layer_m12_batch_8_capture_outputs.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+      "sha256": "eb7f79f250145dc79bbb4144af5d09a625d7b2ee164d09fdbe04339ec39c852e",
+      "size_bytes": 3412
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix-report.json",
+      "sha256": "d93e6eabbbd55292342cc53413a5cdb3c57e6cad21bed9e0642c3a47d8447016",
+      "size_bytes": 12805
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      8
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      0
+    ],
+    "max_batch_tokens": 0,
+    "max_workers": 1,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "runner": "run_cache_profile_matrix",
+    "shared_cache_dir": null,
+    "wall_clock_seconds": 162.65887685900088
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

@@ -217,7 +217,9 @@ The workflow writes per-run `result-*.json` and `profile-*.json` files plus
 `inside-sampling-profile-comparison.json`, whose leaderboard reports total
 generated samples, `inside_generation` seconds, ratio-to-fixed baselines, and
 the recommended lowest-sample configuration. `--dry-run` prints the exact
-commands without loading a model.
+commands without loading a model. Use `--skip-existing` after an interrupted
+profile to reuse completed per-run result/profile files and only run missing
+variants before rebuilding the comparison report and manifest.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the
@@ -1228,6 +1230,97 @@ current local smoke artifact, `adaptive_selfcheck` is selected with generated
 sample ratio `0.667` and `inside_generation` ratio `0.716` versus fixed
 sampling. This remains a tiny offline plumbing artifact; use representative
 Qwen/SmolLM2 profile artifacts before making model-specific deployment claims.
+
+SmolLM2 real-model l20 release candidate:
+
+```bash
+HF_HUB_DISABLE_XET=1 python benchmarks/run_inside_sampling_profile.py \
+  --output-dir artifacts/smollm2_l20_inside_sampling \
+  --model HuggingFaceTB/SmolLM2-135M-Instruct \
+  --dtype float32 \
+  --layer -12 \
+  --limit 20 \
+  --manifold-questions 40 \
+  --batch-size 8 \
+  --max-length 64 \
+  --hidden-state-capture outputs \
+  --inside-samples 3 \
+  --inside-min-samples 2 \
+  --inside-sample-step 1 \
+  --inside-max-new-tokens 4 \
+  --inside-batch-size 1 \
+  --adaptive-max-sample-ratio 1.0 \
+  --adaptive-selfcheck-max-sample-ratio 1.0 \
+  --python .venv/bin/python \
+  --real-truthfulqa \
+  --skip-existing \
+  --fail-on-regression
+
+HF_HUB_DISABLE_XET=1 python benchmarks/run_adapter_readiness_registry_workflow.py \
+  --output-dir artifacts/smollm2_l20_readiness_inside \
+  --registry artifacts/local-readiness-registry.json \
+  --name smollm2-l20-readiness-inside \
+  --version 0.6 \
+  --json artifacts/smollm2_l20_readiness_inside_registry_workflow.json \
+  --verification-report artifacts/smollm2_l20_readiness_inside_manifest_verification.json \
+  --inside-sampling-report artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json \
+  --real-truthfulqa \
+  --limit 20 \
+  --manifold-questions 40 \
+  --alpha 0.2 \
+  --n-records 8 \
+  --model HuggingFaceTB/SmolLM2-135M-Instruct \
+  --layers -12 \
+  --batch-sizes 8 \
+  --hidden-state-captures outputs \
+  --max-length 64 \
+  --eval-reps-cache-shard-size 64 \
+  --cached-max-total-ratio 1.10 \
+  --cache-only-max-total-ratio 0.35 \
+  --progress-every 50 \
+  --python .venv/bin/python \
+  --performance-clean \
+  --compact-json \
+  --fail-on-blocked
+
+python benchmarks/run_release_candidate_registry_workflow.py \
+  --readiness-registry artifacts/local-readiness-registry.json \
+  --route-registry artifacts/staged-route-registry.json \
+  --release-registry artifacts/local-release-registry.json \
+  --name smollm2-l20-inside-staged-qa-release-candidate \
+  --version 0.6 \
+  --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside:0.6 \
+  --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
+  --min-best-quality-auroc 0.65 \
+  --max-uncached-forward-seconds 45.0 \
+  --max-cache-only-seconds 1.0 \
+  --max-inside-sample-count-ratio 0.95 \
+  --max-inside-generation-seconds-ratio 1.05 \
+  --min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --max-p99-duration-seconds 0.01 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --json artifacts/smollm2_l20_inside_staged_release_candidate_registry_workflow.json \
+  --release-report-json artifacts/smollm2_l20_inside_staged_release_candidate_comparison.json \
+  --artifact-manifest artifacts/smollm2_l20_inside_staged_release_candidate_manifest.json \
+  --verification-report artifacts/smollm2_l20_inside_staged_release_candidate_manifest_verification.json \
+  --metadata evidence=smollm2_l20_readiness_inside_plus_truthfulqa_l80_structured_qa_staged \
+  --fail-on-blocked
+```
+
+This records `benchmark_manifest:smollm2-l20-readiness-inside:0.6` and
+`benchmark_manifest:smollm2-l20-inside-staged-qa-release-candidate:0.6`. The
+readiness run promotes `truth_proj` AUROC `0.682`, uncached forced-answer cost
+`38.786s`, and cache-only replay cost `0.339s`. The full-sample INSIDE profile
+selects `adaptive_selfcheck`, but only reduces generated samples to `0.937` of
+fixed sampling and leaves `inside_generation` at `1.001` of fixed. Treat this as
+evidence that real-model INSIDE should be threshold/top-fraction triggered
+instead of run on every statement by default.
 
 ## `build_truthfulqa_corpus.py`
 

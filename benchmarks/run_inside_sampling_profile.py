@@ -219,6 +219,7 @@ def run_inside_sampling_profile(
     *,
     clean: bool = False,
     dry_run: bool = False,
+    skip_existing: bool = False,
 ) -> dict[str, Any]:
     """Run the sampling profile workflow and write comparison artifacts."""
     if clean and config.output_dir.exists():
@@ -227,9 +228,13 @@ def run_inside_sampling_profile(
 
     commands = build_inside_sampling_commands(config)
     command_log: dict[str, list[str]] = {}
+    reused_runs = []
     for name, command in commands.items():
         command_log[name] = command
         if not dry_run:
+            if skip_existing and _run_outputs_exist(config, name):
+                reused_runs.append(name)
+                continue
             subprocess.run(command, cwd=REPO_ROOT, check=True)
 
     if dry_run:
@@ -269,6 +274,7 @@ def run_inside_sampling_profile(
             "comparison_report": str(config.comparison_report),
             "sample_efficiency_gate": comparison["sample_efficiency_gate"],
             "recommendation": comparison["recommendation"],
+            "reused_runs": tuple(reused_runs),
         }
 
     command_log_path = config.output_dir / "inside-sampling-profile-commands.json"
@@ -279,6 +285,13 @@ def run_inside_sampling_profile(
     payload["artifact_manifest"] = str(config.artifact_manifest)
     payload["artifact_manifest_summary"] = manifest["summary"]
     return payload
+
+
+def _run_outputs_exist(config: InsideSamplingProfileConfig, name: str) -> bool:
+    required = [config.result_path(name), config.profile_path(name)]
+    if config.dump_scores or config.dump_inside_samples:
+        required.append(config.score_dump_path(name))
+    return all(path.is_file() for path in required)
 
 
 def build_inside_sampling_comparison(
@@ -552,6 +565,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         _config_from_args(args),
         clean=bool(args.clean),
         dry_run=bool(args.dry_run),
+        skip_existing=bool(args.skip_existing),
     )
     print(json.dumps(payload, indent=2, sort_keys=True))
     gate = payload.get("sample_efficiency_gate")
@@ -605,6 +619,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--runs", default="fixed,adaptive,adaptive_selfcheck",
                         help="comma-list of runs in canonical order: fixed,adaptive,adaptive_selfcheck")
     parser.add_argument("--clean", action="store_true")
+    parser.add_argument("--skip-existing", action="store_true",
+                        help="reuse existing per-run result/profile outputs and only run missing runs")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--fail-on-regression", action="store_true",
                         help="exit non-zero when the generated sample efficiency gate fails")

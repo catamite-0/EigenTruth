@@ -1,0 +1,93 @@
+{
+  "artifacts": {
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-commands.json",
+      "sha256": "745d52a575785d0b0bdf954e4df1e511fb9e22caf87f51cb0a2a429069253939",
+      "size_bytes": 3211
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-comparison.json",
+      "sha256": "f56a0991dc3502dea6ed741f3f6c8b77bfd42fe573139aad2c657019ad28b824",
+      "size_bytes": 4813
+    },
+    "profiles.adaptive": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-adaptive.json",
+      "sha256": "1985aeeccd4a3b7bb4d48c9f0dbbe1bb30945b2873e692d1390a61f285cd3cb3",
+      "size_bytes": 1809
+    },
+    "profiles.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-adaptive_selfcheck.json",
+      "sha256": "f53ae49e80711a830a9d266a0c26863ff922169aff7d4084ea9ef14f2d9573d7",
+      "size_bytes": 1812
+    },
+    "profiles.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-fixed.json",
+      "sha256": "96d7e8fdfbb386d931eaf62e57288452ea57b5a3f220fc49e377cb51b63343a8",
+      "size_bytes": 1813
+    },
+    "results.adaptive": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-adaptive.json",
+      "sha256": "dbb9e4a1563144f4fe02604a29792fcf85d6e3ae078e7cc3c0d68236b5a7bffb",
+      "size_bytes": 18743
+    },
+    "results.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-adaptive_selfcheck.json",
+      "sha256": "2e6449b6227f9488be52dfe283ea75fc901a39a70eccff4a645e2ba0a2801528",
+      "size_bytes": 18829
+    },
+    "results.fixed": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-fixed.json",
+      "sha256": "25f90ebccfd12591a9edbe08218d722573fbbfcb43240ae31d485674102a9860",
+      "size_bytes": 18981
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "dtype": "float32",
+    "inside_min_samples": 2,
+    "inside_sample_step": 1,
+    "inside_samples": 3,
+    "inside_stability_delta": 0.05,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "run_names": [
+      "fixed",
+      "adaptive",
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_sampling_profile"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}

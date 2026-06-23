@@ -298,6 +298,189 @@
       "name": "tiny-local-readiness-inside-verification",
       "path": "artifacts/tiny_local_readiness_inside_manifest_verification.json",
       "version": "0.5"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "adapter_family_status": "promote",
+        "checked": 7,
+        "failure_count": 0,
+        "manifest_metadata": {
+          "adapter_family_status": "promote",
+          "batch_sizes": [
+            8
+          ],
+          "dtype": "float32",
+          "hidden_state_captures": [
+            "outputs"
+          ],
+          "inside_sampling_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+          "layers": [
+            -12
+          ],
+          "matrix_mode": "triplet",
+          "max_batch_token_budgets": null,
+          "max_batch_tokens": 0,
+          "max_runtime_total_seconds": null,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "offline": false,
+          "performance_dry_run": false,
+          "performance_max_workers": 1,
+          "performance_status": "promote",
+          "performance_wall_clock_seconds": 162.65887685900088,
+          "prefix_kv_cache": false,
+          "prefix_kv_cache_modes": null,
+          "readiness_status": "promote",
+          "recommended_batch_size": 8,
+          "recommended_best_quality_auroc": 0.6823529411764706,
+          "recommended_best_quality_signal": "truth_proj",
+          "recommended_hidden_state_capture": "outputs",
+          "recommended_inside_sampling": {
+            "adaptive": true,
+            "inside_batch_size": 1,
+            "inside_embedding_threshold": 0.9,
+            "inside_generation_seconds": 468.009417,
+            "inside_generation_seconds_ratio_to_baseline": 1.0009554183876417,
+            "inside_max_new_tokens": 4,
+            "inside_min_samples": 2,
+            "inside_pooling": "last",
+            "inside_sample_step": 1,
+            "inside_samples": 3,
+            "inside_selfcheck_min_overlap": 0.65,
+            "inside_selfcheck_refute_threshold": 0.5,
+            "inside_selfcheck_support_threshold": 0.6,
+            "inside_stability_delta": 0.05,
+            "inside_temperature": 0.7,
+            "inside_top_p": 0.9,
+            "inside_trigger_signal": null,
+            "inside_trigger_threshold": null,
+            "inside_trigger_top_fraction": null,
+            "mode": "all",
+            "recommended_run": "adaptive_selfcheck",
+            "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive_selfcheck.json",
+            "sample_count_ratio_to_baseline": 0.9372294372294372,
+            "selfcheck_early_stop": true,
+            "stop_reason_counts": {
+              "selfcheck_thresholds_unreachable": 29
+            },
+            "total_generated_samples": 433
+          },
+          "recommended_layer": -12,
+          "recommended_max_batch_tokens": 0,
+          "recommended_max_workers": 1,
+          "recommended_performance_cell": "layer_m12_batch_8_capture_outputs",
+          "recommended_prefix_kv_cache": false,
+          "recommended_quality_signals": {
+            "disp_euclid": 0.45217391304347826,
+            "disp_hse": 0.4235294117647059,
+            "eigenscore": 0.4792838874680307,
+            "maha_last": 0.5914748508098892,
+            "nll_answer": 0.4584825234441603,
+            "subspace_resid": 0.5087809036658142,
+            "truth_proj": 0.6823529411764706
+          },
+          "recommended_route": "structured_qa",
+          "runner": "run_adapter_readiness_workflow",
+          "runtime_budget_enabled": false,
+          "runtime_budget_failures": [],
+          "runtime_budget_passed": true,
+          "runtime_budget_policy": {
+            "max_retrieval_hit_count": null,
+            "max_total_seconds": null,
+            "min_cache_hit_rate": null,
+            "min_claims_cache_hit_rate": null,
+            "min_verifier_trace_cache_hit_rate": null
+          },
+          "runtime_recommendation_status": "promote",
+          "wall_clock_seconds": 162.6973872500239
+        },
+        "manifest_summary": {
+          "artifact_count": 7,
+          "directory_count": 0,
+          "file_count": 7,
+          "missing_count": 0
+        },
+        "nested_count": 1,
+        "performance_status": "promote",
+        "readiness_status": "promote",
+        "recommended_batch_size": 8,
+        "recommended_best_quality_auroc": 0.6823529411764706,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_hidden_state_capture": "outputs",
+        "recommended_inside_generation_seconds": 468.009417,
+        "recommended_inside_generation_seconds_ratio_to_baseline": 1.0009554183876417,
+        "recommended_inside_sampling": {
+          "adaptive": true,
+          "inside_batch_size": 1,
+          "inside_embedding_threshold": 0.9,
+          "inside_generation_seconds": 468.009417,
+          "inside_generation_seconds_ratio_to_baseline": 1.0009554183876417,
+          "inside_max_new_tokens": 4,
+          "inside_min_samples": 2,
+          "inside_pooling": "last",
+          "inside_sample_step": 1,
+          "inside_samples": 3,
+          "inside_selfcheck_min_overlap": 0.65,
+          "inside_selfcheck_refute_threshold": 0.5,
+          "inside_selfcheck_support_threshold": 0.6,
+          "inside_stability_delta": 0.05,
+          "inside_temperature": 0.7,
+          "inside_top_p": 0.9,
+          "inside_trigger_signal": null,
+          "inside_trigger_threshold": null,
+          "inside_trigger_top_fraction": null,
+          "mode": "all",
+          "recommended_run": "adaptive_selfcheck",
+          "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive_selfcheck.json",
+          "sample_count_ratio_to_baseline": 0.9372294372294372,
+          "selfcheck_early_stop": true,
+          "stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 29
+          },
+          "total_generated_samples": 433
+        },
+        "recommended_inside_sampling_run": "adaptive_selfcheck",
+        "recommended_inside_sampling_sample_count_ratio_to_baseline": 0.9372294372294372,
+        "recommended_inside_sampling_stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 29
+        },
+        "recommended_inside_sampling_total_generated_samples": 433,
+        "recommended_layer": -12,
+        "recommended_max_batch_tokens": 0,
+        "recommended_max_workers": 1,
+        "recommended_performance_cell": "layer_m12_batch_8_capture_outputs",
+        "recommended_prefix_kv_cache": false,
+        "recommended_quality_signals": {
+          "disp_euclid": 0.45217391304347826,
+          "disp_hse": 0.4235294117647059,
+          "eigenscore": 0.4792838874680307,
+          "maha_last": 0.5914748508098892,
+          "nll_answer": 0.4584825234441603,
+          "subspace_resid": 0.5087809036658142,
+          "truth_proj": 0.6823529411764706
+        },
+        "recommended_route": "structured_qa",
+        "recursive": true,
+        "runtime_recommendation_status": "promote",
+        "verification_report": "artifacts/smollm2_l20_readiness_inside_manifest_verification.json",
+        "verified": true,
+        "workflow": "run_adapter_readiness_registry_workflow"
+      },
+      "name": "smollm2-l20-readiness-inside",
+      "path": "artifacts/smollm2_l20_readiness_inside/artifact-manifest.json",
+      "version": "0.6"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l20-readiness-inside",
+        "manifest_path": "artifacts/smollm2_l20_readiness_inside/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l20-readiness-inside-verification",
+      "path": "artifacts/smollm2_l20_readiness_inside_manifest_verification.json",
+      "version": "0.6"
     }
   ],
   "schema_version": 1

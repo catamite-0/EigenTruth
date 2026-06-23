@@ -1,0 +1,157 @@
+{
+  "artifacts": {
+    "adapter_family_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family-matrix.json",
+      "sha256": "ed8c238363e82e5460eb4481063773329da18360bdc24fec6db0fb8eee8cb6a4",
+      "size_bytes": 23202
+    },
+    "adapter_family_route_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family/route-family-comparison.json",
+      "sha256": "4a5f32240d770f295209fdd4656cdc9baba84126bae006f7535829d1c24ac3e4",
+      "size_bytes": 19956
+    },
+    "inside_sampling_profile_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+      "sha256": "f56a0991dc3502dea6ed741f3f6c8b77bfd42fe573139aad2c657019ad28b824",
+      "size_bytes": 4813
+    },
+    "performance_matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix/artifact-manifest.json",
+      "sha256": "bc86ef79176286c21eff478dc8b4f51f3ee30f916f7ba79fe84263bb3f441300",
+      "size_bytes": 1362
+    },
+    "performance_matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix/cache-profile-matrix-report.json",
+      "sha256": "d93e6eabbbd55292342cc53413a5cdb3c57e6cad21bed9e0642c3a47d8447016",
+      "size_bytes": 12805
+    },
+    "readiness_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-readiness-report.json",
+      "sha256": "4cccf5afa200759905c5f6b6653ea5a7b027a2a9bd4cf02e80e5a4271396abcf",
+      "size_bytes": 38199
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "4e9cfac50a0b65e525928d8fd0bb5b9fcedddbae26bbb1537770ddbde31dafe7",
+      "size_bytes": 4222
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_family_status": "promote",
+    "batch_sizes": [
+      8
+    ],
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": null,
+    "max_batch_tokens": 0,
+    "max_runtime_total_seconds": null,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "performance_dry_run": false,
+    "performance_max_workers": 1,
+    "performance_status": "promote",
+    "performance_wall_clock_seconds": 162.65887685900088,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": null,
+    "readiness_status": "promote",
+    "recommended_batch_size": 8,
+    "recommended_best_quality_auroc": 0.6823529411764706,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_hidden_state_capture": "outputs",
+    "recommended_inside_sampling": {
+      "adaptive": true,
+      "inside_batch_size": 1,
+      "inside_embedding_threshold": 0.9,
+      "inside_generation_seconds": 468.009417,
+      "inside_generation_seconds_ratio_to_baseline": 1.0009554183876417,
+      "inside_max_new_tokens": 4,
+      "inside_min_samples": 2,
+      "inside_pooling": "last",
+      "inside_sample_step": 1,
+      "inside_samples": 3,
+      "inside_selfcheck_min_overlap": 0.65,
+      "inside_selfcheck_refute_threshold": 0.5,
+      "inside_selfcheck_support_threshold": 0.6,
+      "inside_stability_delta": 0.05,
+      "inside_temperature": 0.7,
+      "inside_top_p": 0.9,
+      "inside_trigger_signal": null,
+      "inside_trigger_threshold": null,
+      "inside_trigger_top_fraction": null,
+      "mode": "all",
+      "recommended_run": "adaptive_selfcheck",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive_selfcheck.json",
+      "sample_count_ratio_to_baseline": 0.9372294372294372,
+      "selfcheck_early_stop": true,
+      "stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 29
+      },
+      "total_generated_samples": 433
+    },
+    "recommended_layer": -12,
+    "recommended_max_batch_tokens": 0,
+    "recommended_max_workers": 1,
+    "recommended_performance_cell": "layer_m12_batch_8_capture_outputs",
+    "recommended_prefix_kv_cache": false,
+    "recommended_quality_signals": {
+      "disp_euclid": 0.45217391304347826,
+      "disp_hse": 0.4235294117647059,
+      "eigenscore": 0.4792838874680307,
+      "maha_last": 0.5914748508098892,
+      "nll_answer": 0.4584825234441603,
+      "subspace_resid": 0.5087809036658142,
+      "truth_proj": 0.6823529411764706
+    },
+    "recommended_route": "structured_qa",
+    "runner": "run_adapter_readiness_workflow",
+    "runtime_budget_enabled": false,
+    "runtime_budget_failures": [],
+    "runtime_budget_passed": true,
+    "runtime_budget_policy": {
+      "max_retrieval_hit_count": null,
+      "max_total_seconds": null,
+      "min_cache_hit_rate": null,
+      "min_claims_cache_hit_rate": null,
+      "min_verifier_trace_cache_hit_rate": null
+    },
+    "runtime_recommendation_status": "promote",
+    "wall_clock_seconds": 162.6973872500239
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

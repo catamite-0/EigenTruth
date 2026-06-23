@@ -2366,6 +2366,9 @@ def _inside_selfcheck_stop_reason(
 ) -> str | None:
     if len(sample_texts) >= total_samples:
         return None
+    valid_sample_texts = tuple(text for text in sample_texts if str(text).strip())
+    if len(valid_sample_texts) < 2:
+        return None
     status = SelfConsistencyVerifier(
         min_samples=2,
         min_overlap=min_overlap,
@@ -2373,7 +2376,7 @@ def _inside_selfcheck_stop_reason(
         refute_threshold=refute_threshold,
     ).sample_budget_status(
         _selfcheck_claim_for_statement(stmt),
-        tuple(sample_texts),
+        valid_sample_texts,
         total_samples=total_samples,
     )
     reason = status.get("reason") if status.get("can_stop") else None

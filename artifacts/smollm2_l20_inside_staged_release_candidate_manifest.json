@@ -1,0 +1,92 @@
+{
+  "artifacts": {
+    "readiness_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2_l20_readiness_inside/artifact-manifest.json",
+      "sha256": "507c97c42c4656b08b9934974e36a990802bef04507c58689496348c7b9c5bce",
+      "size_bytes": 5341
+    },
+    "release_candidate_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2_l20_inside_staged_release_candidate_comparison.json",
+      "sha256": "74c33fa4de899f94d4945e0cb2692a95ef941b2d68a1d804c8636c49c5935f6a",
+      "size_bytes": 19515
+    },
+    "route_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+      "sha256": "9a070cb3ecc3bde08f2c455f38b0c0f5d7acbe81b39bf9d0abd6de28a7050ea8",
+      "size_bytes": 2217
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "readiness_manifest": "artifacts/smollm2_l20_readiness_inside/artifact-manifest.json",
+    "recommended_batch_size": 8,
+    "recommended_best_quality_auroc": 0.6823529411764706,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cache_only_total_seconds": 0.339105,
+    "recommended_hidden_state_capture": "outputs",
+    "recommended_inside_generation_seconds": 468.009417,
+    "recommended_inside_generation_seconds_ratio_to_baseline": 1.0009554183876417,
+    "recommended_inside_sampling_run": "adaptive_selfcheck",
+    "recommended_inside_sampling_sample_count_ratio_to_baseline": 0.9372294372294372,
+    "recommended_inside_sampling_stop_reason_counts": {
+      "selfcheck_thresholds_unreachable": 29
+    },
+    "recommended_inside_sampling_total_generated_samples": 433,
+    "recommended_layer": -12,
+    "recommended_max_batch_tokens": 0,
+    "recommended_max_workers": 1,
+    "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "recommended_prefix_kv_cache": false,
+    "recommended_quality_signals": {
+      "disp_euclid": 0.45217391304347826,
+      "disp_hse": 0.4235294117647059,
+      "eigenscore": 0.4792838874680307,
+      "maha_last": 0.5914748508098892,
+      "nll_answer": 0.4584825234441603,
+      "subspace_resid": 0.5087809036658142,
+      "truth_proj": 0.6823529411764706
+    },
+    "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside:0.6",
+    "recommended_route": "structured_qa",
+    "recommended_route_claims_cache_hit_rate": null,
+    "recommended_route_decision_accuracy": 1.0,
+    "recommended_route_false_refuted_rate": 1.0,
+    "recommended_route_false_supported_rate": 0.0,
+    "recommended_route_max_duration_seconds": 0.0007935770554468036,
+    "recommended_route_mean_attempted_route_count": 1.0,
+    "recommended_route_mean_duration_seconds": 0.00010692605227675466,
+    "recommended_route_p99_duration_seconds": 0.0001987196248956039,
+    "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+    "recommended_route_retrieval_use_rate": 0.0,
+    "recommended_route_runtime_retrieval_hit_count": null,
+    "recommended_route_runtime_total_seconds": null,
+    "recommended_route_selected": 210,
+    "recommended_route_verified_detection": 1.0,
+    "recommended_route_verified_false_alarm": 0.0,
+    "recommended_route_verifier_trace_cache_hit_rate": null,
+    "recommended_uncached_forward_cost_seconds": 38.786261,
+    "recommended_uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+    "release_candidate_status": "promote",
+    "release_readiness_status": "promote",
+    "release_route_status": "promote",
+    "route_manifest": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+    "runner": "run_release_candidate_registry_workflow",
+    "workflow": "release_candidate_comparison"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "baseline": "fixed",
+  "runs": {
+    "adaptive_selfcheck": {
+      "name": "adaptive_selfcheck",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive_selfcheck.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-adaptive_selfcheck.json",
+      "adaptive": true,
+      "selfcheck_early_stop": true,
+      "sampled": 154,
+      "total_generated_samples": 433,
+      "mean_samples_per_record": 2.811688311688312,
+      "mean_samples_per_sampled_record": 2.811688311688312,
+      "stopped_early": 29,
+      "stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 29
+      },
+      "total_seconds": 604.105045,
+      "inside_generation_seconds": 468.009417,
+      "sample_count_ratio_to_baseline": 0.9372294372294372,
+      "inside_generation_seconds_ratio_to_baseline": 1.0009554183876417
+    },
+    "fixed": {
+      "name": "fixed",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-fixed.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-fixed.json",
+      "adaptive": false,
+      "selfcheck_early_stop": false,
+      "sampled": 154,
+      "total_generated_samples": 462,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 604.800806,
+      "inside_generation_seconds": 467.562699,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    },
+    "adaptive": {
+      "name": "adaptive",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-adaptive.json",
+      "adaptive": true,
+      "selfcheck_early_stop": false,
+      "sampled": 154,
+      "total_generated_samples": 462,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 645.359939,
+      "inside_generation_seconds": 508.927787,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0884696065115322
+    }
+  },
+  "leaderboard": [
+    {
+      "name": "adaptive_selfcheck",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive_selfcheck.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-adaptive_selfcheck.json",
+      "adaptive": true,
+      "selfcheck_early_stop": true,
+      "sampled": 154,
+      "total_generated_samples": 433,
+      "mean_samples_per_record": 2.811688311688312,
+      "mean_samples_per_sampled_record": 2.811688311688312,
+      "stopped_early": 29,
+      "stop_reason_counts": {
+        "selfcheck_thresholds_unreachable": 29
+      },
+      "total_seconds": 604.105045,
+      "inside_generation_seconds": 468.009417,
+      "sample_count_ratio_to_baseline": 0.9372294372294372,
+      "inside_generation_seconds_ratio_to_baseline": 1.0009554183876417
+    },
+    {
+      "name": "fixed",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-fixed.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-fixed.json",
+      "adaptive": false,
+      "selfcheck_early_stop": false,
+      "sampled": 154,
+      "total_generated_samples": 462,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 604.800806,
+      "inside_generation_seconds": 467.562699,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0
+    },
+    {
+      "name": "adaptive",
+      "result_path": "artifacts/smollm2_l20_inside_sampling/result-adaptive.json",
+      "profile_path": "artifacts/smollm2_l20_inside_sampling/profile-adaptive.json",
+      "adaptive": true,
+      "selfcheck_early_stop": false,
+      "sampled": 154,
+      "total_generated_samples": 462,
+      "mean_samples_per_record": 3.0,
+      "mean_samples_per_sampled_record": 3.0,
+      "stopped_early": 0,
+      "stop_reason_counts": {},
+      "total_seconds": 645.359939,
+      "inside_generation_seconds": 508.927787,
+      "sample_count_ratio_to_baseline": 1.0,
+      "inside_generation_seconds_ratio_to_baseline": 1.0884696065115322
+    }
+  ],
+  "sample_efficiency_gate": {
+    "passed": true,
+    "baseline": "fixed",
+    "checked_runs": [
+      "adaptive_selfcheck",
+      "adaptive"
+    ],
+    "failures": [],
+    "max_sample_ratios": {
+      "adaptive": 1.0,
+      "adaptive_selfcheck": 1.0
+    },
+    "max_inside_generation_seconds_ratio": null
+  },
+  "recommendation": {
+    "recommended_run": "adaptive_selfcheck",
+    "reason": "lowest_total_generated_samples_then_inside_generation_seconds"
+  }
+}

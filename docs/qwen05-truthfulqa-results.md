@@ -646,6 +646,25 @@ fixed sampling. It is still a tiny offline plumbing artifact; the Qwen-specific
 next step is to replace the readiness half with representative Qwen or SmolLM2
 same-machine profile artifacts.
 
+That replacement now exists for SmolLM2 at l20 scale:
+
+- INSIDE profile: `artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json`
+- Readiness record: `benchmark_manifest:smollm2-l20-readiness-inside:0.6`
+- Release record: `benchmark_manifest:smollm2-l20-inside-staged-qa-release-candidate:0.6`
+- Release comparison: `artifacts/smollm2_l20_inside_staged_release_candidate_comparison.json`
+- Release manifest: `artifacts/smollm2_l20_inside_staged_release_candidate_manifest.json`
+
+The 0.6 comparison promotes with model
+`HuggingFaceTB/SmolLM2-135M-Instruct`, layer `-12`, batch size `8`,
+`truth_proj` AUROC 0.682, uncached forced-answer cost 38.786 seconds,
+cache-only replay cost 0.339 seconds, and route `structured_qa` from the
+TruthfulQA l80 staged route baseline. Full-sample INSIDE is not yet a good
+default: `adaptive_selfcheck` reduces generated samples to 0.937 of fixed
+sampling, but `inside_generation` remains 1.001 of fixed. The next runtime
+optimization should therefore use `--inside-trigger-signal` with a conformal
+threshold or `--inside-trigger-top-fraction`, rather than sampling every
+statement.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -658,12 +677,13 @@ same-machine profile artifacts.
 4. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
    peak memory is the bottleneck; keep the default output capture for final-layer
    or full hidden-state semantics.
-5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
-   `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
-   budget and shared conformal report.
-6. Replace the tiny-gpt2 local release-candidate readiness half, including the
-   INSIDE sampling profile, with a real Qwen or SmolLM2 readiness baseline once
-   representative same-machine profile artifacts are available.
+5. Run triggered real-model INSIDE on the same layer band, using
+   `--inside-trigger-signal truth_proj` with either a conformal threshold or a
+   top-fraction budget, then compare `inside_eigenscore`/semantic entropy versus
+   `truth_proj` under the same release-gate cost report.
+6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
+   if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
+   non-tiny registered readiness/release candidate.
 7. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm

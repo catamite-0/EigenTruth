@@ -1,0 +1,339 @@
+{
+  "dry_run": false,
+  "config": {
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "dtype": "float32",
+    "layers": [
+      -12
+    ],
+    "batch_sizes": [
+      8
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "limit": 20,
+    "manifold_questions": 40,
+    "max_length": 64,
+    "max_batch_tokens": 0,
+    "max_batch_token_budgets": [
+      0
+    ],
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "eval_reps_cache_shard_size": 64,
+    "offline": false,
+    "length_bucketed_batches": true,
+    "shared_cache_dir": null,
+    "shared_cache_root": null,
+    "matrix_mode": "triplet",
+    "max_workers": 1
+  },
+  "cells": [
+    {
+      "id": "layer_m12_batch_8_capture_outputs",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 162.6574627950322,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs",
+        "commands": {
+          "uncached": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "50",
+            "--json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-uncached.json",
+            "--limit",
+            "20",
+            "--manifold-questions",
+            "40",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "64",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "50",
+            "--json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-cached.json",
+            "--limit",
+            "20",
+            "--manifold-questions",
+            "40",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/eval-reps-cache"
+          ],
+          "cache_only": [
+            ".venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "50",
+            "--json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-cache_only.json",
+            "--limit",
+            "20",
+            "--manifold-questions",
+            "40",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/eval-reps-cache"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-uncached.json",
+          "cached": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-uncached.json",
+          "cached": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-cached.json",
+          "cache_only": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/statement-encodings.json",
+          "layer_stats_cache": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.339105,
+          "speedup_vs_baseline": 408.9511832618216
+        },
+        "quality_signals": {
+          "maha_last": 0.5914748508098892,
+          "truth_proj": 0.6823529411764706,
+          "subspace_resid": 0.5087809036658142,
+          "disp_euclid": 0.45217391304347826,
+          "disp_hse": 0.4235294117647059,
+          "eigenscore": 0.4792838874680307,
+          "nll_answer": 0.4584825234441603
+        },
+        "truth_proj_auroc": 0.6823529411764706,
+        "totals": {
+          "uncached": {
+            "total_seconds": 138.677391,
+            "bottleneck": "build_layer_stats",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "forced_answer_forward_seconds": 38.786261,
+            "model_forward_seconds": 124.76671
+          },
+          "cached": {
+            "total_seconds": 13.980508,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 9.919338481834853,
+            "ratio_to_baseline": 0.10081317436956973,
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.339105,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 408.9511832618216,
+            "ratio_to_baseline": 0.0024452796346594086,
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "layer_m12_batch_8_capture_outputs",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 138.677391,
+      "cached_total_seconds": 13.980508,
+      "cache_only_total_seconds": 0.339105,
+      "uncached_forced_answer_forward_seconds": 38.786261,
+      "uncached_model_forward_seconds": 124.76671,
+      "cache_only_speedup_vs_baseline": 408.9511832618216,
+      "truth_proj_auroc": 0.6823529411764706,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds"
+    }
+  ],
+  "leaderboard_sort_metric": "cache_only_total_seconds",
+  "prefix_kv_comparisons": [],
+  "matrix_decision": {
+    "status": "promote",
+    "recommended_cell": "layer_m12_batch_8_capture_outputs",
+    "recommended": {
+      "id": "layer_m12_batch_8_capture_outputs",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 138.677391,
+      "cached_total_seconds": 13.980508,
+      "cache_only_total_seconds": 0.339105,
+      "uncached_forced_answer_forward_seconds": 38.786261,
+      "uncached_model_forward_seconds": 124.76671,
+      "cache_only_speedup_vs_baseline": 408.9511832618216,
+      "truth_proj_auroc": 0.6823529411764706,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds"
+    },
+    "checked_cell_count": 1,
+    "candidate_count": 1,
+    "failed_cells": [],
+    "unchecked_cells": [],
+    "recommendation_metric": "cache_only_total_seconds",
+    "blocking_reasons": []
+  },
+  "execution": {
+    "wall_clock_seconds": 162.65887685900088,
+    "cell_count": 1,
+    "max_workers": 1,
+    "shared_cache_refresh_barrier": false
+  },
+  "report_path": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/cache-profile-matrix-report.json",
+  "artifact_manifest": "artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json"
+}
