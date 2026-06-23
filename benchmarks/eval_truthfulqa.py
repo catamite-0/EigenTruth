@@ -629,6 +629,7 @@ def _inside_diagnostics_cache_key(
             "is_false": int(stmt.is_false),
         },
         "model": args.model,
+        "dtype": getattr(args, "dtype", None),
         "layers": [int(layer) for layer in layers],
         "target_layer": int(args.layer),
         "max_length": int(args.max_length),
@@ -3638,7 +3639,8 @@ def run(args) -> dict:
                 print(f"  {layer:>6}{values}")
 
     payload = {
-        "config": {"model": args.model, "layer": args.layer, "offline": args.offline,
+        "config": {"model": args.model, "dtype": args.dtype, "layer": args.layer,
+                   "offline": args.offline, "max_length": args.max_length,
                    "manifold_n": primary.n, "n_manifold_false": len(manifold_false),
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,
                    "n_pos": n_pos, "n_neg": n_neg, "seed": args.seed,
@@ -3930,6 +3932,10 @@ def main():
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:
         p.error("--inside-samples must be 0 or >=2")
+    if args.inside_temperature <= 0.0:
+        p.error("--inside-temperature must be >0")
+    if not (0.0 < args.inside_top_p <= 1.0):
+        p.error("--inside-top-p must be in (0, 1]")
     if not (-1.0 <= args.inside_embedding_threshold <= 1.0):
         p.error("--inside-embedding-threshold must be in [-1, 1]")
     if args.inside_min_samples < 2:

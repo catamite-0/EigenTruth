@@ -5388,6 +5388,21 @@ def test_run_inside_sampling_profile_rejects_incomplete_trigger_config(tmp_path)
         )
 
 
+def test_run_inside_sampling_profile_rejects_invalid_sampling_distribution_config(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+
+    with pytest.raises(ValueError, match="inside_temperature"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            inside_temperature=0.0,
+        )
+    with pytest.raises(ValueError, match="inside_top_p"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            inside_top_p=0.0,
+        )
+
+
 def test_run_inside_sampling_profile_cli_accepts_explicit_offline(tmp_path, capsys):
     module = importlib.import_module("benchmarks.run_inside_sampling_profile")
 
@@ -7729,6 +7744,8 @@ def test_eval_truthfulqa_cache_only_can_skip_dataset_load_from_eval_reps_metadat
     ))
 
     assert result["config"]["cache_only_restored_eval_statements"] is True
+    assert result["config"]["dtype"] == "float32"
+    assert result["config"]["max_length"] == 32
     assert result["config"]["n_pos"] == 1
     assert result["config"]["n_neg"] == 1
     assert "load_data" not in result["profile"]["phases"]
@@ -7823,6 +7840,7 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
     stmt = module.Statement("Question?", "Answer.", 0)
     args = SimpleNamespace(
         model="tiny-local",
+        dtype="float32",
         layer=-1,
         max_length=64,
         hidden_state_capture="outputs",
@@ -7859,6 +7877,14 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
         adaptive=True,
         selfcheck_early_stop=True,
     )
+    args.dtype = "bfloat16"
+    dtype_key = module._inside_diagnostics_cache_key(
+        stmt,
+        args,
+        layers=(-1,),
+        adaptive=True,
+        selfcheck_early_stop=True,
+    )
     diagnostics = module.SampledInsideDiagnostics(
         eigenscore_by_layer={-1: 0.25},
         semantic_entropy=0.5,
@@ -7873,6 +7899,7 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
     cache = module.InsideDiagnosticsCache(cache_path)
 
     assert same_statement_key == key
+    assert dtype_key != key
     assert cache.get(key) is None
     cache.put(key, diagnostics)
     cache.save()

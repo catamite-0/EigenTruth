@@ -94,9 +94,10 @@ class InsideSamplingProfileConfig:
             raise ValueError("inside_batch_size must be >=1.")
         if int(self.inside_max_new_tokens) < 1:
             raise ValueError("inside_max_new_tokens must be >=1.")
-        if float(self.inside_temperature) < 0.0:
-            raise ValueError("inside_temperature must be non-negative.")
-        _validate_unit_interval(self.inside_top_p, "inside_top_p")
+        if float(self.inside_temperature) <= 0.0:
+            raise ValueError("inside_temperature must be >0.")
+        if not (0.0 < float(self.inside_top_p) <= 1.0):
+            raise ValueError("inside_top_p must be in (0, 1].")
         if int(self.inside_min_samples) < 2:
             raise ValueError("inside_min_samples must be >=2.")
         if int(self.inside_min_samples) > int(self.inside_samples):
