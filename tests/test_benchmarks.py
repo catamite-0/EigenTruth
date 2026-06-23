@@ -9881,6 +9881,57 @@ def test_runtime_profile_selector_replay_writes_trace_detail_sidecar(tmp_path):
     ).passed is True
 
 
+def test_runtime_profile_selector_replay_streams_sidecar_summary(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    output_dir = tmp_path / "selector-replay"
+    trace_details_path = output_dir / "trace-details.json"
+    traces_dir = tmp_path / "traces"
+    traces_dir.mkdir()
+
+    trace_paths = []
+    for index in range(2):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(
+            json.dumps({
+                "request_id": f"low-supported-{index}",
+                "risk_decision": {
+                    "action": "accept",
+                    "risk_level": "low",
+                    "confidence": 1.0,
+                    "reason": "supported",
+                },
+                "claims": [{"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}}],
+                "metadata": {"runtime_profile": "latency"},
+                "runtime_trace": {"total_seconds": 0.10 + index, "phases": []},
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(trace_path)
+
+    def fail_if_full_trace_summary_is_used(*_args, **_kwargs):
+        raise AssertionError("sidecar replay should stream summary accumulation")
+
+    monkeypatch.setattr(module, "_selection_summary", fail_if_full_trace_summary_is_used)
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            detail_limit=0,
+            trace_details_path=trace_details_path,
+        )
+    )
+    trace_details = json.loads(trace_details_path.read_text(encoding="utf-8"))
+
+    assert payload["candidates"][0]["traces"] == []
+    assert payload["candidates"][0]["summary"]["trace_count"] == 2
+    assert payload["candidates"][0]["trace_detail_truncated"] is True
+    assert trace_details["summary"]["trace_record_count"] == 2
+    assert len(trace_details["candidates"][0]["traces"]) == 2
+    assert not trace_details_path.with_name(f"{trace_details_path.name}.tmp").exists()
+
+
 def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     trace_path = tmp_path / "trace.json"

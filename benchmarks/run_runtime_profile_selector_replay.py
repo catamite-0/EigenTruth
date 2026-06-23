@@ -255,20 +255,15 @@ def run_runtime_profile_selector_replay(
     replay_policy, replay_policy_source = _load_replay_policy(config)
     traces = tuple(_load_trace_replay_input(path) for path in config.trace_paths)
     runtime_pair_index = _runtime_pair_index(traces)
-    candidates = [
-        _candidate_record(
-            config,
-            candidate,
-            traces=traces,
-            replay_policy=replay_policy,
-            runtime_pair_index=runtime_pair_index,
-        )
-        for candidate in config.candidates
-    ]
+    candidates = _candidate_records(
+        config,
+        traces=traces,
+        replay_policy=replay_policy,
+        runtime_pair_index=runtime_pair_index,
+    )
     leaderboard = _leaderboard(candidates)
     recommendation = leaderboard[0] if leaderboard else None
     status = _replay_status(candidates)
-    report_candidates = _report_candidates_with_trace_details(config, candidates)
     trace_details_path = config.resolved_trace_details_path
     report = {
         "schema_version": 1,
@@ -280,7 +275,7 @@ def run_runtime_profile_selector_replay(
             "recommended_policy_path": None if recommendation is None else recommendation["policy_path"],
             "blocking_reasons": _blocking_reasons(candidates),
         },
-        "candidates": report_candidates,
+        "candidates": candidates,
         "leaderboard": leaderboard,
         "paths": {
             "report": str(config.resolved_report_path),
@@ -308,6 +303,32 @@ def run_runtime_profile_selector_replay(
     _write_report_and_manifest(config, report)
     _record_registry(config, report)
     return report
+
+
+def _candidate_records(
+    config: RuntimeProfileSelectorReplayConfig,
+    *,
+    traces: Sequence[TraceReplayInput],
+    replay_policy: RuntimeProfileSelectorReplayPolicy | None,
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
+) -> list[dict[str, Any]]:
+    if config.resolved_trace_details_path is not None:
+        return _candidate_records_with_trace_detail_sidecar(
+            config,
+            traces=traces,
+            replay_policy=replay_policy,
+            runtime_pair_index=runtime_pair_index,
+        )
+    return [
+        _candidate_record(
+            config,
+            candidate,
+            traces=traces,
+            replay_policy=replay_policy,
+            runtime_pair_index=runtime_pair_index,
+        )
+        for candidate in config.candidates
+    ]
 
 
 def _candidate_record(
@@ -343,70 +364,253 @@ def _candidate_record(
     }
 
 
-def _report_candidates_with_trace_details(
+def _candidate_records_with_trace_detail_sidecar(
     config: RuntimeProfileSelectorReplayConfig,
-    candidates: Sequence[Mapping[str, Any]],
+    *,
+    traces: Sequence[TraceReplayInput],
+    replay_policy: RuntimeProfileSelectorReplayPolicy | None,
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> list[dict[str, Any]]:
-    trace_details_path = config.resolved_trace_details_path
-    if trace_details_path is None:
-        return [dict(candidate) for candidate in candidates]
-
-    detail_limit = config.detail_limit
+    writer = _TraceDetailsJsonWriter(config)
     report_candidates: list[dict[str, Any]] = []
-    sidecar_candidates: list[dict[str, Any]] = []
-    trace_record_count = 0
-    truncated_candidate_count = 0
-    for candidate in candidates:
-        full_traces = list(_sequence(candidate.get("traces")))
-        inline_traces = full_traces if detail_limit is None else full_traces[:detail_limit]
-        truncated = len(inline_traces) < len(full_traces)
-        trace_record_count += len(full_traces)
-        if truncated:
-            truncated_candidate_count += 1
+    writer.open()
+    try:
+        for candidate in config.candidates:
+            policy_path = _write_candidate_policy(config, candidate)
+            accumulator = _SelectionSummaryAccumulator(cost_units=config.profile_cost_units)
+            inline_traces = []
+            trace_count = 0
+            writer.begin_candidate(candidate, policy_path=policy_path)
+            for trace in traces:
+                record = _trace_selection_record(
+                    trace,
+                    candidate=candidate,
+                    cost_units=config.profile_cost_units,
+                    runtime_pair_index=runtime_pair_index,
+                )
+                trace_count += 1
+                accumulator.add(record)
+                writer.write_trace(record)
+                if config.detail_limit is None or len(inline_traces) < config.detail_limit:
+                    inline_traces.append(record)
+            summary = accumulator.to_dict()
+            gate = _evaluate_replay_policy(summary, replay_policy)
+            status = _candidate_status(gate)
+            truncated = len(inline_traces) < trace_count
+            writer.end_candidate(
+                status=status,
+                trace_count=trace_count,
+                inline_trace_count=len(inline_traces),
+                truncated=truncated,
+            )
+            report_candidates.append({
+                "candidate": candidate.name,
+                "status": status,
+                "policy_path": str(policy_path),
+                "policy": candidate.to_dict()["policy"],
+                "source": candidate.source,
+                "summary": summary,
+                "gate": gate,
+                "traces": inline_traces,
+                "trace_detail_count": trace_count,
+                "inline_trace_count": len(inline_traces),
+                "trace_detail_truncated": truncated,
+                "trace_details_path": str(writer.path),
+            })
+    except Exception:
+        writer.abort()
+        raise
+    writer.close()
+    return report_candidates
 
-        report_candidate = dict(candidate)
-        report_candidate["traces"] = list(inline_traces)
-        report_candidate["trace_detail_count"] = len(full_traces)
-        report_candidate["inline_trace_count"] = len(inline_traces)
-        report_candidate["trace_detail_truncated"] = truncated
-        report_candidate["trace_details_path"] = str(trace_details_path)
-        report_candidates.append(report_candidate)
 
-        sidecar_candidates.append({
-            "candidate": candidate.get("candidate"),
-            "status": candidate.get("status"),
-            "policy_path": candidate.get("policy_path"),
-            "trace_count": len(full_traces),
-            "traces": full_traces,
-        })
+@dataclass
+class _SelectionSummaryAccumulator:
+    cost_units: Mapping[str, float]
+    selected_counts: dict[str, int] = field(default_factory=dict)
+    original_counts: dict[str, int] = field(default_factory=dict)
+    reason_counts: dict[str, int] = field(default_factory=dict)
+    switch_counts: dict[str, int] = field(default_factory=dict)
+    costs: list[float] = field(default_factory=list)
+    observed_original_seconds: list[float] = field(default_factory=list)
+    observed_selected_seconds: list[float] = field(default_factory=list)
+    observed_selected_by_profile: dict[str, list[float]] = field(default_factory=dict)
+    changed: int = 0
+    paired: int = 0
+    total: int = 0
 
-    _write_json(
-        trace_details_path,
-        {
+    def add(self, record: Mapping[str, Any]) -> None:
+        selected = str(record.get("selected_runtime_profile"))
+        self.total += 1
+        self.selected_counts[selected] = self.selected_counts.get(selected, 0) + 1
+        original = record.get("original_runtime_profile")
+        if original is not None:
+            original_key = str(original)
+            self.original_counts[original_key] = self.original_counts.get(original_key, 0) + 1
+            switch_key = f"{original_key}->{selected}"
+            self.switch_counts[switch_key] = self.switch_counts.get(switch_key, 0) + 1
+        selection = _mapping(record.get("selection"))
+        reason = selection.get("reason")
+        if reason is not None:
+            reason_key = str(reason)
+            self.reason_counts[reason_key] = self.reason_counts.get(reason_key, 0) + 1
+        if bool(record.get("changed")):
+            self.changed += 1
+        cost = _float_or_none(record.get("estimated_cost_units"))
+        if cost is not None:
+            self.costs.append(cost)
+        original_seconds = _float_or_none(record.get("observed_original_total_seconds"))
+        if original_seconds is not None:
+            self.observed_original_seconds.append(original_seconds)
+        selected_seconds = _float_or_none(record.get("observed_selected_total_seconds"))
+        if selected_seconds is not None:
+            self.paired += 1
+            self.observed_selected_seconds.append(selected_seconds)
+            self.observed_selected_by_profile.setdefault(selected, []).append(selected_seconds)
+
+    def to_dict(self) -> dict[str, Any]:
+        selected_runtime_stats = _runtime_seconds_stats(self.observed_selected_seconds)
+        original_runtime_stats = _runtime_seconds_stats(self.observed_original_seconds)
+        return {
+            "trace_count": self.total,
+            "selected_counts": self.selected_counts,
+            "selected_rates": {
+                profile: _safe_div(count, self.total)
+                for profile, count in self.selected_counts.items()
+            },
+            "original_counts": self.original_counts,
+            "switch_counts": self.switch_counts,
+            "changed_count": self.changed,
+            "changed_rate": _safe_div(self.changed, self.total),
+            "reason_counts": self.reason_counts,
+            "estimated_cost_units_total": None if not self.costs else sum(self.costs),
+            "estimated_cost_units_mean": None if not self.costs else sum(self.costs) / len(self.costs),
+            "profile_cost_units": dict(self.cost_units),
+            "observed_runtime": {
+                "paired_count": self.paired,
+                "coverage_rate": _safe_div(self.paired, self.total),
+                "selected_total_seconds": selected_runtime_stats,
+                "original_total_seconds": original_runtime_stats,
+                "selected_total_seconds_by_profile": {
+                    profile: _runtime_seconds_stats(values)
+                    for profile, values in sorted(self.observed_selected_by_profile.items())
+                },
+            },
+            "observed_runtime_paired_count": self.paired,
+            "observed_runtime_coverage_rate": _safe_div(self.paired, self.total),
+            "observed_selected_total_seconds_mean": selected_runtime_stats["mean_seconds"],
+            "observed_selected_total_seconds_p95": selected_runtime_stats["p95_seconds"],
+            "observed_selected_total_seconds_p99": selected_runtime_stats["p99_seconds"],
+            "observed_selected_total_seconds_max": selected_runtime_stats["max_seconds"],
+            "observed_original_total_seconds_mean": original_runtime_stats["mean_seconds"],
+        }
+
+
+class _TraceDetailsJsonWriter:
+    def __init__(self, config: RuntimeProfileSelectorReplayConfig) -> None:
+        path = config.resolved_trace_details_path
+        if path is None:
+            raise ValueError("trace details path is required.")
+        self.path = path
+        self.tmp_path = path.with_name(f"{path.name}.tmp")
+        self.config = config
+        self._handle: Any = None
+        self._candidate_count = 0
+        self._trace_record_count = 0
+        self._truncated_candidate_count = 0
+        self._first_candidate = True
+        self._first_trace = True
+
+    def open(self) -> None:
+        self.tmp_path.parent.mkdir(parents=True, exist_ok=True)
+        self._handle = self.tmp_path.open("w", encoding="utf-8")
+        prefix = {
             "schema_version": 1,
             "workflow": "runtime_profile_selector_replay_trace_details",
-            "summary": {
-                "candidate_count": len(sidecar_candidates),
-                "trace_record_count": trace_record_count,
-                "truncated_candidate_count": truncated_candidate_count,
-                "detail_limit": detail_limit,
-            },
             "paths": {
-                "report": str(config.resolved_report_path),
-                "trace_details": str(trace_details_path),
+                "report": str(self.config.resolved_report_path),
+                "trace_details": str(self.path),
             },
             "config": {
-                "candidate_names": tuple(candidate.name for candidate in config.candidates),
-                "trace_count": len(config.trace_paths),
-                "detail_limit": detail_limit,
-                "compact_json": config.compact_json,
-                "metadata": dict(config.metadata),
+                "candidate_names": tuple(candidate.name for candidate in self.config.candidates),
+                "trace_count": len(self.config.trace_paths),
+                "detail_limit": self.config.detail_limit,
+                "compact_json": self.config.compact_json,
+                "metadata": dict(self.config.metadata),
             },
-            "candidates": sidecar_candidates,
-        },
-        compact=config.compact_json,
-    )
-    return report_candidates
+        }
+        self._handle.write(_json_fragment(prefix, compact=self.config.compact_json)[:-1])
+        self._handle.write(f"{self._field_separator()}\"candidates\":[")
+
+    def begin_candidate(
+        self,
+        candidate: RuntimeProfileSelectorCandidate,
+        *,
+        policy_path: Path,
+    ) -> None:
+        if not self._first_candidate:
+            self._handle.write(",")
+        self._first_candidate = False
+        self._first_trace = True
+        base = {
+            "candidate": candidate.name,
+            "policy_path": str(policy_path),
+            "source": candidate.source,
+        }
+        self._handle.write(_json_fragment(base, compact=self.config.compact_json)[:-1])
+        self._handle.write(f"{self._field_separator()}\"traces\":[")
+
+    def write_trace(self, record: Mapping[str, Any]) -> None:
+        if not self._first_trace:
+            self._handle.write(",")
+        self._first_trace = False
+        self._handle.write(_json_fragment(record, compact=self.config.compact_json))
+
+    def end_candidate(
+        self,
+        *,
+        status: str,
+        trace_count: int,
+        inline_trace_count: int,
+        truncated: bool,
+    ) -> None:
+        self._handle.write("]")
+        self._handle.write(f"{self._field_separator()}\"trace_count\":{trace_count}")
+        self._handle.write(f"{self._field_separator()}\"inline_trace_count\":{inline_trace_count}")
+        self._handle.write(f"{self._field_separator()}\"trace_detail_truncated\":")
+        self._handle.write(_json_fragment(truncated, compact=self.config.compact_json))
+        self._handle.write(f"{self._field_separator()}\"status\":")
+        self._handle.write(_json_fragment(status, compact=self.config.compact_json))
+        self._handle.write("}")
+        self._candidate_count += 1
+        self._trace_record_count += trace_count
+        if truncated:
+            self._truncated_candidate_count += 1
+
+    def close(self) -> None:
+        summary = {
+            "candidate_count": self._candidate_count,
+            "trace_record_count": self._trace_record_count,
+            "truncated_candidate_count": self._truncated_candidate_count,
+            "detail_limit": self.config.detail_limit,
+        }
+        self._handle.write("]")
+        self._handle.write(f"{self._field_separator()}\"summary\":")
+        self._handle.write(_json_fragment(summary, compact=self.config.compact_json))
+        self._handle.write("}\n")
+        self._handle.close()
+        self._handle = None
+        self.tmp_path.replace(self.path)
+
+    def abort(self) -> None:
+        if self._handle is not None:
+            self._handle.close()
+            self._handle = None
+        if self.tmp_path.exists():
+            self.tmp_path.unlink()
+
+    def _field_separator(self) -> str:
+        return "," if self.config.compact_json else ",\n  "
 
 
 def _trace_selection_record(
@@ -457,79 +661,10 @@ def _selection_summary(
     *,
     cost_units: Mapping[str, float],
 ) -> dict[str, Any]:
-    selected_counts: dict[str, int] = {}
-    original_counts: dict[str, int] = {}
-    reason_counts: dict[str, int] = {}
-    switch_counts: dict[str, int] = {}
-    costs = []
-    observed_original_seconds = []
-    observed_selected_seconds = []
-    observed_selected_by_profile: dict[str, list[float]] = {}
-    changed = 0
-    paired = 0
+    accumulator = _SelectionSummaryAccumulator(cost_units=cost_units)
     for record in records:
-        selected = str(record.get("selected_runtime_profile"))
-        selected_counts[selected] = selected_counts.get(selected, 0) + 1
-        original = record.get("original_runtime_profile")
-        if original is not None:
-            original_key = str(original)
-            original_counts[original_key] = original_counts.get(original_key, 0) + 1
-            switch_key = f"{original_key}->{selected}"
-            switch_counts[switch_key] = switch_counts.get(switch_key, 0) + 1
-        selection = _mapping(record.get("selection"))
-        reason = selection.get("reason")
-        if reason is not None:
-            reason_key = str(reason)
-            reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
-        if bool(record.get("changed")):
-            changed += 1
-        cost = _float_or_none(record.get("estimated_cost_units"))
-        if cost is not None:
-            costs.append(cost)
-        original_seconds = _float_or_none(record.get("observed_original_total_seconds"))
-        if original_seconds is not None:
-            observed_original_seconds.append(original_seconds)
-        selected_seconds = _float_or_none(record.get("observed_selected_total_seconds"))
-        if selected_seconds is not None:
-            paired += 1
-            observed_selected_seconds.append(selected_seconds)
-            observed_selected_by_profile.setdefault(selected, []).append(selected_seconds)
-    total = len(records)
-    selected_runtime_stats = _runtime_seconds_stats(observed_selected_seconds)
-    original_runtime_stats = _runtime_seconds_stats(observed_original_seconds)
-    return {
-        "trace_count": total,
-        "selected_counts": selected_counts,
-        "selected_rates": {
-            profile: _safe_div(count, total)
-            for profile, count in selected_counts.items()
-        },
-        "original_counts": original_counts,
-        "switch_counts": switch_counts,
-        "changed_count": changed,
-        "changed_rate": _safe_div(changed, total),
-        "reason_counts": reason_counts,
-        "estimated_cost_units_total": None if not costs else sum(costs),
-        "estimated_cost_units_mean": None if not costs else sum(costs) / len(costs),
-        "profile_cost_units": dict(cost_units),
-        "observed_runtime": {
-            "paired_count": paired,
-            "coverage_rate": _safe_div(paired, total),
-            "selected_total_seconds": selected_runtime_stats,
-            "original_total_seconds": original_runtime_stats,
-            "selected_total_seconds_by_profile": {
-                profile: _runtime_seconds_stats(values)
-                for profile, values in sorted(observed_selected_by_profile.items())
-            },
-        },
-        "observed_runtime_paired_count": paired,
-        "observed_runtime_coverage_rate": _safe_div(paired, total),
-        "observed_selected_total_seconds_mean": selected_runtime_stats["mean_seconds"],
-        "observed_selected_total_seconds_p95": selected_runtime_stats["p95_seconds"],
-        "observed_selected_total_seconds_p99": selected_runtime_stats["p99_seconds"],
-        "observed_selected_total_seconds_max": selected_runtime_stats["max_seconds"],
-        "observed_original_total_seconds_mean": original_runtime_stats["mean_seconds"],
-    }
+        accumulator.add(record)
+    return accumulator.to_dict()
 
 
 def _evaluate_replay_policy(
@@ -1199,9 +1334,13 @@ def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool =
 
 
 def _json_text(payload: Any, *, compact: bool) -> str:
+    return _json_fragment(payload, compact=compact) + "\n"
+
+
+def _json_fragment(payload: Any, *, compact: bool) -> str:
     if compact:
-        return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
-    return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return json.dumps(payload, indent=2, sort_keys=True)
 
 
 def _parse_mapping_json(value: str | None, *, name: str) -> dict[str, Any]:
