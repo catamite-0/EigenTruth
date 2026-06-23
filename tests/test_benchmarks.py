@@ -9932,6 +9932,57 @@ def test_runtime_profile_selector_replay_streams_sidecar_summary(tmp_path, monke
     assert not trace_details_path.with_name(f"{trace_details_path.name}.tmp").exists()
 
 
+def test_runtime_profile_selector_replay_reiterates_trace_corpus_without_materializing(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    output_dir = tmp_path / "selector-replay"
+    trace_details_path = output_dir / "trace-details.json"
+    trace_paths = tuple(tmp_path / f"trace-{index}.json" for index in range(3))
+    load_calls = []
+
+    def fake_load_trace_replay_input(path):
+        trace_path = Path(path)
+        load_calls.append(trace_path.name)
+        return module.TraceReplayInput(
+            path=trace_path,
+            request_id=trace_path.stem,
+            request_key=trace_path.stem,
+            original_runtime_profile="latency",
+            runtime_pair_profile="latency",
+            risk_decision={
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            claims=(),
+            original_total_seconds=0.1,
+        )
+
+    monkeypatch.setattr(module, "_load_trace_replay_input", fake_load_trace_replay_input)
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(
+                module.RuntimeProfileSelectorCandidate(name="default", policy={}),
+                module.RuntimeProfileSelectorCandidate(name="strict", policy={}),
+            ),
+            detail_limit=0,
+            trace_details_path=trace_details_path,
+        )
+    )
+    trace_details = json.loads(trace_details_path.read_text(encoding="utf-8"))
+
+    expected_pass = [path.name for path in trace_paths]
+    assert load_calls == expected_pass * 3
+    assert payload["config"]["trace_count"] == 3
+    assert payload["paths"]["traces"] == [str(path) for path in trace_paths]
+    assert [candidate["traces"] for candidate in payload["candidates"]] == [[], []]
+    assert trace_details["summary"]["candidate_count"] == 2
+    assert trace_details["summary"]["trace_record_count"] == 6
+
+
 def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     trace_path = tmp_path / "trace.json"

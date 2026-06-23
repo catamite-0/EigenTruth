@@ -9,7 +9,7 @@ import math
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +42,20 @@ class TraceReplayInput:
     risk_decision: Mapping[str, Any]
     claims: tuple[Any, ...] = ()
     original_total_seconds: float | None = None
+
+
+@dataclass(frozen=True)
+class _TraceReplayCorpus:
+    """Re-iterable lightweight ProductTrace loader."""
+
+    paths: tuple[Path, ...]
+
+    def __iter__(self):
+        for path in self.paths:
+            yield _load_trace_replay_input(path)
+
+    def __len__(self) -> int:
+        return len(self.paths)
 
 
 @dataclass(frozen=True)
@@ -253,7 +267,7 @@ def run_runtime_profile_selector_replay(
     """Replay selector candidates over saved ProductTrace JSON payloads."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     replay_policy, replay_policy_source = _load_replay_policy(config)
-    traces = tuple(_load_trace_replay_input(path) for path in config.trace_paths)
+    traces = _TraceReplayCorpus(tuple(config.trace_paths))
     runtime_pair_index = _runtime_pair_index(traces)
     candidates = _candidate_records(
         config,
@@ -283,7 +297,7 @@ def run_runtime_profile_selector_replay(
             "output_dir": str(config.output_dir),
             "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
             "trace_details": None if trace_details_path is None else str(trace_details_path),
-            "traces": [str(trace.path) for trace in traces],
+            "traces": [str(path) for path in traces.paths],
         },
         "config": {
             "candidate_names": tuple(candidate.name for candidate in config.candidates),
@@ -308,7 +322,7 @@ def run_runtime_profile_selector_replay(
 def _candidate_records(
     config: RuntimeProfileSelectorReplayConfig,
     *,
-    traces: Sequence[TraceReplayInput],
+    traces: _TraceReplayCorpus,
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
     runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> list[dict[str, Any]]:
@@ -335,7 +349,7 @@ def _candidate_record(
     config: RuntimeProfileSelectorReplayConfig,
     candidate: RuntimeProfileSelectorCandidate,
     *,
-    traces: Sequence[TraceReplayInput],
+    traces: Iterable[TraceReplayInput],
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
     runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> dict[str, Any]:
@@ -367,7 +381,7 @@ def _candidate_record(
 def _candidate_records_with_trace_detail_sidecar(
     config: RuntimeProfileSelectorReplayConfig,
     *,
-    traces: Sequence[TraceReplayInput],
+    traces: _TraceReplayCorpus,
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
     runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> list[dict[str, Any]]:
@@ -1036,7 +1050,7 @@ def _selector_claims(value: Any) -> tuple[dict[str, Any], ...]:
 
 
 def _runtime_pair_index(
-    traces: Sequence[TraceReplayInput],
+    traces: Iterable[TraceReplayInput],
 ) -> dict[tuple[str, str], tuple[RuntimeObservation, ...]]:
     grouped: dict[tuple[str, str], list[RuntimeObservation]] = {}
     for trace in traces:
