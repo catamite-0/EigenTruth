@@ -5782,6 +5782,125 @@ def test_run_inside_trigger_budget_sweep_compares_budgets_to_reference(tmp_path,
     assert manifest["artifacts"]["budgets.top_0p2.profile_manifest"]["exists"] is True
 
 
+def test_run_inside_trigger_budget_sweep_can_derive_top_fraction_rows_from_max_budget(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+    calls = []
+
+    def fake_profile(config, *, clean, dry_run, skip_existing):
+        del clean, dry_run, skip_existing
+        calls.append(config)
+        assert config.inside_trigger_top_fraction == pytest.approx(2 / 3)
+        assert config.dump_scores is True
+        assert config.run_names == ("adaptive_selfcheck",)
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        run_name = "adaptive_selfcheck"
+        result_path = config.result_path(run_name)
+        profile_path = config.profile_path(run_name)
+        score_dump_path = config.score_dump_path(run_name)
+        comparison_path = config.comparison_report
+        manifest_path = config.artifact_manifest
+        result_path.write_text(json.dumps({"auroc": {"inside_eigenscore": 0.75}}), encoding="utf-8")
+        profile_path.write_text(
+            json.dumps({"total_seconds": 20.0, "phases": {"inside_generation": 10.0}}),
+            encoding="utf-8",
+        )
+        score_dump_path.write_text(
+            json.dumps({
+                "config": {"inside_trigger_top_fraction": 2 / 3},
+                "inside_sampling": {"top_fraction": 2 / 3, "fill_value_for_untriggered": 0.0},
+                "labels": [0, 1, 0, 1, 1, 0],
+                "batch_indexes": [0, 0, 0, 1, 1, 1],
+                "scores": {
+                    "truth_proj": [0.1, 0.9, 0.4, 0.2, 0.8, 0.7],
+                    "inside_eigenscore": [0.0, 2.0, 1.0, 0.0, 3.0, 1.5],
+                    "inside_semantic_entropy": [0.0, 0.5, 0.2, 0.0, 0.9, 0.4],
+                },
+                "inside_sampled": [False, True, True, False, True, True],
+                "inside_sample_counts": [0, 2, 2, 0, 3, 3],
+                "inside_stopped_early": [False, False, True, False, True, False],
+                "inside_stop_reasons": [None, None, "stability_delta", None, "selfcheck_supported", None],
+            }),
+            encoding="utf-8",
+        )
+        comparison_path.write_text(
+            json.dumps({
+                "runs": {
+                    run_name: {
+                        "name": run_name,
+                        "result_path": str(result_path),
+                        "profile_path": str(profile_path),
+                        "sampled": 4,
+                        "skipped_by_trigger": 2,
+                        "total_generated_samples": 10,
+                        "mean_samples_per_record": 10 / 6,
+                        "mean_samples_per_sampled_record": 2.5,
+                        "inside_generation_seconds": 10.0,
+                    }
+                },
+                "recommendation": {"recommended_run": run_name},
+                "sample_efficiency_gate": {"passed": True},
+            }),
+            encoding="utf-8",
+        )
+        manifest_path.write_text(json.dumps({"summary": {"artifact_count": 1}}), encoding="utf-8")
+        return {
+            "dry_run": False,
+            "output_dir": str(config.output_dir),
+            "comparison_report": str(comparison_path),
+            "artifact_manifest": str(manifest_path),
+            "results": {run_name: str(result_path)},
+            "profiles": {run_name: str(profile_path)},
+            "score_dumps": {run_name: str(score_dump_path)},
+            "sample_efficiency_gate": {"passed": True},
+            "recommendation": {"recommended_run": run_name},
+        }
+
+    monkeypatch.setattr(module, "run_inside_sampling_profile", fake_profile)
+    config = module.InsideTriggerBudgetSweepConfig(
+        output_dir=tmp_path / "sweep",
+        trigger_signal="truth_proj",
+        budgets=(
+            module.TriggerBudgetSpec("top_fraction", 1 / 3),
+            module.TriggerBudgetSpec("top_fraction", 2 / 3),
+        ),
+        run_names=("adaptive_selfcheck",),
+        derive_from_max_budget=True,
+    )
+
+    report = module.run_inside_trigger_budget_sweep(config, clean=True)
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+    small = next(row for row in report["leaderboard"] if row["budget_id"] == "top_0p333333")
+    large = next(row for row in report["leaderboard"] if row["budget_id"] == "top_0p666667")
+
+    assert len(calls) == 1
+    assert report["derived_from_max_budget"] is True
+    assert report["derived_source_budget_id"] == "top_0p666667"
+    assert small["sampled"] == 2
+    assert small["skipped_by_trigger"] == 4
+    assert small["total_generated_samples"] == 5
+    assert small["inside_generation_seconds"] == pytest.approx(5.0)
+    assert small["inside_generation_seconds_source"] == "sample_count_ratio_estimate"
+    assert small["stop_reason_counts"] == {"selfcheck_supported": 1}
+    assert large["total_generated_samples"] == 10
+    assert large["inside_generation_seconds"] == pytest.approx(10.0)
+    assert large["inside_generation_seconds_source"] == "measured_source_run"
+    assert report["recommendation"]["budget_id"] == "top_0p333333"
+    assert manifest["artifacts"]["budgets.top_0p333333.source_score_dump"]["exists"] is True
+
+
+def test_run_inside_trigger_budget_sweep_derived_mode_rejects_multiple_runs(tmp_path):
+    module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
+
+    with pytest.raises(ValueError, match="exactly one run"):
+        module.InsideTriggerBudgetSweepConfig(
+            output_dir=tmp_path,
+            trigger_signal="truth_proj",
+            budgets=(module.TriggerBudgetSpec("top_fraction", 0.5),),
+            run_names=("fixed", "adaptive_selfcheck"),
+            derive_from_max_budget=True,
+        )
+
+
 def test_run_inside_trigger_budget_sweep_refreshes_child_manifests_for_mutable_shared_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_inside_trigger_budget_sweep")
     profile_module = importlib.import_module("benchmarks.run_inside_sampling_profile")

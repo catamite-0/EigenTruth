@@ -262,6 +262,13 @@ statement-encoding cache, layer-stats cache, eval-reps cache, and sampled INSIDE
 diagnostics cache instead of repeating warmup, forced-answer forward work, and
 overlapping sampled generation. Add
 `--refresh-shared-caches` only when intentionally rebuilding those shared caches.
+When comparing nested top-fraction budgets for a single run, add
+`--derive-from-max-budget`. The runner executes only the largest top-fraction
+budget with `--dump-scores`, then derives smaller budget rows from the score
+dump's per-record `batch_indexes`, trigger scores, INSIDE scores, and sample
+counts. Derived rows preserve the benchmark's batch-local top-fraction semantics;
+their `inside_generation` seconds are sample-count-ratio estimates except for
+the measured source budget.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the

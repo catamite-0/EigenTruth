@@ -3303,6 +3303,7 @@ def run(args) -> dict:
     inside_stopped_early: List[bool] = []
     inside_stop_reasons: list[str | None] = []
     inside_sample_texts: list[list[str]] = []
+    scored_batch_indexes: list[int] = []
     inside_triggered_total = 0
     inside_skipped_total = 0
 
@@ -3561,6 +3562,7 @@ def run(args) -> dict:
                 scores["nll_answer"].append(primary_scores["nll_answer"])
                 labels.append(record["stmt"].is_false)
                 scored_statements.append(_statement_to_dump(record["stmt"]))
+                scored_batch_indexes.append(int(eval_batch_idx))
                 if _inside_enabled(args):
                     inside_sampled.append(bool(record["inside_sampled"]))
                     inside_sample_counts.append(int(record.get("inside_sample_count", 0)))
@@ -3785,7 +3787,13 @@ def run(args) -> dict:
         # 逐陈述原始分数：供共形校准等后处理复用，无需再跑模型
         # Raw per-statement scores: enables post-hoc analyses (e.g. conformal
         # calibration) without re-running the model
-        dump = {"config": payload["config"], "labels": labels, "scores": scores, "statements": scored_statements}
+        dump = {
+            "config": payload["config"],
+            "labels": labels,
+            "scores": scores,
+            "statements": scored_statements,
+            "batch_indexes": scored_batch_indexes,
+        }
         if _inside_enabled(args):
             dump["inside_sampled"] = inside_sampled
             dump["inside_sample_counts"] = inside_sample_counts

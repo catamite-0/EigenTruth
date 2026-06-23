@@ -23,7 +23,15 @@ from benchmarks.run_inside_sampling_profile import (  # noqa: E402
     _parse_run_names,
     run_inside_sampling_profile,
 )
+from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS  # noqa: E402
+from eigentruth.eval.metrics import roc_auc  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
+
+DERIVED_INSIDE_SIGNALS = (
+    "inside_eigenscore",
+    "inside_semantic_entropy",
+    "inside_embedding_entropy",
+)
 
 
 @dataclass(frozen=True)
@@ -93,6 +101,7 @@ class InsideTriggerBudgetSweepConfig:
     shared_cache_dir: Path | None = None
     eval_reps_cache_shard_size: int = 0
     refresh_shared_caches: bool = False
+    derive_from_max_budget: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -113,9 +122,15 @@ class InsideTriggerBudgetSweepConfig:
             raise ValueError("eval_reps_cache_shard_size must be >=0.")
         if int(self.eval_reps_cache_shard_size) > 0 and self.shared_cache_dir is None:
             raise ValueError("eval_reps_cache_shard_size requires shared_cache_dir.")
+        run_names = _parse_run_names(",".join(self.run_names))
+        if bool(self.derive_from_max_budget):
+            if any(budget.kind != "top_fraction" for budget in budgets):
+                raise ValueError("derive_from_max_budget only supports top_fraction budgets.")
+            if len(run_names) != 1:
+                raise ValueError("derive_from_max_budget requires exactly one run name.")
         object.__setattr__(self, "trigger_signal", trigger_signal)
         object.__setattr__(self, "budgets", budgets)
-        object.__setattr__(self, "run_names", _parse_run_names(",".join(self.run_names)))
+        object.__setattr__(self, "run_names", run_names)
 
     @property
     def report_path(self) -> Path:
@@ -137,6 +152,13 @@ def run_inside_trigger_budget_sweep(
     if clean and config.output_dir.exists():
         shutil.rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True, exist_ok=True)
+
+    if config.derive_from_max_budget:
+        return _run_derived_trigger_budget_sweep(
+            config,
+            dry_run=dry_run,
+            skip_existing=skip_existing,
+        )
 
     child_payloads = {}
     for budget in config.budgets:
@@ -161,6 +183,35 @@ def run_inside_trigger_budget_sweep(
     return report
 
 
+def _run_derived_trigger_budget_sweep(
+    config: InsideTriggerBudgetSweepConfig,
+    *,
+    dry_run: bool,
+    skip_existing: bool,
+) -> dict[str, Any]:
+    source_budget = _derived_source_budget(config)
+    source_config = _profile_config_for_budget(config, source_budget, dump_scores=True)
+    source_payload = run_inside_sampling_profile(
+        source_config,
+        clean=False,
+        dry_run=dry_run,
+        skip_existing=skip_existing,
+    )
+    child_payloads = {source_budget.id: source_payload}
+    if not dry_run:
+        _refresh_child_manifests(config, child_payloads)
+
+    if dry_run:
+        report = _dry_run_report(config, child_payloads)
+    else:
+        report = _derived_budget_sweep_report(config, source_budget, source_payload)
+    report["artifact_manifest"] = str(config.artifact_manifest)
+    config.report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = _write_artifact_manifest(config, report)
+    report["artifact_manifest_summary"] = manifest["summary"]
+    return report
+
+
 def _refresh_child_manifests(
     config: InsideTriggerBudgetSweepConfig,
     child_payloads: Mapping[str, Mapping[str, Any]],
@@ -171,7 +222,7 @@ def _refresh_child_manifests(
         if not isinstance(payload, Mapping):
             continue
         child_manifest = inside_profile._write_artifact_manifest(
-            _profile_config_for_budget(config, budget),
+            _profile_config_for_budget(config, budget, dump_scores=bool(payload.get("score_dumps"))),
             payload,
         )
         if isinstance(payload, dict):
@@ -181,6 +232,8 @@ def _refresh_child_manifests(
 def _profile_config_for_budget(
     config: InsideTriggerBudgetSweepConfig,
     budget: TriggerBudgetSpec,
+    *,
+    dump_scores: bool = False,
 ) -> InsideSamplingProfileConfig:
     return InsideSamplingProfileConfig(
         output_dir=config.output_dir / budget.id,
@@ -217,6 +270,7 @@ def _profile_config_for_budget(
         adaptive_selfcheck_max_sample_ratio=config.adaptive_selfcheck_max_sample_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
         run_names=config.run_names,
+        dump_scores=bool(dump_scores),
         statement_encoding_cache_path=_shared_cache_path(config, "statement-encodings.json"),
         layer_stats_cache_path=_shared_cache_path(config, "layer-stats.pt"),
         eval_reps_cache_path=_shared_cache_path(config, "eval-reps-cache"),
@@ -302,6 +356,77 @@ def _budget_sweep_report(
     }
 
 
+def _derived_budget_sweep_report(
+    config: InsideTriggerBudgetSweepConfig,
+    source_budget: TriggerBudgetSpec,
+    source_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    reference = _reference_payload(config.reference_report_path)
+    run_name = config.run_names[0]
+    score_dumps = dict(source_payload.get("score_dumps") or {})
+    score_dump_path = score_dumps.get(run_name)
+    if not score_dump_path:
+        raise ValueError("derive_from_max_budget requires the source profile to write a score dump.")
+
+    comparison_path = Path(str(source_payload["comparison_report"]))
+    comparison = _read_json(comparison_path)
+    runs = dict(comparison.get("runs") or {})
+    source_row = dict(runs.get(run_name) or {})
+    if not source_row:
+        raise ValueError(f"source comparison report does not contain run {run_name!r}.")
+
+    rows = _derive_budget_rows_from_score_dump(
+        Path(str(score_dump_path)),
+        budgets=config.budgets,
+        source_budget=source_budget,
+        trigger_signal=config.trigger_signal,
+        run_name=run_name,
+        source_row=source_row,
+        comparison_path=comparison_path,
+        reference=reference,
+    )
+    budget_payloads = {
+        budget.id: {
+            "budget": {"kind": budget.kind, "value": budget.value},
+            "derived": True,
+            "derived_from_budget_id": source_budget.id,
+            "source_profile_output_dir": source_payload.get("output_dir"),
+            "source_score_dump": str(score_dump_path),
+            "comparison_report": source_payload.get("comparison_report"),
+            "artifact_manifest": (
+                source_payload.get("artifact_manifest") if budget.id == source_budget.id else None
+            ),
+            "caches": source_payload.get("caches"),
+            "sample_efficiency_gate": source_payload.get("sample_efficiency_gate"),
+            "recommendation": {
+                "recommended_run": run_name,
+                "reason": "derived_from_max_budget_score_dump",
+            },
+        }
+        for budget in config.budgets
+    }
+    leaderboard = sorted(rows, key=_budget_sort_key)
+    recommendation = {
+        "budget_id": leaderboard[0]["budget_id"],
+        "recommended_run": leaderboard[0]["recommended_run"],
+        "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+    } if leaderboard else None
+    return {
+        "schema_version": 1,
+        "workflow": "inside_trigger_budget_sweep",
+        "dry_run": False,
+        "derived_from_max_budget": True,
+        "derived_source_budget_id": source_budget.id,
+        "derived_source_score_dump": str(score_dump_path),
+        "config": _config_payload(config),
+        "reference": reference,
+        "budgets": budget_payloads,
+        "leaderboard": leaderboard,
+        "recommendation": recommendation,
+        "quality_balanced_recommendation": _quality_balanced_recommendation(leaderboard),
+    }
+
+
 def _budget_row(
     budget: TriggerBudgetSpec,
     *,
@@ -340,6 +465,247 @@ def _budget_row(
             if str(key).startswith("inside_")
         },
     }
+
+
+def _derive_budget_rows_from_score_dump(
+    score_dump_path: Path,
+    *,
+    budgets: Sequence[TriggerBudgetSpec],
+    source_budget: TriggerBudgetSpec,
+    trigger_signal: str,
+    run_name: str,
+    source_row: Mapping[str, Any],
+    comparison_path: Path,
+    reference: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    dump = _read_json(score_dump_path)
+    labels = _int_list(dump.get("labels"), name="labels")
+    n_records = len(labels)
+    if n_records == 0:
+        raise ValueError("score dump must contain at least one label.")
+    scores = dict(dump.get("scores") or {})
+    trigger_scores = _score_vector(scores, trigger_signal, n_records)
+    batch_indexes = _int_list(dump.get("batch_indexes"), name="batch_indexes")
+    if len(batch_indexes) != n_records:
+        raise ValueError("score dump batch_indexes must match labels length.")
+    source_fraction = _source_top_fraction(dump)
+    if source_fraction is None:
+        raise ValueError("score dump must record source inside trigger top_fraction.")
+    if float(source_budget.value) > source_fraction + 1e-12:
+        raise ValueError("source budget exceeds score dump top_fraction.")
+
+    inside_sample_counts = _int_list(dump.get("inside_sample_counts"), name="inside_sample_counts")
+    if len(inside_sample_counts) != n_records:
+        raise ValueError("score dump inside_sample_counts must match labels length.")
+    inside_sampled = _bool_list(
+        dump.get("inside_sampled"),
+        name="inside_sampled",
+        fallback=[count > 0 for count in inside_sample_counts],
+    )
+    if len(inside_sampled) != n_records:
+        raise ValueError("score dump inside_sampled must match labels length.")
+    inside_stopped_early = _bool_list(
+        dump.get("inside_stopped_early"),
+        name="inside_stopped_early",
+        fallback=[False] * n_records,
+    )
+    if len(inside_stopped_early) != n_records:
+        raise ValueError("score dump inside_stopped_early must match labels length.")
+    stop_reasons = _optional_str_list(
+        dump.get("inside_stop_reasons"),
+        name="inside_stop_reasons",
+        fallback=[None] * n_records,
+    )
+    if len(stop_reasons) != n_records:
+        raise ValueError("score dump inside_stop_reasons must match labels length.")
+
+    inside_signals = [
+        signal for signal in DERIVED_INSIDE_SIGNALS
+        if signal in scores and len(scores.get(signal) or []) == n_records
+    ]
+    if not inside_signals:
+        raise ValueError("score dump does not contain derivable inside scores.")
+    inside_score_vectors = {
+        signal: _score_vector(scores, signal, n_records) for signal in inside_signals
+    }
+
+    source_total_samples = _optional_int(source_row.get("total_generated_samples"))
+    if source_total_samples is None:
+        source_total_samples = sum(inside_sample_counts)
+    source_seconds = _optional_float(source_row.get("inside_generation_seconds"))
+    direction = DEFAULT_SCORE_DIRECTIONS.get(trigger_signal, "higher")
+    rows = []
+    for budget in budgets:
+        if budget.kind != "top_fraction":
+            raise ValueError("derived budget rows only support top_fraction budgets.")
+        if float(budget.value) > source_fraction + 1e-12:
+            raise ValueError("cannot derive a budget larger than the source score dump top_fraction.")
+        selected = _top_fraction_mask(
+            trigger_scores,
+            batch_indexes,
+            fraction=float(budget.value),
+            direction=direction,
+        )
+        selected_indexes = [idx for idx, flag in enumerate(selected) if flag]
+        missing = [idx for idx in selected_indexes if not inside_sampled[idx]]
+        if missing:
+            raise ValueError("source score dump is missing INSIDE diagnostics for a derived selected record.")
+        total_generated_samples = sum(inside_sample_counts[idx] for idx in selected_indexes)
+        sampled = len(selected_indexes)
+        estimated_seconds = _derived_inside_seconds(
+            budget,
+            source_budget=source_budget,
+            source_seconds=source_seconds,
+            source_total_samples=source_total_samples,
+            total_generated_samples=total_generated_samples,
+        )
+        rows.append({
+            "budget_id": budget.id,
+            "budget_kind": budget.kind,
+            "budget_value": budget.value,
+            "comparison_report": str(comparison_path),
+            "recommended_run": run_name,
+            "derived": True,
+            "derived_from_budget_id": source_budget.id,
+            "source_score_dump": str(score_dump_path),
+            "inside_generation_seconds_source": (
+                "measured_source_run" if budget.id == source_budget.id else "sample_count_ratio_estimate"
+            ),
+            "sampled": sampled,
+            "skipped_by_trigger": n_records - sampled,
+            "total_generated_samples": total_generated_samples,
+            "mean_samples_per_record": total_generated_samples / n_records,
+            "mean_samples_per_sampled_record": (total_generated_samples / sampled) if sampled else 0.0,
+            "stopped_early": sum(1 for idx in selected_indexes if inside_stopped_early[idx]),
+            "stop_reason_counts": _stop_reason_counts(stop_reasons, selected_indexes),
+            "inside_generation_seconds": estimated_seconds,
+            "sample_count_ratio_to_budget_fixed": None,
+            "inside_generation_seconds_ratio_to_budget_fixed": None,
+            "sample_count_ratio_to_reference": _ratio(
+                total_generated_samples,
+                None if reference is None else _optional_int(reference.get("total_generated_samples")),
+            ),
+            "inside_generation_seconds_ratio_to_reference": _ratio(
+                estimated_seconds,
+                None if reference is None else _optional_float(reference.get("inside_generation_seconds")),
+            ),
+            "inside_auroc": {
+                signal: roc_auc(
+                    [
+                        inside_score_vectors[signal][idx] if selected[idx] else 0.0
+                        for idx in range(n_records)
+                    ],
+                    labels,
+                )
+                for signal in inside_signals
+            },
+        })
+    return rows
+
+
+def _derived_inside_seconds(
+    budget: TriggerBudgetSpec,
+    *,
+    source_budget: TriggerBudgetSpec,
+    source_seconds: float | None,
+    source_total_samples: int | None,
+    total_generated_samples: int,
+) -> float | None:
+    if source_seconds is None:
+        return None
+    if budget.id == source_budget.id:
+        return source_seconds
+    ratio = _ratio(total_generated_samples, source_total_samples)
+    return None if ratio is None else source_seconds * ratio
+
+
+def _source_top_fraction(dump: Mapping[str, Any]) -> float | None:
+    inside_sampling = dump.get("inside_sampling")
+    if isinstance(inside_sampling, Mapping):
+        value = _optional_float(inside_sampling.get("top_fraction"))
+        if value is not None:
+            return value
+    config = dump.get("config")
+    if isinstance(config, Mapping):
+        return _optional_float(config.get("inside_trigger_top_fraction"))
+    return None
+
+
+def _top_fraction_mask(
+    values: Sequence[float],
+    batch_indexes: Sequence[int],
+    *,
+    fraction: float,
+    direction: str,
+) -> list[bool]:
+    if not (0.0 < float(fraction) <= 1.0):
+        raise ValueError("top_fraction must be in (0, 1].")
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    groups: dict[int, list[int]] = {}
+    for idx, batch_idx in enumerate(batch_indexes):
+        groups.setdefault(int(batch_idx), []).append(idx)
+    selected = [False] * len(values)
+    reverse = direction == "higher"
+    for indexes in groups.values():
+        k = max(1, math.ceil(len(indexes) * float(fraction)))
+        ranked = sorted(indexes, key=lambda idx: values[idx], reverse=reverse)
+        for idx in ranked[:k]:
+            selected[idx] = True
+    return selected
+
+
+def _score_vector(scores: Mapping[str, Any], name: str, expected_len: int) -> list[float]:
+    raw_values = scores.get(name)
+    if not isinstance(raw_values, Sequence) or isinstance(raw_values, (str, bytes)):
+        raise ValueError(f"score dump is missing score vector {name!r}.")
+    values = []
+    for raw in raw_values:
+        try:
+            value = float(raw)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"score vector {name!r} contains a non-numeric value.") from exc
+        if not math.isfinite(value):
+            raise ValueError(f"score vector {name!r} contains a non-finite value.")
+        values.append(value)
+    if len(values) != int(expected_len):
+        raise ValueError(f"score vector {name!r} must match labels length.")
+    return values
+
+
+def _int_list(value: Any, *, name: str) -> list[int]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"score dump {name} must be a list.")
+    try:
+        return [int(item) for item in value]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"score dump {name} must contain integers.") from exc
+
+
+def _bool_list(value: Any, *, name: str, fallback: Sequence[bool]) -> list[bool]:
+    if value is None:
+        return [bool(item) for item in fallback]
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"score dump {name} must be a list.")
+    return [bool(item) for item in value]
+
+
+def _optional_str_list(value: Any, *, name: str, fallback: Sequence[str | None]) -> list[str | None]:
+    if value is None:
+        return list(fallback)
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        raise ValueError(f"score dump {name} must be a list.")
+    return [None if item is None else str(item) for item in value]
+
+
+def _stop_reason_counts(stop_reasons: Sequence[str | None], indexes: Sequence[int]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for idx in indexes:
+        reason = stop_reasons[idx]
+        if reason is None:
+            continue
+        counts[str(reason)] = counts.get(str(reason), 0) + 1
+    return counts
 
 
 def _reference_payload(path: Path | None) -> dict[str, Any] | None:
@@ -439,6 +805,10 @@ def _inside_quality_signal(inside_auroc: Any) -> tuple[str | None, float | None]
     return max(finite_values, key=lambda item: (item[1], item[0]))
 
 
+def _derived_source_budget(config: InsideTriggerBudgetSweepConfig) -> TriggerBudgetSpec:
+    return max(config.budgets, key=lambda budget: (float(budget.value), budget.id))
+
+
 def _write_artifact_manifest(
     config: InsideTriggerBudgetSweepConfig,
     report: Mapping[str, Any],
@@ -448,6 +818,8 @@ def _write_artifact_manifest(
         if isinstance(payload, Mapping):
             artifacts[f"budgets.{budget_id}.profile_manifest"] = payload.get("artifact_manifest")
             artifacts[f"budgets.{budget_id}.comparison_report"] = payload.get("comparison_report")
+            if payload.get("source_score_dump") is not None:
+                artifacts[f"budgets.{budget_id}.source_score_dump"] = payload.get("source_score_dump")
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -464,6 +836,7 @@ def _write_artifact_manifest(
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
             "eval_reps_cache_shard_size": int(config.eval_reps_cache_shard_size),
             "refresh_shared_caches": bool(config.refresh_shared_caches),
+            "derive_from_max_budget": bool(config.derive_from_max_budget),
             "dry_run": bool(report.get("dry_run")),
         },
     )
@@ -494,6 +867,7 @@ def _config_payload(config: InsideTriggerBudgetSweepConfig) -> dict[str, Any]:
         "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
         "eval_reps_cache_shard_size": int(config.eval_reps_cache_shard_size),
         "refresh_shared_caches": bool(config.refresh_shared_caches),
+        "derive_from_max_budget": bool(config.derive_from_max_budget),
     }
 
 
@@ -609,6 +983,7 @@ def _config_from_args(args: argparse.Namespace) -> InsideTriggerBudgetSweepConfi
         shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         refresh_shared_caches=args.refresh_shared_caches,
+        derive_from_max_budget=args.derive_from_max_budget,
     )
 
 
@@ -671,6 +1046,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="write the shared eval-reps cache as shards with this many records per shard")
     parser.add_argument("--refresh-shared-caches", action="store_true",
                         help="refresh shared caches on the first run that uses them; later runs load them")
+    parser.add_argument("--derive-from-max-budget", action="store_true",
+                        help="run only the largest top-fraction budget with --dump-scores, then derive smaller "
+                             "top-fraction rows from the score dump; requires exactly one --runs value")
     parser.add_argument("--runs", default="fixed,adaptive,adaptive_selfcheck")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--skip-existing", action="store_true")
