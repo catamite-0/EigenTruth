@@ -222,6 +222,47 @@ def test_calibrated_control_demo_records_cache_summary_and_budget():
     assert runtime_budget["failures"][0]["metric"] == "cache_hit_rate"
 
 
+def test_calibrated_control_demo_records_route_cost_summary_and_budget():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=True,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            max_runtime_total_seconds=None,
+            max_runtime_phase_seconds=None,
+            max_mean_route_duration_seconds=None,
+            max_p95_route_duration_seconds=None,
+            max_p99_route_duration_seconds=None,
+            max_mean_attempted_route_count=0.5,
+            max_retrieval_use_rate=None,
+            min_cache_hit_rate=None,
+            min_named_cache_hit_rate=None,
+            request_id="test-route-cost-budget-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    route_cost_summary = payload["metadata"]["route_cost_summary"]
+    runtime_budget = payload["metadata"]["runtime_budget"]
+
+    assert route_cost_summary["routed_total"] == 1
+    assert route_cost_summary["mean_attempted_route_count"] == 1.0
+    assert runtime_budget["passed"] is False
+    assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
+
+
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
     demo = importlib.import_module("examples.sqlite_state_control_demo")
 

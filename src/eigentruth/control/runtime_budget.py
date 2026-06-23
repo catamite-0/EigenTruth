@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from eigentruth.control.trace import ProductTrace, RuntimeTrace
 
 
 @dataclass(frozen=True)
 class ProductRuntimeBudgetPolicy:
-    """Optional runtime thresholds for one product trace.
+    """Optional runtime, cache, and route-cost thresholds for one product trace.
 
     Missing or non-finite metrics fail closed only when the corresponding
     threshold is configured.
@@ -21,6 +21,11 @@ class ProductRuntimeBudgetPolicy:
     max_phase_seconds: Mapping[str, float] = field(default_factory=dict)
     max_phase_p95_seconds: Mapping[str, float] = field(default_factory=dict)
     max_phase_p99_seconds: Mapping[str, float] = field(default_factory=dict)
+    max_mean_route_duration_seconds: float | None = None
+    max_p95_route_duration_seconds: float | None = None
+    max_p99_route_duration_seconds: float | None = None
+    max_mean_attempted_route_count: float | None = None
+    max_retrieval_use_rate: float | None = None
     min_cache_hit_rate: float | None = None
     min_named_cache_hit_rate: Mapping[str, float] = field(default_factory=dict)
     require_runtime_trace: bool = True
@@ -47,6 +52,26 @@ class ProductRuntimeBudgetPolicy:
             self.max_phase_p99_seconds,
             field_name="max_phase_p99_seconds",
         )
+        max_mean_route_duration_seconds = _optional_non_negative_float(
+            self.max_mean_route_duration_seconds,
+            name="max_mean_route_duration_seconds",
+        )
+        max_p95_route_duration_seconds = _optional_non_negative_float(
+            self.max_p95_route_duration_seconds,
+            name="max_p95_route_duration_seconds",
+        )
+        max_p99_route_duration_seconds = _optional_non_negative_float(
+            self.max_p99_route_duration_seconds,
+            name="max_p99_route_duration_seconds",
+        )
+        max_mean_attempted_route_count = _optional_non_negative_float(
+            self.max_mean_attempted_route_count,
+            name="max_mean_attempted_route_count",
+        )
+        max_retrieval_use_rate = _optional_rate_float(
+            self.max_retrieval_use_rate,
+            name="max_retrieval_use_rate",
+        )
         min_cache_hit_rate = _optional_rate_float(
             self.min_cache_hit_rate,
             name="min_cache_hit_rate",
@@ -64,6 +89,27 @@ class ProductRuntimeBudgetPolicy:
         object.__setattr__(self, "max_phase_seconds", max_phase_seconds)
         object.__setattr__(self, "max_phase_p95_seconds", max_phase_p95_seconds)
         object.__setattr__(self, "max_phase_p99_seconds", max_phase_p99_seconds)
+        object.__setattr__(
+            self,
+            "max_mean_route_duration_seconds",
+            max_mean_route_duration_seconds,
+        )
+        object.__setattr__(
+            self,
+            "max_p95_route_duration_seconds",
+            max_p95_route_duration_seconds,
+        )
+        object.__setattr__(
+            self,
+            "max_p99_route_duration_seconds",
+            max_p99_route_duration_seconds,
+        )
+        object.__setattr__(
+            self,
+            "max_mean_attempted_route_count",
+            max_mean_attempted_route_count,
+        )
+        object.__setattr__(self, "max_retrieval_use_rate", max_retrieval_use_rate)
         object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
         object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
         object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
@@ -76,6 +122,11 @@ class ProductRuntimeBudgetPolicy:
             max_phase_seconds=dict(_mapping(payload.get("max_phase_seconds"))),
             max_phase_p95_seconds=dict(_mapping(payload.get("max_phase_p95_seconds"))),
             max_phase_p99_seconds=dict(_mapping(payload.get("max_phase_p99_seconds"))),
+            max_mean_route_duration_seconds=payload.get("max_mean_route_duration_seconds"),
+            max_p95_route_duration_seconds=payload.get("max_p95_route_duration_seconds"),
+            max_p99_route_duration_seconds=payload.get("max_p99_route_duration_seconds"),
+            max_mean_attempted_route_count=payload.get("max_mean_attempted_route_count"),
+            max_retrieval_use_rate=payload.get("max_retrieval_use_rate"),
             min_cache_hit_rate=payload.get("min_cache_hit_rate"),
             min_named_cache_hit_rate=dict(_mapping(payload.get("min_named_cache_hit_rate"))),
             require_runtime_trace=_bool_value(payload.get("require_runtime_trace", True)),
@@ -88,6 +139,11 @@ class ProductRuntimeBudgetPolicy:
             or bool(self.max_phase_seconds)
             or bool(self.max_phase_p95_seconds)
             or bool(self.max_phase_p99_seconds)
+            or self.max_mean_route_duration_seconds is not None
+            or self.max_p95_route_duration_seconds is not None
+            or self.max_p99_route_duration_seconds is not None
+            or self.max_mean_attempted_route_count is not None
+            or self.max_retrieval_use_rate is not None
             or self.min_cache_hit_rate is not None
             or bool(self.min_named_cache_hit_rate)
         )
@@ -99,6 +155,11 @@ class ProductRuntimeBudgetPolicy:
             "max_phase_seconds": dict(self.max_phase_seconds),
             "max_phase_p95_seconds": dict(self.max_phase_p95_seconds),
             "max_phase_p99_seconds": dict(self.max_phase_p99_seconds),
+            "max_mean_route_duration_seconds": self.max_mean_route_duration_seconds,
+            "max_p95_route_duration_seconds": self.max_p95_route_duration_seconds,
+            "max_p99_route_duration_seconds": self.max_p99_route_duration_seconds,
+            "max_mean_attempted_route_count": self.max_mean_attempted_route_count,
+            "max_retrieval_use_rate": self.max_retrieval_use_rate,
             "min_cache_hit_rate": self.min_cache_hit_rate,
             "min_named_cache_hit_rate": dict(self.min_named_cache_hit_rate),
             "require_runtime_trace": self.require_runtime_trace,
@@ -192,6 +253,20 @@ def evaluate_product_runtime_budget(
         if not check["passed"]:
             failures.append(_failure_from_check(check))
 
+    for metric, limit in (
+        ("mean_route_duration_seconds", resolved.max_mean_route_duration_seconds),
+        ("p95_route_duration_seconds", resolved.max_p95_route_duration_seconds),
+        ("p99_route_duration_seconds", resolved.max_p99_route_duration_seconds),
+        ("mean_attempted_route_count", resolved.max_mean_attempted_route_count),
+        ("retrieval_use_rate", resolved.max_retrieval_use_rate),
+    ):
+        if limit is None:
+            continue
+        check = _max_metric_check(metrics, metric=metric, limit=limit)
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
     if resolved.min_cache_hit_rate is not None:
         check = _min_metric_check(
             metrics,
@@ -236,6 +311,13 @@ def evaluate_product_runtime_budget(
             "cache_hit_rate": metrics.get("cache_hit_rate"),
             "cache_summary": metrics.get("cache_summary"),
             "named_cache_hit_rates": named_cache_hit_rates,
+            "route_cost_summary": metrics.get("route_cost_summary"),
+            "mean_route_duration_seconds": metrics.get("mean_route_duration_seconds"),
+            "p95_route_duration_seconds": metrics.get("p95_route_duration_seconds"),
+            "p99_route_duration_seconds": metrics.get("p99_route_duration_seconds"),
+            "mean_attempted_route_count": metrics.get("mean_attempted_route_count"),
+            "retrieval_use_rate": metrics.get("retrieval_use_rate"),
+            "mean_retrieval_hits": metrics.get("mean_retrieval_hits"),
         },
         "checks": checks,
         "failures": failures,
@@ -263,6 +345,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             "slowest_phase": None,
         }
         metrics.update(_cache_metrics(trace))
+        metrics.update(_route_cost_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
@@ -294,6 +377,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         "slowest_phase": summary.get("slowest_phase"),
     }
     metrics.update(_cache_metrics(trace))
+    metrics.update(_route_cost_metrics(trace))
     return metrics
 
 
@@ -357,6 +441,25 @@ def _cache_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
         "cache_summary": summary,
         "named_cache_hit_rates": named_hit_rates,
         "raw_named_cache_hit_rates": raw_named_hit_rates,
+    }
+
+
+def _route_cost_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        summary = trace.verification_route_cost_summary()
+    else:
+        payload = dict(trace)
+        summary = ProductTrace(
+            verification_results=tuple(_sequence(payload.get("verification_results", ()))),
+        ).verification_route_cost_summary()
+    return {
+        "route_cost_summary": summary,
+        "mean_route_duration_seconds": _finite_float(summary.get("mean_duration_seconds")),
+        "p95_route_duration_seconds": _finite_float(summary.get("p95_duration_seconds")),
+        "p99_route_duration_seconds": _finite_float(summary.get("p99_duration_seconds")),
+        "mean_attempted_route_count": _finite_float(summary.get("mean_attempted_route_count")),
+        "retrieval_use_rate": _finite_float(summary.get("retrieval_use_rate")),
+        "mean_retrieval_hits": _finite_float(summary.get("mean_retrieval_hits")),
     }
 
 
@@ -485,3 +588,11 @@ def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _sequence(value: Any) -> tuple[Any, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return tuple(value)
+    return (value,)

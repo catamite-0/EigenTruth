@@ -246,6 +246,20 @@ class ProductTrace:
             "skipped_routes": skipped_routes,
         }
 
+    def verification_route_cost_summary(self) -> dict[str, Any]:
+        """Summarize verifier route cost metadata from verification results."""
+        results = [_verification_result_to_dict(result) for result in self.verification_results]
+        records = [_route_cost_record(result) for result in results]
+        by_route_records: dict[str, list[dict[str, Any]]] = {}
+        for record in records:
+            by_route_records.setdefault(record["route"], []).append(record)
+        summary = _route_cost_stats(records)
+        summary["by_route"] = {
+            route: _route_cost_stats(route_records)
+            for route, route_records in by_route_records.items()
+        }
+        return summary
+
     def runtime_summary(self) -> dict[str, Any]:
         """Return a compact runtime profile summary for trace/registry metadata."""
         payload = _runtime_trace_to_dict(self.runtime_trace)
@@ -339,6 +353,120 @@ def _runtime_trace_to_dict(trace: RuntimeTrace | Mapping[str, Any] | None) -> di
     return RuntimeTrace.from_dict(trace).to_dict()
 
 
+def _route_cost_record(result: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = result.get("metadata", {})
+    if not isinstance(metadata, Mapping):
+        metadata = {}
+    selected_route = metadata.get("selected_route")
+    route = "unrouted" if selected_route is None else str(selected_route)
+    retrieval_hit_count = _retrieval_hit_count(metadata)
+    return {
+        "route": route,
+        "routed": selected_route is not None,
+        "total_duration_seconds": _finite_float(metadata.get("total_duration_seconds")),
+        "selected_route_duration_seconds": _finite_float(
+            metadata.get("selected_route_duration_seconds")
+        ),
+        "attempted_route_count": _attempted_route_count(metadata),
+        "used_retrieval": _truthy_flag(metadata.get("used_retrieval")) or retrieval_hit_count > 0,
+        "retrieval_hit_count": retrieval_hit_count,
+    }
+
+
+def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    total_durations = [
+        value
+        for record in records
+        if (value := _finite_float(record.get("total_duration_seconds"))) is not None
+    ]
+    selected_route_durations = [
+        value
+        for record in records
+        if (value := _finite_float(record.get("selected_route_duration_seconds"))) is not None
+    ]
+    attempted_route_counts = [
+        value
+        for record in records
+        if (value := _finite_float(record.get("attempted_route_count"))) is not None
+    ]
+    selected = len(records)
+    routed_total = sum(1 for record in records if bool(record.get("routed")))
+    used_retrieval_count = sum(1 for record in records if bool(record.get("used_retrieval")))
+    retrieval_hit_count = sum(_non_negative_int(record.get("retrieval_hit_count")) or 0 for record in records)
+    total_duration = float(sum(total_durations)) if total_durations else None
+    total_selected_route_duration = (
+        float(sum(selected_route_durations))
+        if selected_route_durations
+        else None
+    )
+    total_attempted_route_count = (
+        float(sum(attempted_route_counts))
+        if attempted_route_counts
+        else None
+    )
+    return {
+        "total": selected,
+        "routed_total": routed_total,
+        "unrouted_total": selected - routed_total,
+        "duration_observations": len(total_durations),
+        "total_duration_seconds": total_duration,
+        "mean_duration_seconds": _mean_or_none(total_durations),
+        "p95_duration_seconds": _percentile_or_none(total_durations, 95.0),
+        "p99_duration_seconds": _percentile_or_none(total_durations, 99.0),
+        "max_duration_seconds": max(total_durations) if total_durations else None,
+        "selected_route_duration_observations": len(selected_route_durations),
+        "total_selected_route_duration_seconds": total_selected_route_duration,
+        "mean_selected_route_duration_seconds": _mean_or_none(selected_route_durations),
+        "p95_selected_route_duration_seconds": _percentile_or_none(
+            selected_route_durations,
+            95.0,
+        ),
+        "p99_selected_route_duration_seconds": _percentile_or_none(
+            selected_route_durations,
+            99.0,
+        ),
+        "attempted_route_count_observations": len(attempted_route_counts),
+        "total_attempted_route_count": total_attempted_route_count,
+        "mean_attempted_route_count": _mean_or_none(attempted_route_counts),
+        "used_retrieval_count": used_retrieval_count,
+        "retrieval_use_rate": _safe_div(used_retrieval_count, selected),
+        "retrieval_hit_count": retrieval_hit_count,
+        "mean_retrieval_hits": _safe_div(retrieval_hit_count, selected),
+    }
+
+
+def _attempted_route_count(metadata: Mapping[str, Any]) -> float | None:
+    explicit = _finite_float(metadata.get("attempted_route_count"))
+    if explicit is not None and explicit >= 0.0:
+        return explicit
+    skipped_count = sum(1 for item in _as_sequence(metadata.get("skipped_routes", ())) if isinstance(item, Mapping))
+    if metadata.get("selected_route") is not None:
+        return float(skipped_count + 1)
+    matched_count = len(_as_sequence(metadata.get("matched_routes", ())))
+    if skipped_count:
+        return float(skipped_count)
+    if matched_count:
+        return float(matched_count)
+    return None
+
+
+def _retrieval_hit_count(metadata: Mapping[str, Any]) -> int:
+    explicit = _non_negative_int(metadata.get("retrieval_hit_count"))
+    if explicit is not None:
+        return explicit
+    hits = metadata.get("retrieval_hits", ())
+    if isinstance(hits, Sequence) and not isinstance(hits, (str, bytes, bytearray)):
+        return len(hits)
+    return 0
+
+
+def _truthy_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    return normalized in {"1", "true", "yes", "on"}
+
+
 def _phase_duration_stats(durations: Sequence[float]) -> dict[str, Any]:
     values = [float(value) for value in durations]
     if not values:
@@ -361,6 +489,18 @@ def _phase_duration_stats(durations: Sequence[float]) -> dict[str, Any]:
         "p99_seconds": _percentile_or_none(values, 99.0),
         "max_seconds": max(values),
     }
+
+
+def _mean_or_none(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return float(sum(values)) / len(values)
+
+
+def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
+    if denominator == 0:
+        return None
+    return float(numerator) / float(denominator)
 
 
 def _percentile_or_none(values: Sequence[float], percentile: float) -> float | None:

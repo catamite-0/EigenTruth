@@ -99,9 +99,10 @@ By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence
 collection, and re-verification. Pass `--no-runtime-trace` when comparing JSON
 payloads that should omit timing noise. Optional runtime budget flags evaluate
-those timings fail-closed and write the result into trace metadata. The demo can
-also wrap verifier/retriever calls in request-local caches and gate on aggregate
-or named cache hit rates:
+those timings fail-closed and write the result into trace metadata. The demo also
+summarizes verifier route cost metadata, can wrap verifier/retriever calls in
+request-local caches, and can gate on route attempts, retrieval use, and cache
+hit rates:
 
 ```bash
 python examples/calibrated_control_demo.py --runtime-profile balanced
@@ -112,6 +113,9 @@ python examples/calibrated_control_demo.py \
 python examples/calibrated_control_demo.py \
   --max-runtime-phase-p95-seconds '{"initial_verification": 0.5}' \
   --max-runtime-phase-p99-seconds '{"initial_verification": 0.8}'
+python examples/calibrated_control_demo.py \
+  --max-mean-attempted-route-count 1.5 \
+  --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5

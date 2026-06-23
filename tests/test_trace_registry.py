@@ -423,6 +423,106 @@ def test_product_trace_verification_route_summary_counts_runtime_routes():
     json.dumps(summary)
 
 
+def test_product_trace_verification_route_cost_summary_matches_benchmark_fields():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "selected_route": "structured_qa",
+                    "matched_routes": ("structured_qa", "fallback"),
+                    "total_duration_seconds": 0.01,
+                    "selected_route_duration_seconds": 0.01,
+                    "retrieval_hits": ({"id": "doc-1"}, {"id": "doc-2"}),
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.5,
+                metadata={
+                    "selected_route": "retrieval_groundedness",
+                    "matched_routes": ("structured_qa", "retrieval_groundedness"),
+                    "skipped_routes": (
+                        {
+                            "route": "structured_qa",
+                            "status": "insufficient_evidence",
+                        },
+                    ),
+                    "total_duration_seconds": 0.04,
+                    "selected_route_duration_seconds": 0.03,
+                    "used_retrieval": True,
+                    "retrieval_hit_count": 3,
+                },
+            ),
+            VerificationResult(status=VerificationStatus.NOT_APPLICABLE, confidence=1.0),
+        )
+    )
+
+    summary = trace.verification_route_cost_summary()
+
+    assert summary["total"] == 3
+    assert summary["routed_total"] == 2
+    assert summary["duration_observations"] == 2
+    assert summary["mean_duration_seconds"] == 0.025
+    assert summary["attempted_route_count_observations"] == 2
+    assert summary["mean_attempted_route_count"] == 1.5
+    assert summary["used_retrieval_count"] == 2
+    assert summary["retrieval_use_rate"] == 2 / 3
+    assert summary["retrieval_hit_count"] == 5
+    assert summary["mean_retrieval_hits"] == 5 / 3
+    assert summary["by_route"]["retrieval_groundedness"]["mean_attempted_route_count"] == 2.0
+    json.dumps(summary)
+
+
+def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "selected_route": "structured_qa",
+                    "total_duration_seconds": 0.01,
+                    "retrieval_hits": (),
+                },
+            ),
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "selected_route": "retrieval_groundedness",
+                    "skipped_routes": ({"route": "structured_qa"},),
+                    "total_duration_seconds": 0.05,
+                    "used_retrieval": True,
+                    "retrieval_hit_count": 2,
+                },
+            ),
+        ),
+        runtime_trace=None,
+    )
+
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            max_mean_route_duration_seconds=0.02,
+            max_mean_attempted_route_count=1.2,
+            max_retrieval_use_rate=0.25,
+        ),
+    )
+
+    assert report["passed"] is False
+    assert report["metrics"]["has_runtime_trace"] is False
+    assert round(report["metrics"]["mean_route_duration_seconds"], 6) == 0.03
+    assert report["metrics"]["mean_attempted_route_count"] == 1.5
+    assert report["metrics"]["retrieval_use_rate"] == 0.5
+    assert [failure["metric"] for failure in report["failures"]] == [
+        "mean_route_duration_seconds",
+        "mean_attempted_route_count",
+        "retrieval_use_rate",
+    ]
+
+
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
     registry_path = tmp_path / "registry.json"
     registry = ArtifactRegistry.load_json(registry_path)

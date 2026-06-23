@@ -135,6 +135,11 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     raw_phase_seconds = getattr(args, "max_runtime_phase_seconds", None)
     raw_phase_p95_seconds = getattr(args, "max_runtime_phase_p95_seconds", None)
     raw_phase_p99_seconds = getattr(args, "max_runtime_phase_p99_seconds", None)
+    max_mean_route_duration_seconds = getattr(args, "max_mean_route_duration_seconds", None)
+    max_p95_route_duration_seconds = getattr(args, "max_p95_route_duration_seconds", None)
+    max_p99_route_duration_seconds = getattr(args, "max_p99_route_duration_seconds", None)
+    max_mean_attempted_route_count = getattr(args, "max_mean_attempted_route_count", None)
+    max_retrieval_use_rate = getattr(args, "max_retrieval_use_rate", None)
     min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
     raw_named_cache_hit_rate = getattr(args, "min_named_cache_hit_rate", None)
     if (
@@ -142,6 +147,11 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         and raw_phase_seconds is None
         and raw_phase_p95_seconds is None
         and raw_phase_p99_seconds is None
+        and max_mean_route_duration_seconds is None
+        and max_p95_route_duration_seconds is None
+        and max_p99_route_duration_seconds is None
+        and max_mean_attempted_route_count is None
+        and max_retrieval_use_rate is None
         and min_cache_hit_rate is None
         and raw_named_cache_hit_rate is None
     ):
@@ -171,6 +181,11 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         max_phase_seconds={key: float(value) for key, value in phase_seconds.items()},
         max_phase_p95_seconds={key: float(value) for key, value in phase_p95_seconds.items()},
         max_phase_p99_seconds={key: float(value) for key, value in phase_p99_seconds.items()},
+        max_mean_route_duration_seconds=max_mean_route_duration_seconds,
+        max_p95_route_duration_seconds=max_p95_route_duration_seconds,
+        max_p99_route_duration_seconds=max_p99_route_duration_seconds,
+        max_mean_attempted_route_count=max_mean_attempted_route_count,
+        max_retrieval_use_rate=max_retrieval_use_rate,
         min_cache_hit_rate=min_cache_hit_rate,
         min_named_cache_hit_rate={key: float(value) for key, value in named_cache_hit_rate.items()},
     )
@@ -356,9 +371,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if retriever_cache is not None:
         cache_metadata["retriever"] = retriever_cache.stats.to_dict()
     cache_summary = trace.cache_summary()
+    route_cost_summary = trace.verification_route_cost_summary()
     payload = trace.to_dict()
     if cache_metadata:
         payload["metadata"]["cache_summary"] = cache_summary
+    payload["metadata"]["route_cost_summary"] = route_cost_summary
     runtime_budget_policy = runtime_budget_policy_from_args(args)
     runtime_budget = (
         None
@@ -385,6 +402,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
                 "cache_summary": cache_summary,
+                "route_cost_summary": route_cost_summary,
                 "runtime_budget": runtime_budget,
                 "verifier_type": type(verifier).__name__,
             },
@@ -428,6 +446,16 @@ def main() -> None:
                         help="optional JSON object mapping runtime phase names to max p95 seconds")
     parser.add_argument("--max-runtime-phase-p99-seconds", default=None,
                         help="optional JSON object mapping runtime phase names to max p99 seconds")
+    parser.add_argument("--max-mean-route-duration-seconds", type=float, default=None,
+                        help="optional ProductTrace route-cost budget for mean route seconds")
+    parser.add_argument("--max-p95-route-duration-seconds", type=float, default=None,
+                        help="optional ProductTrace route-cost budget for p95 route seconds")
+    parser.add_argument("--max-p99-route-duration-seconds", type=float, default=None,
+                        help="optional ProductTrace route-cost budget for p99 route seconds")
+    parser.add_argument("--max-mean-attempted-route-count", type=float, default=None,
+                        help="optional ProductTrace route-cost budget for mean attempted routes per claim")
+    parser.add_argument("--max-retrieval-use-rate", type=float, default=None,
+                        help="optional ProductTrace route-cost budget for retrieval use rate")
     parser.add_argument("--min-cache-hit-rate", type=float, default=None,
                         help="optional ProductTrace cache budget for aggregate cache hit rate")
     parser.add_argument("--min-named-cache-hit-rate", default=None,
