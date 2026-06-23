@@ -4009,6 +4009,122 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     )
 
 
+def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    structured_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        runtime_total_seconds=0.8,
+        runtime_n_retrieval_hits=0,
+    )
+    retrieval_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=0.96,
+        false_supported_rate=0.03,
+        false_refuted_rate=0.60,
+        mean_duration_seconds=0.04,
+        p99_duration_seconds=0.08,
+        mean_attempted_route_count=2.0,
+        retrieval_use_rate=1.0,
+        runtime_total_seconds=2.0,
+        runtime_n_retrieval_hits=24,
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    registry.record_benchmark_manifest(
+        name="structured-route",
+        path=structured_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    )
+    registry.record_benchmark_manifest(
+        name="retrieval-route",
+        path=retrieval_manifest,
+        version="0.7",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    )
+    registry.save_json()
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.95,
+        max_false_supported_rate=0.05,
+        min_false_refuted_rate=0.50,
+        max_retrieval_use_rate=0.0,
+        max_runtime_total_seconds=1.0,
+        required_route_max_runtime_total_seconds=3.0,
+        required_route_max_retrieval_hit_count=30,
+        required_route_max_retrieval_use_rate=1.0,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.95,
+        max_false_supported_rate=0.05,
+        min_false_refuted_rate=0.50,
+        max_retrieval_use_rate=0.0,
+        max_runtime_total_seconds=1.0,
+        required_route_max_runtime_total_seconds=1.0,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
+    assert promoted["decision"]["required_route_baseline_status"] == "promote"
+    assert promoted["decision"]["required_route_baseline_records"] == (
+        "benchmark_manifest:retrieval-route:0.7",
+    )
+    candidate = promoted["release_candidate"]
+    assert candidate["verifier_route"]["route"] == "structured_state"
+    assert candidate["verifier_route"]["retrieval_use_rate"] == pytest.approx(0.0)
+    assert candidate["required_route_baselines"]["records"] == (
+        "benchmark_manifest:retrieval-route:0.7",
+    )
+    assert candidate["required_route_baselines"]["routes"] == ("retrieval_groundedness",)
+    assert candidate["manifests"]["required_route_manifest_1"] == str(retrieval_manifest)
+    assert promoted["required_route_baseline_gate"]["gate"]["passed"] is True
+    assert promoted["required_route_baseline_gate"]["comparison"]["config"]["max_runtime_total_seconds"] == (
+        pytest.approx(3.0)
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "required_route_baselines"
+    assert any(
+        "runtime_budget: total_seconds above 1.0" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_blocks_mismatched_performance_baseline(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -4604,11 +4720,30 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         mean_duration_seconds=0.01,
         p99_duration_seconds=0.02,
     )
+    retrieval_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=0.96,
+        false_supported_rate=0.03,
+        false_refuted_rate=0.60,
+        mean_duration_seconds=0.04,
+        p99_duration_seconds=0.08,
+        mean_attempted_route_count=2.0,
+        retrieval_use_rate=1.0,
+        runtime_total_seconds=2.0,
+        runtime_n_retrieval_hits=24,
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
         name="structured-route",
         path=route_manifest,
         version="0.6",
         metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).record_benchmark_manifest(
+        name="retrieval-route",
+        path=retrieval_manifest,
+        version="0.7",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
     ).save_json()
     _write_performance_baseline_record(
         tmp_path / "performance",
@@ -4634,6 +4769,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
             performance_baseline_key="performance_baseline:qwen-performance:0.6",
+            route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+            required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
             adapter_family_matrix_path=adapter_family_matrix_path,
             required_adapter_routes=("structured_state", "state_transition"),
             runtime_profile="balanced",
@@ -4645,6 +4782,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             min_selected=4,
             min_decision_accuracy=0.99,
             max_p99_duration_seconds=0.03,
+            required_route_max_runtime_total_seconds=3.0,
+            required_route_max_retrieval_hit_count=30,
+            required_route_max_retrieval_use_rate=1.0,
             promotion_metadata={"scope": "unit"},
         )
     )
@@ -4659,6 +4799,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "performance_manifest",
         "readiness_manifest",
         "release_candidate_report",
+        "required_route_manifest_1",
         "route_manifest",
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
@@ -4666,6 +4807,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_runtime_profile"] == "balanced"
     assert manifest["metadata"]["release_performance_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
+    assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
         "max_mean_attempted_route_count": 1.5,
         "max_retrieval_use_rate": 0.5,
@@ -4676,6 +4818,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "performance_baseline:qwen-performance:0.6"
     )
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
+    assert manifest["metadata"]["required_route_baseline_records"] == [
+        "benchmark_manifest:retrieval-route:0.7"
+    ]
     assert manifest["metadata"]["recommended_route_verified_false_alarm"] == pytest.approx(0.0)
     assert manifest["metadata"]["recommended_route_verified_detection"] == pytest.approx(1.0)
     assert manifest["metadata"]["recommended_route_mean_duration_seconds"] == pytest.approx(0.01)
@@ -4693,11 +4838,25 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_manifest"].endswith("performance/artifact-manifest.json")
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
+    assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
+    assert manifest["metadata"]["required_route_baseline_manifests"] == [str(retrieval_manifest)]
+    assert manifest["metadata"]["required_route_budget_policy"]["required_route_max_runtime_total_seconds"] == (
+        pytest.approx(3.0)
+    )
     assert payload["config"]["runtime_profile"] == "balanced"
+    assert payload["config"]["route_baseline_keys"] == ("benchmark_manifest:structured-route:0.6",)
+    assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
+    assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
+    assert payload["release_candidate_comparison"]["config"]["required_route_baseline_keys"] == [
+        "benchmark_manifest:retrieval-route:0.7"
+    ]
+    assert payload["release_candidate_comparison"]["config"]["required_route_max_runtime_total_seconds"] == (
+        pytest.approx(3.0)
+    )
     assert payload["release_candidate_comparison"]["config"]["inside_trigger_budget_policy"] == "cost_first"
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
@@ -4712,7 +4871,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "performance_baseline:qwen-performance:0.6"
     )
     assert record.metadata["release_adapter_family_status"] == "promote"
+    assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
+    assert record.metadata["required_route_baseline_records"] == [
+        "benchmark_manifest:retrieval-route:0.7"
+    ]
+    assert record.metadata["required_route_budget_policy"]["required_route_max_retrieval_hit_count"] == (
+        pytest.approx(30.0)
+    )
     assert record.metadata["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"

@@ -1094,6 +1094,8 @@ python benchmarks/compare_release_candidates.py \
   --route-registry artifacts/registry.json \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
+  --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1109,6 +1111,9 @@ python benchmarks/compare_release_candidates.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --required-route-max-runtime-total-seconds 120 \
+  --required-route-max-retrieval-hit-count 5000 \
+  --required-route-max-retrieval-use-rate 1.0 \
   --json artifacts/release-candidate-comparison.json \
   --fail-on-blocked
 ```
@@ -1116,6 +1121,16 @@ python benchmarks/compare_release_candidates.py \
 Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
+Repeat `--required-route-baseline-key` when the release should also require
+additional promoted route baselines, such as a real local-corpus
+`retrieval_groundedness` baseline, without making that route the selected
+low-latency product route. This gate verifies that each required route manifest
+is promoted and recursively valid. Add `--required-route-*` thresholds when the
+audit route needs its own quality, latency, retrieval-hit, or cache-reuse budget;
+otherwise the release only checks the route's already-registered promotion
+status and manifest validity. This keeps selected product-route budgets such as
+`--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
+retrieval or world-model adapters.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -1151,7 +1166,10 @@ readiness manifest or runtime recommendation. Pass `cost_first`,
 without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
-`run_release_candidate_registry_workflow.py`:
+`run_release_candidate_registry_workflow.py`. It accepts the same
+`--required-route-baseline-key` option and includes those route manifests in the
+final release-candidate manifest when the gate promotes. Required-route budget
+settings are also copied into manifest metadata as `required_route_budget_policy`.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1552,7 +1570,10 @@ python benchmarks/run_local_retrieval_route_workflow.py \
 ```
 
 Use this when the local corpus baseline should enter `compare_route_baselines.py`
-and release-candidate gates. Unlike `build_evidence_fixture.py` alone, this
+and release-candidate gates. Pass the resulting registry key to
+`compare_release_candidates.py --required-route-baseline-key` when it should be a
+mandatory audit baseline while another route remains the selected product path.
+Unlike `build_evidence_fixture.py` alone, this
 workflow records the full provenance chain needed for recursive manifest
 verification. The workflow report also includes a lightweight `profile` block
 with phase timings, input/output artifact byte sizes, dataset scale, retrieval
@@ -1586,7 +1607,7 @@ when set with `auto` or `sqlite_fts`, the workflow can reuse a persistent FTS
 index across runs and records the actual backend, index path, and reuse status
 in the claims fixture and manifest metadata.
 
-Current l80 local-corpus baseline with `--query-field answer`,
+Saved l80 local-corpus verifier baseline with `--query-field answer`,
 `--retriever-min-overlap 0.95`, and `--retrieval-limit 3`:
 
 | Run | Verified false alarm | Verified detection | true supported | false supported | decision accuracy |
@@ -1598,6 +1619,12 @@ Interpretation: this conservative lexical corpus strongly suppresses false
 alarms by supporting most true claims, but it rarely refutes false claims. It is
 a reproducible non-oracle baseline, not a replacement for stronger retrieval,
 database, calculator, or domain-world-model evidence.
+These rows are overall `verification_quality` metrics from the verifier report,
+not route-promotion metrics. `run_local_retrieval_route_workflow.py` computes
+route gates on selected route invocations, so a release-grade local retrieval
+route should be registered only after its own promotion report passes the
+intended route-level false-support, verified false-alarm, detection, and runtime
+checks.
 
 For both Qwen l80 and SmolLM2 l80, `route_summary.selected_counts` is
 `groundedness=287` and `retrieval_groundedness=269`, which separates direct

@@ -34,6 +34,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     performance_registry_path: Path | None = None
     readiness_baseline_keys: Sequence[str] = ()
     route_baseline_keys: Sequence[str] = ()
+    required_route_baseline_keys: Sequence[str] = ()
     performance_baseline_key: str | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
@@ -65,6 +66,21 @@ class ReleaseCandidateRegistryWorkflowConfig:
     max_retrieval_hit_count: float | None = None
     min_claims_cache_hit_rate: float | None = None
     min_verifier_trace_cache_hit_rate: float | None = None
+    required_route_min_selected: int | None = None
+    required_route_min_decision_accuracy: float | None = None
+    required_route_max_false_supported_rate: float | None = None
+    required_route_min_false_refuted_rate: float | None = None
+    required_route_max_verified_false_alarm: float | None = None
+    required_route_min_verified_detection: float | None = None
+    required_route_max_mean_duration_seconds: float | None = None
+    required_route_max_p99_duration_seconds: float | None = None
+    required_route_max_max_duration_seconds: float | None = None
+    required_route_max_mean_attempted_route_count: float | None = None
+    required_route_max_retrieval_use_rate: float | None = None
+    required_route_max_runtime_total_seconds: float | None = None
+    required_route_max_retrieval_hit_count: float | None = None
+    required_route_min_claims_cache_hit_rate: float | None = None
+    required_route_min_verifier_trace_cache_hit_rate: float | None = None
     promotion_metadata: Mapping[str, Any] | None = None
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -97,6 +113,11 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "inside_trigger_budget_policy", policy)
         object.__setattr__(self, "readiness_baseline_keys", tuple(str(key) for key in self.readiness_baseline_keys))
         object.__setattr__(self, "route_baseline_keys", tuple(str(key) for key in self.route_baseline_keys))
+        object.__setattr__(
+            self,
+            "required_route_baseline_keys",
+            tuple(str(key) for key in self.required_route_baseline_keys),
+        )
         object.__setattr__(self, "required_adapter_routes", tuple(str(route) for route in self.required_adapter_routes))
 
     @property
@@ -135,6 +156,7 @@ def run_release_candidate_registry_workflow(
         route_registry_path=config.route_registry_path,
         readiness_baseline_keys=config.readiness_baseline_keys,
         route_baseline_keys=config.route_baseline_keys,
+        required_route_baseline_keys=config.required_route_baseline_keys,
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
@@ -163,6 +185,21 @@ def run_release_candidate_registry_workflow(
         max_retrieval_hit_count=config.max_retrieval_hit_count,
         min_claims_cache_hit_rate=config.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=config.min_verifier_trace_cache_hit_rate,
+        required_route_min_selected=config.required_route_min_selected,
+        required_route_min_decision_accuracy=config.required_route_min_decision_accuracy,
+        required_route_max_false_supported_rate=config.required_route_max_false_supported_rate,
+        required_route_min_false_refuted_rate=config.required_route_min_false_refuted_rate,
+        required_route_max_verified_false_alarm=config.required_route_max_verified_false_alarm,
+        required_route_min_verified_detection=config.required_route_min_verified_detection,
+        required_route_max_mean_duration_seconds=config.required_route_max_mean_duration_seconds,
+        required_route_max_p99_duration_seconds=config.required_route_max_p99_duration_seconds,
+        required_route_max_max_duration_seconds=config.required_route_max_max_duration_seconds,
+        required_route_max_mean_attempted_route_count=config.required_route_max_mean_attempted_route_count,
+        required_route_max_retrieval_use_rate=config.required_route_max_retrieval_use_rate,
+        required_route_max_runtime_total_seconds=config.required_route_max_runtime_total_seconds,
+        required_route_max_retrieval_hit_count=config.required_route_max_retrieval_hit_count,
+        required_route_min_claims_cache_hit_rate=config.required_route_min_claims_cache_hit_rate,
+        required_route_min_verifier_trace_cache_hit_rate=config.required_route_min_verifier_trace_cache_hit_rate,
         notes=("release candidate registry workflow",),
     )
     config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
@@ -202,7 +239,10 @@ def run_release_candidate_registry_workflow(
             "readiness_registry": str(config.readiness_registry_path),
             "route_registry": str(config.route_registry_path or config.readiness_registry_path),
             "performance_registry": str(config.performance_registry_path or config.readiness_registry_path),
+            "readiness_baseline_keys": tuple(config.readiness_baseline_keys),
+            "route_baseline_keys": tuple(config.route_baseline_keys),
             "performance_baseline_key": config.performance_baseline_key,
+            "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
             "adapter_family_matrix": (
                 None
                 if config.adapter_family_matrix_path is None
@@ -218,6 +258,25 @@ def run_release_candidate_registry_workflow(
             "allow_promotion_failures": config.allow_promotion_failures,
             "runtime_profile": config.runtime_profile,
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
+            "required_route_min_selected": config.required_route_min_selected,
+            "required_route_min_decision_accuracy": config.required_route_min_decision_accuracy,
+            "required_route_max_false_supported_rate": config.required_route_max_false_supported_rate,
+            "required_route_min_false_refuted_rate": config.required_route_min_false_refuted_rate,
+            "required_route_max_verified_false_alarm": config.required_route_max_verified_false_alarm,
+            "required_route_min_verified_detection": config.required_route_min_verified_detection,
+            "required_route_max_mean_duration_seconds": config.required_route_max_mean_duration_seconds,
+            "required_route_max_p99_duration_seconds": config.required_route_max_p99_duration_seconds,
+            "required_route_max_max_duration_seconds": config.required_route_max_max_duration_seconds,
+            "required_route_max_mean_attempted_route_count": (
+                config.required_route_max_mean_attempted_route_count
+            ),
+            "required_route_max_retrieval_use_rate": config.required_route_max_retrieval_use_rate,
+            "required_route_max_runtime_total_seconds": config.required_route_max_runtime_total_seconds,
+            "required_route_max_retrieval_hit_count": config.required_route_max_retrieval_hit_count,
+            "required_route_min_claims_cache_hit_rate": config.required_route_min_claims_cache_hit_rate,
+            "required_route_min_verifier_trace_cache_hit_rate": (
+                config.required_route_min_verifier_trace_cache_hit_rate
+            ),
         },
         "release_candidate_comparison": comparison,
         "promotion": promotion,
@@ -241,6 +300,11 @@ def _write_artifact_manifest(
         "performance_manifest": manifests.get("performance_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
+    artifacts.update({
+        str(name): path
+        for name, path in manifests.items()
+        if str(name).startswith("required_route_manifest_")
+    })
     manifest = build_artifact_manifest(
         artifacts,
         root=config.manifest_path.parent,
@@ -286,6 +350,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     verifier_route = dict(candidate.get("verifier_route") or {})
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
+    required_route_baselines = dict(candidate.get("required_route_baselines") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -294,6 +359,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_route_status": decision.get("route_status"),
         "release_performance_status": decision.get("performance_status"),
         "release_adapter_family_status": decision.get("adapter_family_status"),
+        "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_runtime_profile": config.get("runtime_profile"),
         "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
         "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
@@ -301,6 +367,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_record": decision.get("recommended_route_record"),
         "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
         "required_adapter_routes": decision.get("required_adapter_routes"),
+        "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
         "recommended_route": decision.get("recommended_route"),
         "recommended_layer": runtime.get("layer"),
@@ -369,6 +436,29 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
         "adapter_family_required_routes": adapter_family.get("required_routes"),
+        "required_route_baseline_registry": required_route_baselines.get("registry"),
+        "required_route_baseline_routes": required_route_baselines.get("routes"),
+        "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
+        "required_route_budget_policy": {
+            key: config.get(key)
+            for key in (
+                "required_route_min_selected",
+                "required_route_min_decision_accuracy",
+                "required_route_max_false_supported_rate",
+                "required_route_min_false_refuted_rate",
+                "required_route_max_verified_false_alarm",
+                "required_route_min_verified_detection",
+                "required_route_max_mean_duration_seconds",
+                "required_route_max_p99_duration_seconds",
+                "required_route_max_max_duration_seconds",
+                "required_route_max_mean_attempted_route_count",
+                "required_route_max_retrieval_use_rate",
+                "required_route_max_runtime_total_seconds",
+                "required_route_max_retrieval_hit_count",
+                "required_route_min_claims_cache_hit_rate",
+                "required_route_min_verifier_trace_cache_hit_rate",
+            )
+        },
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
@@ -426,6 +516,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         version=args.version,
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
+        required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
         performance_baseline_key=args.performance_baseline_key,
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
@@ -457,6 +548,21 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        required_route_min_selected=args.required_route_min_selected,
+        required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
+        required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
+        required_route_min_false_refuted_rate=args.required_route_min_false_refuted_rate,
+        required_route_max_verified_false_alarm=args.required_route_max_verified_false_alarm,
+        required_route_min_verified_detection=args.required_route_min_verified_detection,
+        required_route_max_mean_duration_seconds=args.required_route_max_mean_duration_seconds,
+        required_route_max_p99_duration_seconds=args.required_route_max_p99_duration_seconds,
+        required_route_max_max_duration_seconds=args.required_route_max_max_duration_seconds,
+        required_route_max_mean_attempted_route_count=args.required_route_max_mean_attempted_route_count,
+        required_route_max_retrieval_use_rate=args.required_route_max_retrieval_use_rate,
+        required_route_max_runtime_total_seconds=args.required_route_max_runtime_total_seconds,
+        required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
+        required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
+        required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
         promotion_metadata=_parse_metadata(args.metadata or ()),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -489,6 +595,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", required=True)
     parser.add_argument("--readiness-baseline-key", action="append", default=[])
     parser.add_argument("--route-baseline-key", action="append", default=[])
+    parser.add_argument("--required-route-baseline-key", action="append", default=[],
+                        help="additional promoted route benchmark_manifest key that must verify without "
+                             "becoming the selected product route; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--adapter-family-matrix", default=None,
@@ -596,6 +705,70 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument("--required-route-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--required-route-min-selected",
+    ), default=None)
+    parser.add_argument("--required-route-min-decision-accuracy", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-decision-accuracy",
+    ), default=None)
+    parser.add_argument("--required-route-max-false-supported-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-false-supported-rate",
+    ), default=None)
+    parser.add_argument("--required-route-min-false-refuted-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-false-refuted-rate",
+    ), default=None)
+    parser.add_argument("--required-route-max-verified-false-alarm", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-verified-false-alarm",
+    ), default=None)
+    parser.add_argument("--required-route-min-verified-detection", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-verified-detection",
+    ), default=None)
+    parser.add_argument("--required-route-max-mean-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-mean-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-p99-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-p99-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-max-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-max-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-mean-attempted-route-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-mean-attempted-route-count",
+    ), default=None)
+    parser.add_argument("--required-route-max-retrieval-use-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-retrieval-use-rate",
+    ), default=None)
+    parser.add_argument("--required-route-max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--required-route-min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument(
+        "--required-route-min-verifier-trace-cache-hit-rate",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--required-route-min-verifier-trace-cache-hit-rate",
+        ),
+        default=None,
+    )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate registry workflow promotes")
     run(parser.parse_args(argv))

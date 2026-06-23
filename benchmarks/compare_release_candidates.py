@@ -27,6 +27,7 @@ def compare_release_candidates(
     route_registry_path: str | Path | None = None,
     readiness_baseline_keys: Sequence[str] = (),
     route_baseline_keys: Sequence[str] = (),
+    required_route_baseline_keys: Sequence[str] = (),
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
     adapter_family_matrix_path: str | Path | None = None,
@@ -55,6 +56,21 @@ def compare_release_candidates(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    required_route_min_selected: int | None = None,
+    required_route_min_decision_accuracy: float | None = None,
+    required_route_max_false_supported_rate: float | None = None,
+    required_route_min_false_refuted_rate: float | None = None,
+    required_route_max_verified_false_alarm: float | None = None,
+    required_route_min_verified_detection: float | None = None,
+    required_route_max_mean_duration_seconds: float | None = None,
+    required_route_max_p99_duration_seconds: float | None = None,
+    required_route_max_max_duration_seconds: float | None = None,
+    required_route_max_mean_attempted_route_count: float | None = None,
+    required_route_max_retrieval_use_rate: float | None = None,
+    required_route_max_runtime_total_seconds: float | None = None,
+    required_route_max_retrieval_hit_count: float | None = None,
+    required_route_min_claims_cache_hit_rate: float | None = None,
+    required_route_min_verifier_trace_cache_hit_rate: float | None = None,
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
@@ -116,6 +132,27 @@ def compare_release_candidates(
         notes=("release candidate route comparison",),
     )
     raw_candidate = _release_candidate(readiness, route)
+    required_routes = _required_route_baseline_gate(
+        route_registry_path=route_registry_path,
+        required_route_baseline_keys=required_route_baseline_keys,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        min_selected=required_route_min_selected,
+        min_decision_accuracy=required_route_min_decision_accuracy,
+        max_false_supported_rate=required_route_max_false_supported_rate,
+        min_false_refuted_rate=required_route_min_false_refuted_rate,
+        max_verified_false_alarm=required_route_max_verified_false_alarm,
+        min_verified_detection=required_route_min_verified_detection,
+        max_mean_duration_seconds=required_route_max_mean_duration_seconds,
+        max_p99_duration_seconds=required_route_max_p99_duration_seconds,
+        max_max_duration_seconds=required_route_max_max_duration_seconds,
+        max_mean_attempted_route_count=required_route_max_mean_attempted_route_count,
+        max_retrieval_use_rate=required_route_max_retrieval_use_rate,
+        max_runtime_total_seconds=required_route_max_runtime_total_seconds,
+        max_retrieval_hit_count=required_route_max_retrieval_hit_count,
+        min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
+    )
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
         required_routes=required_adapter_routes,
@@ -127,9 +164,9 @@ def compare_release_candidates(
         allow_unverified=allow_unverified,
         candidate=raw_candidate,
     )
-    decision = _decision(readiness, route, raw_candidate, performance, adapter_family)
+    decision = _decision(readiness, route, raw_candidate, performance, adapter_family, required_routes)
     candidate = (
-        _candidate_with_gates(raw_candidate, performance, adapter_family)
+        _candidate_with_gates(raw_candidate, performance, adapter_family, required_routes)
         if decision["status"] == "promote"
         else None
     )
@@ -142,6 +179,7 @@ def compare_release_candidates(
             "performance_registry": str(performance_registry_path),
             "readiness_baseline_keys": list(readiness_baseline_keys),
             "route_baseline_keys": list(route_baseline_keys),
+            "required_route_baseline_keys": list(required_route_baseline_keys),
             "performance_baseline_key": performance_baseline_key,
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
@@ -171,9 +209,25 @@ def compare_release_candidates(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "required_route_min_selected": required_route_min_selected,
+            "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
+            "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
+            "required_route_min_false_refuted_rate": required_route_min_false_refuted_rate,
+            "required_route_max_verified_false_alarm": required_route_max_verified_false_alarm,
+            "required_route_min_verified_detection": required_route_min_verified_detection,
+            "required_route_max_mean_duration_seconds": required_route_max_mean_duration_seconds,
+            "required_route_max_p99_duration_seconds": required_route_max_p99_duration_seconds,
+            "required_route_max_max_duration_seconds": required_route_max_max_duration_seconds,
+            "required_route_max_mean_attempted_route_count": required_route_max_mean_attempted_route_count,
+            "required_route_max_retrieval_use_rate": required_route_max_retrieval_use_rate,
+            "required_route_max_runtime_total_seconds": required_route_max_runtime_total_seconds,
+            "required_route_max_retrieval_hit_count": required_route_max_retrieval_hit_count,
+            "required_route_min_claims_cache_hit_rate": required_route_min_claims_cache_hit_rate,
+            "required_route_min_verifier_trace_cache_hit_rate": required_route_min_verifier_trace_cache_hit_rate,
         },
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
+        "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
@@ -300,6 +354,7 @@ def _decision(
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None = None,
     adapter_family: Mapping[str, Any] | None = None,
+    required_routes: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -309,6 +364,8 @@ def _decision(
     performance_status = None if performance is None else performance.get("status")
     adapter_family_gate = _mapping(None if adapter_family is None else adapter_family.get("gate"))
     adapter_family_status = None if adapter_family is None else adapter_family.get("status")
+    required_routes_gate = _mapping(None if required_routes is None else required_routes.get("gate"))
+    required_route_status = None if required_routes is None else required_routes.get("status")
     blocking_reasons = []
     if readiness_status != "promote":
         blocking_reasons.append({
@@ -334,6 +391,12 @@ def _decision(
             "status": adapter_family_status,
             "reasons": list(adapter_family_gate.get("blocking_reasons", ())),
         })
+    if required_routes is not None and required_routes_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "required_route_baselines",
+            "status": required_route_status,
+            "reasons": list(required_routes_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -349,6 +412,7 @@ def _decision(
         "route_status": route_status,
         "performance_status": performance_status,
         "adapter_family_status": adapter_family_status,
+        "required_route_baseline_status": required_route_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
@@ -359,9 +423,89 @@ def _decision(
             if adapter_family is None or adapter_family_gate.get("passed") is not True
             else tuple(adapter_family.get("required_routes", ()))
         ),
+        "required_route_baseline_records": (
+            ()
+            if required_routes is None or required_routes_gate.get("passed") is not True
+            else tuple(required_routes.get("required_keys", ()))
+        ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
         "blocking_reasons": blocking_reasons,
+    }
+
+
+def _required_route_baseline_gate(
+    *,
+    route_registry_path: str | Path,
+    required_route_baseline_keys: Sequence[str],
+    recursive: bool,
+    allow_unverified: bool,
+    min_selected: int | None,
+    min_decision_accuracy: float | None,
+    max_false_supported_rate: float | None,
+    min_false_refuted_rate: float | None,
+    max_verified_false_alarm: float | None,
+    min_verified_detection: float | None,
+    max_mean_duration_seconds: float | None,
+    max_p99_duration_seconds: float | None,
+    max_max_duration_seconds: float | None,
+    max_mean_attempted_route_count: float | None,
+    max_retrieval_use_rate: float | None,
+    max_runtime_total_seconds: float | None,
+    max_retrieval_hit_count: float | None,
+    min_claims_cache_hit_rate: float | None,
+    min_verifier_trace_cache_hit_rate: float | None,
+) -> dict[str, Any] | None:
+    required_keys = tuple(str(key) for key in required_route_baseline_keys if str(key))
+    if not required_keys:
+        return None
+    comparison = compare_route_baselines(
+        registry_path=route_registry_path,
+        baseline_keys=required_keys,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        min_selected=min_selected,
+        min_decision_accuracy=min_decision_accuracy,
+        max_false_supported_rate=max_false_supported_rate,
+        min_false_refuted_rate=min_false_refuted_rate,
+        max_verified_false_alarm=max_verified_false_alarm,
+        min_verified_detection=min_verified_detection,
+        max_mean_duration_seconds=max_mean_duration_seconds,
+        max_p99_duration_seconds=max_p99_duration_seconds,
+        max_max_duration_seconds=max_max_duration_seconds,
+        max_mean_attempted_route_count=max_mean_attempted_route_count,
+        max_retrieval_use_rate=max_retrieval_use_rate,
+        max_runtime_total_seconds=max_runtime_total_seconds,
+        max_retrieval_hit_count=max_retrieval_hit_count,
+        min_claims_cache_hit_rate=min_claims_cache_hit_rate,
+        min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        notes=("release candidate required route baseline gate",),
+    )
+    rows = tuple(_mapping(row) for row in comparison.get("leaderboard", ()))
+    rows_by_key = {str(row.get("record_key")): row for row in rows if row.get("record_key") is not None}
+    failures = []
+    for key in required_keys:
+        row = rows_by_key.get(key)
+        if row is None:
+            failures.append(f"required route baseline {key!r} is missing from comparison")
+            continue
+        gate = _mapping(row.get("gate"))
+        if gate.get("passed") is True:
+            continue
+        reasons = list(gate.get("blocking_reasons", ())) or ["route baseline gate did not pass"]
+        failures.extend(f"{key}: {reason}" for reason in reasons)
+    gate = {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "registry": str(route_registry_path),
+        "required_keys": required_keys,
+        "comparison": comparison,
+        "rows": rows,
+        "gate": gate,
     }
 
 
@@ -706,6 +850,7 @@ def _candidate_with_gates(
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None,
     adapter_family: Mapping[str, Any] | None,
+    required_routes: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
@@ -723,6 +868,20 @@ def _candidate_with_gates(
             "promotion_status": adapter_family.get("promotion_status"),
         }
         manifests["adapter_family_matrix_report"] = adapter_family.get("matrix_path")
+    if required_routes is not None:
+        required_rows = tuple(_mapping(row) for row in required_routes.get("rows", ()))
+        required_records = tuple(row.get("record_key") for row in required_rows if row.get("record_key") is not None)
+        required_manifest_paths = tuple(
+            row.get("manifest_path") for row in required_rows if row.get("manifest_path") is not None
+        )
+        payload["required_route_baselines"] = {
+            "registry": required_routes.get("registry"),
+            "records": required_records,
+            "routes": tuple(row.get("recommended_route") for row in required_rows),
+            "manifest_paths": required_manifest_paths,
+        }
+        for idx, manifest_path in enumerate(required_manifest_paths, start=1):
+            manifests[f"required_route_manifest_{idx}"] = manifest_path
     payload["manifests"] = manifests
     return payload
 
@@ -834,6 +993,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         route_registry_path=args.route_registry,
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
+        required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
         adapter_family_matrix_path=args.adapter_family_matrix,
@@ -862,6 +1022,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        required_route_min_selected=args.required_route_min_selected,
+        required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
+        required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
+        required_route_min_false_refuted_rate=args.required_route_min_false_refuted_rate,
+        required_route_max_verified_false_alarm=args.required_route_max_verified_false_alarm,
+        required_route_min_verified_detection=args.required_route_min_verified_detection,
+        required_route_max_mean_duration_seconds=args.required_route_max_mean_duration_seconds,
+        required_route_max_p99_duration_seconds=args.required_route_max_p99_duration_seconds,
+        required_route_max_max_duration_seconds=args.required_route_max_max_duration_seconds,
+        required_route_max_mean_attempted_route_count=args.required_route_max_mean_attempted_route_count,
+        required_route_max_retrieval_use_rate=args.required_route_max_retrieval_use_rate,
+        required_route_max_runtime_total_seconds=args.required_route_max_runtime_total_seconds,
+        required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
+        required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
+        required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
         notes=args.note,
     )
     if args.json:
@@ -896,6 +1071,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="readiness benchmark_manifest registry key to compare; repeatable")
     parser.add_argument("--route-baseline-key", action="append", default=[],
                         help="route benchmark_manifest registry key to compare; repeatable")
+    parser.add_argument("--required-route-baseline-key", action="append", default=[],
+                        help="additional promoted route benchmark_manifest key that must verify without "
+                             "becoming the selected product route; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--adapter-family-matrix", default=None,
@@ -995,6 +1173,70 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument("--required-route-min-selected", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--required-route-min-selected",
+    ), default=None)
+    parser.add_argument("--required-route-min-decision-accuracy", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-decision-accuracy",
+    ), default=None)
+    parser.add_argument("--required-route-max-false-supported-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-false-supported-rate",
+    ), default=None)
+    parser.add_argument("--required-route-min-false-refuted-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-false-refuted-rate",
+    ), default=None)
+    parser.add_argument("--required-route-max-verified-false-alarm", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-verified-false-alarm",
+    ), default=None)
+    parser.add_argument("--required-route-min-verified-detection", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-verified-detection",
+    ), default=None)
+    parser.add_argument("--required-route-max-mean-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-mean-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-p99-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-p99-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-max-duration-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-max-duration-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-mean-attempted-route-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-mean-attempted-route-count",
+    ), default=None)
+    parser.add_argument("--required-route-max-retrieval-use-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-retrieval-use-rate",
+    ), default=None)
+    parser.add_argument("--required-route-max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-runtime-total-seconds",
+    ), default=None)
+    parser.add_argument("--required-route-max-retrieval-hit-count", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-max-retrieval-hit-count",
+    ), default=None)
+    parser.add_argument("--required-route-min-claims-cache-hit-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--required-route-min-claims-cache-hit-rate",
+    ), default=None)
+    parser.add_argument(
+        "--required-route-min-verifier-trace-cache-hit-rate",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--required-route-min-verifier-trace-cache-hit-rate",
+        ),
+        default=None,
+    )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate promotes")
     run(parser.parse_args(argv))
