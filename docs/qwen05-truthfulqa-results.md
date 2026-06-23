@@ -748,6 +748,24 @@ seconds wall-clock, while the derived source profile totaled 251.2 seconds and
 preserved the ranking, cost-first recommendation, and quality-balanced
 recommendation.
 
+The derived sweep has now been promoted into the local SmolLM2 release chain:
+
+- Readiness record: `benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8`
+- Release record: `benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-staged-qa-release-candidate:0.8`
+- Release comparison: `artifacts/smollm2_l20_inside_trigger_budget_derived_staged_release_candidate_comparison.json`
+- Release manifest: `artifacts/smollm2_l20_inside_trigger_budget_derived_staged_release_candidate_manifest.json`
+
+The release candidate reuses the SmolLM2 l20 performance matrix and the
+TruthfulQA l80 staged structured QA route, then gates runtime cost on the
+derived trigger-budget sweep. The promoted runtime recommendation uses the
+quality-balanced `top_0p4` profile: sample-count ratio `0.472`,
+`inside_generation` ratio `0.503`, semantic-entropy AUROC `0.570`, 77/154
+statements sampled, 77 skipped, and 218 generated samples. Because this release
+compares a trigger-budget sweep against a full-sample fixed reference rather
+than a previous release baseline, the release comparison records the gate source
+as `sample_count_ratio_to_reference` and
+`inside_generation_seconds_ratio_to_reference`.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -767,9 +785,9 @@ recommendation.
 4. Use `--hidden-state-capture hooks` for targeted non-final layer-band runs when
    peak memory is the bottleneck; keep the default output capture for final-layer
    or full hidden-state semantics.
-5. Treat top-10% as the cost-first triggered INSIDE default and top-25% as the
-   quality-balanced default until larger model/data runs change the Pareto
-   frontier; do not default to top-40% on current evidence.
+5. Treat top-10% as the cost-first triggered INSIDE experiment default and the
+   registered top-40% derived budget as the current SmolLM2 quality-balanced
+   release default until larger model/data runs change the Pareto frontier.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.

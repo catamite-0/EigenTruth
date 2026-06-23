@@ -1392,6 +1392,23 @@ versus triggered fixed, and `inside_generation` ratio `1.009`; treat the
 trigger gate as the primary performance win and self-check as an auditable
 analysis setting, not as the main speedup source.
 
+The current derived trigger-budget release records
+`benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8`
+and
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-staged-qa-release-candidate:0.8`.
+It reuses the 0.6 SmolLM2 l20 performance matrix and the 0.4 staged structured
+QA route, then folds in
+`artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json`.
+The runtime recommendation uses the sweep's `quality_balanced_recommendation`:
+`truth_proj` top-40% triggered `adaptive_selfcheck`, derived from one
+largest-budget source profile with `--derive-from-max-budget`. The release gate
+uses reference ratios because no direct trigger-budget baseline ratios are
+available: sample-count ratio `0.472`, `inside_generation` ratio `0.503`,
+semantic-entropy AUROC `0.570`, 77/154 statements sampled, 77 skipped, and 218
+generated samples. The cost-first sweep recommendation remains top-10%; the
+registered release default is top-40% because it preserves the best measured
+INSIDE semantic-entropy quality within the configured tolerance.
+
 ## `build_truthfulqa_corpus.py`
 
 Builds a local TruthfulQA correct-answer corpus for reproducible retrieval
