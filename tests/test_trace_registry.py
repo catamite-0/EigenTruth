@@ -231,6 +231,10 @@ def test_product_trace_runtime_summary_counts_phase_timings():
         "initial_verification": 2,
     }
     assert round(summary["phase_seconds"]["initial_verification"], 6) == 0.30
+    assert summary["phase_stats"]["initial_verification"]["count"] == 2
+    assert round(summary["phase_stats"]["initial_verification"]["mean_seconds"], 6) == 0.15
+    assert round(summary["phase_p95_seconds"]["initial_verification"], 6) == 0.195
+    assert round(summary["phase_p99_seconds"]["initial_verification"], 6) == 0.199
     assert summary["slowest_phase"] == {"name": "initial_verification", "seconds": 0.20}
     json.dumps(payload)
 
@@ -314,6 +318,35 @@ def test_product_runtime_budget_checks_cache_hit_rates():
     assert [failure["metric"] for failure in report["failures"]] == [
         "cache_hit_rate",
         "named_cache_hit_rate.verifier",
+    ]
+
+
+def test_product_runtime_budget_checks_phase_tail_latency():
+    trace = ProductTrace(
+        runtime_trace=RuntimeTrace(
+            total_seconds=0.08,
+            phases=(
+                RuntimePhaseTiming("initial_verification", 0.01),
+                RuntimePhaseTiming("initial_verification", 0.02),
+                RuntimePhaseTiming("initial_verification", 0.05),
+            ),
+        ),
+    )
+
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            max_phase_p95_seconds={"initial_verification": 0.045},
+            max_phase_p99_seconds={"initial_verification": 0.049},
+        ),
+    )
+
+    assert report["passed"] is False
+    assert round(report["metrics"]["phase_p95_seconds"]["initial_verification"], 6) == 0.047
+    assert round(report["metrics"]["phase_p99_seconds"]["initial_verification"], 6) == 0.0494
+    assert [failure["metric"] for failure in report["failures"]] == [
+        "phase_p95_seconds.initial_verification",
+        "phase_p99_seconds.initial_verification",
     ]
 
 

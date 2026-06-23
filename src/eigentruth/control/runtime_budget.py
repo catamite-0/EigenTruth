@@ -19,6 +19,8 @@ class ProductRuntimeBudgetPolicy:
 
     max_total_seconds: float | None = None
     max_phase_seconds: Mapping[str, float] = field(default_factory=dict)
+    max_phase_p95_seconds: Mapping[str, float] = field(default_factory=dict)
+    max_phase_p99_seconds: Mapping[str, float] = field(default_factory=dict)
     min_cache_hit_rate: float | None = None
     min_named_cache_hit_rate: Mapping[str, float] = field(default_factory=dict)
     require_runtime_trace: bool = True
@@ -37,6 +39,14 @@ class ProductRuntimeBudgetPolicy:
                 raw_value,
                 name=f"max_phase_seconds.{name}",
             )
+        max_phase_p95_seconds = _phase_budget_mapping(
+            self.max_phase_p95_seconds,
+            field_name="max_phase_p95_seconds",
+        )
+        max_phase_p99_seconds = _phase_budget_mapping(
+            self.max_phase_p99_seconds,
+            field_name="max_phase_p99_seconds",
+        )
         min_cache_hit_rate = _optional_rate_float(
             self.min_cache_hit_rate,
             name="min_cache_hit_rate",
@@ -52,6 +62,8 @@ class ProductRuntimeBudgetPolicy:
             )
         object.__setattr__(self, "max_total_seconds", max_total_seconds)
         object.__setattr__(self, "max_phase_seconds", max_phase_seconds)
+        object.__setattr__(self, "max_phase_p95_seconds", max_phase_p95_seconds)
+        object.__setattr__(self, "max_phase_p99_seconds", max_phase_p99_seconds)
         object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
         object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
         object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
@@ -62,6 +74,8 @@ class ProductRuntimeBudgetPolicy:
         return cls(
             max_total_seconds=payload.get("max_total_seconds"),
             max_phase_seconds=dict(_mapping(payload.get("max_phase_seconds"))),
+            max_phase_p95_seconds=dict(_mapping(payload.get("max_phase_p95_seconds"))),
+            max_phase_p99_seconds=dict(_mapping(payload.get("max_phase_p99_seconds"))),
             min_cache_hit_rate=payload.get("min_cache_hit_rate"),
             min_named_cache_hit_rate=dict(_mapping(payload.get("min_named_cache_hit_rate"))),
             require_runtime_trace=_bool_value(payload.get("require_runtime_trace", True)),
@@ -72,6 +86,8 @@ class ProductRuntimeBudgetPolicy:
         return (
             self.max_total_seconds is not None
             or bool(self.max_phase_seconds)
+            or bool(self.max_phase_p95_seconds)
+            or bool(self.max_phase_p99_seconds)
             or self.min_cache_hit_rate is not None
             or bool(self.min_named_cache_hit_rate)
         )
@@ -81,6 +97,8 @@ class ProductRuntimeBudgetPolicy:
         return {
             "max_total_seconds": self.max_total_seconds,
             "max_phase_seconds": dict(self.max_phase_seconds),
+            "max_phase_p95_seconds": dict(self.max_phase_p95_seconds),
+            "max_phase_p99_seconds": dict(self.max_phase_p99_seconds),
             "min_cache_hit_rate": self.min_cache_hit_rate,
             "min_named_cache_hit_rate": dict(self.min_named_cache_hit_rate),
             "require_runtime_trace": self.require_runtime_trace,
@@ -100,7 +118,12 @@ def evaluate_product_runtime_budget(
     metrics = product_runtime_metrics(trace)
     failures = []
     checks = []
-    requires_runtime_trace = resolved.max_total_seconds is not None or bool(resolved.max_phase_seconds)
+    requires_runtime_trace = (
+        resolved.max_total_seconds is not None
+        or bool(resolved.max_phase_seconds)
+        or bool(resolved.max_phase_p95_seconds)
+        or bool(resolved.max_phase_p99_seconds)
+    )
 
     if requires_runtime_trace and resolved.require_runtime_trace and not metrics["has_runtime_trace"]:
         check = {
@@ -134,6 +157,36 @@ def evaluate_product_runtime_budget(
             limit=limit,
             output_metric=metric,
             raw_value=raw_phase_seconds.get(phase_name),
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
+    phase_p95_seconds = _mapping(metrics.get("phase_p95_seconds"))
+    raw_phase_p95_seconds = _mapping(metrics.get("raw_phase_p95_seconds"))
+    for phase_name, limit in resolved.max_phase_p95_seconds.items():
+        metric = f"phase_p95_seconds.{phase_name}"
+        check = _max_metric_check(
+            phase_p95_seconds,
+            metric=phase_name,
+            limit=limit,
+            output_metric=metric,
+            raw_value=raw_phase_p95_seconds.get(phase_name),
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
+    phase_p99_seconds = _mapping(metrics.get("phase_p99_seconds"))
+    raw_phase_p99_seconds = _mapping(metrics.get("raw_phase_p99_seconds"))
+    for phase_name, limit in resolved.max_phase_p99_seconds.items():
+        metric = f"phase_p99_seconds.{phase_name}"
+        check = _max_metric_check(
+            phase_p99_seconds,
+            metric=phase_name,
+            limit=limit,
+            output_metric=metric,
+            raw_value=raw_phase_p99_seconds.get(phase_name),
         )
         checks.append(check)
         if not check["passed"]:
@@ -176,6 +229,9 @@ def evaluate_product_runtime_budget(
             "measured_phases": metrics["measured_phases"],
             "phase_seconds": phase_seconds,
             "phase_counts": _mapping(metrics.get("phase_counts")),
+            "phase_stats": _mapping(metrics.get("phase_stats")),
+            "phase_p95_seconds": phase_p95_seconds,
+            "phase_p99_seconds": phase_p99_seconds,
             "slowest_phase": metrics.get("slowest_phase"),
             "cache_hit_rate": metrics.get("cache_hit_rate"),
             "cache_summary": metrics.get("cache_summary"),
@@ -199,12 +255,19 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
             "phase_seconds": {},
             "raw_phase_seconds": {},
             "phase_counts": {},
+            "phase_stats": {},
+            "phase_p95_seconds": {},
+            "raw_phase_p95_seconds": {},
+            "phase_p99_seconds": {},
+            "raw_phase_p99_seconds": {},
             "slowest_phase": None,
         }
         metrics.update(_cache_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
+    phase_p95_seconds = _mapping(summary.get("phase_p95_seconds"))
+    phase_p99_seconds = _mapping(summary.get("phase_p99_seconds"))
     metrics = {
         "has_runtime_trace": True,
         "total_seconds": _finite_float(summary.get("total_seconds")),
@@ -217,6 +280,17 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         },
         "raw_phase_seconds": dict(phase_seconds),
         "phase_counts": _mapping(summary.get("phase_counts")),
+        "phase_stats": _mapping(summary.get("phase_stats")),
+        "phase_p95_seconds": {
+            str(name): _finite_float(value)
+            for name, value in phase_p95_seconds.items()
+        },
+        "raw_phase_p95_seconds": dict(phase_p95_seconds),
+        "phase_p99_seconds": {
+            str(name): _finite_float(value)
+            for name, value in phase_p99_seconds.items()
+        },
+        "raw_phase_p99_seconds": dict(phase_p99_seconds),
         "slowest_phase": summary.get("slowest_phase"),
     }
     metrics.update(_cache_metrics(trace))
@@ -244,7 +318,20 @@ def _runtime_trace_payload(trace: ProductTrace | Mapping[str, Any]) -> dict[str,
 def _runtime_summary(runtime_trace: Mapping[str, Any]) -> dict[str, Any]:
     summary = runtime_trace.get("summary")
     if isinstance(summary, Mapping):
-        return dict(summary)
+        merged = dict(summary)
+        if (
+            "phase_stats" not in merged
+            or "phase_p95_seconds" not in merged
+            or "phase_p99_seconds" not in merged
+        ):
+            try:
+                derived = RuntimeTrace.from_dict(runtime_trace).summary()
+            except (KeyError, TypeError, ValueError):
+                return merged
+            for key in ("phase_stats", "phase_p95_seconds", "phase_p99_seconds"):
+                if key not in merged:
+                    merged[key] = derived.get(key)
+        return merged
     return RuntimeTrace.from_dict(runtime_trace).summary()
 
 
@@ -336,6 +423,19 @@ def _optional_non_negative_float(value: Any, *, name: str) -> float | None:
     if value is None:
         return None
     return _required_non_negative_float(value, name=name)
+
+
+def _phase_budget_mapping(values: Mapping[str, Any], *, field_name: str) -> dict[str, float]:
+    budgets = {}
+    for raw_name, raw_value in values.items():
+        name = str(raw_name).strip()
+        if not name:
+            raise ValueError("runtime phase budget names must be non-empty")
+        budgets[name] = _required_non_negative_float(
+            raw_value,
+            name=f"{field_name}.{name}",
+        )
+    return budgets
 
 
 def _required_non_negative_float(value: Any, *, name: str) -> float:

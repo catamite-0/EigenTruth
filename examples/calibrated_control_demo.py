@@ -133,11 +133,15 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     """Build an optional runtime budget policy from CLI-like arguments."""
     max_total_seconds = getattr(args, "max_runtime_total_seconds", None)
     raw_phase_seconds = getattr(args, "max_runtime_phase_seconds", None)
+    raw_phase_p95_seconds = getattr(args, "max_runtime_phase_p95_seconds", None)
+    raw_phase_p99_seconds = getattr(args, "max_runtime_phase_p99_seconds", None)
     min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
     raw_named_cache_hit_rate = getattr(args, "min_named_cache_hit_rate", None)
     if (
         max_total_seconds is None
         and raw_phase_seconds is None
+        and raw_phase_p95_seconds is None
+        and raw_phase_p99_seconds is None
         and min_cache_hit_rate is None
         and raw_named_cache_hit_rate is None
     ):
@@ -147,6 +151,16 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         if raw_phase_seconds is None
         else parse_json_mapping(raw_phase_seconds, name="--max-runtime-phase-seconds")
     )
+    phase_p95_seconds = (
+        {}
+        if raw_phase_p95_seconds is None
+        else parse_json_mapping(raw_phase_p95_seconds, name="--max-runtime-phase-p95-seconds")
+    )
+    phase_p99_seconds = (
+        {}
+        if raw_phase_p99_seconds is None
+        else parse_json_mapping(raw_phase_p99_seconds, name="--max-runtime-phase-p99-seconds")
+    )
     named_cache_hit_rate = (
         {}
         if raw_named_cache_hit_rate is None
@@ -155,6 +169,8 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     return ProductRuntimeBudgetPolicy(
         max_total_seconds=max_total_seconds,
         max_phase_seconds={key: float(value) for key, value in phase_seconds.items()},
+        max_phase_p95_seconds={key: float(value) for key, value in phase_p95_seconds.items()},
+        max_phase_p99_seconds={key: float(value) for key, value in phase_p99_seconds.items()},
         min_cache_hit_rate=min_cache_hit_rate,
         min_named_cache_hit_rate={key: float(value) for key, value in named_cache_hit_rate.items()},
     )
@@ -408,6 +424,10 @@ def main() -> None:
                         help="optional ProductTrace runtime budget for total request seconds")
     parser.add_argument("--max-runtime-phase-seconds", default=None,
                         help="optional JSON object mapping runtime phase names to max seconds")
+    parser.add_argument("--max-runtime-phase-p95-seconds", default=None,
+                        help="optional JSON object mapping runtime phase names to max p95 seconds")
+    parser.add_argument("--max-runtime-phase-p99-seconds", default=None,
+                        help="optional JSON object mapping runtime phase names to max p99 seconds")
     parser.add_argument("--min-cache-hit-rate", type=float, default=None,
                         help="optional ProductTrace cache budget for aggregate cache hit rate")
     parser.add_argument("--min-named-cache-hit-rate", default=None,

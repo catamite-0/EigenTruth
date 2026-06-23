@@ -110,6 +110,9 @@ python examples/calibrated_control_demo.py \
   --max-runtime-total-seconds 1.0 \
   --max-runtime-phase-seconds '{"initial_verification": 0.5}'
 python examples/calibrated_control_demo.py \
+  --max-runtime-phase-p95-seconds '{"initial_verification": 0.5}' \
+  --max-runtime-phase-p99-seconds '{"initial_verification": 0.8}'
+python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
 ```

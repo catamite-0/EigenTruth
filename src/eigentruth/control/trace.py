@@ -106,13 +106,19 @@ class RuntimeTrace:
         """Summarize phase timing counts and totals."""
         phase_seconds: dict[str, float] = {}
         phase_counts: dict[str, int] = {}
+        phase_durations: dict[str, list[float]] = {}
         slowest_phase: dict[str, Any] | None = None
         for phase in self.phases:
             phase_seconds[phase.name] = phase_seconds.get(phase.name, 0.0) + phase.seconds
             phase_counts[phase.name] = phase_counts.get(phase.name, 0) + 1
+            phase_durations.setdefault(phase.name, []).append(phase.seconds)
             if slowest_phase is None or phase.seconds > float(slowest_phase["seconds"]):
                 slowest_phase = {"name": phase.name, "seconds": phase.seconds}
         accounted_seconds = sum(phase.seconds for phase in self.phases)
+        phase_stats = {
+            name: _phase_duration_stats(durations)
+            for name, durations in phase_durations.items()
+        }
         return {
             "total_seconds": self.total_seconds,
             "accounted_seconds": accounted_seconds,
@@ -120,6 +126,15 @@ class RuntimeTrace:
             "measured_phases": len(self.phases),
             "phase_seconds": phase_seconds,
             "phase_counts": phase_counts,
+            "phase_stats": phase_stats,
+            "phase_p95_seconds": {
+                name: stats["p95_seconds"]
+                for name, stats in phase_stats.items()
+            },
+            "phase_p99_seconds": {
+                name: stats["p99_seconds"]
+                for name, stats in phase_stats.items()
+            },
             "slowest_phase": slowest_phase,
         }
 
@@ -322,6 +337,48 @@ def _runtime_trace_to_dict(trace: RuntimeTrace | Mapping[str, Any] | None) -> di
     if isinstance(trace, RuntimeTrace):
         return trace.to_dict()
     return RuntimeTrace.from_dict(trace).to_dict()
+
+
+def _phase_duration_stats(durations: Sequence[float]) -> dict[str, Any]:
+    values = [float(value) for value in durations]
+    if not values:
+        return {
+            "count": 0,
+            "total_seconds": None,
+            "mean_seconds": None,
+            "min_seconds": None,
+            "p95_seconds": None,
+            "p99_seconds": None,
+            "max_seconds": None,
+        }
+    total = float(sum(values))
+    return {
+        "count": len(values),
+        "total_seconds": total,
+        "mean_seconds": total / len(values),
+        "min_seconds": min(values),
+        "p95_seconds": _percentile_or_none(values, 95.0),
+        "p99_seconds": _percentile_or_none(values, 99.0),
+        "max_seconds": max(values),
+    }
+
+
+def _percentile_or_none(values: Sequence[float], percentile: float) -> float | None:
+    if not values:
+        return None
+    if not (0.0 <= percentile <= 100.0):
+        raise ValueError("percentile must be between 0 and 100.")
+    ordered = sorted(float(value) for value in values)
+    if len(ordered) == 1:
+        return ordered[0]
+    rank = (percentile / 100.0) * (len(ordered) - 1)
+    lower_index = math.floor(rank)
+    upper_index = math.ceil(rank)
+    if lower_index == upper_index:
+        return ordered[lower_index]
+    lower = ordered[lower_index]
+    upper = ordered[upper_index]
+    return lower + (upper - lower) * (rank - lower_index)
 
 
 def _cache_stats_from_metadata(metadata: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
