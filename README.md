@@ -126,9 +126,9 @@ all-statement sampling; the SmolLM2 l20 profile shows full-sample
 `adaptive_selfcheck` reduces generated samples only to 0.937 of fixed while
 leaving `inside_generation` at 1.001 of fixed, while `truth_proj` top-25%
 triggering samples 39/154 statements and cuts fixed `inside_generation` to
-0.253 of full-sample fixed. The current registered SmolLM2
+0.253 of full-sample fixed. The current registered SmolLM2 strict
 structured-retrieval-audit release
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate:1.2`
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`
 selects the top-40% quality-balanced budget from a single largest-budget run,
 uses 218 generated samples with sample-count ratio 0.472 and
 `inside_generation` ratio 0.503 against the full-sample fixed reference,
@@ -138,7 +138,9 @@ the final runtime, requires promoted `structured_state`, `state_transition`, and
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
 retrieval structured-QA audit baseline. That audit route promotes with selected
 238, decision accuracy 0.992, false-supported rate 0.000, false-refuted rate
-1.000, runtime about 1.05s, and 410 retrieval hits under a 450-hit budget.
+1.000, runtime about 1.05s, and 410 retrieval hits under a 450-hit budget. The
+selected product route remains strict low-latency `structured_qa` with
+`max_retrieval_use_rate=0.0` and `max_mean_attempted_route_count=1.1`.
 
 `run_inside_sampling_profile.py` accepts `--inside-trigger-signal` plus
 `--inside-trigger-threshold` or `--inside-trigger-top-fraction`, and

@@ -60,6 +60,9 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
             "state_transition",
             "retrieval_groundedness",
         ]
+        assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
+            "retrieval_structured_qa"
+        ]
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
@@ -329,10 +332,11 @@ def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
 
 
-def test_calibrated_control_demo_can_use_default_adapter_gated_contract_budget():
+def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
     assert contract_path is not None
+    assert "strict_structured_retrieval_audit" in contract_path.name
 
     payload = demo.run(
         SimpleNamespace(
@@ -383,6 +387,16 @@ def test_calibrated_control_demo_can_use_default_adapter_gated_contract_budget()
         "state_transition",
         "retrieval_groundedness",
     ]
+    assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_records"] == [
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5"
+    ]
+    assert payload["metadata"]["promotion_contract_metadata"]["required_route_baseline_routes"] == [
+        "retrieval_structured_qa"
+    ]
+    assert payload["metadata"]["promotion_contract_metadata"]["required_route_budget_policy"][
+        "required_route_max_retrieval_hit_count"
+    ] == 450.0
     assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
     assert route_summary["mean_attempted_route_count"] == 1.0
     assert runtime_budget["passed"] is True

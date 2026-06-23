@@ -546,6 +546,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "max_retrieval_hit_count": 4,
             "min_claims_cache_hit_rate": 0.8,
             "min_verifier_trace_cache_hit_rate": 0.9,
+            "required_route_min_selected": 200,
+            "required_route_max_runtime_total_seconds": 8.0,
+            "required_route_max_retrieval_hit_count": 450.0,
         },
         "decision": {
             "status": "promote",
@@ -553,6 +556,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_route_record": "benchmark_manifest:route:0.8",
             "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
             "recommended_route": "structured_state",
+            "required_route_baseline_records": [
+                "benchmark_manifest:retrieval-structured-qa:0.5"
+            ],
+            "required_route_baseline_status": "promote",
         },
         "release_candidate": {
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
@@ -577,6 +584,12 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "max_duration_seconds": 0.03,
                 "mean_attempted_route_count": 1.0,
                 "retrieval_use_rate": 0.0,
+            },
+            "required_route_baselines": {
+                "records": ["benchmark_manifest:retrieval-structured-qa:0.5"],
+                "routes": ["retrieval_structured_qa"],
+                "manifest_paths": ["artifacts/retrieval/audit-manifest.json"],
+                "registry": "artifacts/staged-route-registry.json",
             },
             "manifests": {
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
@@ -611,6 +624,16 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "retrieval_groundedness",
     ]
     assert contract.metadata["adapter_family_promotion_status"] == "promote"
+    assert contract.metadata["required_route_baseline_status"] == "promote"
+    assert contract.metadata["required_route_baseline_records"] == [
+        "benchmark_manifest:retrieval-structured-qa:0.5"
+    ]
+    assert contract.metadata["required_route_baseline_routes"] == ["retrieval_structured_qa"]
+    assert contract.metadata["required_route_baseline_manifests"] == [
+        "artifacts/retrieval/audit-manifest.json"
+    ]
+    assert contract.metadata["required_route_budget_policy"]["required_route_min_selected"] == 200
+    assert contract.metadata["required_route_budget_policy"]["required_route_max_retrieval_hit_count"] == 450.0
     assert contract.runtime_budget_policy == direct_policy
     assert contract.runtime_budget_policy.max_total_seconds == 1.0
     assert contract.runtime_budget_policy.max_mean_route_duration_seconds == 0.05

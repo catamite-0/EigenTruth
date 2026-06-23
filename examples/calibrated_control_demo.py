@@ -8,10 +8,11 @@ diagnostics with `RiskController`, verify simple claims, execute actions through
 The output is a trace for routing and debugging. It is not proof that a response
 is true. When the repository's SmolLM2 l80 calibration artifact is present, it is
 used by default; otherwise the script falls back to the Qwen l80 artifact and
-then toy thresholds. When the SmolLM2 adapter-gated release candidate is
-present, its product promotion contract supplies the default verifier route and
-adapter-family metadata; pass it explicitly with `--promotion-contract` to also
-enforce its runtime budget policy.
+then toy thresholds. When the SmolLM2 structured-retrieval-audit release
+candidate is present, its product promotion contract supplies the default
+verifier route plus adapter-family and required-audit metadata; pass it
+explicitly with `--promotion-contract` to also enforce its runtime budget
+policy.
 """
 
 from __future__ import annotations
@@ -57,14 +58,25 @@ DEFAULT_SMOLLM2_ARTIFACT_PATH = (
 DEFAULT_QWEN_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
 )
-DEFAULT_PROMOTION_CONTRACT_FILENAME = (
-    "smollm2_l20_inside_trigger_budget_derived_retrieval_adapter_gated_"
-    "staged_release_candidate_registry_workflow.json"
+DEFAULT_PROMOTION_CONTRACT_FILENAMES = (
+    (
+        "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
+        "staged_release_candidate_registry_workflow.json"
+    ),
+    (
+        "smollm2_l20_inside_trigger_budget_derived_structured_retrieval_audit_"
+        "staged_release_candidate_registry_workflow.json"
+    ),
+    (
+        "smollm2_l20_inside_trigger_budget_derived_retrieval_adapter_gated_"
+        "staged_release_candidate_registry_workflow.json"
+    ),
 )
-DEFAULT_PROMOTION_CONTRACT_PATH = (
+DEFAULT_PROMOTION_CONTRACT_PATHS = tuple(
     Path(__file__).resolve().parents[1]
     / "artifacts"
-    / DEFAULT_PROMOTION_CONTRACT_FILENAME
+    / filename
+    for filename in DEFAULT_PROMOTION_CONTRACT_FILENAMES
 )
 ARITHMETIC_TEXT_PATTERN = r"\d[\d\s().%+*/-]*[+*/%-][\d\s().%+*/-]*(?:=|equals|is)\s*[-+]?\d"
 
@@ -96,7 +108,10 @@ def default_artifact_path() -> Path | None:
 
 def default_promotion_contract_path() -> Path | None:
     """Return the preferred product promotion contract when available."""
-    return DEFAULT_PROMOTION_CONTRACT_PATH if DEFAULT_PROMOTION_CONTRACT_PATH.exists() else None
+    for path in DEFAULT_PROMOTION_CONTRACT_PATHS:
+        if path.exists():
+            return path
+    return None
 
 
 def default_artifact() -> CalibrationArtifact:

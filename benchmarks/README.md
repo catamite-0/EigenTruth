@@ -1471,8 +1471,8 @@ Use `--inside-trigger-budget-policy cost_first` in the release-candidate
 comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
-The current structured-retrieval-audit SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate:1.2`.
+The current strict structured-retrieval-audit SmolLM2 default records
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`.
 It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA product
 route, and registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
@@ -1486,8 +1486,9 @@ release comparison verifies that the performance baseline recommendation matches
 the selected runtime: layer `-12`, batch size `8`, `outputs` hidden-state
 capture, no prefix-KV cache, worker count `1`, `truth_proj` AUROC `0.682`, and
 the quality-balanced `top_0p4` triggered `adaptive_selfcheck` budget. The
-selected product route still gates `retrieval_use_rate` at `0.0`; retrieval is
-required as audit capability evidence, not as the default low-latency route.
+selected product route gates `retrieval_use_rate` at `0.0` and
+`mean_attempted_route_count` at `1.1`; retrieval is required as audit capability
+evidence, not as the default low-latency route.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1495,8 +1496,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --route-registry artifacts/staged-route-registry.json \
   --performance-registry artifacts/local-readiness-registry.json \
   --release-registry artifacts/local-release-registry.json \
-  --name smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate \
-  --version 1.2 \
+  --name smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate \
+  --version 1.3 \
   --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8 \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
@@ -1506,6 +1507,15 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --required-adapter-route state_transition \
   --required-adapter-route retrieval_groundedness \
   --runtime-profile balanced \
+  --min-selected 200 \
+  --min-decision-accuracy 0.99 \
+  --max-false-supported-rate 0.01 \
+  --min-false-refuted-rate 1.0 \
+  --max-verified-false-alarm 0.01 \
+  --min-verified-detection 1.0 \
+  --max-p99-duration-seconds 0.01 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
   --required-route-min-selected 200 \
   --required-route-min-decision-accuracy 0.99 \
   --required-route-max-false-supported-rate 0.01 \

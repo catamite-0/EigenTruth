@@ -119,16 +119,18 @@ python examples/calibrated_control_demo.py \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_retrieval_adapter_gated_staged_release_candidate_registry_workflow.json
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_registry_workflow.json
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
 ```
 
-When the SmolLM2 adapter-gated release candidate is present, the demo loads its
-promotion contract by default as route and adapter-family metadata. Passing the
-same file explicitly with `--promotion-contract` also enforces its runtime
-budget.
+When the SmolLM2 strict structured-retrieval-audit release candidate is present,
+the demo loads its promotion contract by default as route, adapter-family, and
+required-audit metadata. Passing the same file explicitly with
+`--promotion-contract` also enforces its runtime budget, including the
+low-latency product-route gates `max_retrieval_use_rate=0.0` and
+`max_mean_attempted_route_count=1.1`.
 
 The demo can also route unsupported claims to the dependency-free in-memory
 retrieval executor, feed retrieval hits back into the groundedness verifier, and

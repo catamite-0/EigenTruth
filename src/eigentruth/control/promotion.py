@@ -92,6 +92,7 @@ class ProductPromotionContract:
         config = _mapping(comparison.get("config"))
         manifests = _mapping(candidate.get("manifests"))
         adapter_family = _mapping(candidate.get("adapter_family_matrix"))
+        required_route_baselines = _mapping(candidate.get("required_route_baselines"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -123,6 +124,15 @@ class ProductPromotionContract:
                 "adapter_family_required_routes": adapter_family.get("required_routes"),
                 "adapter_family_promotion_status": adapter_family.get("promotion_status"),
                 "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
+                "required_route_baseline_status": decision.get("required_route_baseline_status"),
+                "required_route_baseline_records": (
+                    required_route_baselines.get("records")
+                    or decision.get("required_route_baseline_records")
+                ),
+                "required_route_baseline_routes": required_route_baselines.get("routes"),
+                "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
+                "required_route_baseline_registry": required_route_baselines.get("registry"),
+                "required_route_budget_policy": _required_route_budget_policy(config),
             },
         )
 
@@ -169,6 +179,29 @@ def product_runtime_budget_policy_from_release_candidate(
         min_cache_hit_rate=config.get("min_cache_hit_rate"),
         min_named_cache_hit_rate=named_cache_hit_rates,
     )
+
+
+def _required_route_budget_policy(config: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        key: config.get(key)
+        for key in (
+            "required_route_min_selected",
+            "required_route_min_decision_accuracy",
+            "required_route_max_false_supported_rate",
+            "required_route_min_false_refuted_rate",
+            "required_route_max_verified_false_alarm",
+            "required_route_min_verified_detection",
+            "required_route_max_mean_duration_seconds",
+            "required_route_max_p99_duration_seconds",
+            "required_route_max_max_duration_seconds",
+            "required_route_max_mean_attempted_route_count",
+            "required_route_max_retrieval_use_rate",
+            "required_route_max_runtime_total_seconds",
+            "required_route_max_retrieval_hit_count",
+            "required_route_min_claims_cache_hit_rate",
+            "required_route_min_verifier_trace_cache_hit_rate",
+        )
+    }
 
 
 def _release_candidate_comparison(payload: Mapping[str, Any]) -> dict[str, Any]:

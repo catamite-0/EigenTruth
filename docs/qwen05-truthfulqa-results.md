@@ -310,10 +310,10 @@ does not load either model or rerun the benchmark. With the current repository
 artifacts it loads `artifacts/smollm2_truthfulqa_l80_best_calibration.json`,
 auto-generates a `truth_proj` diagnostic that crosses the conformal threshold,
 combines that diagnostic with deterministic claim verification, and emits a
-`ProductTrace`. When the SmolLM2 adapter-gated release candidate is present, the
-demo also loads its promotion contract as verifier-route and adapter-family
-metadata; pass the contract explicitly with `--promotion-contract` to enforce
-its runtime budget.
+`ProductTrace`. When the SmolLM2 strict structured-retrieval-audit release
+candidate is present, the demo also loads its promotion contract as
+verifier-route, adapter-family, and required-audit metadata; pass the contract
+explicitly with `--promotion-contract` to enforce its runtime budget.
 
 Demo command:
 
@@ -771,8 +771,8 @@ than a previous release baseline, the release comparison records the gate source
 as `sample_count_ratio_to_reference` and
 `inside_generation_seconds_ratio_to_reference`.
 
-The current structured-retrieval-audit release record is
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate:1.2`.
+The current strict structured-retrieval-audit release record is
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.3`.
 It keeps the same readiness, staged structured-QA product route, performance
 evidence, and retrieval-inclusive promoted adapter-family matrix, then adds
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a required
@@ -786,8 +786,8 @@ The required retrieval audit route promotes with selected `238`, decision
 accuracy `0.992`, false-supported rate `0.000`, false-refuted rate `1.000`,
 runtime about `1.05s`, and `410` retrieval hits under a `450` hit budget. The
 selected product route remains `structured_qa` with retrieval use gated at
-`0.0`; retrieval is required as audit evidence, not as the default low-latency
-path.
+`0.0` and mean attempted routes gated at `1.1`; retrieval is required as audit
+evidence, not as the default low-latency path.
 
 ## Next Steps
 
