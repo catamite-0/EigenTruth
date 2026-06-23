@@ -237,8 +237,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `recommend_runtime_config.py` | Converts promoted matrix/worker-sweep reports plus optional INSIDE sampling and trigger-budget sweep evidence into one deployable runtime recommendation: layer, batch size, token budget, prefix KV mode, worker count, sampling flags, derived-sweep flags, and best available AUROC quality signal. |
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling / trigger-budget gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
-| `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, and runtime cost, then recommends one deployable baseline. |
-| `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, runtime cost, and optional INSIDE sampling cost evidence. |
+| `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, runtime cost, and INSIDE profile or trigger-budget cost evidence, then recommends one deployable baseline. |
+| `compare_release_candidates.py` | Combines registered readiness and route baselines into one fail-closed release candidate with runtime flags, verifier route, quality, runtime cost, and optional INSIDE profile / trigger-budget cost evidence. |
 | `run_release_candidate_registry_workflow.py` | Runs the release-candidate gate, writes a manifest covering the candidate report plus selected readiness/route manifests, recursively verifies it, and registers the final candidate. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
@@ -295,8 +295,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `recommend_runtime_config.py` | 将 promoted matrix/worker-sweep report 与可选 INSIDE sampling / trigger-budget sweep 证据转成可执行 runtime recommendation：layer、batch size、token budget、prefix KV、worker count、sampling flags、derived-sweep flags 和最佳 AUROC quality signal。 |
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling / trigger-budget gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
-| `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal 和 runtime cost 比较已注册 readiness baseline，并推荐一个可部署 baseline。 |
-| `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量、runtime cost 和可选 INSIDE sampling 成本证据。 |
+| `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal、runtime cost 和 INSIDE profile / trigger-budget 成本证据比较已注册 readiness baseline，并推荐一个可部署 baseline。 |
+| `compare_release_candidates.py` | 将已注册 readiness baseline 和 route baseline 合成一个 fail-closed release candidate，输出 runtime flags、verifier route、质量、runtime cost 和可选 INSIDE profile / trigger-budget 成本证据。 |
 | `run_release_candidate_registry_workflow.py` | 执行 release-candidate gate，写入覆盖 candidate report 与选中 readiness/route manifests 的 manifest，递归验证后登记最终候选。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |

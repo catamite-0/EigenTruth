@@ -139,8 +139,8 @@ def _readiness_row(
         best_quality=best_quality,
         uncached_forward_seconds=uncached_cost["seconds"],
         cache_only_seconds=cache_only_seconds,
-        inside_sample_count_ratio=inside_sampling["sample_count_ratio_to_baseline"],
-        inside_generation_seconds_ratio=inside_sampling["inside_generation_seconds_ratio_to_baseline"],
+        inside_sample_count_ratio=inside_sampling["sample_count_ratio_for_gate"],
+        inside_generation_seconds_ratio=inside_sampling["inside_generation_seconds_ratio_for_gate"],
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
@@ -192,11 +192,26 @@ def _readiness_row(
         "inside_sampling_recommended_run": inside_sampling["recommended_run"],
         "inside_sampling_total_generated_samples": inside_sampling["total_generated_samples"],
         "inside_sampling_sample_count_ratio_to_baseline": inside_sampling["sample_count_ratio_to_baseline"],
+        "inside_sampling_sample_count_ratio_to_reference": inside_sampling["sample_count_ratio_to_reference"],
+        "inside_sampling_sample_count_ratio_for_gate": inside_sampling["sample_count_ratio_for_gate"],
+        "inside_sampling_sample_count_ratio_source": inside_sampling["sample_count_ratio_source"],
         "inside_generation_seconds": inside_sampling["inside_generation_seconds"],
         "inside_generation_seconds_ratio_to_baseline": inside_sampling[
             "inside_generation_seconds_ratio_to_baseline"
         ],
+        "inside_generation_seconds_ratio_to_reference": inside_sampling[
+            "inside_generation_seconds_ratio_to_reference"
+        ],
+        "inside_generation_seconds_ratio_for_gate": inside_sampling[
+            "inside_generation_seconds_ratio_for_gate"
+        ],
+        "inside_generation_seconds_ratio_source": inside_sampling[
+            "inside_generation_seconds_ratio_source"
+        ],
         "inside_sampling_stop_reason_counts": inside_sampling["stop_reason_counts"],
+        "inside_trigger_budget_sweep": inside_sampling["trigger_budget_sweep"],
+        "inside_trigger_budget_id": inside_sampling["trigger_budget_id"],
+        "inside_trigger_budget_derive_from_max_budget": inside_sampling["derive_from_max_budget"],
         "performance_wall_clock_seconds": _float_or_none(
             manifest_metadata.get("performance_wall_clock_seconds")
         ),
@@ -228,12 +243,24 @@ def _runtime_recommendation_from_manifest(
                 if inside_sampling_path is None
                 else _load_optional_json(inside_sampling_path)
             )
+            inside_trigger_budget_sweep_path = _resolve_artifact_path(
+                manifest_path,
+                manifest,
+                artifact_name="inside_trigger_budget_sweep_report",
+            )
+            inside_trigger_budget_sweep_report, _ = (
+                ({}, None)
+                if inside_trigger_budget_sweep_path is None
+                else _load_optional_json(inside_trigger_budget_sweep_path)
+            )
             return (
                 build_runtime_recommendation(
                     matrix_report,
                     inside_sampling_report=inside_sampling_report or None,
+                    inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report or None,
                     matrix_report_path=performance_matrix_path,
                     inside_sampling_report_path=inside_sampling_path,
+                    inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_path,
                 ),
                 str(performance_matrix_path),
             )
@@ -269,6 +296,9 @@ def _runtime_recommendation_from_manifest(
                 "quality_signals": quality_signals,
                 "best_quality_signal": best_quality,
                 "inside_sampling": _mapping(manifest_metadata.get("recommended_inside_sampling")),
+                "inside_trigger_budget_sweep": _mapping(
+                    manifest_metadata.get("recommended_inside_trigger_budget_sweep")
+                ),
             },
         },
         "registry_metadata",
@@ -402,8 +432,8 @@ def _leaderboard_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     best_auroc = _float_or_none(best_quality.get("auroc"))
     forward = _float_or_none(row.get("uncached_forward_cost_seconds"))
     cache_only = _float_or_none(row.get("cache_only_total_seconds"))
-    inside_sample_ratio = _float_or_none(row.get("inside_sampling_sample_count_ratio_to_baseline"))
-    inside_seconds_ratio = _float_or_none(row.get("inside_generation_seconds_ratio_to_baseline"))
+    inside_sample_ratio = _float_or_none(row.get("inside_sampling_sample_count_ratio_for_gate"))
+    inside_seconds_ratio = _float_or_none(row.get("inside_generation_seconds_ratio_for_gate"))
     return (
         not _mapping(row.get("gate")).get("passed", False),
         -(best_auroc if best_auroc is not None else -math.inf),
@@ -504,20 +534,87 @@ def _inside_sampling_summary(
     payload = _mapping(recommendation.get("inside_sampling"))
     if not payload:
         payload = _mapping(manifest_metadata.get("recommended_inside_sampling"))
+    trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    if not trigger_budget:
+        trigger_budget = _mapping(manifest_metadata.get("recommended_inside_trigger_budget_sweep"))
     stop_reason_counts = payload.get("stop_reason_counts")
     if not isinstance(stop_reason_counts, Mapping):
         stop_reason_counts = {}
+    sample_ratio_to_baseline = _float_or_none(payload.get("sample_count_ratio_to_baseline"))
+    sample_ratio_to_reference = _first_float(
+        payload.get("sample_count_ratio_to_reference"),
+        trigger_budget.get("sample_count_ratio_to_reference"),
+    )
+    sample_ratio_for_gate, sample_ratio_source = _ratio_for_gate(
+        sample_ratio_to_baseline,
+        baseline_source="sample_count_ratio_to_baseline",
+        reference_ratio=sample_ratio_to_reference,
+        reference_source="sample_count_ratio_to_reference",
+    )
+    seconds_ratio_to_baseline = _float_or_none(payload.get("inside_generation_seconds_ratio_to_baseline"))
+    seconds_ratio_to_reference = _first_float(
+        payload.get("inside_generation_seconds_ratio_to_reference"),
+        trigger_budget.get("inside_generation_seconds_ratio_to_reference"),
+    )
+    seconds_ratio_for_gate, seconds_ratio_source = _ratio_for_gate(
+        seconds_ratio_to_baseline,
+        baseline_source="inside_generation_seconds_ratio_to_baseline",
+        reference_ratio=seconds_ratio_to_reference,
+        reference_source="inside_generation_seconds_ratio_to_reference",
+    )
     return {
         "payload": payload or None,
         "recommended_run": payload.get("recommended_run"),
         "total_generated_samples": _int_or_none(payload.get("total_generated_samples")),
-        "sample_count_ratio_to_baseline": _float_or_none(payload.get("sample_count_ratio_to_baseline")),
+        "sample_count_ratio_to_baseline": sample_ratio_to_baseline,
+        "sample_count_ratio_to_reference": sample_ratio_to_reference,
+        "sample_count_ratio_for_gate": sample_ratio_for_gate,
+        "sample_count_ratio_source": sample_ratio_source,
         "inside_generation_seconds": _float_or_none(payload.get("inside_generation_seconds")),
-        "inside_generation_seconds_ratio_to_baseline": _float_or_none(
-            payload.get("inside_generation_seconds_ratio_to_baseline")
-        ),
+        "inside_generation_seconds_ratio_to_baseline": seconds_ratio_to_baseline,
+        "inside_generation_seconds_ratio_to_reference": seconds_ratio_to_reference,
+        "inside_generation_seconds_ratio_for_gate": seconds_ratio_for_gate,
+        "inside_generation_seconds_ratio_source": seconds_ratio_source,
         "stop_reason_counts": dict(stop_reason_counts),
+        "trigger_budget_sweep": trigger_budget or None,
+        "trigger_budget_id": _first_present(
+            payload.get("inside_trigger_budget_id"),
+            trigger_budget.get("recommended_budget_id"),
+        ),
+        "derive_from_max_budget": _first_present(
+            payload.get("derive_from_max_budget"),
+            trigger_budget.get("derive_from_max_budget"),
+        ),
     }
+
+
+def _first_float(*values: Any) -> float | None:
+    for value in values:
+        numeric = _float_or_none(value)
+        if numeric is not None:
+            return numeric
+    return None
+
+
+def _ratio_for_gate(
+    baseline_ratio: float | None,
+    *,
+    baseline_source: str,
+    reference_ratio: float | None,
+    reference_source: str,
+) -> tuple[float | None, str | None]:
+    if baseline_ratio is not None:
+        return baseline_ratio, baseline_source
+    if reference_ratio is not None:
+        return reference_ratio, reference_source
+    return None, None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _finite_float_mapping(values: Mapping[str, Any]) -> dict[str, float]:

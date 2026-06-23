@@ -149,6 +149,7 @@ def _release_candidate(
             "prefix_kv_cache": readiness_row.get("prefix_kv_cache"),
             "max_workers": readiness_row.get("max_workers"),
             "inside_sampling": readiness_row.get("inside_sampling"),
+            "inside_trigger_budget_sweep": readiness_row.get("inside_trigger_budget_sweep"),
             "performance_cell": readiness_row.get("recommended_performance_cell"),
             "benchmark_flags": readiness_row.get("benchmark_flags"),
         },
@@ -168,11 +169,33 @@ def _release_candidate(
             "inside_sampling_sample_count_ratio_to_baseline": readiness_row.get(
                 "inside_sampling_sample_count_ratio_to_baseline"
             ),
+            "inside_sampling_sample_count_ratio_to_reference": readiness_row.get(
+                "inside_sampling_sample_count_ratio_to_reference"
+            ),
+            "inside_sampling_sample_count_ratio_for_gate": readiness_row.get(
+                "inside_sampling_sample_count_ratio_for_gate"
+            ),
+            "inside_sampling_sample_count_ratio_source": readiness_row.get(
+                "inside_sampling_sample_count_ratio_source"
+            ),
             "inside_generation_seconds": readiness_row.get("inside_generation_seconds"),
             "inside_generation_seconds_ratio_to_baseline": readiness_row.get(
                 "inside_generation_seconds_ratio_to_baseline"
             ),
+            "inside_generation_seconds_ratio_to_reference": readiness_row.get(
+                "inside_generation_seconds_ratio_to_reference"
+            ),
+            "inside_generation_seconds_ratio_for_gate": readiness_row.get(
+                "inside_generation_seconds_ratio_for_gate"
+            ),
+            "inside_generation_seconds_ratio_source": readiness_row.get(
+                "inside_generation_seconds_ratio_source"
+            ),
             "inside_sampling_stop_reason_counts": readiness_row.get("inside_sampling_stop_reason_counts"),
+            "inside_trigger_budget_id": readiness_row.get("inside_trigger_budget_id"),
+            "inside_trigger_budget_derive_from_max_budget": readiness_row.get(
+                "inside_trigger_budget_derive_from_max_budget"
+            ),
         },
         "verifier_route": {
             "route": route_row.get("recommended_route"),

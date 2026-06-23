@@ -1940,9 +1940,12 @@ manifests to choose among model/runtime candidates using verified manifests,
 best AUROC quality signal, and explicit runtime gates. Its uncached forward gate
 uses forced-answer phase timing when available and falls back to uncached total
 time for older reports. When readiness manifests include an
-`inside_sampling_profile_report` artifact, the comparison can also gate on
-promoted INSIDE sample-count and generation-time ratios before a runtime is
-eligible for release.
+`inside_sampling_profile_report` or `inside_trigger_budget_sweep_report`
+artifact, the comparison can also gate on promoted INSIDE sample-count and
+generation-time ratios before a runtime is eligible for release. Profile
+reports use `*_to_baseline` ratios; trigger-budget sweeps use
+`*_to_reference` ratios when baseline ratios are absent, and the report records
+which source each gate used.
 
 Add `--prefix-kv-cache` to run the experimental shared-prefix eval path inside
 the same triplet/matrix/readiness gates. To compare it against the default path

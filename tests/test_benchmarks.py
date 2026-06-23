@@ -3609,6 +3609,64 @@ def test_compare_readiness_baselines_applies_inside_sampling_cost_gate(tmp_path)
     assert "INSIDE sampling generation-seconds ratio above 0.8" in blocked["gate"]["blocking_reasons"]
 
 
+def test_compare_readiness_baselines_applies_trigger_budget_reference_cost_gate(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "expensive-trigger",
+        registry_path=registry_path,
+        name="expensive-trigger",
+        version="0.5",
+        model="expensive-model",
+        layer=-12,
+        quality_signals={"truth_proj": 0.79},
+        uncached_forward_seconds=14.0,
+        cache_only_seconds=0.15,
+        inside_trigger_sample_ratio=0.9,
+        inside_trigger_generation_ratio=0.95,
+    )
+    _write_readiness_baseline_manifest(
+        tmp_path / "efficient-trigger",
+        registry_path=registry_path,
+        name="efficient-trigger",
+        version="0.5",
+        model="efficient-model",
+        layer=-16,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=16.0,
+        cache_only_seconds=0.18,
+        inside_trigger_sample_ratio=0.4,
+        inside_trigger_generation_ratio=0.45,
+    )
+
+    payload = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_record"] == "benchmark_manifest:efficient-trigger:0.5"
+    recommended = payload["leaderboard"][0]
+    assert recommended["inside_sampling_sample_count_ratio_to_baseline"] is None
+    assert recommended["inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.4)
+    assert recommended["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.4)
+    assert recommended["inside_sampling_sample_count_ratio_source"] == "sample_count_ratio_to_reference"
+    assert recommended["inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.45)
+    assert recommended["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.45)
+    assert recommended["inside_generation_seconds_ratio_source"] == (
+        "inside_generation_seconds_ratio_to_reference"
+    )
+    assert recommended["inside_trigger_budget_id"] == "top_0p4"
+    assert recommended["inside_trigger_budget_derive_from_max_budget"] is True
+    blocked = next(row for row in payload["leaderboard"] if row["record_key"].endswith("expensive-trigger:0.5"))
+    assert blocked["gate"]["passed"] is False
+    assert "INSIDE sampling sample-count ratio above 0.6" in blocked["gate"]["blocking_reasons"]
+    assert "INSIDE sampling generation-seconds ratio above 0.8" in blocked["gate"]["blocking_reasons"]
+
+
 def test_compare_readiness_baselines_uses_uncached_total_fallback_for_legacy_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_readiness_baselines")
 
@@ -3656,6 +3714,8 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         cache_only_seconds=0.20,
         inside_sample_ratio=0.4,
         inside_generation_ratio=0.45,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3755,6 +3815,8 @@ def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
         cache_only_seconds=0.20,
         inside_sample_ratio=0.4,
         inside_generation_ratio=0.45,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3811,6 +3873,8 @@ def test_compare_release_candidates_applies_retrieval_cost_gate(tmp_path):
         cache_only_seconds=0.20,
         inside_sample_ratio=0.4,
         inside_generation_ratio=0.45,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3919,6 +3983,71 @@ def test_compare_release_candidates_applies_inside_sampling_cost_gate(tmp_path):
     assert any("INSIDE sampling generation-seconds ratio above 0.8" in reason for reason in reasons)
 
 
+def test_compare_release_candidates_carries_trigger_budget_reference_cost(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.4,
+        inside_trigger_generation_ratio=0.45,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    candidate = payload["release_candidate"]
+    assert candidate["runtime"]["inside_trigger_budget_sweep"]["recommended_budget_id"] == "top_0p4"
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_to_baseline"] is None
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.4)
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.4)
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_source"] == (
+        "sample_count_ratio_to_reference"
+    )
+    assert candidate["runtime_cost"]["inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.45)
+    assert candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.45)
+    assert candidate["runtime_cost"]["inside_generation_seconds_ratio_source"] == (
+        "inside_generation_seconds_ratio_to_reference"
+    )
+    assert candidate["runtime_cost"]["inside_trigger_budget_id"] == "top_0p4"
+    assert candidate["runtime_cost"]["inside_trigger_budget_derive_from_max_budget"] is True
+
+
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     from eigentruth.registry import ArtifactRegistry
@@ -3937,6 +4066,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         cache_only_seconds=0.20,
         inside_sample_ratio=0.4,
         inside_generation_ratio=0.45,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3999,6 +4130,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_inside_sampling_run"] == "adaptive_selfcheck"
     assert manifest["metadata"]["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
     assert manifest["metadata"]["recommended_inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert manifest["metadata"]["recommended_inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.3)
+    assert manifest["metadata"]["recommended_inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.35)
+    assert manifest["metadata"]["recommended_inside_trigger_budget_id"] == "top_0p4"
+    assert manifest["metadata"]["recommended_inside_trigger_budget_derive_from_max_budget"] is True
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
         0.8
@@ -4012,6 +4147,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
     assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
     assert record.metadata["recommended_inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.3)
+    assert record.metadata["recommended_inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.35)
+    assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert record.metadata["scope"] == "unit"
 
 
@@ -4154,6 +4292,95 @@ def _write_inside_sampling_profile(
     return report_path
 
 
+def _write_inside_trigger_budget_sweep(
+    output_dir,
+    *,
+    sample_count_ratio,
+    generation_seconds_ratio,
+    total_generated_samples=8,
+    budget_id="top_0p4",
+    top_fraction=0.4,
+    quality_value=0.57,
+    derive_from_max_budget=True,
+):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "inside-trigger-budget-sweep.json"
+    report_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "inside_trigger_budget_sweep",
+            "dry_run": False,
+            "derived_from_max_budget": derive_from_max_budget,
+            "derived_source_budget_id": budget_id if derive_from_max_budget else None,
+            "config": {
+                "trigger_signal": "truth_proj",
+                "budgets": [{"kind": "top_fraction", "value": top_fraction, "id": budget_id}],
+                "inside_samples": 5,
+                "inside_batch_size": 1,
+                "inside_max_new_tokens": 12,
+                "inside_temperature": 0.7,
+                "inside_top_p": 0.9,
+                "inside_pooling": "last",
+                "inside_embedding_threshold": 0.9,
+                "inside_min_samples": 2,
+                "inside_sample_step": 1,
+                "inside_stability_delta": 0.05,
+                "inside_selfcheck_min_overlap": 0.65,
+                "inside_selfcheck_support_threshold": 0.6,
+                "inside_selfcheck_refute_threshold": 0.5,
+                "run_names": ["adaptive_selfcheck"],
+                "derive_from_max_budget": derive_from_max_budget,
+            },
+            "budgets": {
+                budget_id: {
+                    "sample_efficiency_gate": {"passed": True},
+                    "recommendation": {"recommended_run": "adaptive_selfcheck"},
+                }
+            },
+            "leaderboard": [
+                {
+                    "budget_id": budget_id,
+                    "budget_kind": "top_fraction",
+                    "budget_value": top_fraction,
+                    "recommended_run": "adaptive_selfcheck",
+                    "derived": derive_from_max_budget,
+                    "derived_from_budget_id": budget_id if derive_from_max_budget else None,
+                    "inside_generation_seconds_source": (
+                        "measured_source_run" if derive_from_max_budget else "measured"
+                    ),
+                    "sampled": total_generated_samples,
+                    "skipped_by_trigger": 100 - total_generated_samples,
+                    "total_generated_samples": total_generated_samples,
+                    "mean_samples_per_record": total_generated_samples / 100,
+                    "inside_generation_seconds": 4.5,
+                    "sample_count_ratio_to_reference": sample_count_ratio,
+                    "inside_generation_seconds_ratio_to_reference": generation_seconds_ratio,
+                    "inside_auroc": {"inside_semantic_entropy": quality_value},
+                    "stop_reason_counts": {"selfcheck_supported": 4},
+                }
+            ],
+            "recommendation": {
+                "budget_id": budget_id,
+                "recommended_run": "adaptive_selfcheck",
+                "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+            },
+            "quality_balanced_recommendation": {
+                "budget_id": budget_id,
+                "recommended_run": "adaptive_selfcheck",
+                "reason": "lowest_cost_within_inside_quality_tolerance",
+                "quality_metric": "inside_semantic_entropy",
+                "quality_value": quality_value,
+                "best_quality_value": quality_value,
+                "quality_tolerance": 0.02,
+                "cost_metric": "inside_generation_seconds_ratio_to_reference",
+                "cost_value": generation_seconds_ratio,
+            },
+        }),
+        encoding="utf-8",
+    )
+    return report_path
+
+
 def _write_readiness_baseline_manifest(
     output_dir,
     *,
@@ -4169,6 +4396,9 @@ def _write_readiness_baseline_manifest(
     inside_sample_ratio=None,
     inside_generation_ratio=None,
     inside_total_generated_samples=8,
+    inside_trigger_sample_ratio=None,
+    inside_trigger_generation_ratio=None,
+    inside_trigger_total_generated_samples=8,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -4177,6 +4407,7 @@ def _write_readiness_baseline_manifest(
     matrix_path = output_dir / "performance-matrix.json"
     manifest_path = output_dir / "artifact-manifest.json"
     inside_sampling_path = None
+    inside_trigger_budget_sweep_path = None
     if inside_sample_ratio is not None:
         inside_sampling_path = _write_inside_sampling_profile(
             output_dir,
@@ -4185,6 +4416,17 @@ def _write_readiness_baseline_manifest(
                 inside_sample_ratio if inside_generation_ratio is None else inside_generation_ratio
             ),
             total_generated_samples=inside_total_generated_samples,
+        )
+    if inside_trigger_sample_ratio is not None:
+        inside_trigger_budget_sweep_path = _write_inside_trigger_budget_sweep(
+            output_dir,
+            sample_count_ratio=inside_trigger_sample_ratio,
+            generation_seconds_ratio=(
+                inside_trigger_sample_ratio
+                if inside_trigger_generation_ratio is None
+                else inside_trigger_generation_ratio
+            ),
+            total_generated_samples=inside_trigger_total_generated_samples,
         )
     cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
     result_path.write_text(
@@ -4250,6 +4492,9 @@ def _write_readiness_baseline_manifest(
         "recommended_route": "structured_qa",
         "recommended_performance_cell": cell_id,
         "inside_sampling_report": None if inside_sampling_path is None else str(inside_sampling_path),
+        "inside_trigger_budget_sweep_report": None
+        if inside_trigger_budget_sweep_path is None
+        else str(inside_trigger_budget_sweep_path),
     }
     manifest_path.write_text(
         json.dumps(
@@ -4257,6 +4502,7 @@ def _write_readiness_baseline_manifest(
                 {
                     "performance_matrix_report": matrix_path,
                     "inside_sampling_profile_report": inside_sampling_path,
+                    "inside_trigger_budget_sweep_report": inside_trigger_budget_sweep_path,
                 },
                 root=output_dir,
                 metadata=metadata,

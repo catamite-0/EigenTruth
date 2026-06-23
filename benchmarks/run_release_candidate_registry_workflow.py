@@ -273,11 +273,33 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_inside_sampling_sample_count_ratio_to_baseline": runtime_cost.get(
             "inside_sampling_sample_count_ratio_to_baseline"
         ),
+        "recommended_inside_sampling_sample_count_ratio_to_reference": runtime_cost.get(
+            "inside_sampling_sample_count_ratio_to_reference"
+        ),
+        "recommended_inside_sampling_sample_count_ratio_for_gate": runtime_cost.get(
+            "inside_sampling_sample_count_ratio_for_gate"
+        ),
+        "recommended_inside_sampling_sample_count_ratio_source": runtime_cost.get(
+            "inside_sampling_sample_count_ratio_source"
+        ),
         "recommended_inside_generation_seconds": runtime_cost.get("inside_generation_seconds"),
         "recommended_inside_generation_seconds_ratio_to_baseline": runtime_cost.get(
             "inside_generation_seconds_ratio_to_baseline"
         ),
+        "recommended_inside_generation_seconds_ratio_to_reference": runtime_cost.get(
+            "inside_generation_seconds_ratio_to_reference"
+        ),
+        "recommended_inside_generation_seconds_ratio_for_gate": runtime_cost.get(
+            "inside_generation_seconds_ratio_for_gate"
+        ),
+        "recommended_inside_generation_seconds_ratio_source": runtime_cost.get(
+            "inside_generation_seconds_ratio_source"
+        ),
         "recommended_inside_sampling_stop_reason_counts": runtime_cost.get("inside_sampling_stop_reason_counts"),
+        "recommended_inside_trigger_budget_id": runtime_cost.get("inside_trigger_budget_id"),
+        "recommended_inside_trigger_budget_derive_from_max_budget": runtime_cost.get(
+            "inside_trigger_budget_derive_from_max_budget"
+        ),
         "recommended_route_selected": verifier_route.get("selected"),
         "recommended_route_decision_accuracy": verifier_route.get("decision_accuracy"),
         "recommended_route_false_supported_rate": verifier_route.get("false_supported_rate"),
