@@ -58,6 +58,7 @@ class ProductTraceCorpusConfig:
     output_dir: str | Path = "artifacts/product_trace_corpus"
     report_path: str | Path | None = None
     traces_dir: str | Path | None = None
+    runtime_pair_index_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -86,6 +87,8 @@ class ProductTraceCorpusConfig:
             object.__setattr__(self, "report_path", Path(self.report_path))
         if self.traces_dir is not None:
             object.__setattr__(self, "traces_dir", Path(self.traces_dir))
+        if self.runtime_pair_index_path is not None:
+            object.__setattr__(self, "runtime_pair_index_path", Path(self.runtime_pair_index_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
@@ -122,6 +125,13 @@ class ProductTraceCorpusConfig:
             return Path(self.artifact_manifest_path)
         return Path(self.output_dir) / "artifact-manifest.json"
 
+    @property
+    def resolved_runtime_pair_index_path(self) -> Path:
+        """Return the runtime pairing index artifact path."""
+        if self.runtime_pair_index_path is not None:
+            return Path(self.runtime_pair_index_path)
+        return Path(self.output_dir) / "runtime-pair-index.json"
+
 
 def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, Any]:
     """Validate, redact, and standardize saved ProductTrace payloads."""
@@ -152,6 +162,12 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
             break
 
     status = _corpus_status(accepted, rejected)
+    runtime_pair_index = _runtime_pair_index_payload(config, accepted)
+    _write_json(
+        config.resolved_runtime_pair_index_path,
+        runtime_pair_index,
+        compact=config.compact_json,
+    )
     report = {
         "schema_version": 1,
         "workflow": "product_trace_corpus",
@@ -161,12 +177,14 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
             "blocking_reasons": () if accepted else ("no valid ProductTrace payloads",),
         },
         "summary": _corpus_summary(accepted, rejected),
+        "runtime_pair_index": runtime_pair_index["summary"],
         "traces": accepted,
         "rejected": rejected,
         "paths": {
             "report": str(config.resolved_report_path),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "traces_dir": str(config.resolved_traces_dir),
+            "runtime_pair_index": str(config.resolved_runtime_pair_index_path),
             "inputs": [str(path) for path in config.trace_paths],
             "jsonl_inputs": [str(path) for path in config.jsonl_paths],
         },
@@ -294,6 +312,45 @@ def _corpus_summary(accepted: Sequence[Mapping[str, Any]], rejected: Sequence[Ma
     }
 
 
+def _runtime_pair_index_payload(
+    config: ProductTraceCorpusConfig,
+    accepted: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    records = []
+    for record in accepted:
+        request_key = record.get("request_key")
+        runtime_profile = record.get("runtime_profile")
+        if request_key is None or runtime_profile is None:
+            continue
+        records.append({
+            "request_key": str(request_key),
+            "runtime_profile": str(runtime_profile),
+            "path": record.get("path"),
+            "total_seconds": _float_or_none(record.get("total_seconds")),
+        })
+    return {
+        "schema_version": 1,
+        "workflow": "product_trace_runtime_pair_index",
+        "summary": {
+            "record_count": len(records),
+            "request_key_count": len({record["request_key"] for record in records}),
+            "profile_counts": _counts(record["runtime_profile"] for record in records),
+        },
+        "records": records,
+        "paths": {
+            "corpus_report": str(config.resolved_report_path),
+            "traces_dir": str(config.resolved_traces_dir),
+        },
+        "config": {
+            "redact_text": config.redact_text,
+            "require_runtime_trace": config.require_runtime_trace,
+            "limit": config.limit,
+            "compact_json": config.compact_json,
+            "metadata": dict(config.metadata),
+        },
+    }
+
+
 def _corpus_status(accepted: Sequence[Mapping[str, Any]], rejected: Sequence[Mapping[str, Any]]) -> str:
     if not accepted:
         return "blocked"
@@ -319,6 +376,7 @@ def _artifact_paths(config: ProductTraceCorpusConfig) -> dict[str, str | Path | 
     artifacts: dict[str, str | Path | None] = {
         "product_trace_corpus_report": config.resolved_report_path,
         "product_trace_corpus_traces": config.resolved_traces_dir,
+        "product_trace_runtime_pair_index": config.resolved_runtime_pair_index_path,
     }
     for index, path in enumerate(config.trace_paths):
         artifacts[f"input_trace_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
@@ -342,6 +400,7 @@ def _write_artifact_manifest(
             "accepted_count": _nested(report, "summary", "accepted_count"),
             "rejected_count": _nested(report, "summary", "rejected_count"),
             "runtime_trace_count": _nested(report, "summary", "runtime_trace_count"),
+            "runtime_pair_index_record_count": _nested(report, "runtime_pair_index", "record_count"),
             "redact_text": config.redact_text,
             "compact_json": config.compact_json,
             **dict(config.metadata),
@@ -365,6 +424,8 @@ def _record_registry(config: ProductTraceCorpusConfig, report: Mapping[str, Any]
             "accepted_count": _nested(report, "summary", "accepted_count"),
             "rejected_count": _nested(report, "summary", "rejected_count"),
             "runtime_trace_count": _nested(report, "summary", "runtime_trace_count"),
+            "runtime_pair_index": _nested(report, "paths", "runtime_pair_index"),
+            "runtime_pair_index_record_count": _nested(report, "runtime_pair_index", "record_count"),
             "redact_text": config.redact_text,
             "compact_json": config.compact_json,
             **dict(config.metadata),
@@ -541,6 +602,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceCorpusConfig:
         output_dir=Path(args.output_dir),
         report_path=Path(args.json) if args.json else None,
         traces_dir=Path(args.traces_dir) if args.traces_dir else None,
+        runtime_pair_index_path=Path(args.runtime_pair_index) if args.runtime_pair_index else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -570,6 +632,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--jsonl", action="append", default=[], help="ProductTrace JSONL path; repeatable")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--traces-dir", default=None)
+    parser.add_argument("--runtime-pair-index", default=None,
+                        help="runtime pairing index artifact path")
     parser.add_argument("--json", default=None, help="top-level corpus report path")
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)

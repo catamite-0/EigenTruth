@@ -9462,6 +9462,8 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert payload["summary"]["rejected_count"] == 1
     assert payload["summary"]["runtime_trace_count"] == 2
     assert payload["summary"]["redacted_trace_count"] == 2
+    assert payload["runtime_pair_index"]["record_count"] == 2
+    assert payload["runtime_pair_index"]["profile_counts"] == {"audit": 1, "latency": 1}
     assert payload["summary"]["counts_by_runtime_profile"] == {"audit": 1, "latency": 1}
     assert payload["summary"]["rejected_reasons"] == {"missing risk_decision object": 1}
     assert payload["traces"][0]["request_key"] == "low-supported"
@@ -9470,14 +9472,29 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert saved_trace["verification_results"][0]["metadata"]["key"].startswith("[redacted:sha256=")
     assert saved_trace["metadata"]["runtime_replay_key"] == "low-supported"
     assert saved_trace["metadata"]["trace_corpus"]["redacted_text"] is True
+    runtime_pair_index = json.loads(
+        Path(payload["paths"]["runtime_pair_index"]).read_text(encoding="utf-8")
+    )
+    assert runtime_pair_index["workflow"] == "product_trace_runtime_pair_index"
+    assert runtime_pair_index["summary"]["record_count"] == 2
+    assert {
+        (record["request_key"], record["runtime_profile"], record["total_seconds"])
+        for record in runtime_pair_index["records"]
+    } == {
+        ("low-supported", "latency", 0.10),
+        ("low-sensitive", "audit", 0.40),
+    }
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert payload["artifact_manifest_summary"] == manifest["summary"]
+    assert "product_trace_runtime_pair_index" in manifest["artifacts"]
+    assert manifest["metadata"]["runtime_pair_index_record_count"] == 2
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"]
     ).passed is True
     assert record.metadata["status"] == "partial"
     assert record.metadata["accepted_count"] == 2
     assert record.metadata["rejected_count"] == 1
+    assert record.metadata["runtime_pair_index_record_count"] == 2
 
 
 def test_build_product_trace_corpus_streams_jsonl_limit_and_parses_bool_strings(tmp_path):
@@ -9630,13 +9647,21 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["status"] == "promote"
     assert payload["corpus"]["status"] == "ready"
     assert payload["corpus"]["accepted_count"] == 3
+    assert payload["corpus"]["runtime_pair_index_record_count"] == 3
     assert payload["runtime_baseline"]["status"] == "observed"
     assert payload["runtime_baseline"]["n_traces"] == 3
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
+    assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    selector_replay_report = json.loads(
+        Path(payload["paths"]["selector_replay_report"]).read_text(encoding="utf-8")
+    )
+    assert selector_replay_report["config"]["runtime_pairing"]["source"] == "runtime_pair_index"
+    assert selector_replay_report["paths"]["runtime_pair_index"] == payload["paths"]["corpus_runtime_pair_index"]
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert payload["artifact_manifest_summary"] == manifest["summary"]
+    assert "corpus_runtime_pair_index" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"],
         recursive=True,
@@ -9814,6 +9839,63 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
     assert record.metadata["recommended_candidate"] == "default"
     assert record.metadata["candidate_count"] == 2
     assert record.metadata["trace_count"] == 3
+
+
+def test_runtime_profile_selector_replay_uses_external_runtime_pair_index(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    output_dir = tmp_path / "selector-replay"
+    trace_path = tmp_path / "trace.json"
+    runtime_pair_index_path = tmp_path / "runtime-pair-index.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "low-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}}],
+            "metadata": {"runtime_profile": "latency"},
+        }),
+        encoding="utf-8",
+    )
+    runtime_pair_index_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "product_trace_runtime_pair_index",
+            "records": [{
+                "request_key": "low-supported",
+                "runtime_profile": "latency",
+                "path": str(trace_path),
+                "total_seconds": 0.12,
+            }],
+        }),
+        encoding="utf-8",
+    )
+
+    def fail_if_trace_scan_is_used(*_args, **_kwargs):
+        raise AssertionError("external runtime pair index should avoid trace scan")
+
+    monkeypatch.setattr(module, "_runtime_pair_index", fail_if_trace_scan_is_used)
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            runtime_pair_index_path=runtime_pair_index_path,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["config"]["runtime_pairing"]["source"] == "runtime_pair_index"
+    assert payload["config"]["runtime_pairing"]["indexed_observations"] == 1
+    assert payload["paths"]["runtime_pair_index"] == str(runtime_pair_index_path)
+    assert payload["candidates"][0]["summary"]["observed_runtime_coverage_rate"] == pytest.approx(1.0)
+    assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_mean"] == pytest.approx(0.12)
+    assert manifest["artifacts"]["runtime_pair_index"]["exists"] is True
+    assert manifest["metadata"]["runtime_pair_index_source"] == "runtime_pair_index"
 
 
 def test_runtime_profile_selector_replay_writes_trace_detail_sidecar(tmp_path):

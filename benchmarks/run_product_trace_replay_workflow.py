@@ -121,7 +121,11 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
     corpus = _run_corpus(config)
     corpus_trace_paths = tuple(Path(record["path"]) for record in _sequence(corpus.get("traces")))
     runtime_baseline = _run_runtime_baseline(config, corpus_trace_paths)
-    selector_replay = _run_selector_replay(config, corpus_trace_paths)
+    selector_replay = _run_selector_replay(
+        config,
+        corpus_trace_paths,
+        runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
+    )
     status = _workflow_status(corpus, runtime_baseline, selector_replay)
     report = {
         "schema_version": 1,
@@ -151,6 +155,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             "corpus_report": _nested(corpus, "paths", "report"),
             "corpus_manifest": _nested(corpus, "paths", "artifact_manifest"),
             "corpus_traces_dir": _nested(corpus, "paths", "traces_dir"),
+            "corpus_runtime_pair_index": _nested(corpus, "paths", "runtime_pair_index"),
             "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
             "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
             "selector_replay_report": _nested(selector_replay, "paths", "report"),
@@ -223,6 +228,8 @@ def _run_runtime_baseline(
 def _run_selector_replay(
     config: ProductTraceReplayWorkflowConfig,
     trace_paths: Sequence[Path],
+    *,
+    runtime_pair_index_path: str | Path | None = None,
 ) -> dict[str, Any]:
     if not trace_paths:
         return _skipped_child_report("runtime_profile_selector_replay", reason="no valid corpus traces")
@@ -233,6 +240,9 @@ def _run_selector_replay(
             output_dir=output_dir,
             candidates=config.candidates,
             replay_policy_path=config.replay_policy_path,
+            runtime_pair_index_path=(
+                None if runtime_pair_index_path is None else Path(runtime_pair_index_path)
+            ),
             compact_json=config.compact_json,
             metadata={
                 "source": "run_product_trace_replay_workflow",
@@ -303,6 +313,7 @@ def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
         "runtime_trace_count": summary.get("runtime_trace_count"),
         "redacted_trace_count": summary.get("redacted_trace_count"),
         "unique_request_key_count": summary.get("unique_request_key_count"),
+        "runtime_pair_index_record_count": _nested(corpus, "runtime_pair_index", "record_count"),
         "counts_by_runtime_profile": dict(_mapping(summary.get("counts_by_runtime_profile"))),
         "counts_by_risk_level": dict(_mapping(summary.get("counts_by_risk_level"))),
         "counts_by_action": dict(_mapping(summary.get("counts_by_action"))),
@@ -372,6 +383,7 @@ def _artifact_paths(
         "corpus_report": _nested(report, "paths", "corpus_report"),
         "corpus_manifest": _nested(report, "paths", "corpus_manifest"),
         "corpus_traces_dir": _nested(report, "paths", "corpus_traces_dir"),
+        "corpus_runtime_pair_index": _nested(report, "paths", "corpus_runtime_pair_index"),
         "runtime_baseline_report": _nested(report, "paths", "runtime_baseline_report"),
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),

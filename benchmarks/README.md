@@ -2206,8 +2206,8 @@ diff readability is less important than artifact size.
 Use `build_product_trace_corpus.py` before replaying real product traffic. It
 loads ProductTrace JSON files or JSONL streams, validates the control fields,
 optionally requires runtime traces, redacts text-like fields by default, adds a
-stable `metadata.runtime_replay_key`, writes standardized trace files, builds a
-manifest, and can register the corpus:
+stable `metadata.runtime_replay_key`, writes standardized trace files plus
+`runtime-pair-index.json`, builds a manifest, and can register the corpus:
 
 ```bash
 python benchmarks/build_product_trace_corpus.py \
@@ -2227,13 +2227,17 @@ three logical replay keys, and keeps four traces per runtime profile. Feed
 `artifacts/smollm2_product_trace_corpus/traces/*.json` into
 `run_product_runtime_baseline.py` or `run_runtime_profile_selector_replay.py`
 when validating control policies against replay-ready traces rather than raw
-product logs.
+product logs; pass
+`artifacts/smollm2_product_trace_corpus/runtime-pair-index.json` to selector
+replay with `--runtime-pair-index` to avoid rebuilding the paired-runtime index
+from trace files.
 
 Use `run_product_trace_replay_workflow.py` when the raw-trace handoff should be
 one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the
-provided candidate policies, writes a recursive top-level manifest over all
-child reports, and registers one workflow report:
+provided candidate policies using the corpus runtime-pair index, writes a
+recursive top-level manifest over all child reports, and registers one workflow
+report:
 
 ```bash
 python benchmarks/run_product_trace_replay_workflow.py \
@@ -2343,9 +2347,11 @@ demo scenarios or verifier work. The replay runner loads each trace's
 `risk_decision` and claim metadata, applies each candidate
 `RuntimeProfileSelectorPolicy`, estimates a configurable profile-cost summary,
 matches selected profiles back to paired traces when the same logical request
-was saved under multiple runtime profiles, applies optional distribution and
-observed-runtime replay gates, writes a manifest, and can register the replay
-report. The current registered replay report promotes the default selector with
+was saved under multiple runtime profiles, optionally reads a
+`build_product_trace_corpus.py` runtime-pair index instead of scanning traces to
+build that pairing map, applies optional distribution and observed-runtime
+replay gates, writes a manifest, and can register the replay report. The
+current registered replay report promotes the default selector with
 100% paired runtime coverage, observed mean selected runtime around `0.00045s`,
 and observed p95 selected runtime around `0.00059s` on the local deterministic
 SmolLM2 trace set:
@@ -2358,6 +2364,7 @@ python benchmarks/run_runtime_profile_selector_replay.py \
   --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
   --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
   --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
+  --runtime-pair-index artifacts/smollm2_product_trace_corpus/runtime-pair-index.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-runtime-profile-selector-replay \
   --version 0.1 \

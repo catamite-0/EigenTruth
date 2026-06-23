@@ -189,6 +189,7 @@ class RuntimeProfileSelectorReplayConfig:
     candidates: Sequence[RuntimeProfileSelectorCandidate | Mapping[str, Any]]
     replay_policy: RuntimeProfileSelectorReplayPolicy | Mapping[str, Any] | None = None
     replay_policy_path: str | Path | None = None
+    runtime_pair_index_path: str | Path | None = None
     profile_cost_units: Mapping[str, Any] = field(default_factory=lambda: dict(DEFAULT_PROFILE_COST_UNITS))
     report_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
@@ -220,6 +221,8 @@ class RuntimeProfileSelectorReplayConfig:
         object.__setattr__(self, "profile_cost_units", _profile_cost_mapping(self.profile_cost_units))
         if self.replay_policy_path is not None:
             object.__setattr__(self, "replay_policy_path", Path(self.replay_policy_path))
+        if self.runtime_pair_index_path is not None:
+            object.__setattr__(self, "runtime_pair_index_path", Path(self.runtime_pair_index_path))
         if self.report_path is not None:
             object.__setattr__(self, "report_path", Path(self.report_path))
         if self.artifact_manifest_path is not None:
@@ -268,7 +271,7 @@ def run_runtime_profile_selector_replay(
     config.output_dir.mkdir(parents=True, exist_ok=True)
     replay_policy, replay_policy_source = _load_replay_policy(config)
     traces = _TraceReplayCorpus(tuple(config.trace_paths))
-    runtime_pair_index = _runtime_pair_index(traces)
+    runtime_pair_index, runtime_pair_index_source = _resolve_runtime_pair_index(config, traces)
     candidates = _candidate_records(
         config,
         traces=traces,
@@ -296,6 +299,9 @@ def run_runtime_profile_selector_replay(
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "output_dir": str(config.output_dir),
             "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
+            "runtime_pair_index": (
+                None if config.runtime_pair_index_path is None else str(config.runtime_pair_index_path)
+            ),
             "trace_details": None if trace_details_path is None else str(trace_details_path),
             "traces": [str(path) for path in traces.paths],
         },
@@ -307,6 +313,8 @@ def run_runtime_profile_selector_replay(
             "profile_cost_units": dict(config.profile_cost_units),
             "runtime_pairing": {
                 "enabled": True,
+                "source": runtime_pair_index_source,
+                "path": None if config.runtime_pair_index_path is None else str(config.runtime_pair_index_path),
                 "indexed_pairs": len(runtime_pair_index),
                 "indexed_observations": sum(len(values) for values in runtime_pair_index.values()),
             },
@@ -895,6 +903,7 @@ def _artifact_paths(
     artifacts: dict[str, str | Path | None] = {
         "runtime_profile_selector_replay_report": config.resolved_report_path,
         "replay_policy": config.replay_policy_path,
+        "runtime_pair_index": config.runtime_pair_index_path,
     }
     trace_details = _nested(report, "paths", "trace_details")
     if trace_details is not None:
@@ -938,6 +947,8 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             "detail_limit": config.detail_limit,
             "trace_details_path": _nested(report, "paths", "trace_details"),
+            "runtime_pair_index_path": _nested(report, "paths", "runtime_pair_index"),
+            "runtime_pair_index_source": _nested(report, "config", "runtime_pairing", "source"),
             **dict(config.metadata),
         },
     )
@@ -973,6 +984,8 @@ def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping
             "compact_json": config.compact_json,
             "detail_limit": config.detail_limit,
             "trace_details_path": _nested(report, "paths", "trace_details"),
+            "runtime_pair_index_path": _nested(report, "paths", "runtime_pair_index"),
+            "runtime_pair_index_source": _nested(report, "config", "runtime_pairing", "source"),
             **dict(config.metadata),
         },
     ).save_json()
@@ -1063,6 +1076,48 @@ def _runtime_pair_index(
                 request_key=trace.request_key,
                 runtime_profile=trace.runtime_pair_profile,
                 total_seconds=trace.original_total_seconds,
+            )
+        )
+    return {
+        key: tuple(sorted(values, key=lambda item: str(item.path)))
+        for key, values in grouped.items()
+    }
+
+
+def _resolve_runtime_pair_index(
+    config: RuntimeProfileSelectorReplayConfig,
+    traces: Iterable[TraceReplayInput],
+) -> tuple[dict[tuple[str, str], tuple[RuntimeObservation, ...]], str]:
+    if config.runtime_pair_index_path is not None:
+        return _load_runtime_pair_index(config.runtime_pair_index_path), "runtime_pair_index"
+    return _runtime_pair_index(traces), "trace_scan"
+
+
+def _load_runtime_pair_index(
+    path: str | Path,
+) -> dict[tuple[str, str], tuple[RuntimeObservation, ...]]:
+    index_path = Path(path)
+    payload = json.loads(index_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"runtime pair index must be a JSON object: {index_path}")
+    grouped: dict[tuple[str, str], list[RuntimeObservation]] = {}
+    for record in _sequence(payload.get("records")):
+        if not isinstance(record, Mapping):
+            raise ValueError(f"runtime pair index record must be an object: {index_path}")
+        request_key = record.get("request_key")
+        runtime_profile = record.get("runtime_profile")
+        trace_path = record.get("path")
+        if request_key is None or runtime_profile is None or trace_path is None:
+            raise ValueError(
+                "runtime pair index records require request_key, runtime_profile, and path."
+            )
+        key = (str(request_key), str(runtime_profile))
+        grouped.setdefault(key, []).append(
+            RuntimeObservation(
+                path=Path(str(trace_path)),
+                request_key=str(request_key),
+                runtime_profile=str(runtime_profile),
+                total_seconds=_float_or_none(record.get("total_seconds")),
             )
         )
     return {
@@ -1374,6 +1429,7 @@ def _config_from_args(args: argparse.Namespace) -> RuntimeProfileSelectorReplayC
         output_dir=Path(args.output_dir),
         candidates=tuple(_load_candidate(value) for value in args.candidate),
         replay_policy_path=Path(args.replay_policy) if args.replay_policy else None,
+        runtime_pair_index_path=Path(args.runtime_pair_index) if args.runtime_pair_index else None,
         profile_cost_units=_parse_mapping_json(args.profile_cost_units, name="--profile-cost-units"),
         report_path=Path(args.json) if args.json else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
@@ -1404,6 +1460,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--candidate", action="append", default=[],
                         help="candidate selector policy JSON path, or name=path; repeatable")
     parser.add_argument("--replay-policy", default=None, help="RuntimeProfileSelectorReplayPolicy JSON path")
+    parser.add_argument("--runtime-pair-index", default=None,
+                        help="optional runtime pairing index from build_product_trace_corpus")
     parser.add_argument("--profile-cost-units", default=None,
                         help="optional JSON object overriding latency/balanced/audit cost units")
     parser.add_argument("--json", default=None, help="top-level replay report path")
