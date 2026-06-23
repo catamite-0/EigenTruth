@@ -1072,6 +1072,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --version 0.7 \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
+  --max-inside-sample-count-ratio 0.60 \
+  --max-inside-generation-seconds-ratio 0.80 \
   --min-selected 100 \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
@@ -1087,6 +1089,64 @@ The generated manifest fingerprints the release-candidate report and the
 selected readiness and route manifests. Recursive verification therefore checks
 the final candidate and both underlying baseline manifests before the release
 candidate is registered.
+
+Current local smoke release candidate:
+
+```bash
+python benchmarks/run_adapter_readiness_registry_workflow.py \
+  --output-dir artifacts/tiny_local_readiness \
+  --registry artifacts/local-readiness-registry.json \
+  --name tiny-local-readiness \
+  --version 0.4 \
+  --json artifacts/tiny_local_readiness_registry_workflow.json \
+  --verification-report artifacts/tiny_local_readiness_manifest_verification.json \
+  --alpha 0.2 \
+  --n-records 8 \
+  --model sshleifer/tiny-gpt2 \
+  --layers -1 \
+  --batch-sizes 4 \
+  --hidden-state-captures outputs \
+  --eval-reps-cache-shard-size 4 \
+  --cached-max-total-ratio 1.10 \
+  --cache-only-max-total-ratio 0.35 \
+  --python .venv/bin/python \
+  --performance-clean \
+  --compact-json \
+  --fail-on-blocked
+
+python benchmarks/run_release_candidate_registry_workflow.py \
+  --readiness-registry artifacts/local-readiness-registry.json \
+  --route-registry artifacts/staged-route-registry.json \
+  --release-registry artifacts/local-release-registry.json \
+  --name tiny-local-staged-qa-release-candidate \
+  --version 0.4 \
+  --readiness-baseline-key benchmark_manifest:tiny-local-readiness:0.4 \
+  --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
+  --min-best-quality-auroc 0.60 \
+  --max-uncached-forward-seconds 1.0 \
+  --max-cache-only-seconds 1.0 \
+  --min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --max-p99-duration-seconds 0.01 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --json artifacts/local_staged_release_candidate_registry_workflow.json \
+  --release-report-json artifacts/local_staged_release_candidate_comparison.json \
+  --artifact-manifest artifacts/local_staged_release_candidate_manifest.json \
+  --verification-report artifacts/local_staged_release_candidate_manifest_verification.json \
+  --metadata evidence=tiny_local_readiness_plus_truthfulqa_l80_structured_qa_staged \
+  --fail-on-blocked
+```
+
+This records `benchmark_manifest:tiny-local-readiness:0.4` and
+`benchmark_manifest:tiny-local-staged-qa-release-candidate:0.4`. The candidate
+combines a tiny-gpt2 offline readiness/runtime smoke baseline with the
+TruthfulQA l80 staged structured QA route baseline. It is a local release-gate
+plumbing artifact, not a Qwen production readiness claim.
 
 ## `build_truthfulqa_corpus.py`
 

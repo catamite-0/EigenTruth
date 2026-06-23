@@ -3589,6 +3589,8 @@ def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
         quality_signals={"truth_proj": 0.72},
         uncached_forward_seconds=18.0,
         cache_only_seconds=0.20,
+        inside_sample_ratio=0.4,
+        inside_generation_ratio=0.45,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3643,6 +3645,8 @@ def test_compare_release_candidates_applies_retrieval_cost_gate(tmp_path):
         quality_signals={"truth_proj": 0.72},
         uncached_forward_seconds=18.0,
         cache_only_seconds=0.20,
+        inside_sample_ratio=0.4,
+        inside_generation_ratio=0.45,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3767,6 +3771,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         quality_signals={"truth_proj": 0.72},
         uncached_forward_seconds=18.0,
         cache_only_seconds=0.20,
+        inside_sample_ratio=0.4,
+        inside_generation_ratio=0.45,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -3797,6 +3803,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             verification_report_path=tmp_path / "release-verification.json",
             min_best_quality_auroc=0.70,
             max_uncached_forward_seconds=20.0,
+            max_inside_sample_count_ratio=0.6,
+            max_inside_generation_seconds_ratio=0.8,
             min_selected=4,
             min_decision_accuracy=0.99,
             max_p99_duration_seconds=0.03,
@@ -3824,6 +3832,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_route_max_duration_seconds"] == pytest.approx(0.02)
     assert manifest["metadata"]["recommended_route_mean_attempted_route_count"] == pytest.approx(1.0)
     assert manifest["metadata"]["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
+    assert manifest["metadata"]["recommended_inside_sampling_run"] == "adaptive_selfcheck"
+    assert manifest["metadata"]["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert manifest["metadata"]["recommended_inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
+    assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
+    assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
+        0.8
+    )
     registry = ArtifactRegistry.load_json(release_registry_path)
     record = registry.get("benchmark_manifest:qwen-release-candidate:0.7")
     assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
@@ -3831,6 +3846,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
+    assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert record.metadata["recommended_inside_generation_seconds_ratio_to_baseline"] == pytest.approx(0.45)
     assert record.metadata["scope"] == "unit"
 
 
@@ -4989,6 +5006,8 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert manifest["artifacts"]["caches.eval_reps_cache"]["exists"] is False
     assert payload["artifact_manifest_summary"]["missing_count"] == 3
     assert commands["uncached"][0] == "/python"
+    assert commands["uncached"][1] == "benchmarks/eval_truthfulqa.py"
+    assert not Path(commands["uncached"][1]).is_absolute()
     assert "--offline" in commands["uncached"]
     assert commands["uncached"][commands["uncached"].index("--dtype") + 1] == "float32"
     assert commands["uncached"][commands["uncached"].index("--max-batch-tokens") + 1] == "128"

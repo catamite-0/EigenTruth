@@ -40,6 +40,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
+    max_inside_sample_count_ratio: float | None = None
+    max_inside_generation_seconds_ratio: float | None = None
     min_selected: int | None = None
     min_decision_accuracy: float | None = None
     max_false_supported_rate: float | None = None
@@ -116,6 +118,8 @@ def run_release_candidate_registry_workflow(
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
+        max_inside_sample_count_ratio=config.max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
         min_selected=config.min_selected,
         min_decision_accuracy=config.min_decision_accuracy,
         max_false_supported_rate=config.max_false_supported_rate,
@@ -262,6 +266,18 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_uncached_forward_cost_seconds": runtime_cost.get("uncached_forward_cost_seconds"),
         "recommended_uncached_forward_cost_source": runtime_cost.get("uncached_forward_cost_source"),
         "recommended_cache_only_total_seconds": runtime_cost.get("cache_only_total_seconds"),
+        "recommended_inside_sampling_run": runtime_cost.get("inside_sampling_recommended_run"),
+        "recommended_inside_sampling_total_generated_samples": runtime_cost.get(
+            "inside_sampling_total_generated_samples"
+        ),
+        "recommended_inside_sampling_sample_count_ratio_to_baseline": runtime_cost.get(
+            "inside_sampling_sample_count_ratio_to_baseline"
+        ),
+        "recommended_inside_generation_seconds": runtime_cost.get("inside_generation_seconds"),
+        "recommended_inside_generation_seconds_ratio_to_baseline": runtime_cost.get(
+            "inside_generation_seconds_ratio_to_baseline"
+        ),
+        "recommended_inside_sampling_stop_reason_counts": runtime_cost.get("inside_sampling_stop_reason_counts"),
         "recommended_route_selected": verifier_route.get("selected"),
         "recommended_route_decision_accuracy": verifier_route.get("decision_accuracy"),
         "recommended_route_false_supported_rate": verifier_route.get("false_supported_rate"),
@@ -340,6 +356,8 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
+        max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         min_selected=args.min_selected,
         min_decision_accuracy=args.min_decision_accuracy,
         max_false_supported_rate=args.max_false_supported_rate,
@@ -410,6 +428,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-cache-only-seconds", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-cache-only-seconds",
+    ), default=None)
+    parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-sample-count-ratio",
+    ), default=None)
+    parser.add_argument("--max-inside-generation-seconds-ratio", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-inside-generation-seconds-ratio",
     ), default=None)
     parser.add_argument("--min-selected", type=lambda value: _parse_non_negative_int(
         value,

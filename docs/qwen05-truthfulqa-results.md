@@ -614,6 +614,23 @@ verified false alarm 0.000, verified detection 1.000, p99 route duration
 available in the manifest and registry metadata: skip-rate 0.811, staged
 verified false alarm 0.009, and staged verified detection 0.275.
 
+A local release-candidate smoke artifact now pairs that staged route baseline
+with a tiny-gpt2 offline readiness/runtime baseline:
+
+- Readiness registry: `artifacts/local-readiness-registry.json`
+- Readiness record: `benchmark_manifest:tiny-local-readiness:0.4`
+- Release registry: `artifacts/local-release-registry.json`
+- Release record: `benchmark_manifest:tiny-local-staged-qa-release-candidate:0.4`
+- Release comparison: `artifacts/local_staged_release_candidate_comparison.json`
+- Release manifest: `artifacts/local_staged_release_candidate_manifest.json`
+
+The release comparison promotes with model `sshleifer/tiny-gpt2`, layer `-1`,
+batch size `4`, best local quality signal `disp_hse` AUROC 0.688, uncached
+forced-answer cost 0.061 seconds, cache-only total 0.032 seconds, and route
+`structured_qa` from the TruthfulQA l80 staged route baseline. This artifact
+proves the end-to-end registry/release gate plumbing; it is not a claim that
+tiny-gpt2 is the target production runtime for Qwen results.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -629,8 +646,9 @@ verified false alarm 0.009, and staged verified detection 0.275.
 5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
    `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
    budget and shared conformal report.
-6. Include the registered staged structured QA route baseline in
-   release-candidate comparison once paired readiness artifacts are available.
+6. Replace the tiny-gpt2 local release-candidate readiness half with a real Qwen
+   or SmolLM2 readiness baseline once representative same-machine profile
+   artifacts are available.
 7. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm
