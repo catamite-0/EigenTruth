@@ -117,6 +117,8 @@ python examples/calibrated_control_demo.py \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
+  --promotion-contract artifacts/local_release_candidate_comparison.json
+python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
 ```

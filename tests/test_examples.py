@@ -263,6 +263,58 @@ def test_calibrated_control_demo_records_route_cost_summary_and_budget():
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
 
 
+def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract, ProductRuntimeBudgetPolicy
+
+    contract_path = tmp_path / "promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        runtime_budget_policy=ProductRuntimeBudgetPolicy(max_mean_attempted_route_count=0.5),
+        source_status="promote",
+    ).save_json(contract_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=True,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=str(contract_path),
+            max_runtime_total_seconds=None,
+            max_runtime_phase_seconds=None,
+            max_mean_route_duration_seconds=None,
+            max_p95_route_duration_seconds=None,
+            max_p99_route_duration_seconds=None,
+            max_route_duration_seconds=None,
+            max_mean_attempted_route_count=None,
+            max_retrieval_use_rate=None,
+            max_retrieval_hit_count=None,
+            min_cache_hit_rate=None,
+            min_named_cache_hit_rate=None,
+            request_id="test-promotion-contract-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    runtime_budget = payload["metadata"]["runtime_budget"]
+
+    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 0.5
+    assert runtime_budget["passed"] is False
+    assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
+
+
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):
     demo = importlib.import_module("examples.sqlite_state_control_demo")
 

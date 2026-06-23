@@ -8,6 +8,7 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
     ProductTrace,
     RiskController,
@@ -16,6 +17,7 @@ from eigentruth.control import (
     RuntimeTrace,
     TraceEvent,
     evaluate_product_runtime_budget,
+    product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
 )
 from eigentruth.registry import (
@@ -506,21 +508,93 @@ def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
         trace,
         ProductRuntimeBudgetPolicy(
             max_mean_route_duration_seconds=0.02,
+            max_route_duration_seconds=0.04,
             max_mean_attempted_route_count=1.2,
             max_retrieval_use_rate=0.25,
+            max_retrieval_hit_count=1,
         ),
     )
 
     assert report["passed"] is False
     assert report["metrics"]["has_runtime_trace"] is False
     assert round(report["metrics"]["mean_route_duration_seconds"], 6) == 0.03
+    assert report["metrics"]["max_route_duration_seconds"] == 0.05
     assert report["metrics"]["mean_attempted_route_count"] == 1.5
     assert report["metrics"]["retrieval_use_rate"] == 0.5
+    assert report["metrics"]["retrieval_hit_count"] == 2.0
     assert [failure["metric"] for failure in report["failures"]] == [
         "mean_route_duration_seconds",
+        "max_route_duration_seconds",
         "mean_attempted_route_count",
         "retrieval_use_rate",
+        "retrieval_hit_count",
     ]
+
+
+def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
+    release_report = {
+        "workflow": "release_candidate_comparison",
+        "config": {
+            "runtime_profile": "balanced",
+            "inside_trigger_budget_policy": "quality_balanced",
+            "max_runtime_total_seconds": 1.0,
+            "max_mean_duration_seconds": 0.05,
+            "max_p99_duration_seconds": 0.20,
+            "max_max_duration_seconds": 0.25,
+            "max_mean_attempted_route_count": 1.5,
+            "max_retrieval_use_rate": 0.5,
+            "max_retrieval_hit_count": 4,
+            "min_claims_cache_hit_rate": 0.8,
+            "min_verifier_trace_cache_hit_rate": 0.9,
+        },
+        "decision": {
+            "status": "promote",
+            "recommended_readiness_record": "benchmark_manifest:readiness:0.8",
+            "recommended_route_record": "benchmark_manifest:route:0.8",
+            "recommended_route": "structured_state",
+        },
+        "release_candidate": {
+            "model": "Qwen/Qwen2.5-0.5B-Instruct",
+            "runtime": {"layer": -12, "batch_size": 2},
+            "verifier_route": {
+                "route": "structured_state",
+                "mean_duration_seconds": 0.01,
+                "p99_duration_seconds": 0.02,
+                "max_duration_seconds": 0.03,
+                "mean_attempted_route_count": 1.0,
+                "retrieval_use_rate": 0.0,
+            },
+        },
+    }
+    registry_workflow = {
+        "workflow": "release_candidate_registry_workflow",
+        "release_candidate_comparison": release_report,
+    }
+    contract_path = tmp_path / "release-workflow.json"
+    contract_path.write_text(json.dumps(registry_workflow), encoding="utf-8")
+
+    contract = ProductPromotionContract.from_json(contract_path)
+    direct_policy = product_runtime_budget_policy_from_release_candidate(release_report)
+    roundtrip = ProductPromotionContract.from_mapping(contract.to_dict())
+
+    assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert contract.runtime["layer"] == -12
+    assert contract.verifier_route["route"] == "structured_state"
+    assert contract.metadata["runtime_profile"] == "balanced"
+    assert contract.runtime_budget_policy == direct_policy
+    assert contract.runtime_budget_policy.max_total_seconds == 1.0
+    assert contract.runtime_budget_policy.max_mean_route_duration_seconds == 0.05
+    assert contract.runtime_budget_policy.max_p99_route_duration_seconds == 0.20
+    assert contract.runtime_budget_policy.max_route_duration_seconds == 0.25
+    assert contract.runtime_budget_policy.max_mean_attempted_route_count == 1.5
+    assert contract.runtime_budget_policy.max_retrieval_use_rate == 0.5
+    assert contract.runtime_budget_policy.max_retrieval_hit_count == 4.0
+    assert contract.runtime_budget_policy.min_named_cache_hit_rate == {
+        "claims": 0.8,
+        "verifier_trace": 0.9,
+    }
+    assert roundtrip == contract
+    json.dumps(contract.to_dict())
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
