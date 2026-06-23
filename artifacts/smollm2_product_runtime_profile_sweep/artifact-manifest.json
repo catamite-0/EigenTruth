@@ -5,15 +5,15 @@
       "file_count": 1,
       "kind": "file",
       "path": "baselines/audit/product-runtime-baseline.json",
-      "sha256": "4c6a8b04e582d64433dcbcab0335d76a707a61e37130dfe68c15c35252f5d702",
-      "size_bytes": 62097
+      "sha256": "5b8df20d150cdcd216ed4f086606c19c600e7713e9c0578045cdcb7fe5c7c052",
+      "size_bytes": 62178
     },
     "audit_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/audit/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "247c1779cd7dad5528f034731b57555586cf70adeb6b779d6765c3d0b039255a",
+      "sha256": "d082b5603b3e86ef7bce768b10b1294228fa51b6574f0ebd4f280d06bfd74b80",
       "size_bytes": 2113
     },
     "audit_trace_0000": {
@@ -21,39 +21,79 @@
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/low_risk_supported-r0.json",
-      "sha256": "ff2c37377032c5bf785b42af02e2e462da5051f2ad416d957c93facb92207b43",
-      "size_bytes": 36682
+      "sha256": "5014b29b1e06248389bcfcd6d2024c786fc84f3bc701281cb57100a85f994153",
+      "size_bytes": 36727
     },
     "audit_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/diagnostic_refuted-r0.json",
-      "sha256": "94fd7c626446f537ce4dc110b6da4e1a863799b38e52a5b36fef7065c39cb305",
-      "size_bytes": 40441
+      "sha256": "a19e78154594aec33102d9e969c550aca8bbffca41423bce6ee193717b59d116",
+      "size_bytes": 40452
     },
     "audit_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/audit/calculator_refuted-r0.json",
-      "sha256": "a30d2afe3697e821cb0ee8138a2ce12f8480675b356e3c9b5849b36d515016c2",
-      "size_bytes": 39356
+      "sha256": "7cb28d3577f93714bad22e7ea98887c320b4f664f70ed63ba2f79cb7a61c58c8",
+      "size_bytes": 39360
+    },
+    "auto_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline.json",
+      "sha256": "d08bf2ecaefbfeca0d594cff551965aaf4c8f77fc4dbd6748504367b0f319086",
+      "size_bytes": 63611
+    },
+    "auto_baseline_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "sha256": "6096ffba5373bf9693eab2b8e55f6f9362b1666715b17541957fb1d9ea8f6109",
+      "size_bytes": 2109
+    },
+    "auto_trace_0000": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/low_risk_supported-r0.json",
+      "sha256": "aa2963c9d9b29996de200c14d8e1de98c0b9f234f43c726c348d0efba1181f0f",
+      "size_bytes": 33414
+    },
+    "auto_trace_0001": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "28514a5bce1e88fe0ac3c11ecda1ca120f4c4c4cc5aad9b1e6d0375e2bbdf21f",
+      "size_bytes": 45510
+    },
+    "auto_trace_0002": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "traces/auto/calculator_refuted-r0.json",
+      "sha256": "21a719e3b29d2b350e86769d427faee652bccbaac293f841eb952c6660421608",
+      "size_bytes": 39803
     },
     "balanced_baseline": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/balanced/product-runtime-baseline.json",
-      "sha256": "bfc63721685577d8f938c86e9a6141b273224ceaec460845cfc8c32998de92af",
-      "size_bytes": 65766
+      "sha256": "3a681fccaf6fe68a7867bdf2f14b14003a295aabb316f3663364554cb7c4059a",
+      "size_bytes": 65742
     },
     "balanced_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/balanced/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "7cda0b024e527d26d723705f8e4cb118205757dc2d8227b0856412faa4d4343c",
+      "sha256": "9c557c029c7a8913e2c3a0513cd3f6997e7cdf7631008f1e6f2554fb5bfbef64",
       "size_bytes": 2125
     },
     "balanced_trace_0000": {
@@ -61,39 +101,39 @@
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/low_risk_supported-r0.json",
-      "sha256": "79e0767a6f0942685c71ffd0a683c1365afc8db6d67380ab4163adea3825e04c",
-      "size_bytes": 33282
+      "sha256": "da7be473cbc23d98423d414c7ea472db9624ea04f3a40a3977887ac565b3bc27",
+      "size_bytes": 33301
     },
     "balanced_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/diagnostic_refuted-r0.json",
-      "sha256": "d3281e01b0caaa1af70613bc8e9fa77dd1bc976b23980c5bbd0892d4b3e36832",
-      "size_bytes": 45089
+      "sha256": "17d9c3139bbbf17ec3e8f486e4bca4a503ea21fb3ad6185b4031aebeeec470c1",
+      "size_bytes": 45084
     },
     "balanced_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/balanced/calculator_refuted-r0.json",
-      "sha256": "4037656a9f72488e9f07d72d6767de5e313b7d45624d2da597dcb8c9b2cf9b81",
-      "size_bytes": 44340
+      "sha256": "c08f4f18e214cd7d078b308c33c03e3602dad21ef8dd9a38fe2ae2a54691727a",
+      "size_bytes": 44315
     },
     "latency_baseline": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/latency/product-runtime-baseline.json",
-      "sha256": "bc49916ae9deef52532896ac37e684727edfeacb91805711acb45b4ab85891fe",
-      "size_bytes": 58764
+      "sha256": "9f88764f8b06d9b05b24c65252aa2f70bdcb4a7fd4dba9ee84f7259df27c32ad",
+      "size_bytes": 58927
     },
     "latency_baseline_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "baselines/latency/product-runtime-baseline-artifact-manifest.json",
-      "sha256": "44692c7a985652fd238960abf14f0065208be5632f9abad665886bd4a0a6b8bf",
+      "sha256": "092698d25d2e019650f1faaa82505ce2fdc2800eb43469c54c1ab0bbaa7569aa",
       "size_bytes": 2121
     },
     "latency_trace_0000": {
@@ -101,32 +141,32 @@
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/low_risk_supported-r0.json",
-      "sha256": "2a19dda20fce33db905251b514a08c0c3fa8de7fe9dbf1d209f3717f026f606c",
-      "size_bytes": 33033
+      "sha256": "72708e2f5d6f60ebd2f786661b58094400520c999851cbc9b91ea3e2127a51a4",
+      "size_bytes": 32994
     },
     "latency_trace_0001": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "14236dff9e61169ec8b56a9e860b82ca96117f8f58956079d955a63a0aa7ab5c",
-      "size_bytes": 33437
+      "sha256": "499694bd054b666c07447cf2694566c996e7e6986299189078eb530fff921423",
+      "size_bytes": 33473
     },
     "latency_trace_0002": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "traces/latency/calculator_refuted-r0.json",
-      "sha256": "10ef3b0e1df723f92c2d4e59839f19dfbb875252dd7727022233480be748959f",
-      "size_bytes": 43941
+      "sha256": "b6a382607829ad5c1e85ca125c3f9b9292aa6f1bfbbdc2043e103f4ef01754a9",
+      "size_bytes": 44041
     },
     "product_runtime_profile_sweep_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-profile-sweep.json",
-      "sha256": "c0bf43d830cdfbdb5981912ba02117e84607411680f74b47cee85bd5caf9bc23",
-      "size_bytes": 12586
+      "sha256": "c2a94dd5ce6423a47c2e6f6c3d07b528f51495eff965f672d18ad694059a20c3",
+      "size_bytes": 19468
     },
     "promotion_contract": {
       "exists": true,
@@ -142,9 +182,9 @@
     "compact_json": false,
     "contract": "smollm2_1_4",
     "max_workers": 1,
-    "profile_count": 3,
+    "profile_count": 4,
     "purpose": "product_runtime_profile_selection",
-    "recommended_profile": "audit",
+    "recommended_profile": "auto",
     "release": "strict_structured_retrieval_audit",
     "repeats": 1,
     "runner": "run_product_runtime_profile_sweep",
@@ -153,9 +193,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 17,
+    "artifact_count": 22,
     "directory_count": 0,
-    "file_count": 17,
+    "file_count": 22,
     "missing_count": 0
   }
 }

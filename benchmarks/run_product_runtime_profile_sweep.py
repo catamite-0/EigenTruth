@@ -29,6 +29,8 @@ from eigentruth.control import (  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 from examples import calibrated_control_demo as demo  # noqa: E402
 
+PRODUCT_RUNTIME_PROFILE_SWEEP_MODES = (*RUNTIME_PROFILE_NAMES, "auto")
+
 
 @dataclass(frozen=True)
 class ProductRuntimeScenario:
@@ -80,7 +82,7 @@ class ProductRuntimeProfileSweepConfig:
     """Configuration for sweeping product runtime profiles."""
 
     output_dir: str | Path
-    profiles: Sequence[str] = RUNTIME_PROFILE_NAMES
+    profiles: Sequence[str] = PRODUCT_RUNTIME_PROFILE_SWEEP_MODES
     scenarios: Sequence[ProductRuntimeScenario] = DEFAULT_SCENARIOS
     repeats: int = 1
     artifact_path: str | Path | None = None
@@ -183,6 +185,7 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
         },
         "config": {
             "profiles": tuple(config.profiles),
+            "profile_modes": tuple(config.profiles),
             "scenario_names": tuple(scenario.name for scenario in config.scenarios),
             "repeats": config.repeats,
             "artifact_path": None if config.artifact_path is None else str(config.artifact_path),
@@ -285,6 +288,8 @@ def _run_profile_traces(
                 "repeat": repeat_index,
                 "risk_action": _nested(payload, "risk_decision", "action"),
                 "risk_level": _nested(payload, "risk_decision", "risk_level"),
+                "selected_runtime_profile": _nested(payload, "metadata", "runtime_profile"),
+                "runtime_profile_selection": _nested(payload, "metadata", "runtime_profile_selection"),
                 "staged_verification_enabled": _nested(payload, "metadata", "staged_verification_enabled"),
                 "runtime_total_seconds": _nested(payload, "runtime_trace", "summary", "total_seconds"),
                 "measured_phases": _nested(payload, "runtime_trace", "summary", "measured_phases"),
@@ -373,7 +378,27 @@ def _profile_record(
             "retrieval_hit_count": routes.get("retrieval_hit_count"),
             "cache_hit_rate_mean": _nested(summary, "cache_hit_rate", "mean"),
         },
+        "runtime_profile_selection": _runtime_profile_selection_summary(traces),
         "budget": _mapping(baseline.get("budget")),
+    }
+
+
+def _runtime_profile_selection_summary(traces: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    counts_by_selected_profile: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    for trace in traces:
+        selected = trace.get("selected_runtime_profile")
+        if selected is not None:
+            profile = str(selected)
+            counts_by_selected_profile[profile] = counts_by_selected_profile.get(profile, 0) + 1
+        selection = _mapping(trace.get("runtime_profile_selection"))
+        reason = selection.get("reason")
+        if reason is not None:
+            reason_key = str(reason)
+            reason_counts[reason_key] = reason_counts.get(reason_key, 0) + 1
+    return {
+        "counts_by_selected_profile": counts_by_selected_profile,
+        "reason_counts": reason_counts,
     }
 
 
@@ -499,6 +524,9 @@ def _profile_baseline_path(config: ProductRuntimeProfileSweepConfig, profile_nam
 
 
 def _normalize_profile(profile: str) -> str:
+    normalized = str(profile).strip().lower().replace("-", "_")
+    if normalized == "auto":
+        return normalized
     resolved = get_runtime_profile(profile)
     if resolved is None:
         raise ValueError("runtime profile must not be None.")
@@ -623,7 +651,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Sweep calibrated-control runtime profiles")
     parser.add_argument("--output-dir", required=True)
-    parser.add_argument("--profiles", default=",".join(RUNTIME_PROFILE_NAMES))
+    parser.add_argument("--profiles", default=",".join(PRODUCT_RUNTIME_PROFILE_SWEEP_MODES))
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--artifact", default=None)
     parser.add_argument("--promotion-contract", default=None)

@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-baseline.json",
-      "sha256": "9f88764f8b06d9b05b24c65252aa2f70bdcb4a7fd4dba9ee84f7259df27c32ad",
-      "size_bytes": 58927
+      "sha256": "d08bf2ecaefbfeca0d594cff551965aaf4c8f77fc4dbd6748504367b0f319086",
+      "size_bytes": 63611
     },
     "promotion_contract": {
       "exists": true,
@@ -20,25 +20,25 @@
       "exists": true,
       "file_count": 1,
       "kind": "file",
-      "path": "../../traces/latency/low_risk_supported-r0.json",
-      "sha256": "72708e2f5d6f60ebd2f786661b58094400520c999851cbc9b91ea3e2127a51a4",
-      "size_bytes": 32994
+      "path": "../../traces/auto/low_risk_supported-r0.json",
+      "sha256": "aa2963c9d9b29996de200c14d8e1de98c0b9f234f43c726c348d0efba1181f0f",
+      "size_bytes": 33414
     },
     "trace_0001_diagnostic_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
-      "path": "../../traces/latency/diagnostic_refuted-r0.json",
-      "sha256": "499694bd054b666c07447cf2694566c996e7e6986299189078eb530fff921423",
-      "size_bytes": 33473
+      "path": "../../traces/auto/diagnostic_refuted-r0.json",
+      "sha256": "28514a5bce1e88fe0ac3c11ecda1ca120f4c4c4cc5aad9b1e6d0375e2bbdf21f",
+      "size_bytes": 45510
     },
     "trace_0002_calculator_refuted-r0": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
-      "path": "../../traces/latency/calculator_refuted-r0.json",
-      "sha256": "b6a382607829ad5c1e85ca125c3f9b9292aa6f1bfbbdc2043e103f4ef01754a9",
-      "size_bytes": 44041
+      "path": "../../traces/auto/calculator_refuted-r0.json",
+      "sha256": "21a719e3b29d2b350e86769d427faee652bccbaac293f841eb952c6660421608",
+      "size_bytes": 39803
     }
   },
   "digest_algorithm": "sha256",
@@ -50,7 +50,7 @@
     "purpose": "product_runtime_profile_selection",
     "release": "strict_structured_retrieval_audit",
     "runner": "run_product_runtime_baseline",
-    "runtime_profile": "latency",
+    "runtime_profile": "auto",
     "source": "run_product_runtime_profile_sweep",
     "status": "promote",
     "trace_count": 3

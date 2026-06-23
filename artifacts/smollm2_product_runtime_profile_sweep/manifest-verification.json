@@ -1,5 +1,5 @@
 {
-  "checked": 17,
+  "checked": 22,
   "failures": [],
   "manifest_path": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
   "nested": [
@@ -7,6 +7,13 @@
       "checked": 5,
       "failures": [],
       "manifest_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/audit/product-runtime-baseline-artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 5,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline-artifact-manifest.json",
       "nested": [],
       "passed": true
     },

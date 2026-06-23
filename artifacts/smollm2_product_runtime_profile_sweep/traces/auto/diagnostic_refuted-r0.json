@@ -5,7 +5,7 @@
       "error": null,
       "metadata": {
         "context": {
-          "request_id": "latency-calculator_refuted-r0"
+          "request_id": "auto-diagnostic_refuted-r0"
         },
         "executor": "DryRunActionExecutor",
         "executor_name": "dry_run",
@@ -18,30 +18,22 @@
       "output": {
         "blocked_claims": [
           {
-            "claim_id": "c1",
-            "confidence": 0.99,
-            "evidence": [
-              "calculator: 2 + 2 = 4; expected 5"
-            ],
+            "claim_id": "c2",
+            "confidence": 0.9,
+            "evidence": [],
             "metadata": {
-              "calculation": {
-                "expected": 5.0,
-                "expression": "2 + 2",
-                "parser": "symbolic",
-                "source": "claim_text"
-              },
               "extractor": "sentence_split",
               "features": {
-                "has_calculation": true,
+                "has_calculation": false,
                 "has_citation": false,
                 "has_negation": false,
-                "has_number": true,
+                "has_number": false,
                 "is_time_sensitive": false
               },
-              "source_index": 1
+              "source_index": 2
             },
             "status": "refuted",
-            "text": "2 + 2 = 5."
+            "text": "The moon is made of cheese."
           }
         ],
         "message": "I cannot answer reliably with the available evidence.",
@@ -61,30 +53,22 @@
       "payload": {
         "blocked_claims": [
           {
-            "claim_id": "c1",
-            "confidence": 0.99,
-            "evidence": [
-              "calculator: 2 + 2 = 4; expected 5"
-            ],
+            "claim_id": "c2",
+            "confidence": 0.9,
+            "evidence": [],
             "metadata": {
-              "calculation": {
-                "expected": 5.0,
-                "expression": "2 + 2",
-                "parser": "symbolic",
-                "source": "claim_text"
-              },
               "extractor": "sentence_split",
               "features": {
-                "has_calculation": true,
+                "has_calculation": false,
                 "has_citation": false,
                 "has_negation": false,
-                "has_number": true,
+                "has_number": false,
                 "is_time_sensitive": false
               },
-              "source_index": 1
+              "source_index": 2
             },
             "status": "refuted",
-            "text": "2 + 2 = 5."
+            "text": "The moon is made of cheese."
           }
         ],
         "claim_status_counts": {
@@ -92,14 +76,14 @@
           "insufficient_evidence": 0,
           "not_applicable": 0,
           "refuted": 1,
-          "supported": 0
+          "supported": 1
         },
-        "decision_confidence": 0.99,
-        "decision_reason": "claim verification refuted 1 claim(s)",
+        "decision_confidence": 0.9,
+        "decision_reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
         "message": "I cannot answer reliably with the available evidence.",
         "risk_level": "high"
       },
-      "reason": "claim verification refuted 1 claim(s)",
+      "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
       "request_id": null
     }
   ],
@@ -107,69 +91,78 @@
     {
       "claim_id": "c1",
       "metadata": {
-        "calculation": {
-          "expected": 5.0,
-          "expression": "2 + 2",
-          "parser": "symbolic",
-          "source": "claim_text"
-        },
         "extractor": "sentence_split",
         "features": {
-          "has_calculation": true,
+          "has_calculation": false,
           "has_citation": false,
           "has_negation": false,
-          "has_number": true,
+          "has_number": false,
           "is_time_sensitive": false
         },
         "source_index": 1
       },
       "span": [
         0,
-        10
+        31
       ],
-      "text": "2 + 2 = 5."
+      "text": "Paris is the capital of France."
+    },
+    {
+      "claim_id": "c2",
+      "metadata": {
+        "extractor": "sentence_split",
+        "features": {
+          "has_calculation": false,
+          "has_citation": false,
+          "has_negation": false,
+          "has_number": false,
+          "is_time_sensitive": false
+        },
+        "source_index": 2
+      },
+      "span": [
+        31,
+        59
+      ],
+      "text": "The moon is made of cheese."
     }
   ],
   "diagnostics": {
-    "truth_proj": 1.0182865977287292
+    "truth_proj": 1.2445725083351136
   },
   "events": [
     {
       "created_at": null,
       "event_type": "diagnostic_risk_decision",
       "payload": {
-        "action": "accept",
-        "confidence": 1.0,
+        "action": "retrieve",
+        "confidence": 0.55,
         "diagnostics": {
           "invalid_scores": [],
           "invalid_values": {},
           "missing_scores": [],
           "severities": {
-            "truth_proj": 0.0
+            "truth_proj": 0.10000000000000003
           },
           "thresholds": {
             "truth_proj": 1.1314295530319214
           },
-          "triggered_scores": []
+          "triggered_scores": [
+            "truth_proj"
+          ]
         },
-        "reason": "no calibrated diagnostic threshold was exceeded",
-        "risk_level": "low"
+        "reason": "calibrated diagnostic threshold exceeded: truth_proj",
+        "risk_level": "medium"
       }
     },
     {
       "created_at": null,
       "event_type": "verification_stage_decision",
       "payload": {
-        "reason": "claim metadata requires verification",
+        "reason": "diagnostic risk level is medium",
         "run_verifier": true,
-        "triggered_claim_ids": [
-          "c1"
-        ],
-        "triggered_features": {
-          "c1": [
-            "has_number"
-          ]
-        },
+        "triggered_claim_ids": [],
+        "triggered_features": {},
         "triggered_metadata": {}
       }
     },
@@ -177,29 +170,16 @@
       "created_at": null,
       "event_type": "initial_verification",
       "payload": {
-        "n_claims": 1,
+        "n_claims": 2,
         "results": [
           {
-            "confidence": 0.99,
-            "evidence": [
-              "calculator: 2 + 2 = 4; expected 5"
-            ],
-            "explanation": "calculator result does not match the claimed value",
+            "confidence": 0.9,
+            "evidence": [],
+            "explanation": "in-memory verifier matched status=supported",
             "metadata": {
-              "actual": 4.0,
               "attempted_route_count": 1.0,
-              "decision_rule": "calculation_mismatch",
-              "expected": 5.0,
-              "expression": "2 + 2",
+              "key": "paris is the capital of france",
               "matched_route_details": [
-                {
-                  "match_reasons": [
-                    "metadata:calculation",
-                    "text_pattern:\\d[\\d\\s().%+*/-]*[+*/%-][\\d\\s().%+*/-]*(?:=|equals|is)\\s*[-+]?\\d"
-                  ],
-                  "route": "calculator",
-                  "verifier": "CalculatorVerifier"
-                },
                 {
                   "match_reasons": [
                     "fallback"
@@ -209,17 +189,42 @@
                 }
               ],
               "matched_routes": [
-                "calculator",
                 "structured_qa"
               ],
               "router_verifier": "RoutedVerifier",
-              "selected_route": "calculator",
-              "selected_route_duration_seconds": 9.938504081219435e-05,
-              "selected_verifier": "CalculatorVerifier",
+              "selected_route": "structured_qa",
+              "selected_route_duration_seconds": 2.1065003238618374e-05,
+              "selected_verifier": "InMemoryVerifier",
               "skipped_routes": [],
-              "tolerance": 1e-09,
-              "total_duration_seconds": 9.938504081219435e-05,
-              "verifier": "calculator"
+              "total_duration_seconds": 2.1065003238618374e-05
+            },
+            "status": "supported"
+          },
+          {
+            "confidence": 0.9,
+            "evidence": [],
+            "explanation": "in-memory verifier matched status=refuted",
+            "metadata": {
+              "attempted_route_count": 1.0,
+              "key": "the moon is made of cheese",
+              "matched_route_details": [
+                {
+                  "match_reasons": [
+                    "fallback"
+                  ],
+                  "route": "structured_qa",
+                  "verifier": "InMemoryVerifier"
+                }
+              ],
+              "matched_routes": [
+                "structured_qa"
+              ],
+              "router_verifier": "RoutedVerifier",
+              "selected_route": "structured_qa",
+              "selected_route_duration_seconds": 1.528998836874962e-05,
+              "selected_verifier": "InMemoryVerifier",
+              "skipped_routes": [],
+              "total_duration_seconds": 1.528998836874962e-05
             },
             "status": "refuted"
           }
@@ -232,36 +237,39 @@
       "event_type": "initial_risk_decision",
       "payload": {
         "action": "abstain",
-        "confidence": 0.99,
+        "confidence": 0.9,
         "diagnostics": {
           "invalid_scores": [],
           "invalid_values": {},
           "missing_scores": [],
           "severities": {
-            "truth_proj": 0.0
+            "truth_proj": 0.10000000000000003
           },
           "thresholds": {
             "truth_proj": 1.1314295530319214
           },
-          "triggered_scores": [],
+          "triggered_scores": [
+            "truth_proj"
+          ],
           "verification": {
             "counts": {
               "error": 0,
               "insufficient_evidence": 0,
               "not_applicable": 0,
               "refuted": 1,
-              "supported": 0
+              "supported": 1
             },
             "max_confidence_by_status": {
-              "refuted": 0.99
+              "refuted": 0.9,
+              "supported": 0.9
             },
-            "total": 1,
+            "total": 2,
             "triggered_statuses": [
               "refuted"
             ]
           }
         },
-        "reason": "claim verification refuted 1 claim(s)",
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
         "risk_level": "high"
       }
     },
@@ -303,7 +311,7 @@
       "created_at": null,
       "event_type": "final_verification",
       "payload": {
-        "n_claims": 1,
+        "n_claims": 2,
         "used_retrieval_evidence": false
       }
     },
@@ -312,36 +320,39 @@
       "event_type": "final_risk_decision",
       "payload": {
         "action": "abstain",
-        "confidence": 0.99,
+        "confidence": 0.9,
         "diagnostics": {
           "invalid_scores": [],
           "invalid_values": {},
           "missing_scores": [],
           "severities": {
-            "truth_proj": 0.0
+            "truth_proj": 0.10000000000000003
           },
           "thresholds": {
             "truth_proj": 1.1314295530319214
           },
-          "triggered_scores": [],
+          "triggered_scores": [
+            "truth_proj"
+          ],
           "verification": {
             "counts": {
               "error": 0,
               "insufficient_evidence": 0,
               "not_applicable": 0,
               "refuted": 1,
-              "supported": 0
+              "supported": 1
             },
             "max_confidence_by_status": {
-              "refuted": 0.99
+              "refuted": 0.9,
+              "supported": 0.9
             },
-            "total": 1,
+            "total": 2,
             "triggered_statuses": [
               "refuted"
             ]
           }
         },
-        "reason": "claim verification refuted 1 claim(s)",
+        "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
         "risk_level": "high"
       }
     }
@@ -358,31 +369,31 @@
       "verifier": {
         "hit_rate": 0.0,
         "hits": 0,
-        "misses": 1,
-        "requests": 1,
-        "size": 1
+        "misses": 2,
+        "requests": 2,
+        "size": 2
       }
     },
     "cache_summary": {
       "aggregate": {
         "hit_rate": 0.0,
         "hits": 0,
-        "misses": 1,
-        "requests": 1,
-        "size": 1
+        "misses": 2,
+        "requests": 2,
+        "size": 2
       },
       "caches": {
         "verifier": {
           "hit_rate": 0.0,
           "hits": 0,
-          "misses": 1,
-          "requests": 1,
-          "size": 1
+          "misses": 2,
+          "requests": 2,
+          "size": 2
         }
       },
       "total_caches": 1
     },
-    "calculator_enabled": true,
+    "calculator_enabled": false,
     "loop_version": "0.4",
     "promotion_contract_budget_enabled": true,
     "promotion_contract_metadata": {
@@ -688,50 +699,50 @@
     },
     "registered_actions": [],
     "route_cost_summary": {
-      "attempted_route_count_observations": 1,
+      "attempted_route_count_observations": 2,
       "by_route": {
-        "calculator": {
-          "attempted_route_count_observations": 1,
-          "duration_observations": 1,
-          "max_duration_seconds": 9.938504081219435e-05,
+        "structured_qa": {
+          "attempted_route_count_observations": 2,
+          "duration_observations": 2,
+          "max_duration_seconds": 2.1065003238618374e-05,
           "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 9.938504081219435e-05,
+          "mean_duration_seconds": 1.8177495803683996e-05,
           "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 9.938504081219435e-05,
-          "p95_duration_seconds": 9.938504081219435e-05,
-          "p95_selected_route_duration_seconds": 9.938504081219435e-05,
-          "p99_duration_seconds": 9.938504081219435e-05,
-          "p99_selected_route_duration_seconds": 9.938504081219435e-05,
+          "mean_selected_route_duration_seconds": 1.8177495803683996e-05,
+          "p95_duration_seconds": 2.0776252495124935e-05,
+          "p95_selected_route_duration_seconds": 2.0776252495124935e-05,
+          "p99_duration_seconds": 2.1007253089919686e-05,
+          "p99_selected_route_duration_seconds": 2.1007253089919686e-05,
           "retrieval_hit_count": 0,
           "retrieval_use_rate": 0.0,
-          "routed_total": 1,
-          "selected_route_duration_observations": 1,
-          "total": 1,
-          "total_attempted_route_count": 1.0,
-          "total_duration_seconds": 9.938504081219435e-05,
-          "total_selected_route_duration_seconds": 9.938504081219435e-05,
+          "routed_total": 2,
+          "selected_route_duration_observations": 2,
+          "total": 2,
+          "total_attempted_route_count": 2.0,
+          "total_duration_seconds": 3.635499160736799e-05,
+          "total_selected_route_duration_seconds": 3.635499160736799e-05,
           "unrouted_total": 0,
           "used_retrieval_count": 0
         }
       },
-      "duration_observations": 1,
-      "max_duration_seconds": 9.938504081219435e-05,
+      "duration_observations": 2,
+      "max_duration_seconds": 2.1065003238618374e-05,
       "mean_attempted_route_count": 1.0,
-      "mean_duration_seconds": 9.938504081219435e-05,
+      "mean_duration_seconds": 1.8177495803683996e-05,
       "mean_retrieval_hits": 0.0,
-      "mean_selected_route_duration_seconds": 9.938504081219435e-05,
-      "p95_duration_seconds": 9.938504081219435e-05,
-      "p95_selected_route_duration_seconds": 9.938504081219435e-05,
-      "p99_duration_seconds": 9.938504081219435e-05,
-      "p99_selected_route_duration_seconds": 9.938504081219435e-05,
+      "mean_selected_route_duration_seconds": 1.8177495803683996e-05,
+      "p95_duration_seconds": 2.0776252495124935e-05,
+      "p95_selected_route_duration_seconds": 2.0776252495124935e-05,
+      "p99_duration_seconds": 2.1007253089919686e-05,
+      "p99_selected_route_duration_seconds": 2.1007253089919686e-05,
       "retrieval_hit_count": 0,
       "retrieval_use_rate": 0.0,
-      "routed_total": 1,
-      "selected_route_duration_observations": 1,
-      "total": 1,
-      "total_attempted_route_count": 1.0,
-      "total_duration_seconds": 9.938504081219435e-05,
-      "total_selected_route_duration_seconds": 9.938504081219435e-05,
+      "routed_total": 2,
+      "selected_route_duration_observations": 2,
+      "total": 2,
+      "total_attempted_route_count": 2.0,
+      "total_duration_seconds": 3.635499160736799e-05,
+      "total_selected_route_duration_seconds": 3.635499160736799e-05,
       "unrouted_total": 0,
       "used_retrieval_count": 0
     },
@@ -742,8 +753,8 @@
           "limit_type": "max",
           "metric": "p99_route_duration_seconds",
           "passed": true,
-          "raw_value": "9.938504081219435e-05",
-          "value": 9.938504081219435e-05
+          "raw_value": "2.1007253089919686e-05",
+          "value": 2.1007253089919686e-05
         },
         {
           "limit": 1.1,
@@ -765,38 +776,38 @@
       "enabled": true,
       "failures": [],
       "metrics": {
-        "accounted_seconds": 0.0009007197804749012,
+        "accounted_seconds": 0.0004845961229875684,
         "cache_hit_rate": 0.0,
         "cache_summary": {
           "aggregate": {
             "hit_rate": 0.0,
             "hits": 0,
-            "misses": 1,
-            "requests": 1,
-            "size": 1
+            "misses": 2,
+            "requests": 2,
+            "size": 2
           },
           "caches": {
             "verifier": {
               "hit_rate": 0.0,
               "hits": 0,
-              "misses": 1,
-              "requests": 1,
-              "size": 1
+              "misses": 2,
+              "requests": 2,
+              "size": 2
             }
           },
           "total_caches": 1
         },
         "has_runtime_trace": true,
-        "max_route_duration_seconds": 9.938504081219435e-05,
+        "max_route_duration_seconds": 2.1065003238618374e-05,
         "mean_attempted_route_count": 1.0,
         "mean_retrieval_hits": 0.0,
-        "mean_route_duration_seconds": 9.938504081219435e-05,
+        "mean_route_duration_seconds": 1.8177495803683996e-05,
         "measured_phases": 7.0,
         "named_cache_hit_rates": {
           "verifier": 0.0
         },
-        "p95_route_duration_seconds": 9.938504081219435e-05,
-        "p99_route_duration_seconds": 9.938504081219435e-05,
+        "p95_route_duration_seconds": 2.0776252495124935e-05,
+        "p99_route_duration_seconds": 2.1007253089919686e-05,
         "phase_counts": {
           "action_execution": 1,
           "action_planning": 1,
@@ -807,182 +818,174 @@
           "verification_stage_decision": 1
         },
         "phase_p95_seconds": {
-          "action_execution": 1.563096884638071e-05,
-          "action_planning": 7.637299131602049e-05,
-          "diagnostic_risk_decision": 2.147792838513851e-05,
-          "initial_risk_decision": 5.4551986977458e-05,
-          "initial_verification": 0.0006127029191702604,
-          "retrieval_evidence_collection": 8.884305134415627e-05,
-          "verification_stage_decision": 3.1139934435486794e-05
+          "action_execution": 1.3967975974082947e-05,
+          "action_planning": 9.384204167872667e-05,
+          "diagnostic_risk_decision": 2.4216948077082634e-05,
+          "initial_risk_decision": 5.4805073887109756e-05,
+          "initial_verification": 0.0002092430368065834,
+          "retrieval_evidence_collection": 7.537601049989462e-05,
+          "verification_stage_decision": 1.3145036064088345e-05
         },
         "phase_p99_seconds": {
-          "action_execution": 1.563096884638071e-05,
-          "action_planning": 7.637299131602049e-05,
-          "diagnostic_risk_decision": 2.147792838513851e-05,
-          "initial_risk_decision": 5.4551986977458e-05,
-          "initial_verification": 0.0006127029191702604,
-          "retrieval_evidence_collection": 8.884305134415627e-05,
-          "verification_stage_decision": 3.1139934435486794e-05
+          "action_execution": 1.3967975974082947e-05,
+          "action_planning": 9.384204167872667e-05,
+          "diagnostic_risk_decision": 2.4216948077082634e-05,
+          "initial_risk_decision": 5.4805073887109756e-05,
+          "initial_verification": 0.0002092430368065834,
+          "retrieval_evidence_collection": 7.537601049989462e-05,
+          "verification_stage_decision": 1.3145036064088345e-05
         },
         "phase_seconds": {
-          "action_execution": 1.563096884638071e-05,
-          "action_planning": 7.637299131602049e-05,
-          "diagnostic_risk_decision": 2.147792838513851e-05,
-          "initial_risk_decision": 5.4551986977458e-05,
-          "initial_verification": 0.0006127029191702604,
-          "retrieval_evidence_collection": 8.884305134415627e-05,
-          "verification_stage_decision": 3.1139934435486794e-05
+          "action_execution": 1.3967975974082947e-05,
+          "action_planning": 9.384204167872667e-05,
+          "diagnostic_risk_decision": 2.4216948077082634e-05,
+          "initial_risk_decision": 5.4805073887109756e-05,
+          "initial_verification": 0.0002092430368065834,
+          "retrieval_evidence_collection": 7.537601049989462e-05,
+          "verification_stage_decision": 1.3145036064088345e-05
         },
         "phase_stats": {
           "action_execution": {
             "count": 1,
-            "max_seconds": 1.563096884638071e-05,
-            "mean_seconds": 1.563096884638071e-05,
-            "min_seconds": 1.563096884638071e-05,
-            "p95_seconds": 1.563096884638071e-05,
-            "p99_seconds": 1.563096884638071e-05,
-            "total_seconds": 1.563096884638071e-05
+            "max_seconds": 1.3967975974082947e-05,
+            "mean_seconds": 1.3967975974082947e-05,
+            "min_seconds": 1.3967975974082947e-05,
+            "p95_seconds": 1.3967975974082947e-05,
+            "p99_seconds": 1.3967975974082947e-05,
+            "total_seconds": 1.3967975974082947e-05
           },
           "action_planning": {
             "count": 1,
-            "max_seconds": 7.637299131602049e-05,
-            "mean_seconds": 7.637299131602049e-05,
-            "min_seconds": 7.637299131602049e-05,
-            "p95_seconds": 7.637299131602049e-05,
-            "p99_seconds": 7.637299131602049e-05,
-            "total_seconds": 7.637299131602049e-05
+            "max_seconds": 9.384204167872667e-05,
+            "mean_seconds": 9.384204167872667e-05,
+            "min_seconds": 9.384204167872667e-05,
+            "p95_seconds": 9.384204167872667e-05,
+            "p99_seconds": 9.384204167872667e-05,
+            "total_seconds": 9.384204167872667e-05
           },
           "diagnostic_risk_decision": {
             "count": 1,
-            "max_seconds": 2.147792838513851e-05,
-            "mean_seconds": 2.147792838513851e-05,
-            "min_seconds": 2.147792838513851e-05,
-            "p95_seconds": 2.147792838513851e-05,
-            "p99_seconds": 2.147792838513851e-05,
-            "total_seconds": 2.147792838513851e-05
+            "max_seconds": 2.4216948077082634e-05,
+            "mean_seconds": 2.4216948077082634e-05,
+            "min_seconds": 2.4216948077082634e-05,
+            "p95_seconds": 2.4216948077082634e-05,
+            "p99_seconds": 2.4216948077082634e-05,
+            "total_seconds": 2.4216948077082634e-05
           },
           "initial_risk_decision": {
             "count": 1,
-            "max_seconds": 5.4551986977458e-05,
-            "mean_seconds": 5.4551986977458e-05,
-            "min_seconds": 5.4551986977458e-05,
-            "p95_seconds": 5.4551986977458e-05,
-            "p99_seconds": 5.4551986977458e-05,
-            "total_seconds": 5.4551986977458e-05
+            "max_seconds": 5.4805073887109756e-05,
+            "mean_seconds": 5.4805073887109756e-05,
+            "min_seconds": 5.4805073887109756e-05,
+            "p95_seconds": 5.4805073887109756e-05,
+            "p99_seconds": 5.4805073887109756e-05,
+            "total_seconds": 5.4805073887109756e-05
           },
           "initial_verification": {
             "count": 1,
-            "max_seconds": 0.0006127029191702604,
-            "mean_seconds": 0.0006127029191702604,
-            "min_seconds": 0.0006127029191702604,
-            "p95_seconds": 0.0006127029191702604,
-            "p99_seconds": 0.0006127029191702604,
-            "total_seconds": 0.0006127029191702604
+            "max_seconds": 0.0002092430368065834,
+            "mean_seconds": 0.0002092430368065834,
+            "min_seconds": 0.0002092430368065834,
+            "p95_seconds": 0.0002092430368065834,
+            "p99_seconds": 0.0002092430368065834,
+            "total_seconds": 0.0002092430368065834
           },
           "retrieval_evidence_collection": {
             "count": 1,
-            "max_seconds": 8.884305134415627e-05,
-            "mean_seconds": 8.884305134415627e-05,
-            "min_seconds": 8.884305134415627e-05,
-            "p95_seconds": 8.884305134415627e-05,
-            "p99_seconds": 8.884305134415627e-05,
-            "total_seconds": 8.884305134415627e-05
+            "max_seconds": 7.537601049989462e-05,
+            "mean_seconds": 7.537601049989462e-05,
+            "min_seconds": 7.537601049989462e-05,
+            "p95_seconds": 7.537601049989462e-05,
+            "p99_seconds": 7.537601049989462e-05,
+            "total_seconds": 7.537601049989462e-05
           },
           "verification_stage_decision": {
             "count": 1,
-            "max_seconds": 3.1139934435486794e-05,
-            "mean_seconds": 3.1139934435486794e-05,
-            "min_seconds": 3.1139934435486794e-05,
-            "p95_seconds": 3.1139934435486794e-05,
-            "p99_seconds": 3.1139934435486794e-05,
-            "total_seconds": 3.1139934435486794e-05
+            "max_seconds": 1.3145036064088345e-05,
+            "mean_seconds": 1.3145036064088345e-05,
+            "min_seconds": 1.3145036064088345e-05,
+            "p95_seconds": 1.3145036064088345e-05,
+            "p99_seconds": 1.3145036064088345e-05,
+            "total_seconds": 1.3145036064088345e-05
           }
         },
         "retrieval_hit_count": 0.0,
         "retrieval_use_rate": 0.0,
         "route_cost_summary": {
-          "attempted_route_count_observations": 1,
+          "attempted_route_count_observations": 2,
           "by_route": {
-            "calculator": {
-              "attempted_route_count_observations": 1,
-              "duration_observations": 1,
-              "max_duration_seconds": 9.938504081219435e-05,
+            "structured_qa": {
+              "attempted_route_count_observations": 2,
+              "duration_observations": 2,
+              "max_duration_seconds": 2.1065003238618374e-05,
               "mean_attempted_route_count": 1.0,
-              "mean_duration_seconds": 9.938504081219435e-05,
+              "mean_duration_seconds": 1.8177495803683996e-05,
               "mean_retrieval_hits": 0.0,
-              "mean_selected_route_duration_seconds": 9.938504081219435e-05,
-              "p95_duration_seconds": 9.938504081219435e-05,
-              "p95_selected_route_duration_seconds": 9.938504081219435e-05,
-              "p99_duration_seconds": 9.938504081219435e-05,
-              "p99_selected_route_duration_seconds": 9.938504081219435e-05,
+              "mean_selected_route_duration_seconds": 1.8177495803683996e-05,
+              "p95_duration_seconds": 2.0776252495124935e-05,
+              "p95_selected_route_duration_seconds": 2.0776252495124935e-05,
+              "p99_duration_seconds": 2.1007253089919686e-05,
+              "p99_selected_route_duration_seconds": 2.1007253089919686e-05,
               "retrieval_hit_count": 0,
               "retrieval_use_rate": 0.0,
-              "routed_total": 1,
-              "selected_route_duration_observations": 1,
-              "total": 1,
-              "total_attempted_route_count": 1.0,
-              "total_duration_seconds": 9.938504081219435e-05,
-              "total_selected_route_duration_seconds": 9.938504081219435e-05,
+              "routed_total": 2,
+              "selected_route_duration_observations": 2,
+              "total": 2,
+              "total_attempted_route_count": 2.0,
+              "total_duration_seconds": 3.635499160736799e-05,
+              "total_selected_route_duration_seconds": 3.635499160736799e-05,
               "unrouted_total": 0,
               "used_retrieval_count": 0
             }
           },
-          "duration_observations": 1,
-          "max_duration_seconds": 9.938504081219435e-05,
+          "duration_observations": 2,
+          "max_duration_seconds": 2.1065003238618374e-05,
           "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 9.938504081219435e-05,
+          "mean_duration_seconds": 1.8177495803683996e-05,
           "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 9.938504081219435e-05,
-          "p95_duration_seconds": 9.938504081219435e-05,
-          "p95_selected_route_duration_seconds": 9.938504081219435e-05,
-          "p99_duration_seconds": 9.938504081219435e-05,
-          "p99_selected_route_duration_seconds": 9.938504081219435e-05,
+          "mean_selected_route_duration_seconds": 1.8177495803683996e-05,
+          "p95_duration_seconds": 2.0776252495124935e-05,
+          "p95_selected_route_duration_seconds": 2.0776252495124935e-05,
+          "p99_duration_seconds": 2.1007253089919686e-05,
+          "p99_selected_route_duration_seconds": 2.1007253089919686e-05,
           "retrieval_hit_count": 0,
           "retrieval_use_rate": 0.0,
-          "routed_total": 1,
-          "selected_route_duration_observations": 1,
-          "total": 1,
-          "total_attempted_route_count": 1.0,
-          "total_duration_seconds": 9.938504081219435e-05,
-          "total_selected_route_duration_seconds": 9.938504081219435e-05,
+          "routed_total": 2,
+          "selected_route_duration_observations": 2,
+          "total": 2,
+          "total_attempted_route_count": 2.0,
+          "total_duration_seconds": 3.635499160736799e-05,
+          "total_selected_route_duration_seconds": 3.635499160736799e-05,
           "unrouted_total": 0,
           "used_retrieval_count": 0
         },
         "slowest_phase": {
           "name": "initial_verification",
-          "seconds": 0.0006127029191702604
+          "seconds": 0.0002092430368065834
         },
-        "total_seconds": 0.0009427920449525118,
-        "unaccounted_seconds": 4.207226447761059e-05,
+        "total_seconds": 0.0005232410039752722,
+        "unaccounted_seconds": 3.86448809877038e-05,
         "verification_skip_rate": 0.0,
         "verification_stage_enabled": true,
         "verification_stage_skipped": false,
         "verification_stage_summary": {
-          "claim_count": 1,
+          "claim_count": 2,
           "enabled": true,
-          "reason": "claim metadata requires verification",
+          "reason": "diagnostic risk level is medium",
           "run_verifier": true,
           "saved_claim_count": 0,
           "skip_rate": 0.0,
           "skipped": false,
-          "triggered_claim_count": 1,
-          "triggered_claim_ids": [
-            "c1"
-          ],
-          "triggered_feature_counts": {
-            "has_number": 1
-          },
-          "triggered_features": {
-            "c1": [
-              "has_number"
-            ]
-          },
+          "triggered_claim_count": 0,
+          "triggered_claim_ids": [],
+          "triggered_feature_counts": {},
+          "triggered_features": {},
           "triggered_metadata": {},
           "triggered_metadata_counts": {},
-          "verification_result_count": 1,
-          "verified_claim_count": 1
+          "verification_result_count": 2,
+          "verified_claim_count": 2
         },
-        "verified_claim_count": 1.0,
+        "verified_claim_count": 2.0,
         "verifier_saved_claim_count": 0.0
       },
       "passed": true,
@@ -1005,9 +1008,13 @@
         "require_runtime_trace": true
       }
     },
-    "runtime_profile": "latency",
+    "runtime_profile": "balanced",
     "runtime_profile_control_defaults": {
       "stage_verify_actions": [
+        "retrieve",
+        "rewrite",
+        "steer_regenerate",
+        "execute_tool",
         "abstain",
         "clarify"
       ],
@@ -1020,15 +1027,30 @@
         "requires_verification"
       ],
       "stage_verify_risk_levels": [
+        "medium",
         "high",
         "unknown"
       ],
       "staged_verification": true
     },
-    "runtime_profile_description": "Minimize triggered INSIDE work and prefer cheap verifier routes.",
+    "runtime_profile_description": "Default release posture balancing INSIDE quality and runtime cost.",
+    "runtime_profile_requested": "auto",
+    "runtime_profile_selection": {
+      "diagnostic_action": "retrieve",
+      "diagnostic_risk_level": "medium",
+      "reason": "default profile for diagnostic risk level medium",
+      "selected_profile": "balanced",
+      "triggered_claim_ids": [],
+      "triggered_features": {},
+      "triggered_metadata": {}
+    },
     "source": "examples/calibrated_control_demo.py",
     "staged_verification": {
       "verify_actions": [
+        "retrieve",
+        "rewrite",
+        "steer_regenerate",
+        "execute_tool",
         "abstain",
         "clarify"
       ],
@@ -1041,71 +1063,67 @@
         "requires_verification"
       ],
       "verify_risk_levels": [
+        "medium",
         "high",
         "unknown"
       ]
     },
     "staged_verification_enabled": true,
     "verification_stage_summary": {
-      "claim_count": 1,
+      "claim_count": 2,
       "enabled": true,
-      "reason": "claim metadata requires verification",
+      "reason": "diagnostic risk level is medium",
       "run_verifier": true,
       "saved_claim_count": 0,
       "skip_rate": 0.0,
       "skipped": false,
-      "triggered_claim_count": 1,
-      "triggered_claim_ids": [
-        "c1"
-      ],
-      "triggered_feature_counts": {
-        "has_number": 1
-      },
-      "triggered_features": {
-        "c1": [
-          "has_number"
-        ]
-      },
+      "triggered_claim_count": 0,
+      "triggered_claim_ids": [],
+      "triggered_feature_counts": {},
+      "triggered_features": {},
       "triggered_metadata": {},
       "triggered_metadata_counts": {},
-      "verification_result_count": 1,
-      "verified_claim_count": 1
+      "verification_result_count": 2,
+      "verified_claim_count": 2
     },
     "verifier_type": "CachedVerifier"
   },
-  "request_id": "latency-calculator_refuted-r0",
+  "request_id": "auto-diagnostic_refuted-r0",
   "risk_decision": {
     "action": "abstain",
-    "confidence": 0.99,
+    "confidence": 0.9,
     "diagnostics": {
       "invalid_scores": [],
       "invalid_values": {},
       "missing_scores": [],
       "severities": {
-        "truth_proj": 0.0
+        "truth_proj": 0.10000000000000003
       },
       "thresholds": {
         "truth_proj": 1.1314295530319214
       },
-      "triggered_scores": [],
+      "triggered_scores": [
+        "truth_proj"
+      ],
       "verification": {
         "counts": {
           "error": 0,
           "insufficient_evidence": 0,
           "not_applicable": 0,
           "refuted": 1,
-          "supported": 0
+          "supported": 1
         },
         "max_confidence_by_status": {
-          "refuted": 0.99
+          "refuted": 0.9,
+          "supported": 0.9
         },
-        "total": 1,
+        "total": 2,
         "triggered_statuses": [
           "refuted"
         ]
       }
     },
-    "reason": "claim verification refuted 1 claim(s)",
+    "reason": "claim verification refuted 1 claim(s); calibrated diagnostic threshold exceeded: truth_proj",
     "risk_level": "high"
   },
   "runtime_trace": {
@@ -1115,36 +1133,36 @@
           "verification_results": 0
         },
         "name": "diagnostic_risk_decision",
-        "seconds": 2.147792838513851e-05
+        "seconds": 2.4216948077082634e-05
       },
       {
         "metadata": {
           "run_verifier": true
         },
         "name": "verification_stage_decision",
-        "seconds": 3.1139934435486794e-05
+        "seconds": 1.3145036064088345e-05
       },
       {
         "metadata": {
-          "n_claims": 1,
+          "n_claims": 2,
           "skipped": false
         },
         "name": "initial_verification",
-        "seconds": 0.0006127029191702604
+        "seconds": 0.0002092430368065834
       },
       {
         "metadata": {
-          "verification_results": 1
+          "verification_results": 2
         },
         "name": "initial_risk_decision",
-        "seconds": 5.4551986977458e-05
+        "seconds": 5.4805073887109756e-05
       },
       {
         "metadata": {
           "n_actions": 1
         },
         "name": "action_planning",
-        "seconds": 7.637299131602049e-05
+        "seconds": 9.384204167872667e-05
       },
       {
         "metadata": {
@@ -1152,7 +1170,7 @@
           "n_results": 1
         },
         "name": "action_execution",
-        "seconds": 1.563096884638071e-05
+        "seconds": 1.3967975974082947e-05
       },
       {
         "metadata": {
@@ -1160,11 +1178,11 @@
           "n_results": 1
         },
         "name": "retrieval_evidence_collection",
-        "seconds": 8.884305134415627e-05
+        "seconds": 7.537601049989462e-05
       }
     ],
     "summary": {
-      "accounted_seconds": 0.0009007197804749012,
+      "accounted_seconds": 0.0004845961229875684,
       "measured_phases": 7,
       "phase_counts": {
         "action_execution": 1,
@@ -1176,128 +1194,115 @@
         "verification_stage_decision": 1
       },
       "phase_p95_seconds": {
-        "action_execution": 1.563096884638071e-05,
-        "action_planning": 7.637299131602049e-05,
-        "diagnostic_risk_decision": 2.147792838513851e-05,
-        "initial_risk_decision": 5.4551986977458e-05,
-        "initial_verification": 0.0006127029191702604,
-        "retrieval_evidence_collection": 8.884305134415627e-05,
-        "verification_stage_decision": 3.1139934435486794e-05
+        "action_execution": 1.3967975974082947e-05,
+        "action_planning": 9.384204167872667e-05,
+        "diagnostic_risk_decision": 2.4216948077082634e-05,
+        "initial_risk_decision": 5.4805073887109756e-05,
+        "initial_verification": 0.0002092430368065834,
+        "retrieval_evidence_collection": 7.537601049989462e-05,
+        "verification_stage_decision": 1.3145036064088345e-05
       },
       "phase_p99_seconds": {
-        "action_execution": 1.563096884638071e-05,
-        "action_planning": 7.637299131602049e-05,
-        "diagnostic_risk_decision": 2.147792838513851e-05,
-        "initial_risk_decision": 5.4551986977458e-05,
-        "initial_verification": 0.0006127029191702604,
-        "retrieval_evidence_collection": 8.884305134415627e-05,
-        "verification_stage_decision": 3.1139934435486794e-05
+        "action_execution": 1.3967975974082947e-05,
+        "action_planning": 9.384204167872667e-05,
+        "diagnostic_risk_decision": 2.4216948077082634e-05,
+        "initial_risk_decision": 5.4805073887109756e-05,
+        "initial_verification": 0.0002092430368065834,
+        "retrieval_evidence_collection": 7.537601049989462e-05,
+        "verification_stage_decision": 1.3145036064088345e-05
       },
       "phase_seconds": {
-        "action_execution": 1.563096884638071e-05,
-        "action_planning": 7.637299131602049e-05,
-        "diagnostic_risk_decision": 2.147792838513851e-05,
-        "initial_risk_decision": 5.4551986977458e-05,
-        "initial_verification": 0.0006127029191702604,
-        "retrieval_evidence_collection": 8.884305134415627e-05,
-        "verification_stage_decision": 3.1139934435486794e-05
+        "action_execution": 1.3967975974082947e-05,
+        "action_planning": 9.384204167872667e-05,
+        "diagnostic_risk_decision": 2.4216948077082634e-05,
+        "initial_risk_decision": 5.4805073887109756e-05,
+        "initial_verification": 0.0002092430368065834,
+        "retrieval_evidence_collection": 7.537601049989462e-05,
+        "verification_stage_decision": 1.3145036064088345e-05
       },
       "phase_stats": {
         "action_execution": {
           "count": 1,
-          "max_seconds": 1.563096884638071e-05,
-          "mean_seconds": 1.563096884638071e-05,
-          "min_seconds": 1.563096884638071e-05,
-          "p95_seconds": 1.563096884638071e-05,
-          "p99_seconds": 1.563096884638071e-05,
-          "total_seconds": 1.563096884638071e-05
+          "max_seconds": 1.3967975974082947e-05,
+          "mean_seconds": 1.3967975974082947e-05,
+          "min_seconds": 1.3967975974082947e-05,
+          "p95_seconds": 1.3967975974082947e-05,
+          "p99_seconds": 1.3967975974082947e-05,
+          "total_seconds": 1.3967975974082947e-05
         },
         "action_planning": {
           "count": 1,
-          "max_seconds": 7.637299131602049e-05,
-          "mean_seconds": 7.637299131602049e-05,
-          "min_seconds": 7.637299131602049e-05,
-          "p95_seconds": 7.637299131602049e-05,
-          "p99_seconds": 7.637299131602049e-05,
-          "total_seconds": 7.637299131602049e-05
+          "max_seconds": 9.384204167872667e-05,
+          "mean_seconds": 9.384204167872667e-05,
+          "min_seconds": 9.384204167872667e-05,
+          "p95_seconds": 9.384204167872667e-05,
+          "p99_seconds": 9.384204167872667e-05,
+          "total_seconds": 9.384204167872667e-05
         },
         "diagnostic_risk_decision": {
           "count": 1,
-          "max_seconds": 2.147792838513851e-05,
-          "mean_seconds": 2.147792838513851e-05,
-          "min_seconds": 2.147792838513851e-05,
-          "p95_seconds": 2.147792838513851e-05,
-          "p99_seconds": 2.147792838513851e-05,
-          "total_seconds": 2.147792838513851e-05
+          "max_seconds": 2.4216948077082634e-05,
+          "mean_seconds": 2.4216948077082634e-05,
+          "min_seconds": 2.4216948077082634e-05,
+          "p95_seconds": 2.4216948077082634e-05,
+          "p99_seconds": 2.4216948077082634e-05,
+          "total_seconds": 2.4216948077082634e-05
         },
         "initial_risk_decision": {
           "count": 1,
-          "max_seconds": 5.4551986977458e-05,
-          "mean_seconds": 5.4551986977458e-05,
-          "min_seconds": 5.4551986977458e-05,
-          "p95_seconds": 5.4551986977458e-05,
-          "p99_seconds": 5.4551986977458e-05,
-          "total_seconds": 5.4551986977458e-05
+          "max_seconds": 5.4805073887109756e-05,
+          "mean_seconds": 5.4805073887109756e-05,
+          "min_seconds": 5.4805073887109756e-05,
+          "p95_seconds": 5.4805073887109756e-05,
+          "p99_seconds": 5.4805073887109756e-05,
+          "total_seconds": 5.4805073887109756e-05
         },
         "initial_verification": {
           "count": 1,
-          "max_seconds": 0.0006127029191702604,
-          "mean_seconds": 0.0006127029191702604,
-          "min_seconds": 0.0006127029191702604,
-          "p95_seconds": 0.0006127029191702604,
-          "p99_seconds": 0.0006127029191702604,
-          "total_seconds": 0.0006127029191702604
+          "max_seconds": 0.0002092430368065834,
+          "mean_seconds": 0.0002092430368065834,
+          "min_seconds": 0.0002092430368065834,
+          "p95_seconds": 0.0002092430368065834,
+          "p99_seconds": 0.0002092430368065834,
+          "total_seconds": 0.0002092430368065834
         },
         "retrieval_evidence_collection": {
           "count": 1,
-          "max_seconds": 8.884305134415627e-05,
-          "mean_seconds": 8.884305134415627e-05,
-          "min_seconds": 8.884305134415627e-05,
-          "p95_seconds": 8.884305134415627e-05,
-          "p99_seconds": 8.884305134415627e-05,
-          "total_seconds": 8.884305134415627e-05
+          "max_seconds": 7.537601049989462e-05,
+          "mean_seconds": 7.537601049989462e-05,
+          "min_seconds": 7.537601049989462e-05,
+          "p95_seconds": 7.537601049989462e-05,
+          "p99_seconds": 7.537601049989462e-05,
+          "total_seconds": 7.537601049989462e-05
         },
         "verification_stage_decision": {
           "count": 1,
-          "max_seconds": 3.1139934435486794e-05,
-          "mean_seconds": 3.1139934435486794e-05,
-          "min_seconds": 3.1139934435486794e-05,
-          "p95_seconds": 3.1139934435486794e-05,
-          "p99_seconds": 3.1139934435486794e-05,
-          "total_seconds": 3.1139934435486794e-05
+          "max_seconds": 1.3145036064088345e-05,
+          "mean_seconds": 1.3145036064088345e-05,
+          "min_seconds": 1.3145036064088345e-05,
+          "p95_seconds": 1.3145036064088345e-05,
+          "p99_seconds": 1.3145036064088345e-05,
+          "total_seconds": 1.3145036064088345e-05
         }
       },
       "slowest_phase": {
         "name": "initial_verification",
-        "seconds": 0.0006127029191702604
+        "seconds": 0.0002092430368065834
       },
-      "total_seconds": 0.0009427920449525118,
-      "unaccounted_seconds": 4.207226447761059e-05
+      "total_seconds": 0.0005232410039752722,
+      "unaccounted_seconds": 3.86448809877038e-05
     },
-    "total_seconds": 0.0009427920449525118
+    "total_seconds": 0.0005232410039752722
   },
   "verification_results": [
     {
-      "confidence": 0.99,
-      "evidence": [
-        "calculator: 2 + 2 = 4; expected 5"
-      ],
-      "explanation": "calculator result does not match the claimed value",
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=supported",
       "metadata": {
-        "actual": 4.0,
         "attempted_route_count": 1.0,
-        "decision_rule": "calculation_mismatch",
-        "expected": 5.0,
-        "expression": "2 + 2",
+        "key": "paris is the capital of france",
         "matched_route_details": [
-          {
-            "match_reasons": [
-              "metadata:calculation",
-              "text_pattern:\\d[\\d\\s().%+*/-]*[+*/%-][\\d\\s().%+*/-]*(?:=|equals|is)\\s*[-+]?\\d"
-            ],
-            "route": "calculator",
-            "verifier": "CalculatorVerifier"
-          },
           {
             "match_reasons": [
               "fallback"
@@ -1307,17 +1312,42 @@
           }
         ],
         "matched_routes": [
-          "calculator",
           "structured_qa"
         ],
         "router_verifier": "RoutedVerifier",
-        "selected_route": "calculator",
-        "selected_route_duration_seconds": 9.938504081219435e-05,
-        "selected_verifier": "CalculatorVerifier",
+        "selected_route": "structured_qa",
+        "selected_route_duration_seconds": 2.1065003238618374e-05,
+        "selected_verifier": "InMemoryVerifier",
         "skipped_routes": [],
-        "tolerance": 1e-09,
-        "total_duration_seconds": 9.938504081219435e-05,
-        "verifier": "calculator"
+        "total_duration_seconds": 2.1065003238618374e-05
+      },
+      "status": "supported"
+    },
+    {
+      "confidence": 0.9,
+      "evidence": [],
+      "explanation": "in-memory verifier matched status=refuted",
+      "metadata": {
+        "attempted_route_count": 1.0,
+        "key": "the moon is made of cheese",
+        "matched_route_details": [
+          {
+            "match_reasons": [
+              "fallback"
+            ],
+            "route": "structured_qa",
+            "verifier": "InMemoryVerifier"
+          }
+        ],
+        "matched_routes": [
+          "structured_qa"
+        ],
+        "router_verifier": "RoutedVerifier",
+        "selected_route": "structured_qa",
+        "selected_route_duration_seconds": 1.528998836874962e-05,
+        "selected_verifier": "InMemoryVerifier",
+        "skipped_routes": [],
+        "total_duration_seconds": 1.528998836874962e-05
       },
       "status": "refuted"
     }

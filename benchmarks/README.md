@@ -2204,8 +2204,9 @@ fast-path verifier savings. Add
 diff readability is less important than artifact size.
 
 Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
-the built-in `latency`, `balanced`, and `audit` product profiles before choosing
-which profile to put on the default path:
+the built-in `latency`, `balanced`, and `audit` product profiles plus the
+request-level `auto` selector before choosing which mode to put on the default
+path:
 
 ```bash
 python benchmarks/run_product_runtime_profile_sweep.py \
@@ -2218,25 +2219,27 @@ python benchmarks/run_product_runtime_profile_sweep.py \
 ```
 
 The sweep runs deterministic calibrated-control demo scenarios, writes one trace
-per profile/scenario/repeat, builds a `run_product_runtime_baseline.py` report
-for each profile, and ranks the non-blocked profiles by request runtime and
-route cost. This is the product-control counterpart to model-side cache/profile
-sweeps. Use the default `--max-workers 1` when profile timing will be used as
-promotion evidence. Use `--max-workers N` to run independent runtime profiles
-concurrently for faster smoke and coverage scans; within each profile, trace
-order remains deterministic before its baseline is built. Add `--compact-json`
-to minify generated traces, per-profile baselines, the top-level report, and
-manifests without changing the payload schema.
+per mode/scenario/repeat, builds a `run_product_runtime_baseline.py` report for
+each mode, records the actual selected runtime profile for `auto`, and ranks the
+non-blocked modes by request runtime and route cost. This is the product-control
+counterpart to model-side cache/profile sweeps. Use the default
+`--max-workers 1` when timing will be used as promotion evidence. Use
+`--max-workers N` to run independent modes concurrently for faster smoke and
+coverage scans; within each mode, trace order remains deterministic before its
+baseline is built. Add `--compact-json` to minify generated traces, per-mode
+baselines, the top-level report, and manifests without changing the payload
+schema.
 
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in
 `artifacts/local-release-registry.json`. It uses the strict structured-retrieval
 audit 1.4 promotion contract, verifies the artifact manifest, promotes all three
-profiles under `max_mean_attempted_route_count=1.1`,
+static profiles plus `auto` under `max_mean_attempted_route_count=1.1`,
 `max_retrieval_use_rate=0.0`, and `max_p99_route_duration_seconds=0.01`, and
-recommends `audit` for the deterministic control-plane scenario set. Skipped
-staged-verification paths with no verifier route are counted as zero route cost
-for route-cost budget checks.
+recommends `auto` for the deterministic control-plane scenario set. In that
+registered sweep, `auto` selects `latency`, `balanced`, and `audit` once each
+across the three scenarios. Skipped staged-verification paths with no verifier
+route are counted as zero route cost for route-cost budget checks.
 
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in

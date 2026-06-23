@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 17,
+    "artifact_count": 22,
     "directory_count": 0,
-    "file_count": 17,
+    "file_count": 22,
     "missing_count": 0
   },
   "config": {
@@ -14,10 +14,17 @@
       "purpose": "product_runtime_profile_selection",
       "release": "strict_structured_retrieval_audit"
     },
+    "profile_modes": [
+      "latency",
+      "balanced",
+      "audit",
+      "auto"
+    ],
     "profiles": [
       "latency",
       "balanced",
-      "audit"
+      "audit",
+      "auto"
     ],
     "repeats": 1,
     "scenario_names": [
@@ -28,14 +35,25 @@
   },
   "decision": {
     "blocking_reasons": [],
-    "recommended_profile": "audit",
+    "recommended_profile": "auto",
     "status": "promote"
   },
   "execution": {
     "max_workers": 1,
-    "wall_clock_seconds": 0.14989821601193398
+    "wall_clock_seconds": 0.20094652101397514
   },
   "leaderboard": [
+    {
+      "blocked": false,
+      "cache_hit_rate_mean": 0.0,
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.666666666666667,
+      "profile": "auto",
+      "retrieval_use_rate": 0.0,
+      "status": "promote",
+      "total_seconds_mean": 0.0004010613774880767,
+      "total_seconds_p95": 0.000517247011885047
+    },
     {
       "blocked": false,
       "cache_hit_rate_mean": 0.0,
@@ -44,8 +62,8 @@
       "profile": "audit",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.00043574930168688297,
-      "total_seconds_p95": 0.0004817375564016402
+      "total_seconds_mean": 0.000438929651863873,
+      "total_seconds_p95": 0.00048812797758728265
     },
     {
       "blocked": false,
@@ -55,8 +73,8 @@
       "profile": "balanced",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.00044720802300920087,
-      "total_seconds_p95": 0.0005729173077270389
+      "total_seconds_mean": 0.00044918366863081854,
+      "total_seconds_p95": 0.0005740071763284504
     },
     {
       "blocked": false,
@@ -66,8 +84,8 @@
       "profile": "latency",
       "retrieval_use_rate": 0.0,
       "status": "promote",
-      "total_seconds_mean": 0.0005417213154335817,
-      "total_seconds_p95": 0.0008871629019267857
+      "total_seconds_mean": 0.0005477906670421362,
+      "total_seconds_p95": 0.000890948437154293
     }
   ],
   "paths": {
@@ -109,14 +127,20 @@
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 9.915791451931e-05,
+        "mean_route_duration_seconds": 9.938504081219435e-05,
         "measured_phases_mean": 5.666666666666667,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.0005417213154335817,
-        "total_seconds_p95": 0.0008871629019267857
+        "total_seconds_mean": 0.0005477906670421362,
+        "total_seconds_p95": 0.000890948437154293
       },
       "profile": "latency",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "latency": 3
+        },
+        "reason_counts": {}
+      },
       "status": "promote",
       "trace_count": 3,
       "trace_paths": [
@@ -132,8 +156,10 @@
           "request_id": "latency-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.00041043199598789215,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0004243559669703245,
           "scenario": "low_risk_supported",
+          "selected_runtime_profile": "latency",
           "staged_verification_enabled": true
         },
         {
@@ -143,8 +169,10 @@
           "request_id": "latency-diagnostic_refuted-r0",
           "risk_action": "retrieve",
           "risk_level": "medium",
-          "runtime_total_seconds": 0.0002745989477261901,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0002762239892035723,
           "scenario": "diagnostic_refuted",
+          "selected_runtime_profile": "latency",
           "staged_verification_enabled": true
         },
         {
@@ -154,8 +182,10 @@
           "request_id": "latency-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0009401330025866628,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0009427920449525118,
           "scenario": "calculator_refuted",
+          "selected_runtime_profile": "latency",
           "staged_verification_enabled": true
         }
       ]
@@ -191,14 +221,20 @@
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 4.2263069190084934e-05,
+        "mean_route_duration_seconds": 4.3343015325566135e-05,
         "measured_phases_mean": 6.333333333333333,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.00044720802300920087,
-        "total_seconds_p95": 0.0005729173077270389
+        "total_seconds_mean": 0.00044918366863081854,
+        "total_seconds_p95": 0.0005740071763284504
       },
       "profile": "balanced",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "balanced": 3
+        },
+        "reason_counts": {}
+      },
       "status": "promote",
       "trace_count": 3,
       "trace_paths": [
@@ -214,8 +250,10 @@
           "request_id": "balanced-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.00023198698181658983,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.00023255194537341595,
           "scenario": "low_risk_supported",
+          "selected_runtime_profile": "balanced",
           "staged_verification_enabled": true
         },
         {
@@ -225,8 +263,10 @@
           "request_id": "balanced-diagnostic_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.000577441998757422,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0005781340878456831,
           "scenario": "diagnostic_refuted",
+          "selected_runtime_profile": "balanced",
           "staged_verification_enabled": true
         },
         {
@@ -236,8 +276,10 @@
           "request_id": "balanced-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0005321950884535909,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0005368649726733565,
           "scenario": "calculator_refuted",
+          "selected_runtime_profile": "balanced",
           "staged_verification_enabled": true
         }
       ]
@@ -273,14 +315,20 @@
       "metrics": {
         "cache_hit_rate_mean": 0.0,
         "mean_attempted_route_count": 1.0,
-        "mean_route_duration_seconds": 3.61605198122561e-05,
+        "mean_route_duration_seconds": 3.7036254070699215e-05,
         "measured_phases_mean": 5.0,
         "retrieval_hit_count": 0,
         "retrieval_use_rate": 0.0,
-        "total_seconds_mean": 0.00043574930168688297,
-        "total_seconds_p95": 0.0004817375564016402
+        "total_seconds_mean": 0.000438929651863873,
+        "total_seconds_p95": 0.00048812797758728265
       },
       "profile": "audit",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "audit": 3
+        },
+        "reason_counts": {}
+      },
       "status": "promote",
       "trace_count": 3,
       "trace_paths": [
@@ -296,8 +344,10 @@
           "request_id": "audit-low_risk_supported-r0",
           "risk_action": "accept",
           "risk_level": "low",
-          "runtime_total_seconds": 0.0003638799535110593,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.00035082094836980104,
           "scenario": "low_risk_supported",
+          "selected_runtime_profile": "audit",
           "staged_verification_enabled": false
         },
         {
@@ -307,8 +357,10 @@
           "request_id": "audit-diagnostic_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0004842509515583515,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0004894139710813761,
           "scenario": "diagnostic_refuted",
+          "selected_runtime_profile": "audit",
           "staged_verification_enabled": false
         },
         {
@@ -318,8 +370,141 @@
           "request_id": "audit-calculator_refuted-r0",
           "risk_action": "abstain",
           "risk_level": "high",
-          "runtime_total_seconds": 0.0004591169999912381,
+          "runtime_profile_selection": null,
+          "runtime_total_seconds": 0.0004765540361404419,
           "scenario": "calculator_refuted",
+          "selected_runtime_profile": "audit",
+          "staged_verification_enabled": false
+        }
+      ]
+    },
+    {
+      "baseline_artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "baseline_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+      "budget": {
+        "enabled": true,
+        "failed_count": 0,
+        "failure_counts_by_metric": {},
+        "passed": true,
+        "passed_count": 3,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "max_verified_claim_count": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "min_verification_skip_rate": null,
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "cache_hit_rate_mean": 0.0,
+        "mean_attempted_route_count": 1.0,
+        "mean_route_duration_seconds": 3.80523269996047e-05,
+        "measured_phases_mean": 5.666666666666667,
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0004010613774880767,
+        "total_seconds_p95": 0.000517247011885047
+      },
+      "profile": "auto",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "audit": 1,
+          "balanced": 1,
+          "latency": 1
+        },
+        "reason_counts": {
+          "claim metadata requires audit profile": 1,
+          "default profile for diagnostic risk level medium": 1,
+          "low diagnostic risk and no sensitive claim metadata": 1
+        }
+      },
+      "status": "promote",
+      "trace_count": 3,
+      "trace_paths": [
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json"
+      ],
+      "traces": [
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json",
+          "repeat": 0,
+          "request_id": "auto-low_risk_supported-r0",
+          "risk_action": "accept",
+          "risk_level": "low",
+          "runtime_profile_selection": {
+            "diagnostic_action": "accept",
+            "diagnostic_risk_level": "low",
+            "reason": "low diagnostic risk and no sensitive claim metadata",
+            "selected_profile": "latency",
+            "triggered_claim_ids": [],
+            "triggered_features": {},
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.0002166420454159379,
+          "scenario": "low_risk_supported",
+          "selected_runtime_profile": "latency",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 7,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "auto-diagnostic_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_profile_selection": {
+            "diagnostic_action": "retrieve",
+            "diagnostic_risk_level": "medium",
+            "reason": "default profile for diagnostic risk level medium",
+            "selected_profile": "balanced",
+            "triggered_claim_ids": [],
+            "triggered_features": {},
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.0005232410039752722,
+          "scenario": "diagnostic_refuted",
+          "selected_runtime_profile": "balanced",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "auto-calculator_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_profile_selection": {
+            "diagnostic_action": "accept",
+            "diagnostic_risk_level": "low",
+            "reason": "claim metadata requires audit profile",
+            "selected_profile": "audit",
+            "triggered_claim_ids": [
+              "c1"
+            ],
+            "triggered_features": {
+              "c1": [
+                "has_number",
+                "has_calculation"
+              ]
+            },
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.00046330108307302,
+          "scenario": "calculator_refuted",
+          "selected_runtime_profile": "audit",
           "staged_verification_enabled": false
         }
       ]

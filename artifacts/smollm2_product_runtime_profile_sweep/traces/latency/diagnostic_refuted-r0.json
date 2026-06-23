@@ -630,7 +630,7 @@
       "enabled": true,
       "failures": [],
       "metrics": {
-        "accounted_seconds": 0.00024256797041743994,
+        "accounted_seconds": 0.0002438579685986042,
         "cache_hit_rate": null,
         "cache_summary": {
           "aggregate": {
@@ -670,71 +670,71 @@
           "verification_stage_decision": 1
         },
         "phase_p95_seconds": {
-          "action_execution": 1.9120052456855774e-05,
-          "action_planning": 9.665696416050196e-05,
-          "diagnostic_risk_decision": 3.661599475890398e-05,
-          "retrieval_evidence_collection": 5.24669885635376e-05,
-          "verification_stage_decision": 3.770797047764063e-05
+          "action_execution": 1.8816906958818436e-05,
+          "action_planning": 9.704194962978363e-05,
+          "diagnostic_risk_decision": 3.601901698857546e-05,
+          "retrieval_evidence_collection": 5.341100040823221e-05,
+          "verification_stage_decision": 3.8569094613194466e-05
         },
         "phase_p99_seconds": {
-          "action_execution": 1.9120052456855774e-05,
-          "action_planning": 9.665696416050196e-05,
-          "diagnostic_risk_decision": 3.661599475890398e-05,
-          "retrieval_evidence_collection": 5.24669885635376e-05,
-          "verification_stage_decision": 3.770797047764063e-05
+          "action_execution": 1.8816906958818436e-05,
+          "action_planning": 9.704194962978363e-05,
+          "diagnostic_risk_decision": 3.601901698857546e-05,
+          "retrieval_evidence_collection": 5.341100040823221e-05,
+          "verification_stage_decision": 3.8569094613194466e-05
         },
         "phase_seconds": {
-          "action_execution": 1.9120052456855774e-05,
-          "action_planning": 9.665696416050196e-05,
-          "diagnostic_risk_decision": 3.661599475890398e-05,
-          "retrieval_evidence_collection": 5.24669885635376e-05,
-          "verification_stage_decision": 3.770797047764063e-05
+          "action_execution": 1.8816906958818436e-05,
+          "action_planning": 9.704194962978363e-05,
+          "diagnostic_risk_decision": 3.601901698857546e-05,
+          "retrieval_evidence_collection": 5.341100040823221e-05,
+          "verification_stage_decision": 3.8569094613194466e-05
         },
         "phase_stats": {
           "action_execution": {
             "count": 1,
-            "max_seconds": 1.9120052456855774e-05,
-            "mean_seconds": 1.9120052456855774e-05,
-            "min_seconds": 1.9120052456855774e-05,
-            "p95_seconds": 1.9120052456855774e-05,
-            "p99_seconds": 1.9120052456855774e-05,
-            "total_seconds": 1.9120052456855774e-05
+            "max_seconds": 1.8816906958818436e-05,
+            "mean_seconds": 1.8816906958818436e-05,
+            "min_seconds": 1.8816906958818436e-05,
+            "p95_seconds": 1.8816906958818436e-05,
+            "p99_seconds": 1.8816906958818436e-05,
+            "total_seconds": 1.8816906958818436e-05
           },
           "action_planning": {
             "count": 1,
-            "max_seconds": 9.665696416050196e-05,
-            "mean_seconds": 9.665696416050196e-05,
-            "min_seconds": 9.665696416050196e-05,
-            "p95_seconds": 9.665696416050196e-05,
-            "p99_seconds": 9.665696416050196e-05,
-            "total_seconds": 9.665696416050196e-05
+            "max_seconds": 9.704194962978363e-05,
+            "mean_seconds": 9.704194962978363e-05,
+            "min_seconds": 9.704194962978363e-05,
+            "p95_seconds": 9.704194962978363e-05,
+            "p99_seconds": 9.704194962978363e-05,
+            "total_seconds": 9.704194962978363e-05
           },
           "diagnostic_risk_decision": {
             "count": 1,
-            "max_seconds": 3.661599475890398e-05,
-            "mean_seconds": 3.661599475890398e-05,
-            "min_seconds": 3.661599475890398e-05,
-            "p95_seconds": 3.661599475890398e-05,
-            "p99_seconds": 3.661599475890398e-05,
-            "total_seconds": 3.661599475890398e-05
+            "max_seconds": 3.601901698857546e-05,
+            "mean_seconds": 3.601901698857546e-05,
+            "min_seconds": 3.601901698857546e-05,
+            "p95_seconds": 3.601901698857546e-05,
+            "p99_seconds": 3.601901698857546e-05,
+            "total_seconds": 3.601901698857546e-05
           },
           "retrieval_evidence_collection": {
             "count": 1,
-            "max_seconds": 5.24669885635376e-05,
-            "mean_seconds": 5.24669885635376e-05,
-            "min_seconds": 5.24669885635376e-05,
-            "p95_seconds": 5.24669885635376e-05,
-            "p99_seconds": 5.24669885635376e-05,
-            "total_seconds": 5.24669885635376e-05
+            "max_seconds": 5.341100040823221e-05,
+            "mean_seconds": 5.341100040823221e-05,
+            "min_seconds": 5.341100040823221e-05,
+            "p95_seconds": 5.341100040823221e-05,
+            "p99_seconds": 5.341100040823221e-05,
+            "total_seconds": 5.341100040823221e-05
           },
           "verification_stage_decision": {
             "count": 1,
-            "max_seconds": 3.770797047764063e-05,
-            "mean_seconds": 3.770797047764063e-05,
-            "min_seconds": 3.770797047764063e-05,
-            "p95_seconds": 3.770797047764063e-05,
-            "p99_seconds": 3.770797047764063e-05,
-            "total_seconds": 3.770797047764063e-05
+            "max_seconds": 3.8569094613194466e-05,
+            "mean_seconds": 3.8569094613194466e-05,
+            "min_seconds": 3.8569094613194466e-05,
+            "p95_seconds": 3.8569094613194466e-05,
+            "p99_seconds": 3.8569094613194466e-05,
+            "total_seconds": 3.8569094613194466e-05
           }
         },
         "retrieval_hit_count": 0.0,
@@ -765,10 +765,10 @@
         },
         "slowest_phase": {
           "name": "action_planning",
-          "seconds": 9.665696416050196e-05
+          "seconds": 9.704194962978363e-05
         },
-        "total_seconds": 0.0002745989477261901,
-        "unaccounted_seconds": 3.203097730875015e-05,
+        "total_seconds": 0.0002762239892035723,
+        "unaccounted_seconds": 3.236602060496807e-05,
         "verification_skip_rate": 1.0,
         "verification_stage_enabled": true,
         "verification_stage_skipped": true,
@@ -900,21 +900,21 @@
           "verification_results": 0
         },
         "name": "diagnostic_risk_decision",
-        "seconds": 3.661599475890398e-05
+        "seconds": 3.601901698857546e-05
       },
       {
         "metadata": {
           "run_verifier": false
         },
         "name": "verification_stage_decision",
-        "seconds": 3.770797047764063e-05
+        "seconds": 3.8569094613194466e-05
       },
       {
         "metadata": {
           "n_actions": 1
         },
         "name": "action_planning",
-        "seconds": 9.665696416050196e-05
+        "seconds": 9.704194962978363e-05
       },
       {
         "metadata": {
@@ -922,7 +922,7 @@
           "n_results": 1
         },
         "name": "action_execution",
-        "seconds": 1.9120052456855774e-05
+        "seconds": 1.8816906958818436e-05
       },
       {
         "metadata": {
@@ -930,11 +930,11 @@
           "n_results": 1
         },
         "name": "retrieval_evidence_collection",
-        "seconds": 5.24669885635376e-05
+        "seconds": 5.341100040823221e-05
       }
     ],
     "summary": {
-      "accounted_seconds": 0.00024256797041743994,
+      "accounted_seconds": 0.0002438579685986042,
       "measured_phases": 5,
       "phase_counts": {
         "action_execution": 1,
@@ -944,81 +944,81 @@
         "verification_stage_decision": 1
       },
       "phase_p95_seconds": {
-        "action_execution": 1.9120052456855774e-05,
-        "action_planning": 9.665696416050196e-05,
-        "diagnostic_risk_decision": 3.661599475890398e-05,
-        "retrieval_evidence_collection": 5.24669885635376e-05,
-        "verification_stage_decision": 3.770797047764063e-05
+        "action_execution": 1.8816906958818436e-05,
+        "action_planning": 9.704194962978363e-05,
+        "diagnostic_risk_decision": 3.601901698857546e-05,
+        "retrieval_evidence_collection": 5.341100040823221e-05,
+        "verification_stage_decision": 3.8569094613194466e-05
       },
       "phase_p99_seconds": {
-        "action_execution": 1.9120052456855774e-05,
-        "action_planning": 9.665696416050196e-05,
-        "diagnostic_risk_decision": 3.661599475890398e-05,
-        "retrieval_evidence_collection": 5.24669885635376e-05,
-        "verification_stage_decision": 3.770797047764063e-05
+        "action_execution": 1.8816906958818436e-05,
+        "action_planning": 9.704194962978363e-05,
+        "diagnostic_risk_decision": 3.601901698857546e-05,
+        "retrieval_evidence_collection": 5.341100040823221e-05,
+        "verification_stage_decision": 3.8569094613194466e-05
       },
       "phase_seconds": {
-        "action_execution": 1.9120052456855774e-05,
-        "action_planning": 9.665696416050196e-05,
-        "diagnostic_risk_decision": 3.661599475890398e-05,
-        "retrieval_evidence_collection": 5.24669885635376e-05,
-        "verification_stage_decision": 3.770797047764063e-05
+        "action_execution": 1.8816906958818436e-05,
+        "action_planning": 9.704194962978363e-05,
+        "diagnostic_risk_decision": 3.601901698857546e-05,
+        "retrieval_evidence_collection": 5.341100040823221e-05,
+        "verification_stage_decision": 3.8569094613194466e-05
       },
       "phase_stats": {
         "action_execution": {
           "count": 1,
-          "max_seconds": 1.9120052456855774e-05,
-          "mean_seconds": 1.9120052456855774e-05,
-          "min_seconds": 1.9120052456855774e-05,
-          "p95_seconds": 1.9120052456855774e-05,
-          "p99_seconds": 1.9120052456855774e-05,
-          "total_seconds": 1.9120052456855774e-05
+          "max_seconds": 1.8816906958818436e-05,
+          "mean_seconds": 1.8816906958818436e-05,
+          "min_seconds": 1.8816906958818436e-05,
+          "p95_seconds": 1.8816906958818436e-05,
+          "p99_seconds": 1.8816906958818436e-05,
+          "total_seconds": 1.8816906958818436e-05
         },
         "action_planning": {
           "count": 1,
-          "max_seconds": 9.665696416050196e-05,
-          "mean_seconds": 9.665696416050196e-05,
-          "min_seconds": 9.665696416050196e-05,
-          "p95_seconds": 9.665696416050196e-05,
-          "p99_seconds": 9.665696416050196e-05,
-          "total_seconds": 9.665696416050196e-05
+          "max_seconds": 9.704194962978363e-05,
+          "mean_seconds": 9.704194962978363e-05,
+          "min_seconds": 9.704194962978363e-05,
+          "p95_seconds": 9.704194962978363e-05,
+          "p99_seconds": 9.704194962978363e-05,
+          "total_seconds": 9.704194962978363e-05
         },
         "diagnostic_risk_decision": {
           "count": 1,
-          "max_seconds": 3.661599475890398e-05,
-          "mean_seconds": 3.661599475890398e-05,
-          "min_seconds": 3.661599475890398e-05,
-          "p95_seconds": 3.661599475890398e-05,
-          "p99_seconds": 3.661599475890398e-05,
-          "total_seconds": 3.661599475890398e-05
+          "max_seconds": 3.601901698857546e-05,
+          "mean_seconds": 3.601901698857546e-05,
+          "min_seconds": 3.601901698857546e-05,
+          "p95_seconds": 3.601901698857546e-05,
+          "p99_seconds": 3.601901698857546e-05,
+          "total_seconds": 3.601901698857546e-05
         },
         "retrieval_evidence_collection": {
           "count": 1,
-          "max_seconds": 5.24669885635376e-05,
-          "mean_seconds": 5.24669885635376e-05,
-          "min_seconds": 5.24669885635376e-05,
-          "p95_seconds": 5.24669885635376e-05,
-          "p99_seconds": 5.24669885635376e-05,
-          "total_seconds": 5.24669885635376e-05
+          "max_seconds": 5.341100040823221e-05,
+          "mean_seconds": 5.341100040823221e-05,
+          "min_seconds": 5.341100040823221e-05,
+          "p95_seconds": 5.341100040823221e-05,
+          "p99_seconds": 5.341100040823221e-05,
+          "total_seconds": 5.341100040823221e-05
         },
         "verification_stage_decision": {
           "count": 1,
-          "max_seconds": 3.770797047764063e-05,
-          "mean_seconds": 3.770797047764063e-05,
-          "min_seconds": 3.770797047764063e-05,
-          "p95_seconds": 3.770797047764063e-05,
-          "p99_seconds": 3.770797047764063e-05,
-          "total_seconds": 3.770797047764063e-05
+          "max_seconds": 3.8569094613194466e-05,
+          "mean_seconds": 3.8569094613194466e-05,
+          "min_seconds": 3.8569094613194466e-05,
+          "p95_seconds": 3.8569094613194466e-05,
+          "p99_seconds": 3.8569094613194466e-05,
+          "total_seconds": 3.8569094613194466e-05
         }
       },
       "slowest_phase": {
         "name": "action_planning",
-        "seconds": 9.665696416050196e-05
+        "seconds": 9.704194962978363e-05
       },
-      "total_seconds": 0.0002745989477261901,
-      "unaccounted_seconds": 3.203097730875015e-05
+      "total_seconds": 0.0002762239892035723,
+      "unaccounted_seconds": 3.236602060496807e-05
     },
-    "total_seconds": 0.0002745989477261901
+    "total_seconds": 0.0002762239892035723
   },
   "verification_results": []
 }

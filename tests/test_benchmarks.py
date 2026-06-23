@@ -9085,7 +9085,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     payload = module.run_product_runtime_profile_sweep(
         module.ProductRuntimeProfileSweepConfig(
             output_dir=output_dir,
-            profiles=("latency", "audit"),
+            profiles=("latency", "auto", "audit"),
             scenarios=(
                 module.ProductRuntimeScenario(
                     name="low",
@@ -9108,7 +9108,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
         Path(payload["profiles"][0]["trace_paths"][0]).read_text(encoding="utf-8")
     )
     audit_trace = json.loads(
-        Path(payload["profiles"][1]["trace_paths"][0]).read_text(encoding="utf-8")
+        Path(payload["profiles"][2]["trace_paths"][0]).read_text(encoding="utf-8")
     )
     record = registry_module.ArtifactRegistry.load_json(registry_path).get(
         "report:demo-profile-sweep:0.1"
@@ -9118,13 +9118,21 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert payload["config"]["max_workers"] == 2
     assert payload["config"]["compact_json"] is True
     assert payload["execution"]["max_workers"] == 2
-    assert payload["decision"]["recommended_profile"] in {"latency", "audit"}
-    assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "audit"}
+    assert payload["decision"]["recommended_profile"] in {"latency", "auto", "audit"}
+    assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "auto", "audit"}
     assert payload["profiles"][0]["status"] == "observed"
     assert payload["profiles"][1]["status"] == "observed"
+    assert payload["profiles"][2]["status"] == "observed"
     assert Path(payload["profiles"][0]["baseline_artifact_manifest"]).exists()
     assert Path(payload["profiles"][1]["baseline_artifact_manifest"]).exists()
+    assert Path(payload["profiles"][2]["baseline_artifact_manifest"]).exists()
     assert latency_trace["metadata"]["runtime_profile"] == "latency"
+    auto_trace = json.loads(
+        Path(payload["profiles"][1]["trace_paths"][0]).read_text(encoding="utf-8")
+    )
+    assert auto_trace["metadata"]["runtime_profile"] == "latency"
+    assert auto_trace["metadata"]["runtime_profile_selection"]["selected_profile"] == "latency"
+    assert payload["profiles"][1]["runtime_profile_selection"]["counts_by_selected_profile"] == {"latency": 1}
     assert audit_trace["metadata"]["runtime_profile"] == "audit"
     assert "initial_verification" not in {
         phase["name"] for phase in latency_trace["runtime_trace"]["phases"]
@@ -9135,6 +9143,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert Path(payload["paths"]["artifact_manifest"]).exists()
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert "latency_baseline_manifest" in manifest["artifacts"]
+    assert "auto_baseline_manifest" in manifest["artifacts"]
     assert "audit_baseline_manifest" in manifest["artifacts"]
     assert manifest["metadata"]["compact_json"] is True
     assert "\n  " not in report_text
@@ -9144,7 +9153,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
         payload["paths"]["artifact_manifest"]
     ).passed is True
     assert record.metadata["status"] == "observed"
-    assert record.metadata["profile_count"] == 2
+    assert record.metadata["profile_count"] == 3
     assert record.metadata["compact_json"] is True
 
 
