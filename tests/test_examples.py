@@ -202,6 +202,59 @@ def test_calibrated_control_demo_balanced_profile_verifies_diagnostic_risk():
     assert payload["risk_decision"]["action"] == "abstain"
 
 
+def test_calibrated_control_demo_auto_profile_selects_latency_or_audit():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+    low_diagnostics = json.dumps(demo.low_diagnostics_for_artifact(artifact))
+
+    latency_payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=low_diagnostics,
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="auto",
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="auto-latency",
+            output=None,
+            registry=None,
+        )
+    )
+    audit_payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=low_diagnostics,
+            text="2 + 2 = 4.",
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=True,
+            calculator_context=None,
+            runtime_profile="auto",
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="auto-audit",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert latency_payload["metadata"]["runtime_profile"] == "latency"
+    assert latency_payload["metadata"]["runtime_profile_selection"]["selected_profile"] == "latency"
+    assert latency_payload["metadata"]["verification_stage_summary"]["skipped"] is True
+    assert audit_payload["metadata"]["runtime_profile"] == "audit"
+    assert audit_payload["metadata"]["runtime_profile_selection"]["selected_profile"] == "audit"
+    assert audit_payload["metadata"]["runtime_profile_selection"]["triggered_claim_ids"] == ("c1",)
+    assert audit_payload["metadata"]["verification_stage_summary"]["skipped"] is False
+
+
 def test_calibrated_control_demo_can_record_runtime_budget_result():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

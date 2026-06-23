@@ -46,8 +46,10 @@ from eigentruth.control import (
     RiskDecision,
     RiskLevel,
     RuntimeProfile,
+    RuntimeProfileSelection,
     TimeoutActionExecutor,
     get_runtime_profile,
+    select_runtime_profile,
 )
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
@@ -153,6 +155,47 @@ def test_runtime_profiles_apply_only_missing_defaults():
 
     with pytest.raises(ValueError, match="runtime_profile"):
         get_runtime_profile("fast")
+
+
+def test_select_runtime_profile_routes_by_risk_and_claim_metadata():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    medium = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.7,
+        reason="unsupported",
+    )
+    high = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="risky",
+    )
+
+    low_selection = select_runtime_profile(
+        low,
+        claims=(Claim("Paris is the capital of France.", claim_id="c1", metadata={"features": {}}),),
+    )
+    sensitive_selection = select_runtime_profile(
+        low,
+        claims=(Claim("2 + 2 = 4.", claim_id="calc", metadata={"features": {"has_number": True}}),),
+    )
+    medium_selection = select_runtime_profile(medium, claims=())
+    high_selection = select_runtime_profile(high, claims=())
+
+    assert isinstance(low_selection, RuntimeProfileSelection)
+    assert low_selection.selected_profile == "latency"
+    assert low_selection.reason == "low diagnostic risk and no sensitive claim metadata"
+    assert sensitive_selection.selected_profile == "audit"
+    assert sensitive_selection.triggered_claim_ids == ("calc",)
+    assert sensitive_selection.triggered_features == {"calc": ("has_number",)}
+    assert medium_selection.selected_profile == "balanced"
+    assert high_selection.selected_profile == "audit"
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():

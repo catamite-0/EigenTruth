@@ -91,11 +91,17 @@ diagnostics are low and claims lack sensitive metadata:
 python examples/calibrated_control_demo.py \
   --runtime-profile latency \
   --diagnostics '{"truth_proj": 0.0}'
+python examples/calibrated_control_demo.py \
+  --runtime-profile auto \
+  --diagnostics '{"truth_proj": 0.0}'
 ```
 
 The balanced profile enables staged verification but still verifies diagnostic
 risk or sensitive claims; the audit profile disables staging and verifies all
-initial claims:
+initial claims. The `auto` selector runs only the cheap diagnostic decision and
+claim metadata checks before choosing a profile: low-risk non-sensitive claims
+use `latency`, medium diagnostic risk uses `balanced`, and high/unknown risk or
+number/citation/time-sensitive/calculation claims use `audit`.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence

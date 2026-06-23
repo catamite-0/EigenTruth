@@ -40,7 +40,9 @@ from eigentruth.control.runtime_profiles import (
     RUNTIME_PROFILE_NAMES,
     RUNTIME_PROFILES,
     RuntimeProfile,
+    RuntimeProfileSelection,
     get_runtime_profile,
+    select_runtime_profile,
 )
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
@@ -72,6 +74,7 @@ __all__ = [
     "ProductRuntimeBudgetPolicy",
     "RuntimePhaseTiming",
     "RuntimeProfile",
+    "RuntimeProfileSelection",
     "RuntimeTrace",
     "RiskController",
     "RiskDecision",
@@ -85,4 +88,5 @@ __all__ = [
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "run_verification_loop",
+    "select_runtime_profile",
 ]

@@ -33,10 +33,12 @@ from eigentruth.control import (
     ProductRuntimeBudgetPolicy,
     RiskController,
     RuntimeProfile,
+    RuntimeProfileSelection,
     StagedVerificationPolicy,
     evaluate_product_runtime_budget,
     get_runtime_profile,
     run_verification_loop,
+    select_runtime_profile,
 )
 from eigentruth.registry import ArtifactRegistry
 from eigentruth.verify import (
@@ -310,18 +312,27 @@ def low_diagnostics_for_artifact(artifact: CalibrationArtifact) -> dict[str, flo
     return diagnostics
 
 
-def runtime_profile_metadata(profile: RuntimeProfile | None) -> dict[str, Any]:
+def runtime_profile_metadata(
+    profile: RuntimeProfile | None,
+    *,
+    selection: RuntimeProfileSelection | None = None,
+    requested: str | None = None,
+) -> dict[str, Any]:
     """Return trace metadata for the selected runtime profile."""
     if profile is None:
         return {
             "runtime_profile": None,
             "runtime_profile_control_defaults": None,
         }
-    return {
+    metadata = {
         "runtime_profile": profile.name,
         "runtime_profile_description": profile.description,
         "runtime_profile_control_defaults": dict(profile.control_defaults),
     }
+    if selection is not None:
+        metadata["runtime_profile_requested"] = requested
+        metadata["runtime_profile_selection"] = selection.to_dict()
+    return metadata
 
 
 def stage_policy_from_runtime_profile(
@@ -357,6 +368,23 @@ def stage_policy_from_runtime_profile(
             default_policy.verify_claim_metadata_keys,
         ),
     )
+
+
+def resolve_runtime_profile(
+    requested_profile: str | None,
+    *,
+    controller: RiskController,
+    diagnostics: dict[str, float],
+    claims: tuple[Any, ...],
+) -> tuple[RuntimeProfile | None, RuntimeProfileSelection | None]:
+    """Resolve an explicit or automatic runtime profile request."""
+    if requested_profile == "auto":
+        selection = select_runtime_profile(
+            controller.decide(diagnostics),
+            claims=claims,
+        )
+        return get_runtime_profile(selection.selected_profile), selection
+    return get_runtime_profile(requested_profile), None
 
 
 def build_verifier(
@@ -445,7 +473,6 @@ def _promotion_contract_metadata(
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
-    runtime_profile = get_runtime_profile(args.runtime_profile)
     explicit_promotion_contract = getattr(args, "promotion_contract", None) is not None
     promotion_contract_path = _promotion_contract_path(getattr(args, "promotion_contract", None))
     promotion_contract = (
@@ -454,15 +481,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else ProductPromotionContract.from_json(promotion_contract_path)
     )
     setattr(args, "_promotion_contract", promotion_contract)
-    stage_policy = stage_policy_from_runtime_profile(
-        runtime_profile,
-        staged_verification=args.staged_verification,
-    )
     diagnostics = (
         default_diagnostics_for_artifact(artifact)
         if args.diagnostics is None
         else parse_json_mapping(args.diagnostics, name="--diagnostics")
     )
+    resolved_diagnostics = {key: float(value) for key, value in diagnostics.items()}
     facts = None if args.facts is None else parse_json_mapping(args.facts, name="--facts")
     evidence = None if args.evidence is None else parse_json_sequence(args.evidence, name="--evidence")
     refutations = None if args.refutations is None else parse_json_mapping(args.refutations, name="--refutations")
@@ -478,6 +502,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     claims = extract_claims(args.text)
+    controller = RiskController(artifact)
+    runtime_profile, runtime_profile_selection = resolve_runtime_profile(
+        args.runtime_profile,
+        controller=controller,
+        diagnostics=resolved_diagnostics,
+        claims=claims,
+    )
+    stage_policy = stage_policy_from_runtime_profile(
+        runtime_profile,
+        staged_verification=args.staged_verification,
+    )
     verifier_route_name = (
         None
         if promotion_contract is None
@@ -494,7 +529,6 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if getattr(args, "cache_verifier", False):
         verifier_cache = CachedVerifier(verifier)
         verifier = verifier_cache
-    controller = RiskController(artifact)
     executor_registry = ActionExecutorRegistry()
     cache_metadata: dict[str, Any] = {}
     retriever_cache = None
@@ -510,7 +544,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     loop_result = run_verification_loop(
         request_id=args.request_id,
-        diagnostics={key: float(value) for key, value in diagnostics.items()},
+        diagnostics=resolved_diagnostics,
         claims=claims,
         verifier=verifier,
         controller=controller,
@@ -529,7 +563,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 source=None if promotion_contract_path is None else str(promotion_contract_path),
                 budget_enabled=explicit_promotion_contract,
             ),
-            **runtime_profile_metadata(runtime_profile),
+            **runtime_profile_metadata(
+                runtime_profile,
+                selection=runtime_profile_selection,
+                requested=args.runtime_profile,
+            ),
             "staged_verification_enabled": stage_policy is not None,
             "verifier_type": type(verifier).__name__,
             "calculator_enabled": args.enable_calculator,
@@ -580,7 +618,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     source=None if promotion_contract_path is None else str(promotion_contract_path),
                     budget_enabled=explicit_promotion_contract,
                 ),
-                **runtime_profile_metadata(runtime_profile),
+                **runtime_profile_metadata(
+                    runtime_profile,
+                    selection=runtime_profile_selection,
+                    requested=args.runtime_profile,
+                ),
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
@@ -614,8 +656,8 @@ def main() -> None:
                         help="run CalculatorVerifier before the selected lexical verifier")
     parser.add_argument("--calculator-context", default=None,
                         help="optional calculator context JSON object, e.g. {'calculation': {...}}")
-    parser.add_argument("--runtime-profile", default=None, choices=RUNTIME_PROFILE_NAMES,
-                        help="optional control-plane profile: latency, balanced, or audit")
+    parser.add_argument("--runtime-profile", default=None, choices=(*RUNTIME_PROFILE_NAMES, "auto"),
+                        help="optional control-plane profile: latency, balanced, audit, or auto")
     parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
                         default=None,
                         help="force staged verification even without a runtime profile")
