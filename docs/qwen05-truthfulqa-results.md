@@ -695,14 +695,29 @@ semantic-entropy AUROC `0.502`; top-25% uses 110 samples and 129.131 seconds
 recommendation is top-10%, while the quality-balanced recommendation is top-25%:
 top-40% roughly doubles top-25% cost for only a small semantic-entropy gain.
 
+A shared-cache rerun in
+`artifacts/smollm2_l20_inside_trigger_budget_sweep_shared_cache/` verifies the
+long-sweep cache path. The first cache-producing run still pays the base cost:
+top-10% fixed takes 199.136 seconds total, including 84.476 seconds for layer
+stats, 39.854 seconds for forced-answer forward, and 60.819 seconds for INSIDE
+generation. Later budget/run children load statement encodings, layer stats, and
+eval reps from the shared cache: top-10% `adaptive_selfcheck` takes 75.756
+seconds total with 0.063 seconds of eval-rep cache reads and 61.695 seconds of
+INSIDE generation; top-25% takes 135.218 seconds total with 0.062 seconds of
+cache reads and 119.916 seconds of INSIDE generation; top-40% takes 260.962
+seconds total with 0.068 seconds of cache reads and 246.352 seconds of INSIDE
+generation. The recommendation remains unchanged: top-10% is the cost-first
+default, top-25% is the quality-balanced default, and the remaining bottleneck is
+sampled INSIDE generation rather than repeated base scoring.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
    multi-sample generation is the dominant CPU cost.
 2. Pair future long runs with `--warmup-checkpoint`, `--layer-stats-cache`, and
-   trigger-sweep `--shared-cache-dir` so interrupted warmup can resume and
-   budget children reuse statement encodings, layer stats, and eval reps instead
-   of repeating base forward work.
+   trigger-sweep `--shared-cache-dir`; the SmolLM2 shared-cache sweep confirms
+   that budget children reuse statement encodings, layer stats, and eval reps
+   instead of repeating base forward work.
 3. Use sharded `--eval-reps-cache` for long forced-answer runs and cache-only
    rescoring; adjacent batch reads reuse the active shard and expose shard IO
    counters in the structured JSON output.
