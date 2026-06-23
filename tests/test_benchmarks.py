@@ -266,6 +266,7 @@ def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
     assert payload["retrieval_qa_verifier"]["enabled"] is True
     assert run["retrieval_qa"]["decided_records"] == 4
     assert run["cache_stats"]["retrieval_qa_verifiers"]["requests"] == 4
+    assert run["cache_stats"]["retrievers"]["requests"] == 0
     assert routes["selected_counts"] == {"retrieval_structured_qa": 4}
     assert routes["by_route"]["retrieval_structured_qa"]["statuses"]["supported"] == 2
     assert routes["by_route"]["retrieval_structured_qa"]["statuses"]["refuted"] == 2

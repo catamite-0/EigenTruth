@@ -713,16 +713,41 @@ def _verify_records(
             VerificationStatus.INSUFFICIENT_EVIDENCE,
             VerificationStatus.NOT_APPLICABLE,
         } and record.retrieval_documents:
-            retriever = retriever_for(record.retrieval_documents)
-            hits = _timed_retrieve(
-                route_timings,
-                retriever=retriever,
-                query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
-                limit=retrieval_limit,
-            )
-            hit_documents = tuple(hit.to_dict() for hit in hits)
-            qa_documents = hit_documents or _retrieval_document_payloads(record.retrieval_documents)
-            if qa_documents:
+            fixture_documents = _retrieval_document_payloads(record.retrieval_documents)
+            if fixture_documents:
+                runner = retrieval_qa_runner(fixture_documents)
+                if runner is not None:
+                    attempted_routes.append("retrieval_structured_qa")
+                    retrieval_qa_result = _timed_verify(
+                        route_timings,
+                        route="retrieval_structured_qa",
+                        runner=runner,
+                        claim=record.claim,
+                        context={"statement": record.metadata.get("statement", {})},
+                    )
+                    if retrieval_qa_result.status in {
+                        VerificationStatus.SUPPORTED,
+                        VerificationStatus.REFUTED,
+                    }:
+                        final = retrieval_qa_result
+                        selected_route = "retrieval_structured_qa"
+                        selected_verifier = "QuestionAnswerVerifier"
+                        selected_retrieval_hits = fixture_documents
+            hit_documents: tuple[Mapping[str, Any], ...] = ()
+            if final.status in {
+                VerificationStatus.INSUFFICIENT_EVIDENCE,
+                VerificationStatus.NOT_APPLICABLE,
+            }:
+                retriever = retriever_for(record.retrieval_documents)
+                hits = _timed_retrieve(
+                    route_timings,
+                    retriever=retriever,
+                    query=RetrievalQuery(query=record.claim.text, claim_id=record.claim.claim_id),
+                    limit=retrieval_limit,
+                )
+                hit_documents = tuple(hit.to_dict() for hit in hits)
+            qa_documents = hit_documents
+            if qa_documents and retrieval_qa_result is None:
                 runner = retrieval_qa_runner(qa_documents)
                 if runner is not None:
                     attempted_routes.append("retrieval_structured_qa")
