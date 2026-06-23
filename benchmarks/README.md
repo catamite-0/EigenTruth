@@ -1471,21 +1471,53 @@ Use `--inside-trigger-budget-policy cost_first` in the release-candidate
 comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
-The current retrieval-adapter-gated SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-retrieval-adapter-gated-staged-qa-release-candidate:1.1`.
-It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA route, and
-registered performance handoff
+The current structured-retrieval-audit SmolLM2 default records
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate:1.2`.
+It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA product
+route, and registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
 promoted adapter-family matrix with `structured_state`, `state_transition`, and
-`retrieval_groundedness` routes present and promoted. The final manifest now
-fingerprints the release-candidate report plus the readiness, route,
-performance, and adapter-family matrix reports; the release comparison verifies
-that the performance baseline recommendation matches the selected runtime:
-layer `-12`, batch size `8`, `outputs` hidden-state capture, no prefix-KV cache,
-worker count `1`, `truth_proj` AUROC `0.682`, and the quality-balanced
-`top_0p4` triggered `adaptive_selfcheck` budget. The selected product route
-still gates `retrieval_use_rate` at `0.0`; retrieval is required as available
-adapter capability evidence, not as the default low-latency route.
+`retrieval_groundedness` routes present and promoted. It also requires
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
+retrieval-structured-QA audit route with its own quality and runtime budget.
+The final manifest fingerprints the release-candidate report plus readiness,
+route, performance, adapter-family, and required retrieval-audit manifests; the
+release comparison verifies that the performance baseline recommendation matches
+the selected runtime: layer `-12`, batch size `8`, `outputs` hidden-state
+capture, no prefix-KV cache, worker count `1`, `truth_proj` AUROC `0.682`, and
+the quality-balanced `top_0p4` triggered `adaptive_selfcheck` budget. The
+selected product route still gates `retrieval_use_rate` at `0.0`; retrieval is
+required as audit capability evidence, not as the default low-latency route.
+
+```bash
+python benchmarks/run_release_candidate_registry_workflow.py \
+  --readiness-registry artifacts/local-readiness-registry.json \
+  --route-registry artifacts/staged-route-registry.json \
+  --performance-registry artifacts/local-readiness-registry.json \
+  --release-registry artifacts/local-release-registry.json \
+  --name smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate \
+  --version 1.2 \
+  --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8 \
+  --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
+  --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
+  --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval/adapter-family-matrix.json \
+  --required-adapter-route structured_state \
+  --required-adapter-route state_transition \
+  --required-adapter-route retrieval_groundedness \
+  --runtime-profile balanced \
+  --required-route-min-selected 200 \
+  --required-route-min-decision-accuracy 0.99 \
+  --required-route-max-false-supported-rate 0.01 \
+  --required-route-min-false-refuted-rate 1.0 \
+  --required-route-max-verified-false-alarm 0.01 \
+  --required-route-min-verified-detection 1.0 \
+  --required-route-max-mean-attempted-route-count 2.1 \
+  --required-route-max-retrieval-use-rate 1.0 \
+  --required-route-max-runtime-total-seconds 8.0 \
+  --required-route-max-retrieval-hit-count 450 \
+  --fail-on-blocked
+```
 
 ## `build_truthfulqa_corpus.py`
 
@@ -1596,6 +1628,43 @@ For strict false-support gates on TruthfulQA-style local corpora, prefer
 `question`/`answer` metadata as structured facts before falling back to lexical
 `retrieval_groundedness`, which avoids treating high token overlap between a
 wrong answer and the same-question correct-answer evidence as support.
+
+The current registered SmolLM2 l80 retrieval audit baseline is
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5`:
+
+```bash
+python benchmarks/run_local_retrieval_route_workflow.py \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --output-dir artifacts/smollm2_l80_retrieval_structured_qa_route \
+  --registry artifacts/staged-route-registry.json \
+  --name smollm2-l80-retrieval-structured-qa-route \
+  --version 0.5 \
+  --signal truth_proj \
+  --query-field answer \
+  --retriever-backend memory \
+  --retriever-min-overlap 0.95 \
+  --retrieval-limit 3 \
+  --gate-route retrieval_structured_qa \
+  --min-selected 200 \
+  --gate-min-selected 200 \
+  --min-decision-accuracy 0.99 \
+  --max-false-supported-rate 0.01 \
+  --min-false-refuted-rate 1.0 \
+  --max-verified-false-alarm 0.01 \
+  --min-verified-detection 1.0 \
+  --max-mean-attempted-route-count 2.1 \
+  --max-retrieval-use-rate 1.0 \
+  --max-runtime-total-seconds 8.0 \
+  --max-retrieval-hit-count 450 \
+  --compact-json \
+  --fail-on-blocked
+```
+
+It promotes `retrieval_structured_qa` with selected `238`, decision accuracy
+`0.992`, false-supported rate `0.000`, false-refuted rate `1.000`, verified
+detection `1.000`, verified false alarm `0.009`, runtime `~1.05s`, and `410`
+retrieval hits under the explicit `450` hit budget.
 
 `--claims-cache-dir` is optional. When set, the workflow caches generated
 claims fixtures by score-dump fingerprint, corpus fingerprints, query field,

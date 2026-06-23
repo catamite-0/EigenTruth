@@ -771,18 +771,23 @@ than a previous release baseline, the release comparison records the gate source
 as `sample_count_ratio_to_reference` and
 `inside_generation_seconds_ratio_to_reference`.
 
-The current retrieval-adapter-gated release record is
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-retrieval-adapter-gated-staged-qa-release-candidate:1.1`.
-It keeps the same readiness, route, and performance evidence, then adds the
-retrieval-inclusive promoted adapter-family matrix as a required gate. The final
-manifest fingerprints the release-candidate report, readiness manifest, route
-manifest, performance manifest, and adapter-family matrix report. Required
-adapter routes are `structured_state`, `state_transition`, and
-`retrieval_groundedness`, all promoted in
+The current structured-retrieval-audit release record is
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-structured-retrieval-audit-staged-qa-release-candidate:1.2`.
+It keeps the same readiness, staged structured-QA product route, performance
+evidence, and retrieval-inclusive promoted adapter-family matrix, then adds
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a required
+retrieval-structured-QA audit gate. The final manifest fingerprints the
+release-candidate report, readiness manifest, product route manifest,
+performance manifest, adapter-family matrix report, and required retrieval audit
+manifest. Required adapter routes are `structured_state`, `state_transition`,
+and `retrieval_groundedness`, all promoted in
 `artifacts/smollm2_l20_adapter_family_retrieval/adapter-family-matrix.json`.
-The selected product route remains `structured_qa` with retrieval use gated at
-`0.0`; the retrieval adapter is required as available verification capability
-evidence, not as the default low-latency path.
+The required retrieval audit route promotes with selected `238`, decision
+accuracy `0.992`, false-supported rate `0.000`, false-refuted rate `1.000`,
+runtime about `1.05s`, and `410` retrieval hits under a `450` hit budget. The
+selected product route remains `structured_qa` with retrieval use gated at
+`0.0`; retrieval is required as audit evidence, not as the default low-latency
+path.
 
 ## Next Steps
 
