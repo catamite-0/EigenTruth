@@ -1253,6 +1253,53 @@ the relevant question and correct answer.
 
 For both runs, `route_summary.selected_counts` is `structured_qa=556`.
 
+Staged structured QA cost-gating artifact:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --staged-verification \
+  --staged-alpha 0.1 \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json \
+  --compact-json
+
+python benchmarks/compare_verifier_routes.py \
+  --report staged=artifacts/truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json \
+  --alpha 0.1 \
+  --gate-route structured_qa \
+  --gate-min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --min-staged-skip-rate 0.75 \
+  --max-staged-verified-false-alarm 0.02 \
+  --min-staged-verified-detection 0.20 \
+  --max-staged-delta-false-alarm 0.0 \
+  --min-staged-delta-detection 0.0 \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_route_comparison.json \
+  --fail-on-gate
+```
+
+Current staged l80 structured QA result at alpha 0.100:
+
+| Scope | Skipped | Verified false alarm | Verified detection | Gate status |
+|---|---:|---:|---:|---|
+| Qwen l80 | 79.3% | 0.008 | 0.306 | pass |
+| SmolLM2 l80 | 82.9% | 0.010 | 0.244 | pass |
+| Aggregate | 81.1% | 0.009 | 0.275 | promote `structured_qa` |
+
+Interpretation: staged gating keeps the exact structured QA adapter for risky
+claims while skipping 902 of 1112 verifier calls across the two l80 runs. The
+registered comparison artifact blocks promotion unless skip-rate, false-alarm,
+and detection thresholds all pass.
+
 
 ## `backfill_truthfulqa_statements.py`
 

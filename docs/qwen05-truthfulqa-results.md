@@ -540,6 +540,65 @@ when the adapter has the right key/value facts. The product implication is to
 prioritize real structured sources next: database rows, calculators, business
 rules, tool outputs, and domain/world-model state.
 
+## Staged Structured QA Control Gate
+
+The staged control-plane variant gates expensive verifier execution behind the
+calibrated internal diagnostic. Low-risk, non-sensitive claims skip verification;
+claims above the conformal diagnostic threshold still run the structured QA
+adapter. This measures whether the product can preserve most verification
+quality while avoiding unnecessary tool calls.
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --staged-verification \
+  --staged-alpha 0.1 \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json \
+  --compact-json
+
+python benchmarks/compare_verifier_routes.py \
+  --report staged=artifacts/truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json \
+  --alpha 0.1 \
+  --gate-route structured_qa \
+  --gate-min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --min-staged-skip-rate 0.75 \
+  --max-staged-verified-false-alarm 0.02 \
+  --min-staged-verified-detection 0.20 \
+  --max-staged-delta-false-alarm 0.0 \
+  --min-staged-delta-detection 0.0 \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_route_comparison.json \
+  --fail-on-gate
+```
+
+At alpha 0.100:
+
+| Scope | Verifier calls skipped | Verified false alarm | Verified detection |
+|---|---:|---:|---:|
+| Qwen l80 | 79.3% | 0.008 | 0.306 |
+| SmolLM2 l80 | 82.9% | 0.010 | 0.244 |
+| Aggregate | 81.1% | 0.009 | 0.275 |
+
+The route comparison artifact promotes `structured_qa` with
+`promotion_score=0.974`, `decision_accuracy=1.000` on the verified route,
+aggregate staged skip-rate 0.811, staged verified false alarm 0.009, and staged
+verified detection 0.275. Configured staged gates fail closed if these metrics
+are missing or regress beyond threshold.
+
+Interpretation: staged verification turns the control plane from a maximal
+verification policy into a cost-aware policy. It preserves the conformal false
+alarm budget and slightly improves detection over the internal-only gate while
+skipping 902 of 1112 structured QA calls in this reproducible l80 comparison.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -555,11 +614,14 @@ rules, tool outputs, and domain/world-model state.
 5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
    `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
    budget and shared conformal report.
-6. Replace the label-derived oracle evidence fixture with real retrieval,
+6. Register the staged structured QA route comparison as a route baseline and
+   include it in release-candidate comparison once paired readiness artifacts
+   are available.
+7. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm
    budgets. Use `benchmarks/build_evidence_fixture.py` with a local corpus as
    the first reproducible non-oracle baseline before networked retrieval.
-7. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
+8. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a
    deterministic tool adapter, not a broad natural-language math parser.
