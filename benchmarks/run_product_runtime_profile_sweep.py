@@ -88,6 +88,7 @@ class ProductRuntimeProfileSweepConfig:
     repeats: int = 1
     artifact_path: str | Path | None = None
     promotion_contract_path: str | Path | None = None
+    runtime_profile_selector_policy_path: str | Path | None = None
     policy: ProductRuntimeBudgetPolicy | Mapping[str, Any] | None = None
     policy_path: str | Path | None = None
     slo_policy: "ProductRuntimeProfileSLOPolicy | Mapping[str, Any] | None" = None
@@ -133,6 +134,12 @@ class ProductRuntimeProfileSweepConfig:
             object.__setattr__(self, "artifact_path", Path(self.artifact_path))
         if self.promotion_contract_path is not None:
             object.__setattr__(self, "promotion_contract_path", Path(self.promotion_contract_path))
+        if self.runtime_profile_selector_policy_path is not None:
+            object.__setattr__(
+                self,
+                "runtime_profile_selector_policy_path",
+                Path(self.runtime_profile_selector_policy_path),
+            )
         if self.policy_path is not None:
             object.__setattr__(self, "policy_path", Path(self.policy_path))
         if self.slo_policy_path is not None:
@@ -340,6 +347,11 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "output_dir": str(config.output_dir),
             "policy": None if config.policy_path is None else str(config.policy_path),
             "slo_policy": None if config.slo_policy_path is None else str(config.slo_policy_path),
+            "runtime_profile_selector_policy": (
+                None
+                if config.runtime_profile_selector_policy_path is None
+                else str(config.runtime_profile_selector_policy_path)
+            ),
             "promotion_contract": (
                 None if config.promotion_contract_path is None else str(config.promotion_contract_path)
             ),
@@ -350,6 +362,11 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "scenario_names": tuple(scenario.name for scenario in config.scenarios),
             "repeats": config.repeats,
             "artifact_path": None if config.artifact_path is None else str(config.artifact_path),
+            "runtime_profile_selector_policy_path": (
+                None
+                if config.runtime_profile_selector_policy_path is None
+                else str(config.runtime_profile_selector_policy_path)
+            ),
             "max_workers": config.max_workers,
             "compact_json": config.compact_json,
             "slo_policy_source": slo_policy_source,
@@ -487,6 +504,11 @@ def _demo_args(
         staged_verification=scenario.staged_verification,
         runtime_trace=True,
         promotion_contract=None if config.promotion_contract_path is None else str(config.promotion_contract_path),
+        runtime_profile_selector_policy=(
+            None
+            if config.runtime_profile_selector_policy_path is None
+            else str(config.runtime_profile_selector_policy_path)
+        ),
         cache_verifier=True,
         cache_retriever=True,
         max_runtime_total_seconds=None,
@@ -806,6 +828,7 @@ def _write_artifact_manifest(
         "product_runtime_profile_sweep_report": config.resolved_report_path,
         "policy": config.policy_path,
         "slo_policy": config.slo_policy_path,
+        "runtime_profile_selector_policy": config.runtime_profile_selector_policy_path,
         "promotion_contract": config.promotion_contract_path,
     }
     slo = _mapping(report.get("slo"))
@@ -831,6 +854,11 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
+            "runtime_profile_selector_policy": (
+                None
+                if config.runtime_profile_selector_policy_path is None
+                else str(config.runtime_profile_selector_policy_path)
+            ),
             **dict(config.metadata),
         },
     )
@@ -858,6 +886,11 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
             "compact_json": config.compact_json,
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
+            "runtime_profile_selector_policy": (
+                None
+                if config.runtime_profile_selector_policy_path is None
+                else str(config.runtime_profile_selector_policy_path)
+            ),
             **dict(config.metadata),
         },
     ).save_json()
@@ -1098,6 +1131,11 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeProfileSweepCon
         repeats=args.repeats,
         artifact_path=Path(args.artifact) if args.artifact else None,
         promotion_contract_path=Path(args.promotion_contract) if args.promotion_contract else None,
+        runtime_profile_selector_policy_path=(
+            Path(args.runtime_profile_selector_policy)
+            if args.runtime_profile_selector_policy
+            else None
+        ),
         policy_path=_parse_policy(args.policy),
         slo_policy_path=Path(args.slo_policy) if args.slo_policy else None,
         report_path=Path(args.json) if args.json else None,
@@ -1127,6 +1165,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--artifact", default=None)
     parser.add_argument("--promotion-contract", default=None)
+    parser.add_argument("--runtime-profile-selector-policy", default=None,
+                        help="RuntimeProfileSelectorPolicy JSON path for auto profile runs")
     parser.add_argument("--policy", default=None, help="ProductRuntimeBudgetPolicy JSON path for baselines")
     parser.add_argument("--slo-policy", default=None, help="ProductRuntimeProfileSLOPolicy JSON path")
     parser.add_argument("--json", default=None, help="top-level sweep report path")

@@ -2305,6 +2305,7 @@
         "profile_count": 4,
         "recommended_profile": "auto",
         "repeats": 1,
+        "runtime_profile_selector_policy": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-selector-policy.json",
         "scenario_count": 3,
         "slo_enabled": true,
         "slo_passed": true,

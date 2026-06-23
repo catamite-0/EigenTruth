@@ -94,6 +94,10 @@ python examples/calibrated_control_demo.py \
 python examples/calibrated_control_demo.py \
   --runtime-profile auto \
   --diagnostics '{"truth_proj": 0.0}'
+python examples/calibrated_control_demo.py \
+  --runtime-profile auto \
+  --runtime-profile-selector-policy artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-selector-policy.json \
+  --diagnostics '{"truth_proj": 0.0}'
 ```
 
 The balanced profile enables staged verification but still verifies diagnostic
@@ -101,7 +105,9 @@ risk or sensitive claims; the audit profile disables staging and verifies all
 initial claims. The `auto` selector runs only the cheap diagnostic decision and
 claim metadata checks before choosing a profile: low-risk non-sensitive claims
 use `latency`, medium diagnostic risk uses `balanced`, and high/unknown risk or
-number/citation/time-sensitive/calculation claims use `audit`.
+number/citation/time-sensitive/calculation claims use `audit`. Pass
+`--runtime-profile-selector-policy` to make those routing thresholds and
+sensitive claim metadata keys explicit in the trace.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence

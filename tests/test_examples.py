@@ -255,6 +255,47 @@ def test_calibrated_control_demo_auto_profile_selects_latency_or_audit():
     assert audit_payload["metadata"]["verification_stage_summary"]["skipped"] is False
 
 
+def test_calibrated_control_demo_auto_profile_uses_selector_policy(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+    low_diagnostics = json.dumps(demo.low_diagnostics_for_artifact(artifact))
+    policy_path = tmp_path / "selector-policy.json"
+    policy_path.write_text(
+        json.dumps({
+            "sensitive_claim_feature_flags": ["has_citation"],
+            "sensitive_claim_metadata_keys": ["requires_review"],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=low_diagnostics,
+            text="2 + 2 = 4.",
+            facts='{"2 + 2 = 4": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="auto",
+            runtime_profile_selector_policy=str(policy_path),
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="auto-selector-policy",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert payload["metadata"]["runtime_profile"] == "latency"
+    assert payload["metadata"]["runtime_profile_selection"]["selected_profile"] == "latency"
+    assert payload["metadata"]["runtime_profile_selector_policy"]["sensitive_claim_feature_flags"] == (
+        "has_citation",
+    )
+
+
 def test_calibrated_control_demo_can_record_runtime_budget_result():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

@@ -144,6 +144,110 @@ class RuntimeProfileSelection:
         }
 
 
+@dataclass(frozen=True)
+class RuntimeProfileSelectorPolicy:
+    """Configurable request-time policy for automatic runtime profile selection."""
+
+    low_risk_profile: str = "latency"
+    default_profile: str = "balanced"
+    high_risk_profile: str = "audit"
+    sensitive_profile: str = "audit"
+    low_risk_levels: Sequence[str] = (RiskLevel.LOW.value,)
+    low_risk_actions: Sequence[str] = (ControlAction.ACCEPT.value,)
+    high_risk_levels: Sequence[str] = (RiskLevel.HIGH.value, RiskLevel.UNKNOWN.value)
+    high_risk_actions: Sequence[str] = (
+        ControlAction.ABSTAIN.value,
+        ControlAction.CLARIFY.value,
+        ControlAction.REWRITE.value,
+        ControlAction.STEER_REGENERATE.value,
+        ControlAction.EXECUTE_TOOL.value,
+    )
+    sensitive_claim_feature_flags: Sequence[str] = _DEFAULT_SENSITIVE_CLAIM_FEATURE_FLAGS
+    sensitive_claim_metadata_keys: Sequence[str] = _DEFAULT_SENSITIVE_CLAIM_METADATA_KEYS
+
+    def __post_init__(self) -> None:
+        low_risk_profile = _normalize_profile_name(self.low_risk_profile)
+        default_profile = _normalize_profile_name(self.default_profile)
+        high_risk_profile = _normalize_profile_name(self.high_risk_profile)
+        sensitive_profile = _normalize_profile_name(self.sensitive_profile)
+        _validate_profile_names(low_risk_profile, default_profile, high_risk_profile, sensitive_profile)
+        object.__setattr__(self, "low_risk_profile", low_risk_profile)
+        object.__setattr__(self, "default_profile", default_profile)
+        object.__setattr__(self, "high_risk_profile", high_risk_profile)
+        object.__setattr__(self, "sensitive_profile", sensitive_profile)
+        object.__setattr__(
+            self,
+            "low_risk_levels",
+            _risk_level_values(self.low_risk_levels, field_name="low_risk_levels"),
+        )
+        object.__setattr__(
+            self,
+            "low_risk_actions",
+            _control_action_values(self.low_risk_actions, field_name="low_risk_actions"),
+        )
+        object.__setattr__(
+            self,
+            "high_risk_levels",
+            _risk_level_values(self.high_risk_levels, field_name="high_risk_levels"),
+        )
+        object.__setattr__(
+            self,
+            "high_risk_actions",
+            _control_action_values(self.high_risk_actions, field_name="high_risk_actions"),
+        )
+        object.__setattr__(
+            self,
+            "sensitive_claim_feature_flags",
+            _non_empty_string_tuple(
+                self.sensitive_claim_feature_flags,
+                field_name="sensitive_claim_feature_flags",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "sensitive_claim_metadata_keys",
+            _non_empty_string_tuple(
+                self.sensitive_claim_metadata_keys,
+                field_name="sensitive_claim_metadata_keys",
+            ),
+        )
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "RuntimeProfileSelectorPolicy":
+        """Build a selector policy from a JSON-like mapping."""
+        return cls(
+            low_risk_profile=payload.get("low_risk_profile", cls.low_risk_profile),
+            default_profile=payload.get("default_profile", cls.default_profile),
+            high_risk_profile=payload.get("high_risk_profile", cls.high_risk_profile),
+            sensitive_profile=payload.get("sensitive_profile", cls.sensitive_profile),
+            low_risk_levels=_as_sequence(payload.get("low_risk_levels", cls.low_risk_levels)),
+            low_risk_actions=_as_sequence(payload.get("low_risk_actions", cls.low_risk_actions)),
+            high_risk_levels=_as_sequence(payload.get("high_risk_levels", cls.high_risk_levels)),
+            high_risk_actions=_as_sequence(payload.get("high_risk_actions", cls.high_risk_actions)),
+            sensitive_claim_feature_flags=_as_sequence(
+                payload.get("sensitive_claim_feature_flags", cls.sensitive_claim_feature_flags)
+            ),
+            sensitive_claim_metadata_keys=_as_sequence(
+                payload.get("sensitive_claim_metadata_keys", cls.sensitive_claim_metadata_keys)
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "low_risk_profile": self.low_risk_profile,
+            "default_profile": self.default_profile,
+            "high_risk_profile": self.high_risk_profile,
+            "sensitive_profile": self.sensitive_profile,
+            "low_risk_levels": tuple(self.low_risk_levels),
+            "low_risk_actions": tuple(self.low_risk_actions),
+            "high_risk_levels": tuple(self.high_risk_levels),
+            "high_risk_actions": tuple(self.high_risk_actions),
+            "sensitive_claim_feature_flags": tuple(self.sensitive_claim_feature_flags),
+            "sensitive_claim_metadata_keys": tuple(self.sensitive_claim_metadata_keys),
+        }
+
+
 RUNTIME_PROFILES: Mapping[str, RuntimeProfile] = MappingProxyType({
     "latency": RuntimeProfile(
         name="latency",
@@ -221,6 +325,7 @@ def select_runtime_profile(
     diagnostic_decision: RiskDecision | Mapping[str, Any],
     *,
     claims: Sequence[Any] = (),
+    selector_policy: RuntimeProfileSelectorPolicy | Mapping[str, Any] | None = None,
     low_risk_profile: str = "latency",
     default_profile: str = "balanced",
     high_risk_profile: str = "audit",
@@ -235,36 +340,44 @@ def select_runtime_profile(
     requests can use the latency profile, sensitive claims use audit, and
     medium diagnostic risk stays on balanced defaults.
     """
+    if selector_policy is None:
+        policy = RuntimeProfileSelectorPolicy(
+            low_risk_profile=low_risk_profile,
+            default_profile=default_profile,
+            high_risk_profile=high_risk_profile,
+            sensitive_profile=sensitive_profile,
+            sensitive_claim_feature_flags=sensitive_claim_feature_flags,
+            sensitive_claim_metadata_keys=sensitive_claim_metadata_keys,
+        )
+    else:
+        policy = (
+            selector_policy
+            if isinstance(selector_policy, RuntimeProfileSelectorPolicy)
+            else RuntimeProfileSelectorPolicy.from_mapping(selector_policy)
+        )
     risk_level, action = _decision_fields(diagnostic_decision)
-    _validate_profile_names(low_risk_profile, default_profile, high_risk_profile, sensitive_profile)
     sensitive_claims = _sensitive_claim_matches(
         claims,
-        feature_flags=sensitive_claim_feature_flags,
-        metadata_keys=sensitive_claim_metadata_keys,
+        feature_flags=policy.sensitive_claim_feature_flags,
+        metadata_keys=policy.sensitive_claim_metadata_keys,
     )
-    if risk_level in {RiskLevel.HIGH, RiskLevel.UNKNOWN}:
+    if risk_level.value in policy.high_risk_levels:
         return RuntimeProfileSelection(
-            selected_profile=high_risk_profile,
+            selected_profile=policy.high_risk_profile,
             reason=f"diagnostic risk level is {risk_level.value}",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
         )
-    if action in {
-        ControlAction.ABSTAIN,
-        ControlAction.CLARIFY,
-        ControlAction.REWRITE,
-        ControlAction.STEER_REGENERATE,
-        ControlAction.EXECUTE_TOOL,
-    }:
+    if action.value in policy.high_risk_actions:
         return RuntimeProfileSelection(
-            selected_profile=high_risk_profile,
+            selected_profile=policy.high_risk_profile,
             reason=f"diagnostic action is {action.value}",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
         )
     if sensitive_claims["triggered_claim_ids"]:
         return RuntimeProfileSelection(
-            selected_profile=sensitive_profile,
+            selected_profile=policy.sensitive_profile,
             reason="claim metadata requires audit profile",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
@@ -272,15 +385,15 @@ def select_runtime_profile(
             triggered_features=sensitive_claims["triggered_features"],
             triggered_metadata=sensitive_claims["triggered_metadata"],
         )
-    if risk_level is RiskLevel.LOW and action is ControlAction.ACCEPT:
+    if risk_level.value in policy.low_risk_levels and action.value in policy.low_risk_actions:
         return RuntimeProfileSelection(
-            selected_profile=low_risk_profile,
+            selected_profile=policy.low_risk_profile,
             reason="low diagnostic risk and no sensitive claim metadata",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
         )
     return RuntimeProfileSelection(
-        selected_profile=default_profile,
+        selected_profile=policy.default_profile,
         reason=f"default profile for diagnostic risk level {risk_level.value}",
         diagnostic_risk_level=risk_level.value,
         diagnostic_action=action.value,
@@ -367,6 +480,38 @@ def _validate_profile_names(*names: str) -> None:
 
 def _normalize_profile_name(name: str) -> str:
     return str(name).strip().lower().replace("-", "_")
+
+
+def _risk_level_values(values: Sequence[Any], *, field_name: str) -> tuple[str, ...]:
+    normalized = []
+    for value in _as_sequence(values):
+        try:
+            normalized.append(RiskLevel(str(value)).value)
+        except ValueError as exc:
+            choices = ", ".join(level.value for level in RiskLevel)
+            raise ValueError(f"{field_name} must contain only: {choices}") from exc
+    return tuple(dict.fromkeys(normalized))
+
+
+def _control_action_values(values: Sequence[Any], *, field_name: str) -> tuple[str, ...]:
+    normalized = []
+    for value in _as_sequence(values):
+        try:
+            normalized.append(ControlAction(str(value)).value)
+        except ValueError as exc:
+            choices = ", ".join(action.value for action in ControlAction)
+            raise ValueError(f"{field_name} must contain only: {choices}") from exc
+    return tuple(dict.fromkeys(normalized))
+
+
+def _non_empty_string_tuple(values: Sequence[Any], *, field_name: str) -> tuple[str, ...]:
+    normalized = []
+    for value in _as_sequence(values):
+        item = str(value).strip()
+        if not item:
+            raise ValueError(f"{field_name} entries must be non-empty strings")
+        normalized.append(item)
+    return tuple(dict.fromkeys(normalized))
 
 
 def _string_sequence_mapping(value: Mapping[str, Sequence[str]]) -> dict[str, tuple[str, ...]]:

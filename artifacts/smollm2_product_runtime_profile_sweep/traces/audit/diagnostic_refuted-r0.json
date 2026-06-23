@@ -158,10 +158,10 @@
               ],
               "router_verifier": "RoutedVerifier",
               "selected_route": "structured_qa",
-              "selected_route_duration_seconds": 2.0728912204504013e-05,
+              "selected_route_duration_seconds": 2.6616966351866722e-05,
               "selected_verifier": "InMemoryVerifier",
               "skipped_routes": [],
-              "total_duration_seconds": 2.0728912204504013e-05
+              "total_duration_seconds": 2.6616966351866722e-05
             },
             "status": "supported"
           },
@@ -186,10 +186,10 @@
               ],
               "router_verifier": "RoutedVerifier",
               "selected_route": "structured_qa",
-              "selected_route_duration_seconds": 1.7347047105431557e-05,
+              "selected_route_duration_seconds": 1.8442049622535706e-05,
               "selected_verifier": "InMemoryVerifier",
               "skipped_routes": [],
-              "total_duration_seconds": 1.7347047105431557e-05
+              "total_duration_seconds": 1.8442049622535706e-05
             },
             "status": "refuted"
           }
@@ -669,45 +669,45 @@
         "structured_qa": {
           "attempted_route_count_observations": 2,
           "duration_observations": 2,
-          "max_duration_seconds": 2.0728912204504013e-05,
+          "max_duration_seconds": 2.6616966351866722e-05,
           "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 1.9037979654967785e-05,
+          "mean_duration_seconds": 2.2529507987201214e-05,
           "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 1.9037979654967785e-05,
-          "p95_duration_seconds": 2.055981894955039e-05,
-          "p95_selected_route_duration_seconds": 2.055981894955039e-05,
-          "p99_duration_seconds": 2.069509355351329e-05,
-          "p99_selected_route_duration_seconds": 2.069509355351329e-05,
+          "mean_selected_route_duration_seconds": 2.2529507987201214e-05,
+          "p95_duration_seconds": 2.620822051540017e-05,
+          "p95_selected_route_duration_seconds": 2.620822051540017e-05,
+          "p99_duration_seconds": 2.6535217184573412e-05,
+          "p99_selected_route_duration_seconds": 2.6535217184573412e-05,
           "retrieval_hit_count": 0,
           "retrieval_use_rate": 0.0,
           "routed_total": 2,
           "selected_route_duration_observations": 2,
           "total": 2,
           "total_attempted_route_count": 2.0,
-          "total_duration_seconds": 3.807595930993557e-05,
-          "total_selected_route_duration_seconds": 3.807595930993557e-05,
+          "total_duration_seconds": 4.505901597440243e-05,
+          "total_selected_route_duration_seconds": 4.505901597440243e-05,
           "unrouted_total": 0,
           "used_retrieval_count": 0
         }
       },
       "duration_observations": 2,
-      "max_duration_seconds": 2.0728912204504013e-05,
+      "max_duration_seconds": 2.6616966351866722e-05,
       "mean_attempted_route_count": 1.0,
-      "mean_duration_seconds": 1.9037979654967785e-05,
+      "mean_duration_seconds": 2.2529507987201214e-05,
       "mean_retrieval_hits": 0.0,
-      "mean_selected_route_duration_seconds": 1.9037979654967785e-05,
-      "p95_duration_seconds": 2.055981894955039e-05,
-      "p95_selected_route_duration_seconds": 2.055981894955039e-05,
-      "p99_duration_seconds": 2.069509355351329e-05,
-      "p99_selected_route_duration_seconds": 2.069509355351329e-05,
+      "mean_selected_route_duration_seconds": 2.2529507987201214e-05,
+      "p95_duration_seconds": 2.620822051540017e-05,
+      "p95_selected_route_duration_seconds": 2.620822051540017e-05,
+      "p99_duration_seconds": 2.6535217184573412e-05,
+      "p99_selected_route_duration_seconds": 2.6535217184573412e-05,
       "retrieval_hit_count": 0,
       "retrieval_use_rate": 0.0,
       "routed_total": 2,
       "selected_route_duration_observations": 2,
       "total": 2,
       "total_attempted_route_count": 2.0,
-      "total_duration_seconds": 3.807595930993557e-05,
-      "total_selected_route_duration_seconds": 3.807595930993557e-05,
+      "total_duration_seconds": 4.505901597440243e-05,
+      "total_selected_route_duration_seconds": 4.505901597440243e-05,
       "unrouted_total": 0,
       "used_retrieval_count": 0
     },
@@ -718,8 +718,8 @@
           "limit_type": "max",
           "metric": "p99_route_duration_seconds",
           "passed": true,
-          "raw_value": "2.069509355351329e-05",
-          "value": 2.069509355351329e-05
+          "raw_value": "2.6535217184573412e-05",
+          "value": 2.6535217184573412e-05
         },
         {
           "limit": 1.1,
@@ -741,7 +741,7 @@
       "enabled": true,
       "failures": [],
       "metrics": {
-        "accounted_seconds": 0.0004758258583024144,
+        "accounted_seconds": 0.0005613601533696055,
         "cache_hit_rate": 0.0,
         "cache_summary": {
           "aggregate": {
@@ -763,16 +763,16 @@
           "total_caches": 1
         },
         "has_runtime_trace": true,
-        "max_route_duration_seconds": 2.0728912204504013e-05,
+        "max_route_duration_seconds": 2.6616966351866722e-05,
         "mean_attempted_route_count": 1.0,
         "mean_retrieval_hits": 0.0,
-        "mean_route_duration_seconds": 1.9037979654967785e-05,
+        "mean_route_duration_seconds": 2.2529507987201214e-05,
         "measured_phases": 5.0,
         "named_cache_hit_rates": {
           "verifier": 0.0
         },
-        "p95_route_duration_seconds": 2.055981894955039e-05,
-        "p99_route_duration_seconds": 2.069509355351329e-05,
+        "p95_route_duration_seconds": 2.620822051540017e-05,
+        "p99_route_duration_seconds": 2.6535217184573412e-05,
         "phase_counts": {
           "action_execution": 1,
           "action_planning": 1,
@@ -781,71 +781,71 @@
           "retrieval_evidence_collection": 1
         },
         "phase_p95_seconds": {
-          "action_execution": 1.5176949091255665e-05,
-          "action_planning": 8.684396743774414e-05,
-          "initial_risk_decision": 6.377801764756441e-05,
-          "initial_verification": 0.0002325759269297123,
-          "retrieval_evidence_collection": 7.74509971961379e-05
+          "action_execution": 1.8946011550724506e-05,
+          "action_planning": 9.586301166564226e-05,
+          "initial_risk_decision": 7.362395990639925e-05,
+          "initial_verification": 0.0002912800991907716,
+          "retrieval_evidence_collection": 8.164707105606794e-05
         },
         "phase_p99_seconds": {
-          "action_execution": 1.5176949091255665e-05,
-          "action_planning": 8.684396743774414e-05,
-          "initial_risk_decision": 6.377801764756441e-05,
-          "initial_verification": 0.0002325759269297123,
-          "retrieval_evidence_collection": 7.74509971961379e-05
+          "action_execution": 1.8946011550724506e-05,
+          "action_planning": 9.586301166564226e-05,
+          "initial_risk_decision": 7.362395990639925e-05,
+          "initial_verification": 0.0002912800991907716,
+          "retrieval_evidence_collection": 8.164707105606794e-05
         },
         "phase_seconds": {
-          "action_execution": 1.5176949091255665e-05,
-          "action_planning": 8.684396743774414e-05,
-          "initial_risk_decision": 6.377801764756441e-05,
-          "initial_verification": 0.0002325759269297123,
-          "retrieval_evidence_collection": 7.74509971961379e-05
+          "action_execution": 1.8946011550724506e-05,
+          "action_planning": 9.586301166564226e-05,
+          "initial_risk_decision": 7.362395990639925e-05,
+          "initial_verification": 0.0002912800991907716,
+          "retrieval_evidence_collection": 8.164707105606794e-05
         },
         "phase_stats": {
           "action_execution": {
             "count": 1,
-            "max_seconds": 1.5176949091255665e-05,
-            "mean_seconds": 1.5176949091255665e-05,
-            "min_seconds": 1.5176949091255665e-05,
-            "p95_seconds": 1.5176949091255665e-05,
-            "p99_seconds": 1.5176949091255665e-05,
-            "total_seconds": 1.5176949091255665e-05
+            "max_seconds": 1.8946011550724506e-05,
+            "mean_seconds": 1.8946011550724506e-05,
+            "min_seconds": 1.8946011550724506e-05,
+            "p95_seconds": 1.8946011550724506e-05,
+            "p99_seconds": 1.8946011550724506e-05,
+            "total_seconds": 1.8946011550724506e-05
           },
           "action_planning": {
             "count": 1,
-            "max_seconds": 8.684396743774414e-05,
-            "mean_seconds": 8.684396743774414e-05,
-            "min_seconds": 8.684396743774414e-05,
-            "p95_seconds": 8.684396743774414e-05,
-            "p99_seconds": 8.684396743774414e-05,
-            "total_seconds": 8.684396743774414e-05
+            "max_seconds": 9.586301166564226e-05,
+            "mean_seconds": 9.586301166564226e-05,
+            "min_seconds": 9.586301166564226e-05,
+            "p95_seconds": 9.586301166564226e-05,
+            "p99_seconds": 9.586301166564226e-05,
+            "total_seconds": 9.586301166564226e-05
           },
           "initial_risk_decision": {
             "count": 1,
-            "max_seconds": 6.377801764756441e-05,
-            "mean_seconds": 6.377801764756441e-05,
-            "min_seconds": 6.377801764756441e-05,
-            "p95_seconds": 6.377801764756441e-05,
-            "p99_seconds": 6.377801764756441e-05,
-            "total_seconds": 6.377801764756441e-05
+            "max_seconds": 7.362395990639925e-05,
+            "mean_seconds": 7.362395990639925e-05,
+            "min_seconds": 7.362395990639925e-05,
+            "p95_seconds": 7.362395990639925e-05,
+            "p99_seconds": 7.362395990639925e-05,
+            "total_seconds": 7.362395990639925e-05
           },
           "initial_verification": {
             "count": 1,
-            "max_seconds": 0.0002325759269297123,
-            "mean_seconds": 0.0002325759269297123,
-            "min_seconds": 0.0002325759269297123,
-            "p95_seconds": 0.0002325759269297123,
-            "p99_seconds": 0.0002325759269297123,
-            "total_seconds": 0.0002325759269297123
+            "max_seconds": 0.0002912800991907716,
+            "mean_seconds": 0.0002912800991907716,
+            "min_seconds": 0.0002912800991907716,
+            "p95_seconds": 0.0002912800991907716,
+            "p99_seconds": 0.0002912800991907716,
+            "total_seconds": 0.0002912800991907716
           },
           "retrieval_evidence_collection": {
             "count": 1,
-            "max_seconds": 7.74509971961379e-05,
-            "mean_seconds": 7.74509971961379e-05,
-            "min_seconds": 7.74509971961379e-05,
-            "p95_seconds": 7.74509971961379e-05,
-            "p99_seconds": 7.74509971961379e-05,
-            "total_seconds": 7.74509971961379e-05
+            "max_seconds": 8.164707105606794e-05,
+            "mean_seconds": 8.164707105606794e-05,
+            "min_seconds": 8.164707105606794e-05,
+            "p95_seconds": 8.164707105606794e-05,
+            "p99_seconds": 8.164707105606794e-05,
+            "total_seconds": 8.164707105606794e-05
           }
         },
         "retrieval_hit_count": 0.0,
@@ -856,54 +856,54 @@
             "structured_qa": {
               "attempted_route_count_observations": 2,
               "duration_observations": 2,
-              "max_duration_seconds": 2.0728912204504013e-05,
+              "max_duration_seconds": 2.6616966351866722e-05,
               "mean_attempted_route_count": 1.0,
-              "mean_duration_seconds": 1.9037979654967785e-05,
+              "mean_duration_seconds": 2.2529507987201214e-05,
               "mean_retrieval_hits": 0.0,
-              "mean_selected_route_duration_seconds": 1.9037979654967785e-05,
-              "p95_duration_seconds": 2.055981894955039e-05,
-              "p95_selected_route_duration_seconds": 2.055981894955039e-05,
-              "p99_duration_seconds": 2.069509355351329e-05,
-              "p99_selected_route_duration_seconds": 2.069509355351329e-05,
+              "mean_selected_route_duration_seconds": 2.2529507987201214e-05,
+              "p95_duration_seconds": 2.620822051540017e-05,
+              "p95_selected_route_duration_seconds": 2.620822051540017e-05,
+              "p99_duration_seconds": 2.6535217184573412e-05,
+              "p99_selected_route_duration_seconds": 2.6535217184573412e-05,
               "retrieval_hit_count": 0,
               "retrieval_use_rate": 0.0,
               "routed_total": 2,
               "selected_route_duration_observations": 2,
               "total": 2,
               "total_attempted_route_count": 2.0,
-              "total_duration_seconds": 3.807595930993557e-05,
-              "total_selected_route_duration_seconds": 3.807595930993557e-05,
+              "total_duration_seconds": 4.505901597440243e-05,
+              "total_selected_route_duration_seconds": 4.505901597440243e-05,
               "unrouted_total": 0,
               "used_retrieval_count": 0
             }
           },
           "duration_observations": 2,
-          "max_duration_seconds": 2.0728912204504013e-05,
+          "max_duration_seconds": 2.6616966351866722e-05,
           "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 1.9037979654967785e-05,
+          "mean_duration_seconds": 2.2529507987201214e-05,
           "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 1.9037979654967785e-05,
-          "p95_duration_seconds": 2.055981894955039e-05,
-          "p95_selected_route_duration_seconds": 2.055981894955039e-05,
-          "p99_duration_seconds": 2.069509355351329e-05,
-          "p99_selected_route_duration_seconds": 2.069509355351329e-05,
+          "mean_selected_route_duration_seconds": 2.2529507987201214e-05,
+          "p95_duration_seconds": 2.620822051540017e-05,
+          "p95_selected_route_duration_seconds": 2.620822051540017e-05,
+          "p99_duration_seconds": 2.6535217184573412e-05,
+          "p99_selected_route_duration_seconds": 2.6535217184573412e-05,
           "retrieval_hit_count": 0,
           "retrieval_use_rate": 0.0,
           "routed_total": 2,
           "selected_route_duration_observations": 2,
           "total": 2,
           "total_attempted_route_count": 2.0,
-          "total_duration_seconds": 3.807595930993557e-05,
-          "total_selected_route_duration_seconds": 3.807595930993557e-05,
+          "total_duration_seconds": 4.505901597440243e-05,
+          "total_selected_route_duration_seconds": 4.505901597440243e-05,
           "unrouted_total": 0,
           "used_retrieval_count": 0
         },
         "slowest_phase": {
           "name": "initial_verification",
-          "seconds": 0.0002325759269297123
+          "seconds": 0.0002912800991907716
         },
-        "total_seconds": 0.0005065079312771559,
-        "unaccounted_seconds": 3.068207297474146e-05,
+        "total_seconds": 0.0005944980075582862,
+        "unaccounted_seconds": 3.313785418868065e-05,
         "verification_skip_rate": 0.0,
         "verification_stage_enabled": false,
         "verification_stage_skipped": false,
@@ -1020,21 +1020,21 @@
           "skipped": false
         },
         "name": "initial_verification",
-        "seconds": 0.0002325759269297123
+        "seconds": 0.0002912800991907716
       },
       {
         "metadata": {
           "verification_results": 2
         },
         "name": "initial_risk_decision",
-        "seconds": 6.377801764756441e-05
+        "seconds": 7.362395990639925e-05
       },
       {
         "metadata": {
           "n_actions": 1
         },
         "name": "action_planning",
-        "seconds": 8.684396743774414e-05
+        "seconds": 9.586301166564226e-05
       },
       {
         "metadata": {
@@ -1042,7 +1042,7 @@
           "n_results": 1
         },
         "name": "action_execution",
-        "seconds": 1.5176949091255665e-05
+        "seconds": 1.8946011550724506e-05
       },
       {
         "metadata": {
@@ -1050,11 +1050,11 @@
           "n_results": 1
         },
         "name": "retrieval_evidence_collection",
-        "seconds": 7.74509971961379e-05
+        "seconds": 8.164707105606794e-05
       }
     ],
     "summary": {
-      "accounted_seconds": 0.0004758258583024144,
+      "accounted_seconds": 0.0005613601533696055,
       "measured_phases": 5,
       "phase_counts": {
         "action_execution": 1,
@@ -1064,81 +1064,81 @@
         "retrieval_evidence_collection": 1
       },
       "phase_p95_seconds": {
-        "action_execution": 1.5176949091255665e-05,
-        "action_planning": 8.684396743774414e-05,
-        "initial_risk_decision": 6.377801764756441e-05,
-        "initial_verification": 0.0002325759269297123,
-        "retrieval_evidence_collection": 7.74509971961379e-05
+        "action_execution": 1.8946011550724506e-05,
+        "action_planning": 9.586301166564226e-05,
+        "initial_risk_decision": 7.362395990639925e-05,
+        "initial_verification": 0.0002912800991907716,
+        "retrieval_evidence_collection": 8.164707105606794e-05
       },
       "phase_p99_seconds": {
-        "action_execution": 1.5176949091255665e-05,
-        "action_planning": 8.684396743774414e-05,
-        "initial_risk_decision": 6.377801764756441e-05,
-        "initial_verification": 0.0002325759269297123,
-        "retrieval_evidence_collection": 7.74509971961379e-05
+        "action_execution": 1.8946011550724506e-05,
+        "action_planning": 9.586301166564226e-05,
+        "initial_risk_decision": 7.362395990639925e-05,
+        "initial_verification": 0.0002912800991907716,
+        "retrieval_evidence_collection": 8.164707105606794e-05
       },
       "phase_seconds": {
-        "action_execution": 1.5176949091255665e-05,
-        "action_planning": 8.684396743774414e-05,
-        "initial_risk_decision": 6.377801764756441e-05,
-        "initial_verification": 0.0002325759269297123,
-        "retrieval_evidence_collection": 7.74509971961379e-05
+        "action_execution": 1.8946011550724506e-05,
+        "action_planning": 9.586301166564226e-05,
+        "initial_risk_decision": 7.362395990639925e-05,
+        "initial_verification": 0.0002912800991907716,
+        "retrieval_evidence_collection": 8.164707105606794e-05
       },
       "phase_stats": {
         "action_execution": {
           "count": 1,
-          "max_seconds": 1.5176949091255665e-05,
-          "mean_seconds": 1.5176949091255665e-05,
-          "min_seconds": 1.5176949091255665e-05,
-          "p95_seconds": 1.5176949091255665e-05,
-          "p99_seconds": 1.5176949091255665e-05,
-          "total_seconds": 1.5176949091255665e-05
+          "max_seconds": 1.8946011550724506e-05,
+          "mean_seconds": 1.8946011550724506e-05,
+          "min_seconds": 1.8946011550724506e-05,
+          "p95_seconds": 1.8946011550724506e-05,
+          "p99_seconds": 1.8946011550724506e-05,
+          "total_seconds": 1.8946011550724506e-05
         },
         "action_planning": {
           "count": 1,
-          "max_seconds": 8.684396743774414e-05,
-          "mean_seconds": 8.684396743774414e-05,
-          "min_seconds": 8.684396743774414e-05,
-          "p95_seconds": 8.684396743774414e-05,
-          "p99_seconds": 8.684396743774414e-05,
-          "total_seconds": 8.684396743774414e-05
+          "max_seconds": 9.586301166564226e-05,
+          "mean_seconds": 9.586301166564226e-05,
+          "min_seconds": 9.586301166564226e-05,
+          "p95_seconds": 9.586301166564226e-05,
+          "p99_seconds": 9.586301166564226e-05,
+          "total_seconds": 9.586301166564226e-05
         },
         "initial_risk_decision": {
           "count": 1,
-          "max_seconds": 6.377801764756441e-05,
-          "mean_seconds": 6.377801764756441e-05,
-          "min_seconds": 6.377801764756441e-05,
-          "p95_seconds": 6.377801764756441e-05,
-          "p99_seconds": 6.377801764756441e-05,
-          "total_seconds": 6.377801764756441e-05
+          "max_seconds": 7.362395990639925e-05,
+          "mean_seconds": 7.362395990639925e-05,
+          "min_seconds": 7.362395990639925e-05,
+          "p95_seconds": 7.362395990639925e-05,
+          "p99_seconds": 7.362395990639925e-05,
+          "total_seconds": 7.362395990639925e-05
         },
         "initial_verification": {
           "count": 1,
-          "max_seconds": 0.0002325759269297123,
-          "mean_seconds": 0.0002325759269297123,
-          "min_seconds": 0.0002325759269297123,
-          "p95_seconds": 0.0002325759269297123,
-          "p99_seconds": 0.0002325759269297123,
-          "total_seconds": 0.0002325759269297123
+          "max_seconds": 0.0002912800991907716,
+          "mean_seconds": 0.0002912800991907716,
+          "min_seconds": 0.0002912800991907716,
+          "p95_seconds": 0.0002912800991907716,
+          "p99_seconds": 0.0002912800991907716,
+          "total_seconds": 0.0002912800991907716
         },
         "retrieval_evidence_collection": {
           "count": 1,
-          "max_seconds": 7.74509971961379e-05,
-          "mean_seconds": 7.74509971961379e-05,
-          "min_seconds": 7.74509971961379e-05,
-          "p95_seconds": 7.74509971961379e-05,
-          "p99_seconds": 7.74509971961379e-05,
-          "total_seconds": 7.74509971961379e-05
+          "max_seconds": 8.164707105606794e-05,
+          "mean_seconds": 8.164707105606794e-05,
+          "min_seconds": 8.164707105606794e-05,
+          "p95_seconds": 8.164707105606794e-05,
+          "p99_seconds": 8.164707105606794e-05,
+          "total_seconds": 8.164707105606794e-05
         }
       },
       "slowest_phase": {
         "name": "initial_verification",
-        "seconds": 0.0002325759269297123
+        "seconds": 0.0002912800991907716
       },
-      "total_seconds": 0.0005065079312771559,
-      "unaccounted_seconds": 3.068207297474146e-05
+      "total_seconds": 0.0005944980075582862,
+      "unaccounted_seconds": 3.313785418868065e-05
     },
-    "total_seconds": 0.0005065079312771559
+    "total_seconds": 0.0005944980075582862
   },
   "verification_results": [
     {
@@ -1162,10 +1162,10 @@
         ],
         "router_verifier": "RoutedVerifier",
         "selected_route": "structured_qa",
-        "selected_route_duration_seconds": 2.0728912204504013e-05,
+        "selected_route_duration_seconds": 2.6616966351866722e-05,
         "selected_verifier": "InMemoryVerifier",
         "skipped_routes": [],
-        "total_duration_seconds": 2.0728912204504013e-05
+        "total_duration_seconds": 2.6616966351866722e-05
       },
       "status": "supported"
     },
@@ -1190,10 +1190,10 @@
         ],
         "router_verifier": "RoutedVerifier",
         "selected_route": "structured_qa",
-        "selected_route_duration_seconds": 1.7347047105431557e-05,
+        "selected_route_duration_seconds": 1.8442049622535706e-05,
         "selected_verifier": "InMemoryVerifier",
         "skipped_routes": [],
-        "total_duration_seconds": 1.7347047105431557e-05
+        "total_duration_seconds": 1.8442049622535706e-05
       },
       "status": "refuted"
     }

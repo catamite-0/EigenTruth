@@ -9081,6 +9081,14 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     registry_module = importlib.import_module("eigentruth.registry")
     output_dir = tmp_path / "profile-sweep"
     registry_path = tmp_path / "registry.json"
+    selector_policy_path = tmp_path / "selector-policy.json"
+    selector_policy_path.write_text(
+        json.dumps({
+            "sensitive_claim_feature_flags": ["has_citation"],
+            "sensitive_claim_metadata_keys": ["requires_review"],
+        }),
+        encoding="utf-8",
+    )
 
     payload = module.run_product_runtime_profile_sweep(
         module.ProductRuntimeProfileSweepConfig(
@@ -9095,6 +9103,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
                 ),
             ),
             repeats=1,
+            runtime_profile_selector_policy_path=selector_policy_path,
             registry_path=registry_path,
             name="demo-profile-sweep",
             version="0.1",
@@ -9117,6 +9126,8 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert payload["status"] == "observed"
     assert payload["config"]["max_workers"] == 2
     assert payload["config"]["compact_json"] is True
+    assert payload["config"]["runtime_profile_selector_policy_path"] == str(selector_policy_path)
+    assert payload["paths"]["runtime_profile_selector_policy"] == str(selector_policy_path)
     assert payload["execution"]["max_workers"] == 2
     assert payload["decision"]["recommended_profile"] in {"latency", "auto", "audit"}
     assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "auto", "audit"}
@@ -9132,6 +9143,9 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     )
     assert auto_trace["metadata"]["runtime_profile"] == "latency"
     assert auto_trace["metadata"]["runtime_profile_selection"]["selected_profile"] == "latency"
+    assert auto_trace["metadata"]["runtime_profile_selector_policy"]["sensitive_claim_feature_flags"] == [
+        "has_citation"
+    ]
     assert payload["profiles"][1]["runtime_profile_selection"]["counts_by_selected_profile"] == {"latency": 1}
     assert audit_trace["metadata"]["runtime_profile"] == "audit"
     assert "initial_verification" not in {
@@ -9155,6 +9169,7 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert record.metadata["status"] == "observed"
     assert record.metadata["profile_count"] == 3
     assert record.metadata["compact_json"] is True
+    assert record.metadata["runtime_profile_selector_policy"] == str(selector_policy_path)
 
 
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):

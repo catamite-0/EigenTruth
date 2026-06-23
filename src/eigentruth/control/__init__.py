@@ -41,6 +41,7 @@ from eigentruth.control.runtime_profiles import (
     RUNTIME_PROFILES,
     RuntimeProfile,
     RuntimeProfileSelection,
+    RuntimeProfileSelectorPolicy,
     get_runtime_profile,
     select_runtime_profile,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "ProductRuntimeBudgetPolicy",
     "RuntimePhaseTiming",
     "RuntimeProfile",
+    "RuntimeProfileSelectorPolicy",
     "RuntimeProfileSelection",
     "RuntimeTrace",
     "RiskController",

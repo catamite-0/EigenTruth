@@ -34,6 +34,7 @@ from eigentruth.control import (
     RiskController,
     RuntimeProfile,
     RuntimeProfileSelection,
+    RuntimeProfileSelectorPolicy,
     StagedVerificationPolicy,
     evaluate_product_runtime_budget,
     get_runtime_profile,
@@ -316,6 +317,7 @@ def runtime_profile_metadata(
     profile: RuntimeProfile | None,
     *,
     selection: RuntimeProfileSelection | None = None,
+    selector_policy: RuntimeProfileSelectorPolicy | None = None,
     requested: str | None = None,
 ) -> dict[str, Any]:
     """Return trace metadata for the selected runtime profile."""
@@ -332,6 +334,9 @@ def runtime_profile_metadata(
     if selection is not None:
         metadata["runtime_profile_requested"] = requested
         metadata["runtime_profile_selection"] = selection.to_dict()
+        metadata["runtime_profile_selector_policy"] = (
+            None if selector_policy is None else selector_policy.to_dict()
+        )
     return metadata
 
 
@@ -376,15 +381,27 @@ def resolve_runtime_profile(
     controller: RiskController,
     diagnostics: dict[str, float],
     claims: tuple[Any, ...],
+    selector_policy: RuntimeProfileSelectorPolicy | None = None,
 ) -> tuple[RuntimeProfile | None, RuntimeProfileSelection | None]:
     """Resolve an explicit or automatic runtime profile request."""
     if requested_profile == "auto":
         selection = select_runtime_profile(
             controller.decide(diagnostics),
             claims=claims,
+            selector_policy=selector_policy,
         )
         return get_runtime_profile(selection.selected_profile), selection
     return get_runtime_profile(requested_profile), None
+
+
+def load_runtime_profile_selector_policy(path: str | None) -> RuntimeProfileSelectorPolicy | None:
+    """Load an optional runtime-profile selector policy from JSON."""
+    if path is None:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"runtime profile selector policy must be a JSON object: {path}")
+    return RuntimeProfileSelectorPolicy.from_mapping(payload)
 
 
 def build_verifier(
@@ -503,11 +520,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     claims = extract_claims(args.text)
     controller = RiskController(artifact)
+    selector_policy = load_runtime_profile_selector_policy(
+        getattr(args, "runtime_profile_selector_policy", None)
+    )
     runtime_profile, runtime_profile_selection = resolve_runtime_profile(
         args.runtime_profile,
         controller=controller,
         diagnostics=resolved_diagnostics,
         claims=claims,
+        selector_policy=selector_policy,
     )
     stage_policy = stage_policy_from_runtime_profile(
         runtime_profile,
@@ -566,6 +587,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             **runtime_profile_metadata(
                 runtime_profile,
                 selection=runtime_profile_selection,
+                selector_policy=selector_policy,
                 requested=args.runtime_profile,
             ),
             "staged_verification_enabled": stage_policy is not None,
@@ -621,6 +643,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 **runtime_profile_metadata(
                     runtime_profile,
                     selection=runtime_profile_selection,
+                    selector_policy=selector_policy,
                     requested=args.runtime_profile,
                 ),
                 "staged_verification_enabled": stage_policy is not None,
@@ -658,6 +681,8 @@ def main() -> None:
                         help="optional calculator context JSON object, e.g. {'calculation': {...}}")
     parser.add_argument("--runtime-profile", default=None, choices=(*RUNTIME_PROFILE_NAMES, "auto"),
                         help="optional control-plane profile: latency, balanced, audit, or auto")
+    parser.add_argument("--runtime-profile-selector-policy", default=None,
+                        help="optional RuntimeProfileSelectorPolicy JSON path for --runtime-profile auto")
     parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
                         default=None,
                         help="force staged verification even without a runtime profile")

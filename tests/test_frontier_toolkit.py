@@ -47,6 +47,7 @@ from eigentruth.control import (
     RiskLevel,
     RuntimeProfile,
     RuntimeProfileSelection,
+    RuntimeProfileSelectorPolicy,
     TimeoutActionExecutor,
     get_runtime_profile,
     select_runtime_profile,
@@ -196,6 +197,51 @@ def test_select_runtime_profile_routes_by_risk_and_claim_metadata():
     assert sensitive_selection.triggered_features == {"calc": ("has_number",)}
     assert medium_selection.selected_profile == "balanced"
     assert high_selection.selected_profile == "audit"
+
+
+def test_runtime_profile_selector_policy_roundtrip_and_routes():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    policy = RuntimeProfileSelectorPolicy.from_mapping({
+        "sensitive_profile": "balanced",
+        "sensitive_claim_feature_flags": ["has_citation"],
+        "sensitive_claim_metadata_keys": ["requires_review"],
+        "high_risk_actions": ["abstain"],
+    })
+
+    selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "2 + 2 = 4.",
+                claim_id="calc",
+                metadata={"features": {"has_number": True}},
+            ),
+        ),
+        selector_policy=policy,
+    )
+    citation_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "A cited claim.",
+                claim_id="cite",
+                metadata={"features": {"has_citation": True}},
+            ),
+        ),
+        selector_policy=policy.to_dict(),
+    )
+
+    assert selection.selected_profile == "latency"
+    assert citation_selection.selected_profile == "balanced"
+    assert citation_selection.triggered_claim_ids == ("cite",)
+    assert policy.to_dict()["sensitive_claim_feature_flags"] == ("has_citation",)
+    with pytest.raises(ValueError, match="high_risk_levels"):
+        RuntimeProfileSelectorPolicy(high_risk_levels=("bad",))
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():

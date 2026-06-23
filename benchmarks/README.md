@@ -2212,6 +2212,7 @@ path:
 python benchmarks/run_product_runtime_profile_sweep.py \
   --output-dir artifacts/product-runtime-profile-sweep \
   --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --runtime-profile-selector-policy artifacts/product-runtime-profile-sweep/runtime-profile-selector-policy.json \
   --slo-policy artifacts/product-runtime-profile-sweep/runtime-profile-slo-policy.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-profile-sweep \
@@ -2223,9 +2224,11 @@ The sweep runs deterministic calibrated-control demo scenarios, writes one trace
 per mode/scenario/repeat, builds a `run_product_runtime_baseline.py` report for
 each mode, records the actual selected runtime profile for `auto`, optionally
 applies a sweep-level `--slo-policy`, and ranks the non-blocked modes by request
-runtime and route cost. `--policy` still applies the `ProductRuntimeBudgetPolicy`
-to each trace in each per-mode baseline; `--slo-policy` applies aggregate gates
-such as `max_total_seconds_p95`, `max_mean_attempted_route_count`,
+runtime and route cost. `--runtime-profile-selector-policy` configures the
+request-time `auto` selector before each trace is emitted. `--policy` still
+applies the `ProductRuntimeBudgetPolicy` to each trace in each per-mode
+baseline; `--slo-policy` applies aggregate gates such as
+`max_total_seconds_p95`, `max_mean_attempted_route_count`,
 `min_verification_skip_rate_mean`, `max_verified_claim_count_mean`, and
 `min_auto_selected_profile_counts` to the profile row. This is the
 product-control counterpart to model-side cache/profile sweeps. Use the default
@@ -2246,9 +2249,12 @@ adds the profile SLO policy at
 `artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json`
 with `max_total_seconds_p95=0.05`, `max_verified_claim_count_mean=2.0`, and an
 auto selector distribution gate requiring one `latency`, `balanced`, and `audit`
-selection across the deterministic scenario set. The sweep recommends `auto`.
-Skipped staged-verification paths with no verifier route are counted as zero
-route cost for route-cost budget checks.
+selection across the deterministic scenario set. The auto selector itself is
+fixed by
+`artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-selector-policy.json`
+so routing thresholds can be tuned and audited separately from SLO gates. The
+sweep recommends `auto`. Skipped staged-verification paths with no verifier
+route are counted as zero route cost for route-cost budget checks.
 
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
