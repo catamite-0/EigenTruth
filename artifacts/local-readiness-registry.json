@@ -996,6 +996,36 @@
       "name": "smollm2-l20-readiness-inside-trigger-budget-derived-verification",
       "path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived_manifest_verification.json",
       "version": "0.8"
+    },
+    {
+      "artifact_type": "performance_baseline",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+        "recommended_batch_size": 8,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_cell": "layer_m12_batch_8_capture_outputs",
+        "recommended_layer": -12,
+        "recommended_max_workers": 1,
+        "runtime_recommendation": "artifacts/smollm2_l20_performance_baseline/runtime-recommendation.json",
+        "runtime_recommendation_status": "promote",
+        "status": "promote",
+        "workflow": "run_performance_baseline_workflow"
+      },
+      "name": "smollm2-l20-performance-baseline",
+      "path": "artifacts/smollm2_l20_performance_baseline/performance-baseline-workflow.json",
+      "version": "0.9"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l20-performance-baseline",
+        "manifest_path": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l20-performance-baseline-verification",
+      "path": "artifacts/smollm2_l20_performance_baseline/manifest-verification.json",
+      "version": "0.9"
     }
   ],
   "schema_version": 1

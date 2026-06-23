@@ -1990,6 +1990,17 @@ python benchmarks/run_performance_baseline_workflow.py \
   --fail-on-blocked
 ```
 
+Current registered SmolLM2 l20 performance baseline:
+`performance_baseline:smollm2-l20-performance-baseline:0.9` in
+`artifacts/local-readiness-registry.json`. It reuses the promoted real-model
+cache matrix at `artifacts/smollm2_l20_readiness_inside/cache-profile-matrix/`
+and the derived trigger-budget sweep at
+`artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/`. The runtime
+recommendation selects layer `-12`, batch size `8`, `truth_proj` AUROC `0.682`,
+cache-only replay `0.339s`, and the quality-balanced top-40% triggered
+`adaptive_selfcheck` budget with sample-count ratio `0.472` and
+`inside_generation` ratio `0.503` versus the full-sample reference.
+
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
 best AUROC quality signal, and explicit runtime gates. Its uncached forward gate

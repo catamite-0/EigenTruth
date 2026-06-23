@@ -1,0 +1,88 @@
+{
+  "artifacts": {
+    "inside_trigger_budget_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_sweep_derived/artifact-manifest.json",
+      "sha256": "038946c73042d6a38dca783f6730144e84f7ea79221259acaf312f686cac403b",
+      "size_bytes": 3290
+    },
+    "inside_trigger_budget_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json",
+      "sha256": "0a8bb401d76a90c32d38a71c2108aa1dae61bd7dbe7d0bfa38d63078223c6191",
+      "size_bytes": 11224
+    },
+    "matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+      "sha256": "bc86ef79176286c21eff478dc8b4f51f3ee30f916f7ba79fe84263bb3f441300",
+      "size_bytes": 1362
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l20_readiness_inside/cache-profile-matrix/cache-profile-matrix-report.json",
+      "sha256": "d93e6eabbbd55292342cc53413a5cdb3c57e6cad21bed9e0642c3a47d8447016",
+      "size_bytes": 12805
+    },
+    "performance_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "performance-baseline-workflow.json",
+      "sha256": "06a790d433e7d14886664ba8584e32c39b4e6446ffa2d6a592f3561a11cbe712",
+      "size_bytes": 12178
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "ca0bffeb1aab10394af9bf7509c8307a5d15169193c82818e5766c5a2c2c43c7",
+      "size_bytes": 9086
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_enabled": false,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_enabled": true,
+    "layers": [
+      -1
+    ],
+    "matrix_report_reused": true,
+    "model": "sshleifer/tiny-gpt2",
+    "offline": true,
+    "recommended_batch_size": 8,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cell": "layer_m12_batch_8_capture_outputs",
+    "recommended_layer": -12,
+    "recommended_max_workers": 1,
+    "runner": "run_performance_baseline_workflow",
+    "runtime_recommendation_status": "promote",
+    "status": "promote",
+    "worker_sweep_enabled": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}
