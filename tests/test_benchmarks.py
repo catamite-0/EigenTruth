@@ -7800,6 +7800,8 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
 
 def test_eval_truthfulqa_inside_seed_changes_by_inner_batch():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
+    stmt = module.Statement("Question?", "Answer.", 0)
+    other_stmt = module.Statement("Question?", "Other answer.", 0)
 
     seeds = {
         module._inside_seed(7, eval_batch_idx=0, inside_batch_idx=0),
@@ -7811,6 +7813,9 @@ def test_eval_truthfulqa_inside_seed_changes_by_inner_batch():
     assert module._inside_seed(7, eval_batch_idx=2, inside_batch_idx=3) == module._inside_seed(
         7, eval_batch_idx=2, inside_batch_idx=3
     )
+    assert module._inside_statement_seed(7, stmt) == module._inside_statement_seed(7, stmt)
+    assert module._inside_statement_seed(7, stmt) != module._inside_statement_seed(8, stmt)
+    assert module._inside_statement_seed(7, stmt) != module._inside_statement_seed(7, other_stmt)
 
 
 def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_path):

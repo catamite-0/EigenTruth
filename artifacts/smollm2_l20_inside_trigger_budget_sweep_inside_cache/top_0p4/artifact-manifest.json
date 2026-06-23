@@ -1,0 +1,102 @@
+{
+  "artifacts": {
+    "caches.eval_reps_cache": {
+      "exists": true,
+      "file_count": 21,
+      "kind": "directory",
+      "path": "../shared-caches/eval-reps-cache",
+      "sha256": "6552f5755a9a1b2ca705632fd18ff074d4adb457a066a7c6e6b67bd02ce33230",
+      "size_bytes": 9340912
+    },
+    "caches.inside_diagnostics_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../shared-caches/inside-diagnostics.json",
+      "sha256": "3a461b618727b06017e412eec6c972789525d3adf9af70abc11ef4b4099d6ca9",
+      "size_bytes": 25798
+    },
+    "caches.layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../shared-caches/layer-stats.pt",
+      "sha256": "a4dabb6652acb94aef4a24ca0025d5146dc0d99f6714f2c2d2bf2cde968119c7",
+      "size_bytes": 1349445
+    },
+    "caches.statement_encoding_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../shared-caches/statement-encodings.json",
+      "sha256": "606f37b99e2c8a5dc01771ed8d41c24a2529df4669f5b781417526a4b4c77b14",
+      "size_bytes": 65523
+    },
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-commands.json",
+      "sha256": "12f603a03e2a11108ec1469498c3ef06fbac2b71a05b6cbcfb671577b067b36d",
+      "size_bytes": 2055
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "inside-sampling-profile-comparison.json",
+      "sha256": "fb90cdd20e8ea3a8cbcf88b152f4723b1afc6e8e4c5f3fd3158dace500920b76",
+      "size_bytes": 2613
+    },
+    "profiles.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-adaptive_selfcheck.json",
+      "sha256": "311aedf0c912571c81c995a5edaa029da5b460163e017bb503f610e9cd61ab2d",
+      "size_bytes": 2002
+    },
+    "results.adaptive_selfcheck": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-adaptive_selfcheck.json",
+      "sha256": "1ae8cdf82d0fb00488713ed61d83eba10fabd539faf2ca02270c638a981f03eb",
+      "size_bytes": 20129
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 8,
+    "inside_min_samples": 2,
+    "inside_sample_step": 1,
+    "inside_samples": 3,
+    "inside_stability_delta": 0.05,
+    "inside_trigger_signal": "truth_proj",
+    "inside_trigger_threshold": null,
+    "inside_trigger_top_fraction": 0.4,
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "refresh_shared_caches": false,
+    "run_names": [
+      "adaptive_selfcheck"
+    ],
+    "runner": "run_inside_sampling_profile",
+    "shared_caches": {
+      "eval_reps_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/eval-reps-cache",
+      "inside_diagnostics_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/inside-diagnostics.json",
+      "layer_stats_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/layer-stats.pt",
+      "statement_encoding_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/statement-encodings.json"
+    }
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 1,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

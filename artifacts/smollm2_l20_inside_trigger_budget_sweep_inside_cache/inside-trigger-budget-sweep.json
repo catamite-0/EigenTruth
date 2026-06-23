@@ -1,0 +1,223 @@
+{
+  "artifact_manifest": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/artifact-manifest.json",
+  "budgets": {
+    "top_0p1": {
+      "artifact_manifest": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p1/artifact-manifest.json",
+      "budget": {
+        "kind": "top_fraction",
+        "value": 0.1
+      },
+      "caches": {
+        "eval_reps_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/eval-reps-cache",
+        "inside_diagnostics_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/inside-diagnostics.json",
+        "layer_stats_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/layer-stats.pt",
+        "statement_encoding_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/statement-encodings.json"
+      },
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p1/inside-sampling-profile-comparison.json",
+      "profile_output_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p1",
+      "recommendation": {
+        "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+        "recommended_run": "adaptive_selfcheck"
+      },
+      "sample_efficiency_gate": {
+        "baseline": "adaptive_selfcheck",
+        "checked_runs": [],
+        "failures": [],
+        "max_inside_generation_seconds_ratio": null,
+        "max_sample_ratios": {
+          "adaptive_selfcheck": 1.0
+        },
+        "passed": true
+      }
+    },
+    "top_0p25": {
+      "artifact_manifest": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p25/artifact-manifest.json",
+      "budget": {
+        "kind": "top_fraction",
+        "value": 0.25
+      },
+      "caches": {
+        "eval_reps_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/eval-reps-cache",
+        "inside_diagnostics_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/inside-diagnostics.json",
+        "layer_stats_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/layer-stats.pt",
+        "statement_encoding_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/statement-encodings.json"
+      },
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p25/inside-sampling-profile-comparison.json",
+      "profile_output_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p25",
+      "recommendation": {
+        "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+        "recommended_run": "adaptive_selfcheck"
+      },
+      "sample_efficiency_gate": {
+        "baseline": "adaptive_selfcheck",
+        "checked_runs": [],
+        "failures": [],
+        "max_inside_generation_seconds_ratio": null,
+        "max_sample_ratios": {
+          "adaptive_selfcheck": 1.0
+        },
+        "passed": true
+      }
+    },
+    "top_0p4": {
+      "artifact_manifest": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p4/artifact-manifest.json",
+      "budget": {
+        "kind": "top_fraction",
+        "value": 0.4
+      },
+      "caches": {
+        "eval_reps_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/eval-reps-cache",
+        "inside_diagnostics_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/inside-diagnostics.json",
+        "layer_stats_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/layer-stats.pt",
+        "statement_encoding_cache": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches/statement-encodings.json"
+      },
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p4/inside-sampling-profile-comparison.json",
+      "profile_output_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p4",
+      "recommendation": {
+        "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+        "recommended_run": "adaptive_selfcheck"
+      },
+      "sample_efficiency_gate": {
+        "baseline": "adaptive_selfcheck",
+        "checked_runs": [],
+        "failures": [],
+        "max_inside_generation_seconds_ratio": null,
+        "max_sample_ratios": {
+          "adaptive_selfcheck": 1.0
+        },
+        "passed": true
+      }
+    }
+  },
+  "config": {
+    "batch_size": 8,
+    "budgets": [
+      {
+        "id": "top_0p1",
+        "kind": "top_fraction",
+        "value": 0.1
+      },
+      {
+        "id": "top_0p25",
+        "kind": "top_fraction",
+        "value": 0.25
+      },
+      {
+        "id": "top_0p4",
+        "kind": "top_fraction",
+        "value": 0.4
+      }
+    ],
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 8,
+    "hidden_state_capture": "outputs",
+    "inside_batch_size": 1,
+    "inside_max_new_tokens": 4,
+    "inside_samples": 3,
+    "layer": -12,
+    "limit": 20,
+    "manifold_questions": 40,
+    "max_batch_tokens": 0,
+    "max_length": 64,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "output_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache",
+    "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+    "refresh_shared_caches": true,
+    "run_names": [
+      "adaptive_selfcheck"
+    ],
+    "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/shared-caches",
+    "trigger_signal": "truth_proj"
+  },
+  "dry_run": false,
+  "leaderboard": [
+    {
+      "budget_id": "top_0p1",
+      "budget_kind": "top_fraction",
+      "budget_value": 0.1,
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p1/inside-sampling-profile-comparison.json",
+      "inside_auroc": {
+        "inside_eigenscore": 0.4745098039215686,
+        "inside_embedding_entropy": 0.4876385336743393,
+        "inside_semantic_entropy": 0.4940323955669224
+      },
+      "inside_generation_seconds": 56.445432,
+      "inside_generation_seconds_ratio_to_budget_fixed": 1.0,
+      "inside_generation_seconds_ratio_to_reference": 0.12072270119220951,
+      "mean_samples_per_record": 0.35714285714285715,
+      "recommended_run": "adaptive_selfcheck",
+      "sample_count_ratio_to_budget_fixed": 1.0,
+      "sample_count_ratio_to_reference": 0.11904761904761904,
+      "sampled": 20,
+      "skipped_by_trigger": 134,
+      "total_generated_samples": 55
+    },
+    {
+      "budget_id": "top_0p25",
+      "budget_kind": "top_fraction",
+      "budget_value": 0.25,
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p25/inside-sampling-profile-comparison.json",
+      "inside_auroc": {
+        "inside_eigenscore": 0.46675191815856776,
+        "inside_embedding_entropy": 0.5139812446717817,
+        "inside_semantic_entropy": 0.5206308610400682
+      },
+      "inside_generation_seconds": 56.930407,
+      "inside_generation_seconds_ratio_to_budget_fixed": 1.0,
+      "inside_generation_seconds_ratio_to_reference": 0.12175994176130804,
+      "mean_samples_per_record": 0.7012987012987013,
+      "recommended_run": "adaptive_selfcheck",
+      "sample_count_ratio_to_budget_fixed": 1.0,
+      "sample_count_ratio_to_reference": 0.23376623376623376,
+      "sampled": 39,
+      "skipped_by_trigger": 115,
+      "total_generated_samples": 108
+    },
+    {
+      "budget_id": "top_0p4",
+      "budget_kind": "top_fraction",
+      "budget_value": 0.4,
+      "comparison_report": "artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/top_0p4/inside-sampling-profile-comparison.json",
+      "inside_auroc": {
+        "inside_eigenscore": 0.4782608695652174,
+        "inside_embedding_entropy": 0.5670076726342711,
+        "inside_semantic_entropy": 0.5703324808184144
+      },
+      "inside_generation_seconds": 120.439631,
+      "inside_generation_seconds_ratio_to_budget_fixed": 1.0,
+      "inside_generation_seconds_ratio_to_reference": 0.25759033228610906,
+      "mean_samples_per_record": 1.4155844155844155,
+      "recommended_run": "adaptive_selfcheck",
+      "sample_count_ratio_to_budget_fixed": 1.0,
+      "sample_count_ratio_to_reference": 0.47186147186147187,
+      "sampled": 77,
+      "skipped_by_trigger": 77,
+      "total_generated_samples": 218
+    }
+  ],
+  "quality_balanced_recommendation": {
+    "best_quality_value": 0.5703324808184144,
+    "budget_id": "top_0p4",
+    "cost_metric": "inside_generation_seconds_ratio_to_reference",
+    "cost_value": 0.25759033228610906,
+    "quality_metric": "inside_semantic_entropy",
+    "quality_tolerance": 0.02,
+    "quality_value": 0.5703324808184144,
+    "reason": "lowest_cost_within_inside_quality_tolerance",
+    "recommended_run": "adaptive_selfcheck"
+  },
+  "recommendation": {
+    "budget_id": "top_0p1",
+    "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+    "recommended_run": "adaptive_selfcheck"
+  },
+  "reference": {
+    "inside_generation_seconds": 467.562699,
+    "report_path": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+    "run": "fixed",
+    "total_generated_samples": 462
+  },
+  "schema_version": 1,
+  "workflow": "inside_trigger_budget_sweep"
+}

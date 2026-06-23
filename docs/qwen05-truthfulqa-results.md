@@ -710,6 +710,21 @@ generation. The recommendation remains unchanged: top-10% is the cost-first
 default, top-25% is the quality-balanced default, and the remaining bottleneck is
 sampled INSIDE generation rather than repeated base scoring.
 
+A diagnostics-cache rerun in
+`artifacts/smollm2_l20_inside_trigger_budget_sweep_inside_cache/` verifies the
+next performance layer: overlapping sampled INSIDE diagnostics can be reused
+across nested trigger budgets. This run uses only `adaptive_selfcheck` and a
+statement-stable diagnostics cache, so the reported `inside_generation` time is
+the incremental sweep execution cost after previous budget coverage, not the
+standalone cost of deploying that budget in isolation. Top-10% has no prior cache
+coverage, writes 20 diagnostics entries, and spends 56.445 seconds in
+`inside_generation`. Top-25% then sees 20 hits / 19 misses (`0.513` hit rate)
+and spends 56.930 seconds in `inside_generation` versus 119.916 seconds in the
+eval-reps-only shared-cache run. Top-40% sees 39 hits / 38 misses (`0.506` hit
+rate) and spends 120.440 seconds versus 246.352 seconds. Recursive manifest
+verification passes for the sweep and all three child manifests, including the
+mutable shared diagnostics cache after final manifest refresh.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because

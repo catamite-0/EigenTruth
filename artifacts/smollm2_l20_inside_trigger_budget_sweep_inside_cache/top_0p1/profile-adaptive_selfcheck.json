@@ -1,0 +1,90 @@
+{
+  "total_seconds": 194.513498,
+  "phases": {
+    "load_data": 6.854501,
+    "load_model": 6.779097,
+    "tokenize_statements": 0.045131,
+    "save_statement_encoding_cache": 0.013329,
+    "build_layer_stats": 84.717849,
+    "save_layer_stats_cache": 0.004823,
+    "init_eval_reps_cache_writer": 0.000464,
+    "load_inside_diagnostics_cache": 6e-05,
+    "forced_answer_forward": 39.283068,
+    "write_eval_reps_cache_batch": 0.051798,
+    "score_postprocess": 0.232933,
+    "read_inside_diagnostics_cache": 0.002885,
+    "inside_generation": 56.445432,
+    "write_inside_diagnostics_cache": 0.000225,
+    "save_eval_reps_cache": 0.003541,
+    "save_inside_diagnostics_cache": 0.000475,
+    "reporting": 0.068037,
+    "sweep_reporting": 4e-06
+  },
+  "summary": {
+    "bottleneck": "build_layer_stats",
+    "top_phases": [
+      {
+        "name": "build_layer_stats",
+        "seconds": 84.717849,
+        "share": 0.435537
+      },
+      {
+        "name": "inside_generation",
+        "seconds": 56.445432,
+        "share": 0.290188
+      },
+      {
+        "name": "forced_answer_forward",
+        "seconds": 39.283068,
+        "share": 0.201955
+      },
+      {
+        "name": "load_data",
+        "seconds": 6.854501,
+        "share": 0.035239
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.779097,
+        "share": 0.034852
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 13.633598,
+        "share": 0.070091
+      },
+      "tokenization": {
+        "seconds": 0.05846,
+        "share": 0.000301
+      },
+      "model_forward": {
+        "seconds": 180.446349,
+        "share": 0.92768
+      },
+      "cache_io": {
+        "seconds": 0.064271,
+        "share": 0.00033
+      },
+      "postprocess": {
+        "seconds": 0.300974,
+        "share": 0.001547
+      }
+    },
+    "throughput": {
+      "forced_answer_records_per_second": 3.920264,
+      "warmup_records_per_second": 3.576578,
+      "end_to_end_eval_records_per_second": 0.791719
+    },
+    "accounted_seconds": 194.503652,
+    "accounted_share": 0.999949,
+    "unaccounted_seconds": 0.009846
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 8,
+    "effective_batch_size": 8,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

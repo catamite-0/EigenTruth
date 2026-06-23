@@ -1,0 +1,84 @@
+{
+  "total_seconds": 135.448542,
+  "phases": {
+    "load_data": 7.649803,
+    "load_model": 6.960328,
+    "load_statement_encoding_cache": 0.007714,
+    "load_layer_stats_cache": 0.005838,
+    "load_eval_reps_cache": 0.000543,
+    "load_inside_diagnostics_cache": 0.000469,
+    "read_eval_reps_cache_batch": 0.063367,
+    "score_postprocess": 0.229831,
+    "read_inside_diagnostics_cache": 0.008286,
+    "inside_generation": 120.439631,
+    "write_inside_diagnostics_cache": 0.000409,
+    "save_inside_diagnostics_cache": 0.00123,
+    "reporting": 0.071133,
+    "sweep_reporting": 5e-06
+  },
+  "summary": {
+    "bottleneck": "inside_generation",
+    "top_phases": [
+      {
+        "name": "inside_generation",
+        "seconds": 120.439631,
+        "share": 0.889191
+      },
+      {
+        "name": "load_data",
+        "seconds": 7.649803,
+        "share": 0.056478
+      },
+      {
+        "name": "load_model",
+        "seconds": 6.960328,
+        "share": 0.051387
+      },
+      {
+        "name": "score_postprocess",
+        "seconds": 0.229831,
+        "share": 0.001697
+      },
+      {
+        "name": "reporting",
+        "seconds": 0.071133,
+        "share": 0.000525
+      }
+    ],
+    "groups": {
+      "startup": {
+        "seconds": 14.610131,
+        "share": 0.107865
+      },
+      "tokenization": {
+        "seconds": 0.007714,
+        "share": 5.7e-05
+      },
+      "model_forward": {
+        "seconds": 120.439631,
+        "share": 0.889191
+      },
+      "cache_io": {
+        "seconds": 0.080142,
+        "share": 0.000592
+      },
+      "postprocess": {
+        "seconds": 0.300969,
+        "share": 0.002222
+      }
+    },
+    "throughput": {
+      "end_to_end_eval_records_per_second": 1.136963
+    },
+    "accounted_seconds": 135.438587,
+    "accounted_share": 0.999927,
+    "unaccounted_seconds": 0.009955
+  },
+  "batch_size_fallback": {
+    "enabled": false,
+    "requested_batch_size": 8,
+    "effective_batch_size": 8,
+    "reductions": [],
+    "n_reductions": 0
+  }
+}

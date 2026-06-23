@@ -599,6 +599,20 @@ def _inside_seed(base_seed: int, eval_batch_idx: int, inside_batch_idx: int) -> 
     return int(base_seed) + int(eval_batch_idx) * 1_000_003 + int(inside_batch_idx)
 
 
+def _inside_statement_seed(base_seed: int, stmt: Statement) -> int:
+    payload = json.dumps(
+        {
+            "base_seed": int(base_seed),
+            "question": stmt.question,
+            "answer": stmt.answer,
+            "is_false": int(stmt.is_false),
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") % (2**63 - 1)
+
+
 def _inside_diagnostics_cache_key(
     stmt: Statement,
     args,
@@ -619,7 +633,7 @@ def _inside_diagnostics_cache_key(
         "target_layer": int(args.layer),
         "max_length": int(args.max_length),
         "hidden_state_capture": args.hidden_state_capture,
-        "seed": int(args.seed),
+        "seed": _inside_statement_seed(int(args.seed), stmt),
         "sampling": {
             "adaptive": bool(adaptive),
             "selfcheck_early_stop": bool(selfcheck_early_stop) if adaptive else False,
@@ -2735,6 +2749,70 @@ def sampled_inside_adaptive_diagnostics_batch(
     return final
 
 
+def _sample_inside_diagnostics_for_args(
+    model,
+    tokenizer,
+    statements: Sequence[Statement],
+    layers: List[int],
+    device: torch.device,
+    args,
+    *,
+    inside_adaptive_sampling: bool,
+    inside_min_samples: int,
+    inside_sample_step: int,
+    inside_stability_delta: float,
+    inside_embedding_threshold: float,
+    inside_selfcheck_early_stop: bool,
+    inside_selfcheck_min_overlap: float,
+    inside_selfcheck_support_threshold: float,
+    inside_selfcheck_refute_threshold: float,
+    seed: int,
+) -> list[Optional[SampledInsideDiagnostics]]:
+    if inside_adaptive_sampling:
+        return sampled_inside_adaptive_diagnostics_batch(
+            model,
+            tokenizer,
+            statements,
+            layers,
+            device,
+            args.max_length,
+            min_samples=inside_min_samples,
+            max_samples=args.inside_samples,
+            sample_step=inside_sample_step,
+            stability_delta=inside_stability_delta,
+            target_layer=args.layer,
+            max_new_tokens=args.inside_max_new_tokens,
+            temperature=args.inside_temperature,
+            top_p=args.inside_top_p,
+            pooling=args.inside_pooling,
+            seed=seed,
+            eigenscore_alpha=args.eigenscore_alpha,
+            embedding_similarity_threshold=inside_embedding_threshold,
+            hidden_state_capture=args.hidden_state_capture,
+            selfcheck_early_stop=inside_selfcheck_early_stop,
+            selfcheck_min_overlap=inside_selfcheck_min_overlap,
+            selfcheck_support_threshold=inside_selfcheck_support_threshold,
+            selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
+        )
+    return sampled_inside_diagnostics_batch(
+        model,
+        tokenizer,
+        statements,
+        layers,
+        device,
+        args.max_length,
+        n_samples=args.inside_samples,
+        max_new_tokens=args.inside_max_new_tokens,
+        temperature=args.inside_temperature,
+        top_p=args.inside_top_p,
+        pooling=args.inside_pooling,
+        seed=seed,
+        eigenscore_alpha=args.eigenscore_alpha,
+        embedding_similarity_threshold=inside_embedding_threshold,
+        hidden_state_capture=args.hidden_state_capture,
+    )
+
+
 def sampled_inside_scores_batch(
     model,
     tokenizer,
@@ -3354,58 +3432,57 @@ def run(args) -> dict:
                         else:
                             sampled_by_position[position] = cached
 
-            for inside_batch_idx, position_batch in enumerate(_chunked(missing_positions, args.inside_batch_size)):
-                inside_batch = [batch_records[position]["stmt"] for position in position_batch]
-                with _profile_phase(profile, "inside_generation"):
-                    if inside_adaptive_sampling:
-                        sampled_batch = sampled_inside_adaptive_diagnostics_batch(
+            if inside_diagnostics_cache is not None:
+                for position in missing_positions:
+                    inside_batch = [batch_records[position]["stmt"]]
+                    seed = _inside_statement_seed(args.seed, inside_batch[0])
+                    with _profile_phase(profile, "inside_generation"):
+                        sampled_batch = _sample_inside_diagnostics_for_args(
                             model,
                             tokenizer,
                             inside_batch,
                             layers,
                             device,
-                            args.max_length,
-                            min_samples=inside_min_samples,
-                            max_samples=args.inside_samples,
-                            sample_step=inside_sample_step,
-                            stability_delta=inside_stability_delta,
-                            target_layer=args.layer,
-                            max_new_tokens=args.inside_max_new_tokens,
-                            temperature=args.inside_temperature,
-                            top_p=args.inside_top_p,
-                            pooling=args.inside_pooling,
-                            seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
-                            eigenscore_alpha=args.eigenscore_alpha,
-                            embedding_similarity_threshold=inside_embedding_threshold,
-                            hidden_state_capture=args.hidden_state_capture,
-                            selfcheck_early_stop=inside_selfcheck_early_stop,
-                            selfcheck_min_overlap=inside_selfcheck_min_overlap,
-                            selfcheck_support_threshold=inside_selfcheck_support_threshold,
-                            selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
+                            args,
+                            inside_adaptive_sampling=inside_adaptive_sampling,
+                            inside_min_samples=inside_min_samples,
+                            inside_sample_step=inside_sample_step,
+                            inside_stability_delta=inside_stability_delta,
+                            inside_embedding_threshold=inside_embedding_threshold,
+                            inside_selfcheck_early_stop=inside_selfcheck_early_stop,
+                            inside_selfcheck_min_overlap=inside_selfcheck_min_overlap,
+                            inside_selfcheck_support_threshold=inside_selfcheck_support_threshold,
+                            inside_selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
+                            seed=seed,
                         )
-                    else:
-                        sampled_batch = sampled_inside_diagnostics_batch(
-                            model,
-                            tokenizer,
-                            inside_batch,
-                            layers,
-                            device,
-                            args.max_length,
-                            n_samples=args.inside_samples,
-                            max_new_tokens=args.inside_max_new_tokens,
-                            temperature=args.inside_temperature,
-                            top_p=args.inside_top_p,
-                            pooling=args.inside_pooling,
-                            seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
-                            eigenscore_alpha=args.eigenscore_alpha,
-                            embedding_similarity_threshold=inside_embedding_threshold,
-                            hidden_state_capture=args.hidden_state_capture,
-                        )
-                for position, sampled in zip(position_batch, sampled_batch):
+                    sampled = sampled_batch[0] if sampled_batch else None
                     sampled_by_position[position] = sampled
-                    if inside_diagnostics_cache is not None:
-                        with _profile_phase(profile, "write_inside_diagnostics_cache"):
-                            inside_diagnostics_cache.put(cache_keys_by_position[position], sampled)
+                    with _profile_phase(profile, "write_inside_diagnostics_cache"):
+                        inside_diagnostics_cache.put(cache_keys_by_position[position], sampled)
+            else:
+                for inside_batch_idx, position_batch in enumerate(_chunked(missing_positions, args.inside_batch_size)):
+                    inside_batch = [batch_records[position]["stmt"] for position in position_batch]
+                    with _profile_phase(profile, "inside_generation"):
+                        sampled_batch = _sample_inside_diagnostics_for_args(
+                            model,
+                            tokenizer,
+                            inside_batch,
+                            layers,
+                            device,
+                            args,
+                            inside_adaptive_sampling=inside_adaptive_sampling,
+                            inside_min_samples=inside_min_samples,
+                            inside_sample_step=inside_sample_step,
+                            inside_stability_delta=inside_stability_delta,
+                            inside_embedding_threshold=inside_embedding_threshold,
+                            inside_selfcheck_early_stop=inside_selfcheck_early_stop,
+                            inside_selfcheck_min_overlap=inside_selfcheck_min_overlap,
+                            inside_selfcheck_support_threshold=inside_selfcheck_support_threshold,
+                            inside_selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
+                            seed=_inside_seed(args.seed, eval_batch_idx, inside_batch_idx),
+                        )
+                    for position, sampled in zip(position_batch, sampled_batch):
+                        sampled_by_position[position] = sampled
 
             for position in triggered_positions:
                 sampled = sampled_by_position.get(position)
