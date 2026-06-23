@@ -725,6 +725,29 @@ rate) and spends 120.440 seconds versus 246.352 seconds. Recursive manifest
 verification passes for the sweep and all three child manifests, including the
 mutable shared diagnostics cache after final manifest refresh.
 
+A derived-budget rerun in
+`artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/` validates the
+single-source sweep path added for nested top-fraction budgets. The run executes
+only the largest budget, top-40% `adaptive_selfcheck`, with `--dump-scores`, then
+derives top-10% and top-25% rows from per-record batch indexes, trigger scores,
+INSIDE scores, and sample counts. Recursive manifest verification passes for
+the top-level report and the single source child manifest. The source run uses a
+copied shared cache from the previous diagnostics-cache artifact; because the
+new cache key now includes dtype, it correctly treats the previous diagnostics
+entries as legacy misses, writes 77 dtype-aware diagnostics entries, and spends
+235.259 seconds in `inside_generation` for 218 generated samples. The derived
+top-10% and top-25% rows reproduce the previous diagnostics-cache sample counts
+and AUROCs exactly: top-10% remains 55 samples with semantic-entropy AUROC
+`0.494`, top-25% remains 108 samples with AUROC `0.521`, and top-40% remains 218
+samples with AUROC `0.570`. The derived `inside_generation` values for top-10%
+and top-25% are sample-count-ratio deployment estimates, 59.354 seconds and
+116.550 seconds respectively, not sequential cache-hit execution times. The
+practical result is that one source profile now replaces three child profile
+runs for this sweep family: old diagnostics-cache children totaled about 401.4
+seconds wall-clock, while the derived source profile totaled 251.2 seconds and
+preserved the ranking, cost-first recommendation, and quality-balanced
+recommendation.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -732,9 +755,12 @@ mutable shared diagnostics cache after final manifest refresh.
 2. Pair future long runs with `--warmup-checkpoint`, `--layer-stats-cache`, and
    trigger-sweep `--shared-cache-dir`; the SmolLM2 shared-cache sweep confirms
    that budget children reuse statement encodings, layer stats, and eval reps
-   instead of repeating base forward work. New sweeps should also inspect the
-   shared `inside-diagnostics.json` hit rate to verify overlapping sampled
-   INSIDE generation is being reused across nested trigger budgets.
+   instead of repeating base forward work. For nested top-fraction sweeps with a
+   single run, prefer `run_inside_trigger_budget_sweep.py
+   --derive-from-max-budget`; it preserves batch-local top-fraction semantics
+   while avoiding repeated child profile execution. New sweeps should also
+   inspect the shared `inside-diagnostics.json` hit rate to verify overlapping
+   sampled INSIDE generation is being reused across nested trigger budgets.
 3. Use sharded `--eval-reps-cache` for long forced-answer runs and cache-only
    rescoring; adjacent batch reads reuse the active shard and expose shard IO
    counters in the structured JSON output.
