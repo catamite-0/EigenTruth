@@ -224,6 +224,9 @@ Pass `--inside-trigger-signal` with `--inside-trigger-threshold` or
 `--inside-trigger-top-fraction` to profile the same fixed/adaptive/self-check
 variants under a budgeted two-stage policy where sampled INSIDE runs only on the
 highest-risk statements.
+For repeated comparable profile runs, pass `--statement-encoding-cache`,
+`--layer-stats-cache`, and `--eval-reps-cache`; add
+`--refresh-shared-caches` only to rebuild the first cache-producing run.
 
 Use `run_inside_trigger_budget_sweep.py` to compare several trigger budgets in
 one reproducible report:
@@ -234,6 +237,8 @@ python benchmarks/run_inside_trigger_budget_sweep.py \
   --trigger-signal truth_proj \
   --top-fractions 0.1,0.2,0.3 \
   --reference-report artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json \
+  --shared-cache-dir artifacts/inside_trigger_budget_sweep/shared-caches \
+  --eval-reps-cache-shard-size 8 \
   --inside-samples 3 \
   --inside-max-new-tokens 4 \
   --runs fixed,adaptive_selfcheck
@@ -246,6 +251,10 @@ reference, and inside-score AUROCs from the recommended run. The top-level
 `recommendation` remains cost-first. `quality_balanced_recommendation` selects
 the lowest-cost budget within `0.02` AUROC of the best preferred INSIDE quality
 signal, preferring semantic entropy, then embedding entropy, then eigenscore.
+Use `--shared-cache-dir` on long sweeps so budget/profile children reuse one
+statement-encoding cache, layer-stats cache, and eval-reps cache instead of
+repeating warmup and forced-answer forward work. Add
+`--refresh-shared-caches` only when intentionally rebuilding those shared caches.
 
 Use `--profile` to include phase timings in stdout and `--json` output, or
 `--profile-json profile.json` to write only the timing payload. This is the

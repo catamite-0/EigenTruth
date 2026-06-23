@@ -699,8 +699,10 @@ top-40% roughly doubles top-25% cost for only a small semantic-entropy gain.
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
    multi-sample generation is the dominant CPU cost.
-2. Pair future long runs with `--warmup-checkpoint` and `--layer-stats-cache` so
-   interrupted warmup can resume and completed warmup becomes a compact final cache.
+2. Pair future long runs with `--warmup-checkpoint`, `--layer-stats-cache`, and
+   trigger-sweep `--shared-cache-dir` so interrupted warmup can resume and
+   budget children reuse statement encodings, layer stats, and eval reps instead
+   of repeating base forward work.
 3. Use sharded `--eval-reps-cache` for long forced-answer runs and cache-only
    rescoring; adjacent batch reads reuse the active shard and expose shard IO
    counters in the structured JSON output.

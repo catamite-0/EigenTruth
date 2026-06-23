@@ -65,6 +65,11 @@ class InsideSamplingProfileConfig:
     inside_trigger_top_fraction: float | None = None
     dump_scores: bool = False
     dump_inside_samples: bool = False
+    statement_encoding_cache_path: Path | None = None
+    layer_stats_cache_path: Path | None = None
+    eval_reps_cache_path: Path | None = None
+    eval_reps_cache_shard_size: int = 0
+    refresh_shared_caches: bool = False
     adaptive_max_sample_ratio: float = 1.0
     adaptive_selfcheck_max_sample_ratio: float = 1.0
     max_inside_generation_seconds_ratio: float | None = None
@@ -123,6 +128,10 @@ class InsideSamplingProfileConfig:
             _validate_unit_interval(self.inside_trigger_top_fraction, "inside_trigger_top_fraction", lower=0.0)
             if float(self.inside_trigger_top_fraction) == 0.0:
                 raise ValueError("inside_trigger_top_fraction must be >0.")
+        if int(self.eval_reps_cache_shard_size) < 0:
+            raise ValueError("eval_reps_cache_shard_size must be >=0.")
+        if int(self.eval_reps_cache_shard_size) > 0 and self.eval_reps_cache_path is None:
+            raise ValueError("eval_reps_cache_shard_size requires eval_reps_cache_path.")
         if float(self.adaptive_max_sample_ratio) < 0.0:
             raise ValueError("adaptive_max_sample_ratio must be non-negative.")
         if float(self.adaptive_selfcheck_max_sample_ratio) < 0.0:
@@ -135,6 +144,12 @@ class InsideSamplingProfileConfig:
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "inside_pooling", str(self.inside_pooling))
         object.__setattr__(self, "inside_trigger_signal", trigger_signal)
+        if self.statement_encoding_cache_path is not None:
+            object.__setattr__(self, "statement_encoding_cache_path", Path(self.statement_encoding_cache_path))
+        if self.layer_stats_cache_path is not None:
+            object.__setattr__(self, "layer_stats_cache_path", Path(self.layer_stats_cache_path))
+        if self.eval_reps_cache_path is not None:
+            object.__setattr__(self, "eval_reps_cache_path", Path(self.eval_reps_cache_path))
 
     @property
     def comparison_report(self) -> Path:
@@ -234,6 +249,7 @@ def build_eval_command(config: InsideSamplingProfileConfig, name: str) -> list[s
         command.extend(["--dump-scores", str(config.score_dump_path(name))])
     if config.dump_inside_samples:
         command.append("--dump-inside-samples")
+    _append_cache_args(command, config, name)
     return command
 
 
@@ -271,6 +287,7 @@ def run_inside_sampling_profile(
             "output_dir": str(config.output_dir),
             "commands": command_log,
             "run_names": tuple(command_log),
+            "caches": _cache_paths(config),
         }
     else:
         comparison = build_inside_sampling_comparison(
@@ -299,6 +316,7 @@ def run_inside_sampling_profile(
                 if config.dump_scores or config.dump_inside_samples
                 else {}
             ),
+            "caches": _cache_paths(config),
             "comparison_report": str(config.comparison_report),
             "sample_efficiency_gate": comparison["sample_efficiency_gate"],
             "recommendation": comparison["recommendation"],
@@ -320,6 +338,35 @@ def _run_outputs_exist(config: InsideSamplingProfileConfig, name: str) -> bool:
     if config.dump_scores or config.dump_inside_samples:
         required.append(config.score_dump_path(name))
     return all(path.is_file() for path in required)
+
+
+def _append_cache_args(command: list[str], config: InsideSamplingProfileConfig, name: str) -> None:
+    refresh = bool(config.refresh_shared_caches and name == config.run_names[0])
+    if config.statement_encoding_cache_path is not None:
+        command.extend(["--statement-encoding-cache", str(config.statement_encoding_cache_path)])
+        if refresh:
+            command.append("--refresh-statement-encoding-cache")
+    if config.layer_stats_cache_path is not None:
+        command.extend(["--layer-stats-cache", str(config.layer_stats_cache_path)])
+        if refresh:
+            command.append("--refresh-layer-stats-cache")
+    if config.eval_reps_cache_path is not None:
+        command.extend(["--eval-reps-cache", str(config.eval_reps_cache_path)])
+        if int(config.eval_reps_cache_shard_size) > 0:
+            command.extend(["--eval-reps-cache-shard-size", str(config.eval_reps_cache_shard_size)])
+        if refresh:
+            command.append("--refresh-eval-reps-cache")
+
+
+def _cache_paths(config: InsideSamplingProfileConfig) -> dict[str, str]:
+    paths = {}
+    if config.statement_encoding_cache_path is not None:
+        paths["statement_encoding_cache"] = str(config.statement_encoding_cache_path)
+    if config.layer_stats_cache_path is not None:
+        paths["layer_stats_cache"] = str(config.layer_stats_cache_path)
+    if config.eval_reps_cache_path is not None:
+        paths["eval_reps_cache"] = str(config.eval_reps_cache_path)
+    return paths
 
 
 def build_inside_sampling_comparison(
@@ -489,7 +536,7 @@ def _write_artifact_manifest(config: InsideSamplingProfileConfig, payload: Mappi
         "command_log": payload.get("command_log"),
         "comparison_report": payload.get("comparison_report"),
     }
-    for group_name in ("profiles", "results", "score_dumps"):
+    for group_name in ("profiles", "results", "score_dumps", "caches"):
         for name, path in dict(payload.get(group_name, {})).items():
             artifacts[f"{group_name}.{name}"] = path
     manifest = build_artifact_manifest(
@@ -508,6 +555,9 @@ def _write_artifact_manifest(config: InsideSamplingProfileConfig, payload: Mappi
             "inside_trigger_signal": config.inside_trigger_signal,
             "inside_trigger_threshold": config.inside_trigger_threshold,
             "inside_trigger_top_fraction": config.inside_trigger_top_fraction,
+            "shared_caches": _cache_paths(config),
+            "eval_reps_cache_shard_size": int(config.eval_reps_cache_shard_size),
+            "refresh_shared_caches": bool(config.refresh_shared_caches),
             "run_names": tuple(config.run_names),
             "dry_run": bool(payload.get("dry_run")),
         },
@@ -593,6 +643,11 @@ def _config_from_args(args: argparse.Namespace) -> InsideSamplingProfileConfig:
         inside_trigger_top_fraction=args.inside_trigger_top_fraction,
         dump_scores=args.dump_scores,
         dump_inside_samples=args.dump_inside_samples,
+        statement_encoding_cache_path=Path(args.statement_encoding_cache) if args.statement_encoding_cache else None,
+        layer_stats_cache_path=Path(args.layer_stats_cache) if args.layer_stats_cache else None,
+        eval_reps_cache_path=Path(args.eval_reps_cache) if args.eval_reps_cache else None,
+        eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        refresh_shared_caches=args.refresh_shared_caches,
         adaptive_max_sample_ratio=args.adaptive_max_sample_ratio,
         adaptive_selfcheck_max_sample_ratio=args.adaptive_selfcheck_max_sample_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
@@ -629,8 +684,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--hidden-state-capture", default="outputs")
     parser.add_argument("--progress-every", type=int, default=0)
-    parser.add_argument("--real-truthfulqa", action="store_true",
-                        help="load the configured model and TruthfulQA dataset instead of the offline fixture")
+    truthfulqa_mode = parser.add_mutually_exclusive_group()
+    truthfulqa_mode.add_argument("--offline", action="store_true",
+                                 help="use the built-in offline fixture; this is the default")
+    truthfulqa_mode.add_argument("--real-truthfulqa", action="store_true",
+                                 help="load the configured model and TruthfulQA dataset instead of the offline fixture")
     parser.add_argument("--no-length-bucketed-batches", action="store_true")
     parser.add_argument("--python", default=sys.executable,
                         help="Python executable used for eval_truthfulqa.py subprocesses")
@@ -657,6 +715,16 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="write per-run score dumps in addition to result/profile JSON")
     parser.add_argument("--dump-inside-samples", action="store_true",
                         help="include sampled continuation text in score dumps; implies --dump-scores")
+    parser.add_argument("--statement-encoding-cache", default=None,
+                        help="optional eval_truthfulqa.py statement encoding cache shared by profile runs")
+    parser.add_argument("--layer-stats-cache", default=None,
+                        help="optional eval_truthfulqa.py warmup/layer stats cache shared by profile runs")
+    parser.add_argument("--eval-reps-cache", default=None,
+                        help="optional eval_truthfulqa.py forced-answer representation cache shared by profile runs")
+    parser.add_argument("--eval-reps-cache-shard-size", type=int, default=0,
+                        help="write --eval-reps-cache as shards with this many records per shard")
+    parser.add_argument("--refresh-shared-caches", action="store_true",
+                        help="refresh shared caches on the first configured run; later runs load them")
     parser.add_argument("--adaptive-max-sample-ratio", type=float, default=1.0,
                         help="max adaptive/fixed total-generated-sample ratio for the sample gate")
     parser.add_argument("--adaptive-selfcheck-max-sample-ratio", type=float, default=1.0,

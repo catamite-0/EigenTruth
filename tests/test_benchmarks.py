@@ -5307,6 +5307,11 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
         inside_trigger_signal="truth_proj",
         inside_trigger_top_fraction=0.25,
         dump_inside_samples=True,
+        statement_encoding_cache_path=tmp_path / "shared" / "statement-encodings.json",
+        layer_stats_cache_path=tmp_path / "shared" / "layer-stats.pt",
+        eval_reps_cache_path=tmp_path / "shared" / "eval-reps-cache",
+        eval_reps_cache_shard_size=8,
+        refresh_shared_caches=True,
         python_executable="/python",
     )
 
@@ -5323,15 +5328,27 @@ def test_run_inside_sampling_profile_builds_dry_run_commands(tmp_path):
     assert manifest["metadata"]["inside_samples"] == 6
     assert manifest["metadata"]["inside_trigger_signal"] == "truth_proj"
     assert manifest["metadata"]["inside_trigger_top_fraction"] == 0.25
+    assert manifest["metadata"]["shared_caches"]["layer_stats_cache"].endswith("layer-stats.pt")
+    assert manifest["metadata"]["eval_reps_cache_shard_size"] == 8
+    assert manifest["metadata"]["refresh_shared_caches"] is True
     assert fixed[0] == "/python"
     assert fixed[1] == str(Path("benchmarks") / "eval_truthfulqa.py")
     assert "--offline" in fixed
     assert fixed[fixed.index("--inside-samples") + 1] == "6"
     assert fixed[fixed.index("--inside-trigger-signal") + 1] == "truth_proj"
     assert fixed[fixed.index("--inside-trigger-top-fraction") + 1] == "0.25"
+    assert fixed[fixed.index("--statement-encoding-cache") + 1].endswith("statement-encodings.json")
+    assert fixed[fixed.index("--layer-stats-cache") + 1].endswith("layer-stats.pt")
+    assert fixed[fixed.index("--eval-reps-cache") + 1].endswith("eval-reps-cache")
+    assert fixed[fixed.index("--eval-reps-cache-shard-size") + 1] == "8"
+    assert "--refresh-statement-encoding-cache" in fixed
+    assert "--refresh-layer-stats-cache" in fixed
+    assert "--refresh-eval-reps-cache" in fixed
     assert "--inside-adaptive-sampling" not in fixed
     assert "--inside-adaptive-sampling" in adaptive
     assert adaptive[adaptive.index("--inside-sample-step") + 1] == "2"
+    assert adaptive[adaptive.index("--eval-reps-cache") + 1].endswith("eval-reps-cache")
+    assert "--refresh-eval-reps-cache" not in adaptive
     assert "--inside-selfcheck-early-stop" not in adaptive
     assert "--inside-selfcheck-early-stop" in adaptive_selfcheck
     assert "--dump-scores" in fixed
@@ -5358,6 +5375,30 @@ def test_run_inside_sampling_profile_rejects_incomplete_trigger_config(tmp_path)
             inside_trigger_threshold=0.5,
             inside_trigger_top_fraction=0.25,
         )
+    with pytest.raises(ValueError, match="eval_reps_cache_shard_size"):
+        module.InsideSamplingProfileConfig(
+            output_dir=tmp_path,
+            eval_reps_cache_shard_size=4,
+        )
+
+
+def test_run_inside_sampling_profile_cli_accepts_explicit_offline(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.run_inside_sampling_profile")
+
+    module.main([
+        "--output-dir",
+        str(tmp_path),
+        "--runs",
+        "fixed",
+        "--offline",
+        "--dry-run",
+    ])
+
+    report = json.loads(capsys.readouterr().out)
+
+    assert report["dry_run"] is True
+    assert report["commands"]["fixed"].count("--offline") == 1
+    assert Path(report["artifact_manifest"]).exists()
 
 
 def test_inside_sampling_profile_comparison_reports_sample_savings(tmp_path):
@@ -5548,6 +5589,9 @@ def test_run_inside_trigger_budget_sweep_builds_dry_run_commands(tmp_path):
         model="tiny-local",
         layer=-2,
         inside_samples=3,
+        shared_cache_dir=tmp_path / "shared-caches",
+        eval_reps_cache_shard_size=4,
+        refresh_shared_caches=True,
         python_executable="/python",
         run_names=("fixed", "adaptive_selfcheck"),
     )
@@ -5559,10 +5603,20 @@ def test_run_inside_trigger_budget_sweep_builds_dry_run_commands(tmp_path):
 
     assert report["dry_run"] is True
     assert report["config"]["trigger_signal"] == "truth_proj"
+    assert report["config"]["shared_cache_dir"].endswith("shared-caches")
     assert top10_fixed[top10_fixed.index("--inside-trigger-signal") + 1] == "truth_proj"
     assert top10_fixed[top10_fixed.index("--inside-trigger-top-fraction") + 1] == "0.1"
+    assert top10_fixed[top10_fixed.index("--eval-reps-cache") + 1].endswith("shared-caches/eval-reps-cache")
+    assert top10_fixed[top10_fixed.index("--eval-reps-cache-shard-size") + 1] == "4"
+    assert "--refresh-eval-reps-cache" in top10_fixed
+    assert top25_selfcheck[top25_selfcheck.index("--eval-reps-cache") + 1].endswith(
+        "shared-caches/eval-reps-cache"
+    )
+    assert "--refresh-eval-reps-cache" not in top25_selfcheck
     assert "--inside-selfcheck-early-stop" in top25_selfcheck
     assert manifest["metadata"]["runner"] == "run_inside_trigger_budget_sweep"
+    assert manifest["metadata"]["shared_cache_dir"].endswith("shared-caches")
+    assert manifest["metadata"]["eval_reps_cache_shard_size"] == 4
     assert manifest["metadata"]["budgets"] == [
         {"kind": "top_fraction", "value": 0.1},
         {"kind": "top_fraction", "value": 0.25},

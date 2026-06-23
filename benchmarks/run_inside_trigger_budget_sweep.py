@@ -89,6 +89,9 @@ class InsideTriggerBudgetSweepConfig:
     max_inside_generation_seconds_ratio: float | None = None
     run_names: Sequence[str] = INSIDE_PROFILE_RUN_NAMES
     reference_report_path: Path | None = None
+    shared_cache_dir: Path | None = None
+    eval_reps_cache_shard_size: int = 0
+    refresh_shared_caches: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -103,6 +106,12 @@ class InsideTriggerBudgetSweepConfig:
             raise ValueError("trigger budgets must not contain duplicate ids.")
         if self.reference_report_path is not None:
             object.__setattr__(self, "reference_report_path", Path(self.reference_report_path))
+        if self.shared_cache_dir is not None:
+            object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
+        if int(self.eval_reps_cache_shard_size) < 0:
+            raise ValueError("eval_reps_cache_shard_size must be >=0.")
+        if int(self.eval_reps_cache_shard_size) > 0 and self.shared_cache_dir is None:
+            raise ValueError("eval_reps_cache_shard_size requires shared_cache_dir.")
         object.__setattr__(self, "trigger_signal", trigger_signal)
         object.__setattr__(self, "budgets", budgets)
         object.__setattr__(self, "run_names", _parse_run_names(",".join(self.run_names)))
@@ -188,6 +197,11 @@ def _profile_config_for_budget(
         adaptive_selfcheck_max_sample_ratio=config.adaptive_selfcheck_max_sample_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
         run_names=config.run_names,
+        statement_encoding_cache_path=_shared_cache_path(config, "statement-encodings.json"),
+        layer_stats_cache_path=_shared_cache_path(config, "layer-stats.pt"),
+        eval_reps_cache_path=_shared_cache_path(config, "eval-reps-cache"),
+        eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+        refresh_shared_caches=bool(config.refresh_shared_caches and budget.id == config.budgets[0].id),
     )
 
 
@@ -204,6 +218,7 @@ def _dry_run_report(
             budget_id: {
                 "profile_output_dir": payload.get("output_dir"),
                 "commands": payload.get("commands"),
+                "caches": payload.get("caches"),
             }
             for budget_id, payload in child_payloads.items()
         },
@@ -243,6 +258,7 @@ def _budget_sweep_report(
             "profile_output_dir": payload.get("output_dir"),
             "comparison_report": payload.get("comparison_report"),
             "artifact_manifest": payload.get("artifact_manifest"),
+            "caches": payload.get("caches"),
             "sample_efficiency_gate": comparison.get("sample_efficiency_gate"),
             "recommendation": comparison.get("recommendation"),
         }
@@ -424,6 +440,9 @@ def _write_artifact_manifest(
             "budgets": tuple({"kind": budget.kind, "value": budget.value} for budget in config.budgets),
             "run_names": tuple(config.run_names),
             "reference_report": None if config.reference_report_path is None else str(config.reference_report_path),
+            "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+            "eval_reps_cache_shard_size": int(config.eval_reps_cache_shard_size),
+            "refresh_shared_caches": bool(config.refresh_shared_caches),
             "dry_run": bool(report.get("dry_run")),
         },
     )
@@ -451,7 +470,16 @@ def _config_payload(config: InsideTriggerBudgetSweepConfig) -> dict[str, Any]:
         "inside_max_new_tokens": config.inside_max_new_tokens,
         "run_names": tuple(config.run_names),
         "reference_report": None if config.reference_report_path is None else str(config.reference_report_path),
+        "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+        "eval_reps_cache_shard_size": int(config.eval_reps_cache_shard_size),
+        "refresh_shared_caches": bool(config.refresh_shared_caches),
     }
+
+
+def _shared_cache_path(config: InsideTriggerBudgetSweepConfig, name: str) -> Path | None:
+    if config.shared_cache_dir is None:
+        return None
+    return config.shared_cache_dir / name
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -557,6 +585,9 @@ def _config_from_args(args: argparse.Namespace) -> InsideTriggerBudgetSweepConfi
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         run_names=_parse_run_names(args.runs),
         reference_report_path=Path(args.reference_report) if args.reference_report else None,
+        shared_cache_dir=Path(args.shared_cache_dir) if args.shared_cache_dir else None,
+        eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        refresh_shared_caches=args.refresh_shared_caches,
     )
 
 
@@ -613,6 +644,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adaptive-max-sample-ratio", type=float, default=1.0)
     parser.add_argument("--adaptive-selfcheck-max-sample-ratio", type=float, default=1.0)
     parser.add_argument("--max-inside-generation-seconds-ratio", type=float, default=None)
+    parser.add_argument("--shared-cache-dir", default=None,
+                        help="optional shared cache directory reused across all budget/profile runs")
+    parser.add_argument("--eval-reps-cache-shard-size", type=int, default=0,
+                        help="write the shared eval-reps cache as shards with this many records per shard")
+    parser.add_argument("--refresh-shared-caches", action="store_true",
+                        help="refresh shared caches on the first run that uses them; later runs load them")
     parser.add_argument("--runs", default="fixed,adaptive,adaptive_selfcheck")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--skip-existing", action="store_true")
