@@ -35,6 +35,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     readiness_baseline_keys: Sequence[str] = ()
     route_baseline_keys: Sequence[str] = ()
     performance_baseline_key: str | None = None
+    adapter_family_matrix_path: Path | None = None
+    required_adapter_routes: Sequence[str] = ()
     release_report_path: Path | None = None
     artifact_manifest_path: Path | None = None
     verification_report_path: Path | None = None
@@ -74,6 +76,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "route_registry_path", Path(self.route_registry_path))
         if self.performance_registry_path is not None:
             object.__setattr__(self, "performance_registry_path", Path(self.performance_registry_path))
+        if self.adapter_family_matrix_path is not None:
+            object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
         if self.release_report_path is not None:
             object.__setattr__(self, "release_report_path", Path(self.release_report_path))
         if self.artifact_manifest_path is not None:
@@ -93,6 +97,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "inside_trigger_budget_policy", policy)
         object.__setattr__(self, "readiness_baseline_keys", tuple(str(key) for key in self.readiness_baseline_keys))
         object.__setattr__(self, "route_baseline_keys", tuple(str(key) for key in self.route_baseline_keys))
+        object.__setattr__(self, "required_adapter_routes", tuple(str(route) for route in self.required_adapter_routes))
 
     @property
     def output_root(self) -> Path:
@@ -132,6 +137,8 @@ def run_release_candidate_registry_workflow(
         route_baseline_keys=config.route_baseline_keys,
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
+        adapter_family_matrix_path=config.adapter_family_matrix_path,
+        required_adapter_routes=config.required_adapter_routes,
         recursive=config.recursive,
         allow_unverified=config.allow_unverified,
         runtime_profile=config.runtime_profile,
@@ -196,6 +203,12 @@ def run_release_candidate_registry_workflow(
             "route_registry": str(config.route_registry_path or config.readiness_registry_path),
             "performance_registry": str(config.performance_registry_path or config.readiness_registry_path),
             "performance_baseline_key": config.performance_baseline_key,
+            "adapter_family_matrix": (
+                None
+                if config.adapter_family_matrix_path is None
+                else str(config.adapter_family_matrix_path)
+            ),
+            "required_adapter_routes": tuple(config.required_adapter_routes),
             "release_registry": str(config.release_registry_path),
             "name": config.name,
             "version": config.version,
@@ -226,6 +239,7 @@ def _write_artifact_manifest(
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
+        "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
     manifest = build_artifact_manifest(
         artifacts,
@@ -271,6 +285,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     runtime_cost = dict(candidate.get("runtime_cost") or {})
     verifier_route = dict(candidate.get("verifier_route") or {})
     manifests = dict(candidate.get("manifests") or {})
+    adapter_family = dict(candidate.get("adapter_family_matrix") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -278,12 +293,14 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_readiness_status": decision.get("readiness_status"),
         "release_route_status": decision.get("route_status"),
         "release_performance_status": decision.get("performance_status"),
+        "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_runtime_profile": config.get("runtime_profile"),
         "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
         "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
         "recommended_readiness_record": decision.get("recommended_readiness_record"),
         "recommended_route_record": decision.get("recommended_route_record"),
         "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
+        "required_adapter_routes": decision.get("required_adapter_routes"),
         "recommended_model": decision.get("recommended_model"),
         "recommended_route": decision.get("recommended_route"),
         "recommended_layer": runtime.get("layer"),
@@ -348,9 +365,14 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_runtime_retrieval_hit_count": verifier_route.get("runtime_retrieval_hit_count"),
         "recommended_route_claims_cache_hit_rate": verifier_route.get("claims_cache_hit_rate"),
         "recommended_route_verifier_trace_cache_hit_rate": verifier_route.get("verifier_trace_cache_hit_rate"),
+        "adapter_family_matrix_report": adapter_family.get("matrix_path"),
+        "adapter_family_routes": adapter_family.get("routes"),
+        "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
+        "adapter_family_required_routes": adapter_family.get("required_routes"),
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
+        "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
     }
 
 
@@ -405,6 +427,8 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         performance_baseline_key=args.performance_baseline_key,
+        adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
+        required_adapter_routes=tuple(args.required_adapter_route or ()),
         release_report_path=None if args.release_report_json is None else Path(args.release_report_json),
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
@@ -467,6 +491,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--route-baseline-key", action="append", default=[])
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
+    parser.add_argument("--adapter-family-matrix", default=None,
+                        help="optional adapter-family matrix JSON report that must promote before release")
+    parser.add_argument("--required-adapter-route", action="append", default=[],
+                        help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")
     parser.add_argument("--release-report-json", default=None,
                         help="optional path for the release candidate comparison report")

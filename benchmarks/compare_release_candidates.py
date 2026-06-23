@@ -29,6 +29,8 @@ def compare_release_candidates(
     route_baseline_keys: Sequence[str] = (),
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
+    adapter_family_matrix_path: str | Path | None = None,
+    required_adapter_routes: Sequence[str] = (),
     recursive: bool = True,
     allow_unverified: bool = False,
     runtime_profile: str | None = None,
@@ -114,6 +116,10 @@ def compare_release_candidates(
         notes=("release candidate route comparison",),
     )
     raw_candidate = _release_candidate(readiness, route)
+    adapter_family = _adapter_family_matrix_gate(
+        adapter_family_matrix_path=adapter_family_matrix_path,
+        required_routes=required_adapter_routes,
+    )
     performance = _performance_baseline_gate(
         performance_registry_path=performance_registry_path,
         performance_baseline_key=performance_baseline_key,
@@ -121,9 +127,9 @@ def compare_release_candidates(
         allow_unverified=allow_unverified,
         candidate=raw_candidate,
     )
-    decision = _decision(readiness, route, raw_candidate, performance)
+    decision = _decision(readiness, route, raw_candidate, performance, adapter_family)
     candidate = (
-        _candidate_with_performance(raw_candidate, performance)
+        _candidate_with_gates(raw_candidate, performance, adapter_family)
         if decision["status"] == "promote"
         else None
     )
@@ -137,6 +143,8 @@ def compare_release_candidates(
             "readiness_baseline_keys": list(readiness_baseline_keys),
             "route_baseline_keys": list(route_baseline_keys),
             "performance_baseline_key": performance_baseline_key,
+            "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
+            "required_adapter_routes": list(required_adapter_routes),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
             "runtime_profile": None if profile is None else profile.name,
@@ -167,6 +175,7 @@ def compare_release_candidates(
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
         "performance_baseline_gate": performance,
+        "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
         "notes": list(notes),
@@ -290,6 +299,7 @@ def _decision(
     route: Mapping[str, Any],
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None = None,
+    adapter_family: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -297,6 +307,8 @@ def _decision(
     route_status = route_decision.get("status")
     performance_gate = _mapping(None if performance is None else performance.get("gate"))
     performance_status = None if performance is None else performance.get("status")
+    adapter_family_gate = _mapping(None if adapter_family is None else adapter_family.get("gate"))
+    adapter_family_status = None if adapter_family is None else adapter_family.get("status")
     blocking_reasons = []
     if readiness_status != "promote":
         blocking_reasons.append({
@@ -316,6 +328,12 @@ def _decision(
             "status": performance_status,
             "reasons": list(performance_gate.get("blocking_reasons", ())),
         })
+    if adapter_family is not None and adapter_family_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "adapter_family_matrix",
+            "status": adapter_family_status,
+            "reasons": list(adapter_family_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -330,15 +348,109 @@ def _decision(
         "readiness_status": readiness_status,
         "route_status": route_status,
         "performance_status": performance_status,
+        "adapter_family_status": adapter_family_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
             None if performance is None or performance_gate.get("passed") is not True else performance.get("record_key")
         ),
+        "required_adapter_routes": (
+            ()
+            if adapter_family is None or adapter_family_gate.get("passed") is not True
+            else tuple(adapter_family.get("required_routes", ()))
+        ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
         "blocking_reasons": blocking_reasons,
     }
+
+
+def _adapter_family_matrix_gate(
+    *,
+    adapter_family_matrix_path: str | Path | None,
+    required_routes: Sequence[str],
+) -> dict[str, Any] | None:
+    if adapter_family_matrix_path is None:
+        return None
+    matrix_path = Path(adapter_family_matrix_path)
+    report, report_error = _load_optional_json(matrix_path)
+    routes = tuple(str(route) for route in report.get("routes", ()) if str(route))
+    required = tuple(str(route) for route in required_routes if str(route))
+    family_statuses = _adapter_family_statuses(report)
+    promotion_decision = _mapping(report.get("promotion_decision"))
+    route_comparison = _mapping(report.get("route_comparison"))
+    quality_gate = _mapping(route_comparison.get("quality_gate"))
+    gate = _adapter_family_gate(
+        report_error=report_error,
+        promotion_decision=promotion_decision,
+        quality_gate=quality_gate,
+        routes=routes,
+        family_statuses=family_statuses,
+        required_routes=required,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "matrix_path": str(matrix_path),
+        "workflow": report.get("workflow"),
+        "alpha": report.get("alpha"),
+        "n_records": report.get("n_records"),
+        "routes": routes,
+        "required_routes": required,
+        "promoted_routes": tuple(route for route, status in family_statuses.items() if status == "promote"),
+        "family_statuses": family_statuses,
+        "promotion_status": promotion_decision.get("status"),
+        "quality_gate_passed": quality_gate.get("passed"),
+        "gate": gate,
+    }
+
+
+def _adapter_family_gate(
+    *,
+    report_error: str | None,
+    promotion_decision: Mapping[str, Any],
+    quality_gate: Mapping[str, Any],
+    routes: Sequence[str],
+    family_statuses: Mapping[str, str],
+    required_routes: Sequence[str],
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"adapter family matrix could not be loaded: {report_error}")
+    if promotion_decision.get("status") != "promote":
+        failures.append(
+            f"adapter family promotion status is {promotion_decision.get('status')!r}, expected 'promote'"
+        )
+    if quality_gate and quality_gate.get("passed") is not True:
+        failures.append("adapter family route quality gate did not pass")
+    route_set = set(routes)
+    for route in required_routes:
+        if route not in route_set:
+            failures.append(f"required adapter route {route!r} is missing from matrix")
+            continue
+        status = family_statuses.get(route)
+        if status != "promote":
+            failures.append(f"required adapter route {route!r} status is {status!r}, expected 'promote'")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _adapter_family_statuses(report: Mapping[str, Any]) -> dict[str, str]:
+    statuses = {}
+    for item in report.get("families", ()):
+        family = _mapping(item)
+        route = family.get("route")
+        if route is not None:
+            statuses[str(route)] = str(family.get("status"))
+    by_route = _mapping(_mapping(report.get("route_comparison")).get("by_route"))
+    for route, item in by_route.items():
+        if str(route) not in statuses:
+            status = _mapping(item).get("promotion_status")
+            if status is not None:
+                statuses[str(route)] = str(status)
+    return statuses
 
 
 def _performance_baseline_gate(
@@ -590,18 +702,27 @@ def _verify_performance_manifest(
         }
 
 
-def _candidate_with_performance(
+def _candidate_with_gates(
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None,
+    adapter_family: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
     payload = dict(candidate)
-    if performance is None:
-        return payload
-    payload["performance_baseline_record"] = performance.get("record_key")
     manifests = dict(payload.get("manifests") or {})
-    manifests["performance_manifest"] = performance.get("manifest_path")
+    if performance is not None:
+        payload["performance_baseline_record"] = performance.get("record_key")
+        manifests["performance_manifest"] = performance.get("manifest_path")
+    if adapter_family is not None:
+        payload["adapter_family_matrix"] = {
+            "matrix_path": adapter_family.get("matrix_path"),
+            "required_routes": tuple(adapter_family.get("required_routes", ())),
+            "routes": tuple(adapter_family.get("routes", ())),
+            "promoted_routes": tuple(adapter_family.get("promoted_routes", ())),
+            "promotion_status": adapter_family.get("promotion_status"),
+        }
+        manifests["adapter_family_matrix_report"] = adapter_family.get("matrix_path")
     payload["manifests"] = manifests
     return payload
 
@@ -715,6 +836,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
+        adapter_family_matrix_path=args.adapter_family_matrix,
+        required_adapter_routes=tuple(args.required_adapter_route or ()),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
         runtime_profile=args.runtime_profile,
@@ -775,6 +898,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="route benchmark_manifest registry key to compare; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
+    parser.add_argument("--adapter-family-matrix", default=None,
+                        help="optional adapter-family matrix JSON report that must promote before release")
+    parser.add_argument("--required-adapter-route", action="append", default=[],
+                        help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the comparison report; repeatable")

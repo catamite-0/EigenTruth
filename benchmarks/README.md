@@ -1091,6 +1091,9 @@ python benchmarks/compare_release_candidates.py \
   --route-registry artifacts/registry.json \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
+  --required-adapter-route structured_state \
+  --required-adapter-route state_transition \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -1117,6 +1120,13 @@ and fails closed when layer, batch size, capture mode, token budget, prefix cach
 worker count, trigger budget, trigger policy, or best quality signal differ from
 the readiness-selected runtime. Omit `--performance-registry` when the
 performance record lives in the readiness registry.
+Add `--adapter-family-matrix` when release should also require a promoted
+adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
+`--required-adapter-route` for routes that must be present and promoted in that
+matrix, such as `structured_state`, `state_transition`, or
+`retrieval_groundedness`. This keeps retrieval/database/world-model adapter work
+inside the same fail-closed release gate instead of treating it as a separate
+benchmark note.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.
@@ -1149,6 +1159,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --name qwen05-local-release-candidate \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
+  --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
+  --required-adapter-route structured_state \
+  --required-adapter-route state_transition \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -1164,8 +1177,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 ```
 
 The generated manifest fingerprints the release-candidate report and the
-selected readiness, route, and optional performance manifests. Recursive
-verification therefore checks the final candidate and all underlying baseline
+selected readiness, route, optional performance manifests, and optional adapter
+family matrix report. Recursive verification therefore checks the final
+candidate and all underlying baseline
 manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
 release report, manifest metadata, and registry record.
