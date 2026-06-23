@@ -317,6 +317,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_product_runtime_baseline.py` | Aggregates saved `ProductTrace` JSON files into a request-runtime baseline with phase, cache, verifier-route, retrieval-use, staged-verification savings, and optional `ProductRuntimeBudgetPolicy` gate metrics. |
 | `run_product_runtime_profile_sweep.py` | Runs deterministic calibrated-control demo scenarios under `latency`, `balanced`, `audit`, and request-level `auto` selection modes, writes traces, builds per-mode baselines, applies optional aggregate SLO gates, and recommends the lowest-cost non-blocked mode. |
 | `run_runtime_profile_selector_tuning.py` | Compares candidate `RuntimeProfileSelectorPolicy` JSON configs by running auto-profile sweeps under the same SLO gate and recommending the lowest-cost promoted selector. |
+| `run_runtime_profile_selector_replay.py` | Replays candidate `RuntimeProfileSelectorPolicy` JSON configs over saved `ProductTrace` files, estimates profile cost/distribution without rerunning demos, and registers the lowest-cost promoted selector. |
 | `run_adapter_readiness_workflow.py` | Combines adapter-family quality gates, cache-profile performance gates, and optional INSIDE sampling / trigger-budget gates into one final readiness decision, runtime recommendation, and registry-ready manifest. |
 | `run_adapter_readiness_registry_workflow.py` | Runs readiness gates and registers the verified manifest as a reusable local promotion baseline when readiness promotes. |
 | `compare_readiness_baselines.py` | Compares registered readiness baselines by verified manifest state, best AUROC quality signal, runtime cost, and INSIDE profile or trigger-budget cost evidence, then recommends one deployable baseline. |
@@ -381,6 +382,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_product_runtime_baseline.py` | 聚合已保存的 `ProductTrace` JSON，输出请求级 runtime baseline：phase、cache、verifier route、retrieval 使用率、staged-verification 节省量，以及可选 `ProductRuntimeBudgetPolicy` gate。 |
 | `run_product_runtime_profile_sweep.py` | 在 `latency`、`balanced`、`audit` 和请求级 `auto` selection modes 下运行确定性 calibrated-control demo 场景，写 trace、生成每个 mode 的 baseline，应用可选聚合 SLO 门禁，并推荐最低成本的未阻断 mode。 |
 | `run_runtime_profile_selector_tuning.py` | 通过同一套 SLO gate 比较多个 `RuntimeProfileSelectorPolicy` JSON 候选，运行 auto-profile sweep，并推荐成本最低的 promoted selector。 |
+| `run_runtime_profile_selector_replay.py` | 在已保存的 `ProductTrace` 上回放多个 `RuntimeProfileSelectorPolicy` JSON 候选，不重跑 demo 即可估算 profile 成本和分布，并登记成本最低的 promoted selector。 |
 | `run_adapter_readiness_workflow.py` | 将 adapter-family 质量门槛、cache-profile 性能门槛和可选 INSIDE sampling / trigger-budget gate 合并为最终 readiness decision、runtime recommendation 和可注册 manifest。 |
 | `run_adapter_readiness_registry_workflow.py` | 运行 readiness gate，并在 readiness promote 后把已验证 manifest 注册成本地可复用 promotion baseline。 |
 | `compare_readiness_baselines.py` | 按 manifest 验证状态、最佳 AUROC quality signal、runtime cost 和 INSIDE profile / trigger-budget 成本证据比较已注册 readiness baseline，并推荐一个可部署 baseline。 |

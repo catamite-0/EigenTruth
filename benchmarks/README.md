@@ -2282,6 +2282,28 @@ tuning: `report:smollm2-runtime-profile-selector-tuning:0.1` in
 blocks the biased candidates because they fail the auto selector distribution
 SLO.
 
+Use `run_runtime_profile_selector_replay.py` when saved `ProductTrace` files
+already exist and the selector question should be answered without rerunning
+demo scenarios or verifier work. The replay runner loads each trace's
+`risk_decision` and claim metadata, applies each candidate
+`RuntimeProfileSelectorPolicy`, estimates a configurable profile-cost summary,
+applies optional replay gates, writes a manifest, and can register the replay
+report:
+
+```bash
+python benchmarks/run_runtime_profile_selector_replay.py \
+  --trace-glob 'artifacts/smollm2_product_runtime_profile_sweep/traces/*/*.json' \
+  --output-dir artifacts/smollm2_runtime_profile_selector_replay \
+  --candidate default=artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json \
+  --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
+  --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
+  --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-runtime-profile-selector-replay \
+  --version 0.1 \
+  --fail-on-blocked
+```
+
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
 `artifacts/local-readiness-registry.json`. It reuses the promoted real-model

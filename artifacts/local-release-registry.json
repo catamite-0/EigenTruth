@@ -2332,6 +2332,22 @@
       "name": "smollm2-runtime-profile-selector-tuning",
       "path": "artifacts/smollm2_runtime_profile_selector_tuning/runtime-profile-selector-tuning.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_replay/artifact-manifest.json",
+        "candidate_count": 3,
+        "compact_json": false,
+        "recommended_candidate": "default",
+        "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
+        "status": "promote",
+        "trace_count": 12,
+        "workflow": "run_runtime_profile_selector_replay"
+      },
+      "name": "smollm2-runtime-profile-selector-replay",
+      "path": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

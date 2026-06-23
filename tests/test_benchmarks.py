@@ -9389,6 +9389,119 @@ def test_run_runtime_profile_selector_tuning_recommends_passing_policy(tmp_path)
     assert record.metadata["candidate_count"] == 2
 
 
+def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "selector-replay"
+    registry_path = tmp_path / "registry.json"
+    traces_dir = tmp_path / "traces"
+    traces_dir.mkdir()
+
+    trace_payloads = (
+        {
+            "request_id": "low-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}}],
+            "metadata": {"runtime_profile": "latency"},
+        },
+        {
+            "request_id": "medium-retrieve",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.7,
+                "reason": "unsupported",
+            },
+            "claims": [{"claim_id": "c1", "text": "needs evidence", "metadata": {}}],
+            "metadata": {"runtime_profile": "balanced"},
+        },
+        {
+            "request_id": "low-sensitive",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.9,
+                "reason": "numbered claim",
+            },
+            "claims": [
+                {
+                    "claim_id": "c1",
+                    "text": "The measured value is 42.",
+                    "metadata": {"features": {"has_number": True}},
+                }
+            ],
+            "metadata": {"runtime_profile": "audit"},
+        },
+    )
+    trace_paths = []
+    for index, payload in enumerate(trace_payloads):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(json.dumps(payload), encoding="utf-8")
+        trace_paths.append(trace_path)
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="latency-biased",
+                    policy={
+                        "sensitive_claim_feature_flags": ["has_citation", "is_time_sensitive"],
+                    },
+                ),
+            ),
+            replay_policy=module.RuntimeProfileSelectorReplayPolicy(
+                max_estimated_cost_units_mean=2.0,
+                min_selected_profile_counts={"latency": 1, "balanced": 1, "audit": 1},
+            ),
+            registry_path=registry_path,
+            name="selector-replay",
+            version="0.1",
+            compact_json=True,
+        )
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:selector-replay:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_candidate"] == "default"
+    assert payload["candidates"][0]["status"] == "promote"
+    assert payload["candidates"][1]["status"] == "blocked"
+    assert payload["candidates"][0]["summary"]["selected_counts"] == {
+        "audit": 1,
+        "balanced": 1,
+        "latency": 1,
+    }
+    assert payload["candidates"][1]["summary"]["selected_counts"] == {
+        "balanced": 1,
+        "latency": 2,
+    }
+    assert payload["candidates"][1]["gate"]["failures"][0]["metric"] == "selected_count.audit"
+    assert Path(payload["paths"]["artifact_manifest"]).exists()
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert "default_selector_policy" in manifest["artifacts"]
+    assert "latency-biased_selector_policy" in manifest["artifacts"]
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["recommended_candidate"] == "default"
+    assert record.metadata["candidate_count"] == 2
+    assert record.metadata["trace_count"] == 3
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"
