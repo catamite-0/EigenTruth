@@ -3131,6 +3131,59 @@ def test_run_adapter_family_matrix_can_include_retrieval_route(tmp_path):
     assert (tmp_path / "retrieval_groundedness" / "retrieval-claims.json").exists()
 
 
+def test_run_adapter_family_matrix_can_include_retrieval_structured_qa_route(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_family_matrix")
+
+    payload = module.run_adapter_family_matrix(
+        module.AdapterFamilyMatrixConfig(
+            output_dir=tmp_path,
+            n_records=8,
+            alpha=0.2,
+            include_retrieval_structured_qa=True,
+            max_mean_attempted_route_count=2.1,
+            max_retrieval_use_rate=1.0,
+            compact_json=True,
+        )
+    )
+    by_route = payload["route_comparison"]["by_route"]
+    families = {item["route"]: item for item in payload["families"]}
+    retrieval = families["retrieval_structured_qa"]
+    claims = json.loads(
+        (tmp_path / "retrieval_structured_qa" / "retrieval-qa-claims.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert set(families) == {
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "retrieval_structured_qa",
+    }
+    assert payload["routes"] == (
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "retrieval_structured_qa",
+    )
+    assert payload["retrieval_routes"] == ("retrieval_structured_qa",)
+    assert payload["include_retrieval_structured_qa"] is True
+    assert payload["promotion_decision"]["status"] == "promote"
+    assert payload["route_comparison"]["quality_gate"]["passed"] is True
+    assert retrieval["status"] == "promote"
+    assert retrieval["selected"] == 8
+    assert retrieval["decision_accuracy"] == pytest.approx(1.0)
+    assert retrieval["false_supported_rate"] == pytest.approx(0.0)
+    assert retrieval["false_refuted_rate"] == pytest.approx(1.0)
+    assert retrieval["mean_attempted_route_count"] == pytest.approx(2.0)
+    assert retrieval["retrieval_use_rate"] == pytest.approx(1.0)
+    assert by_route["retrieval_structured_qa"]["selected"] == 8
+    assert by_route["retrieval_structured_qa"]["retrieval_use_rate"] == pytest.approx(1.0)
+    assert claims["records"][0]["retrieval_documents"][0]["metadata"]["question"]
+    assert claims["records"][0]["retrieval_documents"][0]["metadata"]["answer"]
+    assert Path(retrieval["verifier_report_path"]).exists()
+
+
 def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_path):
     module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
     report_path = tmp_path / "readiness.json"

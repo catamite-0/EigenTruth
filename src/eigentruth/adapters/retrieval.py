@@ -87,11 +87,16 @@ class RetrievalHit:
         if text is None:
             raise ValueError("retrieval hit mapping must contain 'text' or 'content'.")
         source = data.get("source")
+        metadata = dict(data.get("metadata", {}))
+        for key, value in data.items():
+            metadata_key = str(key)
+            if metadata_key not in {"text", "content", "source", "score", "metadata"} and metadata_key not in metadata:
+                metadata[metadata_key] = value
         return cls(
             text=str(text),
             source=None if source is None else str(source),
             score=float(data.get("score", 1.0)),
-            metadata=dict(data.get("metadata", {})),
+            metadata=metadata,
         )
 
 

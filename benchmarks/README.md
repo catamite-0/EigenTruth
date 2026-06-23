@@ -975,6 +975,22 @@ python benchmarks/run_adapter_family_matrix.py \
   --fail-on-blocked
 ```
 
+The structured retrieval-QA route uses retrieved documents as local
+question/answer facts before lexical fallback:
+
+```bash
+python benchmarks/run_adapter_family_matrix.py \
+  --output-dir artifacts/adapter_family_matrix_retrieval_qa \
+  --json artifacts/adapter_family_matrix_retrieval_qa/report.json \
+  --n-records 8 \
+  --alpha 0.2 \
+  --include-retrieval-structured-qa \
+  --max-mean-attempted-route-count 2.1 \
+  --max-retrieval-use-rate 1.0 \
+  --compact-json \
+  --fail-on-blocked
+```
+
 ## `run_adapter_readiness_workflow.py`
 
 Combines the deterministic adapter-family quality matrix with the same-machine

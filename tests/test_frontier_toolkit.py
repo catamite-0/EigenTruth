@@ -545,6 +545,26 @@ def test_cached_retriever_reuses_query_results():
     assert retriever.stats.to_dict()["misses"] == 1
 
 
+def test_in_memory_retriever_preserves_mapping_metadata_fields():
+    retriever = InMemoryRetriever((
+        {
+            "text": "Order R1 is approved for expedited shipping.",
+            "source": "shipping:R1",
+            "question": "What shipping option is order R1 approved for?",
+            "answer": "Order R1 is approved for expedited shipping.",
+        },
+    ), min_overlap=0.5)
+
+    hits = retriever.retrieve(
+        RetrievalQuery(query="What shipping option is order R1 approved for?"),
+        limit=1,
+    )
+
+    assert hits[0].metadata["question"] == "What shipping option is order R1 approved for?"
+    assert hits[0].metadata["answer"] == "Order R1 is approved for expedited shipping."
+    assert hits[0].metadata["retriever"] == "InMemoryRetriever"
+
+
 def test_sqlite_fts_retriever_returns_overlap_hits_or_falls_back():
     retriever = SQLiteFTSRetriever((
         "Paris is the capital of France.",

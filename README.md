@@ -293,7 +293,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
 | `run_adapter_promotion_registry_workflow.py` | Runs route promotion, writes a manifest, recursively verifies it, and registers the promoted route baseline in one command. |
 | `compare_route_baselines.py` | Compares registered verifier-route promotion manifests by verified state, route quality, false support/refutation, tail latency, and retrieval cost. |
-| `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, state-transition, and optional retrieval-groundedness fixtures, then compares their promotion metrics in one local matrix. |
+| `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, state-transition, optional retrieval-groundedness, and optional retrieval-structured-QA fixtures, then compares their promotion metrics in one local matrix. |
 | `run_local_retrieval_route_workflow.py` | Builds local retrieval evidence from score dumps and corpora, promotes retrieval routes, fingerprints all source artifacts, records a runtime profile, optionally uses persistent SQLite FTS/cached claims fixtures/verifier traces, and optionally registers the route baseline. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, and capture modes, then emits a matrix-level performance promotion decision with per-cell AUROC quality signals. |
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
@@ -354,7 +354,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
 | `run_adapter_promotion_registry_workflow.py` | 一次性执行 route promotion、写 manifest、递归验证 manifest，并把 promoted route baseline 注册到本地 registry。 |
 | `compare_route_baselines.py` | 按 manifest 验证状态、route 质量、误支持/反证率、尾延迟和 retrieval 成本比较已注册 verifier-route promotion baseline。 |
-| `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition 和可选 retrieval-groundedness fixtures，并在一个本地矩阵里比较 promotion 指标。 |
+| `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition、可选 retrieval-groundedness 和可选 retrieval-structured-QA fixtures，并在一个本地矩阵里比较 promotion 指标。 |
 | `run_local_retrieval_route_workflow.py` | 从 score dump 和本地 corpus 构建 retrieval evidence，promote retrieval route，指纹化全部源 artifact，记录运行 profile，可选使用持久化 SQLite FTS/claims fixture/verifier trace 缓存，并可选注册 route baseline。 |
 | `run_cache_profile_matrix.py` | 跨 layer、batch size 和 capture mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision 和每个 cell 的 AUROC quality signals。 |
 | `run_cache_worker_sweep.py` | 用多个 worker count 运行同一 cache-profile matrix，并按 wall-clock 推荐最快的已 promoted worker count。 |

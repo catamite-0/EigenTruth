@@ -28,7 +28,8 @@ from benchmarks.refresh_verifier_route_artifacts import (  # noqa: E402
     refresh_verifier_route_artifacts,
 )
 
-RETRIEVAL_ROUTE = "retrieval_groundedness"
+RETRIEVAL_GROUNDEDNESS_ROUTE = "retrieval_groundedness"
+RETRIEVAL_STRUCTURED_QA_ROUTE = "retrieval_structured_qa"
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,7 @@ class AdapterFamilyMatrixConfig:
     max_mean_attempted_route_count: float = 1.1
     max_retrieval_use_rate: float = 0.0
     include_retrieval: bool = False
+    include_retrieval_structured_qa: bool = False
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.6
     retrieval_limit: int = 1
@@ -78,6 +80,8 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
     ]
     if config.include_retrieval:
         families.append(_run_retrieval_groundedness(config))
+    if config.include_retrieval_structured_qa:
+        families.append(_run_retrieval_structured_qa(config))
     routes = tuple(str(item["route"]) for item in families)
     comparison_path = output_dir / "route-family-comparison.json"
     comparison = build_route_comparison_report(
@@ -109,6 +113,12 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
         "signal": config.signal,
         "routes": routes,
         "include_retrieval": bool(config.include_retrieval),
+        "include_retrieval_structured_qa": bool(config.include_retrieval_structured_qa),
+        "retrieval_routes": tuple(
+            item["route"]
+            for item in families
+            if str(item["route"]).startswith("retrieval_")
+        ),
         "families": families,
         "route_comparison_path": str(comparison_path),
         "route_comparison": comparison,
@@ -191,7 +201,7 @@ def _run_state_transition(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
 
 
 def _run_retrieval_groundedness(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
-    route = RETRIEVAL_ROUTE
+    route = RETRIEVAL_GROUNDEDNESS_ROUTE
     route_dir = config.output_dir / route
     route_dir.mkdir(parents=True, exist_ok=True)
     scores_path = route_dir / "scores.json"
@@ -206,11 +216,41 @@ def _run_retrieval_groundedness(config: AdapterFamilyMatrixConfig) -> dict[str, 
         compact=config.compact_json,
         retriever_min_overlap=config.retriever_min_overlap,
         retrieval_limit=config.retrieval_limit,
+        structured_qa=False,
     )
     return _refresh_route(
         config,
         route=route,
         score_name="retrieval",
+        scores_path=scores_path,
+        claims_path=claims_path,
+        qa_corpus_path=None,
+        state_path=None,
+    )
+
+
+def _run_retrieval_structured_qa(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
+    route = RETRIEVAL_STRUCTURED_QA_ROUTE
+    route_dir = config.output_dir / route
+    route_dir.mkdir(parents=True, exist_ok=True)
+    scores_path = route_dir / "scores.json"
+    corpus_path = route_dir / "retrieval-qa-corpus.json"
+    claims_path = route_dir / "retrieval-qa-claims.json"
+    _write_retrieval_fixture_inputs(
+        scores_path=scores_path,
+        corpus_path=corpus_path,
+        claims_path=claims_path,
+        n_records=config.n_records,
+        signal=config.signal,
+        compact=config.compact_json,
+        retriever_min_overlap=config.retriever_min_overlap,
+        retrieval_limit=config.retrieval_limit,
+        structured_qa=True,
+    )
+    return _refresh_route(
+        config,
+        route=route,
+        score_name="retrieval_qa",
         scores_path=scores_path,
         claims_path=claims_path,
         qa_corpus_path=None,
@@ -354,6 +394,7 @@ def _write_retrieval_fixture_inputs(
     compact: bool,
     retriever_min_overlap: float,
     retrieval_limit: int,
+    structured_qa: bool,
 ) -> None:
     n_pairs = n_records // 2
     labels = [0] * n_pairs + [1] * n_pairs
@@ -381,9 +422,13 @@ def _write_retrieval_fixture_inputs(
     scores_payload = {
         "schema_version": 1,
         "config": {
-            "model": "synthetic-retrieval-groundedness",
+            "model": "synthetic-retrieval-structured-qa" if structured_qa else "synthetic-retrieval-groundedness",
             "layer": -1,
-            "fixture_type": "retrieval_groundedness_route_family",
+            "fixture_type": (
+                "retrieval_structured_qa_route_family"
+                if structured_qa
+                else "retrieval_groundedness_route_family"
+            ),
             "signal": signal,
             "n_records": n_records,
         },
@@ -391,28 +436,38 @@ def _write_retrieval_fixture_inputs(
         "scores": {signal: scores},
         "statements": true_statements + false_statements,
     }
+    support_documents = [
+        {
+            "text": f"Order R{idx + 1} is approved for expedited shipping.",
+            "source": f"shipping-policy:R{idx + 1}:support",
+            **(
+                {
+                    "question": f"What shipping option is order R{idx + 1} approved for?",
+                    "answer": f"Order R{idx + 1} is approved for expedited shipping.",
+                }
+                if structured_qa
+                else {}
+            ),
+        }
+        for idx in range(n_pairs)
+    ]
+    refutation_documents = [
+        {
+            "text": f"Order R{idx + 1} is not approved for same-day drone shipping.",
+            "source": f"shipping-policy:R{idx + 1}:refutation",
+        }
+        for idx in range(n_pairs)
+    ]
     corpus_payload = {
         "schema_version": 1,
-        "documents": [
-            {
-                "text": f"Order R{idx + 1} is approved for expedited shipping.",
-                "source": f"shipping-policy:R{idx + 1}:support",
-            }
-            for idx in range(n_pairs)
-        ] + [
-            {
-                "text": f"Order R{idx + 1} is not approved for same-day drone shipping.",
-                "source": f"shipping-policy:R{idx + 1}:refutation",
-            }
-            for idx in range(n_pairs)
-        ],
+        "documents": support_documents if structured_qa else support_documents + refutation_documents,
     }
     claims_payload = build_evidence_fixture(
         scores_payload,
         corpus_payload["documents"],
         retriever_min_overlap=retriever_min_overlap,
         retrieval_limit=retrieval_limit,
-        query_field="answer",
+        query_field="question" if structured_qa else "answer",
     )
     _write_json(scores_path, scores_payload, compact=compact)
     _write_json(corpus_path, corpus_payload, compact=compact)
@@ -447,6 +502,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterFamilyMatrixConfig:
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         include_retrieval=bool(args.include_retrieval),
+        include_retrieval_structured_qa=bool(args.include_retrieval_structured_qa),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -481,6 +537,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate", type=float, default=0.0)
     parser.add_argument("--include-retrieval", action="store_true",
                         help="include a local retrieval-groundedness route fixture")
+    parser.add_argument("--include-retrieval-structured-qa", action="store_true",
+                        help="include a local retrieval structured-QA route fixture")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
     parser.add_argument("--retrieval-limit", type=int, default=1)
