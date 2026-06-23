@@ -21,7 +21,7 @@ Implemented today:
 - `eigentruth.control.ActionExecutionPolicy` / `PolicyGuardedActionExecutor`: validates side-effecting action requests, replays idempotent results when a ledger is configured, and records audit metadata such as request ids, idempotency keys, timeout bounds, and timeout-enforcement status.
 - `eigentruth.control.InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger`: store successful idempotent action results for request-local, JSON-file, or SQLite-backed replay without repeating side effects.
 - `eigentruth.control.ProductTrace`: JSON-ready traces for diagnostics, claims, verification, decisions, action execution summaries, verifier-route summaries, and metadata.
-- `eigentruth.control.run_verification_loop` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that feeds retrieval action results back into verifier context.
+- `eigentruth.control.run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle`: dependency-free verify -> decide -> execute -> reverify loop that can gate expensive verifier routes behind diagnostic risk or sensitive claim metadata, then feed retrieval action results back into verifier context.
 - `eigentruth.verify`: dependency-free pluggable claim extraction, rule-based claim metadata, in-memory verifier tools, lexical groundedness checks, and sampled-response self-consistency verification for first-pass claim workflows.
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.ToolOutputStateSource` / `ToolOutputMapping`: maps local tool/action execution outputs into structured verifier state for post-tool checks.
@@ -239,7 +239,7 @@ For product features:
 
 ### Completed 0.4 Verification Loop Shell
 
-- Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output.
+- Dependency-free verify -> decide -> execute -> reverify helper with final `ProductTrace` output and optional staged verifier gating for low-risk, non-sensitive claims.
 - `EvidenceBundle` conversion from retrieval `ActionResult` payloads into claim-scoped verifier evidence context.
 - Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
 - `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies, including structured QA, static state, and action-conditioned state-transition routes.
@@ -260,6 +260,7 @@ For product features:
 - `production_tool_loop_demo.py` emits one product-style trace that combines SQLite pre-tool checks, guarded side-effecting local `execute_tool`, optional JSON/SQLite idempotency replay, mapped `ActionResult.output`, post-tool structured verification, action execution summary, action audit metadata, and runtime route summary metadata.
 - `TimeoutActionExecutor` can return a traceable `timed_out` action result using stdlib thread-pool timeouts; it is a best-effort local boundary, not a hard cancellation mechanism for already-running side-effecting adapters.
 - `CompositeVerifier`, `RoutedVerifier`, and `calibrated_control_demo.py --enable-calculator` show a tool-first product trace path: claim metadata, context, or text patterns can route calculator-supported/refuted claims before lexical verifier fallback.
+- `StagedVerificationPolicy` can be passed to `run_verification_loop` to skip expensive verifier routes for low-risk, non-sensitive claims while still triggering verification for calibrated diagnostic risk or claim metadata such as numbers, citations, time sensitivity, or explicit `requires_verification` flags.
 - `SelfConsistencyVerifier` can be evaluated as a `self_consistency` verifier-ensemble route when fixtures provide sampled responses, giving claim-level support/refutation rates before retrieval fallback.
 - `build_selfcheck_fixture.py` converts dumped INSIDE sampled continuations or external sampled-generation files into verifier-ensemble fixtures for reproducible self-consistency route evaluation.
 - `RoutedVerifier` records route match reasons such as metadata keys, context keys, text patterns, feature flags, or fallback selection; `ProductTrace.verification_route_summary()` aggregates selected, matched, and skipped verifier routes for runtime trace review.

@@ -27,6 +27,7 @@ from eigentruth.control.loop import (
     run_verification_loop,
 )
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
+from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, TraceEvent
 
 __all__ = [
@@ -47,12 +48,14 @@ __all__ = [
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
     "SQLiteActionExecutionLedger",
+    "StagedVerificationPolicy",
     "TimeoutActionExecutor",
     "ProductTrace",
     "RiskController",
     "RiskDecision",
     "RiskLevel",
     "TraceEvent",
+    "VerificationStageDecision",
     "VerificationLoopResult",
     "evidence_bundle_from_action_results",
     "run_verification_loop",

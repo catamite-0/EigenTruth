@@ -12,10 +12,11 @@ from eigentruth.control import (
     EvidenceBundle,
     RiskController,
     RiskLevel,
+    StagedVerificationPolicy,
     evidence_bundle_from_action_results,
     run_verification_loop,
 )
-from eigentruth.verify import Claim, GroundednessVerifier, VerificationStatus, extract_claims
+from eigentruth.verify import Claim, GroundednessVerifier, VerificationResult, VerificationStatus, extract_claims
 
 
 def _artifact() -> CalibrationArtifact:
@@ -157,6 +158,85 @@ def test_verification_loop_does_not_override_refuted_claim_with_retrieval():
     assert result.final_decision.risk_level is RiskLevel.HIGH
 
 
+def test_staged_verification_loop_skips_expensive_verifier_for_low_risk_claim():
+    claims = (Claim("Paris is a city.", claim_id="c1"),)
+    verifier = _CountingVerifier()
+
+    result = run_verification_loop(
+        request_id="req-stage-low",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(),
+    )
+
+    assert verifier.verify_many_calls == 0
+    assert verifier.verify_calls == 0
+    assert result.initial_verification_results == ()
+    assert result.final_verification_results == ()
+    assert result.initial_decision.action is ControlAction.ACCEPT
+    assert result.final_decision.action is ControlAction.ACCEPT
+    assert result.verification_stage_decision is not None
+    assert result.verification_stage_decision.run_verifier is False
+    trace = result.trace.to_dict()
+    assert trace["metadata"]["staged_verification"]["verify_risk_levels"] == (
+        "medium",
+        "high",
+        "unknown",
+    )
+    assert trace["events"][1]["event_type"] == "verification_stage_decision"
+    assert trace["events"][1]["payload"]["run_verifier"] is False
+    assert trace["events"][2]["event_type"] == "initial_verification_skipped"
+    assert trace["events"][3]["payload"]["skipped"] is True
+    json.dumps(result.to_dict())
+
+
+def test_staged_verification_loop_runs_verifier_for_sensitive_claim_metadata():
+    claims = extract_claims("As of 2026, AlphaCorp has 10 offices.")
+    verifier = _CountingVerifier(status=VerificationStatus.SUPPORTED)
+
+    result = run_verification_loop(
+        request_id="req-stage-sensitive",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(),
+    )
+
+    assert verifier.verify_many_calls == 1
+    assert result.initial_verification_results[0].status is VerificationStatus.SUPPORTED
+    assert result.final_decision.action is ControlAction.ACCEPT
+    assert result.verification_stage_decision is not None
+    assert result.verification_stage_decision.run_verifier is True
+    assert result.verification_stage_decision.triggered_claim_ids == ("c1",)
+    assert result.verification_stage_decision.triggered_features["c1"] == (
+        "has_number",
+        "is_time_sensitive",
+    )
+
+
+def test_staged_verification_loop_runs_verifier_for_diagnostic_risk():
+    claims = (Claim("Paris is a city.", claim_id="c1"),)
+    verifier = _CountingVerifier(status=VerificationStatus.SUPPORTED)
+
+    result = run_verification_loop(
+        request_id="req-stage-risk",
+        diagnostics={"maha_last": 4.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(),
+    )
+
+    assert verifier.verify_many_calls == 1
+    assert result.verification_stage_decision is not None
+    assert result.verification_stage_decision.run_verifier is True
+    assert result.verification_stage_decision.reason == "diagnostic risk level is medium"
+    assert result.initial_verification_results[0].status is VerificationStatus.SUPPORTED
+
+
 def test_evidence_bundle_from_action_results_preserves_claim_specific_context():
     action_result = ActionResult(
         action=ControlAction.RETRIEVE,
@@ -178,3 +258,24 @@ def test_evidence_bundle_from_action_results_preserves_claim_specific_context():
     assert bundle.to_context("c1")["evidence"][0]["metadata"]["claim_id"] == "c1"
     assert bundle.to_context("c2") == {"evidence": ()}
     assert bundle.to_dict()["claim_ids"] == ("c1",)
+
+
+class _CountingVerifier:
+    def __init__(self, status=VerificationStatus.INSUFFICIENT_EVIDENCE):
+        self.status = status
+        self.verify_calls = 0
+        self.verify_many_calls = 0
+
+    def verify(self, claim, context=None):
+        del claim, context
+        self.verify_calls += 1
+        return VerificationResult(
+            status=self.status,
+            confidence=0.9,
+            evidence=("counting verifier evidence",) if self.status is VerificationStatus.SUPPORTED else (),
+            explanation="counting verifier",
+        )
+
+    def verify_many(self, claims, context=None):
+        self.verify_many_calls += 1
+        return tuple(self.verify(claim, context=context) for claim in claims)

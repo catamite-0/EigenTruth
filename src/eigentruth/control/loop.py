@@ -16,6 +16,7 @@ from eigentruth.control.actions import (
 )
 from eigentruth.control.controller import RiskController
 from eigentruth.control.policy import RiskDecision
+from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, TraceEvent
 from eigentruth.verify.protocols import Claim, VerificationResult, Verifier
 
@@ -73,6 +74,7 @@ class VerificationLoopResult:
     final_verification_results: Sequence[VerificationResult | Mapping[str, Any]]
     final_decision: RiskDecision
     trace: ProductTrace
+    verification_stage_decision: VerificationStageDecision | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "initial_verification_results", tuple(self.initial_verification_results))
@@ -95,6 +97,7 @@ class VerificationLoopResult:
             ),
             "final_decision": self.final_decision.to_dict(),
             "trace": self.trace.to_dict(),
+            "verification_stage_decision": _stage_decision_to_dict(self.verification_stage_decision),
         }
 
 
@@ -159,11 +162,28 @@ def run_verification_loop(
     executor_registry: ActionExecutorRegistry | None = None,
     context: Mapping[str, Any] | None = None,
     metadata: Mapping[str, Any] | None = None,
+    stage_policy: StagedVerificationPolicy | None = None,
 ) -> VerificationLoopResult:
     """Run a dependency-free verification/action/reverification loop."""
     base_context = dict(context or {})
-    initial_results = tuple(verifier.verify_many(claims, context=base_context))
-    initial_decision = controller.decide(diagnostics, verification_results=initial_results)
+    diagnostic_decision: RiskDecision | None = None
+    stage_decision: VerificationStageDecision | None = None
+    if stage_policy is None:
+        initial_results = tuple(verifier.verify_many(claims, context=base_context))
+        initial_decision = controller.decide(diagnostics, verification_results=initial_results)
+    else:
+        diagnostic_decision = controller.decide(diagnostics)
+        stage_decision = stage_policy.decide(
+            diagnostic_decision,
+            claims=claims,
+            context=base_context,
+        )
+        if stage_decision.run_verifier:
+            initial_results = tuple(verifier.verify_many(claims, context=base_context))
+            initial_decision = controller.decide(diagnostics, verification_results=initial_results)
+        else:
+            initial_results = ()
+            initial_decision = diagnostic_decision
 
     policy = correction_policy or DefaultCorrectionPolicy()
     action_requests = policy.plan(
@@ -198,10 +218,29 @@ def run_verification_loop(
         actions=action_requests,
         action_results=action_results,
         events=(
+            *(
+                (
+                    TraceEvent("diagnostic_risk_decision", diagnostic_decision.to_dict()),
+                    TraceEvent("verification_stage_decision", stage_decision.to_dict()),
+                )
+                if stage_decision is not None and diagnostic_decision is not None
+                else ()
+            ),
+            *(
+                (
+                    TraceEvent(
+                        "initial_verification_skipped",
+                        {"reason": stage_decision.reason},
+                    ),
+                )
+                if stage_decision is not None and not stage_decision.run_verifier
+                else ()
+            ),
             TraceEvent(
                 "initial_verification",
                 {
                     "n_claims": len(claims),
+                    "skipped": stage_decision is not None and not stage_decision.run_verifier,
                     "results": tuple(_verification_result_to_dict(result) for result in initial_results),
                 },
             ),
@@ -224,6 +263,7 @@ def run_verification_loop(
         metadata={
             "loop_version": "0.4",
             "source": "eigentruth.control.run_verification_loop",
+            "staged_verification": None if stage_policy is None else stage_policy.to_dict(),
             **dict(metadata or {}),
         },
     )
@@ -236,6 +276,7 @@ def run_verification_loop(
         final_verification_results=final_results,
         final_decision=final_decision,
         trace=trace,
+        verification_stage_decision=stage_decision,
     )
 
 
@@ -261,6 +302,16 @@ def _action_result_to_dict(result: ActionResult | Mapping[str, Any]) -> dict[str
     if isinstance(result, ActionResult):
         return result.to_dict()
     return dict(_jsonable(result))
+
+
+def _stage_decision_to_dict(
+    decision: VerificationStageDecision | Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if decision is None:
+        return None
+    if isinstance(decision, VerificationStageDecision):
+        return decision.to_dict()
+    return dict(_jsonable(decision))
 
 
 def _context_with_retrieved_evidence(
