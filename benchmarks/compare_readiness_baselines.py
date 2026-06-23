@@ -14,7 +14,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.recommend_runtime_config import build_runtime_recommendation  # noqa: E402
+from benchmarks.recommend_runtime_config import (  # noqa: E402
+    INSIDE_TRIGGER_BUDGET_POLICIES,
+    build_runtime_recommendation,
+)
 from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
 
 
@@ -24,6 +27,7 @@ def compare_readiness_baselines(
     baseline_keys: Sequence[str] = (),
     recursive: bool = True,
     allow_unverified: bool = False,
+    inside_trigger_budget_policy: str | None = None,
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
@@ -32,6 +36,9 @@ def compare_readiness_baselines(
     notes: Sequence[str] = (),
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered readiness baselines."""
+    inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
+        inside_trigger_budget_policy
+    )
     registry = ArtifactRegistry.load_json(registry_path)
     records = _select_records(registry, baseline_keys=baseline_keys)
     rows = [
@@ -39,6 +46,7 @@ def compare_readiness_baselines(
             record,
             recursive=recursive,
             allow_unverified=allow_unverified,
+            inside_trigger_budget_policy=inside_trigger_budget_policy,
             min_best_quality_auroc=min_best_quality_auroc,
             max_uncached_forward_seconds=max_uncached_forward_seconds,
             max_cache_only_seconds=max_cache_only_seconds,
@@ -58,6 +66,7 @@ def compare_readiness_baselines(
             "baseline_keys": list(baseline_keys),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
+            "inside_trigger_budget_policy": inside_trigger_budget_policy,
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
@@ -109,6 +118,7 @@ def _readiness_row(
     *,
     recursive: bool,
     allow_unverified: bool,
+    inside_trigger_budget_policy: str | None,
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
@@ -123,6 +133,7 @@ def _readiness_row(
         manifest_path,
         manifest,
         manifest_metadata,
+        inside_trigger_budget_policy=inside_trigger_budget_policy,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _best_quality(recommendation, manifest_metadata)
@@ -211,6 +222,7 @@ def _readiness_row(
         "inside_sampling_stop_reason_counts": inside_sampling["stop_reason_counts"],
         "inside_trigger_budget_sweep": inside_sampling["trigger_budget_sweep"],
         "inside_trigger_budget_id": inside_sampling["trigger_budget_id"],
+        "inside_trigger_budget_policy": inside_sampling["trigger_budget_policy"],
         "inside_trigger_budget_derive_from_max_budget": inside_sampling["derive_from_max_budget"],
         "performance_wall_clock_seconds": _float_or_none(
             manifest_metadata.get("performance_wall_clock_seconds")
@@ -224,6 +236,8 @@ def _runtime_recommendation_from_manifest(
     manifest_path: Path,
     manifest: Mapping[str, Any],
     manifest_metadata: Mapping[str, Any],
+    *,
+    inside_trigger_budget_policy: str | None,
 ) -> tuple[dict[str, Any], str | None]:
     performance_matrix_path = _resolve_artifact_path(
         manifest_path,
@@ -260,6 +274,7 @@ def _runtime_recommendation_from_manifest(
                     inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report or None,
                     inside_trigger_budget_policy=str(
                         _first_present(
+                            inside_trigger_budget_policy,
                             manifest_metadata.get("recommended_inside_trigger_budget_policy"),
                             manifest_metadata.get("inside_trigger_budget_policy"),
                             "quality_balanced",
@@ -588,6 +603,12 @@ def _inside_sampling_summary(
             payload.get("inside_trigger_budget_id"),
             trigger_budget.get("recommended_budget_id"),
         ),
+        "trigger_budget_policy": _first_present(
+            payload.get("inside_trigger_budget_policy"),
+            trigger_budget.get("selection_policy"),
+            manifest_metadata.get("recommended_inside_trigger_budget_policy"),
+            manifest_metadata.get("inside_trigger_budget_policy"),
+        ),
         "derive_from_max_budget": _first_present(
             payload.get("derive_from_max_budget"),
             trigger_budget.get("derive_from_max_budget"),
@@ -663,6 +684,16 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _normalize_inside_trigger_budget_policy(policy: str | None) -> str | None:
+    if policy is None:
+        return None
+    normalized = str(policy).strip().lower().replace("-", "_")
+    if normalized not in INSIDE_TRIGGER_BUDGET_POLICIES:
+        choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
+        raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
+    return normalized
+
+
 def _parse_non_negative_float(value: str, *, flag: str) -> float:
     numeric = float(value)
     if not math.isfinite(numeric) or numeric < 0:
@@ -677,6 +708,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         baseline_keys=tuple(args.baseline_key or ()),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
@@ -713,6 +745,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified manifests to become candidates")
+    parser.add_argument("--inside-trigger-budget-policy", default=None,
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="optional override for trigger-budget sweep selection; omit to use each readiness "
+                             "baseline policy")
     parser.add_argument("--min-best-quality-auroc", type=lambda value: _parse_non_negative_float(
         value,
         flag="--min-best-quality-auroc",

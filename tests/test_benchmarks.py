@@ -3671,6 +3671,7 @@ def test_compare_readiness_baselines_applies_trigger_budget_reference_cost_gate(
         "inside_generation_seconds_ratio_to_reference"
     )
     assert recommended["inside_trigger_budget_id"] == "top_0p4"
+    assert recommended["inside_trigger_budget_policy"] == "quality_balanced"
     assert recommended["inside_trigger_budget_derive_from_max_budget"] is True
     blocked = next(row for row in payload["leaderboard"] if row["record_key"].endswith("expensive-trigger:0.5"))
     assert blocked["gate"]["passed"] is False
@@ -4044,6 +4045,7 @@ def test_compare_release_candidates_carries_trigger_budget_reference_cost(tmp_pa
     assert payload["decision"]["status"] == "promote"
     candidate = payload["release_candidate"]
     assert candidate["runtime"]["inside_trigger_budget_sweep"]["recommended_budget_id"] == "top_0p4"
+    assert candidate["runtime"]["inside_trigger_budget_policy"] == "quality_balanced"
     assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_to_baseline"] is None
     assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.4)
     assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.4)
@@ -4056,7 +4058,90 @@ def test_compare_release_candidates_carries_trigger_budget_reference_cost(tmp_pa
         "inside_generation_seconds_ratio_to_reference"
     )
     assert candidate["runtime_cost"]["inside_trigger_budget_id"] == "top_0p4"
+    assert candidate["runtime_cost"]["inside_trigger_budget_policy"] == "quality_balanced"
     assert candidate["runtime_cost"]["inside_trigger_budget_derive_from_max_budget"] is True
+
+
+def test_compare_release_candidates_can_override_trigger_budget_policy(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.4,
+        inside_trigger_generation_ratio=0.45,
+        inside_trigger_total_generated_samples=12,
+        inside_trigger_cost_first_sample_ratio=0.1,
+        inside_trigger_cost_first_generation_ratio=0.12,
+        inside_trigger_cost_first_total_generated_samples=3,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    default_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    cost_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        inside_trigger_budget_policy="cost-first",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert default_payload["decision"]["status"] == "promote"
+    assert default_payload["config"]["inside_trigger_budget_policy"] is None
+    assert default_payload["release_candidate"]["runtime_cost"]["inside_trigger_budget_id"] == "top_0p4"
+    assert default_payload["release_candidate"]["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == (
+        pytest.approx(0.4)
+    )
+    assert cost_payload["decision"]["status"] == "promote"
+    assert cost_payload["config"]["inside_trigger_budget_policy"] == "cost_first"
+    assert cost_payload["readiness_baseline_comparison"]["config"]["inside_trigger_budget_policy"] == "cost_first"
+    candidate = cost_payload["release_candidate"]
+    assert candidate["runtime"]["inside_trigger_budget_policy"] == "cost_first"
+    assert candidate["runtime"]["inside_sampling"]["inside_trigger_top_fraction"] == pytest.approx(0.1)
+    assert candidate["runtime_cost"]["inside_trigger_budget_id"] == "top_0p1"
+    assert candidate["runtime_cost"]["inside_trigger_budget_policy"] == "cost_first"
+    assert candidate["runtime_cost"]["inside_sampling_total_generated_samples"] == 3
+    assert candidate["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.1)
+    assert candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.12)
 
 
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
@@ -4107,6 +4192,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             release_report_path=tmp_path / "release-candidate.json",
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
+            inside_trigger_budget_policy="cost_first",
             min_best_quality_auroc=0.70,
             max_uncached_forward_seconds=20.0,
             max_inside_sample_count_ratio=0.6,
@@ -4144,7 +4230,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.3)
     assert manifest["metadata"]["recommended_inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.35)
     assert manifest["metadata"]["recommended_inside_trigger_budget_id"] == "top_0p4"
+    assert manifest["metadata"]["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["recommended_inside_trigger_budget_derive_from_max_budget"] is True
+    assert payload["release_candidate_comparison"]["config"]["inside_trigger_budget_policy"] == "cost_first"
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
         0.8
@@ -4161,6 +4249,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_reference"] == pytest.approx(0.3)
     assert record.metadata["recommended_inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.35)
     assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
+    assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert record.metadata["scope"] == "unit"
 
 
@@ -4313,9 +4402,78 @@ def _write_inside_trigger_budget_sweep(
     top_fraction=0.4,
     quality_value=0.57,
     derive_from_max_budget=True,
+    cost_first_sample_count_ratio=None,
+    cost_first_generation_seconds_ratio=None,
+    cost_first_total_generated_samples=4,
+    cost_first_budget_id="top_0p1",
+    cost_first_top_fraction=0.1,
+    cost_first_quality_value=0.50,
 ):
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / "inside-trigger-budget-sweep.json"
+    cost_first_enabled = cost_first_sample_count_ratio is not None
+    budget_specs = []
+    leaderboard = []
+    budgets_payload = {}
+    if cost_first_enabled:
+        budget_specs.append({
+            "kind": "top_fraction",
+            "value": cost_first_top_fraction,
+            "id": cost_first_budget_id,
+        })
+        budgets_payload[cost_first_budget_id] = {
+            "sample_efficiency_gate": {"passed": True},
+            "recommendation": {"recommended_run": "adaptive_selfcheck"},
+        }
+        leaderboard.append({
+            "budget_id": cost_first_budget_id,
+            "budget_kind": "top_fraction",
+            "budget_value": cost_first_top_fraction,
+            "recommended_run": "adaptive_selfcheck",
+            "derived": derive_from_max_budget,
+            "derived_from_budget_id": budget_id if derive_from_max_budget else None,
+            "inside_generation_seconds_source": (
+                "sample_count_ratio_estimate" if derive_from_max_budget else "measured"
+            ),
+            "sampled": cost_first_total_generated_samples,
+            "skipped_by_trigger": 100 - cost_first_total_generated_samples,
+            "total_generated_samples": cost_first_total_generated_samples,
+            "mean_samples_per_record": cost_first_total_generated_samples / 100,
+            "inside_generation_seconds": 2.0,
+            "sample_count_ratio_to_reference": cost_first_sample_count_ratio,
+            "inside_generation_seconds_ratio_to_reference": (
+                cost_first_sample_count_ratio
+                if cost_first_generation_seconds_ratio is None
+                else cost_first_generation_seconds_ratio
+            ),
+            "inside_auroc": {"inside_semantic_entropy": cost_first_quality_value},
+            "stop_reason_counts": {"selfcheck_supported": 2},
+        })
+    budget_specs.append({"kind": "top_fraction", "value": top_fraction, "id": budget_id})
+    budgets_payload[budget_id] = {
+        "sample_efficiency_gate": {"passed": True},
+        "recommendation": {"recommended_run": "adaptive_selfcheck"},
+    }
+    leaderboard.append({
+        "budget_id": budget_id,
+        "budget_kind": "top_fraction",
+        "budget_value": top_fraction,
+        "recommended_run": "adaptive_selfcheck",
+        "derived": derive_from_max_budget,
+        "derived_from_budget_id": budget_id if derive_from_max_budget else None,
+        "inside_generation_seconds_source": (
+            "measured_source_run" if derive_from_max_budget else "measured"
+        ),
+        "sampled": total_generated_samples,
+        "skipped_by_trigger": 100 - total_generated_samples,
+        "total_generated_samples": total_generated_samples,
+        "mean_samples_per_record": total_generated_samples / 100,
+        "inside_generation_seconds": 4.5,
+        "sample_count_ratio_to_reference": sample_count_ratio,
+        "inside_generation_seconds_ratio_to_reference": generation_seconds_ratio,
+        "inside_auroc": {"inside_semantic_entropy": quality_value},
+        "stop_reason_counts": {"selfcheck_supported": 4},
+    })
     report_path.write_text(
         json.dumps({
             "schema_version": 1,
@@ -4325,7 +4483,7 @@ def _write_inside_trigger_budget_sweep(
             "derived_source_budget_id": budget_id if derive_from_max_budget else None,
             "config": {
                 "trigger_signal": "truth_proj",
-                "budgets": [{"kind": "top_fraction", "value": top_fraction, "id": budget_id}],
+                "budgets": budget_specs,
                 "inside_samples": 5,
                 "inside_batch_size": 1,
                 "inside_max_new_tokens": 12,
@@ -4342,36 +4500,10 @@ def _write_inside_trigger_budget_sweep(
                 "run_names": ["adaptive_selfcheck"],
                 "derive_from_max_budget": derive_from_max_budget,
             },
-            "budgets": {
-                budget_id: {
-                    "sample_efficiency_gate": {"passed": True},
-                    "recommendation": {"recommended_run": "adaptive_selfcheck"},
-                }
-            },
-            "leaderboard": [
-                {
-                    "budget_id": budget_id,
-                    "budget_kind": "top_fraction",
-                    "budget_value": top_fraction,
-                    "recommended_run": "adaptive_selfcheck",
-                    "derived": derive_from_max_budget,
-                    "derived_from_budget_id": budget_id if derive_from_max_budget else None,
-                    "inside_generation_seconds_source": (
-                        "measured_source_run" if derive_from_max_budget else "measured"
-                    ),
-                    "sampled": total_generated_samples,
-                    "skipped_by_trigger": 100 - total_generated_samples,
-                    "total_generated_samples": total_generated_samples,
-                    "mean_samples_per_record": total_generated_samples / 100,
-                    "inside_generation_seconds": 4.5,
-                    "sample_count_ratio_to_reference": sample_count_ratio,
-                    "inside_generation_seconds_ratio_to_reference": generation_seconds_ratio,
-                    "inside_auroc": {"inside_semantic_entropy": quality_value},
-                    "stop_reason_counts": {"selfcheck_supported": 4},
-                }
-            ],
+            "budgets": budgets_payload,
+            "leaderboard": leaderboard,
             "recommendation": {
-                "budget_id": budget_id,
+                "budget_id": cost_first_budget_id if cost_first_enabled else budget_id,
                 "recommended_run": "adaptive_selfcheck",
                 "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
             },
@@ -4410,6 +4542,9 @@ def _write_readiness_baseline_manifest(
     inside_trigger_sample_ratio=None,
     inside_trigger_generation_ratio=None,
     inside_trigger_total_generated_samples=8,
+    inside_trigger_cost_first_sample_ratio=None,
+    inside_trigger_cost_first_generation_ratio=None,
+    inside_trigger_cost_first_total_generated_samples=4,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -4438,6 +4573,9 @@ def _write_readiness_baseline_manifest(
                 else inside_trigger_generation_ratio
             ),
             total_generated_samples=inside_trigger_total_generated_samples,
+            cost_first_sample_count_ratio=inside_trigger_cost_first_sample_ratio,
+            cost_first_generation_seconds_ratio=inside_trigger_cost_first_generation_ratio,
+            cost_first_total_generated_samples=inside_trigger_cost_first_total_generated_samples,
         )
     cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
     result_path.write_text(

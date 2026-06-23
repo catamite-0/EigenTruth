@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.compare_release_candidates import compare_release_candidates  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
+from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
@@ -37,6 +38,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     workflow_report_path: Path | None = None
     recursive: bool = True
     allow_unverified: bool = False
+    inside_trigger_budget_policy: str | None = None
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
@@ -74,6 +76,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.workflow_report_path is not None:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
+        if self.inside_trigger_budget_policy is not None:
+            policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
+            if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
+                choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
+                raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
+            object.__setattr__(self, "inside_trigger_budget_policy", policy)
         object.__setattr__(self, "readiness_baseline_keys", tuple(str(key) for key in self.readiness_baseline_keys))
         object.__setattr__(self, "route_baseline_keys", tuple(str(key) for key in self.route_baseline_keys))
 
@@ -115,6 +123,7 @@ def run_release_candidate_registry_workflow(
         route_baseline_keys=config.route_baseline_keys,
         recursive=config.recursive,
         allow_unverified=config.allow_unverified,
+        inside_trigger_budget_policy=config.inside_trigger_budget_policy,
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
@@ -180,6 +189,7 @@ def run_release_candidate_registry_workflow(
             "artifact_manifest": str(config.manifest_path),
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
+            "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
         },
         "release_candidate_comparison": comparison,
         "promotion": promotion,
@@ -297,6 +307,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_inside_sampling_stop_reason_counts": runtime_cost.get("inside_sampling_stop_reason_counts"),
         "recommended_inside_trigger_budget_id": runtime_cost.get("inside_trigger_budget_id"),
+        "recommended_inside_trigger_budget_policy": runtime_cost.get("inside_trigger_budget_policy"),
         "recommended_inside_trigger_budget_derive_from_max_budget": runtime_cost.get(
             "inside_trigger_budget_derive_from_max_budget"
         ),
@@ -375,6 +386,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         workflow_report_path=None if args.json is None else Path(args.json),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
@@ -439,6 +451,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-recursive", action="store_true", help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified input baseline manifests to become candidates")
+    parser.add_argument("--inside-trigger-budget-policy", default=None,
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="optional release-time override for trigger-budget sweep selection; omit to use "
+                             "the readiness baseline policy")
     parser.add_argument("--min-best-quality-auroc", type=lambda value: _parse_non_negative_float(
         value,
         flag="--min-best-quality-auroc",

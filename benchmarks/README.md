@@ -1097,6 +1097,7 @@ python benchmarks/compare_release_candidates.py \
   --min-false-refuted-rate 0.90 \
   --max-inside-sample-count-ratio 0.60 \
   --max-inside-generation-seconds-ratio 0.80 \
+  --inside-trigger-budget-policy quality_balanced \
   --max-p99-duration-seconds 0.20 \
   --max-mean-attempted-route-count 1.5 \
   --max-retrieval-use-rate 0.50 \
@@ -1118,6 +1119,11 @@ Readiness-side INSIDE sampling gates are delegated to
 `compare_readiness_baselines.py`, so the final release also blocks when the
 selected runtime lacks sampling profile evidence or exceeds the configured
 sample-count/generation-time ratios.
+When readiness evidence includes a trigger-budget sweep, omit
+`--inside-trigger-budget-policy` to use the policy already recorded in the
+readiness manifest or runtime recommendation. Pass `cost_first`,
+`quality_balanced`, or `quality_first` to force a release-gate policy override
+without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`:
@@ -1133,6 +1139,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --max-uncached-forward-seconds 40 \
   --max-inside-sample-count-ratio 0.60 \
   --max-inside-generation-seconds-ratio 0.80 \
+  --inside-trigger-budget-policy quality_balanced \
   --min-selected 100 \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
@@ -1408,6 +1415,9 @@ semantic-entropy AUROC `0.570`, 77/154 statements sampled, 77 skipped, and 218
 generated samples. The cost-first sweep recommendation remains top-10%; the
 registered release default is top-40% because it preserves the best measured
 INSIDE semantic-entropy quality within the configured tolerance.
+Use `--inside-trigger-budget-policy cost_first` in the release-candidate
+comparison or registry workflow to make the final gate select the top-10%
+trigger budget from the same verified sweep evidence.
 
 ## `build_truthfulqa_corpus.py`
 

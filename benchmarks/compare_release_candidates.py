@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.compare_readiness_baselines import compare_readiness_baselines  # noqa: E402
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
+from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 
 
 def compare_release_candidates(
@@ -26,6 +27,7 @@ def compare_release_candidates(
     route_baseline_keys: Sequence[str] = (),
     recursive: bool = True,
     allow_unverified: bool = False,
+    inside_trigger_budget_policy: str | None = None,
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
@@ -50,11 +52,15 @@ def compare_release_candidates(
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
+    inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
+        inside_trigger_budget_policy
+    )
     readiness = compare_readiness_baselines(
         registry_path=readiness_registry_path,
         baseline_keys=readiness_baseline_keys,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        inside_trigger_budget_policy=inside_trigger_budget_policy,
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
@@ -96,6 +102,7 @@ def compare_release_candidates(
             "route_baseline_keys": list(route_baseline_keys),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
+            "inside_trigger_budget_policy": inside_trigger_budget_policy,
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
@@ -150,6 +157,7 @@ def _release_candidate(
             "max_workers": readiness_row.get("max_workers"),
             "inside_sampling": readiness_row.get("inside_sampling"),
             "inside_trigger_budget_sweep": readiness_row.get("inside_trigger_budget_sweep"),
+            "inside_trigger_budget_policy": readiness_row.get("inside_trigger_budget_policy"),
             "performance_cell": readiness_row.get("recommended_performance_cell"),
             "benchmark_flags": readiness_row.get("benchmark_flags"),
         },
@@ -193,6 +201,7 @@ def _release_candidate(
             ),
             "inside_sampling_stop_reason_counts": readiness_row.get("inside_sampling_stop_reason_counts"),
             "inside_trigger_budget_id": readiness_row.get("inside_trigger_budget_id"),
+            "inside_trigger_budget_policy": readiness_row.get("inside_trigger_budget_policy"),
             "inside_trigger_budget_derive_from_max_budget": readiness_row.get(
                 "inside_trigger_budget_derive_from_max_budget"
             ),
@@ -284,6 +293,16 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _normalize_inside_trigger_budget_policy(policy: str | None) -> str | None:
+    if policy is None:
+        return None
+    normalized = str(policy).strip().lower().replace("-", "_")
+    if normalized not in INSIDE_TRIGGER_BUDGET_POLICIES:
+        choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
+        raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
+    return normalized
+
+
 def _parse_non_negative_float(value: str, *, flag: str) -> float:
     numeric = float(value)
     if not math.isfinite(numeric) or numeric < 0:
@@ -307,6 +326,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
@@ -363,6 +383,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-recursive", action="store_true", help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified manifests to become candidates")
+    parser.add_argument("--inside-trigger-budget-policy", default=None,
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="optional release-time override for trigger-budget sweep selection; omit to use "
+                             "the readiness baseline policy")
     parser.add_argument("--min-best-quality-auroc", type=lambda value: _parse_non_negative_float(
         value,
         flag="--min-best-quality-auroc",
