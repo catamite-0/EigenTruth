@@ -8946,6 +8946,9 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
     assert manifest["metadata"]["budget_passed"] is True
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
     assert record.artifact_type == "product_runtime_baseline"
     assert record.metadata["status"] == "promote"
     assert record.metadata["trace_count"] == 2
@@ -9021,6 +9024,8 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert {row["profile"] for row in payload["leaderboard"]} == {"latency", "audit"}
     assert payload["profiles"][0]["status"] == "observed"
     assert payload["profiles"][1]["status"] == "observed"
+    assert Path(payload["profiles"][0]["baseline_artifact_manifest"]).exists()
+    assert Path(payload["profiles"][1]["baseline_artifact_manifest"]).exists()
     assert latency_trace["metadata"]["runtime_profile"] == "latency"
     assert audit_trace["metadata"]["runtime_profile"] == "audit"
     assert "initial_verification" not in {
@@ -9030,6 +9035,12 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
         phase["name"] for phase in audit_trace["runtime_trace"]["phases"]
     }
     assert Path(payload["paths"]["artifact_manifest"]).exists()
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert "latency_baseline_manifest" in manifest["artifacts"]
+    assert "audit_baseline_manifest" in manifest["artifacts"]
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
     assert record.metadata["status"] == "observed"
     assert record.metadata["profile_count"] == 2
 

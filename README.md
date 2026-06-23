@@ -142,6 +142,10 @@ retrieval structured-QA audit baseline. That audit route promotes with selected
 1.000, runtime about 1.05s, and 410 retrieval hits under a 450-hit budget. The
 selected product route remains strict low-latency `structured_qa` with
 `max_retrieval_use_rate=0.0` and `max_mean_attempted_route_count=1.1`.
+The current registered product runtime profile sweep
+`report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
+`balanced`, and `audit` all pass the 1.4 product runtime budget on deterministic
+control-plane traces, with `audit` recommended by the local cost/risk ranking.
 
 `run_inside_sampling_profile.py` accepts `--inside-trigger-signal` plus
 `--inside-trigger-threshold` or `--inside-trigger-top-fraction`, and

@@ -374,6 +374,10 @@ def _route_cost_record(result: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    selected = len(records)
+    routed_total = sum(1 for record in records if bool(record.get("routed")))
+    if routed_total == 0:
+        return _zero_route_cost_stats(selected)
     total_durations = [
         value
         for record in records
@@ -389,8 +393,6 @@ def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         for record in records
         if (value := _finite_float(record.get("attempted_route_count"))) is not None
     ]
-    selected = len(records)
-    routed_total = sum(1 for record in records if bool(record.get("routed")))
     used_retrieval_count = sum(1 for record in records if bool(record.get("used_retrieval")))
     retrieval_hit_count = sum(_non_negative_int(record.get("retrieval_hit_count")) or 0 for record in records)
     total_duration = float(sum(total_durations)) if total_durations else None
@@ -432,6 +434,32 @@ def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "retrieval_use_rate": _safe_div(used_retrieval_count, selected),
         "retrieval_hit_count": retrieval_hit_count,
         "mean_retrieval_hits": _safe_div(retrieval_hit_count, selected),
+    }
+
+
+def _zero_route_cost_stats(selected: int) -> dict[str, Any]:
+    return {
+        "total": selected,
+        "routed_total": 0,
+        "unrouted_total": selected,
+        "duration_observations": 0,
+        "total_duration_seconds": 0.0,
+        "mean_duration_seconds": 0.0,
+        "p95_duration_seconds": 0.0,
+        "p99_duration_seconds": 0.0,
+        "max_duration_seconds": 0.0,
+        "selected_route_duration_observations": 0,
+        "total_selected_route_duration_seconds": 0.0,
+        "mean_selected_route_duration_seconds": 0.0,
+        "p95_selected_route_duration_seconds": 0.0,
+        "p99_selected_route_duration_seconds": 0.0,
+        "attempted_route_count_observations": 0,
+        "total_attempted_route_count": 0.0,
+        "mean_attempted_route_count": 0.0,
+        "used_retrieval_count": 0,
+        "retrieval_use_rate": 0.0,
+        "retrieval_hit_count": 0,
+        "mean_retrieval_hits": 0.0,
     }
 
 

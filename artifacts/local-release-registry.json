@@ -2295,6 +2295,24 @@
       "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate-verification",
       "path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest_verification.json",
       "version": "1.4"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
+        "contract": "smollm2_1_4",
+        "profile_count": 3,
+        "purpose": "product_runtime_profile_selection",
+        "recommended_profile": "audit",
+        "release": "strict_structured_retrieval_audit",
+        "repeats": 1,
+        "scenario_count": 3,
+        "status": "promote",
+        "workflow": "run_product_runtime_profile_sweep"
+      },
+      "name": "smollm2-product-runtime-profile-sweep",
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/product-runtime-profile-sweep.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

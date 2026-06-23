@@ -2219,6 +2219,16 @@ for each profile, and ranks the non-blocked profiles by request runtime and
 route cost. This is the product-control counterpart to model-side cache/profile
 sweeps.
 
+Current registered SmolLM2 product runtime profile sweep:
+`report:smollm2-product-runtime-profile-sweep:0.1` in
+`artifacts/local-release-registry.json`. It uses the strict structured-retrieval
+audit 1.4 promotion contract, verifies the artifact manifest, promotes all three
+profiles under `max_mean_attempted_route_count=1.1`,
+`max_retrieval_use_rate=0.0`, and `max_p99_route_duration_seconds=0.01`, and
+recommends `audit` for the deterministic control-plane scenario set. Skipped
+staged-verification paths with no verifier route are counted as zero route cost
+for route-cost budget checks.
+
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
 `artifacts/local-readiness-registry.json`. It reuses the promoted real-model

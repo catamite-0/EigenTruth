@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "product_runtime_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-baseline.json",
+      "sha256": "ae2c6c77e4da617ff748e80acafc750e0d567d9106f19e6c1212a7a22b967307",
+      "size_bytes": 58510
+    },
+    "promotion_contract": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../../smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+      "sha256": "feaebd93a7a4b92fc50adcabe4ea4ae5515b6b1e42fb3d086db37c2bf530b239",
+      "size_bytes": 53344
+    },
+    "trace_0000_low_risk_supported-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/balanced/low_risk_supported-r0.json",
+      "sha256": "1cbf788a5a4c758542a2fef775e7df6afdf6280b91a352888cb111416e0f3184",
+      "size_bytes": 31773
+    },
+    "trace_0001_diagnostic_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/balanced/diagnostic_refuted-r0.json",
+      "sha256": "97c3dc4c2117c2a94507acaa522b381853e1a416440543cddd76e51daaae3d49",
+      "size_bytes": 43685
+    },
+    "trace_0002_calculator_refuted-r0": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../traces/balanced/calculator_refuted-r0.json",
+      "sha256": "9f697353b714acc0d26f18ba8d82cf91e2fa19776801789a1a77489e54c8f7ae",
+      "size_bytes": 42657
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "budget_enabled": true,
+    "budget_passed": true,
+    "contract": "smollm2_1_4",
+    "purpose": "product_runtime_profile_selection",
+    "release": "strict_structured_retrieval_audit",
+    "runner": "run_product_runtime_baseline",
+    "runtime_profile": "balanced",
+    "source": "run_product_runtime_profile_sweep",
+    "status": "promote",
+    "trace_count": 3
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

@@ -196,12 +196,20 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "metadata": dict(config.metadata),
         },
     }
+    _write_report_and_manifest(config, report)
+    _record_registry(config, report)
+    return report
+
+
+def _write_report_and_manifest(
+    config: ProductRuntimeProfileSweepConfig,
+    report: dict[str, Any],
+) -> dict[str, Any]:
     _write_json(config.resolved_report_path, report)
     manifest = _write_artifact_manifest(config, report)
     report["artifact_manifest_summary"] = manifest["summary"]
     _write_json(config.resolved_report_path, report)
-    _record_registry(config, report)
-    return report
+    return _write_artifact_manifest(config, report)
 
 
 def _run_profile_traces(
@@ -305,6 +313,7 @@ def _profile_record(
         "status": baseline.get("status"),
         "trace_count": len(traces),
         "baseline_path": _nested(baseline, "paths", "report"),
+        "baseline_artifact_manifest": _nested(baseline, "paths", "artifact_manifest"),
         "trace_paths": tuple(str(trace["path"]) for trace in traces),
         "traces": tuple(dict(trace) for trace in traces),
         "metrics": {
@@ -385,6 +394,7 @@ def _write_artifact_manifest(
             continue
         profile_name = _safe_artifact_name(str(profile.get("profile", "profile")))
         artifacts[f"{profile_name}_baseline"] = profile.get("baseline_path")
+        artifacts[f"{profile_name}_baseline_manifest"] = profile.get("baseline_artifact_manifest")
         for index, trace_path in enumerate(_sequence(profile.get("trace_paths"))):
             artifacts[f"{profile_name}_trace_{index:04d}"] = str(trace_path)
     manifest = build_artifact_manifest(

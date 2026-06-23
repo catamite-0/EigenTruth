@@ -1,0 +1,319 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 17,
+    "directory_count": 0,
+    "file_count": 17,
+    "missing_count": 0
+  },
+  "config": {
+    "artifact_path": null,
+    "metadata": {
+      "contract": "smollm2_1_4",
+      "purpose": "product_runtime_profile_selection",
+      "release": "strict_structured_retrieval_audit"
+    },
+    "profiles": [
+      "latency",
+      "balanced",
+      "audit"
+    ],
+    "repeats": 1,
+    "scenario_names": [
+      "low_risk_supported",
+      "diagnostic_refuted",
+      "calculator_refuted"
+    ]
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "recommended_profile": "audit",
+    "status": "promote"
+  },
+  "leaderboard": [
+    {
+      "blocked": false,
+      "cache_hit_rate_mean": 0.0,
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.0,
+      "profile": "audit",
+      "retrieval_use_rate": 0.0,
+      "status": "promote",
+      "total_seconds_mean": 0.0004380536653722326,
+      "total_seconds_p95": 0.00047964833211153743
+    },
+    {
+      "blocked": false,
+      "cache_hit_rate_mean": 0.0,
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 6.333333333333333,
+      "profile": "balanced",
+      "retrieval_use_rate": 0.0,
+      "status": "promote",
+      "total_seconds_mean": 0.0004470846615731716,
+      "total_seconds_p95": 0.000568403652869165
+    },
+    {
+      "blocked": false,
+      "cache_hit_rate_mean": 0.0,
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.666666666666667,
+      "profile": "latency",
+      "retrieval_use_rate": 0.0,
+      "status": "promote",
+      "total_seconds_mean": 0.0005498976679518819,
+      "total_seconds_p95": 0.0009011163259856403
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/artifact-manifest.json",
+    "output_dir": "artifacts/smollm2_product_runtime_profile_sweep",
+    "policy": null,
+    "promotion_contract": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+    "report": "artifacts/smollm2_product_runtime_profile_sweep/product-runtime-profile-sweep.json"
+  },
+  "profiles": [
+    {
+      "baseline_artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/baselines/latency/product-runtime-baseline-artifact-manifest.json",
+      "baseline_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/latency/product-runtime-baseline.json",
+      "budget": {
+        "enabled": true,
+        "failed_count": 0,
+        "failure_counts_by_metric": {},
+        "passed": true,
+        "passed_count": 3,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "cache_hit_rate_mean": 0.0,
+        "mean_attempted_route_count": 1.0,
+        "mean_route_duration_seconds": 0.00010151800233870745,
+        "measured_phases_mean": 5.666666666666667,
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0005498976679518819,
+        "total_seconds_p95": 0.0009011163259856403
+      },
+      "profile": "latency",
+      "status": "promote",
+      "trace_count": 3,
+      "trace_paths": [
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json"
+      ],
+      "traces": [
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json",
+          "repeat": 0,
+          "request_id": "latency-low_risk_supported-r0",
+          "risk_action": "accept",
+          "risk_level": "low",
+          "runtime_total_seconds": 0.000404885970056057,
+          "scenario": "low_risk_supported",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "latency-diagnostic_refuted-r0",
+          "risk_action": "retrieve",
+          "risk_level": "medium",
+          "runtime_total_seconds": 0.00028855400159955025,
+          "scenario": "diagnostic_refuted",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 7,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "latency-calculator_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_total_seconds": 0.0009562530322000384,
+          "scenario": "calculator_refuted",
+          "staged_verification_enabled": true
+        }
+      ]
+    },
+    {
+      "baseline_artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/baselines/balanced/product-runtime-baseline-artifact-manifest.json",
+      "baseline_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/balanced/product-runtime-baseline.json",
+      "budget": {
+        "enabled": true,
+        "failed_count": 0,
+        "failure_counts_by_metric": {},
+        "passed": true,
+        "passed_count": 3,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "cache_hit_rate_mean": 0.0,
+        "mean_attempted_route_count": 1.0,
+        "mean_route_duration_seconds": 4.177932472278675e-05,
+        "measured_phases_mean": 6.333333333333333,
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0004470846615731716,
+        "total_seconds_p95": 0.000568403652869165
+      },
+      "profile": "balanced",
+      "status": "promote",
+      "trace_count": 3,
+      "trace_paths": [
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json"
+      ],
+      "traces": [
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json",
+          "repeat": 0,
+          "request_id": "balanced-low_risk_supported-r0",
+          "risk_action": "accept",
+          "risk_level": "low",
+          "runtime_total_seconds": 0.000230137025937438,
+          "scenario": "low_risk_supported",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 7,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "balanced-diagnostic_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_total_seconds": 0.0005716149462386966,
+          "scenario": "diagnostic_refuted",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 7,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "balanced-calculator_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_total_seconds": 0.0005395020125433803,
+          "scenario": "calculator_refuted",
+          "staged_verification_enabled": true
+        }
+      ]
+    },
+    {
+      "baseline_artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/baselines/audit/product-runtime-baseline-artifact-manifest.json",
+      "baseline_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/audit/product-runtime-baseline.json",
+      "budget": {
+        "enabled": true,
+        "failed_count": 0,
+        "failure_counts_by_metric": {},
+        "passed": true,
+        "passed_count": 3,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "cache_hit_rate_mean": 0.0,
+        "mean_attempted_route_count": 1.0,
+        "mean_route_duration_seconds": 3.3066520700231194e-05,
+        "measured_phases_mean": 5.0,
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0004380536653722326,
+        "total_seconds_p95": 0.00047964833211153743
+      },
+      "profile": "audit",
+      "status": "promote",
+      "trace_count": 3,
+      "trace_paths": [
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json"
+      ],
+      "traces": [
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+          "repeat": 0,
+          "request_id": "audit-low_risk_supported-r0",
+          "risk_action": "accept",
+          "risk_level": "low",
+          "runtime_total_seconds": 0.00036226201336830854,
+          "scenario": "low_risk_supported",
+          "staged_verification_enabled": false
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "audit-diagnostic_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_total_seconds": 0.00048057304229587317,
+          "scenario": "diagnostic_refuted",
+          "staged_verification_enabled": false
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "audit-calculator_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_total_seconds": 0.0004713259404525161,
+          "scenario": "calculator_refuted",
+          "staged_verification_enabled": false
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "status": "promote",
+  "workflow": "product_runtime_profile_sweep"
+}

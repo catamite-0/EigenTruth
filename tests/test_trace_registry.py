@@ -477,6 +477,64 @@ def test_product_trace_verification_route_cost_summary_matches_benchmark_fields(
     json.dumps(summary)
 
 
+def test_product_trace_route_cost_summary_treats_skipped_verifier_as_zero_cost():
+    trace = ProductTrace(verification_results=())
+
+    summary = trace.verification_route_cost_summary()
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            max_mean_attempted_route_count=1.1,
+            max_p99_route_duration_seconds=0.01,
+            max_retrieval_use_rate=0.0,
+            require_runtime_trace=False,
+        ),
+    )
+
+    assert summary["total"] == 0
+    assert summary["routed_total"] == 0
+    assert summary["duration_observations"] == 0
+    assert summary["mean_duration_seconds"] == 0.0
+    assert summary["p99_duration_seconds"] == 0.0
+    assert summary["mean_attempted_route_count"] == 0.0
+    assert summary["retrieval_use_rate"] == 0.0
+    assert report["passed"] is True
+    assert [check["metric"] for check in report["checks"]] == [
+        "p99_route_duration_seconds",
+        "mean_attempted_route_count",
+        "retrieval_use_rate",
+    ]
+    json.dumps(summary)
+
+
+def test_product_trace_route_cost_summary_treats_unrouted_results_as_zero_cost():
+    trace = ProductTrace(
+        verification_results=(
+            VerificationResult(status=VerificationStatus.NOT_APPLICABLE, confidence=1.0),
+        )
+    )
+
+    summary = trace.verification_route_cost_summary()
+    report = evaluate_product_runtime_budget(
+        trace,
+        ProductRuntimeBudgetPolicy(
+            max_mean_attempted_route_count=0.0,
+            max_p99_route_duration_seconds=0.0,
+            max_retrieval_use_rate=0.0,
+            require_runtime_trace=False,
+        ),
+    )
+
+    assert summary["total"] == 1
+    assert summary["routed_total"] == 0
+    assert summary["unrouted_total"] == 1
+    assert summary["mean_duration_seconds"] == 0.0
+    assert summary["mean_attempted_route_count"] == 0.0
+    assert summary["retrieval_use_rate"] == 0.0
+    assert summary["by_route"]["unrouted"]["mean_duration_seconds"] == 0.0
+    assert report["passed"] is True
+
+
 def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
     trace = ProductTrace(
         verification_results=(

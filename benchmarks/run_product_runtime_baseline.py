@@ -110,12 +110,20 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "metadata": dict(config.metadata),
         },
     }
+    _write_report_and_manifest(config, report)
+    _record_registry(config, report)
+    return report
+
+
+def _write_report_and_manifest(
+    config: ProductRuntimeBaselineConfig,
+    report: dict[str, Any],
+) -> dict[str, Any]:
     _write_report(config.report_path, report)
     manifest = _write_artifact_manifest(config, report)
     report["artifact_manifest_summary"] = manifest["summary"]
     _write_report(config.report_path, report)
-    _record_registry(config, report)
-    return report
+    return _write_artifact_manifest(config, report)
 
 
 def _trace_record(

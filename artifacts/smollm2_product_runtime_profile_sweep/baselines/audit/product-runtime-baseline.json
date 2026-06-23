@@ -1,0 +1,1447 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  },
+  "budget": {
+    "enabled": true,
+    "failed_count": 0,
+    "failure_counts_by_metric": {},
+    "passed": true,
+    "passed_count": 3,
+    "policy": {
+      "max_mean_attempted_route_count": 1.1,
+      "max_mean_route_duration_seconds": null,
+      "max_p95_route_duration_seconds": null,
+      "max_p99_route_duration_seconds": 0.01,
+      "max_phase_p95_seconds": {},
+      "max_phase_p99_seconds": {},
+      "max_phase_seconds": {},
+      "max_retrieval_hit_count": null,
+      "max_retrieval_use_rate": 0.0,
+      "max_route_duration_seconds": null,
+      "max_total_seconds": null,
+      "min_cache_hit_rate": null,
+      "min_named_cache_hit_rate": {},
+      "require_runtime_trace": true
+    }
+  },
+  "config": {
+    "metadata": {
+      "contract": "smollm2_1_4",
+      "purpose": "product_runtime_profile_selection",
+      "release": "strict_structured_retrieval_audit",
+      "runtime_profile": "audit",
+      "source": "run_product_runtime_profile_sweep"
+    },
+    "policy_source": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+    "trace_count": 3
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "status": "promote"
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_product_runtime_profile_sweep/baselines/audit/product-runtime-baseline-artifact-manifest.json",
+    "policy": null,
+    "promotion_contract": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+    "report": "artifacts/smollm2_product_runtime_profile_sweep/baselines/audit/product-runtime-baseline.json",
+    "traces": [
+      "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+      "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+      "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json"
+    ]
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "summary": {
+    "accounted_seconds": {
+      "count": 3,
+      "max": 0.00045120413415133953,
+      "mean": 0.0004085023732235034,
+      "min": 0.0003316469956189394,
+      "missing_or_nonfinite": 0,
+      "p50": 0.00044265598990023136,
+      "p95": 0.00045034931972622874,
+      "p99": 0.00045103317126631736
+    },
+    "cache_hit_rate": {
+      "count": 3,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "missing_or_nonfinite": 0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "max_route_duration_seconds": {
+      "count": 3,
+      "max": 7.631198968738317e-05,
+      "mean": 3.8842010932664074e-05,
+      "min": 1.884601078927517e-05,
+      "missing_or_nonfinite": 0,
+      "p50": 2.1368032321333885e-05,
+      "p95": 7.081759395077825e-05,
+      "p99": 7.521311054006218e-05
+    },
+    "mean_attempted_route_count": {
+      "count": 3,
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0,
+      "missing_or_nonfinite": 0,
+      "p50": 1.0,
+      "p95": 1.0,
+      "p99": 1.0
+    },
+    "mean_route_duration_seconds": {
+      "count": 3,
+      "max": 7.631198968738317e-05,
+      "mean": 3.8324350801606975e-05,
+      "min": 1.729303039610386e-05,
+      "missing_or_nonfinite": 0,
+      "p50": 2.1368032321333885e-05,
+      "p95": 7.081759395077825e-05,
+      "p99": 7.521311054006218e-05
+    },
+    "measured_phases": {
+      "count": 3,
+      "max": 5.0,
+      "mean": 5.0,
+      "min": 5.0,
+      "missing_or_nonfinite": 0,
+      "p50": 5.0,
+      "p95": 5.0,
+      "p99": 5.0
+    },
+    "n_traces": 3,
+    "p95_route_duration_seconds": {
+      "count": 3,
+      "max": 7.631198968738317e-05,
+      "mean": 3.879024491955837e-05,
+      "min": 1.869071274995804e-05,
+      "missing_or_nonfinite": 0,
+      "p50": 2.1368032321333885e-05,
+      "p95": 7.081759395077825e-05,
+      "p99": 7.521311054006218e-05
+    },
+    "p99_route_duration_seconds": {
+      "count": 3,
+      "max": 7.631198968738317e-05,
+      "mean": 3.883165773004293e-05,
+      "min": 1.8814951181411745e-05,
+      "missing_or_nonfinite": 0,
+      "p50": 2.1368032321333885e-05,
+      "p95": 7.081759395077825e-05,
+      "p99": 7.521311054006218e-05
+    },
+    "phases": {
+      "action_execution": {
+        "p95_seconds": {
+          "count": 3,
+          "max": 1.636100932955742e-05,
+          "mean": 1.549134807040294e-05,
+          "min": 1.4835037291049957e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 1.5277997590601444e-05,
+          "p95": 1.6252708155661823e-05,
+          "p99": 1.63393490947783e-05
+        },
+        "p99_seconds": {
+          "count": 3,
+          "max": 1.636100932955742e-05,
+          "mean": 1.549134807040294e-05,
+          "min": 1.4835037291049957e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 1.5277997590601444e-05,
+          "p95": 1.6252708155661823e-05,
+          "p99": 1.63393490947783e-05
+        },
+        "phase_count": 3,
+        "seconds": {
+          "count": 3,
+          "max": 1.636100932955742e-05,
+          "mean": 1.549134807040294e-05,
+          "min": 1.4835037291049957e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 1.5277997590601444e-05,
+          "p95": 1.6252708155661823e-05,
+          "p99": 1.63393490947783e-05
+        },
+        "trace_observations": 3
+      },
+      "action_planning": {
+        "p95_seconds": {
+          "count": 3,
+          "max": 8.485501166433096e-05,
+          "mean": 7.194734644144773e-05,
+          "min": 5.721102934330702e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.377599831670523e-05,
+          "p95": 8.374711032956838e-05,
+          "p99": 8.463343139737845e-05
+        },
+        "p99_seconds": {
+          "count": 3,
+          "max": 8.485501166433096e-05,
+          "mean": 7.194734644144773e-05,
+          "min": 5.721102934330702e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.377599831670523e-05,
+          "p95": 8.374711032956838e-05,
+          "p99": 8.463343139737845e-05
+        },
+        "phase_count": 3,
+        "seconds": {
+          "count": 3,
+          "max": 8.485501166433096e-05,
+          "mean": 7.194734644144773e-05,
+          "min": 5.721102934330702e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.377599831670523e-05,
+          "p95": 8.374711032956838e-05,
+          "p99": 8.463343139737845e-05
+        },
+        "trace_observations": 3
+      },
+      "initial_risk_decision": {
+        "p95_seconds": {
+          "count": 3,
+          "max": 6.078602746129036e-05,
+          "mean": 5.482366153349479e-05,
+          "min": 5.0838920287787914e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 5.28460368514061e-05,
+          "p95": 5.999202840030193e-05,
+          "p99": 6.062722764909267e-05
+        },
+        "p99_seconds": {
+          "count": 3,
+          "max": 6.078602746129036e-05,
+          "mean": 5.482366153349479e-05,
+          "min": 5.0838920287787914e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 5.28460368514061e-05,
+          "p95": 5.999202840030193e-05,
+          "p99": 6.062722764909267e-05
+        },
+        "phase_count": 3,
+        "seconds": {
+          "count": 3,
+          "max": 6.078602746129036e-05,
+          "mean": 5.482366153349479e-05,
+          "min": 5.0838920287787914e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 5.28460368514061e-05,
+          "p95": 5.999202840030193e-05,
+          "p99": 6.062722764909267e-05
+        },
+        "trace_observations": 3
+      },
+      "initial_verification": {
+        "p95_seconds": {
+          "count": 3,
+          "max": 0.00021441804710775614,
+          "mean": 0.00018935798046489558,
+          "min": 0.00014130398631095886,
+          "missing_or_nonfinite": 0,
+          "p50": 0.0002123519079759717,
+          "p95": 0.0002142114331945777,
+          "p99": 0.00021437672432512045
+        },
+        "p99_seconds": {
+          "count": 3,
+          "max": 0.00021441804710775614,
+          "mean": 0.00018935798046489558,
+          "min": 0.00014130398631095886,
+          "missing_or_nonfinite": 0,
+          "p50": 0.0002123519079759717,
+          "p95": 0.0002142114331945777,
+          "p99": 0.00021437672432512045
+        },
+        "phase_count": 3,
+        "seconds": {
+          "count": 3,
+          "max": 0.00021441804710775614,
+          "mean": 0.00018935798046489558,
+          "min": 0.00014130398631095886,
+          "missing_or_nonfinite": 0,
+          "p50": 0.0002123519079759717,
+          "p95": 0.0002142114331945777,
+          "p99": 0.00021437672432512045
+        },
+        "trace_observations": 3
+      },
+      "retrieval_evidence_collection": {
+        "p95_seconds": {
+          "count": 3,
+          "max": 8.84040491655469e-05,
+          "mean": 7.68820367132624e-05,
+          "min": 6.593205034732819e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.631001062691212e-05,
+          "p95": 8.719464531168342e-05,
+          "p99": 8.81621683947742e-05
+        },
+        "p99_seconds": {
+          "count": 3,
+          "max": 8.84040491655469e-05,
+          "mean": 7.68820367132624e-05,
+          "min": 6.593205034732819e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.631001062691212e-05,
+          "p95": 8.719464531168342e-05,
+          "p99": 8.81621683947742e-05
+        },
+        "phase_count": 3,
+        "seconds": {
+          "count": 3,
+          "max": 8.84040491655469e-05,
+          "mean": 7.68820367132624e-05,
+          "min": 6.593205034732819e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 7.631001062691212e-05,
+          "p95": 8.719464531168342e-05,
+          "p99": 8.81621683947742e-05
+        },
+        "trace_observations": 3
+      }
+    },
+    "retrieval_hit_count": {
+      "count": 3,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "missing_or_nonfinite": 0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "retrieval_use_rate": {
+      "count": 3,
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0,
+      "missing_or_nonfinite": 0,
+      "p50": 0.0,
+      "p95": 0.0,
+      "p99": 0.0
+    },
+    "routes": {
+      "by_route": {
+        "calculator": {
+          "attempted_route_count_observations": 1,
+          "duration_observations": 1,
+          "max_duration_seconds": 7.631198968738317e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 7.631198968738317e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 7.631198968738317e-05,
+          "per_trace_mean_duration_seconds": {
+            "count": 1,
+            "max": 7.631198968738317e-05,
+            "mean": 7.631198968738317e-05,
+            "min": 7.631198968738317e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 7.631198968738317e-05,
+            "p95": 7.631198968738317e-05,
+            "p99": 7.631198968738317e-05
+          },
+          "per_trace_p95_duration_seconds": {
+            "count": 1,
+            "max": 7.631198968738317e-05,
+            "mean": 7.631198968738317e-05,
+            "min": 7.631198968738317e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 7.631198968738317e-05,
+            "p95": 7.631198968738317e-05,
+            "p99": 7.631198968738317e-05
+          },
+          "per_trace_p99_duration_seconds": {
+            "count": 1,
+            "max": 7.631198968738317e-05,
+            "mean": 7.631198968738317e-05,
+            "min": 7.631198968738317e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 7.631198968738317e-05,
+            "p95": 7.631198968738317e-05,
+            "p99": 7.631198968738317e-05
+          },
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "routed_total": 1,
+          "selected_route_duration_observations": 1,
+          "source_trace_count": 1,
+          "total": 1,
+          "total_attempted_route_count": 1.0,
+          "total_duration_seconds": 7.631198968738317e-05,
+          "total_selected_route_duration_seconds": 7.631198968738317e-05,
+          "unrouted_total": 0,
+          "used_retrieval_count": 0
+        },
+        "structured_qa": {
+          "attempted_route_count_observations": 3,
+          "duration_observations": 3,
+          "max_duration_seconds": 2.1368032321333885e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 1.8651364371180534e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 1.8651364371180534e-05,
+          "per_trace_mean_duration_seconds": {
+            "count": 2,
+            "max": 2.1368032321333885e-05,
+            "mean": 1.9330531358718872e-05,
+            "min": 1.729303039610386e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 1.9330531358718872e-05,
+            "p95": 2.1164282225072383e-05,
+            "p99": 2.1327282302081584e-05
+          },
+          "per_trace_p95_duration_seconds": {
+            "count": 2,
+            "max": 2.1368032321333885e-05,
+            "mean": 2.0029372535645962e-05,
+            "min": 1.869071274995804e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 2.0029372535645962e-05,
+            "p95": 2.1234166342765094e-05,
+            "p99": 2.1341259125620126e-05
+          },
+          "per_trace_p99_duration_seconds": {
+            "count": 2,
+            "max": 2.1368032321333885e-05,
+            "mean": 2.0091491751372815e-05,
+            "min": 1.8814951181411745e-05,
+            "missing_or_nonfinite": 0,
+            "p50": 2.0091491751372815e-05,
+            "p95": 2.1240378264337777e-05,
+            "p99": 2.1342501509934665e-05
+          },
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "routed_total": 3,
+          "selected_route_duration_observations": 3,
+          "source_trace_count": 2,
+          "total": 3,
+          "total_attempted_route_count": 3.0,
+          "total_duration_seconds": 5.59540931135416e-05,
+          "total_selected_route_duration_seconds": 5.59540931135416e-05,
+          "unrouted_total": 0,
+          "used_retrieval_count": 0
+        }
+      },
+      "overall": {
+        "attempted_route_count_observations": 4,
+        "duration_observations": 4,
+        "max_duration_seconds": 7.631198968738317e-05,
+        "mean_attempted_route_count": 1.0,
+        "mean_duration_seconds": 3.3066520700231194e-05,
+        "mean_retrieval_hits": 0.0,
+        "mean_selected_route_duration_seconds": 3.3066520700231194e-05,
+        "per_trace_mean_duration_seconds": {
+          "count": 3,
+          "max": 7.631198968738317e-05,
+          "mean": 3.8324350801606975e-05,
+          "min": 1.729303039610386e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 2.1368032321333885e-05,
+          "p95": 7.081759395077825e-05,
+          "p99": 7.521311054006218e-05
+        },
+        "per_trace_p95_duration_seconds": {
+          "count": 3,
+          "max": 7.631198968738317e-05,
+          "mean": 3.879024491955837e-05,
+          "min": 1.869071274995804e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 2.1368032321333885e-05,
+          "p95": 7.081759395077825e-05,
+          "p99": 7.521311054006218e-05
+        },
+        "per_trace_p99_duration_seconds": {
+          "count": 3,
+          "max": 7.631198968738317e-05,
+          "mean": 3.883165773004293e-05,
+          "min": 1.8814951181411745e-05,
+          "missing_or_nonfinite": 0,
+          "p50": 2.1368032321333885e-05,
+          "p95": 7.081759395077825e-05,
+          "p99": 7.521311054006218e-05
+        },
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "routed_total": 4,
+        "selected_route_duration_observations": 4,
+        "source_trace_count": 3,
+        "total": 4,
+        "total_attempted_route_count": 4.0,
+        "total_duration_seconds": 0.00013226608280092478,
+        "total_selected_route_duration_seconds": 0.00013226608280092478,
+        "unrouted_total": 0,
+        "used_retrieval_count": 0
+      }
+    },
+    "runtime_trace_count": 3,
+    "total_seconds": {
+      "count": 3,
+      "max": 0.00048057304229587317,
+      "mean": 0.0004380536653722326,
+      "min": 0.00036226201336830854,
+      "missing_or_nonfinite": 0,
+      "p50": 0.0004713259404525161,
+      "p95": 0.00047964833211153743,
+      "p99": 0.000480388100259006
+    }
+  },
+  "traces": [
+    {
+      "budget": {
+        "checks": [
+          {
+            "limit": 0.01,
+            "limit_type": "max",
+            "metric": "p99_route_duration_seconds",
+            "passed": true,
+            "raw_value": "2.1368032321333885e-05",
+            "value": 2.1368032321333885e-05
+          },
+          {
+            "limit": 1.1,
+            "limit_type": "max",
+            "metric": "mean_attempted_route_count",
+            "passed": true,
+            "raw_value": "1.0",
+            "value": 1.0
+          },
+          {
+            "limit": 0.0,
+            "limit_type": "max",
+            "metric": "retrieval_use_rate",
+            "passed": true,
+            "raw_value": "0.0",
+            "value": 0.0
+          }
+        ],
+        "enabled": true,
+        "failures": [],
+        "metrics": {
+          "accounted_seconds": 0.0003316469956189394,
+          "cache_hit_rate": 0.0,
+          "cache_summary": {
+            "aggregate": {
+              "hit_rate": 0.0,
+              "hits": 0,
+              "misses": 1,
+              "requests": 1,
+              "size": 1
+            },
+            "caches": {
+              "verifier": {
+                "hit_rate": 0.0,
+                "hits": 0,
+                "misses": 1,
+                "requests": 1,
+                "size": 1
+              }
+            },
+            "total_caches": 1
+          },
+          "has_runtime_trace": true,
+          "max_route_duration_seconds": 2.1368032321333885e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_retrieval_hits": 0.0,
+          "mean_route_duration_seconds": 2.1368032321333885e-05,
+          "measured_phases": 5.0,
+          "named_cache_hit_rates": {
+            "verifier": 0.0
+          },
+          "p95_route_duration_seconds": 2.1368032321333885e-05,
+          "p99_route_duration_seconds": 2.1368032321333885e-05,
+          "phase_counts": {
+            "action_execution": 1,
+            "action_planning": 1,
+            "initial_risk_decision": 1,
+            "initial_verification": 1,
+            "retrieval_evidence_collection": 1
+          },
+          "phase_p95_seconds": {
+            "action_execution": 1.636100932955742e-05,
+            "action_planning": 5.721102934330702e-05,
+            "initial_risk_decision": 5.0838920287787914e-05,
+            "initial_verification": 0.00014130398631095886,
+            "retrieval_evidence_collection": 6.593205034732819e-05
+          },
+          "phase_p99_seconds": {
+            "action_execution": 1.636100932955742e-05,
+            "action_planning": 5.721102934330702e-05,
+            "initial_risk_decision": 5.0838920287787914e-05,
+            "initial_verification": 0.00014130398631095886,
+            "retrieval_evidence_collection": 6.593205034732819e-05
+          },
+          "phase_seconds": {
+            "action_execution": 1.636100932955742e-05,
+            "action_planning": 5.721102934330702e-05,
+            "initial_risk_decision": 5.0838920287787914e-05,
+            "initial_verification": 0.00014130398631095886,
+            "retrieval_evidence_collection": 6.593205034732819e-05
+          },
+          "phase_stats": {
+            "action_execution": {
+              "count": 1,
+              "max_seconds": 1.636100932955742e-05,
+              "mean_seconds": 1.636100932955742e-05,
+              "min_seconds": 1.636100932955742e-05,
+              "p95_seconds": 1.636100932955742e-05,
+              "p99_seconds": 1.636100932955742e-05,
+              "total_seconds": 1.636100932955742e-05
+            },
+            "action_planning": {
+              "count": 1,
+              "max_seconds": 5.721102934330702e-05,
+              "mean_seconds": 5.721102934330702e-05,
+              "min_seconds": 5.721102934330702e-05,
+              "p95_seconds": 5.721102934330702e-05,
+              "p99_seconds": 5.721102934330702e-05,
+              "total_seconds": 5.721102934330702e-05
+            },
+            "initial_risk_decision": {
+              "count": 1,
+              "max_seconds": 5.0838920287787914e-05,
+              "mean_seconds": 5.0838920287787914e-05,
+              "min_seconds": 5.0838920287787914e-05,
+              "p95_seconds": 5.0838920287787914e-05,
+              "p99_seconds": 5.0838920287787914e-05,
+              "total_seconds": 5.0838920287787914e-05
+            },
+            "initial_verification": {
+              "count": 1,
+              "max_seconds": 0.00014130398631095886,
+              "mean_seconds": 0.00014130398631095886,
+              "min_seconds": 0.00014130398631095886,
+              "p95_seconds": 0.00014130398631095886,
+              "p99_seconds": 0.00014130398631095886,
+              "total_seconds": 0.00014130398631095886
+            },
+            "retrieval_evidence_collection": {
+              "count": 1,
+              "max_seconds": 6.593205034732819e-05,
+              "mean_seconds": 6.593205034732819e-05,
+              "min_seconds": 6.593205034732819e-05,
+              "p95_seconds": 6.593205034732819e-05,
+              "p99_seconds": 6.593205034732819e-05,
+              "total_seconds": 6.593205034732819e-05
+            }
+          },
+          "retrieval_hit_count": 0.0,
+          "retrieval_use_rate": 0.0,
+          "route_cost_summary": {
+            "attempted_route_count_observations": 1,
+            "by_route": {
+              "structured_qa": {
+                "attempted_route_count_observations": 1,
+                "duration_observations": 1,
+                "max_duration_seconds": 2.1368032321333885e-05,
+                "mean_attempted_route_count": 1.0,
+                "mean_duration_seconds": 2.1368032321333885e-05,
+                "mean_retrieval_hits": 0.0,
+                "mean_selected_route_duration_seconds": 2.1368032321333885e-05,
+                "p95_duration_seconds": 2.1368032321333885e-05,
+                "p95_selected_route_duration_seconds": 2.1368032321333885e-05,
+                "p99_duration_seconds": 2.1368032321333885e-05,
+                "p99_selected_route_duration_seconds": 2.1368032321333885e-05,
+                "retrieval_hit_count": 0,
+                "retrieval_use_rate": 0.0,
+                "routed_total": 1,
+                "selected_route_duration_observations": 1,
+                "total": 1,
+                "total_attempted_route_count": 1.0,
+                "total_duration_seconds": 2.1368032321333885e-05,
+                "total_selected_route_duration_seconds": 2.1368032321333885e-05,
+                "unrouted_total": 0,
+                "used_retrieval_count": 0
+              }
+            },
+            "duration_observations": 1,
+            "max_duration_seconds": 2.1368032321333885e-05,
+            "mean_attempted_route_count": 1.0,
+            "mean_duration_seconds": 2.1368032321333885e-05,
+            "mean_retrieval_hits": 0.0,
+            "mean_selected_route_duration_seconds": 2.1368032321333885e-05,
+            "p95_duration_seconds": 2.1368032321333885e-05,
+            "p95_selected_route_duration_seconds": 2.1368032321333885e-05,
+            "p99_duration_seconds": 2.1368032321333885e-05,
+            "p99_selected_route_duration_seconds": 2.1368032321333885e-05,
+            "retrieval_hit_count": 0,
+            "retrieval_use_rate": 0.0,
+            "routed_total": 1,
+            "selected_route_duration_observations": 1,
+            "total": 1,
+            "total_attempted_route_count": 1.0,
+            "total_duration_seconds": 2.1368032321333885e-05,
+            "total_selected_route_duration_seconds": 2.1368032321333885e-05,
+            "unrouted_total": 0,
+            "used_retrieval_count": 0
+          },
+          "slowest_phase": {
+            "name": "initial_verification",
+            "seconds": 0.00014130398631095886
+          },
+          "total_seconds": 0.00036226201336830854,
+          "unaccounted_seconds": 3.0615017749369144e-05
+        },
+        "passed": true,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "accounted_seconds": 0.0003316469956189394,
+        "cache_hit_rate": 0.0,
+        "has_runtime_trace": true,
+        "max_route_duration_seconds": 2.1368032321333885e-05,
+        "mean_attempted_route_count": 1.0,
+        "mean_retrieval_hits": 0.0,
+        "mean_route_duration_seconds": 2.1368032321333885e-05,
+        "measured_phases": 5.0,
+        "named_cache_hit_rates": {
+          "verifier": 0.0
+        },
+        "p95_route_duration_seconds": 2.1368032321333885e-05,
+        "p99_route_duration_seconds": 2.1368032321333885e-05,
+        "phase_counts": {
+          "action_execution": 1,
+          "action_planning": 1,
+          "initial_risk_decision": 1,
+          "initial_verification": 1,
+          "retrieval_evidence_collection": 1
+        },
+        "phase_p95_seconds": {
+          "action_execution": 1.636100932955742e-05,
+          "action_planning": 5.721102934330702e-05,
+          "initial_risk_decision": 5.0838920287787914e-05,
+          "initial_verification": 0.00014130398631095886,
+          "retrieval_evidence_collection": 6.593205034732819e-05
+        },
+        "phase_p99_seconds": {
+          "action_execution": 1.636100932955742e-05,
+          "action_planning": 5.721102934330702e-05,
+          "initial_risk_decision": 5.0838920287787914e-05,
+          "initial_verification": 0.00014130398631095886,
+          "retrieval_evidence_collection": 6.593205034732819e-05
+        },
+        "phase_seconds": {
+          "action_execution": 1.636100932955742e-05,
+          "action_planning": 5.721102934330702e-05,
+          "initial_risk_decision": 5.0838920287787914e-05,
+          "initial_verification": 0.00014130398631095886,
+          "retrieval_evidence_collection": 6.593205034732819e-05
+        },
+        "retrieval_hit_count": 0.0,
+        "retrieval_use_rate": 0.0,
+        "route_cost_summary": {
+          "attempted_route_count_observations": 1,
+          "by_route": {
+            "structured_qa": {
+              "attempted_route_count_observations": 1,
+              "duration_observations": 1,
+              "max_duration_seconds": 2.1368032321333885e-05,
+              "mean_attempted_route_count": 1.0,
+              "mean_duration_seconds": 2.1368032321333885e-05,
+              "mean_retrieval_hits": 0.0,
+              "mean_selected_route_duration_seconds": 2.1368032321333885e-05,
+              "p95_duration_seconds": 2.1368032321333885e-05,
+              "p95_selected_route_duration_seconds": 2.1368032321333885e-05,
+              "p99_duration_seconds": 2.1368032321333885e-05,
+              "p99_selected_route_duration_seconds": 2.1368032321333885e-05,
+              "retrieval_hit_count": 0,
+              "retrieval_use_rate": 0.0,
+              "routed_total": 1,
+              "selected_route_duration_observations": 1,
+              "total": 1,
+              "total_attempted_route_count": 1.0,
+              "total_duration_seconds": 2.1368032321333885e-05,
+              "total_selected_route_duration_seconds": 2.1368032321333885e-05,
+              "unrouted_total": 0,
+              "used_retrieval_count": 0
+            }
+          },
+          "duration_observations": 1,
+          "max_duration_seconds": 2.1368032321333885e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 2.1368032321333885e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 2.1368032321333885e-05,
+          "p95_duration_seconds": 2.1368032321333885e-05,
+          "p95_selected_route_duration_seconds": 2.1368032321333885e-05,
+          "p99_duration_seconds": 2.1368032321333885e-05,
+          "p99_selected_route_duration_seconds": 2.1368032321333885e-05,
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "routed_total": 1,
+          "selected_route_duration_observations": 1,
+          "total": 1,
+          "total_attempted_route_count": 1.0,
+          "total_duration_seconds": 2.1368032321333885e-05,
+          "total_selected_route_duration_seconds": 2.1368032321333885e-05,
+          "unrouted_total": 0,
+          "used_retrieval_count": 0
+        },
+        "slowest_phase": {
+          "name": "initial_verification",
+          "seconds": 0.00014130398631095886
+        },
+        "total_seconds": 0.00036226201336830854,
+        "unaccounted_seconds": 3.0615017749369144e-05
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json",
+      "request_id": "audit-low_risk_supported-r0"
+    },
+    {
+      "budget": {
+        "checks": [
+          {
+            "limit": 0.01,
+            "limit_type": "max",
+            "metric": "p99_route_duration_seconds",
+            "passed": true,
+            "raw_value": "1.8814951181411745e-05",
+            "value": 1.8814951181411745e-05
+          },
+          {
+            "limit": 1.1,
+            "limit_type": "max",
+            "metric": "mean_attempted_route_count",
+            "passed": true,
+            "raw_value": "1.0",
+            "value": 1.0
+          },
+          {
+            "limit": 0.0,
+            "limit_type": "max",
+            "metric": "retrieval_use_rate",
+            "passed": true,
+            "raw_value": "0.0",
+            "value": 0.0
+          }
+        ],
+        "enabled": true,
+        "failures": [],
+        "metrics": {
+          "accounted_seconds": 0.00045120413415133953,
+          "cache_hit_rate": 0.0,
+          "cache_summary": {
+            "aggregate": {
+              "hit_rate": 0.0,
+              "hits": 0,
+              "misses": 2,
+              "requests": 2,
+              "size": 2
+            },
+            "caches": {
+              "verifier": {
+                "hit_rate": 0.0,
+                "hits": 0,
+                "misses": 2,
+                "requests": 2,
+                "size": 2
+              }
+            },
+            "total_caches": 1
+          },
+          "has_runtime_trace": true,
+          "max_route_duration_seconds": 1.884601078927517e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_retrieval_hits": 0.0,
+          "mean_route_duration_seconds": 1.729303039610386e-05,
+          "measured_phases": 5.0,
+          "named_cache_hit_rates": {
+            "verifier": 0.0
+          },
+          "p95_route_duration_seconds": 1.869071274995804e-05,
+          "p99_route_duration_seconds": 1.8814951181411745e-05,
+          "phase_counts": {
+            "action_execution": 1,
+            "action_planning": 1,
+            "initial_risk_decision": 1,
+            "initial_verification": 1,
+            "retrieval_evidence_collection": 1
+          },
+          "phase_p95_seconds": {
+            "action_execution": 1.4835037291049957e-05,
+            "action_planning": 8.485501166433096e-05,
+            "initial_risk_decision": 6.078602746129036e-05,
+            "initial_verification": 0.00021441804710775614,
+            "retrieval_evidence_collection": 7.631001062691212e-05
+          },
+          "phase_p99_seconds": {
+            "action_execution": 1.4835037291049957e-05,
+            "action_planning": 8.485501166433096e-05,
+            "initial_risk_decision": 6.078602746129036e-05,
+            "initial_verification": 0.00021441804710775614,
+            "retrieval_evidence_collection": 7.631001062691212e-05
+          },
+          "phase_seconds": {
+            "action_execution": 1.4835037291049957e-05,
+            "action_planning": 8.485501166433096e-05,
+            "initial_risk_decision": 6.078602746129036e-05,
+            "initial_verification": 0.00021441804710775614,
+            "retrieval_evidence_collection": 7.631001062691212e-05
+          },
+          "phase_stats": {
+            "action_execution": {
+              "count": 1,
+              "max_seconds": 1.4835037291049957e-05,
+              "mean_seconds": 1.4835037291049957e-05,
+              "min_seconds": 1.4835037291049957e-05,
+              "p95_seconds": 1.4835037291049957e-05,
+              "p99_seconds": 1.4835037291049957e-05,
+              "total_seconds": 1.4835037291049957e-05
+            },
+            "action_planning": {
+              "count": 1,
+              "max_seconds": 8.485501166433096e-05,
+              "mean_seconds": 8.485501166433096e-05,
+              "min_seconds": 8.485501166433096e-05,
+              "p95_seconds": 8.485501166433096e-05,
+              "p99_seconds": 8.485501166433096e-05,
+              "total_seconds": 8.485501166433096e-05
+            },
+            "initial_risk_decision": {
+              "count": 1,
+              "max_seconds": 6.078602746129036e-05,
+              "mean_seconds": 6.078602746129036e-05,
+              "min_seconds": 6.078602746129036e-05,
+              "p95_seconds": 6.078602746129036e-05,
+              "p99_seconds": 6.078602746129036e-05,
+              "total_seconds": 6.078602746129036e-05
+            },
+            "initial_verification": {
+              "count": 1,
+              "max_seconds": 0.00021441804710775614,
+              "mean_seconds": 0.00021441804710775614,
+              "min_seconds": 0.00021441804710775614,
+              "p95_seconds": 0.00021441804710775614,
+              "p99_seconds": 0.00021441804710775614,
+              "total_seconds": 0.00021441804710775614
+            },
+            "retrieval_evidence_collection": {
+              "count": 1,
+              "max_seconds": 7.631001062691212e-05,
+              "mean_seconds": 7.631001062691212e-05,
+              "min_seconds": 7.631001062691212e-05,
+              "p95_seconds": 7.631001062691212e-05,
+              "p99_seconds": 7.631001062691212e-05,
+              "total_seconds": 7.631001062691212e-05
+            }
+          },
+          "retrieval_hit_count": 0.0,
+          "retrieval_use_rate": 0.0,
+          "route_cost_summary": {
+            "attempted_route_count_observations": 2,
+            "by_route": {
+              "structured_qa": {
+                "attempted_route_count_observations": 2,
+                "duration_observations": 2,
+                "max_duration_seconds": 1.884601078927517e-05,
+                "mean_attempted_route_count": 1.0,
+                "mean_duration_seconds": 1.729303039610386e-05,
+                "mean_retrieval_hits": 0.0,
+                "mean_selected_route_duration_seconds": 1.729303039610386e-05,
+                "p95_duration_seconds": 1.869071274995804e-05,
+                "p95_selected_route_duration_seconds": 1.869071274995804e-05,
+                "p99_duration_seconds": 1.8814951181411745e-05,
+                "p99_selected_route_duration_seconds": 1.8814951181411745e-05,
+                "retrieval_hit_count": 0,
+                "retrieval_use_rate": 0.0,
+                "routed_total": 2,
+                "selected_route_duration_observations": 2,
+                "total": 2,
+                "total_attempted_route_count": 2.0,
+                "total_duration_seconds": 3.458606079220772e-05,
+                "total_selected_route_duration_seconds": 3.458606079220772e-05,
+                "unrouted_total": 0,
+                "used_retrieval_count": 0
+              }
+            },
+            "duration_observations": 2,
+            "max_duration_seconds": 1.884601078927517e-05,
+            "mean_attempted_route_count": 1.0,
+            "mean_duration_seconds": 1.729303039610386e-05,
+            "mean_retrieval_hits": 0.0,
+            "mean_selected_route_duration_seconds": 1.729303039610386e-05,
+            "p95_duration_seconds": 1.869071274995804e-05,
+            "p95_selected_route_duration_seconds": 1.869071274995804e-05,
+            "p99_duration_seconds": 1.8814951181411745e-05,
+            "p99_selected_route_duration_seconds": 1.8814951181411745e-05,
+            "retrieval_hit_count": 0,
+            "retrieval_use_rate": 0.0,
+            "routed_total": 2,
+            "selected_route_duration_observations": 2,
+            "total": 2,
+            "total_attempted_route_count": 2.0,
+            "total_duration_seconds": 3.458606079220772e-05,
+            "total_selected_route_duration_seconds": 3.458606079220772e-05,
+            "unrouted_total": 0,
+            "used_retrieval_count": 0
+          },
+          "slowest_phase": {
+            "name": "initial_verification",
+            "seconds": 0.00021441804710775614
+          },
+          "total_seconds": 0.00048057304229587317,
+          "unaccounted_seconds": 2.9368908144533634e-05
+        },
+        "passed": true,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "accounted_seconds": 0.00045120413415133953,
+        "cache_hit_rate": 0.0,
+        "has_runtime_trace": true,
+        "max_route_duration_seconds": 1.884601078927517e-05,
+        "mean_attempted_route_count": 1.0,
+        "mean_retrieval_hits": 0.0,
+        "mean_route_duration_seconds": 1.729303039610386e-05,
+        "measured_phases": 5.0,
+        "named_cache_hit_rates": {
+          "verifier": 0.0
+        },
+        "p95_route_duration_seconds": 1.869071274995804e-05,
+        "p99_route_duration_seconds": 1.8814951181411745e-05,
+        "phase_counts": {
+          "action_execution": 1,
+          "action_planning": 1,
+          "initial_risk_decision": 1,
+          "initial_verification": 1,
+          "retrieval_evidence_collection": 1
+        },
+        "phase_p95_seconds": {
+          "action_execution": 1.4835037291049957e-05,
+          "action_planning": 8.485501166433096e-05,
+          "initial_risk_decision": 6.078602746129036e-05,
+          "initial_verification": 0.00021441804710775614,
+          "retrieval_evidence_collection": 7.631001062691212e-05
+        },
+        "phase_p99_seconds": {
+          "action_execution": 1.4835037291049957e-05,
+          "action_planning": 8.485501166433096e-05,
+          "initial_risk_decision": 6.078602746129036e-05,
+          "initial_verification": 0.00021441804710775614,
+          "retrieval_evidence_collection": 7.631001062691212e-05
+        },
+        "phase_seconds": {
+          "action_execution": 1.4835037291049957e-05,
+          "action_planning": 8.485501166433096e-05,
+          "initial_risk_decision": 6.078602746129036e-05,
+          "initial_verification": 0.00021441804710775614,
+          "retrieval_evidence_collection": 7.631001062691212e-05
+        },
+        "retrieval_hit_count": 0.0,
+        "retrieval_use_rate": 0.0,
+        "route_cost_summary": {
+          "attempted_route_count_observations": 2,
+          "by_route": {
+            "structured_qa": {
+              "attempted_route_count_observations": 2,
+              "duration_observations": 2,
+              "max_duration_seconds": 1.884601078927517e-05,
+              "mean_attempted_route_count": 1.0,
+              "mean_duration_seconds": 1.729303039610386e-05,
+              "mean_retrieval_hits": 0.0,
+              "mean_selected_route_duration_seconds": 1.729303039610386e-05,
+              "p95_duration_seconds": 1.869071274995804e-05,
+              "p95_selected_route_duration_seconds": 1.869071274995804e-05,
+              "p99_duration_seconds": 1.8814951181411745e-05,
+              "p99_selected_route_duration_seconds": 1.8814951181411745e-05,
+              "retrieval_hit_count": 0,
+              "retrieval_use_rate": 0.0,
+              "routed_total": 2,
+              "selected_route_duration_observations": 2,
+              "total": 2,
+              "total_attempted_route_count": 2.0,
+              "total_duration_seconds": 3.458606079220772e-05,
+              "total_selected_route_duration_seconds": 3.458606079220772e-05,
+              "unrouted_total": 0,
+              "used_retrieval_count": 0
+            }
+          },
+          "duration_observations": 2,
+          "max_duration_seconds": 1.884601078927517e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 1.729303039610386e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 1.729303039610386e-05,
+          "p95_duration_seconds": 1.869071274995804e-05,
+          "p95_selected_route_duration_seconds": 1.869071274995804e-05,
+          "p99_duration_seconds": 1.8814951181411745e-05,
+          "p99_selected_route_duration_seconds": 1.8814951181411745e-05,
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "routed_total": 2,
+          "selected_route_duration_observations": 2,
+          "total": 2,
+          "total_attempted_route_count": 2.0,
+          "total_duration_seconds": 3.458606079220772e-05,
+          "total_selected_route_duration_seconds": 3.458606079220772e-05,
+          "unrouted_total": 0,
+          "used_retrieval_count": 0
+        },
+        "slowest_phase": {
+          "name": "initial_verification",
+          "seconds": 0.00021441804710775614
+        },
+        "total_seconds": 0.00048057304229587317,
+        "unaccounted_seconds": 2.9368908144533634e-05
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json",
+      "request_id": "audit-diagnostic_refuted-r0"
+    },
+    {
+      "budget": {
+        "checks": [
+          {
+            "limit": 0.01,
+            "limit_type": "max",
+            "metric": "p99_route_duration_seconds",
+            "passed": true,
+            "raw_value": "7.631198968738317e-05",
+            "value": 7.631198968738317e-05
+          },
+          {
+            "limit": 1.1,
+            "limit_type": "max",
+            "metric": "mean_attempted_route_count",
+            "passed": true,
+            "raw_value": "1.0",
+            "value": 1.0
+          },
+          {
+            "limit": 0.0,
+            "limit_type": "max",
+            "metric": "retrieval_use_rate",
+            "passed": true,
+            "raw_value": "0.0",
+            "value": 0.0
+          }
+        ],
+        "enabled": true,
+        "failures": [],
+        "metrics": {
+          "accounted_seconds": 0.00044265598990023136,
+          "cache_hit_rate": 0.0,
+          "cache_summary": {
+            "aggregate": {
+              "hit_rate": 0.0,
+              "hits": 0,
+              "misses": 1,
+              "requests": 1,
+              "size": 1
+            },
+            "caches": {
+              "verifier": {
+                "hit_rate": 0.0,
+                "hits": 0,
+                "misses": 1,
+                "requests": 1,
+                "size": 1
+              }
+            },
+            "total_caches": 1
+          },
+          "has_runtime_trace": true,
+          "max_route_duration_seconds": 7.631198968738317e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_retrieval_hits": 0.0,
+          "mean_route_duration_seconds": 7.631198968738317e-05,
+          "measured_phases": 5.0,
+          "named_cache_hit_rates": {
+            "verifier": 0.0
+          },
+          "p95_route_duration_seconds": 7.631198968738317e-05,
+          "p99_route_duration_seconds": 7.631198968738317e-05,
+          "phase_counts": {
+            "action_execution": 1,
+            "action_planning": 1,
+            "initial_risk_decision": 1,
+            "initial_verification": 1,
+            "retrieval_evidence_collection": 1
+          },
+          "phase_p95_seconds": {
+            "action_execution": 1.5277997590601444e-05,
+            "action_planning": 7.377599831670523e-05,
+            "initial_risk_decision": 5.28460368514061e-05,
+            "initial_verification": 0.0002123519079759717,
+            "retrieval_evidence_collection": 8.84040491655469e-05
+          },
+          "phase_p99_seconds": {
+            "action_execution": 1.5277997590601444e-05,
+            "action_planning": 7.377599831670523e-05,
+            "initial_risk_decision": 5.28460368514061e-05,
+            "initial_verification": 0.0002123519079759717,
+            "retrieval_evidence_collection": 8.84040491655469e-05
+          },
+          "phase_seconds": {
+            "action_execution": 1.5277997590601444e-05,
+            "action_planning": 7.377599831670523e-05,
+            "initial_risk_decision": 5.28460368514061e-05,
+            "initial_verification": 0.0002123519079759717,
+            "retrieval_evidence_collection": 8.84040491655469e-05
+          },
+          "phase_stats": {
+            "action_execution": {
+              "count": 1,
+              "max_seconds": 1.5277997590601444e-05,
+              "mean_seconds": 1.5277997590601444e-05,
+              "min_seconds": 1.5277997590601444e-05,
+              "p95_seconds": 1.5277997590601444e-05,
+              "p99_seconds": 1.5277997590601444e-05,
+              "total_seconds": 1.5277997590601444e-05
+            },
+            "action_planning": {
+              "count": 1,
+              "max_seconds": 7.377599831670523e-05,
+              "mean_seconds": 7.377599831670523e-05,
+              "min_seconds": 7.377599831670523e-05,
+              "p95_seconds": 7.377599831670523e-05,
+              "p99_seconds": 7.377599831670523e-05,
+              "total_seconds": 7.377599831670523e-05
+            },
+            "initial_risk_decision": {
+              "count": 1,
+              "max_seconds": 5.28460368514061e-05,
+              "mean_seconds": 5.28460368514061e-05,
+              "min_seconds": 5.28460368514061e-05,
+              "p95_seconds": 5.28460368514061e-05,
+              "p99_seconds": 5.28460368514061e-05,
+              "total_seconds": 5.28460368514061e-05
+            },
+            "initial_verification": {
+              "count": 1,
+              "max_seconds": 0.0002123519079759717,
+              "mean_seconds": 0.0002123519079759717,
+              "min_seconds": 0.0002123519079759717,
+              "p95_seconds": 0.0002123519079759717,
+              "p99_seconds": 0.0002123519079759717,
+              "total_seconds": 0.0002123519079759717
+            },
+            "retrieval_evidence_collection": {
+              "count": 1,
+              "max_seconds": 8.84040491655469e-05,
+              "mean_seconds": 8.84040491655469e-05,
+              "min_seconds": 8.84040491655469e-05,
+              "p95_seconds": 8.84040491655469e-05,
+              "p99_seconds": 8.84040491655469e-05,
+              "total_seconds": 8.84040491655469e-05
+            }
+          },
+          "retrieval_hit_count": 0.0,
+          "retrieval_use_rate": 0.0,
+          "route_cost_summary": {
+            "attempted_route_count_observations": 1,
+            "by_route": {
+              "calculator": {
+                "attempted_route_count_observations": 1,
+                "duration_observations": 1,
+                "max_duration_seconds": 7.631198968738317e-05,
+                "mean_attempted_route_count": 1.0,
+                "mean_duration_seconds": 7.631198968738317e-05,
+                "mean_retrieval_hits": 0.0,
+                "mean_selected_route_duration_seconds": 7.631198968738317e-05,
+                "p95_duration_seconds": 7.631198968738317e-05,
+                "p95_selected_route_duration_seconds": 7.631198968738317e-05,
+                "p99_duration_seconds": 7.631198968738317e-05,
+                "p99_selected_route_duration_seconds": 7.631198968738317e-05,
+                "retrieval_hit_count": 0,
+                "retrieval_use_rate": 0.0,
+                "routed_total": 1,
+                "selected_route_duration_observations": 1,
+                "total": 1,
+                "total_attempted_route_count": 1.0,
+                "total_duration_seconds": 7.631198968738317e-05,
+                "total_selected_route_duration_seconds": 7.631198968738317e-05,
+                "unrouted_total": 0,
+                "used_retrieval_count": 0
+              }
+            },
+            "duration_observations": 1,
+            "max_duration_seconds": 7.631198968738317e-05,
+            "mean_attempted_route_count": 1.0,
+            "mean_duration_seconds": 7.631198968738317e-05,
+            "mean_retrieval_hits": 0.0,
+            "mean_selected_route_duration_seconds": 7.631198968738317e-05,
+            "p95_duration_seconds": 7.631198968738317e-05,
+            "p95_selected_route_duration_seconds": 7.631198968738317e-05,
+            "p99_duration_seconds": 7.631198968738317e-05,
+            "p99_selected_route_duration_seconds": 7.631198968738317e-05,
+            "retrieval_hit_count": 0,
+            "retrieval_use_rate": 0.0,
+            "routed_total": 1,
+            "selected_route_duration_observations": 1,
+            "total": 1,
+            "total_attempted_route_count": 1.0,
+            "total_duration_seconds": 7.631198968738317e-05,
+            "total_selected_route_duration_seconds": 7.631198968738317e-05,
+            "unrouted_total": 0,
+            "used_retrieval_count": 0
+          },
+          "slowest_phase": {
+            "name": "initial_verification",
+            "seconds": 0.0002123519079759717
+          },
+          "total_seconds": 0.0004713259404525161,
+          "unaccounted_seconds": 2.8669950552284718e-05
+        },
+        "passed": true,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "accounted_seconds": 0.00044265598990023136,
+        "cache_hit_rate": 0.0,
+        "has_runtime_trace": true,
+        "max_route_duration_seconds": 7.631198968738317e-05,
+        "mean_attempted_route_count": 1.0,
+        "mean_retrieval_hits": 0.0,
+        "mean_route_duration_seconds": 7.631198968738317e-05,
+        "measured_phases": 5.0,
+        "named_cache_hit_rates": {
+          "verifier": 0.0
+        },
+        "p95_route_duration_seconds": 7.631198968738317e-05,
+        "p99_route_duration_seconds": 7.631198968738317e-05,
+        "phase_counts": {
+          "action_execution": 1,
+          "action_planning": 1,
+          "initial_risk_decision": 1,
+          "initial_verification": 1,
+          "retrieval_evidence_collection": 1
+        },
+        "phase_p95_seconds": {
+          "action_execution": 1.5277997590601444e-05,
+          "action_planning": 7.377599831670523e-05,
+          "initial_risk_decision": 5.28460368514061e-05,
+          "initial_verification": 0.0002123519079759717,
+          "retrieval_evidence_collection": 8.84040491655469e-05
+        },
+        "phase_p99_seconds": {
+          "action_execution": 1.5277997590601444e-05,
+          "action_planning": 7.377599831670523e-05,
+          "initial_risk_decision": 5.28460368514061e-05,
+          "initial_verification": 0.0002123519079759717,
+          "retrieval_evidence_collection": 8.84040491655469e-05
+        },
+        "phase_seconds": {
+          "action_execution": 1.5277997590601444e-05,
+          "action_planning": 7.377599831670523e-05,
+          "initial_risk_decision": 5.28460368514061e-05,
+          "initial_verification": 0.0002123519079759717,
+          "retrieval_evidence_collection": 8.84040491655469e-05
+        },
+        "retrieval_hit_count": 0.0,
+        "retrieval_use_rate": 0.0,
+        "route_cost_summary": {
+          "attempted_route_count_observations": 1,
+          "by_route": {
+            "calculator": {
+              "attempted_route_count_observations": 1,
+              "duration_observations": 1,
+              "max_duration_seconds": 7.631198968738317e-05,
+              "mean_attempted_route_count": 1.0,
+              "mean_duration_seconds": 7.631198968738317e-05,
+              "mean_retrieval_hits": 0.0,
+              "mean_selected_route_duration_seconds": 7.631198968738317e-05,
+              "p95_duration_seconds": 7.631198968738317e-05,
+              "p95_selected_route_duration_seconds": 7.631198968738317e-05,
+              "p99_duration_seconds": 7.631198968738317e-05,
+              "p99_selected_route_duration_seconds": 7.631198968738317e-05,
+              "retrieval_hit_count": 0,
+              "retrieval_use_rate": 0.0,
+              "routed_total": 1,
+              "selected_route_duration_observations": 1,
+              "total": 1,
+              "total_attempted_route_count": 1.0,
+              "total_duration_seconds": 7.631198968738317e-05,
+              "total_selected_route_duration_seconds": 7.631198968738317e-05,
+              "unrouted_total": 0,
+              "used_retrieval_count": 0
+            }
+          },
+          "duration_observations": 1,
+          "max_duration_seconds": 7.631198968738317e-05,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 7.631198968738317e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 7.631198968738317e-05,
+          "p95_duration_seconds": 7.631198968738317e-05,
+          "p95_selected_route_duration_seconds": 7.631198968738317e-05,
+          "p99_duration_seconds": 7.631198968738317e-05,
+          "p99_selected_route_duration_seconds": 7.631198968738317e-05,
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "routed_total": 1,
+          "selected_route_duration_observations": 1,
+          "total": 1,
+          "total_attempted_route_count": 1.0,
+          "total_duration_seconds": 7.631198968738317e-05,
+          "total_selected_route_duration_seconds": 7.631198968738317e-05,
+          "unrouted_total": 0,
+          "used_retrieval_count": 0
+        },
+        "slowest_phase": {
+          "name": "initial_verification",
+          "seconds": 0.0002123519079759717
+        },
+        "total_seconds": 0.0004713259404525161,
+        "unaccounted_seconds": 2.8669950552284718e-05
+      },
+      "path": "artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json",
+      "request_id": "audit-calculator_refuted-r0"
+    }
+  ],
+  "workflow": "product_runtime_baseline"
+}
