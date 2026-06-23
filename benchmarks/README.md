@@ -1000,7 +1000,10 @@ only when both the adapter-family `promotion_decision` and the performance
 runtime settings.
 Pass `--include-retrieval --max-mean-attempted-route-count 2.1
 --max-retrieval-use-rate 1.0` when the readiness matrix should also prove the
-local retrieval-groundedness adapter family.
+local retrieval-groundedness adapter family. Use
+`--include-retrieval-structured-qa` with the same route-count/retrieval-use
+gates when readiness should also prove retrieved structured question/answer
+facts.
 
 Use `--performance-dry-run` to inspect the performance commands without loading
 a model. Dry-run performance evidence produces `needs_performance_evidence`,

@@ -59,6 +59,7 @@ class AdapterReadinessWorkflowConfig:
     max_mean_attempted_route_count: float = 1.1
     max_retrieval_use_rate: float = 0.0
     include_retrieval: bool = False
+    include_retrieval_structured_qa: bool = False
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.6
     retrieval_limit: int = 1
@@ -182,6 +183,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             max_mean_attempted_route_count=config.max_mean_attempted_route_count,
             max_retrieval_use_rate=config.max_retrieval_use_rate,
             include_retrieval=config.include_retrieval,
+            include_retrieval_structured_qa=config.include_retrieval_structured_qa,
             verifier_min_overlap=config.verifier_min_overlap,
             retriever_min_overlap=config.retriever_min_overlap,
             retrieval_limit=config.retrieval_limit,
@@ -404,6 +406,7 @@ def _write_artifact_manifest(
                 config.performance_report_path
             ),
             "adapter_include_retrieval": config.include_retrieval,
+            "adapter_include_retrieval_structured_qa": config.include_retrieval_structured_qa,
             "adapter_verifier_min_overlap": config.verifier_min_overlap,
             "adapter_retriever_min_overlap": config.retriever_min_overlap,
             "adapter_retrieval_limit": config.retrieval_limit,
@@ -510,6 +513,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         include_retrieval=bool(args.include_retrieval),
+        include_retrieval_structured_qa=bool(args.include_retrieval_structured_qa),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -582,6 +586,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate", type=float, default=0.0)
     parser.add_argument("--include-retrieval", action="store_true",
                         help="include the local retrieval-groundedness route in the adapter-family matrix")
+    parser.add_argument("--include-retrieval-structured-qa", action="store_true",
+                        help="include the local retrieval structured-QA route in the adapter-family matrix")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
     parser.add_argument("--retrieval-limit", type=int, default=1)
