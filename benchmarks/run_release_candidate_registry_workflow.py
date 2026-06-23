@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.compare_release_candidates import compare_release_candidates  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
+from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
@@ -38,6 +39,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     workflow_report_path: Path | None = None
     recursive: bool = True
     allow_unverified: bool = False
+    runtime_profile: str | None = None
     inside_trigger_budget_policy: str | None = None
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
@@ -76,6 +78,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.workflow_report_path is not None:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
+        if self.runtime_profile is not None:
+            profile = get_runtime_profile(self.runtime_profile)
+            object.__setattr__(self, "runtime_profile", profile.name)
         if self.inside_trigger_budget_policy is not None:
             policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
             if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
@@ -123,6 +128,7 @@ def run_release_candidate_registry_workflow(
         route_baseline_keys=config.route_baseline_keys,
         recursive=config.recursive,
         allow_unverified=config.allow_unverified,
+        runtime_profile=config.runtime_profile,
         inside_trigger_budget_policy=config.inside_trigger_budget_policy,
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
@@ -189,6 +195,7 @@ def run_release_candidate_registry_workflow(
             "artifact_manifest": str(config.manifest_path),
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
+            "runtime_profile": config.runtime_profile,
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
         },
         "release_candidate_comparison": comparison,
@@ -247,6 +254,7 @@ def _registry_workflow_decision(
 
 def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     decision = dict(comparison.get("decision") or {})
+    config = dict(comparison.get("config") or {})
     candidate = dict(comparison.get("release_candidate") or {})
     runtime = dict(candidate.get("runtime") or {})
     quality = dict(candidate.get("quality") or {})
@@ -260,6 +268,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_candidate_status": decision.get("status"),
         "release_readiness_status": decision.get("readiness_status"),
         "release_route_status": decision.get("route_status"),
+        "release_runtime_profile": config.get("runtime_profile"),
+        "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
+        "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
         "recommended_readiness_record": decision.get("recommended_readiness_record"),
         "recommended_route_record": decision.get("recommended_route_record"),
         "recommended_model": decision.get("recommended_model"),
@@ -386,6 +397,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         workflow_report_path=None if args.json is None else Path(args.json),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        runtime_profile=args.runtime_profile,
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
@@ -451,6 +463,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-recursive", action="store_true", help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified input baseline manifests to become candidates")
+    parser.add_argument("--runtime-profile", default=None, choices=RUNTIME_PROFILE_NAMES,
+                        help="optional release profile that fills unset runtime/cost gates; explicit flags "
+                             "override profile defaults")
     parser.add_argument("--inside-trigger-budget-policy", default=None,
                         choices=INSIDE_TRIGGER_BUDGET_POLICIES,
                         help="optional release-time override for trigger-budget sweep selection; omit to use "

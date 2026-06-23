@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.compare_readiness_baselines import compare_readiness_baselines  # noqa: E402
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
+from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
 
 
 def compare_release_candidates(
@@ -27,6 +28,7 @@ def compare_release_candidates(
     route_baseline_keys: Sequence[str] = (),
     recursive: bool = True,
     allow_unverified: bool = False,
+    runtime_profile: str | None = None,
     inside_trigger_budget_policy: str | None = None,
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
@@ -52,6 +54,21 @@ def compare_release_candidates(
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
+    profile, profile_values, profile_applied = _apply_runtime_profile(
+        runtime_profile,
+        {
+            "inside_trigger_budget_policy": inside_trigger_budget_policy,
+            "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
+            "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
+            "max_mean_attempted_route_count": max_mean_attempted_route_count,
+            "max_retrieval_use_rate": max_retrieval_use_rate,
+        },
+    )
+    inside_trigger_budget_policy = profile_values["inside_trigger_budget_policy"]
+    max_inside_sample_count_ratio = profile_values["max_inside_sample_count_ratio"]
+    max_inside_generation_seconds_ratio = profile_values["max_inside_generation_seconds_ratio"]
+    max_mean_attempted_route_count = profile_values["max_mean_attempted_route_count"]
+    max_retrieval_use_rate = profile_values["max_retrieval_use_rate"]
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
@@ -102,6 +119,9 @@ def compare_release_candidates(
             "route_baseline_keys": list(route_baseline_keys),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
+            "runtime_profile": None if profile is None else profile.name,
+            "runtime_profile_defaults": None if profile is None else dict(profile.defaults),
+            "runtime_profile_applied_defaults": profile_applied,
             "inside_trigger_budget_policy": inside_trigger_budget_policy,
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
@@ -293,6 +313,17 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _apply_runtime_profile(
+    runtime_profile: str | None,
+    values: Mapping[str, Any],
+) -> tuple[Any | None, dict[str, Any], dict[str, Any]]:
+    profile = get_runtime_profile(runtime_profile)
+    if profile is None:
+        return None, dict(values), {}
+    merged, applied = profile.apply_defaults(values)
+    return profile, merged, applied
+
+
 def _normalize_inside_trigger_budget_policy(policy: str | None) -> str | None:
     if policy is None:
         return None
@@ -326,6 +357,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        runtime_profile=args.runtime_profile,
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
@@ -383,6 +415,9 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-recursive", action="store_true", help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified manifests to become candidates")
+    parser.add_argument("--runtime-profile", default=None, choices=RUNTIME_PROFILE_NAMES,
+                        help="optional release profile that fills unset runtime/cost gates; explicit flags "
+                             "override profile defaults")
     parser.add_argument("--inside-trigger-budget-policy", default=None,
                         choices=INSIDE_TRIGGER_BUDGET_POLICIES,
                         help="optional release-time override for trigger-budget sweep selection; omit to use "

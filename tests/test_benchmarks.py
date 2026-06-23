@@ -4144,6 +4144,103 @@ def test_compare_release_candidates_can_override_trigger_budget_policy(tmp_path)
     assert candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.12)
 
 
+def test_compare_release_candidates_runtime_profile_fills_unset_cost_gates(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.4,
+        inside_trigger_generation_ratio=0.45,
+        inside_trigger_total_generated_samples=12,
+        inside_trigger_cost_first_sample_ratio=0.1,
+        inside_trigger_cost_first_generation_ratio=0.12,
+        inside_trigger_cost_first_total_generated_samples=3,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+
+    latency_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        runtime_profile="latency",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    override_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        runtime_profile="latency",
+        inside_trigger_budget_policy="quality_balanced",
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert latency_payload["decision"]["status"] == "promote"
+    assert latency_payload["config"]["runtime_profile"] == "latency"
+    assert latency_payload["config"]["inside_trigger_budget_policy"] == "cost_first"
+    assert latency_payload["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.25)
+    assert latency_payload["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(0.35)
+    assert latency_payload["config"]["max_mean_attempted_route_count"] == pytest.approx(1.1)
+    assert latency_payload["config"]["max_retrieval_use_rate"] == pytest.approx(0.0)
+    assert latency_payload["config"]["runtime_profile_applied_defaults"] == {
+        "inside_trigger_budget_policy": "cost_first",
+        "max_inside_sample_count_ratio": 0.25,
+        "max_inside_generation_seconds_ratio": 0.35,
+        "max_mean_attempted_route_count": 1.1,
+        "max_retrieval_use_rate": 0.0,
+    }
+    latency_candidate = latency_payload["release_candidate"]
+    assert latency_candidate["runtime_cost"]["inside_trigger_budget_id"] == "top_0p1"
+    assert latency_candidate["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.1)
+    assert latency_candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.12)
+
+    assert override_payload["decision"]["status"] == "promote"
+    assert override_payload["config"]["runtime_profile"] == "latency"
+    assert override_payload["config"]["inside_trigger_budget_policy"] == "quality_balanced"
+    assert override_payload["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
+    assert override_payload["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(0.8)
+    assert override_payload["config"]["runtime_profile_applied_defaults"] == {
+        "max_mean_attempted_route_count": 1.1,
+        "max_retrieval_use_rate": 0.0,
+    }
+    override_candidate = override_payload["release_candidate"]
+    assert override_candidate["runtime_cost"]["inside_trigger_budget_id"] == "top_0p4"
+    assert override_candidate["runtime_cost"]["inside_sampling_sample_count_ratio_for_gate"] == pytest.approx(0.4)
+    assert override_candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.45)
+
+
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     from eigentruth.registry import ArtifactRegistry
@@ -4192,6 +4289,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             release_report_path=tmp_path / "release-candidate.json",
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
+            runtime_profile="balanced",
             inside_trigger_budget_policy="cost_first",
             min_best_quality_auroc=0.70,
             max_uncached_forward_seconds=20.0,
@@ -4216,6 +4314,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
     assert manifest["metadata"]["release_candidate_status"] == "promote"
+    assert manifest["metadata"]["release_runtime_profile"] == "balanced"
+    assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
+        "max_mean_attempted_route_count": 1.5,
+        "max_retrieval_use_rate": 0.5,
+    }
     assert manifest["metadata"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
     assert manifest["metadata"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
     assert manifest["metadata"]["recommended_route_verified_false_alarm"] == pytest.approx(0.0)
@@ -4232,6 +4335,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert manifest["metadata"]["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["recommended_inside_trigger_budget_derive_from_max_budget"] is True
+    assert payload["config"]["runtime_profile"] == "balanced"
+    assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
     assert payload["release_candidate_comparison"]["config"]["inside_trigger_budget_policy"] == "cost_first"
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
@@ -4241,6 +4346,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     record = registry.get("benchmark_manifest:qwen-release-candidate:0.7")
     assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
     assert record.metadata["release_candidate_status"] == "promote"
+    assert record.metadata["release_runtime_profile"] == "balanced"
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)

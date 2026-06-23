@@ -1089,18 +1089,14 @@ route cost in one report.
 python benchmarks/compare_release_candidates.py \
   --readiness-registry artifacts/registry.json \
   --route-registry artifacts/registry.json \
+  --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
   --min-selected 100 \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
   --min-false-refuted-rate 0.90 \
-  --max-inside-sample-count-ratio 0.60 \
-  --max-inside-generation-seconds-ratio 0.80 \
-  --inside-trigger-budget-policy quality_balanced \
   --max-p99-duration-seconds 0.20 \
-  --max-mean-attempted-route-count 1.5 \
-  --max-retrieval-use-rate 0.50 \
   --max-runtime-total-seconds 60 \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
@@ -1119,6 +1115,13 @@ Readiness-side INSIDE sampling gates are delegated to
 `compare_readiness_baselines.py`, so the final release also blocks when the
 selected runtime lacks sampling profile evidence or exceeds the configured
 sample-count/generation-time ratios.
+Use `--runtime-profile latency`, `balanced`, or `audit` to fill unset
+runtime/cost defaults. `latency` selects the cost-first trigger budget and
+tighter sampling/route-cost gates, `balanced` selects the quality-balanced
+trigger budget with moderate cost gates, and `audit` selects the highest
+measured INSIDE-quality trigger budget with looser cost ceilings. Explicit CLI
+flags override profile defaults. Quality gates such as
+`--min-best-quality-auroc` remain explicit because they are model/data specific.
 When readiness evidence includes a trigger-budget sweep, omit
 `--inside-trigger-budget-policy` to use the policy already recorded in the
 readiness manifest or runtime recommendation. Pass `cost_first`,
@@ -1135,11 +1138,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --release-registry artifacts/release-registry.json \
   --name qwen05-local-release-candidate \
   --version 0.7 \
+  --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
-  --max-inside-sample-count-ratio 0.60 \
-  --max-inside-generation-seconds-ratio 0.80 \
-  --inside-trigger-budget-policy quality_balanced \
   --min-selected 100 \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
@@ -1154,7 +1155,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 The generated manifest fingerprints the release-candidate report and the
 selected readiness and route manifests. Recursive verification therefore checks
 the final candidate and both underlying baseline manifests before the release
-candidate is registered.
+candidate is registered. When `--runtime-profile` is used, the selected profile
+and the defaults it filled are written into the release report, manifest
+metadata, and registry record.
 
 Current local smoke release candidate:
 

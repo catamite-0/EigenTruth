@@ -29,6 +29,8 @@ from eigentruth.adapters import (
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
+    RUNTIME_PROFILE_NAMES,
+    RUNTIME_PROFILES,
     ActionExecutionPolicy,
     ActionExecutionStatus,
     ActionExecutorRegistry,
@@ -43,7 +45,9 @@ from eigentruth.control import (
     RiskController,
     RiskDecision,
     RiskLevel,
+    RuntimeProfile,
     TimeoutActionExecutor,
+    get_runtime_profile,
 )
 from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
@@ -114,6 +118,36 @@ def test_truth_subspace_rejects_non_finite_states():
 
     with pytest.raises(ValueError, match="finite"):
         TruthSubspace.fit(states, rank=1)
+
+
+def test_runtime_profiles_apply_only_missing_defaults():
+    profile = get_runtime_profile("latency")
+
+    assert isinstance(profile, RuntimeProfile)
+    assert RUNTIME_PROFILE_NAMES == ("latency", "balanced", "audit")
+    assert RUNTIME_PROFILES["balanced"].defaults["inside_trigger_budget_policy"] == "quality_balanced"
+
+    merged, applied = profile.apply_defaults({
+        "inside_trigger_budget_policy": None,
+        "max_inside_sample_count_ratio": 0.5,
+        "max_inside_generation_seconds_ratio": None,
+        "max_mean_attempted_route_count": None,
+        "max_retrieval_use_rate": None,
+    })
+
+    assert merged["inside_trigger_budget_policy"] == "cost_first"
+    assert merged["max_inside_sample_count_ratio"] == pytest.approx(0.5)
+    assert merged["max_inside_generation_seconds_ratio"] == pytest.approx(0.35)
+    assert applied == {
+        "inside_trigger_budget_policy": "cost_first",
+        "max_inside_generation_seconds_ratio": 0.35,
+        "max_mean_attempted_route_count": 1.1,
+        "max_retrieval_use_rate": 0.0,
+    }
+    assert profile.to_dict()["defaults"]["max_retrieval_use_rate"] == pytest.approx(0.0)
+
+    with pytest.raises(ValueError, match="runtime_profile"):
+        get_runtime_profile("fast")
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():
