@@ -9816,6 +9816,71 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
     assert record.metadata["trace_count"] == 3
 
 
+def test_runtime_profile_selector_replay_writes_trace_detail_sidecar(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "selector-replay"
+    trace_details_path = output_dir / "trace-details.json"
+    traces_dir = tmp_path / "traces"
+    traces_dir.mkdir()
+
+    trace_paths = []
+    for index in range(3):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(
+            json.dumps({
+                "request_id": f"low-supported-{index}",
+                "risk_decision": {
+                    "action": "accept",
+                    "risk_level": "low",
+                    "confidence": 1.0,
+                    "reason": "supported",
+                },
+                "claims": [{"claim_id": "c1", "text": "Paris is the capital of France.", "metadata": {}}],
+                "metadata": {"runtime_profile": "latency"},
+                "runtime_trace": {"total_seconds": 0.10 + index, "phases": []},
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(trace_path)
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            compact_json=True,
+            detail_limit=1,
+            trace_details_path=trace_details_path,
+        )
+    )
+
+    candidate = payload["candidates"][0]
+    assert payload["paths"]["trace_details"] == str(trace_details_path)
+    assert payload["config"]["detail_limit"] == 1
+    assert len(candidate["traces"]) == 1
+    assert candidate["summary"]["trace_count"] == 3
+    assert candidate["trace_detail_count"] == 3
+    assert candidate["inline_trace_count"] == 1
+    assert candidate["trace_detail_truncated"] is True
+    assert candidate["trace_details_path"] == str(trace_details_path)
+
+    trace_details = json.loads(trace_details_path.read_text(encoding="utf-8"))
+    assert trace_details["workflow"] == "runtime_profile_selector_replay_trace_details"
+    assert trace_details["summary"]["trace_record_count"] == 3
+    assert trace_details["summary"]["truncated_candidate_count"] == 1
+    assert trace_details["candidates"][0]["trace_count"] == 3
+    assert len(trace_details["candidates"][0]["traces"]) == 3
+
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert "runtime_profile_selector_replay_trace_details" in manifest["artifacts"]
+    assert manifest["metadata"]["detail_limit"] == 1
+    assert manifest["metadata"]["trace_details_path"] == str(trace_details_path)
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+
+
 def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     trace_path = tmp_path / "trace.json"

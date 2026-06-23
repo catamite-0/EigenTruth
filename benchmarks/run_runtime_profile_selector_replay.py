@@ -183,6 +183,8 @@ class RuntimeProfileSelectorReplayConfig:
     version: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     compact_json: bool = False
+    detail_limit: int | None = None
+    trace_details_path: str | Path | None = None
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -210,6 +212,14 @@ class RuntimeProfileSelectorReplayConfig:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        if self.detail_limit is not None:
+            object.__setattr__(
+                self,
+                "detail_limit",
+                _required_non_negative_int(self.detail_limit, name="detail_limit"),
+            )
+        if self.trace_details_path is not None:
+            object.__setattr__(self, "trace_details_path", Path(self.trace_details_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
@@ -226,6 +236,15 @@ class RuntimeProfileSelectorReplayConfig:
         if self.artifact_manifest_path is not None:
             return Path(self.artifact_manifest_path)
         return Path(self.output_dir) / "artifact-manifest.json"
+
+    @property
+    def resolved_trace_details_path(self) -> Path | None:
+        """Return the optional full trace details sidecar path."""
+        if self.trace_details_path is not None:
+            return Path(self.trace_details_path)
+        if self.detail_limit is None:
+            return None
+        return Path(self.output_dir) / "runtime-profile-selector-replay-traces.json"
 
 
 def run_runtime_profile_selector_replay(
@@ -249,6 +268,8 @@ def run_runtime_profile_selector_replay(
     leaderboard = _leaderboard(candidates)
     recommendation = leaderboard[0] if leaderboard else None
     status = _replay_status(candidates)
+    report_candidates = _report_candidates_with_trace_details(config, candidates)
+    trace_details_path = config.resolved_trace_details_path
     report = {
         "schema_version": 1,
         "workflow": "runtime_profile_selector_replay",
@@ -259,18 +280,20 @@ def run_runtime_profile_selector_replay(
             "recommended_policy_path": None if recommendation is None else recommendation["policy_path"],
             "blocking_reasons": _blocking_reasons(candidates),
         },
-        "candidates": candidates,
+        "candidates": report_candidates,
         "leaderboard": leaderboard,
         "paths": {
             "report": str(config.resolved_report_path),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "output_dir": str(config.output_dir),
             "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
+            "trace_details": None if trace_details_path is None else str(trace_details_path),
             "traces": [str(trace.path) for trace in traces],
         },
         "config": {
             "candidate_names": tuple(candidate.name for candidate in config.candidates),
             "trace_count": len(traces),
+            "detail_limit": config.detail_limit,
             "replay_policy_source": replay_policy_source,
             "profile_cost_units": dict(config.profile_cost_units),
             "runtime_pairing": {
@@ -318,6 +341,72 @@ def _candidate_record(
         "gate": gate,
         "traces": trace_records,
     }
+
+
+def _report_candidates_with_trace_details(
+    config: RuntimeProfileSelectorReplayConfig,
+    candidates: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    trace_details_path = config.resolved_trace_details_path
+    if trace_details_path is None:
+        return [dict(candidate) for candidate in candidates]
+
+    detail_limit = config.detail_limit
+    report_candidates: list[dict[str, Any]] = []
+    sidecar_candidates: list[dict[str, Any]] = []
+    trace_record_count = 0
+    truncated_candidate_count = 0
+    for candidate in candidates:
+        full_traces = list(_sequence(candidate.get("traces")))
+        inline_traces = full_traces if detail_limit is None else full_traces[:detail_limit]
+        truncated = len(inline_traces) < len(full_traces)
+        trace_record_count += len(full_traces)
+        if truncated:
+            truncated_candidate_count += 1
+
+        report_candidate = dict(candidate)
+        report_candidate["traces"] = list(inline_traces)
+        report_candidate["trace_detail_count"] = len(full_traces)
+        report_candidate["inline_trace_count"] = len(inline_traces)
+        report_candidate["trace_detail_truncated"] = truncated
+        report_candidate["trace_details_path"] = str(trace_details_path)
+        report_candidates.append(report_candidate)
+
+        sidecar_candidates.append({
+            "candidate": candidate.get("candidate"),
+            "status": candidate.get("status"),
+            "policy_path": candidate.get("policy_path"),
+            "trace_count": len(full_traces),
+            "traces": full_traces,
+        })
+
+    _write_json(
+        trace_details_path,
+        {
+            "schema_version": 1,
+            "workflow": "runtime_profile_selector_replay_trace_details",
+            "summary": {
+                "candidate_count": len(sidecar_candidates),
+                "trace_record_count": trace_record_count,
+                "truncated_candidate_count": truncated_candidate_count,
+                "detail_limit": detail_limit,
+            },
+            "paths": {
+                "report": str(config.resolved_report_path),
+                "trace_details": str(trace_details_path),
+            },
+            "config": {
+                "candidate_names": tuple(candidate.name for candidate in config.candidates),
+                "trace_count": len(config.trace_paths),
+                "detail_limit": detail_limit,
+                "compact_json": config.compact_json,
+                "metadata": dict(config.metadata),
+            },
+            "candidates": sidecar_candidates,
+        },
+        compact=config.compact_json,
+    )
+    return report_candidates
 
 
 def _trace_selection_record(
@@ -658,6 +747,9 @@ def _artifact_paths(
         "runtime_profile_selector_replay_report": config.resolved_report_path,
         "replay_policy": config.replay_policy_path,
     }
+    trace_details = _nested(report, "paths", "trace_details")
+    if trace_details is not None:
+        artifacts["runtime_profile_selector_replay_trace_details"] = trace_details
     for index, trace_path in enumerate(config.trace_paths):
         artifacts[f"trace_{index:04d}_{_safe_artifact_name(trace_path.stem)}"] = trace_path
     for candidate in _sequence(report.get("candidates")):
@@ -695,6 +787,8 @@ def _write_artifact_manifest(
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
             "compact_json": config.compact_json,
+            "detail_limit": config.detail_limit,
+            "trace_details_path": _nested(report, "paths", "trace_details"),
             **dict(config.metadata),
         },
     )
@@ -728,6 +822,8 @@ def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
             "compact_json": config.compact_json,
+            "detail_limit": config.detail_limit,
+            "trace_details_path": _nested(report, "paths", "trace_details"),
             **dict(config.metadata),
         },
     ).save_json()
@@ -1133,6 +1229,8 @@ def _config_from_args(args: argparse.Namespace) -> RuntimeProfileSelectorReplayC
         version=args.version,
         metadata=_parse_mapping_json(args.metadata_json, name="--metadata-json"),
         compact_json=bool(args.compact_json),
+        detail_limit=args.detail_limit,
+        trace_details_path=Path(args.trace_details_json) if args.trace_details_json else None,
     )
 
 
@@ -1162,6 +1260,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", default=None)
     parser.add_argument("--metadata-json", default=None)
     parser.add_argument("--compact-json", action="store_true")
+    parser.add_argument("--detail-limit", type=int, default=None,
+                        help="max trace records to inline per candidate; full details move to sidecar")
+    parser.add_argument("--trace-details-json", default=None,
+                        help="optional sidecar path for full per-trace selector replay details")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 
