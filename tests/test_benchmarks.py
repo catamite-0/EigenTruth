@@ -522,6 +522,108 @@ def test_eval_verifier_ensemble_reuses_verification_trace_cache(tmp_path, monkey
     assert second["verification_trace_cache"]["path"] == str(cache_dir / "verifier-ensemble-verified-records.json")
 
 
+def test_eval_verifier_ensemble_staged_verification_skips_low_risk_records(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {"claim": "Paris is the capital of France.", "claim_id": "c1"},
+                {"claim": "The sky is blue.", "claim_id": "c2"},
+                {"claim": "The moon is made of cheese.", "claim_id": "c3"},
+                {"claim": "Paris is the capital of Germany.", "claim_id": "c4"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.5,),
+        repeats=1,
+        seed=0,
+        staged_verification=True,
+        staged_alpha=0.5,
+    )
+
+    run = payload["runs"][0]
+    staged = run["staged_verification"]
+    assert payload["staged_verification"]["enabled"] is True
+    assert staged["threshold"] == pytest.approx(0.2)
+    assert staged["skipped_records"] == 2
+    assert staged["verified_records"] == 2
+    assert staged["skip_rate"] == pytest.approx(0.5)
+    assert staged["reason_counts"]["diagnostics and claim metadata did not require verification"] == 2
+    assert staged["reason_counts"]["diagnostic risk level is medium"] == 2
+    assert run["verification_status_counts"]["not_applicable"] == 2
+    assert run["route_summary"]["selected_counts"]["staged_skip"] == 2
+    assert run["cache_stats"]["groundedness_verifiers"]["requests"] == 2
+
+
+def test_eval_verifier_ensemble_staged_verification_runs_for_sensitive_claim(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "AlphaCorp has 10 offices.",
+                    "claim_id": "c1",
+                    "claim_metadata": {"features": {"has_number": True}},
+                    "initial_evidence": ["AlphaCorp has 10 offices."],
+                },
+                {"claim": "The sky is blue.", "claim_id": "c2"},
+                {"claim": "The moon is made of cheese.", "claim_id": "c3"},
+                {"claim": "Paris is the capital of Germany.", "claim_id": "c4"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.5,),
+        repeats=1,
+        seed=0,
+        staged_verification=True,
+        staged_alpha=0.5,
+    )
+
+    run = payload["runs"][0]
+    staged = run["staged_verification"]
+    assert staged["skipped_records"] == 1
+    assert staged["verified_records"] == 3
+    assert staged["triggered_claim_count"] == 1
+    assert staged["triggered_feature_counts"]["has_number"] == 1
+    assert run["verification_status_counts"]["supported"] == 1
+    assert run["verification_status_counts"]["not_applicable"] == 1
+    assert run["route_summary"]["selected_counts"]["groundedness"] == 3
+    assert run["route_summary"]["selected_counts"]["staged_skip"] == 1
+    assert run["cache_stats"]["groundedness_verifiers"]["requests"] == 3
+
+
 def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     scores_path = tmp_path / "scores.json"

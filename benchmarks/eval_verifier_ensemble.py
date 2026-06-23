@@ -37,6 +37,13 @@ from eigentruth.adapters import (
     combine_cache_stats,
 )
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+from eigentruth.control import (
+    ControlAction,
+    RiskDecision,
+    RiskLevel,
+    StagedVerificationPolicy,
+    VerificationStageDecision,
+)
 from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.verify import (
     CachedVerifier,
@@ -86,6 +93,12 @@ def _parse_alphas(value: str | None) -> tuple[float, ...]:
     if any(not (0.0 < alpha < 1.0) for alpha in alphas):
         raise ValueError("alphas must be in (0, 1).")
     return alphas
+
+
+def _parse_csv(value: str | None) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
 def _load_scores(path: Path, signal: str) -> dict[str, Any]:
@@ -311,6 +324,113 @@ def _merge_state_mappings(*values: Any) -> Mapping[str, Any]:
     return merged
 
 
+def _stage_diagnostic_decision(
+    *,
+    score: float,
+    threshold: float,
+    direction: str,
+    signal: str,
+) -> RiskDecision:
+    if direction == "higher":
+        internal_trigger = score > threshold
+        signed_margin = score - threshold
+    elif direction == "lower":
+        internal_trigger = score < threshold
+        signed_margin = threshold - score
+    else:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    margin_confidence = min(1.0, max(0.5, 0.5 + abs(signed_margin) / (2.0 * (abs(threshold) + 1.0))))
+    diagnostics = {
+        signal: score,
+        "threshold": threshold,
+        "direction": direction,
+        "internal_trigger": internal_trigger,
+        "signed_margin": signed_margin,
+    }
+    if internal_trigger:
+        return RiskDecision(
+            action=ControlAction.RETRIEVE,
+            risk_level=RiskLevel.MEDIUM,
+            confidence=margin_confidence,
+            reason="internal diagnostic exceeded staged verifier threshold",
+            diagnostics=diagnostics,
+        )
+    return RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=margin_confidence,
+        reason="internal diagnostic below staged verifier threshold",
+        diagnostics=diagnostics,
+    )
+
+
+def _stage_record_payload(
+    *,
+    decision: VerificationStageDecision,
+    diagnostic_decision: RiskDecision,
+    score: float,
+    threshold: float,
+    direction: str,
+    alpha: float,
+    signal: str,
+) -> dict[str, Any]:
+    return {
+        **decision.to_dict(),
+        "diagnostic_decision": diagnostic_decision.to_dict(),
+        "score": score,
+        "threshold": threshold,
+        "direction": direction,
+        "alpha": alpha,
+        "signal": signal,
+    }
+
+
+def _record_metadata(
+    record: ClaimEvidenceRecord,
+    stage_payload: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    metadata = dict(record.metadata)
+    if stage_payload is not None:
+        metadata["staged_verification"] = dict(stage_payload)
+    return metadata
+
+
+def _staged_skip_record(
+    record: ClaimEvidenceRecord,
+    stage_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    result = VerificationResult(
+        status=VerificationStatus.NOT_APPLICABLE,
+        confidence=0.0,
+        evidence=(),
+        explanation="Verification skipped by staged policy.",
+        metadata={"staged_verification": dict(stage_payload)},
+    )
+    payload = _verification_to_dict(result)
+    return {
+        "claim": {
+            "text": record.claim.text,
+            "claim_id": record.claim.claim_id,
+            "metadata": dict(record.claim.metadata),
+        },
+        "initial": payload,
+        "final": payload,
+        "qa": None,
+        "state": None,
+        "transition": None,
+        "selfcheck": None,
+        "retrieval_hits": (),
+        "route": _route_metadata(
+            selected_route="staged_skip",
+            selected_verifier="StagedVerificationPolicy",
+            attempted_routes=(),
+            used_retrieval=False,
+            route_timings=(),
+        ),
+        "metadata": _record_metadata(record, stage_payload),
+    }
+
+
 def _verify_records(
     records: Sequence[ClaimEvidenceRecord],
     *,
@@ -329,7 +449,18 @@ def _verify_records(
     transition_verifier: StateTransitionVerifier | None = None,
     state_transitions: Mapping[str, Any] | None = None,
     cache_stats: dict[str, Any] | None = None,
+    stage_policy: StagedVerificationPolicy | None = None,
+    stage_scores: torch.Tensor | None = None,
+    stage_threshold: float | None = None,
+    stage_direction: str = "higher",
+    stage_alpha: float | None = None,
+    stage_signal: str | None = None,
 ) -> tuple[dict[str, Any], ...]:
+    if stage_policy is not None:
+        if stage_scores is None or stage_threshold is None or stage_alpha is None or stage_signal is None:
+            raise ValueError("staged verification requires scores, threshold, alpha, and signal.")
+        if stage_scores.numel() != len(records):
+            raise ValueError("staged verification scores must match records length.")
     verified = []
     state_checks = {} if state_checks is None else state_checks
     state_transitions = {} if state_transitions is None else state_transitions
@@ -395,7 +526,33 @@ def _verify_records(
             retrievers[key] = retriever
         return retriever
 
-    for record in records:
+    for record_index, record in enumerate(records):
+        stage_payload = None
+        if stage_policy is not None:
+            score = float(stage_scores[record_index].item())  # type: ignore[index]
+            diagnostic_decision = _stage_diagnostic_decision(
+                score=score,
+                threshold=float(stage_threshold),
+                direction=stage_direction,
+                signal=stage_signal,
+            )
+            stage_decision = stage_policy.decide(
+                diagnostic_decision,
+                claims=(record.claim,),
+                context={"record_index": record_index},
+            )
+            stage_payload = _stage_record_payload(
+                decision=stage_decision,
+                diagnostic_decision=diagnostic_decision,
+                score=score,
+                threshold=float(stage_threshold),
+                direction=stage_direction,
+                alpha=float(stage_alpha),
+                signal=stage_signal,
+            )
+            if not stage_decision.run_verifier:
+                verified.append(_staged_skip_record(record, stage_payload))
+                continue
         qa_result = None
         state_result = None
         selfcheck_result = None
@@ -431,7 +588,7 @@ def _verify_records(
                         used_retrieval=False,
                         route_timings=route_timings,
                     ),
-                    "metadata": dict(record.metadata),
+                    "metadata": _record_metadata(record, stage_payload),
                 })
                 continue
 
@@ -465,7 +622,7 @@ def _verify_records(
                         used_retrieval=False,
                         route_timings=route_timings,
                     ),
-                    "metadata": dict(record.metadata),
+                    "metadata": _record_metadata(record, stage_payload),
                 })
                 continue
 
@@ -499,7 +656,7 @@ def _verify_records(
                         used_retrieval=False,
                         route_timings=route_timings,
                     ),
-                    "metadata": dict(record.metadata),
+                    "metadata": _record_metadata(record, stage_payload),
                 })
                 continue
 
@@ -576,7 +733,7 @@ def _verify_records(
                 used_retrieval=bool(hits),
                 route_timings=route_timings,
             ),
-            "metadata": dict(record.metadata),
+            "metadata": _record_metadata(record, stage_payload),
         })
     if cache_stats is not None:
         qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
@@ -1002,6 +1159,82 @@ def _selfcheck_execution_summary(verified_records: Sequence[Mapping[str, Any]]) 
     }
 
 
+def _staged_verification_summary(
+    verified_records: Sequence[Mapping[str, Any]],
+    *,
+    enabled: bool,
+) -> dict[str, Any]:
+    summary: dict[str, Any] = {
+        "enabled": enabled,
+        "total_records": len(verified_records),
+        "verified_records": 0,
+        "skipped_records": 0,
+        "skip_rate": None,
+        "reason_counts": {},
+        "risk_level_counts": {},
+        "action_counts": {},
+        "triggered_claim_count": 0,
+        "triggered_feature_counts": {},
+        "triggered_metadata_counts": {},
+    }
+    if not enabled:
+        return summary
+
+    reason_counts: dict[str, int] = {}
+    risk_level_counts: dict[str, int] = {}
+    action_counts: dict[str, int] = {}
+    triggered_feature_counts: dict[str, int] = {}
+    triggered_metadata_counts: dict[str, int] = {}
+    triggered_claim_ids: set[str] = set()
+    for record in verified_records:
+        metadata = record.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        stage = metadata.get("staged_verification", {})
+        if not isinstance(stage, Mapping):
+            continue
+        if stage.get("run_verifier"):
+            summary["verified_records"] += 1
+        else:
+            summary["skipped_records"] += 1
+        reason = str(stage.get("reason", "unknown"))
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+        diagnostic = stage.get("diagnostic_decision", {})
+        if isinstance(diagnostic, Mapping):
+            risk_level = str(diagnostic.get("risk_level", "unknown"))
+            action = str(diagnostic.get("action", "unknown"))
+            risk_level_counts[risk_level] = risk_level_counts.get(risk_level, 0) + 1
+            action_counts[action] = action_counts.get(action, 0) + 1
+        for claim_id in stage.get("triggered_claim_ids", ()):
+            triggered_claim_ids.add(str(claim_id))
+        for features in _mapping_values(stage.get("triggered_features", {})):
+            for feature in features:
+                feature_name = str(feature)
+                triggered_feature_counts[feature_name] = triggered_feature_counts.get(feature_name, 0) + 1
+        for keys in _mapping_values(stage.get("triggered_metadata", {})):
+            for key in keys:
+                key_name = str(key)
+                triggered_metadata_counts[key_name] = triggered_metadata_counts.get(key_name, 0) + 1
+
+    summary["skip_rate"] = _safe_div(int(summary["skipped_records"]), len(verified_records))
+    summary["reason_counts"] = reason_counts
+    summary["risk_level_counts"] = risk_level_counts
+    summary["action_counts"] = action_counts
+    summary["triggered_claim_count"] = len(triggered_claim_ids)
+    summary["triggered_feature_counts"] = triggered_feature_counts
+    summary["triggered_metadata_counts"] = triggered_metadata_counts
+    return summary
+
+
+def _mapping_values(value: Any) -> tuple[Sequence[Any], ...]:
+    if not isinstance(value, Mapping):
+        return ()
+    return tuple(
+        tuple(item) if isinstance(item, Sequence) and not isinstance(item, (str, bytes, bytearray)) else (item,)
+        for item in value.values()
+    )
+
+
 def _non_negative_int(value: Any) -> int | None:
     try:
         result = int(value)
@@ -1298,11 +1531,15 @@ def _verification_trace_cache_key(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    staged_verification: bool,
+    staged_alpha: float,
+    staged_direction: str,
+    staged_policy: StagedVerificationPolicy | None,
 ) -> tuple[str, dict[str, Any]]:
     material = {
         "schema_version": 1,
         "cache_type": "verifier_ensemble_verified_records",
-        "builder": "eval_verifier_ensemble:verified_records:v2",
+        "builder": "eval_verifier_ensemble:verified_records:v3",
         "name": name,
         "signal": signal,
         "score_dump": _path_fingerprint(score_path),
@@ -1329,6 +1566,12 @@ def _verification_trace_cache_key(
             "refute_threshold": float(selfcheck_refute_threshold),
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+        },
+        "staged_verification": {
+            "enabled": bool(staged_verification),
+            "alpha": float(staged_alpha),
+            "direction": staged_direction,
+            "policy": None if staged_policy is None else staged_policy.to_dict(),
         },
     }
     key = hashlib.sha256(stable_cache_key(material).encode("utf-8")).hexdigest()
@@ -1427,6 +1670,23 @@ def build_verifier_ensemble_report(
     selfcheck_early_stop: bool = False,
     selfcheck_max_samples: int | None = None,
     verification_cache_dir: Path | None = None,
+    staged_verification: bool = False,
+    staged_alpha: float = 0.10,
+    staged_verify_risk_levels: Sequence[str] = ("medium", "high", "unknown"),
+    staged_verify_actions: Sequence[str] = (
+        "retrieve",
+        "rewrite",
+        "steer_regenerate",
+        "execute_tool",
+        "abstain",
+        "clarify",
+    ),
+    staged_verify_feature_flags: Sequence[str] = (
+        "has_number",
+        "has_citation",
+        "is_time_sensitive",
+    ),
+    staged_verify_metadata_keys: Sequence[str] = ("requires_verification",),
 ) -> dict[str, Any]:
     if not score_dumps:
         raise ValueError("at least one score dump is required.")
@@ -1444,6 +1704,8 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
     if selfcheck_max_samples is not None and selfcheck_max_samples < selfcheck_min_samples:
         raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
+    if not (0.0 < float(staged_alpha) < 1.0):
+        raise ValueError("staged_alpha must be in (0, 1).")
 
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
@@ -1461,6 +1723,16 @@ def build_verifier_ensemble_report(
     global_state_checks = {**dict(source_state_checks), **dict(fixture_state_checks)}
     global_state_transitions = {**dict(source_state_transitions), **dict(fixture_state_transitions)}
     trace_cache = _verification_trace_cache(verification_cache_dir)
+    stage_policy = (
+        StagedVerificationPolicy(
+            verify_risk_levels=tuple(staged_verify_risk_levels),
+            verify_actions=tuple(staged_verify_actions),
+            verify_claim_feature_flags=tuple(staged_verify_feature_flags),
+            verify_claim_metadata_keys=tuple(staged_verify_metadata_keys),
+        )
+        if staged_verification
+        else None
+    )
     runs = []
     any_state_enabled = False
     any_transition_enabled = False
@@ -1475,6 +1747,16 @@ def build_verifier_ensemble_report(
             fixture=fixture,
             expected_count=int(labels.numel()),
         )
+        stage_threshold = None
+        if stage_policy is not None:
+            true_scores = scores[labels == 0]
+            if true_scores.numel() == 0:
+                raise ValueError("staged verification requires at least one true-labeled calibration score.")
+            stage_threshold = directional_conformal_threshold(
+                true_scores,
+                float(staged_alpha),
+                resolved_direction,
+            )
         transition_enabled = _transition_routes_enabled(records, global_state, global_state_transitions)
         state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
         any_transition_enabled = any_transition_enabled or transition_enabled
@@ -1511,6 +1793,10 @@ def build_verifier_ensemble_report(
             selfcheck_refute_threshold=selfcheck_refute_threshold,
             selfcheck_early_stop=selfcheck_early_stop,
             selfcheck_max_samples=selfcheck_max_samples,
+            staged_verification=stage_policy is not None,
+            staged_alpha=float(staged_alpha),
+            staged_direction=resolved_direction,
+            staged_policy=stage_policy,
         )
         cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
         if cached_trace is not None:
@@ -1540,6 +1826,12 @@ def build_verifier_ensemble_report(
                 transition_verifier=transition_verifier,
                 state_transitions=global_state_transitions,
                 cache_stats=run_cache_stats,
+                stage_policy=stage_policy,
+                stage_scores=scores,
+                stage_threshold=stage_threshold,
+                stage_direction=resolved_direction,
+                stage_alpha=float(staged_alpha),
+                stage_signal=signal,
             )
             if trace_cache is not None:
                 trace_cache.put(
@@ -1549,7 +1841,7 @@ def build_verifier_ensemble_report(
                         "cache_stats": dict(run_cache_stats),
                     },
                     metadata={
-                        "builder": "eval_verifier_ensemble:verified_records:v2",
+                        "builder": "eval_verifier_ensemble:verified_records:v3",
                         "name": name,
                         "signal": signal,
                         "material": trace_material,
@@ -1574,6 +1866,10 @@ def build_verifier_ensemble_report(
             for alpha in alphas
         }
         selfcheck_execution = _selfcheck_execution_summary(verified_records)
+        staged_execution = _staged_verification_summary(
+            verified_records,
+            enabled=stage_policy is not None,
+        )
         runs.append({
             "name": name,
             "scores_path": str(path),
@@ -1642,6 +1938,12 @@ def build_verifier_ensemble_report(
                 "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
                 "retrieval_limit": retrieval_limit,
             },
+            "staged_verification": {
+                **staged_execution,
+                "alpha": float(staged_alpha),
+                "threshold": stage_threshold,
+                "policy": None if stage_policy is None else stage_policy.to_dict(),
+            },
             "cache_stats": run_cache_stats,
             "alphas": alpha_results,
         })
@@ -1702,6 +2004,12 @@ def build_verifier_ensemble_report(
             "enabled": trace_cache is not None,
             "path": None if trace_cache is None else str(trace_cache.path),
         },
+        "staged_verification": {
+            "enabled": stage_policy is not None,
+            "alpha": float(staged_alpha),
+            "policy": None if stage_policy is None else stage_policy.to_dict(),
+            "decision_source": "conformal_internal_gate",
+        },
         "runs": runs,
     }
 
@@ -1730,6 +2038,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             None
             if getattr(args, "verification_cache_dir", None) is None
             else Path(args.verification_cache_dir)
+        ),
+        staged_verification=bool(getattr(args, "staged_verification", False)),
+        staged_alpha=float(getattr(args, "staged_alpha", 0.10)),
+        staged_verify_risk_levels=_parse_csv(
+            getattr(args, "staged_verify_risk_levels", "medium,high,unknown")
+        ),
+        staged_verify_actions=_parse_csv(
+            getattr(
+                args,
+                "staged_verify_actions",
+                "retrieve,rewrite,steer_regenerate,execute_tool,abstain,clarify",
+            )
+        ),
+        staged_verify_feature_flags=_parse_csv(
+            getattr(args, "staged_verify_feature_flags", "has_number,has_citation,is_time_sensitive")
+        ),
+        staged_verify_metadata_keys=_parse_csv(
+            getattr(args, "staged_verify_metadata_keys", "requires_verification")
         ),
     )
     if args.json:
@@ -1789,6 +2115,21 @@ def main() -> None:
                         help="optional cap on self-consistency samples considered per claim")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
+    parser.add_argument("--staged-verification", action="store_true",
+                        help="gate expensive verifier routes with the staged control policy")
+    parser.add_argument("--staged-alpha", type=float, default=0.10,
+                        help="alpha used to calibrate the internal gate for staged verifier execution")
+    parser.add_argument("--staged-verify-risk-levels", default="medium,high,unknown",
+                        help="comma-list of diagnostic risk levels that force verifier execution")
+    parser.add_argument(
+        "--staged-verify-actions",
+        default="retrieve,rewrite,steer_regenerate,execute_tool,abstain,clarify",
+        help="comma-list of diagnostic actions that force verifier execution",
+    )
+    parser.add_argument("--staged-verify-feature-flags", default="has_number,has_citation,is_time_sensitive",
+                        help="comma-list of claim metadata feature flags that force verifier execution")
+    parser.add_argument("--staged-verify-metadata-keys", default="requires_verification",
+                        help="comma-list of claim metadata keys that force verifier execution")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified JSON for lower artifact size and write latency")

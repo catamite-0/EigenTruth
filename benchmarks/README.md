@@ -383,6 +383,25 @@ python benchmarks/eval_verifier_ensemble.py \
 Add `--compact-json` for large automated runs when the report is consumed by
 tools and does not need human-readable indentation.
 
+Add `--staged-verification` to benchmark the cost-aware control plane path. The
+script first calibrates a cheap internal diagnostic gate with `--staged-alpha`,
+then skips expensive verifier routes for low-risk claims unless claim metadata
+matches staged policy triggers such as `features.has_number` or
+`requires_verification`:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores run=artifacts/scores-with-statements.json \
+  --signal truth_proj \
+  --staged-verification \
+  --staged-alpha 0.1 \
+  --json artifacts/verifier_ensemble_staged_report.json
+```
+
+Each run reports `staged_verification.skipped_records`, `skip_rate`,
+`reason_counts`, triggered feature/metadata counts, and the staged conformal
+threshold used for the verifier gate.
+
 If the score dump does not contain `statements`, provide a fixture with one
 record per score:
 
@@ -547,7 +566,7 @@ Reports include `verification_quality`, a label-conditioned matrix over
 final control-policy detection and false-alarm rates. Reports also include
 `route_summary`, which breaks verification outcomes down by selected route
 (`structured_qa`, `state_transition`, `structured_state`, `groundedness`,
-`self_consistency`, or `retrieval_groundedness`) and records attempted-route
+`self_consistency`, `retrieval_groundedness`, or `staged_skip`) and records attempted-route
 counts, status counts, and per-route supported/refuted/error rates. Use
 `route_quality` for label-conditioned false-support / false-refutation metrics
 per selected route, and use each alpha result's `route_control_impact` to see
