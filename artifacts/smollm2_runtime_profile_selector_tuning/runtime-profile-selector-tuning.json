@@ -1,0 +1,373 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 12,
+    "directory_count": 0,
+    "file_count": 12,
+    "missing_count": 0
+  },
+  "candidates": [
+    {
+      "candidate": "default",
+      "decision": {
+        "blocking_reasons": [],
+        "recommended_profile": "auto",
+        "status": "promote"
+      },
+      "metrics": {
+        "mean_attempted_route_count": 1.0,
+        "measured_phases_mean": 5.666666666666667,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0006124516561006507,
+        "total_seconds_p95": 0.0008289626450277865,
+        "verification_skip_rate_mean": 0.3333333333333333,
+        "verified_claim_count_mean": 1.0
+      },
+      "policy": {
+        "default_profile": "balanced",
+        "high_risk_actions": [
+          "abstain",
+          "clarify",
+          "rewrite",
+          "steer_regenerate",
+          "execute_tool"
+        ],
+        "high_risk_levels": [
+          "high",
+          "unknown"
+        ],
+        "high_risk_profile": "audit",
+        "low_risk_actions": [
+          "accept"
+        ],
+        "low_risk_levels": [
+          "low"
+        ],
+        "low_risk_profile": "latency",
+        "sensitive_claim_feature_flags": [
+          "has_number",
+          "has_citation",
+          "is_time_sensitive",
+          "has_calculation"
+        ],
+        "sensitive_claim_metadata_keys": [
+          "requires_verification"
+        ],
+        "sensitive_profile": "audit"
+      },
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "audit": 1,
+          "balanced": 1,
+          "latency": 1
+        },
+        "reason_counts": {
+          "claim metadata requires audit profile": 1,
+          "default profile for diagnostic risk level medium": 1,
+          "low diagnostic risk and no sensitive claim metadata": 1
+        }
+      },
+      "slo": {
+        "enabled": true,
+        "failed_profile_count": 0,
+        "failure_counts_by_metric": {},
+        "failures": [],
+        "passed": true,
+        "passed_profile_count": 1,
+        "policy": {
+          "max_auto_selected_profile_counts": {},
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_measured_phases_mean": null,
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_total_seconds_mean": null,
+          "max_total_seconds_p95": 0.05,
+          "max_verified_claim_count_mean": 2.0,
+          "min_auto_selected_profile_counts": {
+            "audit": 1,
+            "balanced": 1,
+            "latency": 1
+          },
+          "min_cache_hit_rate_mean": null,
+          "min_verification_skip_rate_mean": 0.0
+        },
+        "policy_source": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+      },
+      "source": null,
+      "status": "promote",
+      "sweep_artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/default/artifact-manifest.json",
+      "sweep_report_path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/default/product-runtime-profile-sweep.json"
+    },
+    {
+      "candidate": "latency_biased",
+      "decision": {
+        "blocking_reasons": [
+          "auto.auto_selected_profile_count.audit: SLO min 1.0 failed"
+        ],
+        "recommended_profile": "auto",
+        "status": "blocked"
+      },
+      "metrics": {
+        "mean_attempted_route_count": 1.0,
+        "measured_phases_mean": 6.333333333333333,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0004381416753555338,
+        "total_seconds_p95": 0.0005449931952171028,
+        "verification_skip_rate_mean": 0.3333333333333333,
+        "verified_claim_count_mean": 1.0
+      },
+      "policy": {
+        "default_profile": "balanced",
+        "high_risk_actions": [
+          "abstain",
+          "clarify",
+          "rewrite",
+          "steer_regenerate",
+          "execute_tool"
+        ],
+        "high_risk_levels": [
+          "high",
+          "unknown"
+        ],
+        "high_risk_profile": "audit",
+        "low_risk_actions": [
+          "accept"
+        ],
+        "low_risk_levels": [
+          "low"
+        ],
+        "low_risk_profile": "latency",
+        "sensitive_claim_feature_flags": [
+          "has_citation",
+          "is_time_sensitive"
+        ],
+        "sensitive_claim_metadata_keys": [
+          "requires_verification"
+        ],
+        "sensitive_profile": "audit"
+      },
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "balanced": 1,
+          "latency": 2
+        },
+        "reason_counts": {
+          "default profile for diagnostic risk level medium": 1,
+          "low diagnostic risk and no sensitive claim metadata": 2
+        }
+      },
+      "slo": {
+        "enabled": true,
+        "failed_profile_count": 1,
+        "failure_counts_by_metric": {
+          "auto_selected_profile_count.audit": 1
+        },
+        "failures": [],
+        "passed": false,
+        "passed_profile_count": 0,
+        "policy": {
+          "max_auto_selected_profile_counts": {},
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_measured_phases_mean": null,
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_total_seconds_mean": null,
+          "max_total_seconds_p95": 0.05,
+          "max_verified_claim_count_mean": 2.0,
+          "min_auto_selected_profile_counts": {
+            "audit": 1,
+            "balanced": 1,
+            "latency": 1
+          },
+          "min_cache_hit_rate_mean": null,
+          "min_verification_skip_rate_mean": 0.0
+        },
+        "policy_source": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+      },
+      "source": null,
+      "status": "blocked",
+      "sweep_artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/latency_biased/artifact-manifest.json",
+      "sweep_report_path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/latency_biased/product-runtime-profile-sweep.json"
+    },
+    {
+      "candidate": "audit_biased",
+      "decision": {
+        "blocking_reasons": [
+          "auto.auto_selected_profile_count.balanced: SLO min 1.0 failed"
+        ],
+        "recommended_profile": "auto",
+        "status": "blocked"
+      },
+      "metrics": {
+        "mean_attempted_route_count": 1.0,
+        "measured_phases_mean": 5.0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0003939283002788822,
+        "total_seconds_p95": 0.0004883685382083058,
+        "verification_skip_rate_mean": 0.3333333333333333,
+        "verified_claim_count_mean": 1.0
+      },
+      "policy": {
+        "default_profile": "balanced",
+        "high_risk_actions": [
+          "retrieve",
+          "abstain",
+          "clarify",
+          "rewrite",
+          "steer_regenerate",
+          "execute_tool"
+        ],
+        "high_risk_levels": [
+          "high",
+          "unknown"
+        ],
+        "high_risk_profile": "audit",
+        "low_risk_actions": [
+          "accept"
+        ],
+        "low_risk_levels": [
+          "low"
+        ],
+        "low_risk_profile": "latency",
+        "sensitive_claim_feature_flags": [
+          "has_number",
+          "has_citation",
+          "is_time_sensitive",
+          "has_calculation"
+        ],
+        "sensitive_claim_metadata_keys": [
+          "requires_verification"
+        ],
+        "sensitive_profile": "audit"
+      },
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "audit": 2,
+          "latency": 1
+        },
+        "reason_counts": {
+          "claim metadata requires audit profile": 1,
+          "diagnostic action is retrieve": 1,
+          "low diagnostic risk and no sensitive claim metadata": 1
+        }
+      },
+      "slo": {
+        "enabled": true,
+        "failed_profile_count": 1,
+        "failure_counts_by_metric": {
+          "auto_selected_profile_count.balanced": 1
+        },
+        "failures": [],
+        "passed": false,
+        "passed_profile_count": 0,
+        "policy": {
+          "max_auto_selected_profile_counts": {},
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_measured_phases_mean": null,
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_total_seconds_mean": null,
+          "max_total_seconds_p95": 0.05,
+          "max_verified_claim_count_mean": 2.0,
+          "min_auto_selected_profile_counts": {
+            "audit": 1,
+            "balanced": 1,
+            "latency": 1
+          },
+          "min_cache_hit_rate_mean": null,
+          "min_verification_skip_rate_mean": 0.0
+        },
+        "policy_source": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+      },
+      "source": null,
+      "status": "blocked",
+      "sweep_artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/artifact-manifest.json",
+      "sweep_report_path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/product-runtime-profile-sweep.json"
+    }
+  ],
+  "config": {
+    "artifact_path": null,
+    "candidate_names": [
+      "default",
+      "latency_biased",
+      "audit_biased"
+    ],
+    "compact_json": false,
+    "metadata": {},
+    "profiles": [
+      "auto"
+    ],
+    "repeats": 1,
+    "scenario_names": [
+      "low_risk_supported",
+      "diagnostic_refuted",
+      "calculator_refuted"
+    ]
+  },
+  "decision": {
+    "blocking_reasons": [
+      "latency_biased: auto.auto_selected_profile_count.audit: SLO min 1.0 failed",
+      "audit_biased: auto.auto_selected_profile_count.balanced: SLO min 1.0 failed"
+    ],
+    "recommended_candidate": "default",
+    "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+    "status": "promote"
+  },
+  "execution": {
+    "wall_clock_seconds": 0.19498422800097615
+  },
+  "leaderboard": [
+    {
+      "blocked": false,
+      "candidate": "default",
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.666666666666667,
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+      "retrieval_use_rate": 0.0,
+      "status": "promote",
+      "total_seconds_mean": 0.0006124516561006507,
+      "total_seconds_p95": 0.0008289626450277865,
+      "verified_claim_count_mean": 1.0
+    },
+    {
+      "blocked": true,
+      "candidate": "audit_biased",
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.0,
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+      "retrieval_use_rate": 0.0,
+      "status": "blocked",
+      "total_seconds_mean": 0.0003939283002788822,
+      "total_seconds_p95": 0.0004883685382083058,
+      "verified_claim_count_mean": 1.0
+    },
+    {
+      "blocked": true,
+      "candidate": "latency_biased",
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 6.333333333333333,
+      "policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json",
+      "retrieval_use_rate": 0.0,
+      "status": "blocked",
+      "total_seconds_mean": 0.0004381416753555338,
+      "total_seconds_p95": 0.0005449931952171028,
+      "verified_claim_count_mean": 1.0
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/artifact-manifest.json",
+    "output_dir": "artifacts/smollm2_runtime_profile_selector_tuning",
+    "policy": null,
+    "promotion_contract": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+    "report": "artifacts/smollm2_runtime_profile_selector_tuning/runtime-profile-selector-tuning.json",
+    "slo_policy": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "workflow": "runtime_profile_selector_tuning"
+}

@@ -1,0 +1,334 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  },
+  "config": {
+    "artifact_path": null,
+    "compact_json": false,
+    "max_workers": 1,
+    "metadata": {
+      "selector_candidate": "audit_biased",
+      "source": "run_runtime_profile_selector_tuning"
+    },
+    "profile_modes": [
+      "auto"
+    ],
+    "profiles": [
+      "auto"
+    ],
+    "repeats": 1,
+    "runtime_profile_selector_policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+    "scenario_names": [
+      "low_risk_supported",
+      "diagnostic_refuted",
+      "calculator_refuted"
+    ],
+    "slo_policy_source": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+  },
+  "decision": {
+    "blocking_reasons": [
+      "auto.auto_selected_profile_count.balanced: SLO min 1.0 failed"
+    ],
+    "recommended_profile": "auto",
+    "status": "blocked"
+  },
+  "execution": {
+    "max_workers": 1,
+    "wall_clock_seconds": 0.05134659796021879
+  },
+  "leaderboard": [
+    {
+      "blocked": true,
+      "cache_hit_rate_mean": 0.0,
+      "mean_attempted_route_count": 1.0,
+      "measured_phases_mean": 5.0,
+      "profile": "auto",
+      "retrieval_use_rate": 0.0,
+      "status": "blocked",
+      "total_seconds_mean": 0.0003939283002788822,
+      "total_seconds_p95": 0.0004883685382083058,
+      "verification_skip_rate_mean": 0.3333333333333333,
+      "verified_claim_count_mean": 1.0
+    }
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/artifact-manifest.json",
+    "output_dir": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased",
+    "policy": null,
+    "promotion_contract": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json",
+    "report": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/product-runtime-profile-sweep.json",
+    "runtime_profile_selector_policy": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+    "slo_policy": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+  },
+  "profiles": [
+    {
+      "baseline_artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/baselines/auto/product-runtime-baseline-artifact-manifest.json",
+      "baseline_path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/baselines/auto/product-runtime-baseline.json",
+      "baseline_status": "promote",
+      "budget": {
+        "enabled": true,
+        "failed_count": 0,
+        "failure_counts_by_metric": {},
+        "passed": true,
+        "passed_count": 3,
+        "policy": {
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_p95_route_duration_seconds": null,
+          "max_p99_route_duration_seconds": 0.01,
+          "max_phase_p95_seconds": {},
+          "max_phase_p99_seconds": {},
+          "max_phase_seconds": {},
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_route_duration_seconds": null,
+          "max_total_seconds": null,
+          "max_verified_claim_count": null,
+          "min_cache_hit_rate": null,
+          "min_named_cache_hit_rate": {},
+          "min_verification_skip_rate": null,
+          "require_runtime_trace": true
+        }
+      },
+      "metrics": {
+        "cache_hit_rate_mean": 0.0,
+        "mean_attempted_route_count": 1.0,
+        "mean_route_duration_seconds": 4.033298076440891e-05,
+        "measured_phases_mean": 5.0,
+        "retrieval_hit_count": 0,
+        "retrieval_use_rate": 0.0,
+        "total_seconds_mean": 0.0003939283002788822,
+        "total_seconds_p95": 0.0004883685382083058,
+        "verification_claim_skip_rate": 0.25,
+        "verification_skip_decision_rate": 0.3333333333333333,
+        "verification_skip_rate_mean": 0.3333333333333333,
+        "verified_claim_count_mean": 1.0,
+        "verifier_saved_claim_count_mean": 0.3333333333333333
+      },
+      "profile": "auto",
+      "runtime_profile_selection": {
+        "counts_by_selected_profile": {
+          "audit": 2,
+          "latency": 1
+        },
+        "reason_counts": {
+          "claim metadata requires audit profile": 1,
+          "diagnostic action is retrieve": 1,
+          "low diagnostic risk and no sensitive claim metadata": 1
+        }
+      },
+      "slo": {
+        "checks": [
+          {
+            "limit": 0.05,
+            "limit_type": "max",
+            "metric": "total_seconds_p95",
+            "passed": true,
+            "raw_value": "0.0004883685382083058",
+            "value": 0.0004883685382083058
+          },
+          {
+            "limit": 1.1,
+            "limit_type": "max",
+            "metric": "mean_attempted_route_count",
+            "passed": true,
+            "raw_value": "1.0",
+            "value": 1.0
+          },
+          {
+            "limit": 0.0,
+            "limit_type": "max",
+            "metric": "retrieval_use_rate",
+            "passed": true,
+            "raw_value": "0.0",
+            "value": 0.0
+          },
+          {
+            "limit": 2.0,
+            "limit_type": "max",
+            "metric": "verified_claim_count_mean",
+            "passed": true,
+            "raw_value": "1.0",
+            "value": 1.0
+          },
+          {
+            "limit": 0.0,
+            "limit_type": "min",
+            "metric": "verification_skip_rate_mean",
+            "passed": true,
+            "raw_value": "0.3333333333333333",
+            "value": 0.3333333333333333
+          },
+          {
+            "limit": 1.0,
+            "limit_type": "min",
+            "metric": "auto_selected_profile_count.audit",
+            "passed": true,
+            "raw_value": "2",
+            "value": 2.0
+          },
+          {
+            "limit": 1.0,
+            "limit_type": "min",
+            "metric": "auto_selected_profile_count.balanced",
+            "passed": false,
+            "raw_value": null,
+            "value": null
+          },
+          {
+            "limit": 1.0,
+            "limit_type": "min",
+            "metric": "auto_selected_profile_count.latency",
+            "passed": true,
+            "raw_value": "1",
+            "value": 1.0
+          }
+        ],
+        "enabled": true,
+        "failures": [
+          {
+            "limit": 1.0,
+            "limit_type": "min",
+            "metric": "auto_selected_profile_count.balanced",
+            "raw_value": null,
+            "reason": "missing or non-finite",
+            "value": null
+          }
+        ],
+        "passed": false,
+        "policy": {
+          "max_auto_selected_profile_counts": {},
+          "max_mean_attempted_route_count": 1.1,
+          "max_mean_route_duration_seconds": null,
+          "max_measured_phases_mean": null,
+          "max_retrieval_hit_count": null,
+          "max_retrieval_use_rate": 0.0,
+          "max_total_seconds_mean": null,
+          "max_total_seconds_p95": 0.05,
+          "max_verified_claim_count_mean": 2.0,
+          "min_auto_selected_profile_counts": {
+            "audit": 1,
+            "balanced": 1,
+            "latency": 1
+          },
+          "min_cache_hit_rate_mean": null,
+          "min_verification_skip_rate_mean": 0.0
+        }
+      },
+      "status": "blocked",
+      "trace_count": 3,
+      "trace_paths": [
+        "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/low_risk_supported-r0.json",
+        "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/diagnostic_refuted-r0.json",
+        "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/calculator_refuted-r0.json"
+      ],
+      "traces": [
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/low_risk_supported-r0.json",
+          "repeat": 0,
+          "request_id": "auto-low_risk_supported-r0",
+          "risk_action": "accept",
+          "risk_level": "low",
+          "runtime_profile_selection": {
+            "diagnostic_action": "accept",
+            "diagnostic_risk_level": "low",
+            "reason": "low diagnostic risk and no sensitive claim metadata",
+            "selected_profile": "latency",
+            "triggered_claim_ids": [],
+            "triggered_features": {},
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.0002203310141339898,
+          "scenario": "low_risk_supported",
+          "selected_runtime_profile": "latency",
+          "staged_verification_enabled": true
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/diagnostic_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "auto-diagnostic_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_profile_selection": {
+            "diagnostic_action": "retrieve",
+            "diagnostic_risk_level": "medium",
+            "reason": "diagnostic action is retrieve",
+            "selected_profile": "audit",
+            "triggered_claim_ids": [],
+            "triggered_features": {},
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.0004902789369225502,
+          "scenario": "diagnostic_refuted",
+          "selected_runtime_profile": "audit",
+          "staged_verification_enabled": false
+        },
+        {
+          "measured_phases": 5,
+          "path": "artifacts/smollm2_runtime_profile_selector_tuning/candidates/audit_biased/traces/auto/calculator_refuted-r0.json",
+          "repeat": 0,
+          "request_id": "auto-calculator_refuted-r0",
+          "risk_action": "abstain",
+          "risk_level": "high",
+          "runtime_profile_selection": {
+            "diagnostic_action": "accept",
+            "diagnostic_risk_level": "low",
+            "reason": "claim metadata requires audit profile",
+            "selected_profile": "audit",
+            "triggered_claim_ids": [
+              "c1"
+            ],
+            "triggered_features": {
+              "c1": [
+                "has_number",
+                "has_calculation"
+              ]
+            },
+            "triggered_metadata": {}
+          },
+          "runtime_total_seconds": 0.00047117494978010654,
+          "scenario": "calculator_refuted",
+          "selected_runtime_profile": "audit",
+          "staged_verification_enabled": false
+        }
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "slo": {
+    "enabled": true,
+    "failed_profile_count": 1,
+    "failure_counts_by_metric": {
+      "auto_selected_profile_count.balanced": 1
+    },
+    "failures": [],
+    "passed": false,
+    "passed_profile_count": 0,
+    "policy": {
+      "max_auto_selected_profile_counts": {},
+      "max_mean_attempted_route_count": 1.1,
+      "max_mean_route_duration_seconds": null,
+      "max_measured_phases_mean": null,
+      "max_retrieval_hit_count": null,
+      "max_retrieval_use_rate": 0.0,
+      "max_total_seconds_mean": null,
+      "max_total_seconds_p95": 0.05,
+      "max_verified_claim_count_mean": 2.0,
+      "min_auto_selected_profile_counts": {
+        "audit": 1,
+        "balanced": 1,
+        "latency": 1
+      },
+      "min_cache_hit_rate_mean": null,
+      "min_verification_skip_rate_mean": 0.0
+    },
+    "policy_source": "artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json"
+  },
+  "status": "blocked",
+  "workflow": "product_runtime_profile_sweep"
+}

@@ -9318,6 +9318,77 @@ def test_run_product_runtime_profile_sweep_requires_auto_profile_for_auto_slo(tm
     )
 
 
+def test_run_runtime_profile_selector_tuning_recommends_passing_policy(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "selector-tuning"
+    registry_path = tmp_path / "registry.json"
+    slo_policy_path = tmp_path / "slo-policy.json"
+    slo_policy_path.write_text(
+        json.dumps({
+            "max_total_seconds_p95": 1.0,
+            "max_mean_attempted_route_count": 1.1,
+            "max_retrieval_use_rate": 0.0,
+            "min_auto_selected_profile_counts": {
+                "latency": 1,
+                "balanced": 1,
+                "audit": 1,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_runtime_profile_selector_tuning(
+        module.RuntimeProfileSelectorTuningConfig(
+            output_dir=output_dir,
+            candidates=(
+                module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+                module.RuntimeProfileSelectorCandidate(
+                    name="latency-biased",
+                    policy={
+                        "sensitive_claim_feature_flags": ["has_citation", "is_time_sensitive"],
+                    },
+                ),
+            ),
+            slo_policy_path=slo_policy_path,
+            registry_path=registry_path,
+            name="selector-tuning",
+            version="0.1",
+            compact_json=True,
+        )
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:selector-tuning:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_candidate"] == "default"
+    assert payload["candidates"][0]["status"] == "promote"
+    assert payload["candidates"][1]["status"] == "blocked"
+    assert payload["candidates"][0]["runtime_profile_selection"]["counts_by_selected_profile"] == {
+        "audit": 1,
+        "balanced": 1,
+        "latency": 1,
+    }
+    assert payload["candidates"][1]["runtime_profile_selection"]["counts_by_selected_profile"] == {
+        "balanced": 1,
+        "latency": 2,
+    }
+    assert Path(payload["paths"]["artifact_manifest"]).exists()
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    assert "default_selector_policy" in manifest["artifacts"]
+    assert "latency-biased_sweep_manifest" in manifest["artifacts"]
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["recommended_candidate"] == "default"
+    assert record.metadata["candidate_count"] == 2
+
+
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
     artifact_path = tmp_path / "artifact.json"

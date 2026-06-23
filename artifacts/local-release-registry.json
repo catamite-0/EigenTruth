@@ -2315,6 +2315,23 @@
       "name": "smollm2-product-runtime-profile-sweep",
       "path": "artifacts/smollm2_product_runtime_profile_sweep/product-runtime-profile-sweep.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_tuning/artifact-manifest.json",
+        "candidate_count": 3,
+        "compact_json": false,
+        "recommended_candidate": "default",
+        "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+        "repeats": 1,
+        "scenario_count": 3,
+        "status": "promote",
+        "workflow": "run_runtime_profile_selector_tuning"
+      },
+      "name": "smollm2-runtime-profile-selector-tuning",
+      "path": "artifacts/smollm2_runtime_profile_selector_tuning/runtime-profile-selector-tuning.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

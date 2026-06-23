@@ -2256,6 +2256,32 @@ so routing thresholds can be tuned and audited separately from SLO gates. The
 sweep recommends `auto`. Skipped staged-verification paths with no verifier
 route are counted as zero route cost for route-cost budget checks.
 
+Use `run_runtime_profile_selector_tuning.py` when the question is not which
+runtime profile to deploy, but which request-level `auto` selector policy should
+drive it. The tuner writes one candidate policy file per policy, runs
+`run_product_runtime_profile_sweep.py --profiles auto` for each candidate,
+applies the same `--slo-policy`, and recommends the lowest-cost promoted
+selector:
+
+```bash
+python benchmarks/run_runtime_profile_selector_tuning.py \
+  --output-dir artifacts/runtime-profile-selector-tuning \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --slo-policy artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-runtime-profile-selector-tuning \
+  --version 0.1 \
+  --fail-on-blocked
+```
+
+Pass `--candidate name=policy.json` repeatedly to compare explicit selector
+policies. With no candidates, the tuner compares the built-in `default`,
+`latency_biased`, and `audit_biased` policies. Current registered selector
+tuning: `report:smollm2-runtime-profile-selector-tuning:0.1` in
+`artifacts/local-release-registry.json`. It promotes the default selector and
+blocks the biased candidates because they fail the auto selector distribution
+SLO.
+
 Current registered SmolLM2 l20 performance baseline:
 `performance_baseline:smollm2-l20-performance-baseline:0.9` in
 `artifacts/local-readiness-registry.json`. It reuses the promoted real-model
