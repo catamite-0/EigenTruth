@@ -21,7 +21,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.recommend_runtime_config import build_runtime_recommendation  # noqa: E402
+from benchmarks.recommend_runtime_config import (  # noqa: E402
+    INSIDE_TRIGGER_BUDGET_POLICIES,
+    build_runtime_recommendation,
+)
 from benchmarks.run_adapter_family_matrix import (  # noqa: E402
     AdapterFamilyMatrixConfig,
     run_adapter_family_matrix,
@@ -82,6 +85,7 @@ class AdapterReadinessWorkflowConfig:
     max_runtime_total_seconds: float | None = None
     inside_sampling_report_path: Path | None = None
     inside_trigger_budget_sweep_report_path: Path | None = None
+    inside_trigger_budget_policy: str = "quality_balanced"
     performance_report_path: Path | None = None
 
     def __post_init__(self) -> None:
@@ -100,6 +104,11 @@ class AdapterReadinessWorkflowConfig:
             )
         if self.performance_report_path is not None:
             object.__setattr__(self, "performance_report_path", Path(self.performance_report_path))
+        policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
+        if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
+            choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
+            raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
+        object.__setattr__(self, "inside_trigger_budget_policy", policy)
         object.__setattr__(self, "layers", tuple(int(layer) for layer in self.layers))
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
         if int(self.max_batch_tokens) < 0:
@@ -209,6 +218,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             if config.inside_trigger_budget_sweep_report_path is None
             else _load_json(config.inside_trigger_budget_sweep_report_path)
         ),
+        inside_trigger_budget_policy=config.inside_trigger_budget_policy,
         matrix_report_path=performance_report_path,
         inside_sampling_report_path=config.inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=config.inside_trigger_budget_sweep_report_path,
@@ -232,6 +242,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "performance_matrix_path": str(performance_report_path),
         "runtime_recommendation_path": str(config.runtime_recommendation_path),
         "artifact_manifest": str(config.artifact_manifest_path),
+        "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
         "runtime_recommendation": runtime_recommendation,
@@ -388,6 +399,7 @@ def _write_artifact_manifest(
             "inside_trigger_budget_sweep_report": None
             if config.inside_trigger_budget_sweep_report_path is None
             else str(config.inside_trigger_budget_sweep_report_path),
+            "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
             "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
             "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
                 "performance_wall_clock_seconds"
@@ -413,6 +425,9 @@ def _write_artifact_manifest(
             "recommended_quality_signals": runtime_config.get("quality_signals"),
             "recommended_inside_sampling": runtime_config.get("inside_sampling"),
             "recommended_inside_trigger_budget_sweep": runtime_config.get("inside_trigger_budget_sweep"),
+            "recommended_inside_trigger_budget_policy": dict(
+                runtime_config.get("inside_trigger_budget_sweep") or {}
+            ).get("selection_policy"),
         },
     )
     config.artifact_manifest_path.write_text(
@@ -510,6 +525,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
             if args.inside_trigger_budget_sweep_report
             else None
         ),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
 
@@ -578,6 +594,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional inside-sampling-profile-comparison.json to fold into runtime recommendation")
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
                         help="optional inside-trigger-budget-sweep.json to fold into runtime recommendation")
+    parser.add_argument("--inside-trigger-budget-policy", default="quality_balanced",
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="budget selection policy for trigger-budget sweep evidence")
     parser.add_argument("--performance-report", default=None,
                         help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--max-runtime-total-seconds", type=lambda value: _parse_non_negative_float(

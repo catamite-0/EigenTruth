@@ -258,6 +258,13 @@ def _runtime_recommendation_from_manifest(
                     matrix_report,
                     inside_sampling_report=inside_sampling_report or None,
                     inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report or None,
+                    inside_trigger_budget_policy=str(
+                        _first_present(
+                            manifest_metadata.get("recommended_inside_trigger_budget_policy"),
+                            manifest_metadata.get("inside_trigger_budget_policy"),
+                            "quality_balanced",
+                        )
+                    ),
                     matrix_report_path=performance_matrix_path,
                     inside_sampling_report_path=inside_sampling_path,
                     inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_path,

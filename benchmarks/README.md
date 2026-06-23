@@ -1931,6 +1931,7 @@ python benchmarks/recommend_runtime_config.py \
   --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
   --inside-sampling-report /tmp/eigentruth-qwen05-inside/inside-sampling-profile-comparison.json \
   --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
+  --inside-trigger-budget-policy quality_balanced \
   --output /tmp/eigentruth-qwen05-worker-sweep/runtime-recommendation.json \
   --fail-on-blocked
 ```
@@ -1943,8 +1944,13 @@ recommended sampling run must pass its sample-efficiency gate and expose a
 readable per-run result JSON; otherwise the runtime recommendation fails closed.
 With `--inside-trigger-budget-sweep-report`, the recommendation uses
 `quality_balanced_recommendation` when present, otherwise the cost-first
-recommendation, and emits `run_inside_trigger_budget_sweep.py` flags including
-`--derive-from-max-budget` for derived nested top-fraction sweeps.
+recommendation by default, and emits `run_inside_trigger_budget_sweep.py` flags
+including `--derive-from-max-budget` for derived nested top-fraction sweeps. Use
+`--inside-trigger-budget-policy cost_first` for latency-constrained deployments,
+`quality_balanced` for the default release posture, or `quality_first` when the
+highest measured INSIDE quality metric is worth the extra sampled generation
+cost. The selected policy is written into the runtime recommendation evidence
+and readiness/registry metadata.
 The report includes equivalent flags for `eval_truthfulqa.py`,
 `run_cache_profile_matrix.py`, `run_adapter_readiness_workflow.py`, and, when
 sampling evidence is provided, `run_inside_sampling_profile.py` and

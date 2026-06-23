@@ -3247,6 +3247,11 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
                     "inside_auroc": {"inside_semantic_entropy": 0.57},
                 },
             ],
+            "recommendation": {
+                "budget_id": "top_0p25",
+                "recommended_run": "adaptive_selfcheck",
+                "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+            },
             "quality_balanced_recommendation": {
                 "budget_id": "top_0p4",
                 "recommended_run": "adaptive_selfcheck",
@@ -3273,6 +3278,7 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
             alpha=0.2,
             performance_report_path=performance_report_path,
             inside_trigger_budget_sweep_report_path=trigger_sweep_path,
+            inside_trigger_budget_policy="cost_first",
         )
     )
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
@@ -3287,17 +3293,22 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
     }
     assert payload["runtime_recommendation"]["recommendation"]["inside_trigger_budget_sweep"][
         "recommended_budget_id"
-    ] == "top_0p4"
+    ] == "top_0p25"
+    assert payload["runtime_recommendation"]["recommendation"]["inside_trigger_budget_sweep"][
+        "selection_policy"
+    ] == "cost_first"
     assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"][
         "inside_trigger_top_fraction"
-    ] == pytest.approx(0.4)
+    ] == pytest.approx(0.25)
     assert manifest["metadata"]["performance_report_reused"] is True
+    assert manifest["metadata"]["inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["performance_report_path"] == str(performance_report_path)
     assert manifest["artifacts"]["performance_matrix_report"]["exists"] is True
     assert manifest["artifacts"]["inside_trigger_budget_sweep_report"]["exists"] is True
     assert manifest["metadata"]["recommended_inside_trigger_budget_sweep"][
         "recommended_budget_id"
-    ] == "top_0p4"
+    ] == "top_0p25"
+    assert manifest["metadata"]["recommended_inside_trigger_budget_policy"] == "cost_first"
 
 
 def test_adapter_readiness_decision_blocks_on_runtime_budget():
@@ -7394,11 +7405,13 @@ def test_runtime_config_recommendation_includes_derived_trigger_budget_sweep(tmp
     trigger = report["recommendation"]["inside_trigger_budget_sweep"]
     inside = report["recommendation"]["inside_sampling"]
     assert trigger["recommendation_source"] == "quality_balanced_recommendation"
+    assert trigger["selection_policy"] == "quality_balanced"
     assert trigger["recommended_budget_id"] == "top_0p4"
     assert trigger["derive_from_max_budget"] is True
     assert trigger["sample_count_ratio_to_reference"] == pytest.approx(0.50)
     assert inside["inside_trigger_top_fraction"] == pytest.approx(0.4)
     assert inside["inside_trigger_budget_id"] == "top_0p4"
+    assert inside["inside_trigger_budget_policy"] == "quality_balanced"
     assert inside["adaptive"] is True
     assert inside["selfcheck_early_stop"] is True
     assert inside["inside_generation_seconds_source"] == "measured_source_run"
@@ -7411,6 +7424,130 @@ def test_runtime_config_recommendation_includes_derived_trigger_budget_sweep(tmp
     assert sweep_flags[sweep_flags.index("--top-fractions") + 1] == "0.1,0.4"
     assert sweep_flags[sweep_flags.index("--runs") + 1] == "adaptive_selfcheck"
     assert "--derive-from-max-budget" in sweep_flags
+
+
+def test_runtime_config_recommendation_selects_trigger_budget_policy():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_2_capture_outputs",
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_2_capture_outputs",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+            },
+        },
+    }
+    sweep_report = {
+        "workflow": "inside_trigger_budget_sweep",
+        "dry_run": False,
+        "config": {
+            "trigger_signal": "truth_proj",
+            "budgets": [
+                {"kind": "top_fraction", "value": 0.1, "id": "top_0p1"},
+                {"kind": "top_fraction", "value": 0.4, "id": "top_0p4"},
+                {"kind": "top_fraction", "value": 0.6, "id": "top_0p6"},
+            ],
+            "inside_samples": 3,
+            "inside_batch_size": 1,
+            "inside_max_new_tokens": 4,
+            "run_names": ["adaptive_selfcheck"],
+        },
+        "budgets": {
+            "top_0p1": {"sample_efficiency_gate": {"passed": True}},
+            "top_0p4": {"sample_efficiency_gate": {"passed": True}},
+            "top_0p6": {"sample_efficiency_gate": {"passed": True}},
+        },
+        "leaderboard": [
+            {
+                "budget_id": "top_0p1",
+                "budget_kind": "top_fraction",
+                "budget_value": 0.1,
+                "recommended_run": "adaptive_selfcheck",
+                "total_generated_samples": 30,
+                "sample_count_ratio_to_reference": 0.10,
+                "inside_generation_seconds_ratio_to_reference": 0.11,
+                "inside_auroc": {"inside_semantic_entropy": 0.52},
+            },
+            {
+                "budget_id": "top_0p4",
+                "budget_kind": "top_fraction",
+                "budget_value": 0.4,
+                "recommended_run": "adaptive_selfcheck",
+                "total_generated_samples": 120,
+                "sample_count_ratio_to_reference": 0.40,
+                "inside_generation_seconds_ratio_to_reference": 0.42,
+                "inside_auroc": {"inside_semantic_entropy": 0.57},
+            },
+            {
+                "budget_id": "top_0p6",
+                "budget_kind": "top_fraction",
+                "budget_value": 0.6,
+                "recommended_run": "adaptive_selfcheck",
+                "total_generated_samples": 180,
+                "sample_count_ratio_to_reference": 0.60,
+                "inside_generation_seconds_ratio_to_reference": 0.63,
+                "inside_auroc": {"inside_semantic_entropy": 0.59},
+            },
+        ],
+        "recommendation": {
+            "budget_id": "top_0p1",
+            "recommended_run": "adaptive_selfcheck",
+            "reason": "lowest_total_generated_samples_then_inside_generation_seconds",
+        },
+        "quality_balanced_recommendation": {
+            "budget_id": "top_0p4",
+            "recommended_run": "adaptive_selfcheck",
+            "reason": "lowest_cost_within_inside_quality_tolerance",
+            "quality_metric": "inside_semantic_entropy",
+            "quality_value": 0.57,
+            "best_quality_value": 0.59,
+            "quality_tolerance": 0.02,
+            "cost_metric": "inside_generation_seconds_ratio_to_reference",
+            "cost_value": 0.42,
+        },
+    }
+
+    default_report = module.build_runtime_recommendation(
+        matrix_report,
+        inside_trigger_budget_sweep_report=sweep_report,
+    )
+    cost_report = module.build_runtime_recommendation(
+        matrix_report,
+        inside_trigger_budget_sweep_report=sweep_report,
+        inside_trigger_budget_policy="cost_first",
+    )
+    quality_report = module.build_runtime_recommendation(
+        matrix_report,
+        inside_trigger_budget_sweep_report=sweep_report,
+        inside_trigger_budget_policy="quality_first",
+    )
+
+    assert default_report["recommendation"]["inside_trigger_budget_sweep"]["recommended_budget_id"] == "top_0p4"
+    assert default_report["evidence"]["inside_trigger_budget_policy"] == "quality_balanced"
+    assert cost_report["recommendation"]["inside_trigger_budget_sweep"]["recommended_budget_id"] == "top_0p1"
+    assert cost_report["recommendation"]["inside_trigger_budget_sweep"]["recommendation_source"] == "recommendation"
+    assert cost_report["recommendation"]["inside_sampling"]["inside_trigger_top_fraction"] == pytest.approx(0.1)
+    assert cost_report["evidence"]["inside_trigger_budget_policy"] == "cost_first"
+    quality_trigger = quality_report["recommendation"]["inside_trigger_budget_sweep"]
+    assert quality_trigger["recommended_budget_id"] == "top_0p6"
+    assert quality_trigger["recommendation_source"] == "quality_first"
+    assert quality_trigger["selection_policy"] == "quality_first"
+    assert quality_trigger["quality_metric"] == "inside_semantic_entropy"
+    assert quality_trigger["quality_value"] == pytest.approx(0.59)
+    assert quality_trigger["cost_value"] == pytest.approx(0.63)
+    eval_flags = quality_report["benchmark_flags"]["eval_truthfulqa"]
+    assert eval_flags[eval_flags.index("--inside-trigger-top-fraction") + 1] == "0.6"
+    with pytest.raises(ValueError, match="inside_trigger_budget_policy"):
+        module.build_runtime_recommendation(
+            matrix_report,
+            inside_trigger_budget_sweep_report=sweep_report,
+            inside_trigger_budget_policy="fast_enough",
+        )
 
 
 def test_runtime_config_recommendation_blocks_failed_inside_sampling_gate():
@@ -7483,6 +7620,7 @@ def test_runtime_config_recommendation_cli_writes_output(tmp_path):
         worker_sweep_report=None,
         inside_sampling_report=None,
         inside_trigger_budget_sweep_report=None,
+        inside_trigger_budget_policy="quality_balanced",
         output=str(output_path),
         fail_on_blocked=True,
     ))

@@ -15,6 +15,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
+from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from benchmarks.run_adapter_readiness_workflow import (  # noqa: E402
     AdapterReadinessWorkflowConfig,
     _parse_int_list,
@@ -184,6 +185,7 @@ def _promotion_metadata(
             "recommended_inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
             "recommended_inside_trigger_budget_run": inside_trigger_budget.get("recommended_run"),
             "recommended_inside_trigger_budget_source": inside_trigger_budget.get("recommendation_source"),
+            "recommended_inside_trigger_budget_policy": inside_trigger_budget.get("selection_policy"),
             "recommended_inside_trigger_budget_derive_from_max_budget": inside_trigger_budget.get(
                 "derive_from_max_budget"
             ),
@@ -259,6 +261,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
             if args.inside_trigger_budget_sweep_report
             else None
         ),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
     return AdapterReadinessRegistryWorkflowConfig(
@@ -347,6 +350,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional run_inside_sampling_profile.py comparison report for runtime recommendation")
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
                         help="optional run_inside_trigger_budget_sweep.py report for runtime recommendation")
+    parser.add_argument("--inside-trigger-budget-policy", default="quality_balanced",
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="budget selection policy for trigger-budget sweep evidence")
     parser.add_argument("--performance-report", default=None,
                         help="reuse an existing cache-profile-matrix-report.json instead of rerunning profiles")
     parser.add_argument("--fail-on-blocked", action="store_true",

@@ -22,6 +22,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+INSIDE_TRIGGER_BUDGET_POLICIES = (
+    "quality_balanced",
+    "cost_first",
+    "quality_first",
+)
+INSIDE_QUALITY_METRIC_PRIORITY = (
+    "inside_semantic_entropy",
+    "inside_embedding_entropy",
+    "inside_eigenscore",
+)
+
 
 def build_runtime_recommendation(
     matrix_report: Mapping[str, Any],
@@ -29,12 +40,14 @@ def build_runtime_recommendation(
     worker_sweep_report: Mapping[str, Any] | None = None,
     inside_sampling_report: Mapping[str, Any] | None = None,
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None = None,
+    inside_trigger_budget_policy: str = "quality_balanced",
     matrix_report_path: str | Path | None = None,
     worker_sweep_report_path: str | Path | None = None,
     inside_sampling_report_path: str | Path | None = None,
     inside_trigger_budget_sweep_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one runtime recommendation from matrix and optional worker evidence."""
+    inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(inside_trigger_budget_policy)
     matrix_decision = _mapping(matrix_report.get("matrix_decision"))
     worker_decision = _mapping(
         None if worker_sweep_report is None else worker_sweep_report.get("worker_sweep_decision")
@@ -45,6 +58,7 @@ def build_runtime_recommendation(
     )
     inside_trigger_budget_sweep_decision = _inside_trigger_budget_sweep_decision(
         inside_trigger_budget_sweep_report,
+        policy=inside_trigger_budget_policy,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
     )
     matrix_status = str(matrix_decision.get("status") or "missing")
@@ -104,6 +118,7 @@ def build_runtime_recommendation(
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
+        inside_trigger_budget_policy=inside_trigger_budget_policy,
     )
     report = {
         "schema_version": 1,
@@ -545,6 +560,7 @@ def _inside_sampling_recommendation(
 def _inside_trigger_budget_sweep_decision(
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
     *,
+    policy: str,
     inside_trigger_budget_sweep_report_path: str | Path | None,
 ) -> dict[str, Any]:
     if inside_trigger_budget_sweep_report is None:
@@ -558,14 +574,16 @@ def _inside_trigger_budget_sweep_decision(
         }
 
     recommendation_source, recommendation = _inside_trigger_budget_recommendation_candidate(
-        inside_trigger_budget_sweep_report
+        inside_trigger_budget_sweep_report,
+        policy=policy,
     )
     if not recommendation:
         return {
             "status": "no_candidate",
             "blocking_reasons": [
-                "inside_trigger_budget_sweep: report did not include a budget recommendation"
+                f"inside_trigger_budget_sweep: report did not include a {policy} budget recommendation"
             ],
+            "selection_policy": policy,
         }
     budget_id = recommendation.get("budget_id")
     if not budget_id:
@@ -574,6 +592,7 @@ def _inside_trigger_budget_sweep_decision(
             "blocking_reasons": [
                 "inside_trigger_budget_sweep: recommended budget did not include budget_id"
             ],
+            "selection_policy": policy,
         }
     row = _inside_trigger_budget_row(
         inside_trigger_budget_sweep_report,
@@ -587,6 +606,7 @@ def _inside_trigger_budget_sweep_decision(
             "blocking_reasons": [
                 f"inside_trigger_budget_sweep: recommended budget {budget_id!r} was missing from leaderboard"
             ],
+            "selection_policy": policy,
         }
 
     budget_payload = _mapping(_mapping(inside_trigger_budget_sweep_report.get("budgets")).get(str(budget_id)))
@@ -598,6 +618,7 @@ def _inside_trigger_budget_sweep_decision(
             "recommended_run": row.get("recommended_run") or recommendation.get("recommended_run"),
             "blocking_reasons": _inside_trigger_budget_gate_failures(gate, budget_id=str(budget_id)),
             "sample_efficiency_gate": gate,
+            "selection_policy": policy,
         }
 
     config = _mapping(inside_trigger_budget_sweep_report.get("config"))
@@ -605,6 +626,7 @@ def _inside_trigger_budget_sweep_decision(
         row,
         recommendation=recommendation,
         recommendation_source=recommendation_source,
+        selection_policy=policy,
         report=inside_trigger_budget_sweep_report,
         config=config,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
@@ -614,6 +636,7 @@ def _inside_trigger_budget_sweep_decision(
         "recommended_budget_id": recommended.get("recommended_budget_id"),
         "recommended_run": recommended.get("recommended_run"),
         "recommendation_source": recommendation_source,
+        "selection_policy": policy,
         "sample_efficiency_gate": gate,
         "recommended": recommended,
         "inside_sampling": _inside_trigger_budget_sampling(recommended, config=config, row=row),
@@ -622,7 +645,28 @@ def _inside_trigger_budget_sweep_decision(
 
 def _inside_trigger_budget_recommendation_candidate(
     report: Mapping[str, Any],
+    *,
+    policy: str,
 ) -> tuple[str | None, dict[str, Any]]:
+    if policy == "cost_first":
+        cost_first = _mapping(report.get("recommendation"))
+        if cost_first:
+            return "recommendation", cost_first
+        quality_balanced = _mapping(report.get("quality_balanced_recommendation"))
+        if quality_balanced:
+            return "quality_balanced_recommendation", quality_balanced
+        return None, {}
+    if policy == "quality_first":
+        quality_first = _quality_first_trigger_budget_recommendation(report)
+        if quality_first:
+            return "quality_first", quality_first
+        quality_balanced = _mapping(report.get("quality_balanced_recommendation"))
+        if quality_balanced:
+            return "quality_balanced_recommendation", quality_balanced
+        cost_first = _mapping(report.get("recommendation"))
+        if cost_first:
+            return "recommendation", cost_first
+        return None, {}
     quality_balanced = _mapping(report.get("quality_balanced_recommendation"))
     if quality_balanced:
         return "quality_balanced_recommendation", quality_balanced
@@ -630,6 +674,89 @@ def _inside_trigger_budget_recommendation_candidate(
     if cost_first:
         return "recommendation", cost_first
     return None, {}
+
+
+def _quality_first_trigger_budget_recommendation(report: Mapping[str, Any]) -> dict[str, Any]:
+    leaderboard = report.get("leaderboard")
+    if not isinstance(leaderboard, Sequence) or isinstance(leaderboard, str):
+        return {}
+    rows = [_mapping(value) for value in leaderboard]
+    rows = [row for row in rows if row.get("budget_id")]
+    if not rows:
+        return {}
+    metric = _inside_quality_metric(report, rows)
+    if metric is None:
+        return {}
+    candidates = []
+    for row in rows:
+        quality = _float_or_none(_mapping(row.get("inside_auroc")).get(metric))
+        if quality is None:
+            continue
+        candidates.append((row, quality, _inside_trigger_budget_cost(row)))
+    if not candidates:
+        return {}
+    row, quality, cost = sorted(
+        candidates,
+        key=lambda item: (
+            -item[1],
+            math.inf if item[2] is None else item[2],
+            str(item[0].get("budget_id")),
+            str(item[0].get("recommended_run") or ""),
+        ),
+    )[0]
+    payload = {
+        "budget_id": row.get("budget_id"),
+        "recommended_run": row.get("recommended_run"),
+        "reason": "highest_inside_quality_metric_then_lowest_cost",
+        "quality_metric": metric,
+        "quality_value": quality,
+        "best_quality_value": quality,
+    }
+    cost_metric = _inside_trigger_budget_cost_metric(row)
+    if cost_metric is not None and cost is not None:
+        payload["cost_metric"] = cost_metric
+        payload["cost_value"] = cost
+    return payload
+
+
+def _inside_quality_metric(report: Mapping[str, Any], rows: Sequence[Mapping[str, Any]]) -> str | None:
+    recommended_metric = _mapping(report.get("quality_balanced_recommendation")).get("quality_metric")
+    if recommended_metric:
+        metric = str(recommended_metric)
+        if any(_float_or_none(_mapping(row.get("inside_auroc")).get(metric)) is not None for row in rows):
+            return metric
+    available = {
+        str(metric)
+        for row in rows
+        for metric, value in _mapping(row.get("inside_auroc")).items()
+        if _float_or_none(value) is not None
+    }
+    for metric in INSIDE_QUALITY_METRIC_PRIORITY:
+        if metric in available:
+            return metric
+    if available:
+        return sorted(available)[0]
+    return None
+
+
+def _inside_trigger_budget_cost_metric(row: Mapping[str, Any]) -> str | None:
+    for metric in (
+        "inside_generation_seconds_ratio_to_reference",
+        "inside_generation_seconds_ratio_to_budget_fixed",
+        "inside_generation_seconds",
+        "sample_count_ratio_to_reference",
+        "total_generated_samples",
+    ):
+        if _float_or_none(row.get(metric)) is not None:
+            return metric
+    return None
+
+
+def _inside_trigger_budget_cost(row: Mapping[str, Any]) -> float | None:
+    metric = _inside_trigger_budget_cost_metric(row)
+    if metric is None:
+        return None
+    return _float_or_none(row.get(metric))
 
 
 def _inside_trigger_budget_row(
@@ -658,6 +785,7 @@ def _inside_trigger_budget_recommendation(
     *,
     recommendation: Mapping[str, Any],
     recommendation_source: str | None,
+    selection_policy: str,
     report: Mapping[str, Any],
     config: Mapping[str, Any],
     inside_trigger_budget_sweep_report_path: str | Path | None,
@@ -675,6 +803,7 @@ def _inside_trigger_budget_recommendation(
         if inside_trigger_budget_sweep_report_path is None
         else str(inside_trigger_budget_sweep_report_path),
         "recommendation_source": recommendation_source,
+        "selection_policy": selection_policy,
         "recommended_budget_id": row.get("budget_id"),
         "recommended_run": _first_present(row.get("recommended_run"), recommendation.get("recommended_run")),
         "reason": recommendation.get("reason"),
@@ -788,6 +917,7 @@ def _inside_trigger_budget_sampling(
         "inside_trigger_top_fraction": budget_value if budget_kind == "top_fraction" else None,
         "inside_trigger_budget_id": recommended.get("recommended_budget_id"),
         "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+        "inside_trigger_budget_policy": recommended.get("selection_policy"),
         "derive_from_max_budget": recommended.get("derive_from_max_budget"),
         "derived_source_budget_id": recommended.get("derived_source_budget_id"),
         "total_generated_samples": _int_or_none(recommended.get("total_generated_samples")),
@@ -1073,6 +1203,7 @@ def _evidence(
     worker_sweep_report_path: str | Path | None,
     inside_sampling_report_path: str | Path | None,
     inside_trigger_budget_sweep_report_path: str | Path | None,
+    inside_trigger_budget_policy: str,
 ) -> dict[str, Any]:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     worker_recommended = _mapping(worker_decision.get("recommended"))
@@ -1122,6 +1253,9 @@ def _evidence(
         "inside_trigger_budget_sweep_report": None
         if inside_trigger_budget_sweep_report_path is None
         else str(inside_trigger_budget_sweep_report_path),
+        "inside_trigger_budget_policy": None
+        if inside_trigger_budget_sweep_report is None
+        else inside_trigger_budget_policy,
         "inside_trigger_budget_sweep_status": None
         if inside_trigger_budget_sweep_report is None
         else inside_trigger_budget_sweep_decision.get("status"),
@@ -1216,6 +1350,14 @@ def _combined_status(*statuses: str | None) -> str:
     return "unknown"
 
 
+def _normalize_inside_trigger_budget_policy(policy: str) -> str:
+    normalized = str(policy or "").strip().lower().replace("-", "_")
+    if normalized not in INSIDE_TRIGGER_BUDGET_POLICIES:
+        choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
+        raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
+    return normalized
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -1274,6 +1416,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if inside_trigger_budget_sweep_report_path is None
             else _load_json(inside_trigger_budget_sweep_report_path)
         ),
+        inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
@@ -1302,6 +1445,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
                         help="optional inside-trigger-budget-sweep.json produced by "
                              "run_inside_trigger_budget_sweep.py")
+    parser.add_argument("--inside-trigger-budget-policy", default="quality_balanced",
+                        choices=INSIDE_TRIGGER_BUDGET_POLICIES,
+                        help="budget selection policy when --inside-trigger-budget-sweep-report is provided; "
+                             "quality_balanced preserves the previous default, cost_first minimizes sampled "
+                             "INSIDE work, and quality_first chooses the highest inside quality metric")
     parser.add_argument("--output", default=None,
                         help="optional path to write the recommendation JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",
