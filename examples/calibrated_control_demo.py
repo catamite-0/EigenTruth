@@ -6,8 +6,12 @@ diagnostics with `RiskController`, verify simple claims, execute actions through
 `ActionExecutorRegistry`, and emit a JSON `ProductTrace`.
 
 The output is a trace for routing and debugging. It is not proof that a response
-is true. When the repository's Qwen l80 calibration artifact is present, it is
-used by default; otherwise the script falls back to toy thresholds.
+is true. When the repository's SmolLM2 l80 calibration artifact is present, it is
+used by default; otherwise the script falls back to the Qwen l80 artifact and
+then toy thresholds. When the SmolLM2 performance-gated release candidate is
+present, its product promotion contract supplies the default verifier route
+metadata; pass it explicitly with `--promotion-contract` to also enforce its
+runtime budget policy.
 """
 
 from __future__ import annotations
@@ -47,8 +51,16 @@ from eigentruth.verify import (
 )
 
 DEFAULT_TEXT = "Paris is the capital of France. The moon is made of cheese."
+DEFAULT_SMOLLM2_ARTIFACT_PATH = (
+    Path(__file__).resolve().parents[1] / "artifacts" / "smollm2_truthfulqa_l80_best_calibration.json"
+)
 DEFAULT_QWEN_ARTIFACT_PATH = (
     Path(__file__).resolve().parents[1] / "artifacts" / "qwen05_truthfulqa_l80_best_calibration.json"
+)
+DEFAULT_PROMOTION_CONTRACT_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "artifacts"
+    / "smollm2_l20_inside_trigger_budget_derived_performance_gated_staged_release_candidate_registry_workflow.json"
 )
 ARITHMETIC_TEXT_PATTERN = r"\d[\d\s().%+*/-]*[+*/%-][\d\s().%+*/-]*(?:=|equals|is)\s*[-+]?\d"
 
@@ -72,7 +84,15 @@ def toy_artifact() -> CalibrationArtifact:
 
 def default_artifact_path() -> Path | None:
     """Return the preferred repository calibration artifact when available."""
-    return DEFAULT_QWEN_ARTIFACT_PATH if DEFAULT_QWEN_ARTIFACT_PATH.exists() else None
+    for path in (DEFAULT_SMOLLM2_ARTIFACT_PATH, DEFAULT_QWEN_ARTIFACT_PATH):
+        if path.exists():
+            return path
+    return None
+
+
+def default_promotion_contract_path() -> Path | None:
+    """Return the preferred product promotion contract when available."""
+    return DEFAULT_PROMOTION_CONTRACT_PATH if DEFAULT_PROMOTION_CONTRACT_PATH.exists() else None
 
 
 def default_artifact() -> CalibrationArtifact:
@@ -133,10 +153,15 @@ def parse_json_sequence(value: str, *, name: str) -> list[Any]:
 def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeBudgetPolicy | None:
     """Build an optional runtime budget policy from CLI-like arguments."""
     promotion_contract_path = getattr(args, "promotion_contract", None)
+    promotion_contract = getattr(args, "_promotion_contract", None)
     base_policy = (
         None
         if promotion_contract_path is None
-        else ProductPromotionContract.from_json(promotion_contract_path).runtime_budget_policy
+        else (
+            promotion_contract.runtime_budget_policy
+            if isinstance(promotion_contract, ProductPromotionContract)
+            else ProductPromotionContract.from_json(promotion_contract_path).runtime_budget_policy
+        )
     )
     max_total_seconds = getattr(args, "max_runtime_total_seconds", None)
     raw_phase_seconds = getattr(args, "max_runtime_phase_seconds", None)
@@ -303,12 +328,13 @@ def build_verifier(
     refutations: dict[str, Any] | None,
     *,
     enable_calculator: bool = False,
+    route_name: str | None = None,
 ) -> Verifier:
     """Build a deterministic verifier from exact-match facts or grounded evidence."""
     if evidence is not None or refutations is not None:
         evidence_documents = () if evidence is None else tuple(evidence)
         base_verifier: Verifier = GroundednessVerifier(evidence=evidence_documents, refutations=refutations or {})
-        return _with_optional_calculator(base_verifier, enabled=enable_calculator)
+        return _with_optional_calculator(base_verifier, enabled=enable_calculator, route_name=route_name)
     if facts is None:
         facts = {
             "Paris is the capital of France": VerificationStatus.SUPPORTED.value,
@@ -318,12 +344,19 @@ def build_verifier(
         normalize_claim_text(text): VerificationStatus(str(status))
         for text, status in facts.items()
     }
-    return _with_optional_calculator(InMemoryVerifier(facts=normalized), enabled=enable_calculator)
+    return _with_optional_calculator(
+        InMemoryVerifier(facts=normalized),
+        enabled=enable_calculator,
+        route_name=route_name,
+    )
 
 
-def _with_optional_calculator(verifier: Verifier, *, enabled: bool) -> Verifier:
-    if not enabled:
+def _with_optional_calculator(verifier: Verifier, *, enabled: bool, route_name: str | None = None) -> Verifier:
+    fallback_route_name = _normalized_route_name(route_name) or "fallback"
+    if not enabled and route_name is None:
         return verifier
+    if not enabled:
+        return RoutedVerifier((VerifierRoute(fallback_route_name, verifier, fallback=True),))
     return RoutedVerifier((
         VerifierRoute(
             "calculator",
@@ -332,14 +365,58 @@ def _with_optional_calculator(verifier: Verifier, *, enabled: bool) -> Verifier:
             context_keys=("calculation", "expression"),
             text_patterns=(ARITHMETIC_TEXT_PATTERN,),
         ),
-        VerifierRoute("fallback", verifier, fallback=True),
+        VerifierRoute(fallback_route_name, verifier, fallback=True),
     ))
+
+
+def _normalized_route_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _promotion_contract_path(raw_path: str | None) -> Path | None:
+    if raw_path is not None:
+        return Path(raw_path)
+    return default_promotion_contract_path()
+
+
+def _promotion_contract_metadata(
+    contract: ProductPromotionContract | None,
+    *,
+    source: str | None,
+    budget_enabled: bool,
+) -> dict[str, Any]:
+    if contract is None:
+        return {
+            "promotion_contract_source": None,
+            "promotion_contract_budget_enabled": False,
+        }
+    return {
+        "promotion_contract_source": source,
+        "promotion_contract_budget_enabled": budget_enabled,
+        "promotion_contract_model_id": contract.model_id,
+        "promotion_contract_source_workflow": contract.source_workflow,
+        "promotion_contract_source_status": contract.source_status,
+        "promotion_contract_runtime": dict(contract.runtime),
+        "promotion_contract_verifier_route": dict(contract.verifier_route),
+        "promotion_contract_metadata": dict(contract.metadata),
+    }
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
     runtime_profile = get_runtime_profile(args.runtime_profile)
+    explicit_promotion_contract = getattr(args, "promotion_contract", None) is not None
+    promotion_contract_path = _promotion_contract_path(getattr(args, "promotion_contract", None))
+    promotion_contract = (
+        None
+        if promotion_contract_path is None
+        else ProductPromotionContract.from_json(promotion_contract_path)
+    )
+    setattr(args, "_promotion_contract", promotion_contract)
     stage_policy = stage_policy_from_runtime_profile(
         runtime_profile,
         staged_verification=args.staged_verification,
@@ -364,7 +441,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     claims = extract_claims(args.text)
-    verifier = build_verifier(facts, evidence, refutations, enable_calculator=args.enable_calculator)
+    verifier_route_name = (
+        None
+        if promotion_contract is None
+        else _normalized_route_name(promotion_contract.verifier_route.get("route"))
+    )
+    verifier = build_verifier(
+        facts,
+        evidence,
+        refutations,
+        enable_calculator=args.enable_calculator,
+        route_name=verifier_route_name,
+    )
     verifier_cache = None
     if getattr(args, "cache_verifier", False):
         verifier_cache = CachedVerifier(verifier)
@@ -399,6 +487,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
+            **_promotion_contract_metadata(
+                promotion_contract,
+                source=None if promotion_contract_path is None else str(promotion_contract_path),
+                budget_enabled=explicit_promotion_contract,
+            ),
             **runtime_profile_metadata(runtime_profile),
             "staged_verification_enabled": stage_policy is not None,
             "verifier_type": type(verifier).__name__,
@@ -440,6 +533,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             metadata={
                 "source": "examples/calibrated_control_demo.py",
                 "loop_version": "0.4",
+                **_promotion_contract_metadata(
+                    promotion_contract,
+                    source=None if promotion_contract_path is None else str(promotion_contract_path),
+                    budget_enabled=explicit_promotion_contract,
+                ),
                 **runtime_profile_metadata(runtime_profile),
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),

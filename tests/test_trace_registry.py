@@ -551,11 +551,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "status": "promote",
             "recommended_readiness_record": "benchmark_manifest:readiness:0.8",
             "recommended_route_record": "benchmark_manifest:route:0.8",
+            "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
             "recommended_route": "structured_state",
         },
         "release_candidate": {
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
             "runtime": {"layer": -12, "batch_size": 2},
+            "performance_baseline_record": "performance_baseline:runtime:0.9",
             "verifier_route": {
                 "route": "structured_state",
                 "mean_duration_seconds": 0.01,
@@ -563,6 +565,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "max_duration_seconds": 0.03,
                 "mean_attempted_route_count": 1.0,
                 "retrieval_use_rate": 0.0,
+            },
+            "manifests": {
+                "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
+                "route_manifest": "artifacts/route/artifact-manifest.json",
+                "performance_manifest": "artifacts/performance/artifact-manifest.json",
             },
         },
     }
@@ -581,6 +588,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.runtime["layer"] == -12
     assert contract.verifier_route["route"] == "structured_state"
     assert contract.metadata["runtime_profile"] == "balanced"
+    assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
+    assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
+    assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.runtime_budget_policy == direct_policy
     assert contract.runtime_budget_policy.max_total_seconds == 1.0
     assert contract.runtime_budget_policy.max_mean_route_duration_seconds == 0.05

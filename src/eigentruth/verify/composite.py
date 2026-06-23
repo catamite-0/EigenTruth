@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
@@ -129,27 +130,43 @@ class RoutedVerifier:
             if (reasons := route.match_reasons(claim, context=context))
         ]
         skipped = []
+        total_duration_seconds = 0.0
         for route, reasons in matched:
+            started_at = time.perf_counter()
             result = route.verifier.verify(claim, context=context)
+            route_duration_seconds = time.perf_counter() - started_at
+            total_duration_seconds += route_duration_seconds
             if result.status not in route.fallthrough_statuses:
-                return _with_route_metadata(result, route=route, matched=matched, skipped=skipped)
+                return _with_route_metadata(
+                    result,
+                    route=route,
+                    matched=matched,
+                    skipped=skipped,
+                    total_duration_seconds=total_duration_seconds,
+                    selected_route_duration_seconds=route_duration_seconds,
+                )
             skipped.append({
                 "route": route.name,
                 "verifier": type(route.verifier).__name__,
                 "match_reasons": tuple(reasons),
                 "status": result.status.value,
                 "explanation": result.explanation,
+                "duration_seconds": route_duration_seconds,
             })
+        metadata: dict[str, Any] = {
+            "verifier": type(self).__name__,
+            "matched_routes": tuple(route.name for route, _ in matched),
+            "matched_route_details": _route_match_details(matched),
+            "skipped_routes": tuple(skipped),
+        }
+        if skipped:
+            metadata["total_duration_seconds"] = total_duration_seconds
+            metadata["attempted_route_count"] = float(len(skipped))
         return VerificationResult(
             status=VerificationStatus.NOT_APPLICABLE,
             confidence=1.0,
             explanation="no matched verifier route was applicable to claim",
-            metadata={
-                "verifier": type(self).__name__,
-                "matched_routes": tuple(route.name for route, _ in matched),
-                "matched_route_details": _route_match_details(matched),
-                "skipped_routes": tuple(skipped),
-            },
+            metadata=metadata,
         )
 
     def verify_many(
@@ -188,6 +205,8 @@ def _with_route_metadata(
     route: VerifierRoute,
     matched: Sequence[tuple[VerifierRoute, Sequence[str]]],
     skipped: Sequence[Mapping[str, Any]],
+    total_duration_seconds: float,
+    selected_route_duration_seconds: float,
 ) -> VerificationResult:
     metadata = {
         **dict(result.metadata),
@@ -197,6 +216,9 @@ def _with_route_metadata(
         "matched_routes": tuple(item.name for item, _ in matched),
         "matched_route_details": _route_match_details(matched),
         "skipped_routes": tuple(dict(item) for item in skipped),
+        "total_duration_seconds": total_duration_seconds,
+        "selected_route_duration_seconds": selected_route_duration_seconds,
+        "attempted_route_count": float(len(skipped) + 1),
     }
     return VerificationResult(
         status=result.status,

@@ -969,6 +969,11 @@ def test_routed_verifier_selects_routes_from_metadata_context_and_text():
     assert fallback_route.status is VerificationStatus.SUPPORTED
     assert fallback_route.metadata["selected_route"] == "fallback"
     assert fallback_route.metadata["matched_route_details"][0]["match_reasons"] == ("fallback",)
+    for routed in (text_route, context_route, fallback_route):
+        assert routed.metadata["attempted_route_count"] == 1.0
+        assert math.isfinite(routed.metadata["total_duration_seconds"])
+        assert math.isfinite(routed.metadata["selected_route_duration_seconds"])
+        assert routed.metadata["total_duration_seconds"] >= routed.metadata["selected_route_duration_seconds"] >= 0.0
 
 
 def test_routed_verifier_can_prioritize_structured_state_adapter():
@@ -1031,6 +1036,11 @@ def test_routed_verifier_can_fall_through_on_insufficient_evidence():
         "context:statement.answer",
     )
     assert result.metadata["skipped_routes"][0]["status"] == "insufficient_evidence"
+    assert result.metadata["attempted_route_count"] == 2.0
+    assert math.isfinite(result.metadata["total_duration_seconds"])
+    assert math.isfinite(result.metadata["selected_route_duration_seconds"])
+    assert math.isfinite(result.metadata["skipped_routes"][0]["duration_seconds"])
+    assert result.metadata["total_duration_seconds"] >= result.metadata["selected_route_duration_seconds"] >= 0.0
 
 
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():

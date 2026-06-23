@@ -6,17 +6,20 @@ import sqlite3
 from types import SimpleNamespace
 
 
-def test_calibrated_control_demo_defaults_to_qwen_l80_artifact_when_available():
+def test_calibrated_control_demo_defaults_to_best_repository_artifact_when_available():
     demo = importlib.import_module("examples.calibrated_control_demo")
 
     artifact = demo.default_artifact()
     diagnostics = demo.default_diagnostics_for_artifact(artifact)
 
-    if demo.DEFAULT_QWEN_ARTIFACT_PATH.exists():
-        assert artifact.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
-        assert artifact.target_layer == -10
+    if demo.DEFAULT_SMOLLM2_ARTIFACT_PATH.exists():
+        assert artifact.model_id == "HuggingFaceTB/SmolLM2-135M-Instruct"
+        assert artifact.target_layer == -16
         assert artifact.score_names() == ("truth_proj",)
         assert diagnostics["truth_proj"] > artifact.get_score("truth_proj").threshold
+    elif demo.DEFAULT_QWEN_ARTIFACT_PATH.exists():
+        assert artifact.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+        assert artifact.target_layer == -10
     else:
         assert artifact.model_id == "demo-model"
         assert set(diagnostics) == {"maha_last", "subspace_resid"}
@@ -46,6 +49,12 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
 
     assert payload["metadata"]["artifact_model_id"] == demo.default_artifact().model_id
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
+    if demo.default_promotion_contract_path() is not None:
+        assert payload["metadata"]["promotion_contract_model_id"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
+        assert payload["metadata"]["promotion_contract_budget_enabled"] is False
+        assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
+            "performance_baseline:smollm2-l20-performance-baseline:0.9"
+        )
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
@@ -313,6 +322,61 @@ def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
     assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 0.5
     assert runtime_budget["passed"] is False
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
+
+
+def test_calibrated_control_demo_can_use_default_performance_gated_contract_budget():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    contract_path = demo.default_promotion_contract_path()
+    assert contract_path is not None
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=str(contract_path),
+            cache_verifier=False,
+            cache_retriever=False,
+            max_runtime_total_seconds=None,
+            max_runtime_phase_seconds=None,
+            max_runtime_phase_p95_seconds=None,
+            max_runtime_phase_p99_seconds=None,
+            max_mean_route_duration_seconds=None,
+            max_p95_route_duration_seconds=None,
+            max_p99_route_duration_seconds=None,
+            max_route_duration_seconds=None,
+            max_mean_attempted_route_count=None,
+            max_retrieval_use_rate=None,
+            max_retrieval_hit_count=None,
+            min_cache_hit_rate=None,
+            min_named_cache_hit_rate=None,
+            request_id="test-default-promotion-contract-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    runtime_budget = payload["metadata"]["runtime_budget"]
+    route_summary = payload["metadata"]["route_cost_summary"]
+
+    assert payload["metadata"]["promotion_contract_budget_enabled"] is True
+    assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
+        "performance_baseline:smollm2-l20-performance-baseline:0.9"
+    )
+    assert payload["verification_results"][0]["metadata"]["selected_route"] == "structured_qa"
+    assert route_summary["mean_attempted_route_count"] == 1.0
+    assert runtime_budget["passed"] is True
+    assert runtime_budget["policy"]["max_mean_attempted_route_count"] == 1.1
+    assert runtime_budget["policy"]["max_retrieval_use_rate"] == 0.0
 
 
 def test_sqlite_state_control_demo_refutes_database_state_claim(tmp_path):

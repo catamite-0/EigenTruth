@@ -90,6 +90,7 @@ class ProductPromotionContract:
         if not candidate:
             raise ValueError("release candidate report does not contain a release_candidate.")
         config = _mapping(comparison.get("config"))
+        manifests = _mapping(candidate.get("manifests"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -102,12 +103,19 @@ class ProductPromotionContract:
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
                 "recommended_route_record": decision.get("recommended_route_record"),
+                "recommended_performance_baseline_record": decision.get(
+                    "recommended_performance_baseline_record"
+                ),
+                "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "recommended_route": decision.get("recommended_route"),
                 "runtime_profile": config.get("runtime_profile"),
                 "inside_trigger_budget_policy": config.get("inside_trigger_budget_policy"),
                 "runtime_profile_applied_defaults": config.get(
                     "runtime_profile_applied_defaults"
                 ),
+                "readiness_manifest": manifests.get("readiness_manifest"),
+                "route_manifest": manifests.get("route_manifest"),
+                "performance_manifest": manifests.get("performance_manifest"),
             },
         )
 

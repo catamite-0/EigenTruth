@@ -304,25 +304,29 @@ sample is far too small for a signal-quality claim.
 
 ## Product Trace Demo
 
-`examples/calibrated_control_demo.py` now defaults to the l80 best calibration
-artifact when it is present in the repository. It does not load Qwen or rerun the
-benchmark. It loads `artifacts/qwen05_truthfulqa_l80_best_calibration.json`,
+`examples/calibrated_control_demo.py` now defaults to the best repository l80
+calibration artifact when present: SmolLM2 l80 first, Qwen l80 as fallback. It
+does not load either model or rerun the benchmark. With the current repository
+artifacts it loads `artifacts/smollm2_truthfulqa_l80_best_calibration.json`,
 auto-generates a `truth_proj` diagnostic that crosses the conformal threshold,
 combines that diagnostic with deterministic claim verification, and emits a
-`ProductTrace`.
+`ProductTrace`. When the SmolLM2 performance-gated release candidate is present,
+the demo also loads its promotion contract as verifier-route metadata; pass the
+contract explicitly with `--promotion-contract` to enforce its runtime budget.
 
 Demo command:
 
 ```bash
 python examples/calibrated_control_demo.py \
-  --request-id qwen05-l80-demo \
-  --output artifacts/qwen05_l80_demo_trace.json
+  --request-id smollm2-l80-demo \
+  --output artifacts/smollm2_l80_demo_trace.json
 ```
 
 Trace result:
 
-- Artifact: `Qwen/Qwen2.5-0.5B-Instruct`, layer `-10`, score `truth_proj`
-- Threshold: 3.6069278717041016
+- Artifact: `HuggingFaceTB/SmolLM2-135M-Instruct`, layer `-16`, score
+  `truth_proj`
+- Threshold: 1.1314295530319214
 - Demo diagnostic: 3.9676206588745115
 - Claim verification: one supported claim, one refuted claim
 - Final action: `abstain`
