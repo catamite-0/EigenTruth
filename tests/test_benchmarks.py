@@ -9794,6 +9794,7 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
     assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_mean"] == pytest.approx(
         (0.10 + 0.20 + 0.40) / 3.0
     )
+    assert payload["config"]["runtime_pairing"]["indexed_observations"] == 3
     assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_p95"] == pytest.approx(0.38)
     assert payload["candidates"][1]["summary"]["selected_counts"] == {
         "balanced": 1,
@@ -9813,6 +9814,56 @@ def test_run_runtime_profile_selector_replay_recommends_passing_policy(tmp_path)
     assert record.metadata["recommended_candidate"] == "default"
     assert record.metadata["candidate_count"] == 2
     assert record.metadata["trace_count"] == 3
+
+
+def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    trace_path = tmp_path / "trace.json"
+    large_text = "PRIVATE PAYLOAD " * 1000
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "audit-sensitive",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.9,
+                "reason": "sensitive claim",
+            },
+            "claims": [{
+                "claim_id": "c1",
+                "text": large_text,
+                "metadata": {"features": {"has_number": True}},
+            }],
+            "verification_results": [{
+                "status": "supported",
+                "evidence": [large_text],
+                "explanation": large_text,
+            }],
+            "metadata": {"runtime_profile": "audit"},
+            "runtime_trace": {"total_seconds": 0.30, "phases": []},
+            "generated_text": large_text,
+        }),
+        encoding="utf-8",
+    )
+
+    replay_input = module._load_trace_replay_input(trace_path)
+    pair_index = module._runtime_pair_index((replay_input,))
+    observation = pair_index[(replay_input.request_key, "audit")][0]
+    record = module._trace_selection_record(
+        replay_input,
+        candidate=module.RuntimeProfileSelectorCandidate(name="default", policy={}),
+        cost_units=module.DEFAULT_PROFILE_COST_UNITS,
+        runtime_pair_index=pair_index,
+    )
+
+    assert not hasattr(replay_input, "payload")
+    assert large_text not in repr(replay_input)
+    assert replay_input.claims == ({"claim_id": "c1", "metadata": {"features": {"has_number": True}}},)
+    assert not hasattr(observation, "risk_decision")
+    assert large_text not in repr(observation)
+    assert observation.total_seconds == pytest.approx(0.30)
+    assert record["selected_runtime_profile"] == "audit"
+    assert record["observed_selected_pair_count"] == 1
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):

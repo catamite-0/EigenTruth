@@ -31,6 +31,30 @@ DEFAULT_PROFILE_COST_UNITS: Mapping[str, float] = {
 
 
 @dataclass(frozen=True)
+class TraceReplayInput:
+    """Minimal ProductTrace fields needed for selector replay."""
+
+    path: Path
+    request_id: Any
+    request_key: str
+    original_runtime_profile: str | None
+    runtime_pair_profile: str | None
+    risk_decision: Mapping[str, Any]
+    claims: tuple[Any, ...] = ()
+    original_total_seconds: float | None = None
+
+
+@dataclass(frozen=True)
+class RuntimeObservation:
+    """Minimal runtime observation for selected-profile pairing."""
+
+    path: Path
+    request_key: str
+    runtime_profile: str
+    total_seconds: float | None
+
+
+@dataclass(frozen=True)
 class RuntimeProfileSelectorReplayPolicy:
     """Optional gates for selector replay reports."""
 
@@ -210,7 +234,7 @@ def run_runtime_profile_selector_replay(
     """Replay selector candidates over saved ProductTrace JSON payloads."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     replay_policy, replay_policy_source = _load_replay_policy(config)
-    traces = tuple((path, _load_trace(path)) for path in config.trace_paths)
+    traces = tuple(_load_trace_replay_input(path) for path in config.trace_paths)
     runtime_pair_index = _runtime_pair_index(traces)
     candidates = [
         _candidate_record(
@@ -242,7 +266,7 @@ def run_runtime_profile_selector_replay(
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "output_dir": str(config.output_dir),
             "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
-            "traces": [str(path) for path, _trace in traces],
+            "traces": [str(trace.path) for trace in traces],
         },
         "config": {
             "candidate_names": tuple(candidate.name for candidate in config.candidates),
@@ -252,6 +276,7 @@ def run_runtime_profile_selector_replay(
             "runtime_pairing": {
                 "enabled": True,
                 "indexed_pairs": len(runtime_pair_index),
+                "indexed_observations": sum(len(values) for values in runtime_pair_index.values()),
             },
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
@@ -266,20 +291,19 @@ def _candidate_record(
     config: RuntimeProfileSelectorReplayConfig,
     candidate: RuntimeProfileSelectorCandidate,
     *,
-    traces: Sequence[tuple[Path, Mapping[str, Any]]],
+    traces: Sequence[TraceReplayInput],
     replay_policy: RuntimeProfileSelectorReplayPolicy | None,
-    runtime_pair_index: Mapping[tuple[str, str], Sequence[tuple[Path, Mapping[str, Any]]]],
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> dict[str, Any]:
     policy_path = _write_candidate_policy(config, candidate)
     trace_records = [
         _trace_selection_record(
-            path,
             trace,
             candidate=candidate,
             cost_units=config.profile_cost_units,
             runtime_pair_index=runtime_pair_index,
         )
-        for path, trace in traces
+        for trace in traces
     ]
     summary = _selection_summary(trace_records, cost_units=config.profile_cost_units)
     gate = _evaluate_replay_policy(summary, replay_policy)
@@ -297,52 +321,44 @@ def _candidate_record(
 
 
 def _trace_selection_record(
-    path: Path,
-    trace: Mapping[str, Any],
+    trace: TraceReplayInput,
     *,
     candidate: RuntimeProfileSelectorCandidate,
     cost_units: Mapping[str, float],
-    runtime_pair_index: Mapping[tuple[str, str], Sequence[tuple[Path, Mapping[str, Any]]]],
+    runtime_pair_index: Mapping[tuple[str, str], Sequence[RuntimeObservation]],
 ) -> dict[str, Any]:
-    risk_decision = trace.get("risk_decision")
-    if not isinstance(risk_decision, Mapping):
-        raise ValueError(f"ProductTrace is missing risk_decision object: {path}")
-    claims = tuple(_sequence(trace.get("claims")))
     selection = select_runtime_profile(
-        risk_decision,
-        claims=claims,
+        trace.risk_decision,
+        claims=trace.claims,
         selector_policy=candidate.policy,
     )
-    original_profile = _nested(trace, "metadata", "runtime_profile")
     selected = selection.selected_profile
-    request_key = _trace_request_key(path, trace)
-    original_total_seconds = _runtime_total_seconds(trace)
-    paired_traces = tuple(runtime_pair_index.get((request_key, selected), ()))
+    paired_traces = tuple(runtime_pair_index.get((trace.request_key, selected), ()))
     paired_totals = [
-        seconds
-        for _paired_path, paired_payload in paired_traces
-        if (seconds := _runtime_total_seconds(paired_payload)) is not None
+        observation.total_seconds
+        for observation in paired_traces
+        if observation.total_seconds is not None
     ]
     paired_stats = _runtime_seconds_stats(paired_totals)
     observed_selected_total_seconds = paired_stats["mean_seconds"]
     return {
-        "path": str(path),
-        "request_id": trace.get("request_id"),
-        "request_key": request_key,
-        "original_runtime_profile": None if original_profile is None else str(original_profile),
+        "path": str(trace.path),
+        "request_id": trace.request_id,
+        "request_key": trace.request_key,
+        "original_runtime_profile": trace.original_runtime_profile,
         "selected_runtime_profile": selected,
-        "changed": original_profile is not None and str(original_profile) != selected,
+        "changed": trace.original_runtime_profile is not None and trace.original_runtime_profile != selected,
         "estimated_cost_units": cost_units.get(selected),
-        "observed_original_total_seconds": original_total_seconds,
+        "observed_original_total_seconds": trace.original_total_seconds,
         "observed_selected_total_seconds": observed_selected_total_seconds,
-        "observed_selected_trace_path": None if not paired_traces else str(paired_traces[0][0]),
-        "observed_selected_trace_paths": tuple(str(paired_path) for paired_path, _payload in paired_traces),
+        "observed_selected_trace_path": None if not paired_traces else str(paired_traces[0].path),
+        "observed_selected_trace_paths": tuple(str(observation.path) for observation in paired_traces),
         "observed_selected_pair_count": len(paired_totals),
         "observed_selected_pair_stats": paired_stats,
         "observed_runtime_paired": observed_selected_total_seconds is not None,
-        "risk_level": risk_decision.get("risk_level"),
-        "action": risk_decision.get("action"),
-        "claim_count": len(claims),
+        "risk_level": trace.risk_decision.get("risk_level"),
+        "action": trace.risk_decision.get("action"),
+        "claim_count": len(trace.claims),
         "selection": selection.to_dict(),
     }
 
@@ -752,18 +768,60 @@ def _load_trace(path: str | Path) -> dict[str, Any]:
     return dict(payload)
 
 
+def _load_trace_replay_input(path: str | Path) -> TraceReplayInput:
+    trace_path = Path(path)
+    payload = _load_trace(trace_path)
+    risk_decision = payload.get("risk_decision")
+    if not isinstance(risk_decision, Mapping):
+        raise ValueError(f"ProductTrace JSON is missing risk_decision: {path}")
+    original_profile = _nested(payload, "metadata", "runtime_profile")
+    return TraceReplayInput(
+        path=trace_path,
+        request_id=payload.get("request_id"),
+        request_key=_trace_request_key(trace_path, payload),
+        original_runtime_profile=None if original_profile is None else str(original_profile),
+        runtime_pair_profile=_trace_runtime_profile(trace_path, payload),
+        risk_decision=dict(risk_decision),
+        claims=_selector_claims(payload.get("claims")),
+        original_total_seconds=_runtime_total_seconds(payload),
+    )
+
+
+def _selector_claims(value: Any) -> tuple[dict[str, Any], ...]:
+    claims = []
+    for index, claim in enumerate(_sequence(value)):
+        if isinstance(claim, Mapping):
+            claim_id = claim.get("claim_id")
+            metadata = claim.get("metadata", {})
+        else:
+            claim_id = getattr(claim, "claim_id", None)
+            metadata = getattr(claim, "metadata", {})
+        record: dict[str, Any] = {
+            "claim_id": f"c{index + 1}" if claim_id is None or not str(claim_id).strip() else str(claim_id),
+            "metadata": dict(metadata) if isinstance(metadata, Mapping) else {},
+        }
+        claims.append(record)
+    return tuple(claims)
+
+
 def _runtime_pair_index(
-    traces: Sequence[tuple[Path, Mapping[str, Any]]],
-) -> dict[tuple[str, str], tuple[tuple[Path, Mapping[str, Any]], ...]]:
-    grouped: dict[tuple[str, str], list[tuple[Path, Mapping[str, Any]]]] = {}
-    for path, trace in traces:
-        profile = _trace_runtime_profile(path, trace)
-        if profile is None:
+    traces: Sequence[TraceReplayInput],
+) -> dict[tuple[str, str], tuple[RuntimeObservation, ...]]:
+    grouped: dict[tuple[str, str], list[RuntimeObservation]] = {}
+    for trace in traces:
+        if trace.runtime_pair_profile is None:
             continue
-        key = (_trace_request_key(path, trace), profile)
-        grouped.setdefault(key, []).append((path, trace))
+        key = (trace.request_key, trace.runtime_pair_profile)
+        grouped.setdefault(key, []).append(
+            RuntimeObservation(
+                path=trace.path,
+                request_key=trace.request_key,
+                runtime_profile=trace.runtime_pair_profile,
+                total_seconds=trace.original_total_seconds,
+            )
+        )
     return {
-        key: tuple(sorted(values, key=lambda item: str(item[0])))
+        key: tuple(sorted(values, key=lambda item: str(item.path)))
         for key, values in grouped.items()
     }
 
