@@ -1,0 +1,106 @@
+{
+  "records": [
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "adapter_promotion_status": "promote",
+        "checked": 2,
+        "evidence": "truthfulqa_l80_structured_qa_staged",
+        "failure_count": 0,
+        "manifest_metadata": {
+          "promotion_status": "promote",
+          "quality_gate_checked_routes": [
+            "structured_qa"
+          ],
+          "quality_gate_passed": true,
+          "recommended_decision_accuracy": 1.0,
+          "recommended_false_refuted_rate": 1.0,
+          "recommended_false_supported_rate": 0.0,
+          "recommended_invalid_metric_counts": {},
+          "recommended_max_duration_seconds": 0.0007935770554468036,
+          "recommended_mean_attempted_route_count": 1.0,
+          "recommended_mean_duration_seconds": 0.00010692605227675466,
+          "recommended_p95_duration_seconds": 0.00012811180204153058,
+          "recommended_p99_duration_seconds": 0.0001987196248956039,
+          "recommended_retrieval_use_rate": 0.0,
+          "recommended_route": "structured_qa",
+          "recommended_selected": 210,
+          "recommended_verified_detection": 1.0,
+          "recommended_verified_false_alarm": 0.0,
+          "registry_baseline_checked": false,
+          "registry_baseline_passed": null,
+          "route_promotion_passed": true,
+          "route_promotion_status": "promote",
+          "runner": "run_adapter_promotion_workflow",
+          "staged_delta_detection": 0.014215686274509809,
+          "staged_delta_false_alarm": -0.0924,
+          "staged_skip_rate": 0.8111510791366906,
+          "staged_skipped_records": 902,
+          "staged_verification_enabled": true,
+          "staged_verified_detection": 0.275,
+          "staged_verified_false_alarm": 0.0088,
+          "staged_verified_records": 210,
+          "workflow": "adapter_promotion_workflow"
+        },
+        "manifest_summary": {
+          "artifact_count": 2,
+          "directory_count": 0,
+          "file_count": 2,
+          "missing_count": 0
+        },
+        "nested_count": 0,
+        "quality_gate_checked_routes": [
+          "structured_qa"
+        ],
+        "quality_gate_passed": true,
+        "recommended_decision_accuracy": 1.0,
+        "recommended_false_refuted_rate": 1.0,
+        "recommended_false_supported_rate": 0.0,
+        "recommended_invalid_metric_counts": {},
+        "recommended_max_duration_seconds": 0.0007935770554468036,
+        "recommended_mean_attempted_route_count": 1.0,
+        "recommended_mean_duration_seconds": 0.00010692605227675466,
+        "recommended_p95_duration_seconds": 0.00012811180204153058,
+        "recommended_p99_duration_seconds": 0.0001987196248956039,
+        "recommended_retrieval_use_rate": 0.0,
+        "recommended_route": "structured_qa",
+        "recommended_selected": 210,
+        "recommended_verified_detection": 1.0,
+        "recommended_verified_false_alarm": 0.0,
+        "recursive": true,
+        "registry_baseline_checked": false,
+        "registry_baseline_passed": null,
+        "route_promotion_passed": true,
+        "route_promotion_status": "promote",
+        "source_workflow": "adapter_promotion_workflow",
+        "staged_delta_detection": 0.014215686274509809,
+        "staged_delta_false_alarm": -0.0924,
+        "staged_skip_rate": 0.8111510791366906,
+        "staged_skipped_records": 902,
+        "staged_verification_enabled": true,
+        "staged_verified_detection": 0.275,
+        "staged_verified_false_alarm": 0.0088,
+        "staged_verified_records": 210,
+        "verification_report": "artifacts/truthfulqa_l80_structured_qa_staged_manifest_verification.json",
+        "verified": true,
+        "workflow": "run_adapter_promotion_registry_workflow"
+      },
+      "name": "truthfulqa-l80-structured-qa-staged-route",
+      "path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+      "version": "0.4"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "truthfulqa-l80-structured-qa-staged-route",
+        "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "truthfulqa-l80-structured-qa-staged-route-verification",
+      "path": "artifacts/truthfulqa_l80_structured_qa_staged_manifest_verification.json",
+      "version": "0.4"
+    }
+  ],
+  "schema_version": 1
+}

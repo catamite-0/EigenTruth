@@ -1,0 +1,63 @@
+{
+  "artifacts": {
+    "route_comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa_l80_structured_qa_staged_registry_route_comparison.json",
+      "sha256": "ec00386a1b1f10fbc7d98d44baf806a22d386a21ab2bc8b1852179f1f768cc41",
+      "size_bytes": 21197
+    },
+    "verifier_reports.staged": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json",
+      "sha256": "8940fd01d08f7d57d9f3e8c777e699549564c9621f050c7f5b2ddb658245a16c",
+      "size_bytes": 23512
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "promotion_status": "promote",
+    "quality_gate_checked_routes": [
+      "structured_qa"
+    ],
+    "quality_gate_passed": true,
+    "recommended_decision_accuracy": 1.0,
+    "recommended_false_refuted_rate": 1.0,
+    "recommended_false_supported_rate": 0.0,
+    "recommended_invalid_metric_counts": {},
+    "recommended_max_duration_seconds": 0.0007935770554468036,
+    "recommended_mean_attempted_route_count": 1.0,
+    "recommended_mean_duration_seconds": 0.00010692605227675466,
+    "recommended_p95_duration_seconds": 0.00012811180204153058,
+    "recommended_p99_duration_seconds": 0.0001987196248956039,
+    "recommended_retrieval_use_rate": 0.0,
+    "recommended_route": "structured_qa",
+    "recommended_selected": 210,
+    "recommended_verified_detection": 1.0,
+    "recommended_verified_false_alarm": 0.0,
+    "registry_baseline_checked": false,
+    "registry_baseline_passed": null,
+    "route_promotion_passed": true,
+    "route_promotion_status": "promote",
+    "runner": "run_adapter_promotion_workflow",
+    "staged_delta_detection": 0.014215686274509809,
+    "staged_delta_false_alarm": -0.0924,
+    "staged_skip_rate": 0.8111510791366906,
+    "staged_skipped_records": 902,
+    "staged_verification_enabled": true,
+    "staged_verified_detection": 0.275,
+    "staged_verified_false_alarm": 0.0088,
+    "staged_verified_records": 210,
+    "workflow": "adapter_promotion_workflow"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

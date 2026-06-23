@@ -42,6 +42,11 @@ class AdapterPromotionWorkflowConfig:
     max_mean_attempted_route_count: float | None = None
     max_retrieval_use_rate: float | None = None
     min_cache_hit_rate: float | None = None
+    min_staged_skip_rate: float | None = None
+    max_staged_verified_false_alarm: float | None = None
+    min_staged_verified_detection: float | None = None
+    max_staged_delta_false_alarm: float | None = None
+    min_staged_delta_detection: float | None = None
     registry_path: Path | None = None
     baseline_key: str | None = None
     baseline_name: str | None = None
@@ -93,6 +98,11 @@ def run_adapter_promotion_workflow(config: AdapterPromotionWorkflowConfig) -> di
         max_mean_attempted_route_count=config.max_mean_attempted_route_count,
         max_retrieval_use_rate=config.max_retrieval_use_rate,
         min_cache_hit_rate=config.min_cache_hit_rate,
+        min_staged_skip_rate=config.min_staged_skip_rate,
+        max_staged_verified_false_alarm=config.max_staged_verified_false_alarm,
+        min_staged_verified_detection=config.min_staged_verified_detection,
+        max_staged_delta_false_alarm=config.max_staged_delta_false_alarm,
+        min_staged_delta_detection=config.min_staged_delta_detection,
     )
     config.route_report_path.parent.mkdir(parents=True, exist_ok=True)
     config.route_report_path.write_text(
@@ -158,6 +168,7 @@ def _write_artifact_manifest(
         else {}
     )
     quality_gate = dict(route_comparison.get("quality_gate") or {})
+    staged = dict(route_comparison.get("staged_verification") or {})
     manifest = build_artifact_manifest(
         artifacts,
         root=config.artifact_manifest_path.parent,
@@ -185,6 +196,14 @@ def _write_artifact_manifest(
             "recommended_mean_attempted_route_count": recommended_metrics.get("mean_attempted_route_count"),
             "recommended_retrieval_use_rate": recommended_metrics.get("retrieval_use_rate"),
             "recommended_invalid_metric_counts": recommended_metrics.get("invalid_metric_counts"),
+            "staged_verification_enabled": staged.get("enabled"),
+            "staged_skip_rate": staged.get("skip_rate"),
+            "staged_verified_false_alarm": staged.get("verified_false_alarm"),
+            "staged_verified_detection": staged.get("verified_detection"),
+            "staged_delta_false_alarm": staged.get("delta_false_alarm"),
+            "staged_delta_detection": staged.get("delta_detection"),
+            "staged_verified_records": staged.get("verified_records"),
+            "staged_skipped_records": staged.get("skipped_records"),
         },
     )
     config.artifact_manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -294,6 +313,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionWorkflowConfi
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        min_staged_skip_rate=args.min_staged_skip_rate,
+        max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
+        min_staged_verified_detection=args.min_staged_verified_detection,
+        max_staged_delta_false_alarm=args.max_staged_delta_false_alarm,
+        min_staged_delta_detection=args.min_staged_delta_detection,
         registry_path=None if args.registry is None else Path(args.registry),
         baseline_key=args.baseline_key,
         baseline_name=args.baseline_name,
@@ -361,6 +385,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None)
     parser.add_argument("--min-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--min-staged-skip-rate", type=float, default=None)
+    parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None)
+    parser.add_argument("--min-staged-verified-detection", type=float, default=None)
+    parser.add_argument("--max-staged-delta-false-alarm", type=float, default=None)
+    parser.add_argument("--min-staged-delta-detection", type=float, default=None)
     parser.add_argument("--registry", default=None,
                         help="optional local ArtifactRegistry JSON path for baseline comparison")
     parser.add_argument("--baseline-key", default=None, help="benchmark_manifest registry key")

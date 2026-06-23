@@ -158,6 +158,7 @@ def _promotion_metadata(
         else {}
     )
     quality_gate = dict(route_comparison.get("quality_gate") or {})
+    staged = dict(route_comparison.get("staged_verification") or {})
     metadata = {
         "workflow": "run_adapter_promotion_registry_workflow",
         "source_workflow": promotion_report.get("workflow"),
@@ -182,6 +183,14 @@ def _promotion_metadata(
         "recommended_mean_attempted_route_count": recommended_metrics.get("mean_attempted_route_count"),
         "recommended_retrieval_use_rate": recommended_metrics.get("retrieval_use_rate"),
         "recommended_invalid_metric_counts": recommended_metrics.get("invalid_metric_counts"),
+        "staged_verification_enabled": staged.get("enabled"),
+        "staged_skip_rate": staged.get("skip_rate"),
+        "staged_verified_false_alarm": staged.get("verified_false_alarm"),
+        "staged_verified_detection": staged.get("verified_detection"),
+        "staged_delta_false_alarm": staged.get("delta_false_alarm"),
+        "staged_delta_detection": staged.get("delta_detection"),
+        "staged_verified_records": staged.get("verified_records"),
+        "staged_skipped_records": staged.get("skipped_records"),
     }
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
@@ -228,6 +237,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterPromotionRegistryWorkf
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         min_cache_hit_rate=args.min_cache_hit_rate,
+        min_staged_skip_rate=args.min_staged_skip_rate,
+        max_staged_verified_false_alarm=args.max_staged_verified_false_alarm,
+        min_staged_verified_detection=args.min_staged_verified_detection,
+        max_staged_delta_false_alarm=args.max_staged_delta_false_alarm,
+        min_staged_delta_detection=args.min_staged_delta_detection,
         registry_path=None if args.baseline_registry is None else Path(args.baseline_registry),
         baseline_key=args.baseline_key,
         baseline_name=args.baseline_name,
@@ -319,6 +333,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None)
     parser.add_argument("--min-cache-hit-rate", type=float, default=None)
+    parser.add_argument("--min-staged-skip-rate", type=float, default=None)
+    parser.add_argument("--max-staged-verified-false-alarm", type=float, default=None)
+    parser.add_argument("--min-staged-verified-detection", type=float, default=None)
+    parser.add_argument("--max-staged-delta-false-alarm", type=float, default=None)
+    parser.add_argument("--min-staged-delta-detection", type=float, default=None)
     parser.add_argument("--baseline-registry", default=None,
                         help="optional ArtifactRegistry path used only for performance baseline comparison")
     parser.add_argument("--baseline-key", default=None, help="benchmark_manifest registry key")

@@ -1956,54 +1956,70 @@ def test_compare_verifier_routes_cli_can_fail_on_missing_promotion_gate(tmp_path
     assert payload["promotion_decision"]["status"] == "needs_gate"
 
 
-def _write_adapter_promotion_route_report(path: Path) -> None:
-    path.write_text(
-        json.dumps({
-            "runs": [
-                {
-                    "name": "routes",
-                    "route_quality": {
-                        "structured_state": {
-                            "selected": 4,
-                            "n_true": 2,
-                            "n_false": 2,
-                            "label_status_matrix": {
-                                "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
-                                "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
-                            },
-                            "false_refuted_rate": 1.0,
-                            "false_supported_rate": 0.0,
-                            "decision_accuracy": 1.0,
-                            "duration_observations": 4,
-                            "total_duration_seconds": 0.04,
-                            "mean_duration_seconds": 0.01,
-                            "p95_duration_seconds": 0.019,
-                            "p99_duration_seconds": 0.0198,
-                            "max_duration_seconds": 0.02,
-                            "attempted_route_count_observations": 4,
-                            "total_attempted_route_count": 4,
-                            "mean_attempted_route_count": 1.0,
-                            "used_retrieval_count": 0,
-                            "retrieval_use_rate": 0.0,
-                        }
-                    },
-                    "cache_stats": {
-                        "total": {"size": 2, "hits": 7, "misses": 1, "requests": 8, "hit_rate": 0.875}
-                    },
-                    "alphas": {
-                        "0.1": {
-                            "route_control_impact": {
-                                "structured_state": {
-                                    "verified": {"false_alarm": 0.0, "detection": 1.0},
-                                }
-                            }
-                        }
-                    },
-                }
-            ]
-        }),
-        encoding="utf-8",
-    )
+def _write_adapter_promotion_route_report(path: Path, *, staged: bool = False) -> None:
+    alpha_payload = {
+        "route_control_impact": {
+            "structured_state": {
+                "verified": {"false_alarm": 0.0, "detection": 1.0},
+            }
+        }
+    }
+    run = {
+        "name": "routes",
+        "route_quality": {
+            "structured_state": {
+                "selected": 4,
+                "n_true": 2,
+                "n_false": 2,
+                "label_status_matrix": {
+                    "true": {"supported": 2, "refuted": 0, "insufficient_evidence": 0},
+                    "false": {"supported": 0, "refuted": 2, "insufficient_evidence": 0},
+                },
+                "false_refuted_rate": 1.0,
+                "false_supported_rate": 0.0,
+                "decision_accuracy": 1.0,
+                "duration_observations": 4,
+                "total_duration_seconds": 0.04,
+                "mean_duration_seconds": 0.01,
+                "p95_duration_seconds": 0.019,
+                "p99_duration_seconds": 0.0198,
+                "max_duration_seconds": 0.02,
+                "attempted_route_count_observations": 4,
+                "total_attempted_route_count": 4,
+                "mean_attempted_route_count": 1.0,
+                "used_retrieval_count": 0,
+                "retrieval_use_rate": 0.0,
+            }
+        },
+        "cache_stats": {
+            "total": {"size": 2, "hits": 7, "misses": 1, "requests": 8, "hit_rate": 0.875}
+        },
+        "alphas": {"0.1": alpha_payload},
+    }
+    if staged:
+        run.update({
+            "n_true": 10,
+            "n_false": 10,
+            "staged_verification": {
+                "enabled": True,
+                "total_records": 20,
+                "verified_records": 8,
+                "skipped_records": 12,
+                "skip_rate": 0.6,
+                "threshold": 0.2,
+            },
+        })
+        alpha_payload.update({
+            "internal": {"false_alarm": 0.10, "detection": 0.70},
+            "verified": {"false_alarm": 0.05, "detection": 0.90},
+            "delta": {
+                "false_alarm": -0.05,
+                "detection": 0.20,
+                "suppressed_false_alarm_rate": 0.05,
+                "rescued_detection_rate": 0.20,
+            },
+        })
+    path.write_text(json.dumps({"runs": [run]}), encoding="utf-8")
 
 
 def test_run_adapter_promotion_workflow_promotes_gated_route(tmp_path):
@@ -2137,7 +2153,7 @@ def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
     route_source_path = tmp_path / "routes.json"
     route_report_path = tmp_path / "route-comparison.json"
     manifest_path = tmp_path / "artifact-manifest.json"
-    _write_adapter_promotion_route_report(route_source_path)
+    _write_adapter_promotion_route_report(route_source_path, staged=True)
 
     payload = module.run_adapter_promotion_workflow(
         module.AdapterPromotionWorkflowConfig(
@@ -2154,6 +2170,11 @@ def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
             max_mean_attempted_route_count=1.1,
             max_retrieval_use_rate=0.0,
             min_cache_hit_rate=0.80,
+            min_staged_skip_rate=0.50,
+            max_staged_verified_false_alarm=0.05,
+            min_staged_verified_detection=0.85,
+            max_staged_delta_false_alarm=0.0,
+            min_staged_delta_detection=0.0,
             artifact_manifest_path=manifest_path,
         )
     )
@@ -2163,6 +2184,9 @@ def test_run_adapter_promotion_workflow_writes_artifact_manifest(tmp_path):
     assert manifest["metadata"]["runner"] == "run_adapter_promotion_workflow"
     assert manifest["metadata"]["promotion_status"] == "promote"
     assert manifest["metadata"]["recommended_route"] == "structured_state"
+    assert manifest["metadata"]["staged_skip_rate"] == pytest.approx(0.6)
+    assert manifest["metadata"]["staged_verified_detection"] == pytest.approx(0.9)
+    assert payload["route_comparison"]["quality_gate"]["config"]["min_staged_skip_rate"] == pytest.approx(0.5)
     assert manifest["artifacts"]["route_comparison_report"]["exists"] is True
     assert manifest["artifacts"]["verifier_reports.routes"]["exists"] is True
 
@@ -2178,7 +2202,7 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
     registry_path = tmp_path / "registry.json"
     workflow_path = tmp_path / "workflow.json"
     verification_path = tmp_path / "manifest-verification.json"
-    _write_adapter_promotion_route_report(route_source_path)
+    _write_adapter_promotion_route_report(route_source_path, staged=True)
 
     payload = module.run_adapter_promotion_registry_workflow(
         module.AdapterPromotionRegistryWorkflowConfig(
@@ -2196,6 +2220,11 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
                 max_mean_attempted_route_count=1.1,
                 max_retrieval_use_rate=0.0,
                 min_cache_hit_rate=0.80,
+                min_staged_skip_rate=0.50,
+                max_staged_verified_false_alarm=0.05,
+                min_staged_verified_detection=0.85,
+                max_staged_delta_false_alarm=0.0,
+                min_staged_delta_detection=0.0,
                 artifact_manifest_path=manifest_path,
             ),
             registry_path=registry_path,
@@ -2220,6 +2249,9 @@ def test_run_adapter_promotion_registry_workflow_registers_promoted_route(tmp_pa
     assert record.metadata["route_promotion_status"] == "promote"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_decision_accuracy"] == pytest.approx(1.0)
+    assert record.metadata["staged_skip_rate"] == pytest.approx(0.6)
+    assert record.metadata["staged_verified_false_alarm"] == pytest.approx(0.05)
+    assert record.metadata["staged_delta_detection"] == pytest.approx(0.2)
     assert record.metadata["scope"] == "unit"
 
     baseline = compare_module.compare_route_baselines(registry_path=registry_path)

@@ -599,6 +599,21 @@ verification policy into a cost-aware policy. It preserves the conformal false
 alarm budget and slightly improves detection over the internal-only gate while
 skipping 902 of 1112 structured QA calls in this reproducible l80 comparison.
 
+The staged structured QA route is now registered as a local route baseline:
+
+- Registry: `artifacts/staged-route-registry.json`
+- Record: `benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4`
+- Manifest: `artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json`
+- Registry workflow: `artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_registry_workflow.json`
+- Baseline comparison: `artifacts/truthfulqa_l80_structured_qa_staged_route_baseline_comparison.json`
+
+`compare_route_baselines.py` promotes this record with route `structured_qa`,
+selected count 210, decision accuracy 1.000, false-supported rate 0.000,
+verified false alarm 0.000, verified detection 1.000, p99 route duration
+0.000199 seconds, and no blocking reasons. The staged aggregate metrics remain
+available in the manifest and registry metadata: skip-rate 0.811, staged
+verified false alarm 0.009, and staged verified detection 0.275.
+
 ## Next Steps
 
 1. Run `inside_eigenscore` only on the best layer band, not every layer, because
@@ -614,9 +629,8 @@ skipping 902 of 1112 structured QA calls in this reproducible l80 comparison.
 5. Run a real multi-sample semantic-uncertainty comparison on the same layer band:
    `inside_eigenscore`/semantic entropy versus `truth_proj` under a fixed sampling
    budget and shared conformal report.
-6. Register the staged structured QA route comparison as a route baseline and
-   include it in release-candidate comparison once paired readiness artifacts
-   are available.
+6. Include the registered staged structured QA route baseline in
+   release-candidate comparison once paired readiness artifacts are available.
 7. Replace the label-derived oracle evidence fixture with real retrieval,
    database, calculator, or world-model evidence and rerun
    `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm

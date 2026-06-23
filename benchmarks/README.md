@@ -1300,6 +1300,53 @@ claims while skipping 902 of 1112 verifier calls across the two l80 runs. The
 registered comparison artifact blocks promotion unless skip-rate, false-alarm,
 and detection thresholds all pass.
 
+Registry handoff for the current staged l80 structured QA route baseline:
+
+```bash
+python benchmarks/run_adapter_promotion_registry_workflow.py \
+  --report staged=artifacts/truthfulqa_l80_structured_qa_staged_verifier_ensemble_report.json \
+  --route-report-json artifacts/truthfulqa_l80_structured_qa_staged_registry_route_comparison.json \
+  --artifact-manifest artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json \
+  --verification-report artifacts/truthfulqa_l80_structured_qa_staged_manifest_verification.json \
+  --registry artifacts/staged-route-registry.json \
+  --name truthfulqa-l80-structured-qa-staged-route \
+  --version 0.4 \
+  --alpha 0.1 \
+  --gate-route structured_qa \
+  --gate-min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --min-staged-skip-rate 0.75 \
+  --max-staged-verified-false-alarm 0.02 \
+  --min-staged-verified-detection 0.20 \
+  --max-staged-delta-false-alarm 0.0 \
+  --min-staged-delta-detection 0.0 \
+  --metadata evidence=truthfulqa_l80_structured_qa_staged \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_registry_workflow.json \
+  --compact-json \
+  --fail-on-blocked
+
+python benchmarks/compare_route_baselines.py \
+  --registry artifacts/staged-route-registry.json \
+  --min-selected 80 \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --max-verified-false-alarm 0.02 \
+  --min-verified-detection 0.20 \
+  --max-p99-duration-seconds 0.01 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
+  --json artifacts/truthfulqa_l80_structured_qa_staged_route_baseline_comparison.json \
+  --fail-on-blocked
+```
+
+The registry workflow records
+`benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4`, and the
+baseline comparison promotes that record with route `structured_qa`.
 
 ## `backfill_truthfulqa_statements.py`
 
