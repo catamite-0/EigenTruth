@@ -4045,6 +4045,27 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_inside_sampling_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
+    module = importlib.import_module("benchmarks.inside_sampling_profile_smoke")
+
+    payload = module.build_inside_sampling_profile_smoke(tmp_path)
+    pass_report = payload["pass_report"]
+    failure_report = payload["expected_failure_report"]
+
+    assert (tmp_path / "pass" / "result-fixed.json").exists()
+    assert (tmp_path / "pass" / "profile-adaptive_selfcheck.json").exists()
+    assert (tmp_path / "failure" / "result-adaptive_selfcheck.json").exists()
+    assert (tmp_path / "inside_sampling_profile_pass_report.json").exists()
+    assert (tmp_path / "inside_sampling_profile_expected_failure_report.json").exists()
+    assert pass_report["sample_efficiency_gate"]["passed"] is True
+    assert pass_report["recommendation"]["recommended_run"] == "adaptive_selfcheck"
+    assert failure_report["sample_efficiency_gate"]["passed"] is False
+    assert {failure["metric"] for failure in failure_report["sample_efficiency_gate"]["failures"]} == {
+        "inside_generation_seconds_ratio_to_baseline",
+        "sample_count_ratio_to_baseline",
+    }
+
+
 def test_cache_worker_sweep_smoke_writes_pass_and_expected_blocked_reports(tmp_path):
     module = importlib.import_module("benchmarks.cache_worker_sweep_smoke")
 
