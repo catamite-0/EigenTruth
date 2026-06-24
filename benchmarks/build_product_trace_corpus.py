@@ -21,7 +21,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
+from benchmarks.config_utils import (  # noqa: E402
+    bounded_product_trace_reason,
+    planned_artifact_manifest_summary,
+    strict_bool,
+)
 from eigentruth.control import RUNTIME_PROFILE_NAMES  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
 
@@ -230,6 +234,8 @@ def _source_record(path: str | Path, index: int, payload: Any, *, source_format:
 def _invalid_reason(payload: Any, *, require_runtime_trace: bool) -> str | None:
     if not isinstance(payload, Mapping):
         return "payload is not a JSON object"
+    if (reason := bounded_product_trace_reason(payload)) is not None:
+        return reason
     risk_decision = payload.get("risk_decision")
     if not isinstance(risk_decision, Mapping):
         return "missing risk_decision object"

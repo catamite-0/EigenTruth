@@ -2260,7 +2260,9 @@ Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
-`ProductPromotionContract` budget:
+`ProductPromotionContract` budget. Use full `ProductTrace.to_dict()` payloads
+for this workflow; bounded telemetry from `--bounded-trace` is intentionally
+rejected because it can truncate replay-relevant evidence and action outputs:
 
 ```bash
 python benchmarks/run_product_runtime_baseline.py \
@@ -2458,7 +2460,8 @@ was saved under multiple runtime profiles, optionally reads a
 `build_product_trace_corpus.py` runtime-pair index instead of scanning traces to
 build that pairing map, reports selected-vs-original runtime deltas, applies
 optional distribution, observed-runtime, and runtime-delta replay gates, writes
-a manifest, and can register the replay report. The
+a manifest, and can register the replay report. The runner expects full
+ProductTrace payloads and rejects bounded telemetry inputs. The
 current registered replay report promotes the default selector with
 100% paired runtime coverage, observed mean selected runtime around `0.00045s`,
 and observed p95 selected runtime around `0.00059s` on the local deterministic

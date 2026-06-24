@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Mapping
 
+BOUNDED_PRODUCT_TRACE_FORMAT = "bounded_product_trace"
+
 
 def strict_bool(value: Any, *, name: str) -> bool:
     """Parse booleans without treating arbitrary non-empty strings as true."""
@@ -17,6 +19,26 @@ def strict_bool(value: Any, *, name: str) -> bool:
         if normalized in {"false", "0", "no", "off"}:
             return False
     raise ValueError(f"{name} must be a boolean or boolean string.")
+
+
+def bounded_product_trace_reason(payload: Any) -> str | None:
+    """Return why a bounded ProductTrace cannot be used for replay inputs."""
+    if isinstance(payload, Mapping) and payload.get("trace_format") == BOUNDED_PRODUCT_TRACE_FORMAT:
+        return (
+            "bounded ProductTrace telemetry payloads cannot be used for replay "
+            "or runtime baselines; rerun without --bounded-trace and use the full "
+            "ProductTrace JSON"
+        )
+    return None
+
+
+def reject_bounded_product_trace(payload: Any, *, path: str | Path | None = None) -> None:
+    """Raise when a replay/runtime tool receives bounded telemetry."""
+    reason = bounded_product_trace_reason(payload)
+    if reason is None:
+        return
+    suffix = "" if path is None else f": {path}"
+    raise ValueError(f"{reason}{suffix}")
 
 
 def planned_artifact_manifest_summary(

@@ -20,7 +20,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
+from benchmarks.config_utils import (  # noqa: E402
+    planned_artifact_manifest_summary,
+    reject_bounded_product_trace,
+    strict_bool,
+)
 from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
@@ -492,6 +496,7 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
 
 def _load_trace(path: str | Path) -> dict[str, Any]:
     payload = _load_json(path)
+    reject_bounded_product_trace(payload, path=path)
     if "runtime_trace" not in payload and "verification_results" not in payload:
         raise ValueError(f"ProductTrace JSON is missing runtime/control fields: {path}")
     return payload

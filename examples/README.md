@@ -116,8 +116,9 @@ payloads that should omit timing noise. Pass `--compact-json` when trace output
 is consumed by automated artifact workflows and compact size matters more than
 manual diff readability. Pass `--bounded-trace` for online telemetry payloads
 that keep routing summaries and artifact refs while truncating long claims,
-verification results, events, and action outputs; use full traces for replay and
-runtime-baseline artifacts. Optional runtime budget flags evaluate those timings
+verification results, events, and action outputs; use full traces for replay,
+corpus, and runtime-baseline artifacts because those tools reject bounded
+telemetry inputs. Optional runtime budget flags evaluate those timings
 fail-closed and write the result into trace metadata. The demo also summarizes
 verifier route cost metadata, can wrap verifier/retriever calls in request-local
 caches, and can gate on route attempts, retrieval use, and cache hit rates:

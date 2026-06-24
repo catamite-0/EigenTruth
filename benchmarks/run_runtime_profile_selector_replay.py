@@ -16,7 +16,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
+from benchmarks.config_utils import (  # noqa: E402
+    planned_artifact_manifest_summary,
+    reject_bounded_product_trace,
+    strict_bool,
+)
 from benchmarks.run_runtime_profile_selector_tuning import (  # noqa: E402
     RuntimeProfileSelectorCandidate,
 )
@@ -1170,6 +1174,7 @@ def _load_trace(path: str | Path) -> dict[str, Any]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(payload, Mapping):
         raise ValueError(f"ProductTrace JSON must be an object: {path}")
+    reject_bounded_product_trace(payload, path=path)
     if not isinstance(payload.get("risk_decision"), Mapping):
         raise ValueError(f"ProductTrace JSON is missing risk_decision: {path}")
     return dict(payload)

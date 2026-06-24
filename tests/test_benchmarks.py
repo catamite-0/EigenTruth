@@ -9584,6 +9584,29 @@ def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
 
 
+def test_run_product_runtime_baseline_rejects_bounded_trace_payload(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_path = tmp_path / "bounded-trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "trace_format": "bounded_product_trace",
+            "request_id": "bounded",
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+            "verification_results": [],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="bounded ProductTrace telemetry"):
+        module.build_product_runtime_baseline(
+            module.ProductRuntimeBaselineConfig(
+                trace_paths=(trace_path,),
+                report_path=tmp_path / "product-runtime-baseline.json",
+            )
+        )
+
+
 def test_compare_product_runtime_baselines_promotes_within_gates(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -10436,6 +10459,33 @@ def test_build_product_trace_corpus_streams_jsonl_limit_and_parses_bool_strings(
         )
 
 
+def test_build_product_trace_corpus_rejects_bounded_trace_payload(tmp_path):
+    module = importlib.import_module("benchmarks.build_product_trace_corpus")
+    trace_path = tmp_path / "bounded-trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "trace_format": "bounded_product_trace",
+            "request_id": "bounded",
+            "risk_decision": {"risk_level": "low", "action": "accept"},
+            "metadata": {},
+            "summaries": {},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_path,),
+            output_dir=tmp_path / "trace-corpus",
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["accepted_count"] == 0
+    assert payload["summary"]["rejected_count"] == 1
+    assert "bounded ProductTrace telemetry" in payload["rejected"][0]["reason"]
+
+
 def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp_path):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
@@ -11101,6 +11151,28 @@ def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path)
     assert observation.total_seconds == pytest.approx(0.30)
     assert record["selected_runtime_profile"] == "audit"
     assert record["observed_selected_pair_count"] == 1
+
+
+def test_runtime_profile_selector_replay_rejects_bounded_trace_payload(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    trace_path = tmp_path / "bounded-trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "trace_format": "bounded_product_trace",
+            "request_id": "bounded",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.9,
+            },
+            "metadata": {"runtime_profile": "latency"},
+            "summaries": {},
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="bounded ProductTrace telemetry"):
+        module._load_trace_replay_input(trace_path)
 
 
 def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path, monkeypatch):
