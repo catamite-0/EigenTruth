@@ -209,6 +209,7 @@ def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_ve
     assert payload["metadata"]["runtime_profile"] == "latency"
     assert payload["metadata"]["staged_verification_enabled"] is True
     assert payload["metadata"]["staged_verification"]["verify_triggered_claims_only"] is True
+    assert payload["metadata"]["max_verifier_route_attempts"] == 1
     assert payload["verification_results"] == []
     assert "initial_verification" not in {
         phase["name"] for phase in payload["runtime_trace"]["phases"]

@@ -135,6 +135,8 @@ def test_runtime_profiles_apply_only_missing_defaults():
     assert RUNTIME_PROFILES["balanced"].defaults["inside_trigger_budget_policy"] == "quality_balanced"
     assert RUNTIME_PROFILES["latency"].control_defaults["staged_verification"] is True
     assert RUNTIME_PROFILES["latency"].control_defaults["stage_verify_triggered_claims_only"] is True
+    assert RUNTIME_PROFILES["latency"].control_defaults["max_verifier_route_attempts"] == 1
+    assert RUNTIME_PROFILES["balanced"].control_defaults["max_verifier_route_attempts"] == 2
     assert RUNTIME_PROFILES["audit"].control_defaults["staged_verification"] is False
 
     merged, applied = profile.apply_defaults({
@@ -1358,6 +1360,49 @@ def test_routed_verifier_can_fall_through_on_insufficient_evidence():
     assert math.isfinite(result.metadata["selected_route_duration_seconds"])
     assert math.isfinite(result.metadata["skipped_routes"][0]["duration_seconds"])
     assert result.metadata["total_duration_seconds"] >= result.metadata["selected_route_duration_seconds"] >= 0.0
+
+
+def test_routed_verifier_can_cap_route_fanout():
+    qa = QuestionAnswerVerifier([QuestionAnswerFact(question="Q?", answer="A")])
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier(
+        (
+            VerifierRoute(
+                "structured_qa",
+                qa,
+                context_keys=("statement.question", "statement.answer"),
+                fallthrough_statuses=(VerificationStatus.INSUFFICIENT_EVIDENCE,),
+            ),
+            VerifierRoute("fallback", fallback, fallback=True),
+        ),
+        max_attempted_routes=1,
+    )
+
+    result = verifier.verify(
+        Claim("Fallback fact."),
+        context={"statement": {"question": "Unknown?", "answer": "A"}},
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["selected_route"] == "structured_qa"
+    assert result.metadata["attempted_route_count"] == 1.0
+    assert result.metadata["route_budget_limit"] == 1
+    assert result.metadata["route_budget_exhausted"] is True
+    assert result.metadata["route_stop_reason"] == "max_attempted_routes"
+    assert result.metadata["selected_route_was_fallthrough"] is True
+    assert result.metadata["unattempted_routes"] == ("fallback",)
+    assert result.metadata["skipped_routes"] == ()
+
+
+def test_routed_verifier_rejects_invalid_route_fanout_budget():
+    route = VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",))
+
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=0)
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="max_attempted_routes"):
+        RoutedVerifier((route,), max_attempted_routes=1.5)  # type: ignore[arg-type]
 
 
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():

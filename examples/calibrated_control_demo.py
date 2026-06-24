@@ -211,6 +211,7 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
     raw_named_cache_hit_rate = getattr(args, "min_named_cache_hit_rate", None)
     min_verification_skip_rate = getattr(args, "min_verification_skip_rate", None)
+    min_selective_claim_skip_rate = getattr(args, "min_selective_claim_skip_rate", None)
     max_verified_claim_count = getattr(args, "max_verified_claim_count", None)
     if (
         base_policy is None
@@ -228,6 +229,7 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         and min_cache_hit_rate is None
         and raw_named_cache_hit_rate is None
         and min_verification_skip_rate is None
+        and min_selective_claim_skip_rate is None
         and max_verified_claim_count is None
     ):
         return None
@@ -298,6 +300,11 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
             base_policy.min_verification_skip_rate
             if min_verification_skip_rate is None
             else min_verification_skip_rate
+        ),
+        min_selective_claim_skip_rate=(
+            base_policy.min_selective_claim_skip_rate
+            if min_selective_claim_skip_rate is None
+            else min_selective_claim_skip_rate
         ),
         max_verified_claim_count=(
             base_policy.max_verified_claim_count
@@ -385,6 +392,19 @@ def stage_policy_from_runtime_profile(
             default_policy.verify_triggered_claims_only,
         ),
     )
+
+
+def verifier_route_attempts_from_runtime_profile(
+    profile: RuntimeProfile | None,
+    *,
+    max_verifier_route_attempts: int | None = None,
+) -> int | None:
+    """Resolve the route-fanout cap from explicit args or profile defaults."""
+    if max_verifier_route_attempts is not None:
+        return max_verifier_route_attempts
+    control_defaults = {} if profile is None else dict(profile.control_defaults)
+    value = control_defaults.get("max_verifier_route_attempts")
+    return None if value is None else int(value)
 
 
 def resolve_runtime_profile(
@@ -477,12 +497,18 @@ def build_verifier(
     *,
     enable_calculator: bool = False,
     route_name: str | None = None,
+    max_attempted_routes: int | None = None,
 ) -> Verifier:
     """Build a deterministic verifier from exact-match facts or grounded evidence."""
     if evidence is not None or refutations is not None:
         evidence_documents = () if evidence is None else tuple(evidence)
         base_verifier: Verifier = GroundednessVerifier(evidence=evidence_documents, refutations=refutations or {})
-        return _with_optional_calculator(base_verifier, enabled=enable_calculator, route_name=route_name)
+        return _with_optional_calculator(
+            base_verifier,
+            enabled=enable_calculator,
+            route_name=route_name,
+            max_attempted_routes=max_attempted_routes,
+        )
     if facts is None:
         facts = {
             "Paris is the capital of France": VerificationStatus.SUPPORTED.value,
@@ -496,25 +522,38 @@ def build_verifier(
         InMemoryVerifier(facts=normalized),
         enabled=enable_calculator,
         route_name=route_name,
+        max_attempted_routes=max_attempted_routes,
     )
 
 
-def _with_optional_calculator(verifier: Verifier, *, enabled: bool, route_name: str | None = None) -> Verifier:
+def _with_optional_calculator(
+    verifier: Verifier,
+    *,
+    enabled: bool,
+    route_name: str | None = None,
+    max_attempted_routes: int | None = None,
+) -> Verifier:
     fallback_route_name = _normalized_route_name(route_name) or "fallback"
     if not enabled and route_name is None:
         return verifier
     if not enabled:
-        return RoutedVerifier((VerifierRoute(fallback_route_name, verifier, fallback=True),))
-    return RoutedVerifier((
-        VerifierRoute(
-            "calculator",
-            CalculatorVerifier(),
-            metadata_keys=("calculation", "expression"),
-            context_keys=("calculation", "expression"),
-            text_patterns=(ARITHMETIC_TEXT_PATTERN,),
+        return RoutedVerifier(
+            (VerifierRoute(fallback_route_name, verifier, fallback=True),),
+            max_attempted_routes=max_attempted_routes,
+        )
+    return RoutedVerifier(
+        (
+            VerifierRoute(
+                "calculator",
+                CalculatorVerifier(),
+                metadata_keys=("calculation", "expression"),
+                context_keys=("calculation", "expression"),
+                text_patterns=(ARITHMETIC_TEXT_PATTERN,),
+            ),
+            VerifierRoute(fallback_route_name, verifier, fallback=True),
         ),
-        VerifierRoute(fallback_route_name, verifier, fallback=True),
-    ))
+        max_attempted_routes=max_attempted_routes,
+    )
 
 
 def _normalized_route_name(value: str | None) -> str | None:
@@ -598,6 +637,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         runtime_profile,
         staged_verification=args.staged_verification,
     )
+    max_verifier_route_attempts = verifier_route_attempts_from_runtime_profile(
+        runtime_profile,
+        max_verifier_route_attempts=getattr(args, "max_verifier_route_attempts", None),
+    )
     verifier_route_name = (
         None
         if promotion_contract is None
@@ -609,6 +652,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         refutations,
         enable_calculator=args.enable_calculator,
         route_name=verifier_route_name,
+        max_attempted_routes=max_verifier_route_attempts,
     )
     verifier_cache = None
     if getattr(args, "cache_verifier", False):
@@ -658,6 +702,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 runtime_profile_source=runtime_profile_source,
             ),
             "staged_verification_enabled": stage_policy is not None,
+            "max_verifier_route_attempts": max_verifier_route_attempts,
             "verifier_type": type(verifier).__name__,
             "calculator_enabled": args.enable_calculator,
             "action_executor_type": "ActionExecutorRegistry",
@@ -737,6 +782,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     runtime_profile_source=runtime_profile_source,
                 ),
                 "staged_verification_enabled": stage_policy is not None,
+                "max_verifier_route_attempts": max_verifier_route_attempts,
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
                 "cache_summary": cache_summary,
@@ -819,6 +865,8 @@ def main() -> None:
                         help="optional ProductTrace route-cost budget for max route seconds")
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None,
                         help="optional ProductTrace route-cost budget for mean attempted routes per claim")
+    parser.add_argument("--max-verifier-route-attempts", type=int, default=None,
+                        help="cap matching verifier routes attempted per claim; runtime profiles fill this when unset")
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None,
                         help="optional ProductTrace route-cost budget for retrieval use rate")
     parser.add_argument("--max-retrieval-hit-count", type=float, default=None,
@@ -829,6 +877,8 @@ def main() -> None:
                         help="optional JSON object mapping cache names to minimum hit rates")
     parser.add_argument("--min-verification-skip-rate", type=float, default=None,
                         help="optional ProductTrace budget for staged-verification claim skip rate")
+    parser.add_argument("--min-selective-claim-skip-rate", type=float, default=None,
+                        help="optional ProductTrace budget for triggered-only staged-verification claim skip rate")
     parser.add_argument("--max-verified-claim-count", type=float, default=None,
                         help="optional ProductTrace budget for verifier-checked claim count")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")

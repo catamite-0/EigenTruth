@@ -116,12 +116,24 @@ class RoutedVerifier:
     """Route claims to matching verifiers, then return the first applicable result."""
 
     routes: Sequence[VerifierRoute]
+    max_attempted_routes: int | None = None
 
     def __post_init__(self) -> None:
         routes = tuple(self.routes)
         if not routes:
             raise ValueError("RoutedVerifier requires at least one route.")
         object.__setattr__(self, "routes", routes)
+        if self.max_attempted_routes is None:
+            return
+        if isinstance(self.max_attempted_routes, bool):
+            raise ValueError("max_attempted_routes must be a positive integer.")
+        max_attempted_routes = int(self.max_attempted_routes)
+        if max_attempted_routes <= 0 or str(self.max_attempted_routes).strip() not in {
+            str(max_attempted_routes),
+            f"{max_attempted_routes}.0",
+        }:
+            raise ValueError("max_attempted_routes must be a positive integer.")
+        object.__setattr__(self, "max_attempted_routes", max_attempted_routes)
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim through matching routes."""
@@ -132,11 +144,21 @@ class RoutedVerifier:
         ]
         skipped = []
         total_duration_seconds = 0.0
+        attempted: list[tuple[VerifierRoute, Sequence[str]]] = []
+        last_result: VerificationResult | None = None
+        last_route: VerifierRoute | None = None
+        last_route_duration_seconds = 0.0
         for route, reasons in matched:
+            if self.max_attempted_routes is not None and len(attempted) >= self.max_attempted_routes:
+                break
+            attempted.append((route, reasons))
             started_at = time.perf_counter()
             result = route.verifier.verify(claim, context=context)
             route_duration_seconds = time.perf_counter() - started_at
             total_duration_seconds += route_duration_seconds
+            last_result = result
+            last_route = route
+            last_route_duration_seconds = route_duration_seconds
             if result.status not in route.fallthrough_statuses:
                 return _with_route_metadata(
                     result,
@@ -154,6 +176,23 @@ class RoutedVerifier:
                 "explanation": result.explanation,
                 "duration_seconds": route_duration_seconds,
             })
+        if (
+            self.max_attempted_routes is not None
+            and len(matched) > len(attempted)
+            and last_result is not None
+            and last_route is not None
+        ):
+            return _with_route_metadata(
+                last_result,
+                route=last_route,
+                matched=matched,
+                skipped=skipped[:-1],
+                total_duration_seconds=total_duration_seconds,
+                selected_route_duration_seconds=last_route_duration_seconds,
+                route_budget_limit=self.max_attempted_routes,
+                route_budget_exhausted=True,
+                selected_route_was_fallthrough=True,
+            )
         metadata: dict[str, Any] = {
             "verifier": type(self).__name__,
             "matched_routes": tuple(route.name for route, _ in matched),
@@ -163,6 +202,9 @@ class RoutedVerifier:
         if skipped:
             metadata["total_duration_seconds"] = total_duration_seconds
             metadata["attempted_route_count"] = float(len(skipped))
+        if self.max_attempted_routes is not None:
+            metadata["route_budget_limit"] = self.max_attempted_routes
+            metadata["route_budget_exhausted"] = len(matched) > len(skipped)
         return VerificationResult(
             status=VerificationStatus.NOT_APPLICABLE,
             confidence=1.0,
@@ -208,7 +250,14 @@ def _with_route_metadata(
     skipped: Sequence[Mapping[str, Any]],
     total_duration_seconds: float,
     selected_route_duration_seconds: float,
+    route_budget_limit: int | None = None,
+    route_budget_exhausted: bool = False,
+    selected_route_was_fallthrough: bool = False,
 ) -> VerificationResult:
+    unattempted_routes = tuple(
+        route.name
+        for route, _ in matched[len(skipped) + 1:]
+    )
     metadata = {
         **dict(result.metadata),
         "router_verifier": "RoutedVerifier",
@@ -221,6 +270,13 @@ def _with_route_metadata(
         "selected_route_duration_seconds": selected_route_duration_seconds,
         "attempted_route_count": float(len(skipped) + 1),
     }
+    if route_budget_limit is not None:
+        metadata["route_budget_limit"] = route_budget_limit
+        metadata["route_budget_exhausted"] = route_budget_exhausted
+        metadata["unattempted_routes"] = unattempted_routes
+        if selected_route_was_fallthrough:
+            metadata["selected_route_was_fallthrough"] = True
+            metadata["route_stop_reason"] = "max_attempted_routes"
     return VerificationResult(
         status=result.status,
         confidence=result.confidence,
