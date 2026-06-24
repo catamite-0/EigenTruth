@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -237,12 +238,19 @@ class LayerScoreSweepCalibrator:
 
     alpha: float = 0.1
     best_by: str = "auroc"
+    max_workers: int = 1
 
     def __post_init__(self) -> None:
         if not (0.0 < self.alpha < 1.0):
             raise ValueError("alpha must be in (0, 1).")
         if self.best_by not in {"auroc", "detection"}:
             raise ValueError("best_by must be 'auroc' or 'detection'.")
+        if (
+            isinstance(self.max_workers, bool)
+            or not isinstance(self.max_workers, int)
+            or self.max_workers < 1
+        ):
+            raise ValueError("max_workers must be a positive integer.")
 
     def calibrate_from_file(
         self,
@@ -360,15 +368,14 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from validated score families."""
         selected = set(signals) if signals is not None else _all_score_names(layer_scores)
-        results = []
+        jobs: list[_SweepScoreJob] = []
         for layer in sorted(layer_scores):
-            score_results = []
             for score_name in sorted(layer_scores[layer]):
                 if score_name not in selected:
                     continue
                 direction = _score_direction(score_name, directions)
-                score_results.append(
-                    _calibrate_score(
+                jobs.append(
+                    _SweepScoreJob(
                         layer=layer,
                         score_name=score_name,
                         scores=layer_scores[layer][score_name],
@@ -377,12 +384,24 @@ class LayerScoreSweepCalibrator:
                         direction=direction,
                     )
                 )
-            if score_results:
-                results.append(LayerScoreSweepResult(layer=layer, scores=tuple(score_results)))
 
-        if not results:
+        score_results = _calibrate_score_jobs(jobs, max_workers=int(self.max_workers))
+        if not score_results:
             raise ValueError("no matching layer/score results were found in the score dump.")
 
+        results_by_layer: dict[int, list[SweepScoreResult]] = {}
+        for result in score_results:
+            results_by_layer.setdefault(result.layer, []).append(result)
+        results = [
+            LayerScoreSweepResult(layer=layer, scores=tuple(results_by_layer[layer]))
+            for layer in sorted(results_by_layer)
+        ]
+        report_metadata = (
+            dict(metadata)
+            if metadata is not None
+            else {"source": "eval_truthfulqa.py", "config": config}
+        )
+        report_metadata["sweep_max_workers"] = int(self.max_workers)
         return LayerScoreSweepReport(
             model_id=model_id or str(config.get("model", "unknown")),
             model_revision=model_revision,
@@ -393,8 +412,18 @@ class LayerScoreSweepCalibrator:
             scores_path=scores_path,
             created_at=created_at or datetime.now(timezone.utc).isoformat(),
             commit_sha=commit_sha,
-            metadata=metadata or {"source": "eval_truthfulqa.py", "config": config},
+            metadata=report_metadata,
         )
+
+
+@dataclass(frozen=True)
+class _SweepScoreJob:
+    layer: int
+    score_name: str
+    scores: Sequence[float]
+    labels: torch.Tensor
+    alpha: float
+    direction: str
 
 
 def _collect_layer_scores_from_score_dump(score_dump: ScoreDump) -> dict[int, dict[str, Sequence[float]]]:
@@ -461,6 +490,29 @@ def _calibrate_score(
         n_false=int(false_scores.numel()),
     )
 
+
+def _calibrate_score_jobs(
+    jobs: Sequence[_SweepScoreJob],
+    *,
+    max_workers: int,
+) -> tuple[SweepScoreResult, ...]:
+    if not jobs:
+        return ()
+    if max_workers <= 1 or len(jobs) == 1:
+        return tuple(_calibrate_score_job(job) for job in jobs)
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(jobs))) as executor:
+        return tuple(executor.map(_calibrate_score_job, jobs))
+
+
+def _calibrate_score_job(job: _SweepScoreJob) -> SweepScoreResult:
+    return _calibrate_score(
+        layer=job.layer,
+        score_name=job.score_name,
+        scores=job.scores,
+        labels=job.labels,
+        alpha=job.alpha,
+        direction=job.direction,
+    )
 
 
 def _anomaly_scores(scores: torch.Tensor, direction: str) -> torch.Tensor:

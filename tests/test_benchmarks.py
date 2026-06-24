@@ -96,6 +96,7 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
         save_sweep_report=str(sweep_report_path),
         save_best_calibration=None,
         best_by="auroc",
+        sweep_workers=2,
         artifact_alpha=0.20,
         direction=None,
         model_id=None,
@@ -115,6 +116,7 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
     assert payload["score_dump_cache"]["jsonl_summary"]["hits"] >= 1
     assert payload["sweep_report"]["best"]["score_name"] == "truth_proj"
+    assert payload["sweep_report"]["metadata"]["sweep_max_workers"] == 2
     assert sweep_report_path.exists()
 
 

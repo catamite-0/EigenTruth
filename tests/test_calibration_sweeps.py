@@ -57,6 +57,35 @@ def test_layer_score_sweep_report_selects_best_artifact(tmp_path):
     assert json.loads(path.read_text())["best"]["score_name"] == "maha_last"
 
 
+def test_layer_score_sweep_parallel_matches_serial():
+    serial = LayerScoreSweepCalibrator(alpha=0.4, max_workers=1).calibrate_from_dump(
+        _score_dump(),
+        signals=("maha_last", "subspace_resid"),
+        created_at="2026-06-16T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+    parallel = LayerScoreSweepCalibrator(alpha=0.4, max_workers=3).calibrate_from_dump(
+        _score_dump(),
+        signals=("maha_last", "subspace_resid"),
+        created_at="2026-06-16T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    assert parallel.score_results() == serial.score_results()
+    assert [layer.layer for layer in parallel.layers] == [layer.layer for layer in serial.layers]
+    assert parallel.best_score() == serial.best_score()
+    assert parallel.metadata["sweep_max_workers"] == 3
+
+
+def test_layer_score_sweep_rejects_invalid_worker_count():
+    try:
+        LayerScoreSweepCalibrator(max_workers=0)
+    except ValueError as exc:
+        assert "max_workers" in str(exc)
+    else:
+        raise AssertionError("max_workers=0 should be rejected")
+
+
 def test_layer_score_sweep_from_file_uses_validated_score_dump(tmp_path):
     path = tmp_path / "scores.json"
     path.write_text(json.dumps(_score_dump()), encoding="utf-8")

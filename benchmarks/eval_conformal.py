@@ -220,6 +220,7 @@ def run(args) -> dict:
         report = LayerScoreSweepCalibrator(
             alpha=args.artifact_alpha,
             best_by=args.best_by,
+            max_workers=getattr(args, "sweep_workers", 1),
         ).calibrate_from_file(
             args.scores,
             signals=selected_signals,
@@ -275,6 +276,8 @@ def main():
                    help="optional path to write an artifact manifest for inputs and generated outputs")
     p.add_argument("--best-by", choices=("auroc", "detection"), default="auroc",
                    help="metric used to choose the best layer/score calibration artifact")
+    p.add_argument("--sweep-workers", type=int, default=1,
+                   help="maximum worker threads for layer/score sweep calibration")
     p.add_argument("--artifact-alpha", type=float, default=0.10,
                    help="alpha used for --save-calibration artifact threshold")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,

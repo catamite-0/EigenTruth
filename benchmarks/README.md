@@ -424,7 +424,10 @@ calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`,
 `conformal_threshold`, `directional_conformal_threshold`, `directional_trigger_rate`).
 Reusable single-signal artifacts are built with `eigentruth.calibration.ConformalCalibrator`;
 layer/score reports and best artifacts are built with
-`eigentruth.calibration.LayerScoreSweepCalibrator`. Structured reports also include
+`eigentruth.calibration.LayerScoreSweepCalibrator`. Large layer/score sweeps can
+use bounded CPU post-processing parallelism with `eval_conformal.py --sweep-workers`
+or `LayerScoreSweepCalibrator(max_workers=...)`; the default remains one worker
+for deterministic low-resource local runs. Structured reports also include
 `selective_report` fields for threshold, coverage, selective accuracy, detection,
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
