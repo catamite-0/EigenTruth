@@ -1,0 +1,134 @@
+{
+  "benchmark_flags": {
+    "eval_truthfulqa": [
+      "--layer",
+      "-12",
+      "--batch-size",
+      "4",
+      "--hidden-state-capture",
+      "outputs",
+      "--max-batch-tokens",
+      "512",
+      "--length-bucketed-batches"
+    ],
+    "run_adapter_readiness_workflow": [
+      "--layers",
+      "-12",
+      "--batch-sizes",
+      "4",
+      "--hidden-state-captures",
+      "outputs",
+      "--max-batch-tokens",
+      "512",
+      "--max-workers",
+      "1"
+    ],
+    "run_cache_profile_matrix": [
+      "--layers",
+      "-12",
+      "--batch-sizes",
+      "4",
+      "--hidden-state-captures",
+      "outputs",
+      "--max-batch-tokens",
+      "512",
+      "--max-workers",
+      "1"
+    ]
+  },
+  "blocking_reasons": [],
+  "evidence": {
+    "configured_matrix_workers": 1,
+    "inside_sampling_baseline": null,
+    "inside_sampling_gate_passed": null,
+    "inside_sampling_recommended_run": null,
+    "inside_sampling_report": null,
+    "inside_sampling_status": null,
+    "inside_trigger_budget_derive_from_max_budget": null,
+    "inside_trigger_budget_derived_source_budget_id": null,
+    "inside_trigger_budget_gate_passed": null,
+    "inside_trigger_budget_policy": null,
+    "inside_trigger_budget_recommendation_source": null,
+    "inside_trigger_budget_recommended_budget_id": null,
+    "inside_trigger_budget_recommended_run": null,
+    "inside_trigger_budget_sweep_report": null,
+    "inside_trigger_budget_sweep_status": null,
+    "length_bucketed_batches": true,
+    "matrix_candidate_count": 3,
+    "matrix_checked_cell_count": 3,
+    "matrix_leaderboard_sort_metric": "cache_only_total_seconds",
+    "matrix_recommendation_metric": "cache_only_total_seconds",
+    "matrix_recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "matrix_report": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/cache-profile-matrix-report.json",
+    "matrix_status": "promote",
+    "matrix_wall_clock_seconds": 184.46730228303932,
+    "prefix_kv_comparison": null,
+    "quality_signal_count": 7,
+    "quality_signal_source": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-cache_only.json",
+    "worker_matrix_report_matches": null,
+    "worker_recommended_wall_clock_seconds": null,
+    "worker_recommended_worker_count": null,
+    "worker_sweep_report": null,
+    "worker_sweep_status": null
+  },
+  "recommendation": {
+    "batch_size": 4,
+    "best_quality_signal": {
+      "auroc": 0.8297674418604651,
+      "name": "truth_proj"
+    },
+    "cache_only_total_seconds": 0.1924,
+    "cache_tuning": {
+      "metrics": {
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shard_cache_capacity": 2.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shards_per_read": 1.105263
+      },
+      "read_cache_sweep": {
+        "selected": 2,
+        "sizes": [
+          1,
+          2,
+          4
+        ],
+        "status": "swept"
+      },
+      "recommendations": [],
+      "source_run": "cache_only",
+      "status": "ok",
+      "thresholds": {
+        "high_cross_shard_read_rate": 0.25,
+        "low_records_per_read": 2.0,
+        "low_shard_cache_hit_rate": 0.5
+      }
+    },
+    "cached_total_seconds": 16.517724,
+    "cell_id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_capture": "outputs",
+    "layer": -12,
+    "max_batch_tokens": 512,
+    "max_workers": 1,
+    "prefix_kv_cache": false,
+    "quality_signals": {
+      "disp_euclid": 0.3851162790697674,
+      "disp_hse": 0.2986046511627907,
+      "eigenscore": 0.4474418604651163,
+      "maha_last": 0.6139534883720931,
+      "nll_answer": 0.4790697674418605,
+      "subspace_resid": 0.5590697674418604,
+      "truth_proj": 0.8297674418604651
+    },
+    "recommendation_metric": "cache_only_total_seconds",
+    "truth_proj_auroc": 0.8297674418604651,
+    "uncached_forced_answer_forward_seconds": 18.290334,
+    "uncached_total_seconds": 34.684189
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "workflow": "runtime_config_recommendation"
+}

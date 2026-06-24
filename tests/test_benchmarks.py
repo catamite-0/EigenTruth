@@ -9634,6 +9634,13 @@ def test_runtime_config_recommendation_uses_cell_read_cache_size():
                 "prefix_kv_cache": False,
                 "eval_reps_shard_read_cache_size": 4,
                 "cache_only_total_seconds": 0.20,
+                "cache_only_cache_efficiency": {
+                    "eval_reps_reader.shard_cache_hit_rate": 0.10,
+                    "eval_reps_reader.cross_shard_read_rate": 0.10,
+                    "eval_reps_reader.records_per_read": 4.0,
+                    "eval_reps_reader.shard_count": 16.0,
+                    "eval_reps_reader.shard_cache_capacity": 4.0,
+                },
                 "truth_proj_auroc": 0.88,
             },
         },
@@ -9644,6 +9651,14 @@ def test_runtime_config_recommendation_uses_cell_read_cache_size():
 
     assert report["status"] == "promote"
     assert report["recommendation"]["eval_reps_shard_read_cache_size"] == 4
+    cache_tuning = report["recommendation"]["cache_tuning"]
+    assert cache_tuning["status"] == "ok"
+    assert cache_tuning["read_cache_sweep"] == {
+        "status": "swept",
+        "sizes": (1, 4),
+        "selected": 4,
+    }
+    assert cache_tuning["recommendations"] == []
     assert report["benchmark_flags"]["eval_truthfulqa"] == [
         "--layer",
         "-12",

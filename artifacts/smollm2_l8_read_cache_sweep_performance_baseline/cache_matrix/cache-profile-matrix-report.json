@@ -1,0 +1,1273 @@
+{
+  "dry_run": false,
+  "config": {
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "dtype": "float32",
+    "layers": [
+      -12
+    ],
+    "batch_sizes": [
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "limit": 8,
+    "manifold_questions": 4,
+    "max_length": 64,
+    "max_batch_tokens": 512,
+    "max_batch_token_budgets": [
+      512
+    ],
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "offline": false,
+    "length_bucketed_batches": true,
+    "shared_cache_dir": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix",
+    "shared_cache_root": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a",
+    "matrix_mode": "triplet",
+    "max_workers": 1
+  },
+  "cells": [
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_1",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 1,
+      "eval_reps_shard_read_cache_size_component": "read_cache_1",
+      "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 64.33000076806638,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "1"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "1"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.201539,
+          "speedup_vs_baseline": 197.78294027458708
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 39.860976,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.627478,
+            "model_forward_seconds": 25.709978
+          },
+          "cached": {
+            "total_seconds": 14.608454,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.7286238502719042,
+            "ratio_to_baseline": 0.3664851056331385,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 1.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.201539,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 197.78294027458708,
+            "ratio_to_baseline": 0.005056047799732751,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 3.578947,
+              "eval_reps_reader.shards_per_read": 1.105263,
+              "eval_reps_reader.cross_shard_read_rate": 0.105263,
+              "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+              "eval_reps_reader.shard_load_rate": 0.809524,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 1.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.105263,
+                "baseline_value": 0.0,
+                "delta": 0.105263,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 3.578947,
+                "baseline_value": 0.0,
+                "delta": 3.578947,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.190476,
+                "baseline_value": 0.0,
+                "delta": 0.190476,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 0.809524,
+                "baseline_value": 0.0,
+                "delta": 0.809524,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.105263,
+                "baseline_value": 0.0,
+                "delta": 1.105263,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 2,
+      "eval_reps_shard_read_cache_size_component": "read_cache_2",
+      "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "warm_start",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 61.416913711000234,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "warm_start",
+        "command_log": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.1924,
+          "speedup_vs_baseline": 180.27125259875262
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 34.684189,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.290334,
+            "model_forward_seconds": 18.290334
+          },
+          "cached": {
+            "total_seconds": 16.517724,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.099816475926102,
+            "ratio_to_baseline": 0.47623209526392557,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.1924,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 180.27125259875262,
+            "ratio_to_baseline": 0.0055471961590337305,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 3.578947,
+              "eval_reps_reader.shards_per_read": 1.105263,
+              "eval_reps_reader.cross_shard_read_rate": 0.105263,
+              "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+              "eval_reps_reader.shard_load_rate": 0.809524,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.105263,
+                "baseline_value": 0.0,
+                "delta": 0.105263,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 3.578947,
+                "baseline_value": 0.0,
+                "delta": 3.578947,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.190476,
+                "baseline_value": 0.0,
+                "delta": 0.190476,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 0.809524,
+                "baseline_value": 0.0,
+                "delta": 0.809524,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.105263,
+                "baseline_value": 0.0,
+                "delta": 1.105263,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_4",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 4,
+      "eval_reps_shard_read_cache_size_component": "read_cache_4",
+      "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "warm_start",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 58.71540566091426,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "4"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "4"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "warm_start",
+        "command_log": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.194529,
+          "speedup_vs_baseline": 177.14782885842212
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 34.46039,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.223193,
+            "model_forward_seconds": 18.223193
+          },
+          "cached": {
+            "total_seconds": 14.444998,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.3856278830914337,
+            "ratio_to_baseline": 0.41917685783590963,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 4.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.194529,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 177.14782885842212,
+            "ratio_to_baseline": 0.005645002856903245,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 3.578947,
+              "eval_reps_reader.shards_per_read": 1.105263,
+              "eval_reps_reader.cross_shard_read_rate": 0.105263,
+              "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+              "eval_reps_reader.shard_load_rate": 0.809524,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 4.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.105263,
+                "baseline_value": 0.0,
+                "delta": 0.105263,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 3.578947,
+                "baseline_value": 0.0,
+                "delta": 3.578947,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.190476,
+                "baseline_value": 0.0,
+                "delta": 0.190476,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 0.809524,
+                "baseline_value": 0.0,
+                "delta": 0.809524,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.105263,
+                "baseline_value": 0.0,
+                "delta": 1.105263,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 34.684189,
+      "cached_total_seconds": 16.517724,
+      "cache_only_total_seconds": 0.1924,
+      "uncached_forced_answer_forward_seconds": 18.290334,
+      "uncached_model_forward_seconds": 18.290334,
+      "cache_only_speedup_vs_baseline": 180.27125259875262,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_4",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 4,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 34.46039,
+      "cached_total_seconds": 14.444998,
+      "cache_only_total_seconds": 0.194529,
+      "uncached_forced_answer_forward_seconds": 18.223193,
+      "uncached_model_forward_seconds": 18.223193,
+      "cache_only_speedup_vs_baseline": 177.14782885842212,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 4.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 4.0
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_1",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 1,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 39.860976,
+      "cached_total_seconds": 14.608454,
+      "cache_only_total_seconds": 0.201539,
+      "uncached_forced_answer_forward_seconds": 18.627478,
+      "uncached_model_forward_seconds": 25.709978,
+      "cache_only_speedup_vs_baseline": 197.78294027458708,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 1.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 1.0
+      }
+    }
+  ],
+  "leaderboard_sort_metric": "cache_only_total_seconds",
+  "prefix_kv_comparisons": [],
+  "matrix_decision": {
+    "status": "promote",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "recommended": {
+      "id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_read_cache_sweep/cache_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 34.684189,
+      "cached_total_seconds": 16.517724,
+      "cache_only_total_seconds": 0.1924,
+      "uncached_forced_answer_forward_seconds": 18.290334,
+      "uncached_model_forward_seconds": 18.290334,
+      "cache_only_speedup_vs_baseline": 180.27125259875262,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    "checked_cell_count": 3,
+    "candidate_count": 3,
+    "failed_cells": [],
+    "unchecked_cells": [],
+    "recommendation_metric": "cache_only_total_seconds",
+    "blocking_reasons": []
+  },
+  "execution": {
+    "wall_clock_seconds": 184.46730228303932,
+    "cell_count": 3,
+    "max_workers": 1,
+    "shared_cache_refresh_barrier": true
+  },
+  "report_path": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/cache-profile-matrix-report.json",
+  "artifact_manifest": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/artifact-manifest.json"
+}

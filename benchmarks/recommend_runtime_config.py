@@ -244,6 +244,14 @@ def _cache_tuning_recommendation(
         }
 
     matrix_config = _mapping(matrix_report.get("config"))
+    configured_read_cache_sizes = matrix_config.get("eval_reps_shard_read_cache_sizes")
+    if isinstance(configured_read_cache_sizes, Sequence) and not isinstance(configured_read_cache_sizes, str):
+        read_cache_sweep_sizes = tuple(
+            value for value in (_int_or_none(item) for item in configured_read_cache_sizes) if value is not None
+        )
+    else:
+        read_cache_sweep_sizes = ()
+    read_cache_was_swept = len(set(read_cache_sweep_sizes)) > 1
     shard_hit_rate = _float_or_none(metrics.get("eval_reps_reader.shard_cache_hit_rate"))
     cross_shard_rate = _float_or_none(metrics.get("eval_reps_reader.cross_shard_read_rate"))
     records_per_read = _float_or_none(metrics.get("eval_reps_reader.records_per_read"))
@@ -265,6 +273,7 @@ def _cache_tuning_recommendation(
         and shard_hit_rate < CACHE_TUNING_THRESHOLDS["low_shard_cache_hit_rate"]
         and shard_count is not None
         and shard_count > read_cache_size
+        and not read_cache_was_swept
     ):
         suggested = min(shard_count, max(read_cache_size + 1, read_cache_size * 2))
         recommendations.append({
@@ -320,6 +329,11 @@ def _cache_tuning_recommendation(
         "source_run": source_run,
         "metrics": metrics,
         "thresholds": dict(CACHE_TUNING_THRESHOLDS),
+        "read_cache_sweep": {
+            "status": "swept" if read_cache_was_swept else "not_swept",
+            "sizes": read_cache_sweep_sizes,
+            "selected": read_cache_size,
+        },
         "recommendations": recommendations,
     }
 

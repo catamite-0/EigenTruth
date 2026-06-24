@@ -2612,6 +2612,16 @@ uncached forced-answer forward `18.150s`, cached total `14.603s`, and cache-only
 replay `0.194s`. The cache-tuning summary recommends increasing
 `--eval-reps-shard-read-cache-size` from `2` to `4` because shard cache hit rate
 is low on this small-batch run.
+The follow-up read-cache sweep baseline at
+`artifacts/smollm2_l8_read_cache_sweep_performance_baseline/` compares
+read-cache sizes `1,2,4` on the same layer/batch/token-budget setup and
+registers
+`performance_baseline:smollm2-l8-read-cache-sweep-performance-baseline:0.1`.
+It promotes read-cache size `2`: cache-only replay is `0.192s` versus `0.202s`
+for size `1` and `0.195s` for size `4`, with the same `truth_proj` AUROC
+`0.830`. Because the capacity was explicitly swept, runtime recommendation
+marks `cache_tuning.status=ok` and records `read_cache_sweep.status=swept`
+instead of emitting further read-cache heuristic advice.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

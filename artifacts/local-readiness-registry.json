@@ -1026,6 +1026,27 @@
       "name": "smollm2-l20-performance-baseline-verification",
       "path": "artifacts/smollm2_l20_performance_baseline/manifest-verification.json",
       "version": "0.9"
+    },
+    {
+      "artifact_type": "performance_baseline",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/artifact-manifest.json",
+        "performance_cache_tuning_status": "ok",
+        "performance_evidence_bundle_release_ready": true,
+        "performance_evidence_bundle_status": "promote",
+        "recommended_batch_size": 4,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+        "recommended_layer": -12,
+        "recommended_max_workers": 1,
+        "runtime_recommendation": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/runtime-recommendation.json",
+        "runtime_recommendation_status": "promote",
+        "status": "promote",
+        "workflow": "run_performance_baseline_workflow"
+      },
+      "name": "smollm2-l8-read-cache-sweep-performance-baseline",
+      "path": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/performance-baseline-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

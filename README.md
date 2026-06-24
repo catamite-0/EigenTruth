@@ -197,7 +197,9 @@ triplet, matrix, worker-sweep, and performance-baseline runners pass the setting
 through for cached/cache-only runs. Use
 `run_cache_profile_matrix.py --eval-reps-shard-read-cache-sizes 1,2,4` to
 promote this from a heuristic cache-tuning suggestion into a same-machine sweep;
-the recommended runtime then records the selected cell's read-cache size.
+the recommended runtime then records the selected cell's read-cache size and
+does not emit contradictory read-cache-size heuristic advice after a sweep has
+already compared the candidate capacities.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice
