@@ -3568,6 +3568,57 @@ def test_compare_route_baselines_accepts_process_local_json_cache(tmp_path):
     assert set(json_cache) == cached_keys
 
 
+def test_compare_route_baselines_skips_claims_load_when_evidence_gate_disabled(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="invalid-claims",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+    )
+    claims_path = tmp_path / "invalid-claims-claims.json"
+    claims_path.write_text("{not-json", encoding="utf-8")
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="invalid-claims-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    json_cache: dict[str, dict[str, Any]] = {}
+    ungated = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:invalid-claims-route:0.1",),
+        allow_unverified=True,
+        json_cache=json_cache,
+    )
+    gated = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:invalid-claims-route:0.1",),
+        allow_unverified=True,
+        require_non_oracle_evidence=True,
+    )
+
+    assert ungated["decision"]["status"] == "promote"
+    assert ungated["leaderboard"][0]["claims_path"] == str(claims_path)
+    assert ungated["leaderboard"][0]["evidence_audit"]["enabled"] is False
+    assert ungated["leaderboard"][0]["evidence_audit"]["claims_loaded"] is False
+    assert all(str(claims_path) not in key for key in json_cache)
+    assert gated["decision"]["status"] == "blocked"
+    assert any(
+        "evidence_audit: retrieval claims fixture could not be loaded" in reason
+        for reason in gated["decision"]["blocking_reasons"]
+    )
+
+
 def test_json_cache_invalidates_when_file_signature_changes(tmp_path):
     module = importlib.import_module("benchmarks.compare_route_baselines")
 

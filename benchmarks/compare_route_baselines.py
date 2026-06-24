@@ -196,11 +196,14 @@ def _route_baseline_row(
         manifest,
         artifact_name="retrieval_claims",
     )
-    claims_fixture, claims_error = (
-        ({}, "retrieval_claims artifact missing")
-        if claims_path is None
-        else _load_optional_json(claims_path, json_cache=json_cache)
-    )
+    claims_fixture: dict[str, Any] = {}
+    claims_error = None
+    if require_non_oracle_evidence:
+        claims_fixture, claims_error = (
+            ({}, "retrieval_claims artifact missing")
+            if claims_path is None
+            else _load_optional_json(claims_path, json_cache=json_cache)
+        )
     route_decision = _mapping(route_comparison.get("promotion_decision"))
     recommended_route = (
         route_decision.get("recommended_route")
