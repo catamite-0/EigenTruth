@@ -2,6 +2,7 @@
 
 import json
 
+import eigentruth.registry.provenance as registry_provenance
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
     ActionExecutionStatus,
@@ -287,6 +288,75 @@ def test_artifact_manifest_verification_resolves_sibling_artifacts(tmp_path):
 
     assert manifest["artifacts"]["inside_sampling"]["path"] == "../shared/inside-sampling-profile-comparison.json"
     assert load_and_verify_artifact_manifest(manifest_path).passed is True
+
+
+def test_artifact_manifest_verification_reuses_run_local_fingerprint_cache(tmp_path, monkeypatch):
+    data_path = tmp_path / "shared-result.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    child_dir = tmp_path / "child"
+    child_dir.mkdir()
+    child_manifest_path = child_dir / "artifact-manifest.json"
+    child_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"shared_result": data_path}, root=child_dir)),
+        encoding="utf-8",
+    )
+    root_manifest_path = tmp_path / "artifact-manifest.json"
+    root_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({
+            "child_manifest": child_manifest_path,
+            "direct_result": data_path,
+        }, root=tmp_path)),
+        encoding="utf-8",
+    )
+    original_sha256_file = registry_provenance._sha256_file
+    calls_by_path: dict[str, int] = {}
+
+    def counted_sha256_file(path):
+        key = str(path.resolve())
+        calls_by_path[key] = calls_by_path.get(key, 0) + 1
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(registry_provenance, "_sha256_file", counted_sha256_file)
+
+    verification = load_and_verify_artifact_manifest(root_manifest_path, recursive=True)
+
+    assert verification.passed is True
+    assert calls_by_path[str(data_path.resolve())] == 1
+    assert calls_by_path[str(child_manifest_path.resolve())] == 1
+
+
+def test_explicit_fingerprint_cache_invalidates_changed_file(tmp_path, monkeypatch):
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest({"result": data_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+    original_sha256_file = registry_provenance._sha256_file
+    call_count = 0
+
+    def counted_sha256_file(path):
+        nonlocal call_count
+        call_count += 1
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(registry_provenance, "_sha256_file", counted_sha256_file)
+    fingerprint_cache = {}
+
+    assert load_and_verify_artifact_manifest(
+        manifest_path,
+        fingerprint_cache=fingerprint_cache,
+    ).passed is True
+    data_path.write_text('{"score": 2}\n', encoding="utf-8")
+    drifted = load_and_verify_artifact_manifest(
+        manifest_path,
+        fingerprint_cache=fingerprint_cache,
+    )
+
+    assert drifted.passed is False
+    assert {failure.field for failure in drifted.failures} >= {"sha256"}
+    assert call_count == 2
 
 
 def test_product_trace_action_execution_summary_counts_results():

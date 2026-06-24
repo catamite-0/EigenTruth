@@ -7,7 +7,9 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, MutableMapping
+
+_FingerprintCache = MutableMapping[str, dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -79,24 +81,51 @@ class ArtifactManifestVerification:
         }
 
 
-def fingerprint_path(path: str | Path, *, root: str | Path | None = None) -> ArtifactFingerprint:
+def fingerprint_path(
+    path: str | Path,
+    *,
+    root: str | Path | None = None,
+    fingerprint_cache: _FingerprintCache | None = None,
+) -> ArtifactFingerprint:
     """Fingerprint one path with deterministic directory hashing."""
     artifact_path = Path(path)
     display_path = _display_path(artifact_path, root=root)
     if not artifact_path.exists():
-        return ArtifactFingerprint(path=display_path, exists=False, kind="missing")
+        cache_key = _fingerprint_cache_key(artifact_path, kind="missing")
+        if fingerprint_cache is not None and cache_key in fingerprint_cache:
+            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
+        fingerprint = ArtifactFingerprint(path=display_path, exists=False, kind="missing")
+        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        return fingerprint
     if artifact_path.is_file():
-        return ArtifactFingerprint(
+        stat = artifact_path.stat()
+        cache_key = _fingerprint_cache_key(
+            artifact_path,
+            kind="file",
+            signature=f"{stat.st_size}:{stat.st_mtime_ns}:{stat.st_ctime_ns}",
+        )
+        if fingerprint_cache is not None and cache_key in fingerprint_cache:
+            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
+        fingerprint = ArtifactFingerprint(
             path=display_path,
             exists=True,
             kind="file",
             sha256=_sha256_file(artifact_path),
-            size_bytes=artifact_path.stat().st_size,
+            size_bytes=stat.st_size,
             file_count=1,
         )
+        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        return fingerprint
     if artifact_path.is_dir():
+        cache_key = _fingerprint_cache_key(
+            artifact_path,
+            kind="directory",
+            signature=_directory_cache_signature(artifact_path),
+        )
+        if fingerprint_cache is not None and cache_key in fingerprint_cache:
+            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
         digest, size_bytes, file_count = _sha256_directory(artifact_path)
-        return ArtifactFingerprint(
+        fingerprint = ArtifactFingerprint(
             path=display_path,
             exists=True,
             kind="directory",
@@ -104,7 +133,14 @@ def fingerprint_path(path: str | Path, *, root: str | Path | None = None) -> Art
             size_bytes=size_bytes,
             file_count=file_count,
         )
-    return ArtifactFingerprint(path=display_path, exists=True, kind="other")
+        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        return fingerprint
+    cache_key = _fingerprint_cache_key(artifact_path, kind="other")
+    if fingerprint_cache is not None and cache_key in fingerprint_cache:
+        return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
+    fingerprint = ArtifactFingerprint(path=display_path, exists=True, kind="other")
+    _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+    return fingerprint
 
 
 def build_artifact_manifest(
@@ -112,10 +148,11 @@ def build_artifact_manifest(
     *,
     root: str | Path | None = None,
     metadata: Mapping[str, Any] | None = None,
+    fingerprint_cache: _FingerprintCache | None = None,
 ) -> dict[str, Any]:
     """Build a dependency-free manifest with content fingerprints."""
     records = {
-        str(name): fingerprint_path(path, root=root).to_dict()
+        str(name): fingerprint_path(path, root=root, fingerprint_cache=fingerprint_cache).to_dict()
         for name, path in sorted(artifacts.items())
         if path is not None
     }
@@ -139,9 +176,11 @@ def verify_artifact_manifest(
     root: str | Path | None = None,
     manifest_path: str | Path | None = None,
     recursive: bool = False,
+    fingerprint_cache: _FingerprintCache | None = None,
 ) -> ArtifactManifestVerification:
     """Verify current local artifact state against a saved manifest."""
     manifest_root = _verification_root(root=root, manifest_path=manifest_path)
+    cache = fingerprint_cache if fingerprint_cache is not None else {}
     failures: list[ArtifactManifestMismatch] = []
     nested: list[ArtifactManifestVerification] = []
     artifacts = manifest.get("artifacts", {})
@@ -155,10 +194,18 @@ def verify_artifact_manifest(
             continue
         expected_path = str(expected_record.get("path", ""))
         artifact_path = _resolve_manifest_path(expected_path, root=manifest_root)
-        actual_record = fingerprint_path(artifact_path, root=manifest_root).to_dict()
+        actual_record = fingerprint_path(
+            artifact_path,
+            root=manifest_root,
+            fingerprint_cache=cache,
+        ).to_dict()
         failures.extend(_compare_manifest_record(str(name), expected_record, actual_record))
         if recursive and _is_nested_manifest(str(name), expected_path) and Path(artifact_path).is_file():
-            nested.extend(_verify_nested_manifest(artifact_path, recursive=recursive))
+            nested.extend(_verify_nested_manifest(
+                artifact_path,
+                recursive=recursive,
+                fingerprint_cache=cache,
+            ))
     return ArtifactManifestVerification(
         manifest_path=None if manifest_path is None else str(manifest_path),
         checked=sum(1 for value in artifacts.values() if isinstance(value, Mapping)),
@@ -172,11 +219,65 @@ def load_and_verify_artifact_manifest(
     *,
     root: str | Path | None = None,
     recursive: bool = False,
+    fingerprint_cache: _FingerprintCache | None = None,
 ) -> ArtifactManifestVerification:
     """Load and verify a UTF-8 JSON artifact manifest."""
     path = Path(manifest_path)
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    return verify_artifact_manifest(manifest, root=root, manifest_path=path, recursive=recursive)
+    return verify_artifact_manifest(
+        manifest,
+        root=root,
+        manifest_path=path,
+        recursive=recursive,
+        fingerprint_cache=fingerprint_cache,
+    )
+
+
+def _fingerprint_cache_key(path: Path, *, kind: str, signature: str = "") -> str:
+    try:
+        resolved = str(path.resolve())
+    except OSError:
+        resolved = str(path.absolute())
+    return f"{kind}:{resolved}:{signature}"
+
+
+def _directory_cache_signature(path: Path) -> str:
+    digest = hashlib.sha256()
+    for child in sorted(item for item in path.rglob("*") if item.is_file()):
+        relative_path = child.relative_to(path).as_posix()
+        stat = child.stat()
+        digest.update(relative_path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(stat.st_size).encode("ascii"))
+        digest.update(b"\0")
+        digest.update(str(stat.st_mtime_ns).encode("ascii"))
+        digest.update(b"\0")
+        digest.update(str(stat.st_ctime_ns).encode("ascii"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _fingerprint_from_cache(path: str, cached: Mapping[str, Any]) -> ArtifactFingerprint:
+    return ArtifactFingerprint(
+        path=path,
+        exists=bool(cached["exists"]),
+        kind=str(cached["kind"]),
+        sha256=cached.get("sha256"),
+        size_bytes=cached.get("size_bytes"),
+        file_count=cached.get("file_count"),
+    )
+
+
+def _store_fingerprint_cache(
+    cache: _FingerprintCache | None,
+    key: str,
+    fingerprint: ArtifactFingerprint,
+) -> None:
+    if cache is None:
+        return
+    payload = fingerprint.to_dict()
+    payload.pop("path", None)
+    cache[key] = payload
 
 
 def _display_path(path: Path, *, root: str | Path | None) -> str:
@@ -229,9 +330,20 @@ def _is_nested_manifest(name: str, path: str) -> bool:
     return name.endswith("manifest") or Path(path).name == "artifact-manifest.json"
 
 
-def _verify_nested_manifest(path: Path, *, recursive: bool) -> tuple[ArtifactManifestVerification, ...]:
+def _verify_nested_manifest(
+    path: Path,
+    *,
+    recursive: bool,
+    fingerprint_cache: _FingerprintCache,
+) -> tuple[ArtifactManifestVerification, ...]:
     try:
-        return (load_and_verify_artifact_manifest(path, recursive=recursive),)
+        return (
+            load_and_verify_artifact_manifest(
+                path,
+                recursive=recursive,
+                fingerprint_cache=fingerprint_cache,
+            ),
+        )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         failure = ArtifactManifestMismatch(
             name="nested_manifest",

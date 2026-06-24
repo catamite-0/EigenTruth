@@ -2621,7 +2621,10 @@ eval-reps cache directories it adds one linear read pass after the run.
 
 Use `verify_artifact_manifest.py` to validate that local artifacts still match
 the saved fingerprints. Add `--recursive` for matrix reports so each cell's
-triplet manifest is verified as well:
+triplet manifest is verified as well. Recursive verification shares a
+run-local fingerprint cache, so repeated references to the same large score
+dump or cache artifact avoid duplicate content reads within that verification
+run:
 
 ```bash
 python benchmarks/verify_artifact_manifest.py \
