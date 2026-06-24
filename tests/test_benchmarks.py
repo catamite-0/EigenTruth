@@ -11560,6 +11560,16 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert manifest["metadata"]["trace_records_cache_written"] is True
     assert record.metadata["trace_records_cache_written"] is True
 
+    stale_schema_payload = dict(cache_payload)
+    stale_schema_payload["schema_version"] = 0
+    cache_path.write_text(json.dumps(stale_schema_payload), encoding="utf-8")
+    assert module._load_trace_records_cache(
+        cache_path,
+        trace_paths=(trace_a, trace_b),
+        policy=module.ProductRuntimeBudgetPolicy.from_mapping({"max_total_seconds": 0.30}),
+    ) is None
+    cache_path.write_text(json.dumps(cache_payload), encoding="utf-8")
+
     def fail_if_trace_json_is_scanned(path):
         raise AssertionError(f"trace record cache should avoid ProductTrace JSON scan: {path}")
 
@@ -12616,6 +12626,18 @@ def test_build_product_trace_corpus_reuses_source_cache_incrementally(tmp_path, 
     assert cache_payload["workflow"] == "product_trace_corpus_source_cache"
     assert cache_payload["summary"]["source_count"] == 2
 
+    cache_config = module.ProductTraceCorpusConfig(
+        trace_paths=(trace_a, trace_b),
+        output_dir=output_dir,
+        source_cache_path=source_cache_path,
+        require_runtime_trace=True,
+    )
+    stale_schema_payload = dict(cache_payload)
+    stale_schema_payload["schema_version"] = 0
+    source_cache_path.write_text(json.dumps(stale_schema_payload), encoding="utf-8")
+    assert module._load_source_cache(cache_config) is None
+    source_cache_path.write_text(json.dumps(cache_payload), encoding="utf-8")
+
     original_load_json = module._load_json
 
     def fail_if_json_is_reloaded(path):
@@ -13099,6 +13121,29 @@ def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeyp
     assert first["corpus"]["cache_written"] is True
     assert cache_payload["workflow"] == "product_trace_replay_workflow_corpus_cache"
     assert cache_payload["summary"]["accepted_count"] == 1
+
+    cache_config = module.ProductTraceReplayWorkflowConfig(
+        trace_paths=(trace_path,),
+        output_dir=output_dir,
+        candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+        corpus_cache_path=corpus_cache_path,
+        require_runtime_trace=True,
+    )
+    stale_schema_payload = dict(cache_payload)
+    stale_schema_payload["schema_version"] = 0
+    corpus_cache_path.write_text(json.dumps(stale_schema_payload), encoding="utf-8")
+    assert module._load_corpus_cache(cache_config) is None
+
+    missing_output_payload = json.loads(json.dumps(cache_payload))
+    missing_output_payload["outputs"].pop("runtime_pair_index")
+    corpus_cache_path.write_text(json.dumps(missing_output_payload), encoding="utf-8")
+    assert module._load_corpus_cache(cache_config) is None
+
+    stale_path_payload = json.loads(json.dumps(cache_payload))
+    stale_path_payload["outputs"]["report"]["path"] = str(tmp_path / "stale-corpus-report.json")
+    corpus_cache_path.write_text(json.dumps(stale_path_payload), encoding="utf-8")
+    assert module._load_corpus_cache(cache_config) is None
+    corpus_cache_path.write_text(json.dumps(cache_payload), encoding="utf-8")
 
     def fail_if_corpus_is_rebuilt(config):
         raise AssertionError("corpus cache should avoid rebuilding standardized traces")

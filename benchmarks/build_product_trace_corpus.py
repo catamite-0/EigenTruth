@@ -418,6 +418,8 @@ def _load_source_cache(config: ProductTraceCorpusConfig) -> dict[str, Any] | Non
         return None
     if not isinstance(payload, Mapping):
         return None
+    if payload.get("schema_version") != 1:
+        return None
     if payload.get("workflow") != "product_trace_corpus_source_cache":
         return None
     if _mapping(payload.get("config")).get("signature") != _source_cache_signature(config):

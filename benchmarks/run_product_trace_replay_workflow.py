@@ -600,16 +600,23 @@ def _load_corpus_cache(
         return None
     if not isinstance(payload, Mapping):
         return None
+    if payload.get("schema_version") != 1:
+        return None
     if payload.get("workflow") != "product_trace_replay_workflow_corpus_cache":
         return None
     if _mapping(payload.get("config")).get("signature") != _corpus_cache_signature(config):
         return None
     if not _corpus_sources_match(config, _sequence(payload.get("sources")), fingerprint_cache=fingerprint_cache):
         return None
+    child_paths = _corpus_child_paths(config)
     outputs = _mapping(payload.get("outputs"))
-    if not _corpus_outputs_match(outputs, fingerprint_cache=fingerprint_cache):
+    if not _corpus_outputs_match(
+        outputs,
+        child_paths=child_paths,
+        fingerprint_cache=fingerprint_cache,
+    ):
         return None
-    report_path = _corpus_child_paths(config)["report"]
+    report_path = child_paths["report"]
     try:
         corpus = json.loads(Path(report_path).read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
@@ -712,15 +719,18 @@ def _corpus_sources_match(
 def _corpus_outputs_match(
     outputs: Mapping[str, Any],
     *,
+    child_paths: Mapping[str, Path],
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> bool:
-    for record in outputs.values():
+    if set(outputs) != set(child_paths):
+        return False
+    for key, expected_path in child_paths.items():
+        record = outputs.get(key)
         if not isinstance(record, Mapping):
             return False
-        path = record.get("path")
-        if path is None:
+        if str(record.get("path")) != str(expected_path):
             return False
-        actual = fingerprint_path(str(path), fingerprint_cache=fingerprint_cache).to_dict()
+        actual = fingerprint_path(expected_path, fingerprint_cache=fingerprint_cache).to_dict()
         if not _fingerprint_matches(record, actual):
             return False
     return True

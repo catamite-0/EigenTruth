@@ -290,6 +290,8 @@ def _load_trace_records_cache(
         return None
     if not isinstance(payload, Mapping):
         return None
+    if payload.get("schema_version") != 1:
+        return None
     if payload.get("workflow") != "product_runtime_baseline_trace_records":
         return None
     if _mapping(payload.get("policy")).get("signature") != _policy_signature(policy):
