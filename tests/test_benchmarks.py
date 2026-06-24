@@ -4635,6 +4635,87 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     )
 
 
+def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    selector_report = _write_selector_replay_report(
+        tmp_path / "selector-replay",
+        status="promote",
+        recommended_candidate="default",
+        delta_mean=-0.02,
+        ratio_mean=0.80,
+    )
+    drift_report = _write_product_runtime_drift_report(
+        tmp_path / "runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
+    workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "trace-replay-workflow",
+        selector_report=selector_report,
+        drift_report=drift_report,
+        status="promote",
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        product_trace_replay_workflow_path=workflow_report,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["product_trace_replay_workflow_status"] == "promote"
+    assert payload["decision"]["selector_replay_status"] == "promote"
+    assert payload["decision"]["product_runtime_drift_status"] == "promote"
+    assert payload["config"]["product_trace_replay_workflow"] == str(workflow_report)
+    assert payload["config"]["selector_replay_report"] == str(selector_report)
+    assert payload["config"]["product_runtime_drift_report"] == str(drift_report)
+    assert payload["product_trace_replay_workflow_gate"]["gate"]["passed"] is True
+    assert payload["product_trace_replay_workflow_gate"]["selector_replay_report_source"] == "workflow"
+    assert payload["product_trace_replay_workflow_gate"]["product_runtime_drift_report_source"] == "workflow"
+    candidate = payload["release_candidate"]
+    assert candidate["product_trace_replay_workflow"]["report_path"] == str(workflow_report)
+    assert candidate["manifests"]["product_trace_replay_workflow_manifest"].endswith(
+        "trace-replay-workflow/artifact-manifest.json"
+    )
+    assert candidate["selector_replay"]["recommended_candidate"] == "default"
+    assert candidate["product_runtime_drift"]["summary"]["blocked_metric_count"] == 0
+
+
 def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -5770,6 +5851,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         status="promote",
         blocked_metric_count=0,
     )
+    product_trace_replay_workflow_report = _write_product_trace_replay_workflow_report(
+        tmp_path / "product-trace-replay-workflow",
+        selector_report=selector_replay_report,
+        drift_report=product_runtime_drift_report,
+        status="promote",
+    )
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
     original_sha256_file = provenance_module._sha256_file
     fingerprint_calls_by_path: dict[str, int] = {}
@@ -5799,8 +5886,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             max_performance_cached_total_seconds_ratio=1.5,
             max_performance_cache_only_total_seconds_ratio=1.5,
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
-            selector_replay_report_path=selector_replay_report,
-            product_runtime_drift_report_path=product_runtime_drift_report,
+            product_trace_replay_workflow_path=product_trace_replay_workflow_report,
             route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
             required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
             adapter_family_matrix_path=adapter_family_matrix_path,
@@ -5830,6 +5916,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "adapter_family_matrix_report",
         "performance_manifest",
         "product_runtime_drift_manifest",
+        "product_trace_replay_workflow_manifest",
         "readiness_manifest",
         "release_candidate_report",
         "required_route_manifest_1",
@@ -5842,6 +5929,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_performance_status"] == "promote"
     assert manifest["metadata"]["release_selector_replay_status"] == "promote"
     assert manifest["metadata"]["release_product_runtime_drift_status"] == "promote"
+    assert manifest["metadata"]["release_product_trace_replay_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
@@ -5908,6 +5996,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
     assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 2
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_trace_replay_workflow_report"] == str(
+        product_trace_replay_workflow_report
+    )
+    assert manifest["metadata"]["product_trace_replay_workflow_manifest"].endswith(
+        "product-trace-replay-workflow/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["product_trace_replay_workflow_selector_replay_report"] == str(
+        selector_replay_report
+    )
+    assert manifest["metadata"]["product_trace_replay_workflow_runtime_drift_report"] == str(
+        product_runtime_drift_report
+    )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
@@ -5927,8 +6027,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["config"]["max_performance_uncached_total_seconds_ratio"] == pytest.approx(1.3)
     assert payload["config"]["max_performance_score_dump_cache_jsonl_view_hit_rate_drop"] == pytest.approx(0.4)
-    assert payload["config"]["selector_replay_report"] == str(selector_replay_report)
-    assert payload["config"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
+    assert payload["config"]["selector_replay_report"] is None
+    assert payload["config"]["product_runtime_drift_report"] is None
+    assert payload["config"]["product_trace_replay_workflow"] == str(product_trace_replay_workflow_report)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
@@ -5947,6 +6048,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"][
         "min_performance_score_dump_cache_jsonl_view_hit_rate"
     ] == pytest.approx(0.5)
+    assert payload["release_candidate_comparison"]["config"]["product_trace_replay_workflow"] == str(
+        product_trace_replay_workflow_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
+        selector_replay_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["product_runtime_drift_report"] == str(
+        product_runtime_drift_report
+    )
     assert payload["release_candidate_comparison"]["performance_baseline_gate"][
         "performance_trend_gate"
     ]["passed"] is True
@@ -5980,6 +6090,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
+    assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
+    assert record.metadata["product_trace_replay_workflow_report"] == str(
+        product_trace_replay_workflow_report
+    )
+    assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == str(
+        product_runtime_drift_report
+    )
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
@@ -6859,6 +6976,68 @@ def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_co
                     "runner": "compare_product_runtime_baselines",
                     "status": status,
                     "blocked_metric_count": blocked_metric_count,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_product_trace_replay_workflow_report(
+    output_dir,
+    *,
+    selector_report,
+    drift_report,
+    status,
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "product-trace-replay-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    selector_report = Path(selector_report)
+    drift_report = Path(drift_report)
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "product_trace_replay_workflow",
+        "status": status,
+        "decision": {
+            "status": status,
+            "blocking_reasons": () if status == "promote" else ("product trace replay blocked",),
+            "recommended_selector_candidate": "default" if status == "promote" else None,
+        },
+        "selector_replay": {
+            "status": status,
+            "recommended_candidate": "default" if status == "promote" else None,
+        },
+        "runtime_drift": {
+            "status": status,
+            "blocked_metric_count": 0 if status == "promote" else 1,
+        },
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+            "selector_replay_report": os.path.relpath(selector_report, start=output_dir),
+            "runtime_drift_report": os.path.relpath(drift_report, start=output_dir),
+        },
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_trace_replay_workflow_report": report_path,
+                    "selector_replay_report": selector_report,
+                    "product_runtime_drift_report": drift_report,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_product_trace_replay_workflow",
+                    "status": status,
                 },
             ),
             indent=2,

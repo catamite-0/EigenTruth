@@ -1217,8 +1217,7 @@ python benchmarks/compare_release_candidates.py \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --performance-drift-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.8 \
-  --selector-replay-report artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json \
-  --product-runtime-drift-report artifacts/product-runtime-drift.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -1293,6 +1292,14 @@ carries the recommended selector plus observed selected-vs-original runtime
 delta metrics into the release candidate. This makes request-time auto-profile
 changes part of the same fail-closed release evidence instead of a separate
 benchmark note.
+Add `--product-trace-replay-workflow` when selector replay and product-runtime
+drift were produced by `run_product_trace_replay_workflow.py`. The release gate
+verifies the workflow manifest, requires the workflow itself to promote, and
+uses its child selector-replay and runtime-drift report paths unless explicit
+`--selector-replay-report` or `--product-runtime-drift-report` values are also
+provided. This is the safer default for release promotion because the release
+candidate consumes the same raw-trace handoff artifact that generated the child
+reports.
 Add `--product-runtime-drift-report` when the final candidate must also prove
 that a fresh `ProductTrace` runtime baseline has not drifted from a registered
 or file-based product runtime baseline. The gate verifies the drift report
@@ -1329,8 +1336,9 @@ without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
-`--required-route-baseline-key`, `--selector-replay-report`, and
-`--product-runtime-drift-report` options and includes those route/selector/drift manifests in the final release-candidate manifest
+`--required-route-baseline-key`, `--product-trace-replay-workflow`,
+`--selector-replay-report`, and `--product-runtime-drift-report` options and
+includes those route/workflow/selector/drift manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`.
 
@@ -1344,7 +1352,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
-  --product-runtime-drift-report artifacts/product-runtime-drift.json \
+  --product-trace-replay-workflow artifacts/product-trace-replay-workflow/product-trace-replay-workflow.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1667,8 +1675,8 @@ promoted. It also requires
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
 retrieval-structured-QA audit route with its own quality and runtime budget.
 The final manifest fingerprints the release-candidate report plus readiness,
-route, performance, selector replay, product-runtime-drift, adapter-family, and
-required retrieval-audit manifests; the
+route, performance, product-trace-replay, selector replay, product-runtime-drift,
+adapter-family, and required retrieval-audit manifests; the
 release comparison verifies that the performance baseline recommendation matches
 the selected runtime: layer `-12`, batch size `8`, `outputs` hidden-state
 capture, no prefix-KV cache, worker count `1`, `truth_proj` AUROC `0.682`, and
@@ -1676,9 +1684,8 @@ the quality-balanced `top_0p4` triggered `adaptive_selfcheck` budget. The
 selected product route gates `retrieval_use_rate` at `0.0` and
 `mean_attempted_route_count` at `1.1`; retrieval is required as audit capability
 evidence, not as the default low-latency route. Version 1.5 adds promoted
-selector replay from `artifacts/smollm2_product_trace_replay_workflow` and a
-promoted runtime-drift report at
-`artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json`.
+selector replay and runtime-drift evidence through
+`artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json`.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1692,8 +1699,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
-  --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
-  --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json \
+  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \

@@ -32,6 +32,7 @@ def compare_release_candidates(
     performance_baseline_key: str | None = None,
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
+    product_trace_replay_workflow_path: str | Path | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
     require_performance_score_dump_cache: bool = False,
@@ -153,6 +154,27 @@ def compare_release_candidates(
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
+    product_trace_replay_workflow = _product_trace_replay_workflow_gate(
+        product_trace_replay_workflow_path=product_trace_replay_workflow_path,
+        selector_replay_report_path=selector_replay_report_path,
+        product_runtime_drift_report_path=product_runtime_drift_report_path,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        fingerprint_cache=cache,
+    )
+    if product_trace_replay_workflow is not None:
+        if selector_replay_report_path is None and product_trace_replay_workflow.get(
+            "selector_replay_report_path"
+        ):
+            selector_replay_report_path = str(
+                product_trace_replay_workflow["selector_replay_report_path"]
+            )
+        if product_runtime_drift_report_path is None and product_trace_replay_workflow.get(
+            "product_runtime_drift_report_path"
+        ):
+            product_runtime_drift_report_path = str(
+                product_trace_replay_workflow["product_runtime_drift_report_path"]
+            )
     readiness = compare_readiness_baselines(
         registry_path=readiness_registry_path,
         baseline_keys=readiness_baseline_keys,
@@ -253,6 +275,7 @@ def compare_release_candidates(
         performance,
         adapter_family,
         required_routes,
+        product_trace_replay_workflow,
         selector_replay,
         product_runtime_drift,
     )
@@ -262,6 +285,7 @@ def compare_release_candidates(
             performance,
             adapter_family,
             required_routes,
+            product_trace_replay_workflow,
             selector_replay,
             product_runtime_drift,
         )
@@ -286,6 +310,11 @@ def compare_release_candidates(
                 None
                 if product_runtime_drift_report_path is None
                 else str(product_runtime_drift_report_path)
+            ),
+            "product_trace_replay_workflow": (
+                None
+                if product_trace_replay_workflow_path is None
+                else str(product_trace_replay_workflow_path)
             ),
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
@@ -352,6 +381,7 @@ def compare_release_candidates(
         "route_baseline_comparison": route,
         "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
+        "product_trace_replay_workflow_gate": product_trace_replay_workflow,
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
         "adapter_family_matrix_gate": adapter_family,
@@ -480,6 +510,7 @@ def _decision(
     performance: Mapping[str, Any] | None = None,
     adapter_family: Mapping[str, Any] | None = None,
     required_routes: Mapping[str, Any] | None = None,
+    product_trace_replay_workflow: Mapping[str, Any] | None = None,
     selector_replay: Mapping[str, Any] | None = None,
     product_runtime_drift: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -493,6 +524,12 @@ def _decision(
     adapter_family_status = None if adapter_family is None else adapter_family.get("status")
     required_routes_gate = _mapping(None if required_routes is None else required_routes.get("gate"))
     required_route_status = None if required_routes is None else required_routes.get("status")
+    product_trace_replay_workflow_gate = _mapping(
+        None if product_trace_replay_workflow is None else product_trace_replay_workflow.get("gate")
+    )
+    product_trace_replay_workflow_status = (
+        None if product_trace_replay_workflow is None else product_trace_replay_workflow.get("status")
+    )
     selector_replay_gate = _mapping(None if selector_replay is None else selector_replay.get("gate"))
     selector_replay_status = None if selector_replay is None else selector_replay.get("status")
     product_runtime_drift_gate = _mapping(
@@ -532,6 +569,15 @@ def _decision(
             "status": required_route_status,
             "reasons": list(required_routes_gate.get("blocking_reasons", ())),
         })
+    if (
+        product_trace_replay_workflow is not None
+        and product_trace_replay_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "product_trace_replay_workflow",
+            "status": product_trace_replay_workflow_status,
+            "reasons": list(product_trace_replay_workflow_gate.get("blocking_reasons", ())),
+        })
     if selector_replay is not None and selector_replay_gate.get("passed") is not True:
         blocking_reasons.append({
             "gate": "selector_replay",
@@ -560,6 +606,7 @@ def _decision(
         "performance_status": performance_status,
         "adapter_family_status": adapter_family_status,
         "required_route_baseline_status": required_route_status,
+        "product_trace_replay_workflow_status": product_trace_replay_workflow_status,
         "selector_replay_status": selector_replay_status,
         "product_runtime_drift_status": product_runtime_drift_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
@@ -905,6 +952,143 @@ def _performance_baseline_gate(
         },
         "gate": gate,
     }
+
+
+def _product_trace_replay_workflow_gate(
+    *,
+    product_trace_replay_workflow_path: str | Path | None,
+    selector_replay_report_path: str | Path | None,
+    product_runtime_drift_report_path: str | Path | None,
+    recursive: bool,
+    allow_unverified: bool,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if product_trace_replay_workflow_path is None:
+        return None
+    report_path = Path(product_trace_replay_workflow_path)
+    report, report_error = _load_optional_json(report_path)
+    manifest_path = _product_trace_replay_workflow_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        artifact_name="product_trace_replay_workflow_manifest",
+        fingerprint_cache=fingerprint_cache,
+    )
+    workflow_selector_path = _product_trace_replay_workflow_child_path(
+        report,
+        report_path=report_path,
+        child_path_key="selector_replay_report",
+    )
+    workflow_drift_path = _product_trace_replay_workflow_child_path(
+        report,
+        report_path=report_path,
+        child_path_key="runtime_drift_report",
+    )
+    resolved_selector_path = (
+        Path(selector_replay_report_path)
+        if selector_replay_report_path is not None
+        else workflow_selector_path
+    )
+    resolved_drift_path = (
+        Path(product_runtime_drift_report_path)
+        if product_runtime_drift_report_path is not None
+        else workflow_drift_path
+    )
+    gate = _product_trace_replay_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        selector_replay_report_path=resolved_selector_path,
+        product_runtime_drift_report_path=resolved_drift_path,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "selector_replay_report_path": (
+            None if resolved_selector_path is None else str(resolved_selector_path)
+        ),
+        "selector_replay_report_source": (
+            None
+            if resolved_selector_path is None
+            else ("explicit" if selector_replay_report_path is not None else "workflow")
+        ),
+        "product_runtime_drift_report_path": (
+            None if resolved_drift_path is None else str(resolved_drift_path)
+        ),
+        "product_runtime_drift_report_source": (
+            None
+            if resolved_drift_path is None
+            else ("explicit" if product_runtime_drift_report_path is not None else "workflow")
+        ),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _product_trace_replay_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    selector_replay_report_path: Path | None,
+    product_runtime_drift_report_path: Path | None,
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"product trace replay workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("product trace replay workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("product trace replay workflow manifest verification failed")
+    if report.get("workflow") != "product_trace_replay_workflow":
+        failures.append(
+            f"product trace replay workflow is {report.get('workflow')!r}, "
+            "expected 'product_trace_replay_workflow'"
+        )
+    if report.get("status") != "promote":
+        failures.append(
+            f"product trace replay workflow status is {report.get('status')!r}, expected 'promote'"
+        )
+    if selector_replay_report_path is None:
+        failures.append("product trace replay workflow selector replay report is missing")
+    if product_runtime_drift_report_path is None:
+        failures.append("product trace replay workflow runtime drift report is missing")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _product_trace_replay_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _product_trace_replay_workflow_child_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+    child_path_key: str,
+) -> Path | None:
+    raw_path = _nested(report, "paths", child_path_key)
+    if raw_path is None:
+        return None
+    path = _resolve_path(raw_path, base_path=report_path)
+    return path.resolve() if path.exists() else path
 
 
 def _selector_replay_gate(
@@ -1598,6 +1782,7 @@ def _candidate_with_gates(
     performance: Mapping[str, Any] | None,
     adapter_family: Mapping[str, Any] | None,
     required_routes: Mapping[str, Any] | None,
+    product_trace_replay_workflow: Mapping[str, Any] | None,
     selector_replay: Mapping[str, Any] | None,
     product_runtime_drift: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
@@ -1634,6 +1819,21 @@ def _candidate_with_gates(
         }
         for idx, manifest_path in enumerate(required_manifest_paths, start=1):
             manifests[f"required_route_manifest_{idx}"] = manifest_path
+    if product_trace_replay_workflow is not None:
+        payload["product_trace_replay_workflow"] = {
+            "report_path": product_trace_replay_workflow.get("report_path"),
+            "manifest_path": product_trace_replay_workflow.get("manifest_path"),
+            "report_status": product_trace_replay_workflow.get("report_status"),
+            "selector_replay_report_path": product_trace_replay_workflow.get(
+                "selector_replay_report_path"
+            ),
+            "product_runtime_drift_report_path": product_trace_replay_workflow.get(
+                "product_runtime_drift_report_path"
+            ),
+        }
+        manifests["product_trace_replay_workflow_manifest"] = product_trace_replay_workflow.get(
+            "manifest_path"
+        )
     if selector_replay is not None:
         payload["selector_replay"] = {
             "report_path": selector_replay.get("report_path"),
@@ -1803,6 +2003,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=args.selector_replay_report,
         product_runtime_drift_report_path=args.product_runtime_drift_report,
+        product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
@@ -1908,6 +2109,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--product-runtime-drift-report", default=None,
                         help="optional product runtime drift report that must promote and verify")
+    parser.add_argument("--product-trace-replay-workflow", default=None,
+                        help="optional product trace replay workflow report; when supplied, its selector "
+                             "replay and runtime-drift child reports are used unless explicit child report "
+                             "paths are provided")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],
