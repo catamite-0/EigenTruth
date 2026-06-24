@@ -1,9 +1,10 @@
 """Build a registry-ready performance baseline bundle.
 
 This workflow is a thin orchestration layer over the existing performance
-helpers. It runs or reuses cache-profile evidence, optional worker-count and
-INSIDE sampling evidence, then writes one runtime recommendation and artifact
-manifest that can be registered as the product performance baseline.
+helpers. It runs or reuses cache-profile evidence, optional worker-count,
+INSIDE sampling, trigger-budget, and score-fusion evidence, then writes one
+runtime recommendation and artifact manifest that can be registered as the
+product performance baseline.
 """
 
 from __future__ import annotations
@@ -98,6 +99,7 @@ class PerformanceBaselineWorkflowConfig:
     run_inside_sampling: bool = False
     inside_trigger_budget_sweep_report_path: Path | None = None
     run_inside_trigger_budget_sweep: bool = False
+    score_ensemble_report_path: Path | None = None
     inside_trigger_budget_policy: str = "quality_balanced"
     inside_samples: int = 5
     inside_batch_size: int = 1
@@ -146,6 +148,7 @@ class PerformanceBaselineWorkflowConfig:
             "worker_sweep_report_path",
             "inside_sampling_report_path",
             "inside_trigger_budget_sweep_report_path",
+            "score_ensemble_report_path",
             "inside_reference_report_path",
             "verification_report_path",
         ):
@@ -221,17 +224,20 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
     worker_sweep_report, worker_sweep_report_path = _worker_sweep_report(config)
     inside_sampling_report, inside_sampling_report_path = _inside_sampling_report(config)
     trigger_sweep_report, trigger_sweep_report_path = _inside_trigger_budget_sweep_report(config)
+    score_ensemble_report, score_ensemble_report_path = _score_ensemble_report(config)
 
     runtime_recommendation = build_runtime_recommendation(
         matrix_report,
         worker_sweep_report=worker_sweep_report,
         inside_sampling_report=inside_sampling_report,
         inside_trigger_budget_sweep_report=trigger_sweep_report,
+        score_ensemble_report=score_ensemble_report,
         inside_trigger_budget_policy=config.inside_trigger_budget_policy,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=trigger_sweep_report_path,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
     score_dump_cache_evidence = _score_dump_cache_evidence_summary(
         matrix_report=matrix_report,
@@ -255,6 +261,8 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         inside_sampling_report_path=inside_sampling_report_path,
         trigger_sweep_report=trigger_sweep_report,
         trigger_sweep_report_path=trigger_sweep_report_path,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
     artifact_manifest_summary = planned_artifact_manifest_summary(
         artifacts,
@@ -276,6 +284,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
             "inside_trigger_budget_sweep_report": (
                 None if trigger_sweep_report_path is None else str(trigger_sweep_report_path)
             ),
+            "score_ensemble_report": None
+            if score_ensemble_report_path is None
+            else str(score_ensemble_report_path),
             "manifest_verification": (
                 str(config.resolved_verification_report_path) if config.verify_manifest else None
             ),
@@ -289,6 +300,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
             "inside_trigger_budget_sweep_report_reused": (
                 config.inside_trigger_budget_sweep_report_path is not None
             ),
+            "score_ensemble_report_reused": config.score_ensemble_report_path is not None,
         },
         "artifact_manifest_summary": artifact_manifest_summary,
     }
@@ -318,6 +330,8 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         inside_sampling_report_path=inside_sampling_report_path,
         trigger_sweep_report=trigger_sweep_report,
         trigger_sweep_report_path=trigger_sweep_report_path,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_ensemble_report_path,
         report=report,
         runtime_config=runtime_config,
         verification_context=verification_context,
@@ -494,6 +508,14 @@ def _inside_trigger_budget_sweep_report(
     return (None if report.get("dry_run") else _load_json(path)), path
 
 
+def _score_ensemble_report(
+    config: PerformanceBaselineWorkflowConfig,
+) -> tuple[dict[str, Any] | None, Path | None]:
+    if config.score_ensemble_report_path is None:
+        return None, None
+    return _load_json(config.score_ensemble_report_path), config.score_ensemble_report_path
+
+
 def _inside_sampling_config(
     config: PerformanceBaselineWorkflowConfig,
     *,
@@ -581,6 +603,8 @@ def _write_artifact_manifest(
     inside_sampling_report_path: Path | None,
     trigger_sweep_report: Mapping[str, Any] | None,
     trigger_sweep_report_path: Path | None,
+    score_ensemble_report: Mapping[str, Any] | None,
+    score_ensemble_report_path: Path | None,
     report: Mapping[str, Any],
     runtime_config: Mapping[str, Any],
     verification_context: ArtifactVerificationContext,
@@ -595,7 +619,11 @@ def _write_artifact_manifest(
         inside_sampling_report_path=inside_sampling_report_path,
         trigger_sweep_report=trigger_sweep_report,
         trigger_sweep_report_path=trigger_sweep_report_path,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
+    recommendation = _mapping(_mapping(report.get("runtime_recommendation")).get("recommendation"))
+    score_fusion = _mapping(recommendation.get("score_fusion"))
     manifest = verification_context.build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -621,6 +649,15 @@ def _write_artifact_manifest(
             "worker_sweep_enabled": bool(worker_sweep_report_path),
             "inside_sampling_enabled": bool(inside_sampling_report_path),
             "inside_trigger_budget_sweep_enabled": bool(trigger_sweep_report_path),
+            "score_ensemble_report": None
+            if score_ensemble_report_path is None
+            else str(score_ensemble_report_path),
+            "score_ensemble_report_enabled": bool(score_ensemble_report_path),
+            "recommended_score_fusion": score_fusion or None,
+            "recommended_score_fusion_status": score_fusion.get("status"),
+            "recommended_score_fusion_signal": score_fusion.get("signal_name"),
+            "recommended_score_fusion_auroc": score_fusion.get("auroc"),
+            "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
             "recommended_cell": dict(report.get("decision") or {}).get("recommended_cell"),
             "recommended_layer": dict(report.get("decision") or {}).get("recommended_layer"),
@@ -649,6 +686,8 @@ def _artifact_paths(
     inside_sampling_report_path: Path | None,
     trigger_sweep_report: Mapping[str, Any] | None,
     trigger_sweep_report_path: Path | None,
+    score_ensemble_report: Mapping[str, Any] | None,
+    score_ensemble_report_path: Path | None,
 ) -> dict[str, str | Path | None]:
     return {
         "performance_baseline_report": config.resolved_report_path,
@@ -665,6 +704,10 @@ def _artifact_paths(
         "inside_trigger_budget_sweep_manifest": (
             None if trigger_sweep_report is None else trigger_sweep_report.get("artifact_manifest")
         ),
+        "score_ensemble_report": score_ensemble_report_path,
+        "score_fusion_artifact": None
+        if score_ensemble_report is None
+        else _nested(score_ensemble_report, "runs", 0, "best_fusion_artifact", "path"),
     }
 
 
@@ -684,6 +727,7 @@ def _performance_evidence_bundle_summary(
     cache_tuning = _mapping(recommendation.get("cache_tuning"))
     inside_sampling = _mapping(recommendation.get("inside_sampling"))
     inside_trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    score_fusion = _mapping(recommendation.get("score_fusion"))
     missing_count = _int_or_zero(artifact_manifest_summary.get("missing_count"))
     release_ready = status == "promote" and recommendation_status == "promote" and missing_count == 0
     uncached_total = _float_or_none(recommendation.get("uncached_total_seconds"))
@@ -729,6 +773,10 @@ def _performance_evidence_bundle_summary(
             "best_quality_signal": best_quality.get("name"),
             "best_quality_auroc": best_quality.get("auroc"),
             "quality_signal_count": evidence.get("quality_signal_count"),
+            "score_fusion_status": score_fusion.get("status"),
+            "score_fusion_signal": score_fusion.get("signal_name"),
+            "score_fusion_auroc": score_fusion.get("auroc"),
+            "score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
             "cache_tuning_status": cache_tuning.get("status"),
             "inside_sampling_run": inside_sampling.get("recommended_run"),
             "inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
@@ -759,6 +807,11 @@ def _performance_evidence_bundle_summary(
             "inside_trigger_budget_policy": evidence.get("inside_trigger_budget_policy"),
             "inside_trigger_budget_sweep_status": evidence.get("inside_trigger_budget_sweep_status"),
             "inside_trigger_budget_gate_passed": evidence.get("inside_trigger_budget_gate_passed"),
+            "score_ensemble_report": evidence.get("score_ensemble_report"),
+            "score_fusion_status": evidence.get("score_fusion_status"),
+            "score_fusion_signal": evidence.get("score_fusion_signal"),
+            "score_fusion_auroc": evidence.get("score_fusion_auroc"),
+            "score_fusion_conformal_gate_passed": evidence.get("score_fusion_conformal_gate_passed"),
         },
         "score_dump_cache": dict(score_dump_cache_evidence),
         "artifacts": {
@@ -780,6 +833,8 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
     manifest_verification = _mapping(report.get("manifest_verification"))
     verification_payload = _mapping(manifest_verification.get("verification"))
     verification_report = manifest_verification.get("path")
+    recommendation = _mapping(_mapping(report.get("runtime_recommendation")).get("recommendation"))
+    score_fusion = _mapping(recommendation.get("score_fusion"))
     registry.record_performance_baseline(
         name=str(config.name),
         path=config.resolved_report_path,
@@ -797,6 +852,11 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_best_quality_signal": dict(report.get("decision") or {}).get(
                 "recommended_best_quality_signal"
             ),
+            "recommended_score_fusion": score_fusion or None,
+            "recommended_score_fusion_status": score_fusion.get("status"),
+            "recommended_score_fusion_signal": score_fusion.get("signal_name"),
+            "recommended_score_fusion_auroc": score_fusion.get("auroc"),
+            "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
             "performance_evidence_bundle_status": _nested(
                 report,
                 "performance_evidence_bundle",
@@ -1069,6 +1129,9 @@ def _config_payload(
         "worker_counts": tuple(config.worker_counts),
         "run_inside_sampling": config.run_inside_sampling,
         "run_inside_trigger_budget_sweep": config.run_inside_trigger_budget_sweep,
+        "score_ensemble_report": None
+        if config.score_ensemble_report_path is None
+        else str(config.score_ensemble_report_path),
         "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
         "inside_trigger_signal": config.inside_trigger_signal,
         "inside_trigger_budgets": [
@@ -1103,9 +1166,16 @@ def _bool_value(value: Any) -> bool:
     return bool(value)
 
 
-def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:
+def _nested(mapping: Mapping[str, Any], *keys: str | int) -> Any:
     current: Any = mapping
     for key in keys:
+        if isinstance(key, int):
+            if not isinstance(current, Sequence) or isinstance(current, str):
+                return None
+            if key < 0 or key >= len(current):
+                return None
+            current = current[key]
+            continue
         if not isinstance(current, Mapping):
             return None
         current = current.get(key)
@@ -1220,6 +1290,7 @@ def _config_from_args(args: argparse.Namespace) -> PerformanceBaselineWorkflowCo
             Path(args.inside_reference_report) if args.inside_reference_report else None
         ),
         derive_trigger_from_max_budget=args.derive_trigger_from_max_budget,
+        score_ensemble_report_path=Path(args.score_ensemble_report) if args.score_ensemble_report else None,
         refresh_shared_caches=args.refresh_shared_caches,
         clean=args.clean,
         dry_run=args.dry_run,
@@ -1280,6 +1351,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--run-inside-sampling", action="store_true")
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None)
     parser.add_argument("--run-inside-trigger-budget-sweep", action="store_true")
+    parser.add_argument("--score-ensemble-report", default=None,
+                        help="optional eval_score_ensemble.py report for runtime recommendation evidence")
     parser.add_argument(
         "--inside-trigger-budget-policy",
         default="quality_balanced",

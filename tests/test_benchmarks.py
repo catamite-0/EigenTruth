@@ -11809,6 +11809,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     result_path = tmp_path / "cache-only-result.json"
     matrix_manifest_path = tmp_path / "matrix-artifact-manifest.json"
     matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
+    score_ensemble_report_path = tmp_path / "score-ensemble-report.json"
+    fusion_artifact_path = tmp_path / "score-fusion-artifact.json"
     workflow_report_path = tmp_path / "workflow.json"
     verification_report_path = tmp_path / "manifest-verification.json"
     registry_path = tmp_path / "registry.json"
@@ -11822,6 +11824,45 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         encoding="utf-8",
     )
     matrix_manifest_path.write_text("{}", encoding="utf-8")
+    fusion_artifact_path.write_text(
+        json.dumps({"artifact_type": "rank_score_fusion", "method": "max_rank"}),
+        encoding="utf-8",
+    )
+    score_ensemble_report_path.write_text(
+        json.dumps({
+            "best_alpha": 0.2,
+            "runs": [
+                {
+                    "name": "smollm2-l12",
+                    "config": {"model": "HuggingFaceTB/SmolLM2-135M-Instruct", "layer": -12},
+                    "best_ensemble_at_alpha": {
+                        "name": "max_rank",
+                        "auroc": 0.96,
+                        "false_alarm": 0.18,
+                        "detection": 0.88,
+                    },
+                    "ensemble_results": {
+                        "max_rank": {
+                            "alphas": {
+                                "0.2": {
+                                    "alpha": 0.2,
+                                    "false_alarm": 0.18,
+                                    "coverage": 0.82,
+                                    "detection": 0.88,
+                                    "pass": True,
+                                }
+                            }
+                        }
+                    },
+                    "best_fusion_artifact": {
+                        "path": str(fusion_artifact_path),
+                        "method": "max_rank",
+                    },
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
     matrix_report_path.write_text(
         json.dumps({
             "artifact_manifest": str(matrix_manifest_path),
@@ -11900,6 +11941,7 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
             name="qwen05-local-performance",
             version="0.1",
             matrix_report_path=matrix_report_path,
+            score_ensemble_report_path=score_ensemble_report_path,
             verify_manifest=True,
             verification_report_path=verification_report_path,
         )
@@ -11915,25 +11957,34 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert payload["decision"]["recommended_cell"] == "layer_m12_batch_2_capture_outputs"
     assert payload["decision"]["recommended_layer"] == -12
     assert payload["decision"]["recommended_batch_size"] == 2
-    assert payload["decision"]["recommended_best_quality_signal"] == "subspace_resid"
+    assert payload["decision"]["recommended_best_quality_signal"] == "score_fusion_max_rank"
     assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
-        "name": "subspace_resid",
-        "auroc": pytest.approx(0.94),
+        "name": "score_fusion_max_rank",
+        "auroc": pytest.approx(0.96),
     }
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["status"] == "promote"
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["false_alarm"] == pytest.approx(0.18)
     assert payload["performance_evidence_bundle"]["status"] == "promote"
     assert payload["performance_evidence_bundle"]["release_ready"] is True
     assert payload["performance_evidence_bundle"]["recommendation"]["cell_id"] == (
         "layer_m12_batch_2_capture_outputs"
     )
     assert payload["performance_evidence_bundle"]["recommendation"]["best_quality_signal"] == (
-        "subspace_resid"
+        "score_fusion_max_rank"
     )
+    assert payload["performance_evidence_bundle"]["recommendation"]["score_fusion_status"] == "promote"
+    assert payload["performance_evidence_bundle"]["recommendation"]["score_fusion_auroc"] == pytest.approx(0.96)
+    assert payload["performance_evidence_bundle"]["evidence"]["score_ensemble_report"] == str(
+        score_ensemble_report_path
+    )
+    assert payload["performance_evidence_bundle"]["evidence"]["score_fusion_conformal_gate_passed"] is True
     assert payload["performance_evidence_bundle"]["cost"]["cache_only_total_seconds"] == pytest.approx(0.2)
     assert payload["config"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
     assert payload["config"]["layers"] == (-12,)
     assert payload["config"]["batch_sizes"] == (2, 4)
     assert payload["config"]["max_batch_token_budgets"] == (0, 128)
     assert payload["config"]["eval_reps_shard_read_cache_size"] == 2
+    assert payload["config"]["score_ensemble_report"] == str(score_ensemble_report_path)
     assert payload["config"]["offline"] is False
     assert payload["performance_evidence_bundle"]["runtime"]["model"] == (
         "HuggingFaceTB/SmolLM2-135M-Instruct"
@@ -11950,6 +12001,7 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert payload["performance_evidence_bundle"]["score_dump_cache"]["sources"][0]["source"] == "matrix_report"
     assert payload["performance_evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
+    assert payload["paths"]["score_ensemble_report"] == str(score_ensemble_report_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
     assert payload["manifest_verification"]["verification"]["passed"] is True
     assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
@@ -11960,6 +12012,9 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"
     assert manifest["metadata"]["runner"] == "run_performance_baseline_workflow"
     assert manifest["metadata"]["matrix_report_reused"] is True
+    assert manifest["metadata"]["score_ensemble_report_enabled"] is True
+    assert manifest["metadata"]["recommended_score_fusion_status"] == "promote"
+    assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
     assert manifest["metadata"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
     assert manifest["metadata"]["layers"] == [-12]
     assert manifest["metadata"]["max_batch_token_budgets"] == [0, 128]
@@ -11967,10 +12022,14 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert manifest["artifacts"]["performance_baseline_report"]["exists"] is True
     assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
     assert manifest["artifacts"]["matrix_report"]["exists"] is True
+    assert manifest["artifacts"]["score_ensemble_report"]["exists"] is True
+    assert manifest["artifacts"]["score_fusion_artifact"]["exists"] is True
     assert record.artifact_type == "performance_baseline"
     assert record.path == str(workflow_report_path)
     assert record.metadata["runtime_recommendation_status"] == "promote"
-    assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
+    assert record.metadata["recommended_best_quality_signal"] == "score_fusion_max_rank"
+    assert record.metadata["recommended_score_fusion_status"] == "promote"
+    assert record.metadata["recommended_score_fusion_conformal_gate_passed"] is True
     assert record.metadata["performance_evidence_bundle_status"] == "promote"
     assert record.metadata["performance_evidence_bundle_release_ready"] is True
     assert record.metadata["manifest_verified"] is True
@@ -11983,6 +12042,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
     assert verification_record.metadata["passed"] is True
     assert fingerprint_calls_by_path[str(matrix_report_path.resolve())] == 1
+    assert fingerprint_calls_by_path[str(score_ensemble_report_path.resolve())] == 1
+    assert fingerprint_calls_by_path[str(fusion_artifact_path.resolve())] == 1
     assert fingerprint_calls_by_path[str(Path(payload["paths"]["runtime_recommendation"]).resolve())] == 1
 
 

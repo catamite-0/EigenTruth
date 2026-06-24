@@ -2451,11 +2451,11 @@ worker-sweep, sampling-profile, or trigger-budget-sweep decision.
 
 Use `run_performance_baseline_workflow.py` when the handoff itself should be a
 registered, fingerprinted artifact bundle. It can run the cache-profile matrix
-directly or reuse existing matrix/worker/INSIDE reports, then writes
+directly or reuse existing matrix/worker/INSIDE/score-ensemble reports, then writes
 `performance-baseline-workflow.json`, `runtime-recommendation.json`, an artifact
 manifest, a top-level `performance_evidence_bundle` summary with recommendation
-cost ratios / evidence status / artifact readiness / score-dump cache evidence,
-and an optional
+cost ratios / evidence status / artifact readiness / score-dump cache evidence /
+score-fusion status, and an optional
 `performance_baseline:*:*` registry record. When it reuses an existing matrix
 report, the top-level config, performance evidence runtime block, and artifact
 manifest metadata inherit the matrix report's effective runtime settings. Add
@@ -2474,6 +2474,7 @@ python benchmarks/run_performance_baseline_workflow.py \
   --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
   --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
   --inside-trigger-budget-policy quality_balanced \
+  --score-ensemble-report artifacts/qwen05_score_ensemble_report.json \
   --verify-manifest \
   --fail-on-blocked
 ```
