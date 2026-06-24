@@ -21,7 +21,7 @@ import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 import torch
 
@@ -102,8 +102,13 @@ def _parse_csv(value: str | None) -> tuple[str, ...]:
     return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
-def _load_scores(path: Path, signal: str) -> dict[str, Any]:
-    dump = load_score_dump_statement_scores(path, (signal,))
+def _load_scores(
+    path: Path,
+    signal: str,
+    *,
+    cache: MutableMapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    dump = load_score_dump_statement_scores(path, (signal,), cache=cache)
     labels = torch.tensor(dump.labels, dtype=torch.int64)
     scores = torch.tensor(dump.scores[signal], dtype=torch.float64)
     return {
@@ -1909,7 +1914,7 @@ def build_verifier_ensemble_report(
 
     try:
         for name, path in score_dumps:
-            dump = _load_scores(path, signal)
+            dump = _load_scores(path, signal, cache=score_dump_metadata_cache)
             labels = dump["labels"]
             scores = dump["scores"]
             resolved_direction = direction or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")

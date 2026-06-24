@@ -180,7 +180,7 @@ def build_calibration_transfer_report(
     score_dump_metadata = {}
     score_dump_metadata_cache = {}
     for name, path in score_dumps:
-        score_dump = load_score_dump_layer_scores(path, signals=required_signals)
+        score_dump = load_score_dump_layer_scores(path, signals=required_signals, cache=score_dump_metadata_cache)
         loaded_dumps.append((name, path, score_dump))
         metadata = score_dump_file_metadata(path, cache=score_dump_metadata_cache)
         metadata.update({

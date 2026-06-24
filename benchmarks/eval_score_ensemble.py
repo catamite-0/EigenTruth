@@ -11,7 +11,7 @@ import argparse
 import json
 import statistics
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 import torch
 
@@ -107,8 +107,13 @@ def _rate_payload(false_alarms: Sequence[float], detections: Sequence[float], al
     }
 
 
-def _load_scores(path: Path, *, signals: Sequence[str]) -> dict[str, Any]:
-    dump = load_score_dump_columns(path, signals)
+def _load_scores(
+    path: Path,
+    *,
+    signals: Sequence[str],
+    cache: MutableMapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    dump = load_score_dump_columns(path, signals, cache=cache)
     labels = torch.tensor(dump.labels, dtype=torch.int64)
     scores = {
         name: torch.tensor(values, dtype=torch.float64)
@@ -253,7 +258,7 @@ def build_ensemble_report(
     runs = []
     score_dump_metadata_cache = {}
     for name, path in score_dumps:
-        dump = _load_scores(path, signals=signals)
+        dump = _load_scores(path, signals=signals, cache=score_dump_metadata_cache)
         labels = dump["labels"]
         missing = [signal for signal in signals if signal not in dump["scores"]]
         if missing:

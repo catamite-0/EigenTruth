@@ -463,6 +463,120 @@ class TestScoreDump:
         assert second["summary"]["n_false"] == 1
         assert len(calls) == 1
 
+    def test_jsonl_selected_view_cache_reuses_record_scans(self, tmp_path, monkeypatch):
+        dump = ScoreDump.from_mapping({
+            "config": {"model": "unit-model", "layer": -1},
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "truth_proj": [0.2, 0.8],
+            },
+            "sweep_scores": {
+                "-2": {"truth_proj": [0.3, 0.7]},
+            },
+            "statements": [
+                {"text": "Supported claim."},
+                {"text": "Refuted claim."},
+            ],
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(dump, manifest_path)
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        selected_calls = []
+        statement_calls = []
+        original_selected = score_dump_module._iter_score_dump_jsonl_selected_records
+        original_statement = score_dump_module._iter_score_dump_jsonl_selected_statement_records
+
+        def counting_selected(*args, **kwargs):
+            selected_calls.append(kwargs)
+            yield from original_selected(*args, **kwargs)
+
+        def counting_statement(*args, **kwargs):
+            statement_calls.append(kwargs)
+            yield from original_statement(*args, **kwargs)
+
+        monkeypatch.setattr(
+            score_dump_module,
+            "_iter_score_dump_jsonl_selected_records",
+            counting_selected,
+        )
+        monkeypatch.setattr(
+            score_dump_module,
+            "_iter_score_dump_jsonl_selected_statement_records",
+            counting_statement,
+        )
+        cache = {}
+
+        first_columns = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        second_columns = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        first_layers = load_score_dump_layer_scores(manifest_path, signals=("truth_proj",), cache=cache)
+        second_layers = load_score_dump_layer_scores(manifest_path, signals=("truth_proj",), cache=cache)
+        first_statements = load_score_dump_statement_scores(manifest_path, ("truth_proj",), cache=cache)
+        second_statements = load_score_dump_statement_scores(manifest_path, ("truth_proj",), cache=cache)
+
+        def fail_label_loader(*args, **kwargs):
+            raise AssertionError("metadata should reuse the selected-view JSONL summary cache")
+
+        monkeypatch.setattr(score_dump_module, "_load_score_dump_jsonl_labels", fail_label_loader)
+        metadata = score_dump_file_metadata(manifest_path, cache=cache)
+
+        assert first_columns is second_columns
+        assert first_layers is second_layers
+        assert first_statements is second_statements
+        assert metadata["summary"] == first_columns.summary
+        assert first_columns.scores == {"maha_last": (0.1, 0.9)}
+        assert first_layers.layer_scores == {
+            -2: {"truth_proj": (0.3, 0.7)},
+            -1: {"truth_proj": (0.2, 0.8)},
+        }
+        assert first_statements.statements == (
+            {"text": "Supported claim."},
+            {"text": "Refuted claim."},
+        )
+        assert len(selected_calls) == 2
+        assert len(statement_calls) == 1
+
+    def test_jsonl_selected_view_cache_invalidates_changed_records(self, tmp_path, monkeypatch):
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(
+            ScoreDump.from_mapping({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+            }),
+            manifest_path,
+        )
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        calls = []
+        original_loader = score_dump_module._iter_score_dump_jsonl_selected_records
+
+        def counting_loader(*args, **kwargs):
+            calls.append(kwargs)
+            yield from original_loader(*args, **kwargs)
+
+        monkeypatch.setattr(score_dump_module, "_iter_score_dump_jsonl_selected_records", counting_loader)
+        cache = {}
+
+        first = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        second = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        write_score_dump_jsonl(
+            ScoreDump.from_mapping({
+                "labels": [0, 1, 0],
+                "scores": {"maha_last": [0.4, 0.8, 0.2]},
+            }),
+            manifest_path,
+        )
+        third = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+
+        assert first is second
+        assert first.labels == (0, 1)
+        assert third.labels == (0, 1, 0)
+        assert third.scores == {"maha_last": (0.4, 0.8, 0.2)}
+        assert len(calls) == 2
+
     def test_load_score_dump_layer_scores_reads_selected_jsonl_sweep_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
             "config": {"model": "unit-model", "layer": -1},

@@ -122,8 +122,8 @@ def run(args) -> dict:
     except Exception:
         pass
 
-    score_dump = load_score_dump_columns(args.scores, (args.signal,))
     score_dump_metadata_cache = {}
+    score_dump = load_score_dump_columns(args.scores, (args.signal,), cache=score_dump_metadata_cache)
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
     dump_config = score_dump.config
@@ -225,6 +225,7 @@ def run(args) -> dict:
             created_at=args.created_at,
             commit_sha=args.commit_sha,
             metadata={"source": "eval_conformal.py", "config": dump_config},
+            cache=score_dump_metadata_cache,
         )
         payload["sweep_report"] = report.to_dict()
         if args.save_sweep_report:

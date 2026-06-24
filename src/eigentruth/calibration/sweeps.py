@@ -7,7 +7,7 @@ import math
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Mapping, MutableMapping, Optional, Sequence
 
 import torch
 
@@ -256,10 +256,11 @@ class LayerScoreSweepCalibrator:
         commit_sha: Optional[str] = None,
         eigentruth_version: str = __version__,
         metadata: Optional[Mapping[str, Any]] = None,
+        cache: MutableMapping[str, Any] | None = None,
     ) -> LayerScoreSweepReport:
         """Load a score dump and build a layer/score sweep report."""
         dump_path = Path(path)
-        layer_dump = load_score_dump_layer_scores(dump_path, signals=signals)
+        layer_dump = load_score_dump_layer_scores(dump_path, signals=signals, cache=cache)
         return self._calibrate_layer_scores(
             labels=torch.as_tensor(layer_dump.labels, dtype=torch.int64),
             config=dict(layer_dump.config),
