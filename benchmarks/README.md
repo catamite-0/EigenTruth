@@ -2740,8 +2740,12 @@ The sweep runs deterministic calibrated-control demo scenarios, writes one trace
 per mode/scenario/repeat, builds a `run_product_runtime_baseline.py` report for
 each mode, records the actual selected runtime profile for `auto`, optionally
 applies a sweep-level `--slo-policy`, and ranks the non-blocked modes by request
-runtime and route cost. `--runtime-profile-selector-policy` configures the
-request-time `auto` selector before each trace is emitted. `--policy` still
+runtime and route cost. When `--promotion-contract` provides control defaults,
+the trace row, profile row, leaderboard, manifest, and registry metadata carry
+the effective defaults and `max_verifier_route_attempts` summary, so the selected
+mode can be audited without reopening every trace.
+`--runtime-profile-selector-policy` configures the request-time `auto` selector
+before each trace is emitted. `--policy` still
 applies the `ProductRuntimeBudgetPolicy` to each trace in each per-mode
 baseline; `--slo-policy` applies aggregate gates such as
 `max_total_seconds_p95`, `max_mean_attempted_route_count`,

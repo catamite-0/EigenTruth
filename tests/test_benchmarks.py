@@ -13806,6 +13806,84 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert record.metadata["runtime_profile_selector_policy"] == str(selector_policy_path)
 
 
+def test_run_product_runtime_profile_sweep_carries_promotion_control_defaults(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.control import ProductPromotionContract
+
+    output_dir = tmp_path / "profile-sweep"
+    contract_path = tmp_path / "promotion-contract.json"
+    registry_path = tmp_path / "registry.json"
+    ProductPromotionContract(
+        verifier_route={"route": "fallback"},
+        control_defaults={"max_verifier_route_attempts": 1},
+        source_status="promote",
+    ).save_json(contract_path)
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=output_dir,
+            profiles=("balanced",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="low",
+                    text="Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={"Paris is the capital of France": "supported"},
+                ),
+            ),
+            promotion_contract_path=contract_path,
+            registry_path=registry_path,
+            name="control-default-profile-sweep",
+            version="0.1",
+            compact_json=True,
+        )
+    )
+
+    profile = payload["profiles"][0]
+    trace = profile["traces"][0]
+    trace_payload = json.loads(Path(profile["trace_paths"][0]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:control-default-profile-sweep:0.1"
+    )
+
+    assert payload["paths"]["promotion_contract"] == str(contract_path)
+    assert (
+        payload["decision"]["recommended_profile_control_default_summary"][
+            "max_verifier_route_attempts"
+        ]["mean"]
+        == 1.0
+    )
+    assert payload["leaderboard"][0]["max_verifier_route_attempts_mean"] == 1.0
+    assert payload["leaderboard"][0]["max_verifier_route_attempts_max"] == 1.0
+    assert trace["runtime_profile_control_defaults"]["max_verifier_route_attempts"] == 2
+    assert trace["promotion_contract_control_defaults"]["max_verifier_route_attempts"] == 1
+    assert trace["effective_control_defaults"]["max_verifier_route_attempts"] == 1
+    assert trace["max_verifier_route_attempts"] == 1
+    assert profile["control_defaults"]["effective_key_counts"]["max_verifier_route_attempts"] == 1
+    assert profile["control_defaults"]["runtime_profile_key_counts"]["max_verifier_route_attempts"] == 1
+    assert profile["control_defaults"]["promotion_contract_key_counts"]["max_verifier_route_attempts"] == 1
+    assert profile["control_defaults"]["max_verifier_route_attempts"]["mean"] == 1.0
+    assert profile["metrics"]["max_verifier_route_attempts_mean"] == 1.0
+    assert profile["metrics"]["max_verifier_route_attempts_max"] == 1.0
+    assert trace_payload["metadata"]["effective_control_defaults"]["max_verifier_route_attempts"] == 1
+    assert manifest["metadata"]["promotion_contract"] == str(contract_path)
+    assert (
+        manifest["metadata"]["recommended_profile_control_default_summary"][
+            "max_verifier_route_attempts"
+        ]["mean"]
+        == 1.0
+    )
+    assert record.metadata["promotion_contract"] == str(contract_path)
+    assert (
+        record.metadata["recommended_profile_control_default_summary"][
+            "max_verifier_route_attempts"
+        ]["mean"]
+        == 1.0
+    )
+
+
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
 

@@ -368,6 +368,10 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
 
     leaderboard = _leaderboard(profiles)
     recommendation = leaderboard[0] if leaderboard else None
+    recommended_profile = _profile_by_name(
+        profiles,
+        None if recommendation is None else recommendation.get("profile"),
+    )
     slo_summary = _slo_summary(profiles, policy=slo_policy, policy_source=slo_policy_source)
     status = _sweep_status(profiles, slo=slo_summary)
     report = {
@@ -377,6 +381,11 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
         "decision": {
             "status": status,
             "recommended_profile": None if recommendation is None else recommendation["profile"],
+            "recommended_profile_control_default_summary": (
+                None
+                if recommended_profile is None
+                else _mapping(recommended_profile.get("control_defaults"))
+            ),
             "blocking_reasons": _blocking_reasons(profiles, slo=slo_summary),
         },
         "profiles": profiles,
@@ -518,6 +527,16 @@ def _run_profile_traces(
                 "selected_runtime_profile": _nested(payload, "metadata", "runtime_profile"),
                 "runtime_profile_selection": _nested(payload, "metadata", "runtime_profile_selection"),
                 "staged_verification_enabled": _nested(payload, "metadata", "staged_verification_enabled"),
+                "effective_control_defaults": _mapping(
+                    _nested(payload, "metadata", "effective_control_defaults")
+                ),
+                "runtime_profile_control_defaults": _mapping(
+                    _nested(payload, "metadata", "runtime_profile_control_defaults")
+                ),
+                "promotion_contract_control_defaults": _mapping(
+                    _nested(payload, "metadata", "promotion_contract_control_defaults")
+                ),
+                "max_verifier_route_attempts": _nested(payload, "metadata", "max_verifier_route_attempts"),
                 "runtime_total_seconds": _nested(payload, "runtime_trace", "summary", "total_seconds"),
                 "measured_phases": _nested(payload, "runtime_trace", "summary", "measured_phases"),
             })
@@ -593,6 +612,8 @@ def _profile_record(
 ) -> dict[str, Any]:
     summary = _mapping(baseline.get("summary"))
     routes = _mapping(_mapping(summary.get("routes")).get("overall"))
+    control_defaults = _control_defaults_summary(traces)
+    route_attempts = _mapping(control_defaults.get("max_verifier_route_attempts"))
     record = {
         "profile": profile_name,
         "status": baseline.get("status"),
@@ -634,8 +655,11 @@ def _profile_record(
                 "verification_stage",
                 "selective_claim_skip_rate",
             ),
+            "max_verifier_route_attempts_mean": route_attempts.get("mean"),
+            "max_verifier_route_attempts_max": route_attempts.get("max"),
         },
         "runtime_profile_selection": _runtime_profile_selection_summary(traces),
+        "control_defaults": control_defaults,
         "budget": _mapping(baseline.get("budget")),
     }
     slo = _evaluate_profile_slo(record, slo_policy)
@@ -674,6 +698,30 @@ def _runtime_profile_selection_summary(traces: Sequence[Mapping[str, Any]]) -> d
         "counts_by_selected_profile": counts_by_selected_profile,
         "reason_counts": reason_counts,
     }
+
+
+def _profile_by_name(
+    profiles: Sequence[Mapping[str, Any]],
+    profile_name: Any,
+) -> Mapping[str, Any] | None:
+    if profile_name is None:
+        return None
+    target = str(profile_name)
+    for profile in profiles:
+        if str(profile.get("profile")) == target:
+            return profile
+    return None
+
+
+def _recommended_profile_record(report: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    return _profile_by_name(
+        tuple(
+            profile
+            for profile in _sequence(report.get("profiles"))
+            if isinstance(profile, Mapping)
+        ),
+        _nested(report, "decision", "recommended_profile"),
+    )
 
 
 def _evaluate_profile_slo(
@@ -837,6 +885,12 @@ def _leaderboard(profiles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
             "verification_selective_claim_skip_rate": _float_or_none(
                 metrics.get("verification_selective_claim_skip_rate")
             ),
+            "max_verifier_route_attempts_mean": _float_or_none(
+                metrics.get("max_verifier_route_attempts_mean")
+            ),
+            "max_verifier_route_attempts_max": _float_or_none(
+                metrics.get("max_verifier_route_attempts_max")
+            ),
             "blocked": profile.get("status") == "blocked",
         })
     return sorted(
@@ -904,6 +958,10 @@ def _write_artifact_manifest(
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
     slo = _mapping(report.get("slo"))
+    recommended_profile = _recommended_profile_record(report)
+    recommended_metrics = _mapping(
+        None if recommended_profile is None else recommended_profile.get("metrics")
+    )
     manifest = build_artifact_manifest(
         _artifact_paths(config, report) if artifacts is None else artifacts,
         root=config.resolved_artifact_manifest_path.parent,
@@ -918,6 +976,19 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
+            "recommended_profile_control_default_summary": _nested(
+                report,
+                "decision",
+                "recommended_profile_control_default_summary",
+            ),
+            "recommended_profile_max_verifier_route_attempts_mean": recommended_metrics.get(
+                "max_verifier_route_attempts_mean"
+            ),
+            "promotion_contract": (
+                None
+                if config.promotion_contract_path is None
+                else str(config.promotion_contract_path)
+            ),
             "runtime_profile_selector_policy": (
                 None
                 if config.runtime_profile_selector_policy_path is None
@@ -956,6 +1027,10 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
     if config.registry_path is None:
         return
     slo = _mapping(report.get("slo"))
+    recommended_profile = _recommended_profile_record(report)
+    recommended_metrics = _mapping(
+        None if recommended_profile is None else recommended_profile.get("metrics")
+    )
     ArtifactRegistry.load_json(config.registry_path).record_report(
         name=str(config.name),
         path=config.resolved_report_path,
@@ -972,6 +1047,19 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
             "compact_json": config.compact_json,
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
+            "recommended_profile_control_default_summary": _nested(
+                report,
+                "decision",
+                "recommended_profile_control_default_summary",
+            ),
+            "recommended_profile_max_verifier_route_attempts_mean": recommended_metrics.get(
+                "max_verifier_route_attempts_mean"
+            ),
+            "promotion_contract": (
+                None
+                if config.promotion_contract_path is None
+                else str(config.promotion_contract_path)
+            ),
             "runtime_profile_selector_policy": (
                 None
                 if config.runtime_profile_selector_policy_path is None
@@ -1050,6 +1138,54 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return tuple(value)
     return (value,)
+
+
+def _numeric_summary(values: Sequence[Any]) -> dict[str, Any]:
+    numbers = [
+        numeric
+        for value in values
+        if (numeric := _float_or_none(value)) is not None
+    ]
+    if not numbers:
+        return {
+            "count": 0,
+            "mean": None,
+            "min": None,
+            "max": None,
+        }
+    return {
+        "count": len(numbers),
+        "mean": sum(numbers) / len(numbers),
+        "min": min(numbers),
+        "max": max(numbers),
+    }
+
+
+def _control_defaults_summary(traces: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    effective_key_counts: dict[str, int] = {}
+    runtime_profile_key_counts: dict[str, int] = {}
+    promotion_contract_key_counts: dict[str, int] = {}
+    max_route_attempts = []
+    for trace in traces:
+        effective_defaults = _mapping(trace.get("effective_control_defaults"))
+        runtime_profile_defaults = _mapping(trace.get("runtime_profile_control_defaults"))
+        promotion_contract_defaults = _mapping(trace.get("promotion_contract_control_defaults"))
+        for key in effective_defaults:
+            key_name = str(key)
+            effective_key_counts[key_name] = effective_key_counts.get(key_name, 0) + 1
+        for key in runtime_profile_defaults:
+            key_name = str(key)
+            runtime_profile_key_counts[key_name] = runtime_profile_key_counts.get(key_name, 0) + 1
+        for key in promotion_contract_defaults:
+            key_name = str(key)
+            promotion_contract_key_counts[key_name] = promotion_contract_key_counts.get(key_name, 0) + 1
+        max_route_attempts.append(trace.get("max_verifier_route_attempts"))
+    return {
+        "effective_key_counts": effective_key_counts,
+        "runtime_profile_key_counts": runtime_profile_key_counts,
+        "promotion_contract_key_counts": promotion_contract_key_counts,
+        "max_verifier_route_attempts": _numeric_summary(tuple(max_route_attempts)),
+    }
 
 
 def _float_or_none(value: Any) -> float | None:
