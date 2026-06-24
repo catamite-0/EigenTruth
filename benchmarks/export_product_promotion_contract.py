@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -27,33 +28,49 @@ def export_product_promotion_contract(
     version: str | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
+    release_efficiency_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Write a ProductPromotionContract JSON and optional manifest/registry record."""
     source = Path(source_path)
     output = Path(output_path)
     manifest_path = None if artifact_manifest_path is None else Path(artifact_manifest_path)
+    release_efficiency_report = (
+        None
+        if release_efficiency_report_path is None
+        else Path(release_efficiency_report_path)
+    )
     if (name or version) and (registry_path is None or name is None or version is None):
         raise ValueError("registry export requires registry_path, name, and version.")
 
     contract = ProductPromotionContract.from_json(source)
+    contract = _contract_with_release_efficiency(
+        contract,
+        release_efficiency_report_path=release_efficiency_report,
+    )
     payload = contract.to_dict()
     control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
+    release_efficiency = dict(contract.release_efficiency)
+    release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
     export_metadata = dict(metadata or {})
     _write_json(output, payload, compact=compact_json)
 
     manifest = None
     if manifest_path is not None:
+        artifacts: dict[str, Path] = {
+            "product_promotion_contract": output,
+            "source_release_candidate": source,
+        }
+        if release_efficiency_report is not None:
+            artifacts["release_efficiency_report"] = release_efficiency_report
         manifest = build_artifact_manifest(
-            {
-                "product_promotion_contract": output,
-                "source_release_candidate": source,
-            },
+            artifacts,
             root=manifest_path.parent,
             metadata={
                 "runner": "export_product_promotion_contract",
                 "source": str(source),
                 "compact_json": compact_json,
+                **release_efficiency_metadata,
                 **export_metadata,
             },
         )
@@ -125,6 +142,7 @@ def export_product_promotion_contract(
                 "product_trace_replay_workflow_runtime_drift_report": (
                     trace_replay_workflow.get("product_runtime_drift_report_path")
                 ),
+                **release_efficiency_metadata,
                 "compact_json": compact_json,
                 **export_metadata,
             },
@@ -140,6 +158,9 @@ def export_product_promotion_contract(
             "contract": str(output),
             "artifact_manifest": None if manifest_path is None else str(manifest_path),
             "registry": None if registry_path is None else str(registry_path),
+            "release_efficiency_report": (
+                None if release_efficiency_report is None else str(release_efficiency_report)
+            ),
         },
         "contract": {
             "model_id": contract.model_id,
@@ -149,6 +170,7 @@ def export_product_promotion_contract(
             "verifier_route": dict(contract.verifier_route),
             "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
+            "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
         },
         "artifact_manifest_summary": None if manifest is None else manifest.get("summary"),
@@ -163,6 +185,118 @@ def _write_json(path: str | Path, payload: Mapping[str, Any], *, compact: bool) 
     else:
         text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     output.write_text(text, encoding="utf-8")
+
+
+def _contract_with_release_efficiency(
+    contract: ProductPromotionContract,
+    *,
+    release_efficiency_report_path: Path | None,
+) -> ProductPromotionContract:
+    if release_efficiency_report_path is None:
+        return contract
+    release_efficiency = {
+        **dict(contract.release_efficiency),
+        **_load_release_efficiency_summary(release_efficiency_report_path),
+    }
+    metadata = {
+        **dict(contract.metadata),
+        **_release_efficiency_flat_metadata(release_efficiency),
+    }
+    return replace(
+        contract,
+        release_efficiency=release_efficiency,
+        metadata=metadata,
+    )
+
+
+def _load_release_efficiency_summary(path: Path) -> dict[str, Any]:
+    payload = _load_json_object(path)
+    leaderboard = payload.get("leaderboard")
+    top = _mapping(leaderboard[0]) if isinstance(leaderboard, (list, tuple)) and leaderboard else {}
+    return _drop_none_values({
+        "report_path": str(path),
+        "workflow": payload.get("workflow"),
+        "status": _first_present(payload.get("status"), _nested(payload, "decision", "status")),
+        "manifest_path": _nested(payload, "paths", "artifact_manifest"),
+        "profile_sweep_path": _nested(payload, "paths", "profile_sweep"),
+        "quality_report_paths": _nested(payload, "paths", "quality_reports"),
+        "recommended_profile": _nested(payload, "decision", "recommended_profile"),
+        "recommended_efficiency_score": _first_present(
+            _nested(payload, "decision", "recommended_efficiency_score"),
+            _nested(top, "efficiency", "score"),
+        ),
+        "blocking_reasons": _nested(payload, "decision", "blocking_reasons"),
+        "profile_count": _nested(payload, "summary", "profile_count"),
+        "blocked_profile_count": _nested(payload, "summary", "blocked_profile_count"),
+        "generated_trace_count": _nested(payload, "summary", "generated_trace_count"),
+        "reused_trace_count": _nested(payload, "summary", "reused_trace_count"),
+        "quality_passed": _nested(payload, "summary", "quality_passed"),
+        "trace_record_cache_enabled_profile_count": _nested(
+            payload,
+            "summary",
+            "trace_record_cache_enabled_profile_count",
+        ),
+        "trace_record_cache_hit_profile_count": _nested(
+            payload,
+            "summary",
+            "trace_record_cache_hit_profile_count",
+        ),
+        "trace_record_cache_written_profile_count": _nested(
+            payload,
+            "summary",
+            "trace_record_cache_written_profile_count",
+        ),
+        "leaderboard_top_profile": top.get("profile"),
+        "leaderboard_top_efficiency_score": _nested(top, "efficiency", "score"),
+    })
+
+
+def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "release_efficiency_report": report.get("report_path"),
+        "release_efficiency_manifest": report.get("manifest_path"),
+        "release_efficiency_status": report.get("status"),
+        "release_efficiency_recommended_profile": report.get("recommended_profile"),
+        "release_efficiency_score": report.get("recommended_efficiency_score"),
+        "release_efficiency_profile_count": report.get("profile_count"),
+        "release_efficiency_quality_passed": report.get("quality_passed"),
+        "release_efficiency_trace_record_cache_hit_profile_count": report.get(
+            "trace_record_cache_hit_profile_count"
+        ),
+    })
+
+
+def _load_json_object(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path} must contain a JSON object.")
+    return dict(payload)
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
+
+
+def _nested(payload: Mapping[str, Any], *path: str) -> Any:
+    value: Any = payload
+    for key in path:
+        if not isinstance(value, Mapping):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
+def _drop_none_values(value: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): item for key, item in value.items() if item is not None}
 
 
 def _parse_metadata(values: Sequence[str]) -> dict[str, Any]:
@@ -192,6 +326,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         version=args.version,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
+        release_efficiency_report_path=args.release_efficiency_report,
     )
     print(json.dumps(payload, indent=2, sort_keys=True))
     return payload
@@ -209,6 +344,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", default=None, help="optional registry record version")
     parser.add_argument("--metadata", action="append", default=[], help="metadata key=value; repeatable")
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON artifacts")
+    parser.add_argument(
+        "--release-efficiency-report",
+        default=None,
+        help="optional release-efficiency report to embed as promotion evidence",
+    )
     run(parser.parse_args(argv))
 
 

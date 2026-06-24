@@ -30,6 +30,7 @@ class ProductPromotionContract:
     source_workflow: str | None = None
     source_status: str | None = None
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
+    release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
 
@@ -48,6 +49,7 @@ class ProductPromotionContract:
             "product_trace_replay_workflow",
             dict(self.product_trace_replay_workflow),
         )
+        object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
 
@@ -74,6 +76,7 @@ class ProductPromotionContract:
                 product_trace_replay_workflow=_mapping(
                     payload.get("product_trace_replay_workflow")
                 ),
+                release_efficiency=_mapping(payload.get("release_efficiency")),
                 metadata=_mapping(payload.get("metadata")),
             )
         return cls.from_release_candidate_report(payload, require_promoted=require_promoted)
@@ -113,6 +116,10 @@ class ProductPromotionContract:
         required_route_baselines = _mapping(candidate.get("required_route_baselines"))
         product_trace_replay_workflow = _mapping(
             candidate.get("product_trace_replay_workflow")
+        )
+        release_efficiency = _release_efficiency_metadata(
+            _mapping(candidate.get("release_efficiency")),
+            manifests=manifests,
         )
         selector_replay = _mapping(candidate.get("selector_replay"))
         selector_replay_recommended = _mapping(selector_replay.get("recommended"))
@@ -166,6 +173,7 @@ class ProductPromotionContract:
                 product_trace_replay_workflow,
                 manifests=manifests,
             ),
+            release_efficiency=release_efficiency,
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
                 "recommended_route_record": decision.get("recommended_route_record"),
@@ -206,6 +214,7 @@ class ProductPromotionContract:
                 "product_trace_replay_workflow_runtime_drift_report": (
                     product_trace_replay_workflow.get("product_runtime_drift_report_path")
                 ),
+                **_release_efficiency_flat_metadata(release_efficiency),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
                 "performance_evidence_bundle_release_ready": (
@@ -370,6 +379,7 @@ class ProductPromotionContract:
             "runtime_budget_policy": self.runtime_budget_policy.to_dict(),
             "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
+            "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
         }
 
@@ -605,6 +615,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_product_trace_replay_workflow": dict(
             contract.product_trace_replay_workflow
         ),
+        "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
     }
 
@@ -719,6 +730,71 @@ def _product_trace_replay_workflow_metadata(
     }
 
 
+def _release_efficiency_metadata(
+    report: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not report:
+        return {}
+    leaderboard = report.get("leaderboard")
+    top = _mapping(leaderboard[0]) if isinstance(leaderboard, (list, tuple)) and leaderboard else {}
+    return _drop_none_values({
+        "report_path": _first_present(
+            report.get("report_path"),
+            _nested(report, "paths", "report"),
+            report.get("path"),
+        ),
+        "manifest_path": _first_present(
+            report.get("manifest_path"),
+            _nested(report, "paths", "artifact_manifest"),
+            manifests.get("release_efficiency_manifest"),
+        ),
+        "source": report.get("source"),
+        "registry": report.get("registry"),
+        "record_key": report.get("record_key"),
+        "workflow": report.get("workflow"),
+        "status": _first_present(report.get("status"), _nested(report, "decision", "status")),
+        "recommended_profile": _first_present(
+            report.get("recommended_profile"),
+            _nested(report, "decision", "recommended_profile"),
+        ),
+        "recommended_efficiency_score": _first_present(
+            report.get("recommended_efficiency_score"),
+            _nested(report, "decision", "recommended_efficiency_score"),
+            _nested(top, "efficiency", "score"),
+        ),
+        "profile_count": _first_present(
+            report.get("profile_count"),
+            _nested(report, "summary", "profile_count"),
+        ),
+        "quality_passed": _first_present(
+            report.get("quality_passed"),
+            _nested(report, "summary", "quality_passed"),
+        ),
+        "trace_record_cache_hit_profile_count": _first_present(
+            report.get("trace_record_cache_hit_profile_count"),
+            _nested(report, "summary", "trace_record_cache_hit_profile_count"),
+        ),
+        "leaderboard_top_profile": top.get("profile"),
+    })
+
+
+def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    return _drop_none_values({
+        "release_efficiency_report": report.get("report_path"),
+        "release_efficiency_manifest": report.get("manifest_path"),
+        "release_efficiency_status": report.get("status"),
+        "release_efficiency_recommended_profile": report.get("recommended_profile"),
+        "release_efficiency_score": report.get("recommended_efficiency_score"),
+        "release_efficiency_profile_count": report.get("profile_count"),
+        "release_efficiency_quality_passed": report.get("quality_passed"),
+        "release_efficiency_trace_record_cache_hit_profile_count": report.get(
+            "trace_record_cache_hit_profile_count"
+        ),
+    })
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -732,6 +808,13 @@ def _nested(payload: Mapping[str, Any], *path: str) -> Any:
             return None
         value = value.get(key)
     return value
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _drop_none_values(value: Mapping[str, Any]) -> dict[str, Any]:

@@ -1489,12 +1489,15 @@ the workflow report/manifest plus its selector-replay and runtime-drift child
 report paths for deployment-side provenance. Runtime-drift reports also carry
 baseline/current optimization hints, so exported contracts preserve candidate
 control defaults such as `max_verifier_route_attempts` alongside the budget
-policy:
+policy. When a release-efficiency report is available, pass it explicitly so the
+promotion contract, manifest, and registry record also carry the recommended
+runtime profile and efficiency score:
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \
   --source artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --output artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
+  --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_5/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract \

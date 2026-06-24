@@ -1183,6 +1183,21 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "artifacts/runtime-drift/product-runtime-drift.json"
                 ),
             },
+            "release_efficiency": {
+                "report_path": "artifacts/efficiency/release-efficiency-report.json",
+                "manifest_path": "artifacts/efficiency/artifact-manifest.json",
+                "workflow": "release_efficiency_report",
+                "status": "promote",
+                "decision": {
+                    "recommended_profile": "balanced",
+                    "recommended_efficiency_score": 2.0,
+                },
+                "summary": {
+                    "profile_count": 3,
+                    "quality_passed": True,
+                    "trace_record_cache_hit_profile_count": 1,
+                },
+            },
             "selector_replay": {
                 "report_path": "artifacts/selector/runtime-profile-selector-replay.json",
                 "manifest_path": "artifacts/selector/artifact-manifest.json",
@@ -1253,6 +1268,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_trace_replay_workflow_manifest": (
                     "artifacts/trace-replay-workflow/artifact-manifest.json"
                 ),
+                "release_efficiency_manifest": "artifacts/efficiency/artifact-manifest.json",
                 "selector_replay_manifest": "artifacts/selector/artifact-manifest.json",
                 "product_runtime_drift_manifest": "artifacts/runtime-drift/artifact-manifest.json",
                 "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
@@ -1359,6 +1375,18 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
+    assert contract.release_efficiency["recommended_profile"] == "balanced"
+    assert contract.release_efficiency["recommended_efficiency_score"] == 2.0
+    assert contract.metadata["release_efficiency_report"] == (
+        "artifacts/efficiency/release-efficiency-report.json"
+    )
+    assert contract.metadata["release_efficiency_manifest"] == (
+        "artifacts/efficiency/artifact-manifest.json"
+    )
+    assert contract.metadata["release_efficiency_recommended_profile"] == "balanced"
+    assert contract.metadata["release_efficiency_score"] == 2.0
+    assert contract.metadata["release_efficiency_quality_passed"] is True
+    assert contract.metadata["release_efficiency_trace_record_cache_hit_profile_count"] == 1
     assert contract.metadata["selector_replay_status"] == "promote"
     assert contract.metadata["selector_replay_report"] == (
         "artifacts/selector/runtime-profile-selector-replay.json"
@@ -1440,6 +1468,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "trace-replay-workflow.json",
             "record_key": "report:trace-replay-workflow:0.1",
         },
+        release_efficiency={
+            "report_path": "release-efficiency.json",
+            "recommended_profile": "balanced",
+        },
         control_defaults={"max_verifier_route_attempts": 3},
         metadata={"selector_replay_status": "promote"},
     ).save_json(contract_path)
@@ -1466,6 +1498,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_product_trace_replay_workflow"] == {
         "report_path": "trace-replay-workflow.json",
         "record_key": "report:trace-replay-workflow:0.1",
+    }
+    assert metadata["promotion_contract_release_efficiency"] == {
+        "report_path": "release-efficiency.json",
+        "recommended_profile": "balanced",
     }
     assert metadata["promotion_contract_metadata"] == {"selector_replay_status": "promote"}
     assert product_promotion_contract_metadata(None, source=None, budget_enabled=True) == {

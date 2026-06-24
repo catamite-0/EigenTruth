@@ -7478,6 +7478,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     contract_path = tmp_path / "product-promotion-contract.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
+    release_efficiency_path = tmp_path / "release-efficiency.json"
     source.write_text(
         json.dumps({
             "workflow": "release_candidate_comparison",
@@ -7551,6 +7552,32 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         }),
         encoding="utf-8",
     )
+    release_efficiency_path.write_text(
+        json.dumps({
+            "workflow": "release_efficiency_report",
+            "status": "promote",
+            "decision": {
+                "status": "promote",
+                "recommended_profile": "balanced",
+                "recommended_efficiency_score": 2.0,
+                "blocking_reasons": [],
+            },
+            "summary": {
+                "profile_count": 3,
+                "quality_passed": True,
+                "trace_record_cache_hit_profile_count": 1,
+            },
+            "leaderboard": [
+                {"profile": "balanced", "efficiency": {"score": 2.0}},
+            ],
+            "paths": {
+                "artifact_manifest": "artifacts/efficiency/artifact-manifest.json",
+                "profile_sweep": "artifacts/profile-sweep/product-runtime-profile-sweep.json",
+                "quality_reports": ["artifacts/release-candidate-comparison.json"],
+            },
+        }),
+        encoding="utf-8",
+    )
 
     payload = module.export_product_promotion_contract(
         source_path=source,
@@ -7561,6 +7588,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         version="1.5",
         metadata={"release": "smollm2-v1.5"},
         compact_json=True,
+        release_efficiency_report_path=release_efficiency_path,
     )
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -7575,15 +7603,21 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["product_trace_replay_workflow"]["record_key"] == (
         "report:trace-replay-workflow:0.1"
     )
+    assert contract["release_efficiency"]["recommended_profile"] == "balanced"
+    assert contract["release_efficiency"]["recommended_efficiency_score"] == 2.0
+    assert contract["metadata"]["release_efficiency_recommended_profile"] == "balanced"
     assert payload["contract"]["product_trace_replay_workflow"]["report_path"] == (
         "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
     )
+    assert payload["paths"]["release_efficiency_report"] == str(release_efficiency_path)
+    assert payload["contract"]["release_efficiency"]["status"] == "promote"
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
     assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
-    assert manifest["summary"]["artifact_count"] == 2
+    assert manifest["summary"]["artifact_count"] == 3
+    assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
     assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
@@ -7596,6 +7630,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"
     )
+    assert record.metadata["release_efficiency_report"] == str(release_efficiency_path)
+    assert record.metadata["release_efficiency_manifest"] == (
+        "artifacts/efficiency/artifact-manifest.json"
+    )
+    assert record.metadata["release_efficiency_recommended_profile"] == "balanced"
+    assert record.metadata["release_efficiency_score"] == pytest.approx(2.0)
+    assert record.metadata["release_efficiency_quality_passed"] is True
+    assert record.metadata["release_efficiency_trace_record_cache_hit_profile_count"] == 1
     assert record.metadata["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
     assert record.metadata["readiness_covariance_tradeoff_gate_passed"] is True
     assert record.metadata["performance_covariance_tradeoff_gate_passed"] is True
