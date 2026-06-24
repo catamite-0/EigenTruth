@@ -666,6 +666,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_readiness_record": "benchmark_manifest:readiness:0.8",
             "recommended_route_record": "benchmark_manifest:route:0.8",
             "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
+            "recommended_selector_replay_candidate": "default",
+            "selector_replay_status": "promote",
             "recommended_route": "structured_state",
             "required_route_baseline_records": [
                 "benchmark_manifest:retrieval-structured-qa:0.5"
@@ -676,6 +678,23 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
             "runtime": {"layer": -12, "batch_size": 2},
             "performance_baseline_record": "performance_baseline:runtime:0.9",
+            "selector_replay": {
+                "report_path": "artifacts/selector/runtime-profile-selector-replay.json",
+                "manifest_path": "artifacts/selector/artifact-manifest.json",
+                "recommended_candidate": "default",
+                "recommended_policy_path": "artifacts/selector/policies/default.json",
+                "recommended": {
+                    "candidate": "default",
+                    "status": "promote",
+                    "policy_path": "artifacts/selector/policies/default.json",
+                    "estimated_cost_units_mean": 1.2,
+                    "observed_runtime_coverage_rate": 1.0,
+                    "observed_runtime_delta_coverage_rate": 1.0,
+                    "observed_selected_total_seconds_mean": 0.10,
+                    "observed_selected_minus_original_seconds_mean": -0.02,
+                    "observed_selected_to_original_ratio_mean": 0.80,
+                },
+            },
             "adapter_family_matrix": {
                 "matrix_path": "artifacts/adapter-family-matrix.json",
                 "required_routes": ["structured_state", "state_transition", "retrieval_groundedness"],
@@ -706,6 +725,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
                 "route_manifest": "artifacts/route/artifact-manifest.json",
                 "performance_manifest": "artifacts/performance/artifact-manifest.json",
+                "selector_replay_manifest": "artifacts/selector/artifact-manifest.json",
                 "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
             },
         },
@@ -728,6 +748,22 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
+    assert contract.metadata["recommended_selector_replay_candidate"] == "default"
+    assert contract.metadata["selector_replay_status"] == "promote"
+    assert contract.metadata["selector_replay_report"] == (
+        "artifacts/selector/runtime-profile-selector-replay.json"
+    )
+    assert contract.metadata["selector_replay_manifest"] == "artifacts/selector/artifact-manifest.json"
+    assert contract.metadata["selector_replay_recommended_policy_path"] == (
+        "artifacts/selector/policies/default.json"
+    )
+    assert contract.metadata["selector_replay_recommended"]["candidate"] == "default"
+    assert contract.metadata["selector_replay_estimated_cost_units_mean"] == 1.2
+    assert contract.metadata["selector_replay_observed_runtime_coverage_rate"] == 1.0
+    assert contract.metadata["selector_replay_observed_runtime_delta_coverage_rate"] == 1.0
+    assert contract.metadata["selector_replay_observed_selected_total_seconds_mean"] == 0.10
+    assert contract.metadata["selector_replay_observed_selected_minus_original_seconds_mean"] == -0.02
+    assert contract.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == 0.80
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",

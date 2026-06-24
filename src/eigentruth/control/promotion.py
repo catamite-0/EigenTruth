@@ -93,6 +93,8 @@ class ProductPromotionContract:
         manifests = _mapping(candidate.get("manifests"))
         adapter_family = _mapping(candidate.get("adapter_family_matrix"))
         required_route_baselines = _mapping(candidate.get("required_route_baselines"))
+        selector_replay = _mapping(candidate.get("selector_replay"))
+        selector_replay_recommended = _mapping(selector_replay.get("recommended"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -108,8 +110,39 @@ class ProductPromotionContract:
                 "recommended_performance_baseline_record": decision.get(
                     "recommended_performance_baseline_record"
                 ),
+                "recommended_selector_replay_candidate": decision.get(
+                    "recommended_selector_replay_candidate"
+                ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "recommended_route": decision.get("recommended_route"),
+                "selector_replay_status": decision.get("selector_replay_status"),
+                "selector_replay_report": selector_replay.get("report_path"),
+                "selector_replay_manifest": (
+                    selector_replay.get("manifest_path")
+                    or manifests.get("selector_replay_manifest")
+                ),
+                "selector_replay_recommended_policy_path": selector_replay.get(
+                    "recommended_policy_path"
+                ),
+                "selector_replay_recommended": selector_replay_recommended,
+                "selector_replay_estimated_cost_units_mean": selector_replay_recommended.get(
+                    "estimated_cost_units_mean"
+                ),
+                "selector_replay_observed_runtime_coverage_rate": selector_replay_recommended.get(
+                    "observed_runtime_coverage_rate"
+                ),
+                "selector_replay_observed_runtime_delta_coverage_rate": (
+                    selector_replay_recommended.get("observed_runtime_delta_coverage_rate")
+                ),
+                "selector_replay_observed_selected_total_seconds_mean": (
+                    selector_replay_recommended.get("observed_selected_total_seconds_mean")
+                ),
+                "selector_replay_observed_selected_minus_original_seconds_mean": (
+                    selector_replay_recommended.get("observed_selected_minus_original_seconds_mean")
+                ),
+                "selector_replay_observed_selected_to_original_ratio_mean": (
+                    selector_replay_recommended.get("observed_selected_to_original_ratio_mean")
+                ),
                 "runtime_profile": config.get("runtime_profile"),
                 "inside_trigger_budget_policy": config.get("inside_trigger_budget_policy"),
                 "runtime_profile_applied_defaults": config.get(
