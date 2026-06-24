@@ -40,6 +40,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_runtime_drift_report_path: Path | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
+    require_performance_score_dump_cache: bool = False
+    min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
     release_report_path: Path | None = None
     artifact_manifest_path: Path | None = None
     verification_report_path: Path | None = None
@@ -174,6 +176,10 @@ def run_release_candidate_registry_workflow(
         product_runtime_drift_report_path=config.product_runtime_drift_report_path,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         required_adapter_routes=config.required_adapter_routes,
+        require_performance_score_dump_cache=config.require_performance_score_dump_cache,
+        min_performance_score_dump_cache_jsonl_view_hit_rate=(
+            config.min_performance_score_dump_cache_jsonl_view_hit_rate
+        ),
         recursive=config.recursive,
         allow_unverified=config.allow_unverified,
         runtime_profile=config.runtime_profile,
@@ -274,6 +280,10 @@ def run_release_candidate_registry_workflow(
                 else str(config.adapter_family_matrix_path)
             ),
             "required_adapter_routes": tuple(config.required_adapter_routes),
+            "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
+            "min_performance_score_dump_cache_jsonl_view_hit_rate": (
+                config.min_performance_score_dump_cache_jsonl_view_hit_rate
+            ),
             "release_registry": str(config.release_registry_path),
             "name": config.name,
             "version": config.version,
@@ -441,6 +451,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "performance_cache_only_total_ratio": performance_evidence_cost.get(
             "cache_only_total_ratio"
         ),
+        "performance_score_dump_cache_required": config.get("require_performance_score_dump_cache"),
+        "performance_score_dump_cache_min_jsonl_view_hit_rate": (
+            config.get("min_performance_score_dump_cache_jsonl_view_hit_rate")
+        ),
         "performance_score_dump_cache_source_count": performance_score_dump_cache.get("source_count"),
         "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
         "recommended_uncached_forward_cost_seconds": runtime_cost.get("uncached_forward_cost_seconds"),
@@ -602,6 +616,13 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_unit_float(value: str, *, flag: str) -> float:
+    numeric = _parse_non_negative_float(value, flag=flag)
+    if numeric > 1:
+        raise ValueError(f"{flag} must be between 0 and 1.")
+    return numeric
+
+
 def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkflowConfig:
     return ReleaseCandidateRegistryWorkflowConfig(
         readiness_registry_path=Path(args.readiness_registry),
@@ -624,6 +645,10 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         ),
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
+        require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
+        min_performance_score_dump_cache_jsonl_view_hit_rate=(
+            args.min_performance_score_dump_cache_jsonl_view_hit_rate
+        ),
         release_report_path=None if args.release_report_json is None else Path(args.release_report_json),
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
@@ -712,6 +737,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
+    parser.add_argument("--require-performance-score-dump-cache", action="store_true",
+                        help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")
     parser.add_argument("--release-report-json", default=None,
                         help="optional path for the release candidate comparison report")
@@ -813,6 +840,15 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument(
+        "--min-performance-score-dump-cache-jsonl-view-hit-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--min-performance-score-dump-cache-jsonl-view-hit-rate",
+        ),
+        default=None,
+        help="minimum selected JSONL score-dump cache hit rate required from the performance baseline",
+    )
     parser.add_argument("--required-route-min-selected", type=lambda value: _parse_non_negative_int(
         value,
         flag="--required-route-min-selected",

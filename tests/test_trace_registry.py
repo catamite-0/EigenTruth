@@ -825,6 +825,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "required_route_min_selected": 200,
             "required_route_max_runtime_total_seconds": 8.0,
             "required_route_max_retrieval_hit_count": 450.0,
+            "require_performance_score_dump_cache": True,
+            "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
         },
         "decision": {
             "status": "promote",
@@ -976,6 +978,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_uncached_total_seconds"] == 10.0
     assert contract.metadata["performance_cached_total_ratio"] == 0.50
     assert contract.metadata["performance_cache_only_total_ratio"] == 0.02
+    assert contract.metadata["performance_score_dump_cache_required"] is True
+    assert contract.metadata["performance_score_dump_cache_min_jsonl_view_hit_rate"] == 0.5
     assert contract.metadata["performance_score_dump_cache_source_count"] == 1
     assert contract.metadata["performance_score_dump_cache_jsonl_view_hit_rate"] == 0.6
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"

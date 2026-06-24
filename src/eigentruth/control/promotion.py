@@ -151,6 +151,12 @@ class ProductPromotionContract:
                 "performance_cache_only_total_ratio": performance_evidence_cost.get(
                     "cache_only_total_ratio"
                 ),
+                "performance_score_dump_cache_required": (
+                    config.get("require_performance_score_dump_cache")
+                ),
+                "performance_score_dump_cache_min_jsonl_view_hit_rate": (
+                    config.get("min_performance_score_dump_cache_jsonl_view_hit_rate")
+                ),
                 "performance_score_dump_cache_source_count": (
                     performance_score_dump_cache.get("source_count")
                 ),

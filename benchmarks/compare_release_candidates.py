@@ -34,6 +34,8 @@ def compare_release_candidates(
     product_runtime_drift_report_path: str | Path | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
+    require_performance_score_dump_cache: bool = False,
+    min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
     recursive: bool = True,
     allow_unverified: bool = False,
     runtime_profile: str | None = None,
@@ -77,6 +79,24 @@ def compare_release_candidates(
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
+    if performance_baseline_key is None and (
+        require_performance_score_dump_cache
+        or min_performance_score_dump_cache_jsonl_view_hit_rate is not None
+    ):
+        raise ValueError("performance score-dump cache gates require performance_baseline_key.")
+    if min_performance_score_dump_cache_jsonl_view_hit_rate is not None:
+        cache_hit_rate_threshold = _float_or_none(
+            min_performance_score_dump_cache_jsonl_view_hit_rate
+        )
+        if (
+            cache_hit_rate_threshold is None
+            or cache_hit_rate_threshold < 0
+            or cache_hit_rate_threshold > 1
+        ):
+            raise ValueError(
+                "min_performance_score_dump_cache_jsonl_view_hit_rate must be between 0 and 1."
+            )
+        min_performance_score_dump_cache_jsonl_view_hit_rate = cache_hit_rate_threshold
     cache = fingerprint_cache if fingerprint_cache is not None else {}
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
     performance_registry_path = (
@@ -170,6 +190,8 @@ def compare_release_candidates(
         recursive=recursive,
         allow_unverified=allow_unverified,
         candidate=raw_candidate,
+        require_score_dump_cache=require_performance_score_dump_cache,
+        min_score_dump_cache_jsonl_view_hit_rate=min_performance_score_dump_cache_jsonl_view_hit_rate,
         fingerprint_cache=cache,
     )
     selector_replay = _selector_replay_gate(
@@ -227,6 +249,10 @@ def compare_release_candidates(
             ),
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
+            "require_performance_score_dump_cache": require_performance_score_dump_cache,
+            "min_performance_score_dump_cache_jsonl_view_hit_rate": (
+                min_performance_score_dump_cache_jsonl_view_hit_rate
+            ),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
             "runtime_profile": None if profile is None else profile.name,
@@ -686,6 +712,8 @@ def _performance_baseline_gate(
     recursive: bool,
     allow_unverified: bool,
     candidate: Mapping[str, Any] | None,
+    require_score_dump_cache: bool,
+    min_score_dump_cache_jsonl_view_hit_rate: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
@@ -719,6 +747,8 @@ def _performance_baseline_gate(
         runtime_recommendation=runtime_recommendation,
         performance_evidence_bundle=performance_evidence_bundle,
         candidate=candidate,
+        require_score_dump_cache=require_score_dump_cache,
+        min_score_dump_cache_jsonl_view_hit_rate=min_score_dump_cache_jsonl_view_hit_rate,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _mapping(recommendation.get("best_quality_signal"))
@@ -743,6 +773,7 @@ def _performance_baseline_gate(
         ),
         "performance_score_dump_cache_source_count": performance_score_dump_cache.get("source_count"),
         "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
+        "performance_score_dump_cache_gate": gate.get("score_dump_cache"),
         "runtime": {
             "cell_id": recommendation.get("cell_id"),
             "layer": recommendation.get("layer"),
@@ -1020,8 +1051,16 @@ def _performance_gate(
     runtime_recommendation: Mapping[str, Any],
     performance_evidence_bundle: Mapping[str, Any],
     candidate: Mapping[str, Any] | None,
+    require_score_dump_cache: bool,
+    min_score_dump_cache_jsonl_view_hit_rate: float | None,
 ) -> dict[str, Any]:
     failures = []
+    performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
+    score_dump_cache_gate = _performance_score_dump_cache_gate(
+        performance_score_dump_cache,
+        required=require_score_dump_cache,
+        min_jsonl_view_hit_rate=min_score_dump_cache_jsonl_view_hit_rate,
+    )
     if report_error is not None:
         failures.append(f"performance baseline report could not be loaded: {report_error}")
     if manifest_path is None:
@@ -1038,9 +1077,14 @@ def _performance_gate(
             "performance evidence bundle release_ready is "
             f"{performance_evidence_bundle.get('release_ready')!r}, expected True"
         )
+    failures.extend(score_dump_cache_gate["blocking_reasons"])
     if candidate is None:
         failures.append("release candidate is unavailable for performance baseline comparison")
-        return {"passed": False, "blocking_reasons": failures}
+        return {
+            "passed": False,
+            "blocking_reasons": failures,
+            "score_dump_cache": score_dump_cache_gate,
+        }
 
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     runtime = _mapping(candidate.get("runtime"))
@@ -1073,6 +1117,44 @@ def _performance_gate(
         observed=_mapping(quality.get("best_quality_signal")),
     )
     return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "score_dump_cache": score_dump_cache_gate,
+    }
+
+
+def _performance_score_dump_cache_gate(
+    score_dump_cache: Mapping[str, Any],
+    *,
+    required: bool,
+    min_jsonl_view_hit_rate: float | None,
+) -> dict[str, Any]:
+    totals = _mapping(score_dump_cache.get("totals"))
+    jsonl_view = _mapping(totals.get("jsonl_view"))
+    source_count = _float_or_none(score_dump_cache.get("source_count"))
+    jsonl_view_hit_rate = _float_or_none(jsonl_view.get("hit_rate"))
+    failures = []
+    enabled = bool(required or min_jsonl_view_hit_rate is not None)
+    if required and (
+        score_dump_cache.get("enabled") is not True
+        or source_count is None
+        or source_count < 1
+    ):
+        failures.append("performance score-dump cache evidence is required but missing")
+    if min_jsonl_view_hit_rate is not None:
+        if jsonl_view_hit_rate is None:
+            failures.append("performance score-dump cache jsonl_view hit rate is missing")
+        elif jsonl_view_hit_rate < min_jsonl_view_hit_rate:
+            failures.append(
+                "performance score-dump cache jsonl_view hit rate below "
+                f"{min_jsonl_view_hit_rate}: {jsonl_view_hit_rate}"
+            )
+    return {
+        "enabled": enabled,
+        "required": required,
+        "min_jsonl_view_hit_rate": min_jsonl_view_hit_rate,
+        "observed_source_count": source_count,
+        "observed_jsonl_view_hit_rate": jsonl_view_hit_rate,
         "passed": not failures,
         "blocking_reasons": failures,
     }
@@ -1394,6 +1476,13 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_unit_float(value: str, *, flag: str) -> float:
+    numeric = _parse_non_negative_float(value, flag=flag)
+    if numeric > 1:
+        raise ValueError(f"{flag} must be between 0 and 1.")
+    return numeric
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     payload = compare_release_candidates(
@@ -1408,6 +1497,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         product_runtime_drift_report_path=args.product_runtime_drift_report,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
+        require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
+        min_performance_score_dump_cache_jsonl_view_hit_rate=(
+            args.min_performance_score_dump_cache_jsonl_view_hit_rate
+        ),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
         runtime_profile=args.runtime_profile,
@@ -1496,6 +1589,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
+    parser.add_argument("--require-performance-score-dump-cache", action="store_true",
+                        help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the comparison report; repeatable")
@@ -1589,6 +1684,15 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument(
+        "--min-performance-score-dump-cache-jsonl-view-hit-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--min-performance-score-dump-cache-jsonl-view-hit-rate",
+        ),
+        default=None,
+        help="minimum selected JSONL score-dump cache hit rate required from the performance baseline",
+    )
     parser.add_argument("--required-route-min-selected", type=lambda value: _parse_non_negative_int(
         value,
         flag="--required-route-min-selected",

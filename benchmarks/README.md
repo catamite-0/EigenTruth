@@ -1221,6 +1221,8 @@ python benchmarks/compare_release_candidates.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --require-performance-score-dump-cache \
+  --min-performance-score-dump-cache-jsonl-view-hit-rate 0.5 \
   --required-route-max-runtime-total-seconds 120 \
   --required-route-max-retrieval-hit-count 5000 \
   --required-route-max-retrieval-use-rate 1.0 \
@@ -1249,7 +1251,11 @@ worker count, trigger budget, trigger policy, or best quality signal differ from
 the readiness-selected runtime. Newer performance baseline workflow reports also
 carry `performance_evidence_bundle`; when present, the release gate requires
 `release_ready=true` and copies its recommendation cost/readiness summary into
-the release candidate and downstream promotion contract metadata. Omit
+the release candidate and downstream promotion contract metadata. Add
+`--require-performance-score-dump-cache` when the release should fail closed
+unless that bundle contains score-dump cache evidence, and add
+`--min-performance-score-dump-cache-jsonl-view-hit-rate` to require a minimum
+selected JSONL view cache hit rate for post-hoc analysis reuse. Omit
 `--performance-registry` when the performance record lives in the readiness
 registry.
 Add `--selector-replay-report` when the final candidate must also include a
@@ -1321,6 +1327,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --max-false-supported-rate 0.02 \
   --min-false-refuted-rate 0.90 \
   --max-p99-duration-seconds 0.20 \
+  --require-performance-score-dump-cache \
+  --min-performance-score-dump-cache-jsonl-view-hit-rate 0.5 \
   --json artifacts/release-candidate-registry-workflow.json \
   --release-report-json artifacts/release-candidate-comparison.json \
   --artifact-manifest artifacts/release-candidate-artifact-manifest.json \

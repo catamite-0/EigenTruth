@@ -4956,6 +4956,93 @@ def test_compare_release_candidates_blocks_unready_performance_evidence_bundle(t
     )
 
 
+def test_compare_release_candidates_gates_performance_score_dump_cache(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="quality_balanced",
+    )
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+        require_performance_score_dump_cache=True,
+        min_performance_score_dump_cache_jsonl_view_hit_rate=0.8,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+        require_performance_score_dump_cache=True,
+        min_performance_score_dump_cache_jsonl_view_hit_rate=0.5,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["config"]["require_performance_score_dump_cache"] is True
+    assert blocked["config"]["min_performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.8)
+    assert blocked["performance_baseline_gate"]["performance_score_dump_cache_gate"]["passed"] is False
+    assert blocked["performance_baseline_gate"]["performance_score_dump_cache_gate"][
+        "observed_jsonl_view_hit_rate"
+    ] == pytest.approx(0.6)
+    assert any(
+        "performance score-dump cache jsonl_view hit rate below 0.8" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["performance_baseline_gate"]["performance_score_dump_cache_gate"]["passed"] is True
+
+
 def test_compare_release_candidates_accepts_repo_relative_performance_paths(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -5565,6 +5652,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
             performance_baseline_key="performance_baseline:qwen-performance:0.6",
+            require_performance_score_dump_cache=True,
+            min_performance_score_dump_cache_jsonl_view_hit_rate=0.5,
             selector_replay_report_path=selector_replay_report,
             product_runtime_drift_report_path=product_runtime_drift_report,
             route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
@@ -5625,6 +5714,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert manifest["metadata"]["performance_cache_only_total_ratio"] == pytest.approx(0.02)
+    assert manifest["metadata"]["performance_score_dump_cache_required"] is True
+    assert manifest["metadata"]["performance_score_dump_cache_min_jsonl_view_hit_rate"] == pytest.approx(0.5)
     assert manifest["metadata"]["performance_score_dump_cache_source_count"] == 1
     assert manifest["metadata"]["performance_score_dump_cache_jsonl_view_hit_rate"] == (
         pytest.approx(0.6)
@@ -5671,6 +5762,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
+    assert payload["config"]["require_performance_score_dump_cache"] is True
+    assert payload["config"]["min_performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.5)
     assert payload["config"]["selector_replay_report"] == str(selector_replay_report)
     assert payload["config"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
@@ -5687,6 +5780,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
         0.8
     )
+    assert payload["release_candidate_comparison"]["config"]["require_performance_score_dump_cache"] is True
+    assert payload["release_candidate_comparison"]["config"][
+        "min_performance_score_dump_cache_jsonl_view_hit_rate"
+    ] == pytest.approx(0.5)
     registry = ArtifactRegistry.load_json(release_registry_path)
     record = registry.get("benchmark_manifest:qwen-release-candidate:0.7")
     assert record.metadata["workflow"] == "run_release_candidate_registry_workflow"
@@ -5701,6 +5798,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
+    assert record.metadata["performance_score_dump_cache_required"] is True
+    assert record.metadata["performance_score_dump_cache_min_jsonl_view_hit_rate"] == pytest.approx(0.5)
     assert record.metadata["performance_score_dump_cache_source_count"] == 1
     assert record.metadata["performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.6)
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
