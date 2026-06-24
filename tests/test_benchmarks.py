@@ -10041,6 +10041,102 @@ def test_runtime_profile_selector_replay_uses_external_runtime_pair_index(tmp_pa
     assert manifest["metadata"]["runtime_pair_index_source"] == "runtime_pair_index"
 
 
+def test_runtime_profile_selector_replay_reports_observed_runtime_deltas(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    output_dir = tmp_path / "selector-replay"
+    trace_path = tmp_path / "trace.json"
+    runtime_pair_index_path = tmp_path / "runtime-pair-index.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "delta-case",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        }),
+        encoding="utf-8",
+    )
+    runtime_pair_index_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "product_trace_runtime_pair_index",
+            "records": [
+                {
+                    "request_key": "delta-case",
+                    "runtime_profile": "latency",
+                    "path": str(trace_path),
+                    "total_seconds": 0.10,
+                },
+                {
+                    "request_key": "delta-case",
+                    "runtime_profile": "audit",
+                    "path": str(tmp_path / "audit-trace.json"),
+                    "total_seconds": 0.30,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            candidates=(
+                module.RuntimeProfileSelectorCandidate(name="default", policy={}),
+                module.RuntimeProfileSelectorCandidate(
+                    name="audit-low",
+                    policy={"low_risk_profile": "audit"},
+                ),
+            ),
+            replay_policy=module.RuntimeProfileSelectorReplayPolicy(
+                max_observed_selected_minus_original_seconds_mean=0.10,
+                max_observed_selected_to_original_ratio_mean=2.0,
+                min_observed_runtime_delta_coverage_rate=1.0,
+            ),
+            runtime_pair_index_path=runtime_pair_index_path,
+        )
+    )
+
+    default = payload["candidates"][0]
+    audit_low = payload["candidates"][1]
+    default_trace = default["traces"][0]
+    audit_trace = audit_low["traces"][0]
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_candidate"] == "default"
+    assert default["status"] == "promote"
+    assert audit_low["status"] == "blocked"
+    assert default_trace["observed_selected_minus_original_seconds"] == pytest.approx(0.0)
+    assert default_trace["observed_selected_to_original_ratio"] == pytest.approx(1.0)
+    assert default["summary"]["observed_runtime_delta_coverage_rate"] == pytest.approx(1.0)
+    assert default["summary"]["observed_selected_minus_original_seconds_mean"] == pytest.approx(0.0)
+    assert default["summary"]["observed_selected_to_original_ratio_mean"] == pytest.approx(1.0)
+    assert audit_trace["observed_selected_minus_original_seconds"] == pytest.approx(0.20)
+    assert audit_trace["observed_selected_to_original_ratio"] == pytest.approx(3.0)
+    assert {
+        failure["metric"] for failure in audit_low["gate"]["failures"]
+    } == {
+        "observed_selected_minus_original_seconds_mean",
+        "observed_selected_to_original_ratio_mean",
+    }
+    assert payload["leaderboard"][0]["observed_selected_minus_original_seconds_mean"] == pytest.approx(
+        0.0
+    )
+    assert manifest["metadata"]["recommended_observed_selected_minus_original_seconds_mean"] == pytest.approx(
+        0.0
+    )
+    assert manifest["metadata"]["recommended_observed_selected_to_original_ratio_mean"] == pytest.approx(
+        1.0
+    )
+
+
 def test_runtime_profile_selector_replay_writes_trace_detail_sidecar(tmp_path):
     module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
     registry_module = importlib.import_module("eigentruth.registry")

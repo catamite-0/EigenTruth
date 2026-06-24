@@ -2385,8 +2385,9 @@ demo scenarios or verifier work. The replay runner loads each trace's
 matches selected profiles back to paired traces when the same logical request
 was saved under multiple runtime profiles, optionally reads a
 `build_product_trace_corpus.py` runtime-pair index instead of scanning traces to
-build that pairing map, applies optional distribution and observed-runtime
-replay gates, writes a manifest, and can register the replay report. The
+build that pairing map, reports selected-vs-original runtime deltas, applies
+optional distribution, observed-runtime, and runtime-delta replay gates, writes
+a manifest, and can register the replay report. The
 current registered replay report promotes the default selector with
 100% paired runtime coverage, observed mean selected runtime around `0.00045s`,
 and observed p95 selected runtime around `0.00059s` on the local deterministic

@@ -75,7 +75,10 @@ class RuntimeProfileSelectorReplayPolicy:
     max_estimated_cost_units_mean: float | None = None
     max_observed_selected_total_seconds_mean: float | None = None
     max_observed_selected_total_seconds_p95: float | None = None
+    max_observed_selected_minus_original_seconds_mean: float | None = None
+    max_observed_selected_to_original_ratio_mean: float | None = None
     min_observed_runtime_coverage_rate: float | None = None
+    min_observed_runtime_delta_coverage_rate: float | None = None
     min_selected_profile_counts: Mapping[str, int] = field(default_factory=dict)
     max_selected_profile_rates: Mapping[str, float] = field(default_factory=dict)
     min_selected_profile_rates: Mapping[str, float] = field(default_factory=dict)
@@ -107,10 +110,34 @@ class RuntimeProfileSelectorReplayPolicy:
         )
         object.__setattr__(
             self,
+            "max_observed_selected_minus_original_seconds_mean",
+            _optional_float(
+                self.max_observed_selected_minus_original_seconds_mean,
+                name="max_observed_selected_minus_original_seconds_mean",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_observed_selected_to_original_ratio_mean",
+            _optional_non_negative_float(
+                self.max_observed_selected_to_original_ratio_mean,
+                name="max_observed_selected_to_original_ratio_mean",
+            ),
+        )
+        object.__setattr__(
+            self,
             "min_observed_runtime_coverage_rate",
             _optional_rate_float(
                 self.min_observed_runtime_coverage_rate,
                 name="min_observed_runtime_coverage_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "min_observed_runtime_delta_coverage_rate",
+            _optional_rate_float(
+                self.min_observed_runtime_delta_coverage_rate,
+                name="min_observed_runtime_delta_coverage_rate",
             ),
         )
         object.__setattr__(
@@ -149,7 +176,16 @@ class RuntimeProfileSelectorReplayPolicy:
             max_observed_selected_total_seconds_p95=payload.get(
                 "max_observed_selected_total_seconds_p95"
             ),
+            max_observed_selected_minus_original_seconds_mean=payload.get(
+                "max_observed_selected_minus_original_seconds_mean"
+            ),
+            max_observed_selected_to_original_ratio_mean=payload.get(
+                "max_observed_selected_to_original_ratio_mean"
+            ),
             min_observed_runtime_coverage_rate=payload.get("min_observed_runtime_coverage_rate"),
+            min_observed_runtime_delta_coverage_rate=payload.get(
+                "min_observed_runtime_delta_coverage_rate"
+            ),
             min_selected_profile_counts=dict(_mapping(payload.get("min_selected_profile_counts"))),
             max_selected_profile_rates=dict(_mapping(payload.get("max_selected_profile_rates"))),
             min_selected_profile_rates=dict(_mapping(payload.get("min_selected_profile_rates"))),
@@ -161,7 +197,10 @@ class RuntimeProfileSelectorReplayPolicy:
             self.max_estimated_cost_units_mean is not None
             or self.max_observed_selected_total_seconds_mean is not None
             or self.max_observed_selected_total_seconds_p95 is not None
+            or self.max_observed_selected_minus_original_seconds_mean is not None
+            or self.max_observed_selected_to_original_ratio_mean is not None
             or self.min_observed_runtime_coverage_rate is not None
+            or self.min_observed_runtime_delta_coverage_rate is not None
             or bool(self.min_selected_profile_counts)
             or bool(self.max_selected_profile_rates)
             or bool(self.min_selected_profile_rates)
@@ -173,7 +212,16 @@ class RuntimeProfileSelectorReplayPolicy:
             "max_estimated_cost_units_mean": self.max_estimated_cost_units_mean,
             "max_observed_selected_total_seconds_mean": self.max_observed_selected_total_seconds_mean,
             "max_observed_selected_total_seconds_p95": self.max_observed_selected_total_seconds_p95,
+            "max_observed_selected_minus_original_seconds_mean": (
+                self.max_observed_selected_minus_original_seconds_mean
+            ),
+            "max_observed_selected_to_original_ratio_mean": (
+                self.max_observed_selected_to_original_ratio_mean
+            ),
             "min_observed_runtime_coverage_rate": self.min_observed_runtime_coverage_rate,
+            "min_observed_runtime_delta_coverage_rate": (
+                self.min_observed_runtime_delta_coverage_rate
+            ),
             "min_selected_profile_counts": dict(self.min_selected_profile_counts),
             "max_selected_profile_rates": dict(self.max_selected_profile_rates),
             "min_selected_profile_rates": dict(self.min_selected_profile_rates),
@@ -457,8 +505,14 @@ class _SelectionSummaryAccumulator:
     observed_original_seconds: list[float] = field(default_factory=list)
     observed_selected_seconds: list[float] = field(default_factory=list)
     observed_selected_by_profile: dict[str, list[float]] = field(default_factory=dict)
+    observed_selected_minus_original_seconds: list[float] = field(default_factory=list)
+    observed_selected_to_original_ratios: list[float] = field(default_factory=list)
     changed: int = 0
     paired: int = 0
+    delta_paired: int = 0
+    selected_faster: int = 0
+    selected_slower: int = 0
+    selected_equal: int = 0
     total: int = 0
 
     def add(self, record: Mapping[str, Any]) -> None:
@@ -489,10 +543,25 @@ class _SelectionSummaryAccumulator:
             self.paired += 1
             self.observed_selected_seconds.append(selected_seconds)
             self.observed_selected_by_profile.setdefault(selected, []).append(selected_seconds)
+        delta_seconds = _float_or_none(record.get("observed_selected_minus_original_seconds"))
+        if delta_seconds is not None:
+            self.delta_paired += 1
+            self.observed_selected_minus_original_seconds.append(delta_seconds)
+            if abs(delta_seconds) <= 1e-12:
+                self.selected_equal += 1
+            elif delta_seconds < 0.0:
+                self.selected_faster += 1
+            else:
+                self.selected_slower += 1
+        selected_to_original_ratio = _float_or_none(record.get("observed_selected_to_original_ratio"))
+        if selected_to_original_ratio is not None:
+            self.observed_selected_to_original_ratios.append(selected_to_original_ratio)
 
     def to_dict(self) -> dict[str, Any]:
         selected_runtime_stats = _runtime_seconds_stats(self.observed_selected_seconds)
         original_runtime_stats = _runtime_seconds_stats(self.observed_original_seconds)
+        delta_stats = _runtime_seconds_stats(self.observed_selected_minus_original_seconds)
+        ratio_stats = _numeric_stats(self.observed_selected_to_original_ratios)
         return {
             "trace_count": self.total,
             "selected_counts": self.selected_counts,
@@ -518,6 +587,15 @@ class _SelectionSummaryAccumulator:
                     for profile, values in sorted(self.observed_selected_by_profile.items())
                 },
             },
+            "observed_runtime_delta": {
+                "paired_count": self.delta_paired,
+                "coverage_rate": _safe_div(self.delta_paired, self.total),
+                "selected_minus_original_seconds": delta_stats,
+                "selected_to_original_ratio": ratio_stats,
+                "selected_faster_count": self.selected_faster,
+                "selected_slower_count": self.selected_slower,
+                "selected_equal_count": self.selected_equal,
+            },
             "observed_runtime_paired_count": self.paired,
             "observed_runtime_coverage_rate": _safe_div(self.paired, self.total),
             "observed_selected_total_seconds_mean": selected_runtime_stats["mean_seconds"],
@@ -525,6 +603,12 @@ class _SelectionSummaryAccumulator:
             "observed_selected_total_seconds_p99": selected_runtime_stats["p99_seconds"],
             "observed_selected_total_seconds_max": selected_runtime_stats["max_seconds"],
             "observed_original_total_seconds_mean": original_runtime_stats["mean_seconds"],
+            "observed_runtime_delta_paired_count": self.delta_paired,
+            "observed_runtime_delta_coverage_rate": _safe_div(self.delta_paired, self.total),
+            "observed_selected_minus_original_seconds_mean": delta_stats["mean_seconds"],
+            "observed_selected_minus_original_seconds_p95": delta_stats["p95_seconds"],
+            "observed_selected_to_original_ratio_mean": ratio_stats["mean"],
+            "observed_selected_to_original_ratio_p95": ratio_stats["p95"],
         }
 
 
@@ -656,6 +740,14 @@ def _trace_selection_record(
     ]
     paired_stats = _runtime_seconds_stats(paired_totals)
     observed_selected_total_seconds = paired_stats["mean_seconds"]
+    selected_minus_original_seconds = _selected_minus_original_seconds(
+        selected_total_seconds=observed_selected_total_seconds,
+        original_total_seconds=trace.original_total_seconds,
+    )
+    selected_to_original_ratio = _selected_to_original_ratio(
+        selected_total_seconds=observed_selected_total_seconds,
+        original_total_seconds=trace.original_total_seconds,
+    )
     return {
         "path": str(trace.path),
         "request_id": trace.request_id,
@@ -666,6 +758,9 @@ def _trace_selection_record(
         "estimated_cost_units": cost_units.get(selected),
         "observed_original_total_seconds": trace.original_total_seconds,
         "observed_selected_total_seconds": observed_selected_total_seconds,
+        "observed_selected_minus_original_seconds": selected_minus_original_seconds,
+        "observed_selected_to_original_ratio": selected_to_original_ratio,
+        "observed_runtime_delta_paired": selected_minus_original_seconds is not None,
         "observed_selected_trace_path": None if not paired_traces else str(paired_traces[0].path),
         "observed_selected_trace_paths": tuple(str(observation.path) for observation in paired_traces),
         "observed_selected_pair_count": len(paired_totals),
@@ -730,11 +825,38 @@ def _evaluate_replay_policy(
         checks.append(check)
         if not check["passed"]:
             failures.append(_failure_from_check(check))
+    if policy.max_observed_selected_minus_original_seconds_mean is not None:
+        check = _max_check(
+            summary,
+            metric="observed_selected_minus_original_seconds_mean",
+            limit=policy.max_observed_selected_minus_original_seconds_mean,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+    if policy.max_observed_selected_to_original_ratio_mean is not None:
+        check = _max_check(
+            summary,
+            metric="observed_selected_to_original_ratio_mean",
+            limit=policy.max_observed_selected_to_original_ratio_mean,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
     if policy.min_observed_runtime_coverage_rate is not None:
         check = _min_check(
             summary,
             metric="observed_runtime_coverage_rate",
             limit=policy.min_observed_runtime_coverage_rate,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+    if policy.min_observed_runtime_delta_coverage_rate is not None:
+        check = _min_check(
+            summary,
+            metric="observed_runtime_delta_coverage_rate",
+            limit=policy.min_observed_runtime_delta_coverage_rate,
         )
         checks.append(check)
         if not check["passed"]:
@@ -804,6 +926,15 @@ def _leaderboard(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]
             ),
             "observed_selected_total_seconds_p95": _float_or_none(
                 summary.get("observed_selected_total_seconds_p95")
+            ),
+            "observed_runtime_delta_coverage_rate": _float_or_none(
+                summary.get("observed_runtime_delta_coverage_rate")
+            ),
+            "observed_selected_minus_original_seconds_mean": _float_or_none(
+                summary.get("observed_selected_minus_original_seconds_mean")
+            ),
+            "observed_selected_to_original_ratio_mean": _float_or_none(
+                summary.get("observed_selected_to_original_ratio_mean")
             ),
             "audit_rate": _float_or_none(selected_rates.get("audit")),
             "balanced_rate": _float_or_none(selected_rates.get("balanced")),
@@ -942,6 +1073,15 @@ def _write_artifact_manifest(
             "recommended_observed_runtime_coverage_rate": recommended.get(
                 "observed_runtime_coverage_rate"
             ),
+            "recommended_observed_runtime_delta_coverage_rate": recommended.get(
+                "observed_runtime_delta_coverage_rate"
+            ),
+            "recommended_observed_selected_minus_original_seconds_mean": recommended.get(
+                "observed_selected_minus_original_seconds_mean"
+            ),
+            "recommended_observed_selected_to_original_ratio_mean": recommended.get(
+                "observed_selected_to_original_ratio_mean"
+            ),
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
             "compact_json": config.compact_json,
@@ -978,6 +1118,15 @@ def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping
             ),
             "recommended_observed_runtime_coverage_rate": recommended.get(
                 "observed_runtime_coverage_rate"
+            ),
+            "recommended_observed_runtime_delta_coverage_rate": recommended.get(
+                "observed_runtime_delta_coverage_rate"
+            ),
+            "recommended_observed_selected_minus_original_seconds_mean": recommended.get(
+                "observed_selected_minus_original_seconds_mean"
+            ),
+            "recommended_observed_selected_to_original_ratio_mean": recommended.get(
+                "observed_selected_to_original_ratio_mean"
             ),
             "candidate_count": len(config.candidates),
             "trace_count": len(config.trace_paths),
@@ -1162,6 +1311,30 @@ def _runtime_total_seconds(trace: Mapping[str, Any]) -> float | None:
     return _float_or_none(summary.get("total_seconds"))
 
 
+def _selected_minus_original_seconds(
+    *,
+    selected_total_seconds: Any,
+    original_total_seconds: Any,
+) -> float | None:
+    selected = _float_or_none(selected_total_seconds)
+    original = _float_or_none(original_total_seconds)
+    if selected is None or original is None:
+        return None
+    return selected - original
+
+
+def _selected_to_original_ratio(
+    *,
+    selected_total_seconds: Any,
+    original_total_seconds: Any,
+) -> float | None:
+    selected = _float_or_none(selected_total_seconds)
+    original = _float_or_none(original_total_seconds)
+    if selected is None or original is None or original <= 0.0:
+        return None
+    return selected / original
+
+
 def _trace_paths_from_args(values: Sequence[str], globs: Sequence[str]) -> tuple[Path, ...]:
     paths = [Path(value) for value in values]
     for pattern in globs:
@@ -1267,6 +1440,15 @@ def _failure_from_check(check: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _optional_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = _float_or_none(value)
+    if numeric is None:
+        raise ValueError(f"{name} must be a finite number.")
+    return numeric
+
+
 def _optional_non_negative_float(value: Any, *, name: str) -> float | None:
     if value is None:
         return None
@@ -1364,6 +1546,30 @@ def _runtime_seconds_stats(values: Sequence[float]) -> dict[str, Any]:
         "p95_seconds": _percentile_or_none(finite, 95.0),
         "p99_seconds": _percentile_or_none(finite, 99.0),
         "max_seconds": max(finite),
+    }
+
+
+def _numeric_stats(values: Sequence[float]) -> dict[str, Any]:
+    finite = [float(value) for value in values if _float_or_none(value) is not None]
+    if not finite:
+        return {
+            "count": 0,
+            "total": None,
+            "mean": None,
+            "min": None,
+            "p95": None,
+            "p99": None,
+            "max": None,
+        }
+    total = sum(finite)
+    return {
+        "count": len(finite),
+        "total": total,
+        "mean": total / len(finite),
+        "min": min(finite),
+        "p95": _percentile_or_none(finite, 95.0),
+        "p99": _percentile_or_none(finite, 99.0),
+        "max": max(finite),
     }
 
 
