@@ -7089,6 +7089,72 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
 
 
+def test_manifest_fingerprint_worker_sweep_recommends_worker_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_manifest_fingerprint_worker_sweep")
+    registry_module = importlib.import_module("eigentruth.registry")
+    root_file = tmp_path / "root-result.json"
+    child_dir = tmp_path / "child"
+    child_dir.mkdir()
+    child_file = child_dir / "child-result.json"
+    child_manifest_path = child_dir / "artifact-manifest.json"
+    root_manifest_path = tmp_path / "artifact-manifest.json"
+    output_path = tmp_path / "manifest-worker-sweep.json"
+    registry_path = tmp_path / "registry.json"
+    root_file.write_text('{"root": true}\n', encoding="utf-8")
+    child_file.write_text('{"child": true}\n', encoding="utf-8")
+    child_manifest_path.write_text(
+        json.dumps(registry_module.build_artifact_manifest({"child_result": child_file}, root=child_dir)),
+        encoding="utf-8",
+    )
+    root_manifest_path.write_text(
+        json.dumps(
+            registry_module.build_artifact_manifest(
+                {
+                    "root_result": root_file,
+                    "child_manifest": child_manifest_path,
+                },
+                root=tmp_path,
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    payload = module.build_manifest_fingerprint_worker_sweep(
+        module.ManifestFingerprintWorkerSweepConfig(
+            manifest_paths=(root_manifest_path,),
+            output_path=output_path,
+            worker_counts=(1, 2),
+            repeats=2,
+            registry_path=registry_path,
+            name="manifest-worker-sweep",
+            version="0.1",
+            compact_json=True,
+            metadata={"suite": "unit"},
+        )
+    )
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:manifest-worker-sweep:0.1"
+    )
+
+    assert payload["workflow"] == "manifest_fingerprint_worker_sweep"
+    assert payload["status"] == "observed"
+    assert payload["decision"]["recommended_worker_count"] in {1, 2}
+    assert payload["decision"]["blocking_reasons"] == ()
+    assert {summary["worker_count"] for summary in payload["worker_summaries"]} == {1, 2}
+    assert all(summary["passed_count"] == 2 for summary in payload["worker_summaries"])
+    assert len(payload["samples"]) == 4
+    assert all(sample["passed"] is True for sample in payload["samples"])
+    assert payload["leaderboard"][0]["passed"] is True
+    assert output_path.exists()
+    assert "\n  " not in output_path.read_text(encoding="utf-8")
+    assert record.metadata["workflow"] == "manifest_fingerprint_worker_sweep"
+    assert record.metadata["recommended_worker_count"] in {1, 2}
+    assert record.metadata["manifest_count"] == 1
+    assert record.metadata["repeats"] == 2
+    assert record.metadata["recursive"] is True
+    assert record.metadata["suite"] == "unit"
+
+
 def _write_release_gate_overhead_source_report(
     path,
     *,

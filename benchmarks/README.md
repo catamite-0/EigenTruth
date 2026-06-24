@@ -1434,6 +1434,25 @@ manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
 release report, manifest metadata, and registry record.
 
+To choose a local value for `--manifest-fingerprint-workers` without rerunning
+model work or release gates, replay manifest verification across worker counts:
+
+```bash
+python benchmarks/run_manifest_fingerprint_worker_sweep.py \
+  --manifest artifacts/release-candidate-artifact-manifest.json \
+  --json artifacts/release-manifest-fingerprint-worker-sweep.json \
+  --workers 1,2,4,8 \
+  --repeats 3 \
+  --fingerprint-cache artifacts/release-candidate-fingerprints.json \
+  --registry artifacts/release-registry.json \
+  --name release-manifest-fingerprint-workers \
+  --version 0.1
+```
+
+The sweep starts each sample from the same optional seed fingerprint cache,
+records per-worker verification timing/cache summaries, and recommends the
+fastest worker count whose verification samples all pass.
+
 To quantify local release-gate overhead after collecting one cold and one warm
 registry-workflow run, aggregate their timing/cache summaries without rerunning
 the gate:
