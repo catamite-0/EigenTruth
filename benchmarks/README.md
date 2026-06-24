@@ -415,7 +415,10 @@ record counts, available score names, sweep layers, file size, and SHA-256. This
 lets later calibration, ensemble, and route-refresh steps confirm they are reusing
 the intended dump without parsing model artifacts again. Post-processing reports
 share a run-local metadata cache, so duplicate score paths do not require
-re-hashing the same file.
+re-hashing the same file. For larger score artifacts, `load_score_dump()` also
+accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
+`iter_score_dump_jsonl_records()` can validate those records without materializing
+the whole dump.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.

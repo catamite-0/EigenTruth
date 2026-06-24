@@ -15,7 +15,13 @@ from eigentruth.eval.metrics import (
     roc_auc,
     selective_classification_report,
 )
-from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import (
+    ScoreDump,
+    iter_score_dump_jsonl_records,
+    load_score_dump,
+    score_dump_file_metadata,
+    write_score_dump_jsonl,
+)
 
 
 class TestRocAuc:
@@ -219,3 +225,69 @@ class TestScoreDump:
         assert second["sha256"] == "cached-sha"
         assert first["summary"] == second["summary"]
         assert len(calls) == 1
+
+    def test_jsonl_manifest_roundtrip_and_streaming_records(self, tmp_path):
+        dump = ScoreDump.from_mapping({
+            "config": {"model": "unit-model", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+            "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
+            "statements": [{"text": "true"}, {"text": "false"}],
+            "inside_sampling": {"mode": "off"},
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+
+        manifest = write_score_dump_jsonl(dump, manifest_path)
+        records = tuple(iter_score_dump_jsonl_records(manifest_path))
+        loaded = load_score_dump(manifest_path, required_scores=("maha_last",))
+
+        assert manifest.records_path == "scores.manifest.records.jsonl"
+        assert records[0].label == 0
+        assert records[0].scores["maha_last"] == pytest.approx(0.1)
+        assert records[1].sweep_scores["-2"]["truth_proj"] == pytest.approx(0.8)
+        assert loaded.summary() == dump.summary()
+        assert loaded.to_mapping()["inside_sampling"] == {"mode": "off"}
+        assert loaded.statements == dump.statements
+
+    def test_jsonl_manifest_validates_record_count_and_schema(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "config": {"model": "unit"},
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            json.dumps({"label": 0, "scores": {"maha_last": 0.1}}) + "\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="record count"):
+            tuple(iter_score_dump_jsonl_records(manifest_path))
+
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "config": {"model": "unit"},
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 1,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            json.dumps({"label": 0, "scores": {"other": 0.1}}) + "\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="missing score"):
+            load_score_dump(manifest_path)

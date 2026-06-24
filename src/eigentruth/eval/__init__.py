@@ -21,7 +21,15 @@ from eigentruth.eval.metrics import (
     roc_auc,
     selective_classification_report,
 )
-from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import (
+    ScoreDump,
+    ScoreDumpJsonlManifest,
+    ScoreDumpRecord,
+    iter_score_dump_jsonl_records,
+    load_score_dump,
+    score_dump_file_metadata,
+    write_score_dump_jsonl,
+)
 
 __all__ = [
     "roc_auc",
@@ -33,6 +41,10 @@ __all__ = [
     "directional_conformal_threshold",
     "directional_trigger_rate",
     "ScoreDump",
+    "ScoreDumpJsonlManifest",
+    "ScoreDumpRecord",
+    "iter_score_dump_jsonl_records",
     "load_score_dump",
     "score_dump_file_metadata",
+    "write_score_dump_jsonl",
 ]
