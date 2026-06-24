@@ -1,0 +1,120 @@
+{
+  "artifacts": {
+    "caches.eval_reps_cache": {
+      "exists": true,
+      "file_count": 18,
+      "kind": "directory",
+      "path": "../../cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+      "sha256": "03935c30ac0bac14af258d94b07ddec7ece40bc27327772f2cc7ba3a8172e329",
+      "size_bytes": 4108048
+    },
+    "caches.layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+      "sha256": "6b3256718596b5e5281297501faf31aff8a2d643799e1ff53d2ee6e1ff2ac2b0",
+      "size_bytes": 1349445
+    },
+    "caches.statement_encoding_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+      "sha256": "209479b67df991194f0ae42dcad5d27ca85f749c0c32dfbf54068c7703e4ece2",
+      "size_bytes": 13551
+    },
+    "command_log": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-triplet-commands.json",
+      "sha256": "bbb335a060855d903b10161e9486c450099b79d56db7626238b0cebcde740331",
+      "size_bytes": 3666
+    },
+    "comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-comparison.json",
+      "sha256": "d51f02b5579c5054fa654d23d803f53b883c8ae34dcfd1f27ed575aedc0b6535",
+      "size_bytes": 19190
+    },
+    "profiles.cache_only": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-cache_only.json",
+      "sha256": "56c4823e36b78bf4874d9c708225e0c1a41e0f603d26f01014e96dddb0af34f6",
+      "size_bytes": 2030
+    },
+    "profiles.cached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-cached.json",
+      "sha256": "3433578e046a7b003cfd9fc898dda38b7c7de521b19aea5d63fcba9463e23980",
+      "size_bytes": 2063
+    },
+    "profiles.uncached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "profile-uncached.json",
+      "sha256": "1da5c2cd7b8b0b0197729b8bb3eada3cb1cf5e06835b1fd077dc293616322ba3",
+      "size_bytes": 1816
+    },
+    "results.cache_only": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-cache_only.json",
+      "sha256": "0084702c83a9da343fad064384c7b99cd3d4d71a7b5aedc8baa4d7ecd1fd4f34",
+      "size_bytes": 14469
+    },
+    "results.cached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-cached.json",
+      "sha256": "a5199227eef01b5a31a5cf376eb5a8f6beefda9b272945f2055f3ebd232bcd29",
+      "size_bytes": 14629
+    },
+    "results.uncached": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "result-uncached.json",
+      "sha256": "31c80755cf572e495be6a18427321061099829ee2b6478bcb31c91e9c9e76cd3",
+      "size_bytes": 13883
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_size": 4,
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "hidden_state_capture": "outputs",
+    "layer": -12,
+    "max_batch_tokens": 512,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "run_names": [
+      "uncached",
+      "cached",
+      "cache_only"
+    ],
+    "runner": "run_cache_profile_triplet",
+    "uncached_cache_mode": "warm_start"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 11,
+    "directory_count": 1,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

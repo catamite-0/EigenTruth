@@ -162,9 +162,10 @@ behavior on constrained machines. JSON output includes
 requests, cross-shard reads, shard loads, and shard cache hits, and profile
 summary includes `cache_efficiency.eval_reps_reader` hit-rate/read-shape metrics.
 These fields help diagnose cache-only IO regressions after changing batch size
-or token budget. `run_cache_profile_triplet.py` and `run_cache_profile_matrix.py`
-also accept `--eval-reps-shard-read-cache-size` so cached/cache-only profile runs
-can reproduce the same read-side LRU capacity.
+or token budget. `run_cache_profile_triplet.py`, `run_cache_profile_matrix.py`,
+`run_cache_worker_sweep.py`, and `run_performance_baseline_workflow.py` also
+accept `--eval-reps-shard-read-cache-size` so cached/cache-only profile runs can
+reproduce the same read-side LRU capacity.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
 not run sampled INSIDE. New eval reps caches also store eval statement metadata,
@@ -2340,7 +2341,9 @@ directly or reuse existing matrix/worker/INSIDE reports, then writes
 manifest, a top-level `performance_evidence_bundle` summary with recommendation
 cost ratios / evidence status / artifact readiness / score-dump cache evidence,
 and an optional
-`performance_baseline:*:*` registry record:
+`performance_baseline:*:*` registry record. When it reuses an existing matrix
+report, the top-level config, performance evidence runtime block, and artifact
+manifest metadata inherit the matrix report's effective runtime settings:
 
 ```bash
 python benchmarks/run_performance_baseline_workflow.py \
@@ -2595,6 +2598,16 @@ recommendation selects layer `-12`, batch size `8`, `truth_proj` AUROC `0.682`,
 cache-only replay `0.339s`, and the quality-balanced top-40% triggered
 `adaptive_selfcheck` budget with sample-count ratio `0.472` and
 `inside_generation` ratio `0.503` versus the full-sample reference.
+
+Current small CPU SmolLM2 l8 performance evidence:
+`artifacts/smollm2_l8_performance_baseline/performance-baseline-workflow.json`
+reuses the real TruthfulQA cache matrix at
+`artifacts/smollm2_l8_runtime_profile_matrix/`. It selects layer `-12`, batch
+size `4`, `outputs` capture, `max_batch_tokens=512`, `truth_proj` AUROC `0.830`,
+uncached forced-answer forward `18.150s`, cached total `14.603s`, and cache-only
+replay `0.194s`. The cache-tuning summary recommends increasing
+`--eval-reps-shard-read-cache-size` from `2` to `4` because shard cache hit rate
+is low on this small-batch run.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

@@ -1,0 +1,1645 @@
+{
+  "dry_run": false,
+  "config": {
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "dtype": "float32",
+    "layers": [
+      -12
+    ],
+    "batch_sizes": [
+      4,
+      8
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "limit": 8,
+    "manifold_questions": 4,
+    "max_length": 64,
+    "max_batch_tokens": 0,
+    "max_batch_token_budgets": [
+      0,
+      512
+    ],
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "offline": false,
+    "length_bucketed_batches": true,
+    "shared_cache_dir": "artifacts/cache/smollm2_l8_runtime_profile_matrix",
+    "shared_cache_root": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a",
+    "matrix_mode": "triplet",
+    "max_workers": 1
+  },
+  "cells": [
+    {
+      "id": "layer_m12_batch_4_capture_outputs_token_budget_0",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": "token_budget_0",
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 65.35961788101122,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_0/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.193527,
+          "speedup_vs_baseline": 213.48002087564012
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 41.314148,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 19.019945,
+            "model_forward_seconds": 26.121602
+          },
+          "cached": {
+            "total_seconds": 14.22983,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.9033479669117623,
+            "ratio_to_baseline": 0.3444299516959662,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.193527,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 213.48002087564012,
+            "ratio_to_baseline": 0.004684279099740844,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_token_budget_512",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "max_batch_tokens_component": "token_budget_512",
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "warm_start",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 57.02562214597128,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "warm_start",
+        "command_log": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_4_capture_outputs_token_budget_512/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.194264,
+          "speedup_vs_baseline": 167.81545731581764
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 32.600502,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.150161,
+            "model_forward_seconds": 18.150161
+          },
+          "cached": {
+            "total_seconds": 14.603377,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.2323947399289903,
+            "ratio_to_baseline": 0.44794945182132473,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.194264,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 167.81545731581764,
+            "ratio_to_baseline": 0.005958926644749213,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 3.578947,
+              "eval_reps_reader.shards_per_read": 1.105263,
+              "eval_reps_reader.cross_shard_read_rate": 0.105263,
+              "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+              "eval_reps_reader.shard_load_rate": 0.809524,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.105263,
+                "baseline_value": 0.0,
+                "delta": 0.105263,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 3.578947,
+                "baseline_value": 0.0,
+                "delta": 3.578947,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.190476,
+                "baseline_value": 0.0,
+                "delta": 0.190476,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 0.809524,
+                "baseline_value": 0.0,
+                "delta": 0.809524,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.105263,
+                "baseline_value": 0.0,
+                "delta": 1.105263,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m12_batch_8_capture_outputs_token_budget_0",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": "token_budget_0",
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "warm_start",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 57.76864812197164,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "warm_start",
+        "command_log": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_0/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.21363,
+          "speedup_vs_baseline": 150.61384636989186
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 32.175636,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.261069,
+            "model_forward_seconds": 18.261069
+          },
+          "cached": {
+            "total_seconds": 15.487498,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.0775231738528714,
+            "ratio_to_baseline": 0.48134240454485505,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 7.555556,
+              "eval_reps_reader.shards_per_read": 1.888889,
+              "eval_reps_reader.cross_shard_read_rate": 0.888889,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.888889,
+                "baseline_value": 0.0,
+                "delta": 0.888889,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 7.555556,
+                "baseline_value": 0.0,
+                "delta": 7.555556,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.888889,
+                "baseline_value": 0.0,
+                "delta": 1.888889,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.21363,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 150.61384636989186,
+            "ratio_to_baseline": 0.00663949579737911,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 7.555556,
+              "eval_reps_reader.shards_per_read": 1.888889,
+              "eval_reps_reader.cross_shard_read_rate": 0.888889,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.888889,
+                "baseline_value": 0.0,
+                "delta": 0.888889,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 7.555556,
+                "baseline_value": 0.0,
+                "delta": 7.555556,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.888889,
+                "baseline_value": 0.0,
+                "delta": 1.888889,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m12_batch_8_capture_outputs_token_budget_512",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "max_batch_tokens_component": "token_budget_512",
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_cache_mode": "warm_start",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 56.10909097001422,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-uncached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-uncached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-cached.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-cached.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python3",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "512",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-cache_only.json",
+            "--profile-json",
+            "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-cache_only.json",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "4",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "profiles": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-uncached.json",
+          "cached": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-cached.json",
+          "cache_only": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/statement-encodings.json",
+          "layer_stats_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/layer-stats.pt",
+          "eval_reps_cache": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs/eval-reps-cache"
+        },
+        "uncached_cache_mode": "warm_start",
+        "command_log": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/smollm2_l8_runtime_profile_matrix/layer_m12_batch_8_capture_outputs_token_budget_512/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {}
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.192403,
+          "speedup_vs_baseline": 167.7937558146183
+        },
+        "quality_signals": {
+          "maha_last": 0.6139534883720931,
+          "truth_proj": 0.8297674418604651,
+          "subspace_resid": 0.5590697674418604,
+          "disp_euclid": 0.3851162790697674,
+          "disp_hse": 0.2986046511627907,
+          "eigenscore": 0.4474418604651163,
+          "nll_answer": 0.4790697674418605
+        },
+        "truth_proj_auroc": 0.8297674418604651,
+        "totals": {
+          "uncached": {
+            "total_seconds": 32.284022,
+            "bottleneck": "forced_answer_forward",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 18.277263,
+            "model_forward_seconds": 18.277263
+          },
+          "cached": {
+            "total_seconds": 13.924559,
+            "bottleneck": "load_data",
+            "speedup_vs_baseline": 2.318495113561586,
+            "ratio_to_baseline": 0.4313142581800991,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 7.555556,
+              "eval_reps_reader.shards_per_read": 1.888889,
+              "eval_reps_reader.cross_shard_read_rate": 0.888889,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.888889,
+                "baseline_value": 0.0,
+                "delta": 0.888889,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 7.555556,
+                "baseline_value": 0.0,
+                "delta": 7.555556,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.888889,
+                "baseline_value": 0.0,
+                "delta": 1.888889,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.192403,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 167.7937558146183,
+            "ratio_to_baseline": 0.005959697338825998,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.25,
+              "eval_reps_reader.shards_per_read": 1.875,
+              "eval_reps_reader.cross_shard_read_rate": 0.8125,
+              "eval_reps_reader.shard_cache_hit_rate": 0.433333,
+              "eval_reps_reader.shard_load_rate": 0.566667,
+              "eval_reps_reader.shard_count": 17.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.8125,
+                "baseline_value": 0.0,
+                "delta": 0.8125,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.25,
+                "baseline_value": 0.0,
+                "delta": 4.25,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.433333,
+                "baseline_value": 0.0,
+                "delta": 0.433333,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 17.0,
+                "baseline_value": 0.0,
+                "delta": 17.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 0.566667,
+                "baseline_value": 0.0,
+                "delta": 0.566667,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.875,
+                "baseline_value": 0.0,
+                "delta": 1.875,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "layer_m12_batch_4_capture_outputs_token_budget_512",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 32.600502,
+      "cached_total_seconds": 14.603377,
+      "cache_only_total_seconds": 0.194264,
+      "uncached_forced_answer_forward_seconds": 18.150161,
+      "uncached_model_forward_seconds": 18.150161,
+      "cache_only_speedup_vs_baseline": 167.81545731581764,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "uncached_forced_answer_forward_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m12_batch_8_capture_outputs_token_budget_0",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 32.175636,
+      "cached_total_seconds": 15.487498,
+      "cache_only_total_seconds": 0.21363,
+      "uncached_forced_answer_forward_seconds": 18.261069,
+      "uncached_model_forward_seconds": 18.261069,
+      "cache_only_speedup_vs_baseline": 150.61384636989186,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "uncached_forced_answer_forward_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 7.555556,
+        "eval_reps_reader.shards_per_read": 1.888889,
+        "eval_reps_reader.cross_shard_read_rate": 0.888889,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 7.555556,
+        "eval_reps_reader.shards_per_read": 1.888889,
+        "eval_reps_reader.cross_shard_read_rate": 0.888889,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m12_batch_8_capture_outputs_token_budget_512",
+      "layer": -12,
+      "batch_size": 8,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 32.284022,
+      "cached_total_seconds": 13.924559,
+      "cache_only_total_seconds": 0.192403,
+      "uncached_forced_answer_forward_seconds": 18.277263,
+      "uncached_model_forward_seconds": 18.277263,
+      "cache_only_speedup_vs_baseline": 167.7937558146183,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "uncached_forced_answer_forward_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.25,
+        "eval_reps_reader.shards_per_read": 1.875,
+        "eval_reps_reader.cross_shard_read_rate": 0.8125,
+        "eval_reps_reader.shard_cache_hit_rate": 0.433333,
+        "eval_reps_reader.shard_load_rate": 0.566667,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 7.555556,
+        "eval_reps_reader.shards_per_read": 1.888889,
+        "eval_reps_reader.cross_shard_read_rate": 0.888889,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m12_batch_4_capture_outputs_token_budget_0",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 41.314148,
+      "cached_total_seconds": 14.22983,
+      "cache_only_total_seconds": 0.193527,
+      "uncached_forced_answer_forward_seconds": 19.019945,
+      "uncached_model_forward_seconds": 26.121602,
+      "cache_only_speedup_vs_baseline": 213.48002087564012,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "uncached_forced_answer_forward_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    }
+  ],
+  "leaderboard_sort_metric": "uncached_forced_answer_forward_seconds",
+  "prefix_kv_comparisons": [],
+  "matrix_decision": {
+    "status": "promote",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_token_budget_512",
+    "recommended": {
+      "id": "layer_m12_batch_4_capture_outputs_token_budget_512",
+      "layer": -12,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "max_batch_tokens": 512,
+      "prefix_kv_cache": false,
+      "uncached_cache_mode": "warm_start",
+      "shared_cache_group": "artifacts/cache/smollm2_l8_runtime_profile_matrix/huggingfacetb_smollm2_135m_instruct-711c9496676a/layer_m12_capture_outputs",
+      "uncached_total_seconds": 32.600502,
+      "cached_total_seconds": 14.603377,
+      "cache_only_total_seconds": 0.194264,
+      "uncached_forced_answer_forward_seconds": 18.150161,
+      "uncached_model_forward_seconds": 18.150161,
+      "cache_only_speedup_vs_baseline": 167.81545731581764,
+      "truth_proj_auroc": 0.8297674418604651,
+      "gate_passed": true,
+      "recommendation_metric": "uncached_forced_answer_forward_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 3.578947,
+        "eval_reps_reader.shards_per_read": 1.105263,
+        "eval_reps_reader.cross_shard_read_rate": 0.105263,
+        "eval_reps_reader.shard_cache_hit_rate": 0.190476,
+        "eval_reps_reader.shard_load_rate": 0.809524,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_count": 17.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    "checked_cell_count": 4,
+    "candidate_count": 4,
+    "failed_cells": [],
+    "unchecked_cells": [],
+    "recommendation_metric": "uncached_forced_answer_forward_seconds",
+    "blocking_reasons": []
+  },
+  "execution": {
+    "wall_clock_seconds": 236.26958069007378,
+    "cell_count": 4,
+    "max_workers": 1,
+    "shared_cache_refresh_barrier": true
+  },
+  "report_path": "artifacts/smollm2_l8_runtime_profile_matrix/cache-profile-matrix-report.json",
+  "artifact_manifest": "artifacts/smollm2_l8_runtime_profile_matrix/artifact-manifest.json"
+}

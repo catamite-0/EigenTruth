@@ -9304,6 +9304,7 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
         model="tiny-local",
         layers=(-2,),
         batch_sizes=(1,),
+        eval_reps_shard_read_cache_size=3,
         python_executable="/python",
     )
 
@@ -9316,8 +9317,10 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
     assert [entry["matrix_status"] for entry in report["worker_reports"]] == ["dry_run", "dry_run"]
     assert report["worker_sweep_decision"]["status"] == "dry_run"
     assert report["worker_sweep_decision"]["recommended_worker_count"] is None
+    assert report["config"]["eval_reps_shard_read_cache_size"] == 3
     assert manifest["metadata"]["runner"] == "run_cache_worker_sweep"
     assert manifest["metadata"]["worker_counts"] == [1, 2]
+    assert manifest["metadata"]["eval_reps_shard_read_cache_size"] == 3
     assert manifest["artifacts"]["workers.1.matrix_manifest"]["exists"] is True
     assert manifest["artifacts"]["workers.2.matrix_manifest"]["exists"] is True
 
@@ -9325,6 +9328,8 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-duplicate", worker_counts=(1, 1))
     with pytest.raises(ValueError, match=">=1"):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-zero", worker_counts=(0,))
+    with pytest.raises(ValueError, match="eval_reps_shard_read_cache_size"):
+        module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-read-cache", eval_reps_shard_read_cache_size=0)
 
 
 def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, monkeypatch):
@@ -10060,7 +10065,27 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         json.dumps({
             "artifact_manifest": str(matrix_manifest_path),
             "report_path": str(matrix_report_path),
-            "config": {"max_workers": 1, "length_bucketed_batches": True},
+            "config": {
+                "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+                "dtype": "float32",
+                "layers": [-12],
+                "batch_sizes": [2, 4],
+                "hidden_state_captures": ["outputs"],
+                "limit": 8,
+                "manifold_questions": 4,
+                "max_length": 64,
+                "max_batch_tokens": 0,
+                "max_batch_token_budgets": [0, 128],
+                "prefix_kv_cache": False,
+                "prefix_kv_cache_modes": [False],
+                "eval_reps_cache_shard_size": 4,
+                "eval_reps_shard_read_cache_size": 2,
+                "offline": False,
+                "length_bucketed_batches": True,
+                "shared_cache_dir": str(tmp_path / "matrix-cache"),
+                "matrix_mode": "triplet",
+                "max_workers": 1,
+            },
             "score_dump_cache": {
                 "enabled": True,
                 "cache_entries": 5,
@@ -10130,6 +10155,18 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         "subspace_resid"
     )
     assert payload["performance_evidence_bundle"]["cost"]["cache_only_total_seconds"] == pytest.approx(0.2)
+    assert payload["config"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
+    assert payload["config"]["layers"] == (-12,)
+    assert payload["config"]["batch_sizes"] == (2, 4)
+    assert payload["config"]["max_batch_token_budgets"] == (0, 128)
+    assert payload["config"]["eval_reps_shard_read_cache_size"] == 2
+    assert payload["config"]["offline"] is False
+    assert payload["performance_evidence_bundle"]["runtime"]["model"] == (
+        "HuggingFaceTB/SmolLM2-135M-Instruct"
+    )
+    assert payload["performance_evidence_bundle"]["runtime"]["layers"] == (-12,)
+    assert payload["performance_evidence_bundle"]["runtime"]["max_batch_token_budgets"] == (0, 128)
+    assert payload["performance_evidence_bundle"]["runtime"]["offline"] is False
     assert payload["performance_evidence_bundle"]["score_dump_cache"]["enabled"] is True
     assert payload["performance_evidence_bundle"]["score_dump_cache"]["source_count"] == 1
     assert payload["performance_evidence_bundle"]["score_dump_cache"]["cache_entries"] == 5
@@ -10142,6 +10179,10 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"
     assert manifest["metadata"]["runner"] == "run_performance_baseline_workflow"
     assert manifest["metadata"]["matrix_report_reused"] is True
+    assert manifest["metadata"]["model"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
+    assert manifest["metadata"]["layers"] == [-12]
+    assert manifest["metadata"]["max_batch_token_budgets"] == [0, 128]
+    assert manifest["metadata"]["offline"] is False
     assert manifest["artifacts"]["performance_baseline_report"]["exists"] is True
     assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
     assert manifest["artifacts"]["matrix_report"]["exists"] is True

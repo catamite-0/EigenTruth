@@ -193,8 +193,10 @@ errors. For repeated rescoring, pair `--eval-reps-cache` with
 shards through a default 2-shard read-side LRU cache
 (`--eval-reps-shard-read-cache-size`) and report cache IO counters such as read requests,
 records read, shard loads, shard cache hits, and cross-shard reads in JSON output;
-profile comparison and matrix reports propagate the derived cache-efficiency hit-rate
-metrics for IO diagnosis. Runtime recommendations include cache-tuning advice
+triplet, matrix, worker-sweep, and performance-baseline runners pass the setting
+through for cached/cache-only runs. Profile comparison and matrix reports
+propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
+Runtime recommendations include cache-tuning advice
 when hit rate is low, cross-shard reads are high, or each cache read returns too
 few records. Pair
 repeated INSIDE sweeps with `--inside-diagnostics-cache` or the sweep-level

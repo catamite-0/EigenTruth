@@ -74,6 +74,7 @@ class PerformanceBaselineWorkflowConfig:
     prefix_kv_cache: bool = False
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
+    eval_reps_shard_read_cache_size: int = 2
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -151,6 +152,13 @@ class PerformanceBaselineWorkflowConfig:
         object.__setattr__(self, "worker_counts", tuple(int(value) for value in self.worker_counts))
         object.__setattr__(self, "inside_run_names", _parse_run_names(",".join(self.inside_run_names)))
         object.__setattr__(self, "inside_trigger_budgets", tuple(self.inside_trigger_budgets))
+        if int(self.eval_reps_shard_read_cache_size) < 1:
+            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        object.__setattr__(
+            self,
+            "eval_reps_shard_read_cache_size",
+            int(self.eval_reps_shard_read_cache_size),
+        )
         policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
         if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
             choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
@@ -189,6 +197,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
     matrix_report, matrix_report_path = _matrix_report(config)
+    runtime_config = _effective_runtime_config(config, matrix_report=matrix_report)
     worker_sweep_report, worker_sweep_report_path = _worker_sweep_report(config)
     inside_sampling_report, inside_sampling_report_path = _inside_sampling_report(config)
     trigger_sweep_report, trigger_sweep_report_path = _inside_trigger_budget_sweep_report(config)
@@ -248,7 +257,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
                 None if trigger_sweep_report_path is None else str(trigger_sweep_report_path)
             ),
         },
-        "config": _config_payload(config),
+        "config": _config_payload(config, runtime_config=runtime_config),
         "execution": {
             "wall_clock_seconds": time.perf_counter() - started_at,
             "matrix_report_reused": config.matrix_report_path is not None,
@@ -265,6 +274,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
     report["performance_evidence_bundle"] = _performance_evidence_bundle_summary(
         config,
         report=report,
+        runtime_config=runtime_config,
         runtime_recommendation=runtime_recommendation,
         artifact_manifest_summary=artifact_manifest_summary,
         score_dump_cache_evidence=score_dump_cache_evidence,
@@ -286,11 +296,13 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         trigger_sweep_report=trigger_sweep_report,
         trigger_sweep_report_path=trigger_sweep_report_path,
         report=report,
+        runtime_config=runtime_config,
     )
     report["artifact_manifest_summary"] = manifest["summary"]
     report["performance_evidence_bundle"] = _performance_evidence_bundle_summary(
         config,
         report=report,
+        runtime_config=runtime_config,
         runtime_recommendation=runtime_recommendation,
         artifact_manifest_summary=manifest["summary"],
         score_dump_cache_evidence=score_dump_cache_evidence,
@@ -317,6 +329,7 @@ def _matrix_report(config: PerformanceBaselineWorkflowConfig) -> tuple[dict[str,
         prefix_kv_cache=config.prefix_kv_cache,
         prefix_kv_cache_modes=config.prefix_kv_cache_modes,
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=config.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
         python_executable=config.python_executable,
@@ -352,6 +365,7 @@ def _worker_sweep_report(config: PerformanceBaselineWorkflowConfig) -> tuple[dic
         prefix_kv_cache=config.prefix_kv_cache,
         prefix_kv_cache_modes=config.prefix_kv_cache_modes,
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=config.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
         python_executable=config.python_executable,
@@ -536,6 +550,7 @@ def _write_artifact_manifest(
     trigger_sweep_report: Mapping[str, Any] | None,
     trigger_sweep_report_path: Path | None,
     report: Mapping[str, Any],
+    runtime_config: Mapping[str, Any],
 ) -> dict[str, Any]:
     artifacts = _artifact_paths(
         config,
@@ -555,12 +570,18 @@ def _write_artifact_manifest(
             "runner": "run_performance_baseline_workflow",
             "status": report.get("status"),
             "runtime_recommendation_status": dict(report.get("runtime_recommendation") or {}).get("status"),
-            "model": config.model,
-            "dtype": config.dtype,
-            "layers": tuple(config.layers),
-            "batch_sizes": tuple(config.batch_sizes),
-            "hidden_state_captures": tuple(config.hidden_state_captures),
-            "offline": config.offline,
+            "model": runtime_config.get("model"),
+            "dtype": runtime_config.get("dtype"),
+            "layers": tuple(runtime_config.get("layers") or ()),
+            "batch_sizes": tuple(runtime_config.get("batch_sizes") or ()),
+            "hidden_state_captures": tuple(runtime_config.get("hidden_state_captures") or ()),
+            "max_batch_tokens": runtime_config.get("max_batch_tokens"),
+            "max_batch_token_budgets": runtime_config.get("max_batch_token_budgets"),
+            "prefix_kv_cache": runtime_config.get("prefix_kv_cache"),
+            "prefix_kv_cache_modes": runtime_config.get("prefix_kv_cache_modes"),
+            "eval_reps_cache_shard_size": runtime_config.get("eval_reps_cache_shard_size"),
+            "eval_reps_shard_read_cache_size": runtime_config.get("eval_reps_shard_read_cache_size"),
+            "offline": runtime_config.get("offline"),
             "dry_run": config.dry_run,
             "matrix_report_reused": config.matrix_report_path is not None,
             "worker_sweep_enabled": bool(worker_sweep_report_path),
@@ -617,6 +638,7 @@ def _performance_evidence_bundle_summary(
     config: PerformanceBaselineWorkflowConfig,
     *,
     report: Mapping[str, Any],
+    runtime_config: Mapping[str, Any],
     runtime_recommendation: Mapping[str, Any],
     artifact_manifest_summary: Mapping[str, Any],
     score_dump_cache_evidence: Mapping[str, Any],
@@ -642,23 +664,22 @@ def _performance_evidence_bundle_summary(
         "status": status,
         "release_ready": release_ready,
         "runtime": {
-            "model": config.model,
-            "dtype": config.dtype,
-            "layers": tuple(config.layers),
-            "batch_sizes": tuple(config.batch_sizes),
-            "hidden_state_captures": tuple(config.hidden_state_captures),
-            "max_batch_tokens": config.max_batch_tokens,
-            "max_batch_token_budgets": (
-                None if config.max_batch_token_budgets is None else tuple(config.max_batch_token_budgets)
-            ),
-            "prefix_kv_cache": config.prefix_kv_cache,
-            "prefix_kv_cache_modes": (
-                None if config.prefix_kv_cache_modes is None else tuple(config.prefix_kv_cache_modes)
-            ),
-            "max_workers": config.max_workers,
-            "length_bucketed_batches": config.length_bucketed_batches,
-            "offline": config.offline,
-            "matrix_mode": config.matrix_mode,
+            "model": runtime_config.get("model"),
+            "dtype": runtime_config.get("dtype"),
+            "layers": tuple(runtime_config.get("layers") or ()),
+            "batch_sizes": tuple(runtime_config.get("batch_sizes") or ()),
+            "hidden_state_captures": tuple(runtime_config.get("hidden_state_captures") or ()),
+            "max_batch_tokens": runtime_config.get("max_batch_tokens"),
+            "max_batch_token_budgets": runtime_config.get("max_batch_token_budgets"),
+            "prefix_kv_cache": runtime_config.get("prefix_kv_cache"),
+            "prefix_kv_cache_modes": runtime_config.get("prefix_kv_cache_modes"),
+            "eval_reps_cache_shard_size": runtime_config.get("eval_reps_cache_shard_size"),
+            "eval_reps_shard_read_cache_size": runtime_config.get("eval_reps_shard_read_cache_size"),
+            "max_workers": runtime_config.get("max_workers"),
+            "length_bucketed_batches": runtime_config.get("length_bucketed_batches"),
+            "offline": runtime_config.get("offline"),
+            "shared_cache_dir": runtime_config.get("shared_cache_dir"),
+            "matrix_mode": runtime_config.get("matrix_mode"),
         },
         "recommendation": {
             "status": recommendation_status,
@@ -843,32 +864,110 @@ def _cache_counter_payload(counter: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def _config_payload(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:
+def _effective_runtime_config(
+    config: PerformanceBaselineWorkflowConfig,
+    *,
+    matrix_report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    matrix_config = _mapping(matrix_report.get("config")) if matrix_report is not None else {}
+
+    def value(key: str, default: Any) -> Any:
+        return matrix_config[key] if key in matrix_config else default
+
+    def tuple_value(key: str, default: Sequence[Any], *, converter: Any = None) -> tuple[Any, ...]:
+        raw = value(key, default)
+        convert = (lambda item: item) if converter is None else converter
+        return tuple(convert(item) for item in (raw or ()))
+
+    def optional_tuple_value(
+        key: str,
+        default: Sequence[Any] | None,
+        *,
+        converter: Any = None,
+    ) -> tuple[Any, ...] | None:
+        if key in matrix_config:
+            raw = matrix_config.get(key)
+            if raw is None:
+                return None
+            convert = (lambda item: item) if converter is None else converter
+            return tuple(convert(item) for item in raw)
+        if default is None:
+            return None
+        convert = (lambda item: item) if converter is None else converter
+        return tuple(convert(item) for item in default)
+
     return {
-        "model": config.model,
-        "dtype": config.dtype,
-        "layers": tuple(config.layers),
-        "batch_sizes": tuple(config.batch_sizes),
-        "hidden_state_captures": tuple(config.hidden_state_captures),
-        "limit": config.limit,
-        "manifold_questions": config.manifold_questions,
-        "max_length": config.max_length,
-        "max_batch_tokens": config.max_batch_tokens,
-        "max_batch_token_budgets": (
-            None if config.max_batch_token_budgets is None else tuple(config.max_batch_token_budgets)
+        "model": str(value("model", config.model)),
+        "dtype": str(value("dtype", config.dtype)),
+        "layers": tuple_value("layers", config.layers, converter=int),
+        "batch_sizes": tuple_value("batch_sizes", config.batch_sizes, converter=int),
+        "hidden_state_captures": tuple_value("hidden_state_captures", config.hidden_state_captures, converter=str),
+        "limit": value("limit", config.limit),
+        "manifold_questions": value("manifold_questions", config.manifold_questions),
+        "max_length": int(value("max_length", config.max_length)),
+        "max_batch_tokens": int(value("max_batch_tokens", config.max_batch_tokens)),
+        "max_batch_token_budgets": optional_tuple_value(
+            "max_batch_token_budgets",
+            config.max_batch_token_budgets,
+            converter=int,
         ),
-        "prefix_kv_cache": config.prefix_kv_cache,
-        "prefix_kv_cache_modes": (
-            None if config.prefix_kv_cache_modes is None else tuple(config.prefix_kv_cache_modes)
+        "prefix_kv_cache": _bool_value(value("prefix_kv_cache", config.prefix_kv_cache)),
+        "prefix_kv_cache_modes": optional_tuple_value(
+            "prefix_kv_cache_modes",
+            config.prefix_kv_cache_modes,
+            converter=_bool_value,
         ),
-        "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+        "eval_reps_cache_shard_size": int(
+            value("eval_reps_cache_shard_size", config.eval_reps_cache_shard_size)
+        ),
+        "eval_reps_shard_read_cache_size": int(
+            value("eval_reps_shard_read_cache_size", config.eval_reps_shard_read_cache_size)
+        ),
+        "length_bucketed_batches": _bool_value(
+            value("length_bucketed_batches", config.length_bucketed_batches)
+        ),
+        "offline": _bool_value(value("offline", config.offline)),
+        "shared_cache_dir": value(
+            "shared_cache_dir",
+            None if config.shared_cache_dir is None else str(config.shared_cache_dir),
+        ),
+        "matrix_mode": str(value("matrix_mode", config.matrix_mode)),
+        "max_workers": int(value("max_workers", config.max_workers)),
+    }
+
+
+def _config_payload(
+    config: PerformanceBaselineWorkflowConfig,
+    *,
+    runtime_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    runtime = (
+        _effective_runtime_config(config, matrix_report=None)
+        if runtime_config is None
+        else dict(runtime_config)
+    )
+    return {
+        "model": runtime.get("model"),
+        "dtype": runtime.get("dtype"),
+        "layers": tuple(runtime.get("layers") or ()),
+        "batch_sizes": tuple(runtime.get("batch_sizes") or ()),
+        "hidden_state_captures": tuple(runtime.get("hidden_state_captures") or ()),
+        "limit": runtime.get("limit"),
+        "manifold_questions": runtime.get("manifold_questions"),
+        "max_length": runtime.get("max_length"),
+        "max_batch_tokens": runtime.get("max_batch_tokens"),
+        "max_batch_token_budgets": runtime.get("max_batch_token_budgets"),
+        "prefix_kv_cache": runtime.get("prefix_kv_cache"),
+        "prefix_kv_cache_modes": runtime.get("prefix_kv_cache_modes"),
+        "eval_reps_cache_shard_size": runtime.get("eval_reps_cache_shard_size"),
+        "eval_reps_shard_read_cache_size": runtime.get("eval_reps_shard_read_cache_size"),
         "cached_max_total_ratio": config.cached_max_total_ratio,
         "cache_only_max_total_ratio": config.cache_only_max_total_ratio,
-        "length_bucketed_batches": config.length_bucketed_batches,
-        "offline": config.offline,
-        "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
-        "matrix_mode": config.matrix_mode,
-        "max_workers": config.max_workers,
+        "length_bucketed_batches": runtime.get("length_bucketed_batches"),
+        "offline": runtime.get("offline"),
+        "shared_cache_dir": runtime.get("shared_cache_dir"),
+        "matrix_mode": runtime.get("matrix_mode"),
+        "max_workers": runtime.get("max_workers"),
         "run_worker_sweep": config.run_worker_sweep,
         "worker_counts": tuple(config.worker_counts),
         "run_inside_sampling": config.run_inside_sampling,
@@ -893,6 +992,18 @@ def _load_json(path: str | Path) -> dict[str, Any]:
 
 def _mapping(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off"}:
+            return False
+    return bool(value)
 
 
 def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:
@@ -956,6 +1067,7 @@ def _config_from_args(args: argparse.Namespace) -> PerformanceBaselineWorkflowCo
         prefix_kv_cache=args.prefix_kv_cache,
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -1044,6 +1156,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--prefix-kv-cache", action="store_true")
     parser.add_argument("--prefix-kv-cache-modes", default=None)
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
+    parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
+                        help="number of eval-reps cache shards cached by cached/cache-only reader runs")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)
     parser.add_argument("--python", default=sys.executable)
