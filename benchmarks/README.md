@@ -2824,6 +2824,16 @@ It keeps `truth_proj` as the best quality signal while adding promoted
 `score_fusion_mean_rank` evidence (`AUROC=0.679`, false alarm `0.090`,
 detection `0.196`, `alpha=0.1`) to the runtime recommendation and performance
 evidence bundle.
+The corresponding staged structured-QA release candidate is registered as
+`benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
+with
+`artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_staged_release_candidate_manifest.json`.
+Its manifest and release registry metadata carry
+`recommended_score_fusion_status=promote`,
+`recommended_score_fusion_signal=score_fusion_mean_rank`,
+`recommended_score_fusion_auroc=0.679`,
+`recommended_score_fusion_conformal_gate_passed=true`, and
+`performance_score_ensemble_report=artifacts/truthfulqa_score_ensemble_report.json`.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

@@ -1,0 +1,159 @@
+{
+  "artifacts": {
+    "adapter_family_matrix": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family-matrix.json",
+      "sha256": "eaceb731a4204cdbffeaf985cfba0973b5c6672572d7411d4290f88093e3ae16",
+      "size_bytes": 32256
+    },
+    "adapter_family_route_comparison": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-family/route-family-comparison.json",
+      "sha256": "29d25a2ee8eb31edb884ba18e5d18ce466fb1f8455f9ba29597c444d45c572e8",
+      "size_bytes": 26486
+    },
+    "performance_matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "sha256": "5b84916b2f697886a9c1479411cd390c2f404df0acc5ccc05b0b7833de9f17bb",
+      "size_bytes": 2301
+    },
+    "performance_matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "sha256": "6fd00d9ab64ee9a1437959196e7a1c4588d4099b82fdace3e6a4608e6c62a2b9",
+      "size_bytes": 53040
+    },
+    "readiness_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "adapter-readiness-report.json",
+      "sha256": "d75e0d6cfb23d56ecf8061220bdf60f344e20f14b076088c61313d7aa33cb649",
+      "size_bytes": 97130
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "c17c11f5de1a5c9c4881801a1c8bb11ed43cc9b7b8adae2f06dc646976b412b7",
+      "size_bytes": 5272
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_score_ensemble_report.json",
+      "sha256": "0d654b2ccc0e91f6c9a806d6a036d1fd4085549a4a2b9bd03fa549351e7d7d88",
+      "size_bytes": 15177
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "adapter_family_status": "promote",
+    "adapter_include_retrieval": false,
+    "adapter_include_retrieval_structured_qa": false,
+    "adapter_retrieval_limit": 1,
+    "adapter_retriever_min_overlap": 0.6,
+    "adapter_verifier_min_overlap": 0.65,
+    "batch_sizes": [
+      4
+    ],
+    "dtype": "float32",
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_report": null,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_report": null,
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": null,
+    "max_batch_tokens": 512,
+    "max_runtime_total_seconds": null,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "performance_dry_run": false,
+    "performance_max_workers": 2,
+    "performance_report_path": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+    "performance_report_reused": true,
+    "performance_status": "promote",
+    "performance_wall_clock_seconds": 141.3849613420898,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": null,
+    "readiness_status": "promote",
+    "recommended_batch_size": 4,
+    "recommended_best_quality_auroc": 0.8297674418604651,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_hidden_state_capture": "outputs",
+    "recommended_inside_sampling": null,
+    "recommended_inside_trigger_budget_policy": null,
+    "recommended_inside_trigger_budget_sweep": null,
+    "recommended_layer": -12,
+    "recommended_max_batch_tokens": 512,
+    "recommended_max_workers": 2,
+    "recommended_performance_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "recommended_prefix_kv_cache": false,
+    "recommended_quality_signals": {
+      "disp_euclid": 0.3851162790697674,
+      "disp_hse": 0.2986046511627907,
+      "eigenscore": 0.4474418604651163,
+      "maha_last": 0.6139534883720931,
+      "nll_answer": 0.4790697674418605,
+      "score_fusion_mean_rank": 0.6789917647058823,
+      "subspace_resid": 0.5590697674418604,
+      "truth_proj": 0.8297674418604651
+    },
+    "recommended_route": "structured_qa",
+    "recommended_score_fusion": {
+      "alpha": 0.1,
+      "artifact": {},
+      "auroc": 0.6789917647058823,
+      "conformal_gate_passed": true,
+      "coverage": 0.91024,
+      "detection": 0.19640522875816996,
+      "false_alarm": 0.08975999999999999,
+      "method": "mean_rank",
+      "report": "artifacts/truthfulqa_score_ensemble_report.json",
+      "run_name": "smollm2-l80",
+      "signal_name": "score_fusion_mean_rank",
+      "status": "promote"
+    },
+    "recommended_score_fusion_auroc": 0.6789917647058823,
+    "recommended_score_fusion_conformal_gate_passed": true,
+    "recommended_score_fusion_signal": "score_fusion_mean_rank",
+    "recommended_score_fusion_status": "promote",
+    "runner": "run_adapter_readiness_workflow",
+    "runtime_budget_enabled": false,
+    "runtime_budget_failures": [],
+    "runtime_budget_passed": true,
+    "runtime_budget_policy": {
+      "max_retrieval_hit_count": null,
+      "max_total_seconds": null,
+      "min_cache_hit_rate": null,
+      "min_claims_cache_hit_rate": null,
+      "min_verifier_trace_cache_hit_rate": null
+    },
+    "runtime_recommendation_status": "promote",
+    "score_ensemble_report": "artifacts/truthfulqa_score_ensemble_report.json",
+    "wall_clock_seconds": 0.05455222201999277
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

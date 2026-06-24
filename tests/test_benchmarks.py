@@ -6641,6 +6641,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         cache_only_total_seconds=0.2,
         score_dump_cache_jsonl_view_hit_rate=0.9,
     )
+    score_ensemble_report_path = tmp_path / "score-ensemble-report.json"
+    score_ensemble_report_path.write_text(
+        json.dumps({"schema_version": 1, "status": "promote"}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     _write_performance_baseline_record(
         tmp_path / "performance",
         registry_path=baseline_registry_path,
@@ -6653,6 +6658,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         best_quality_auroc=0.72,
         inside_trigger_budget_id="top_0p4",
         inside_trigger_budget_policy="cost_first",
+        score_ensemble_report=str(score_ensemble_report_path),
+        score_fusion_status="promote",
+        score_fusion_signal="score_fusion_mean_rank",
+        score_fusion_auroc=0.88,
+        score_fusion_conformal_gate_passed=True,
         covariance_tradeoff={
             "status": "quality_preserved",
             "baseline_cell": "full-cell",
@@ -6788,6 +6798,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_evidence_bundle_status"] == "promote"
     assert manifest["metadata"]["performance_evidence_bundle_release_ready"] is True
     assert manifest["metadata"]["performance_cache_tuning_status"] == "ok"
+    assert manifest["metadata"]["performance_score_ensemble_report"] == str(score_ensemble_report_path)
+    assert manifest["metadata"]["recommended_score_fusion_status"] == "promote"
+    assert manifest["metadata"]["recommended_score_fusion_signal"] == "score_fusion_mean_rank"
+    assert manifest["metadata"]["recommended_score_fusion_auroc"] == pytest.approx(0.88)
+    assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
     assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert manifest["metadata"]["performance_cache_only_total_ratio"] == pytest.approx(0.02)
@@ -6941,6 +6956,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["performance_evidence_bundle_status"] == "promote"
     assert record.metadata["performance_evidence_bundle_release_ready"] is True
     assert record.metadata["performance_cache_tuning_status"] == "ok"
+    assert record.metadata["performance_score_ensemble_report"] == str(score_ensemble_report_path)
+    assert record.metadata["recommended_score_fusion_status"] == "promote"
+    assert record.metadata["recommended_score_fusion_signal"] == "score_fusion_mean_rank"
+    assert record.metadata["recommended_score_fusion_auroc"] == pytest.approx(0.88)
+    assert record.metadata["recommended_score_fusion_conformal_gate_passed"] is True
     assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
@@ -7630,6 +7650,11 @@ def _write_performance_baseline_record(
     cache_only_total_seconds=0.2,
     score_dump_cache_jsonl_view_hit_rate=0.6,
     covariance_tradeoff=None,
+    score_ensemble_report=None,
+    score_fusion_status=None,
+    score_fusion_signal=None,
+    score_fusion_auroc=None,
+    score_fusion_conformal_gate_passed=None,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -7720,6 +7745,10 @@ def _write_performance_baseline_record(
             "cache_tuning_status": "ok",
             "inside_sampling_run": "adaptive_selfcheck",
             "inside_trigger_budget_id": inside_trigger_budget_id,
+            "score_fusion_status": score_fusion_status,
+            "score_fusion_signal": score_fusion_signal,
+            "score_fusion_auroc": score_fusion_auroc,
+            "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
         },
         "cost": {
             "uncached_total_seconds": uncached_total_seconds,
@@ -7732,6 +7761,11 @@ def _write_performance_baseline_record(
             "matrix_status": "promote",
             "worker_sweep_status": None,
             "inside_trigger_budget_sweep_status": "promote",
+            "score_ensemble_report": score_ensemble_report,
+            "score_fusion_status": score_fusion_status,
+            "score_fusion_signal": score_fusion_signal,
+            "score_fusion_auroc": score_fusion_auroc,
+            "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
         },
         "score_dump_cache": {
             "enabled": True,

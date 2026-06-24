@@ -468,6 +468,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         performance_evidence_bundle.get("recommendation") or {}
     )
     performance_evidence_cost = dict(performance_evidence_bundle.get("cost") or {})
+    performance_evidence = dict(performance_evidence_bundle.get("evidence") or {})
     performance_score_dump_cache = dict(performance_evidence_bundle.get("score_dump_cache") or {})
     performance_score_dump_cache_totals = dict(performance_score_dump_cache.get("totals") or {})
     performance_jsonl_view_cache = dict(performance_score_dump_cache_totals.get("jsonl_view") or {})
@@ -539,6 +540,19 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "performance_cache_tuning_status": performance_evidence_recommendation.get(
             "cache_tuning_status"
+        ),
+        "performance_score_ensemble_report": performance_evidence.get("score_ensemble_report"),
+        "recommended_score_fusion_status": performance_evidence_recommendation.get(
+            "score_fusion_status"
+        ),
+        "recommended_score_fusion_signal": performance_evidence_recommendation.get(
+            "score_fusion_signal"
+        ),
+        "recommended_score_fusion_auroc": performance_evidence_recommendation.get(
+            "score_fusion_auroc"
+        ),
+        "recommended_score_fusion_conformal_gate_passed": (
+            performance_evidence_recommendation.get("score_fusion_conformal_gate_passed")
         ),
         "performance_uncached_total_seconds": performance_evidence_cost.get(
             "uncached_total_seconds"

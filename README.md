@@ -209,6 +209,11 @@ it keeps the read-cache sweep winner at size 2, selects `max_workers=2`,
 lowers matrix wall-clock from 184.467s to 141.385s on this machine, preserves
 `truth_proj` AUROC 0.830, and carries a conformal-gated
 `score_fusion_mean_rank` auxiliary signal from the l80 score-ensemble report.
+The same evidence now promotes
+`benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
+through the staged structured-QA release gate; its release manifest and registry
+metadata expose the score-fusion status, signal, AUROC, conformal gate result,
+and source score-ensemble report for audit.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice
