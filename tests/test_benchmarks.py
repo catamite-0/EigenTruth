@@ -4143,6 +4143,39 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
         generation_seconds_ratio=0.45,
         total_generated_samples=8,
     )
+    score_ensemble_report_path = tmp_path / "score-ensemble.json"
+    score_ensemble_report_path.write_text(
+        json.dumps({
+            "best_alpha": 0.2,
+            "runs": [
+                {
+                    "name": "unit-layer-m1",
+                    "config": {"model": "sshleifer/tiny-gpt2", "layer": -1},
+                    "best_ensemble_at_alpha": {
+                        "name": "max_rank",
+                        "auroc": 0.94,
+                        "false_alarm": 0.18,
+                        "detection": 0.86,
+                    },
+                    "ensemble_results": {
+                        "max_rank": {
+                            "alphas": {
+                                "0.2": {
+                                    "alpha": 0.2,
+                                    "false_alarm": 0.18,
+                                    "coverage": 0.82,
+                                    "detection": 0.86,
+                                    "pass": True,
+                                }
+                            }
+                        }
+                    },
+                    "best_fusion_artifact": {"path": "fusion.json", "method": "max_rank"},
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
     payload = module.run_adapter_readiness_workflow(
         module.AdapterReadinessWorkflowConfig(
             output_dir=tmp_path,
@@ -4151,6 +4184,7 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
             batch_sizes=(2,),
             performance_dry_run=False,
             inside_sampling_report_path=inside_report_path,
+            score_ensemble_report_path=score_ensemble_report_path,
         )
     )
 
@@ -4164,9 +4198,11 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     assert payload["runtime_recommendation"]["status"] == "promote"
     assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
     assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
-        "name": "subspace_resid",
-        "auroc": pytest.approx(0.91),
+        "name": "score_fusion_max_rank",
+        "auroc": pytest.approx(0.94),
     }
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["status"] == "promote"
+    assert payload["runtime_recommendation"]["recommendation"]["score_fusion"]["false_alarm"] == pytest.approx(0.18)
     assert payload["runtime_recommendation"]["recommendation"]["inside_sampling"]["recommended_run"] == (
         "adaptive_selfcheck"
     )
@@ -4192,10 +4228,13 @@ def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pa
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
     assert manifest["artifacts"]["runtime_recommendation"]["exists"] is True
     assert manifest["artifacts"]["inside_sampling_profile_report"]["exists"] is True
+    assert manifest["artifacts"]["score_ensemble_report"]["exists"] is True
     assert manifest["metadata"]["runtime_recommendation_status"] == "promote"
     assert manifest["metadata"]["recommended_batch_size"] == 2
-    assert manifest["metadata"]["recommended_best_quality_signal"] == "subspace_resid"
-    assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.91)
+    assert manifest["metadata"]["recommended_best_quality_signal"] == "score_fusion_max_rank"
+    assert manifest["metadata"]["recommended_best_quality_auroc"] == pytest.approx(0.94)
+    assert manifest["metadata"]["recommended_score_fusion_status"] == "promote"
+    assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
     assert manifest["metadata"]["recommended_inside_sampling"]["recommended_run"] == "adaptive_selfcheck"
 
 
@@ -10866,6 +10905,97 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "--max-workers",
         "2",
     ]
+
+
+def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    score_report_path = tmp_path / "score-ensemble.json"
+    matrix_report = {
+        "config": {"model": "unit-model", "max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m1_batch_2_capture_outputs",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m1_batch_2_capture_outputs",
+                "layer": -1,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "cache_only_total_seconds": 0.1,
+                "truth_proj_auroc": 0.72,
+            },
+        },
+        "cells": [],
+    }
+    score_ensemble_report = {
+        "best_alpha": 0.2,
+        "runs": [
+            {
+                "name": "unit-layer-m1",
+                "config": {"model": "unit-model", "layer": -1},
+                "best_ensemble_at_alpha": {
+                    "name": "max_rank",
+                    "auroc": 0.81,
+                    "false_alarm": 0.19,
+                    "detection": 0.7,
+                },
+                "ensemble_results": {
+                    "max_rank": {
+                        "alphas": {
+                            "0.2": {
+                                "alpha": 0.2,
+                                "false_alarm": 0.19,
+                                "coverage": 0.81,
+                                "detection": 0.7,
+                                "pass": True,
+                                "repeats": 1,
+                            }
+                        }
+                    }
+                },
+                "best_fusion_artifact": {"path": "fusion.json", "method": "max_rank"},
+            }
+        ],
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_report_path,
+    )
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["quality_signals"]["score_fusion_max_rank"] == pytest.approx(0.81)
+    assert report["recommendation"]["best_quality_signal"] == {
+        "name": "score_fusion_max_rank",
+        "auroc": pytest.approx(0.81),
+    }
+    assert report["recommendation"]["score_fusion"]["status"] == "promote"
+    assert report["recommendation"]["score_fusion"]["conformal_gate_passed"] is True
+    assert report["evidence"]["score_ensemble_report"] == str(score_report_path)
+    assert report["evidence"]["score_fusion_status"] == "promote"
+    assert report["evidence"]["score_fusion_false_alarm"] == pytest.approx(0.19)
+
+    blocked_score_ensemble = json.loads(json.dumps(score_ensemble_report))
+    blocked_score_ensemble["runs"][0]["best_ensemble_at_alpha"]["auroc"] = 0.99
+    blocked_score_ensemble["runs"][0]["ensemble_results"]["max_rank"]["alphas"]["0.2"]["pass"] = False
+
+    blocked = module.build_runtime_recommendation(
+        matrix_report,
+        score_ensemble_report=blocked_score_ensemble,
+        score_ensemble_report_path=score_report_path,
+    )
+
+    assert "score_fusion_max_rank" not in blocked["recommendation"]["quality_signals"]
+    assert blocked["recommendation"]["best_quality_signal"] == {
+        "name": "truth_proj",
+        "auroc": pytest.approx(0.72),
+    }
+    assert blocked["recommendation"]["score_fusion"]["status"] == "blocked"
+    assert blocked["recommendation"]["score_fusion"]["conformal_gate_passed"] is False
 
 
 def test_runtime_config_worker_matrix_match_allows_equivalent_report_path(tmp_path):

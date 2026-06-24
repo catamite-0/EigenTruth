@@ -90,6 +90,7 @@ class AdapterReadinessWorkflowConfig:
     max_runtime_total_seconds: float | None = None
     inside_sampling_report_path: Path | None = None
     inside_trigger_budget_sweep_report_path: Path | None = None
+    score_ensemble_report_path: Path | None = None
     inside_trigger_budget_policy: str = "quality_balanced"
     performance_report_path: Path | None = None
 
@@ -107,6 +108,8 @@ class AdapterReadinessWorkflowConfig:
                 "inside_trigger_budget_sweep_report_path",
                 Path(self.inside_trigger_budget_sweep_report_path),
             )
+        if self.score_ensemble_report_path is not None:
+            object.__setattr__(self, "score_ensemble_report_path", Path(self.score_ensemble_report_path))
         if self.performance_report_path is not None:
             object.__setattr__(self, "performance_report_path", Path(self.performance_report_path))
         policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
@@ -231,10 +234,14 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             if config.inside_trigger_budget_sweep_report_path is None
             else _load_json(config.inside_trigger_budget_sweep_report_path)
         ),
+        score_ensemble_report=(
+            None if config.score_ensemble_report_path is None else _load_json(config.score_ensemble_report_path)
+        ),
         inside_trigger_budget_policy=config.inside_trigger_budget_policy,
         matrix_report_path=performance_report_path,
         inside_sampling_report_path=config.inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=config.inside_trigger_budget_sweep_report_path,
+        score_ensemble_report_path=config.score_ensemble_report_path,
     )
     config.runtime_recommendation_path.write_text(
         _json_text(runtime_recommendation, compact=config.compact_json, sort_keys=True),
@@ -256,6 +263,9 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "runtime_recommendation_path": str(config.runtime_recommendation_path),
         "artifact_manifest": str(config.artifact_manifest_path),
         "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
+        "score_ensemble_report_path": None
+        if config.score_ensemble_report_path is None
+        else str(config.score_ensemble_report_path),
         "adapter_family_matrix": adapter_report,
         "performance_matrix": performance_report,
         "runtime_recommendation": runtime_recommendation,
@@ -373,12 +383,14 @@ def _write_artifact_manifest(
         "runtime_recommendation": report.get("runtime_recommendation_path"),
         "inside_sampling_profile_report": config.inside_sampling_report_path,
         "inside_trigger_budget_sweep_report": config.inside_trigger_budget_sweep_report_path,
+        "score_ensemble_report": config.score_ensemble_report_path,
     }
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
     runtime_budget = dict(report.get("runtime_budget") or {})
     runtime_config = dict(runtime_recommendation.get("recommendation") or {})
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
+    score_fusion = dict(runtime_config.get("score_fusion") or {})
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -417,6 +429,9 @@ def _write_artifact_manifest(
             "inside_trigger_budget_sweep_report": None
             if config.inside_trigger_budget_sweep_report_path is None
             else str(config.inside_trigger_budget_sweep_report_path),
+            "score_ensemble_report": None
+            if config.score_ensemble_report_path is None
+            else str(config.score_ensemble_report_path),
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
             "wall_clock_seconds": dict(report.get("execution") or {}).get("wall_clock_seconds"),
             "performance_wall_clock_seconds": dict(report.get("execution") or {}).get(
@@ -441,6 +456,11 @@ def _write_artifact_manifest(
             "recommended_best_quality_signal": best_quality_signal.get("name"),
             "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
             "recommended_quality_signals": runtime_config.get("quality_signals"),
+            "recommended_score_fusion": score_fusion or None,
+            "recommended_score_fusion_status": score_fusion.get("status"),
+            "recommended_score_fusion_signal": score_fusion.get("signal_name"),
+            "recommended_score_fusion_auroc": score_fusion.get("auroc"),
+            "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
             "recommended_inside_sampling": runtime_config.get("inside_sampling"),
             "recommended_inside_trigger_budget_sweep": runtime_config.get("inside_trigger_budget_sweep"),
             "recommended_inside_trigger_budget_policy": dict(
@@ -548,6 +568,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
             if args.inside_trigger_budget_sweep_report
             else None
         ),
+        score_ensemble_report_path=Path(args.score_ensemble_report) if args.score_ensemble_report else None,
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
@@ -624,6 +645,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional inside-sampling-profile-comparison.json to fold into runtime recommendation")
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
                         help="optional inside-trigger-budget-sweep.json to fold into runtime recommendation")
+    parser.add_argument("--score-ensemble-report", default=None,
+                        help="optional eval_score_ensemble.py report to fold into runtime recommendation")
     parser.add_argument("--inside-trigger-budget-policy", default="quality_balanced",
                         choices=INSIDE_TRIGGER_BUDGET_POLICIES,
                         help="budget selection policy for trigger-budget sweep evidence")

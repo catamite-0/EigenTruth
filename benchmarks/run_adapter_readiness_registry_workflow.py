@@ -143,6 +143,7 @@ def _promotion_metadata(
     runtime = dict(readiness_report.get("runtime_recommendation") or {})
     runtime_config = dict(runtime.get("recommendation") or {})
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
+    score_fusion = dict(runtime_config.get("score_fusion") or {})
     metadata = {
         "workflow": "run_adapter_readiness_registry_workflow",
         "readiness_status": decision.get("status"),
@@ -160,6 +161,11 @@ def _promotion_metadata(
         "recommended_best_quality_signal": best_quality_signal.get("name"),
         "recommended_best_quality_auroc": best_quality_signal.get("auroc"),
         "recommended_quality_signals": runtime_config.get("quality_signals"),
+        "recommended_score_fusion": score_fusion or None,
+        "recommended_score_fusion_status": score_fusion.get("status"),
+        "recommended_score_fusion_signal": score_fusion.get("signal_name"),
+        "recommended_score_fusion_auroc": score_fusion.get("auroc"),
+        "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
     }
     inside_sampling = dict(runtime_config.get("inside_sampling") or {})
     if inside_sampling:
@@ -261,6 +267,7 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
             if args.inside_trigger_budget_sweep_report
             else None
         ),
+        score_ensemble_report_path=Path(args.score_ensemble_report) if args.score_ensemble_report else None,
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         performance_report_path=Path(args.performance_report) if args.performance_report else None,
     )
@@ -350,6 +357,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional run_inside_sampling_profile.py comparison report for runtime recommendation")
     parser.add_argument("--inside-trigger-budget-sweep-report", default=None,
                         help="optional run_inside_trigger_budget_sweep.py report for runtime recommendation")
+    parser.add_argument("--score-ensemble-report", default=None,
+                        help="optional eval_score_ensemble.py report for runtime recommendation")
     parser.add_argument("--inside-trigger-budget-policy", default="quality_balanced",
                         choices=INSIDE_TRIGGER_BUDGET_POLICIES,
                         help="budget selection policy for trigger-budget sweep evidence")

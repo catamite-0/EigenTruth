@@ -2186,9 +2186,12 @@ then thresholded with the same split-conformal false-alarm check as the single
 signals. Each run records the same validated score-dump summary and file
 fingerprint used by `eval_conformal.py`, so ensemble comparisons can be checked
 against exact input artifacts. Saved fusion artifacts preserve the normal-score
-reference distributions, signal directions, fusion method, conformal alpha, and
-threshold; they are intended for controlled follow-up experiments rather than as
-a default product policy.
+orientation, reference distributions, signal directions, fusion method,
+conformal alpha, and threshold. They can be supplied to
+`recommend_runtime_config.py` with `--score-ensemble-report`; the runtime
+recommendation only promotes a fusion signal when its selected alpha passed the
+conformal false-alarm gate. They are intended for controlled follow-up
+experiments rather than as a default product policy.
 
 Current Qwen l80 / SmolLM2 l80 result: simple internal-score ensembles do not
 beat `truth_proj`. At alpha 0.100, Qwen's best single signal detects 0.279 while
@@ -2407,6 +2410,7 @@ python benchmarks/recommend_runtime_config.py \
   --inside-sampling-report /tmp/eigentruth-qwen05-inside/inside-sampling-profile-comparison.json \
   --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
   --inside-trigger-budget-policy quality_balanced \
+  --score-ensemble-report artifacts/qwen05_score_ensemble_report.json \
   --output /tmp/eigentruth-qwen05-worker-sweep/runtime-recommendation.json \
   --fail-on-blocked
 ```
@@ -2429,6 +2433,10 @@ including `--derive-from-max-budget` for derived nested top-fraction sweeps. Use
 highest measured INSIDE quality metric is worth the extra sampled generation
 cost. The selected policy is written into the runtime recommendation evidence
 and readiness/registry metadata.
+With `--score-ensemble-report`, a best fusion signal is added to
+`quality_signals` only when the selected ensemble alpha passed its conformal
+false-alarm gate; blocked or ambiguous fusion evidence is retained in
+`score_fusion` and `evidence` without changing the runtime recommendation.
 When the matrix report and worker-sweep child matrix are separate files, the
 recommendation still treats them as compatible if they select the same promoted
 runtime cell and matching quality/cache-only evidence; this lets a serial matrix

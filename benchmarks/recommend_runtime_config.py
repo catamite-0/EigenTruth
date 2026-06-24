@@ -3,8 +3,8 @@
 The cache-profile matrix and worker-count sweep reports are intentionally
 experiment shaped. This helper turns their promotion decisions into one compact
 machine-readable recommendation: layer, batch size, capture mode, token budget,
-prefix-KV mode, worker count, and optional INSIDE sampling / trigger-budget
-configuration.
+prefix-KV mode, worker count, optional INSIDE sampling / trigger-budget
+configuration, and gated score-fusion quality evidence.
 """
 
 from __future__ import annotations
@@ -45,11 +45,13 @@ def build_runtime_recommendation(
     worker_sweep_report: Mapping[str, Any] | None = None,
     inside_sampling_report: Mapping[str, Any] | None = None,
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None = None,
+    score_ensemble_report: Mapping[str, Any] | None = None,
     inside_trigger_budget_policy: str = "quality_balanced",
     matrix_report_path: str | Path | None = None,
     worker_sweep_report_path: str | Path | None = None,
     inside_sampling_report_path: str | Path | None = None,
     inside_trigger_budget_sweep_report_path: str | Path | None = None,
+    score_ensemble_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one runtime recommendation from matrix and optional worker evidence."""
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(inside_trigger_budget_policy)
@@ -94,7 +96,9 @@ def build_runtime_recommendation(
             worker_decision=worker_decision,
             inside_sampling_decision=inside_sampling_decision,
             inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
+            score_ensemble_report=score_ensemble_report,
             matrix_report_path=matrix_report_path,
+            score_ensemble_report_path=score_ensemble_report_path,
         )
         if recommended is None:
             status = "no_candidate"
@@ -119,10 +123,12 @@ def build_runtime_recommendation(
         inside_sampling_report=inside_sampling_report,
         inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
         inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report,
+        score_ensemble_report=score_ensemble_report,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
+        score_ensemble_report_path=score_ensemble_report_path,
         inside_trigger_budget_policy=inside_trigger_budget_policy,
     )
     report = {
@@ -146,7 +152,9 @@ def _recommendation(
     worker_decision: Mapping[str, Any],
     inside_sampling_decision: Mapping[str, Any],
     inside_trigger_budget_sweep_decision: Mapping[str, Any],
+    score_ensemble_report: Mapping[str, Any] | None,
     matrix_report_path: str | Path | None,
+    score_ensemble_report_path: str | Path | None,
 ) -> dict[str, Any] | None:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     if not matrix_recommended or any(
@@ -163,6 +171,8 @@ def _recommendation(
         matrix_report,
         matrix_recommended,
         matrix_report_path=matrix_report_path,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
     totals = _runtime_totals(matrix_recommended)
     matrix_config = _mapping(matrix_report.get("config"))
@@ -191,6 +201,9 @@ def _recommendation(
         "quality_signals": quality["signals"],
         "best_quality_signal": quality["best"],
     }
+    score_fusion = _mapping(quality.get("score_fusion"))
+    if score_fusion and score_fusion.get("status") != "not_configured":
+        recommendation["score_fusion"] = score_fusion
     covariance_tradeoff = _covariance_tradeoff_summary(
         matrix_report,
         matrix_recommended,
@@ -513,6 +526,8 @@ def _quality_signal_summary(
     matrix_recommended: Mapping[str, Any],
     *,
     matrix_report_path: str | Path | None = None,
+    score_ensemble_report: Mapping[str, Any] | None = None,
+    score_ensemble_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     cell_id = matrix_recommended.get("id")
     cell = _find_by_id(matrix_report.get("cells"), cell_id) if cell_id is not None else {}
@@ -522,6 +537,17 @@ def _quality_signal_summary(
         if truth_proj is not None:
             signals = {"truth_proj": truth_proj}
             source = "leaderboard"
+    score_fusion = _score_fusion_quality_signal(
+        score_ensemble_report,
+        matrix_report=matrix_report,
+        matrix_recommended=matrix_recommended,
+        score_ensemble_report_path=score_ensemble_report_path,
+    )
+    if score_fusion.get("status") == "promote":
+        signal_name = score_fusion.get("signal_name")
+        auroc = _float_or_none(score_fusion.get("auroc"))
+        if signal_name and auroc is not None:
+            signals[str(signal_name)] = auroc
     signals = {name: signals[name] for name in sorted(signals)}
     best = _best_quality_signal(signals)
     return {
@@ -529,7 +555,121 @@ def _quality_signal_summary(
         "best": best,
         "source": source,
         "count": len(signals),
+        "score_fusion": score_fusion,
     }
+
+
+def _score_fusion_quality_signal(
+    score_ensemble_report: Mapping[str, Any] | None,
+    *,
+    matrix_report: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+    score_ensemble_report_path: str | Path | None,
+) -> dict[str, Any]:
+    if score_ensemble_report is None:
+        return {"status": "not_configured"}
+    runs = score_ensemble_report.get("runs")
+    if not isinstance(runs, Sequence) or isinstance(runs, str) or not runs:
+        return {
+            "status": "no_runs",
+            "report": _optional_path_str(score_ensemble_report_path),
+        }
+    selected, selection_status = _select_score_ensemble_run(
+        runs,
+        matrix_report=matrix_report,
+        matrix_recommended=matrix_recommended,
+    )
+    if selected is None:
+        return {
+            "status": selection_status,
+            "report": _optional_path_str(score_ensemble_report_path),
+            "run_count": len(runs),
+        }
+    best = _mapping(selected.get("best_ensemble_at_alpha"))
+    method = best.get("name")
+    if not method:
+        return {
+            "status": "no_best_ensemble",
+            "report": _optional_path_str(score_ensemble_report_path),
+            "run_name": selected.get("name"),
+        }
+    alpha = _float_or_none(score_ensemble_report.get("best_alpha"))
+    if alpha is None:
+        alpha = _float_or_none(best.get("alpha"))
+    alpha_payload = _score_ensemble_alpha_payload(selected, str(method), alpha)
+    if not alpha_payload:
+        return {
+            "status": "missing_alpha_payload",
+            "report": _optional_path_str(score_ensemble_report_path),
+            "run_name": selected.get("name"),
+            "method": method,
+            "alpha": alpha,
+        }
+    passed = alpha_payload.get("pass") is True
+    auroc = _float_or_none(best.get("auroc"))
+    signal_name = f"score_fusion_{method}"
+    status = "promote" if passed and auroc is not None else "blocked"
+    return {
+        "status": status,
+        "report": _optional_path_str(score_ensemble_report_path),
+        "run_name": selected.get("name"),
+        "method": method,
+        "signal_name": signal_name,
+        "auroc": auroc,
+        "alpha": alpha,
+        "false_alarm": _float_or_none(alpha_payload.get("false_alarm")),
+        "detection": _float_or_none(alpha_payload.get("detection")),
+        "coverage": _float_or_none(alpha_payload.get("coverage")),
+        "conformal_gate_passed": passed,
+        "artifact": _mapping(selected.get("best_fusion_artifact")),
+    }
+
+
+def _select_score_ensemble_run(
+    runs: Any,
+    *,
+    matrix_report: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, str]:
+    run_items = [_mapping(run) for run in runs if _mapping(run)]
+    if len(run_items) == 1:
+        return run_items[0], "single_run"
+    config = _mapping(matrix_report.get("config"))
+    model = config.get("model")
+    layer = matrix_recommended.get("layer")
+    matches = []
+    for run in run_items:
+        run_config = _mapping(run.get("config"))
+        model_matches = model is None or run_config.get("model") == model
+        layer_matches = layer is None or run_config.get("layer") == layer
+        if model_matches and layer_matches:
+            matches.append(run)
+    if len(matches) == 1:
+        return matches[0], "matched_model_layer"
+    if not matches:
+        return None, "no_matching_run"
+    return None, "ambiguous_matching_runs"
+
+
+def _score_ensemble_alpha_payload(
+    run: Mapping[str, Any],
+    method: str,
+    alpha: float | None,
+) -> dict[str, Any]:
+    if alpha is None:
+        return {}
+    method_payload = _mapping(_mapping(run.get("ensemble_results")).get(method))
+    alphas = _mapping(method_payload.get("alphas"))
+    candidates = (str(alpha), f"{alpha:.2f}", f"{alpha:.1f}")
+    for key in candidates:
+        payload = _mapping(alphas.get(key))
+        if payload:
+            return payload
+    for key, value in alphas.items():
+        numeric = _float_or_none(key)
+        if numeric is not None and math.isclose(numeric, alpha, rel_tol=1e-9, abs_tol=1e-12):
+            return _mapping(value)
+    return {}
 
 
 def _quality_signals_from_cell(
@@ -1501,10 +1641,12 @@ def _evidence(
     inside_sampling_decision: Mapping[str, Any],
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
     inside_trigger_budget_sweep_decision: Mapping[str, Any],
+    score_ensemble_report: Mapping[str, Any] | None,
     matrix_report_path: str | Path | None,
     worker_sweep_report_path: str | Path | None,
     inside_sampling_report_path: str | Path | None,
     inside_trigger_budget_sweep_report_path: str | Path | None,
+    score_ensemble_report_path: str | Path | None,
     inside_trigger_budget_policy: str,
 ) -> dict[str, Any]:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
@@ -1514,7 +1656,10 @@ def _evidence(
         matrix_report,
         matrix_recommended,
         matrix_report_path=matrix_report_path,
+        score_ensemble_report=score_ensemble_report,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
+    score_fusion = _mapping(quality.get("score_fusion"))
     config = _mapping(matrix_report.get("config"))
     trigger_budget = _mapping(inside_trigger_budget_sweep_decision.get("recommended"))
     evidence = {
@@ -1531,6 +1676,14 @@ def _evidence(
         "prefix_kv_comparison": prefix_comparison,
         "quality_signal_source": quality["source"],
         "quality_signal_count": quality["count"],
+        "score_ensemble_report": _optional_path_str(score_ensemble_report_path),
+        "score_fusion_status": score_fusion.get("status"),
+        "score_fusion_signal": score_fusion.get("signal_name"),
+        "score_fusion_auroc": score_fusion.get("auroc"),
+        "score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+        "score_fusion_false_alarm": score_fusion.get("false_alarm"),
+        "score_fusion_detection": score_fusion.get("detection"),
+        "score_fusion_alpha": score_fusion.get("alpha"),
         "worker_sweep_report": None if worker_sweep_report_path is None else str(worker_sweep_report_path),
         "worker_sweep_status": None if worker_sweep_report is None else worker_decision.get("status"),
         "worker_recommended_worker_count": worker_decision.get("recommended_worker_count"),
@@ -1738,6 +1891,10 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _optional_path_str(path: str | Path | None) -> str | None:
+    return None if path is None else str(path)
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     matrix_report_path = Path(args.matrix_report)
@@ -1747,6 +1904,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     inside_trigger_budget_sweep_report_path = (
         Path(inside_trigger_budget_sweep_report_arg) if inside_trigger_budget_sweep_report_arg else None
     )
+    score_ensemble_report_arg = getattr(args, "score_ensemble_report", None)
+    score_ensemble_report_path = Path(score_ensemble_report_arg) if score_ensemble_report_arg else None
     report = build_runtime_recommendation(
         _load_json(matrix_report_path),
         worker_sweep_report=None if worker_sweep_report_path is None else _load_json(worker_sweep_report_path),
@@ -1758,11 +1917,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             if inside_trigger_budget_sweep_report_path is None
             else _load_json(inside_trigger_budget_sweep_report_path)
         ),
+        score_ensemble_report=(
+            None if score_ensemble_report_path is None else _load_json(score_ensemble_report_path)
+        ),
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
+        score_ensemble_report_path=score_ensemble_report_path,
     )
     output = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
@@ -1792,6 +1955,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="budget selection policy when --inside-trigger-budget-sweep-report is provided; "
                              "quality_balanced preserves the previous default, cost_first minimizes sampled "
                              "INSIDE work, and quality_first chooses the highest inside quality metric")
+    parser.add_argument("--score-ensemble-report", default=None,
+                        help="optional eval_score_ensemble.py report to fold in as gated quality evidence")
     parser.add_argument("--output", default=None,
                         help="optional path to write the recommendation JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",
