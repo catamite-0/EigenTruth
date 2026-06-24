@@ -10910,6 +10910,8 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
         "read_requests": 1,
         "records_read": 2,
         "shard_count": 0,
+        "shard_cache_capacity": 0,
+        "shard_cache_entries": 0,
         "shard_read_requests": 0,
         "cross_shard_reads": 0,
         "shard_loads": 0,
@@ -10998,17 +11000,18 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
     assert counted_reader_loads == [
         "records-000000.pt",
         "records-000001.pt",
-        "records-000000.pt",
     ]
     assert reader_stats == {
         "record_count": 3,
         "read_requests": 4,
         "records_read": 5,
         "shard_count": 2,
+        "shard_cache_capacity": 2,
+        "shard_cache_entries": 2,
         "shard_read_requests": 5,
         "cross_shard_reads": 1,
-        "shard_loads": 3,
-        "shard_cache_hits": 2,
+        "shard_loads": 2,
+        "shard_cache_hits": 3,
     }
     assert loaded_metadata == metadata
     assert torch.allclose(loaded[0]["ans_hs"], reps_a["ans_hs"])
@@ -11635,6 +11638,20 @@ def test_eval_truthfulqa_profile_summary_groups_and_throughput():
         n_eval_records=30,
         n_warmup_true=18,
         n_warmup_false=12,
+        cache_stats={
+            "eval_reps_reader": {
+                "record_count": 30,
+                "read_requests": 3,
+                "records_read": 30,
+                "shard_count": 2,
+                "shard_cache_capacity": 2,
+                "shard_cache_entries": 2,
+                "shard_read_requests": 4,
+                "cross_shard_reads": 1,
+                "shard_loads": 2,
+                "shard_cache_hits": 2,
+            }
+        },
     )
     summary = payload["summary"]
 
@@ -11645,6 +11662,9 @@ def test_eval_truthfulqa_profile_summary_groups_and_throughput():
     assert summary["throughput"]["forced_answer_records_per_second"] == pytest.approx(10.0)
     assert summary["throughput"]["warmup_records_per_second"] == pytest.approx(5.0)
     assert summary["throughput"]["end_to_end_eval_records_per_second"] == pytest.approx(2.5)
+    assert summary["cache_efficiency"]["eval_reps_reader"]["records_per_read"] == pytest.approx(10.0)
+    assert summary["cache_efficiency"]["eval_reps_reader"]["shard_cache_hit_rate"] == pytest.approx(0.5)
+    assert summary["cache_efficiency"]["eval_reps_reader"]["cross_shard_read_rate"] == pytest.approx(1 / 3)
     assert summary["accounted_seconds"] == pytest.approx(10.5)
     assert summary["unaccounted_seconds"] == pytest.approx(1.5)
 

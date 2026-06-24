@@ -170,8 +170,9 @@ run serially before dependent warm-start cells, and reports include end-to-end
 `execution.wall_clock_seconds` for worker-count comparisons. Use
 `--auto-batch-size` on long runs to halve and retry after retriable memory
 errors. For repeated rescoring, pair `--eval-reps-cache` with
-`--eval-reps-cache-shard-size`; sharded cache readers reuse the active shard
-across adjacent batch reads and report cache IO counters such as read requests,
+`--eval-reps-cache-shard-size`; sharded cache readers reuse recently touched
+shards through a default 2-shard read-side LRU cache
+(`--eval-reps-shard-read-cache-size`) and report cache IO counters such as read requests,
 records read, shard loads, shard cache hits, and cross-shard reads in JSON output. Pair
 repeated INSIDE sweeps with `--inside-diagnostics-cache` or the sweep-level
 `--shared-cache-dir` to reuse sampled diagnostics for statements that appear in

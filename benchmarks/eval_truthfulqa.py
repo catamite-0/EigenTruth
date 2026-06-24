@@ -48,6 +48,7 @@ import json
 import math
 import sys
 import time
+from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -860,6 +861,7 @@ def _profile_payload(
     n_eval_records: int | None = None,
     n_warmup_true: int | None = None,
     n_warmup_false: int | None = None,
+    cache_stats: Mapping[str, Mapping[str, object]] | None = None,
 ) -> dict:
     phases = {name: round(float(seconds), 6) for name, seconds in profile.items()}
     return {
@@ -871,6 +873,7 @@ def _profile_payload(
             n_eval_records=n_eval_records,
             n_warmup_true=n_warmup_true,
             n_warmup_false=n_warmup_false,
+            cache_stats=cache_stats,
         ),
     }
 
@@ -882,6 +885,7 @@ def _profile_summary(
     n_eval_records: int | None = None,
     n_warmup_true: int | None = None,
     n_warmup_false: int | None = None,
+    cache_stats: Mapping[str, Mapping[str, object]] | None = None,
 ) -> dict:
     total = max(float(total_seconds), 0.0)
     phases = {name: max(float(seconds), 0.0) for name, seconds in profile.items()}
@@ -923,6 +927,7 @@ def _profile_summary(
         "top_phases": top_phases,
         "groups": groups,
         "throughput": throughput,
+        "cache_efficiency": _cache_efficiency_summary(cache_stats),
         "accounted_seconds": round(phase_total, 6),
         "accounted_share": _profile_share(phase_total, total),
         "unaccounted_seconds": round(max(total - phase_total, 0.0), 6),
@@ -933,6 +938,37 @@ def _profile_share(seconds: float, total_seconds: float) -> float:
     if total_seconds <= 0:
         return 0.0
     return round(float(seconds) / float(total_seconds), 6)
+
+
+def _cache_efficiency_summary(cache_stats: Mapping[str, Mapping[str, object]] | None) -> dict:
+    if not cache_stats:
+        return {}
+    reader_stats = cache_stats.get("eval_reps_reader")
+    if not isinstance(reader_stats, Mapping):
+        return {}
+
+    def read_int(name: str) -> int:
+        return max(int(reader_stats.get(name, 0) or 0), 0)
+
+    read_requests = read_int("read_requests")
+    records_read = read_int("records_read")
+    shard_read_requests = read_int("shard_read_requests")
+    cross_shard_reads = read_int("cross_shard_reads")
+    shard_loads = read_int("shard_loads")
+    shard_cache_hits = read_int("shard_cache_hits")
+    shard_count = read_int("shard_count")
+    shard_cache_capacity = read_int("shard_cache_capacity")
+
+    summary = {
+        "records_per_read": _profile_share(records_read, read_requests),
+        "shards_per_read": _profile_share(shard_read_requests, read_requests),
+        "cross_shard_read_rate": _profile_share(cross_shard_reads, read_requests),
+        "shard_cache_hit_rate": _profile_share(shard_cache_hits, shard_read_requests),
+        "shard_load_rate": _profile_share(shard_loads, shard_read_requests),
+        "shard_count": shard_count,
+        "shard_cache_capacity": shard_cache_capacity,
+    }
+    return {"eval_reps_reader": summary}
 
 
 def _read_cache_metadata(path: str | Path) -> dict:
@@ -1450,15 +1486,17 @@ class EvalRepsCacheReader:
         *,
         expected_metadata: Mapping,
         expected_records: int,
+        shard_read_cache_size: int = 2,
     ) -> None:
         self.path = Path(path)
         self.metadata: dict
         self.record_count = int(expected_records)
         self._records: list[Optional[dict]] | None = None
         self._shards: list[dict] = []
-        self._cached_shard_path: str | None = None
-        self._cached_shard_start: int | None = None
-        self._cached_shard_records: list[object] | None = None
+        self._shard_cache_size = int(shard_read_cache_size)
+        if self._shard_cache_size < 1:
+            raise ValueError("eval reps shard read cache size must be >=1.")
+        self._shard_cache: OrderedDict[tuple[str, int], list[object]] = OrderedDict()
         self._shard_loads = 0
         self._shard_cache_hits = 0
         self._read_requests = 0
@@ -1539,6 +1577,8 @@ class EvalRepsCacheReader:
             "read_requests": int(self._read_requests),
             "records_read": int(self._records_read),
             "shard_count": len(self._shards),
+            "shard_cache_capacity": int(self._shard_cache_size) if self._shards else 0,
+            "shard_cache_entries": len(self._shard_cache),
             "shard_read_requests": int(self._shard_read_requests),
             "cross_shard_reads": int(self._cross_shard_reads),
             "shard_loads": int(self._shard_loads),
@@ -1549,21 +1589,20 @@ class EvalRepsCacheReader:
         shard_path = str(shard["path"])
         shard_start = int(shard["start"])
         shard_count = int(shard["count"])
-        if (
-            self._cached_shard_path == shard_path
-            and self._cached_shard_start == shard_start
-            and self._cached_shard_records is not None
-        ):
+        shard_key = (shard_path, shard_start)
+        if shard_key in self._shard_cache:
+            self._shard_cache.move_to_end(shard_key)
             self._shard_cache_hits += 1
-            return self._cached_shard_records
+            return self._shard_cache[shard_key]
 
         shard_payload = torch.load(self.path / shard_path, map_location="cpu", weights_only=True)
         raw_records = list(shard_payload.get("records", []))
         if int(shard_payload.get("start", -1)) != shard_start or len(raw_records) != shard_count:
             raise ValueError("sharded eval reps cache shard payload does not match manifest.")
-        self._cached_shard_path = shard_path
-        self._cached_shard_start = shard_start
-        self._cached_shard_records = raw_records
+        self._shard_cache[shard_key] = raw_records
+        self._shard_cache.move_to_end(shard_key)
+        while len(self._shard_cache) > self._shard_cache_size:
+            self._shard_cache.popitem(last=False)
         self._shard_loads += 1
         return raw_records
 
@@ -3351,6 +3390,7 @@ def run(args) -> dict:
                 eval_reps_cache_path,
                 expected_metadata=eval_reps_cache_metadata,
                 expected_records=expected_eval_records,
+                shard_read_cache_size=int(getattr(args, "eval_reps_shard_read_cache_size", 2)),
             )
         print(f"   loaded eval reps cache: {eval_reps_cache_path}")
     elif eval_reps_cache_path:
@@ -3698,6 +3738,9 @@ def run(args) -> dict:
                    "refresh_layer_stats_cache": args.refresh_layer_stats_cache,
                    "eval_reps_cache": args.eval_reps_cache,
                    "eval_reps_cache_shard_size": args.eval_reps_cache_shard_size,
+                   "eval_reps_shard_read_cache_size": int(
+                       getattr(args, "eval_reps_shard_read_cache_size", 2)
+                   ),
                    "refresh_eval_reps_cache": args.refresh_eval_reps_cache,
                    "inside_diagnostics_cache": getattr(args, "inside_diagnostics_cache", None),
                    "refresh_inside_diagnostics_cache": bool(
@@ -3769,6 +3812,7 @@ def run(args) -> dict:
             n_eval_records=len(labels),
             n_warmup_true=len(manifold_true),
             n_warmup_false=len(manifold_false),
+            cache_stats=cache_stats,
         )
         payload["profile"]["batch_size_fallback"] = batch_fallback_state.to_dict()
         print("\n  Profile timings (seconds):")
@@ -3795,6 +3839,7 @@ def run(args) -> dict:
                 n_eval_records=len(labels),
                 n_warmup_true=len(manifold_true),
                 n_warmup_false=len(manifold_false),
+                cache_stats=cache_stats,
             ),
         )
         with open(args.profile_json, "w", encoding="utf-8") as f:
@@ -3935,6 +3980,8 @@ def main():
                    help="optional .pt path to load or create cached forced-answer hidden states/metrics")
     p.add_argument("--eval-reps-cache-shard-size", type=int, default=0,
                    help="write --eval-reps-cache as a sharded directory with this many records per shard")
+    p.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
+                   help="number of sharded eval-reps cache shards to keep in the read-side LRU cache")
     p.add_argument("--refresh-eval-reps-cache", action="store_true",
                    help="rebuild and overwrite --eval-reps-cache instead of loading it")
     p.add_argument("--inside-diagnostics-cache", default=None,
@@ -4013,6 +4060,8 @@ def main():
         p.error("--eval-reps-cache-shard-size must be >=0")
     if args.eval_reps_cache_shard_size > 0 and not args.eval_reps_cache:
         p.error("--eval-reps-cache-shard-size requires --eval-reps-cache")
+    if args.eval_reps_shard_read_cache_size < 1:
+        p.error("--eval-reps-shard-read-cache-size must be >=1")
     if args.progress_every < 0:
         p.error("--progress-every must be >=0")
     if args.warmup_checkpoint_every < 0:
