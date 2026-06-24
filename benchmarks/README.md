@@ -1237,6 +1237,7 @@ python benchmarks/compare_release_candidates.py \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --performance-drift-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.8 \
   --product-trace-replay-workflow-key report:smollm2-product-trace-replay-workflow:0.1 \
+  --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -1340,6 +1341,14 @@ manifest, requires `status=promote`, and carries baseline/current paths plus
 blocked-metric counts into the release candidate. This connects captured product
 traffic replay back into the same release gate as model, route, and selector
 evidence.
+Add `--release-efficiency-report` when the final candidate must also prove that
+the product runtime profile sweep has a promoted efficiency handoff. The gate
+verifies the release-efficiency manifest, requires `workflow=release_efficiency_report`
+and promoted report/decision status, and carries the recommended runtime profile,
+efficiency score, quality summary, trace-record cache summary, and manifest path
+into the release candidate. Downstream `ProductPromotionContract` exports can
+then inherit the recommended runtime profile directly from the promoted
+candidate.
 Add `--adapter-family-matrix` when release should also require a promoted
 adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
 `--required-adapter-route` for routes that must be present and promoted in that
@@ -1375,8 +1384,8 @@ To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
 `--required-route-baseline-key`, `--product-trace-replay-workflow-key`,
 `--product-trace-replay-workflow`, `--selector-replay-report`, and
-`--product-runtime-drift-report` options and
-includes those route/workflow/selector/drift manifests in the final release-candidate manifest
+`--product-runtime-drift-report`, and `--release-efficiency-report` options and
+includes those route/workflow/selector/drift/efficiency manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
@@ -1402,6 +1411,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
   --max-covariance-maha-last-auroc-drop 0.05 \
   --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \
+  --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1427,8 +1437,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 ```
 
 The generated manifest fingerprints the release-candidate report and the
-selected readiness, route, optional performance/selector/runtime-drift manifests, and optional adapter
-family matrix report. Recursive verification therefore checks the final
+selected readiness, route, optional performance/selector/runtime-drift/release-efficiency manifests,
+and optional adapter family matrix report. Recursive verification therefore checks the final
 candidate and all underlying baseline
 manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
@@ -1489,9 +1499,11 @@ the workflow report/manifest plus its selector-replay and runtime-drift child
 report paths for deployment-side provenance. Runtime-drift reports also carry
 baseline/current optimization hints, so exported contracts preserve candidate
 control defaults such as `max_verifier_route_attempts` alongside the budget
-policy. When a release-efficiency report is available, pass it explicitly so the
-promotion contract, manifest, and registry record also carry the recommended
-runtime profile and efficiency score:
+policy. When the release candidate was gated by a release-efficiency report,
+the promotion contract inherits the recommended runtime profile and efficiency
+score from the candidate. For older release-candidate reports, pass the
+release-efficiency report explicitly so the promotion contract, manifest, and
+registry record also carry the same handoff evidence:
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \

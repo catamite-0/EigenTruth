@@ -38,6 +38,7 @@ def compare_release_candidates(
     performance_baseline_key: str | None = None,
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
+    release_efficiency_report_path: str | Path | None = None,
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
@@ -313,6 +314,12 @@ def compare_release_candidates(
         allow_unverified=allow_unverified,
         verification_context=verification_context,
     )
+    release_efficiency = _release_efficiency_gate(
+        release_efficiency_report_path=release_efficiency_report_path,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        verification_context=verification_context,
+    )
     decision = _decision(
         readiness,
         route,
@@ -323,6 +330,7 @@ def compare_release_candidates(
         product_trace_replay_workflow,
         selector_replay,
         product_runtime_drift,
+        release_efficiency,
     )
     candidate = (
         _candidate_with_gates(
@@ -333,6 +341,7 @@ def compare_release_candidates(
             product_trace_replay_workflow,
             selector_replay,
             product_runtime_drift,
+            release_efficiency,
         )
         if decision["status"] == "promote"
         else None
@@ -358,6 +367,11 @@ def compare_release_candidates(
                 None
                 if product_runtime_drift_report_path is None
                 else str(product_runtime_drift_report_path)
+            ),
+            "release_efficiency_report": (
+                None
+                if release_efficiency_report_path is None
+                else str(release_efficiency_report_path)
             ),
             "product_trace_replay_workflow": (
                 None
@@ -441,6 +455,7 @@ def compare_release_candidates(
         "product_trace_replay_workflow_gate": product_trace_replay_workflow,
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
+        "release_efficiency_gate": release_efficiency,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
@@ -574,6 +589,7 @@ def _decision(
     product_trace_replay_workflow: Mapping[str, Any] | None = None,
     selector_replay: Mapping[str, Any] | None = None,
     product_runtime_drift: Mapping[str, Any] | None = None,
+    release_efficiency: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -598,6 +614,12 @@ def _decision(
     )
     product_runtime_drift_status = (
         None if product_runtime_drift is None else product_runtime_drift.get("status")
+    )
+    release_efficiency_gate = _mapping(
+        None if release_efficiency is None else release_efficiency.get("gate")
+    )
+    release_efficiency_status = (
+        None if release_efficiency is None else release_efficiency.get("status")
     )
     blocking_reasons = []
     if readiness_status != "promote":
@@ -651,6 +673,12 @@ def _decision(
             "status": product_runtime_drift_status,
             "reasons": list(product_runtime_drift_gate.get("blocking_reasons", ())),
         })
+    if release_efficiency is not None and release_efficiency_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "release_efficiency",
+            "status": release_efficiency_status,
+            "reasons": list(release_efficiency_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -670,6 +698,7 @@ def _decision(
         "product_trace_replay_workflow_status": product_trace_replay_workflow_status,
         "selector_replay_status": selector_replay_status,
         "product_runtime_drift_status": product_runtime_drift_status,
+        "release_efficiency_status": release_efficiency_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
@@ -694,6 +723,16 @@ def _decision(
             None
             if product_runtime_drift is None or product_runtime_drift_gate.get("passed") is not True
             else product_runtime_drift.get("report_path")
+        ),
+        "recommended_release_efficiency_report": (
+            None
+            if release_efficiency is None or release_efficiency_gate.get("passed") is not True
+            else release_efficiency.get("report_path")
+        ),
+        "recommended_release_efficiency_profile": (
+            None
+            if release_efficiency is None or release_efficiency_gate.get("passed") is not True
+            else release_efficiency.get("recommended_profile")
         ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
@@ -1453,6 +1492,176 @@ def _product_runtime_drift_metric_summary(report: Mapping[str, Any]) -> tuple[di
     return tuple(rows)
 
 
+def _release_efficiency_gate(
+    *,
+    release_efficiency_report_path: str | Path | None,
+    recursive: bool,
+    allow_unverified: bool,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if release_efficiency_report_path is None:
+        return None
+    report_path = Path(release_efficiency_report_path)
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _release_efficiency_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        artifact_name="release_efficiency_manifest",
+        verification_context=verification_context,
+    )
+    recommended = _release_efficiency_recommended_row(report)
+    gate = _release_efficiency_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        recommended=recommended,
+        allow_unverified=allow_unverified,
+    )
+    summary = _mapping(report.get("summary"))
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "decision_status": _nested(report, "decision", "status"),
+        "recommended_profile": _nested(report, "decision", "recommended_profile"),
+        "recommended_efficiency_score": _float_or_none(
+            _nested(report, "decision", "recommended_efficiency_score")
+        ),
+        "blocking_reasons": tuple(_nested(report, "decision", "blocking_reasons") or ()),
+        "summary": {
+            "profile_count": summary.get("profile_count"),
+            "blocked_profile_count": summary.get("blocked_profile_count"),
+            "quality_report_count": summary.get("quality_report_count"),
+            "quality_passed": summary.get("quality_passed"),
+            "generated_trace_count": summary.get("generated_trace_count"),
+            "reused_trace_count": summary.get("reused_trace_count"),
+            "trace_record_cache_enabled_profile_count": summary.get(
+                "trace_record_cache_enabled_profile_count"
+            ),
+            "trace_record_cache_hit_profile_count": summary.get(
+                "trace_record_cache_hit_profile_count"
+            ),
+            "trace_record_cache_written_profile_count": summary.get(
+                "trace_record_cache_written_profile_count"
+            ),
+        },
+        "leaderboard_top": _release_efficiency_summary(recommended),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _release_efficiency_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    recommended: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"release efficiency report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("release efficiency artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("release efficiency manifest verification failed")
+    if report.get("workflow") != "release_efficiency_report":
+        failures.append(
+            f"release efficiency workflow is {report.get('workflow')!r}, "
+            "expected 'release_efficiency_report'"
+        )
+    if report.get("status") != "promote":
+        failures.append(f"release efficiency status is {report.get('status')!r}, expected 'promote'")
+    decision_status = _nested(report, "decision", "status")
+    if decision_status != "promote":
+        failures.append(
+            f"release efficiency decision status is {decision_status!r}, expected 'promote'"
+        )
+    recommended_profile = _nested(report, "decision", "recommended_profile")
+    allowed_profiles = set(RUNTIME_PROFILE_NAMES) | {"auto"}
+    if recommended_profile is None:
+        failures.append("release efficiency recommended profile is missing")
+    elif str(recommended_profile) not in allowed_profiles:
+        choices = ", ".join(sorted(allowed_profiles))
+        failures.append(
+            f"release efficiency recommended profile is {recommended_profile!r}, "
+            f"expected one of: {choices}"
+        )
+    if _float_or_none(_nested(report, "decision", "recommended_efficiency_score")) is None:
+        failures.append("release efficiency recommended efficiency score is missing or non-finite")
+    summary = _mapping(report.get("summary"))
+    profile_count = _float_or_none(summary.get("profile_count"))
+    if profile_count is None:
+        failures.append("release efficiency profile count is missing")
+    elif profile_count < 1:
+        failures.append("release efficiency profile count is zero")
+    if summary.get("quality_passed") is False:
+        failures.append("release efficiency quality reports did not pass")
+    if not recommended:
+        failures.append("release efficiency recommended profile is missing from leaderboard")
+    elif recommended.get("status") == "blocked" or bool(recommended.get("blocked")):
+        failures.append(
+            f"release efficiency recommended profile status is {recommended.get('status')!r}, "
+            "expected promoted"
+        )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _release_efficiency_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _release_efficiency_recommended_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    recommended_profile = _nested(report, "decision", "recommended_profile")
+    if recommended_profile is None:
+        return {}
+    for row in report.get("leaderboard", ()):
+        row_map = _mapping(row)
+        if row_map.get("profile") == recommended_profile:
+            return row_map
+    return {}
+
+
+def _release_efficiency_summary(row: Mapping[str, Any]) -> dict[str, Any]:
+    if not row:
+        return {}
+    efficiency = _mapping(row.get("efficiency"))
+    trace_record_cache = _mapping(row.get("trace_record_cache"))
+    return {
+        "profile": row.get("profile"),
+        "status": row.get("status"),
+        "blocked": row.get("blocked"),
+        "efficiency": {
+            "score": _float_or_none(efficiency.get("score")),
+            "quality_score": _float_or_none(efficiency.get("quality_score")),
+            "runtime_score": _float_or_none(efficiency.get("runtime_score")),
+            "route_fanout_score": _float_or_none(efficiency.get("route_fanout_score")),
+            "cache_bonus": _float_or_none(efficiency.get("cache_bonus")),
+        },
+        "total_seconds_mean": _float_or_none(row.get("total_seconds_mean")),
+        "mean_attempted_route_count": _float_or_none(row.get("mean_attempted_route_count")),
+        "verification_skip_rate_mean": _float_or_none(row.get("verification_skip_rate_mean")),
+        "trace_record_cache_hit": trace_record_cache.get("cache_hit"),
+    }
+
+
 def _performance_gate(
     *,
     verification: Mapping[str, Any],
@@ -1912,6 +2121,7 @@ def _candidate_with_gates(
     product_trace_replay_workflow: Mapping[str, Any] | None,
     selector_replay: Mapping[str, Any] | None,
     product_runtime_drift: Mapping[str, Any] | None,
+    release_efficiency: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
@@ -1985,6 +2195,29 @@ def _candidate_with_gates(
             "metrics": tuple(_mapping(metric) for metric in product_runtime_drift.get("metrics") or ()),
         }
         manifests["product_runtime_drift_manifest"] = product_runtime_drift.get("manifest_path")
+    if release_efficiency is not None:
+        leaderboard_top = _mapping(release_efficiency.get("leaderboard_top"))
+        payload["release_efficiency"] = {
+            "report_path": release_efficiency.get("report_path"),
+            "manifest_path": release_efficiency.get("manifest_path"),
+            "workflow": release_efficiency.get("workflow"),
+            "status": release_efficiency.get("report_status"),
+            "recommended_profile": release_efficiency.get("recommended_profile"),
+            "recommended_efficiency_score": release_efficiency.get(
+                "recommended_efficiency_score"
+            ),
+            "decision": {
+                "status": release_efficiency.get("decision_status"),
+                "recommended_profile": release_efficiency.get("recommended_profile"),
+                "recommended_efficiency_score": release_efficiency.get(
+                    "recommended_efficiency_score"
+                ),
+                "blocking_reasons": tuple(release_efficiency.get("blocking_reasons", ())),
+            },
+            "summary": _mapping(release_efficiency.get("summary")),
+            "leaderboard": (leaderboard_top,) if leaderboard_top else (),
+        }
+        manifests["release_efficiency_manifest"] = release_efficiency.get("manifest_path")
     payload["manifests"] = manifests
     return payload
 
@@ -2131,6 +2364,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=args.selector_replay_report,
         product_runtime_drift_report_path=args.product_runtime_drift_report,
+        release_efficiency_report_path=args.release_efficiency_report,
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
@@ -2209,7 +2443,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"route={decision.get('recommended_route_record')} "
         f"performance={decision.get('recommended_performance_baseline_record')} "
         f"selector_replay={decision.get('recommended_selector_replay_candidate')} "
-        f"product_runtime_drift={decision.get('product_runtime_drift_status')}"
+        f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
+        f"release_efficiency={decision.get('recommended_release_efficiency_profile')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -2242,6 +2477,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--product-runtime-drift-report", default=None,
                         help="optional product runtime drift report that must promote and verify")
+    parser.add_argument("--release-efficiency-report", default=None,
+                        help="optional release efficiency report that must promote and verify")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "

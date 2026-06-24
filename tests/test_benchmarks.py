@@ -5400,6 +5400,97 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     )
 
 
+def test_compare_release_candidates_can_require_release_efficiency_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    efficiency_report = _write_release_efficiency_report(
+        tmp_path / "release-efficiency",
+        status="promote",
+        recommended_profile="balanced",
+        efficiency_score=2.0,
+    )
+    blocked_efficiency_report = _write_release_efficiency_report(
+        tmp_path / "blocked-release-efficiency",
+        status="blocked",
+        recommended_profile=None,
+        efficiency_score=None,
+        quality_passed=False,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        release_efficiency_report_path=efficiency_report,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        release_efficiency_report_path=blocked_efficiency_report,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["release_efficiency_status"] == "promote"
+    assert payload["decision"]["recommended_release_efficiency_report"] == str(efficiency_report)
+    assert payload["decision"]["recommended_release_efficiency_profile"] == "balanced"
+    assert payload["release_efficiency_gate"]["gate"]["passed"] is True
+    assert payload["release_efficiency_gate"]["leaderboard_top"]["efficiency"]["score"] == (
+        pytest.approx(2.0)
+    )
+    candidate = payload["release_candidate"]
+    assert candidate["release_efficiency"]["recommended_profile"] == "balanced"
+    assert candidate["release_efficiency"]["recommended_efficiency_score"] == pytest.approx(2.0)
+    assert candidate["release_efficiency"]["summary"]["quality_passed"] is True
+    assert candidate["release_efficiency"]["leaderboard"][0]["profile"] == "balanced"
+    assert candidate["manifests"]["release_efficiency_manifest"].endswith("artifact-manifest.json")
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "release_efficiency"
+    assert any(
+        "release efficiency status is 'blocked'" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -6738,6 +6829,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         status="promote",
         blocked_metric_count=0,
     )
+    release_efficiency_report = _write_release_efficiency_report(
+        tmp_path / "release-efficiency",
+        status="promote",
+        recommended_profile="balanced",
+        efficiency_score=2.0,
+    )
     product_trace_replay_workflow_report = _write_product_trace_replay_workflow_report(
         tmp_path / "product-trace-replay-workflow",
         selector_report=selector_replay_report,
@@ -6780,6 +6877,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         max_performance_cached_total_seconds_ratio=1.5,
         max_performance_cache_only_total_seconds_ratio=1.5,
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
+        release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
         route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
         required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
@@ -6815,6 +6913,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "product_trace_replay_workflow_manifest",
         "readiness_manifest",
         "release_candidate_report",
+        "release_efficiency_manifest",
         "required_route_manifest_1",
         "route_manifest",
         "selector_replay_manifest",
@@ -6825,6 +6924,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_performance_status"] == "promote"
     assert manifest["metadata"]["release_selector_replay_status"] == "promote"
     assert manifest["metadata"]["release_product_runtime_drift_status"] == "promote"
+    assert manifest["metadata"]["release_efficiency_status"] == "promote"
     assert manifest["metadata"]["release_product_trace_replay_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
@@ -6880,6 +6980,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
     assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
+    assert manifest["metadata"]["recommended_release_efficiency_report"] == str(release_efficiency_report)
+    assert manifest["metadata"]["recommended_release_efficiency_profile"] == "balanced"
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -6908,6 +7010,16 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
     assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 2
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert manifest["metadata"]["release_efficiency_report"] == str(release_efficiency_report)
+    assert manifest["metadata"]["release_efficiency_recommended_profile"] == "balanced"
+    assert manifest["metadata"]["release_efficiency_score"] == pytest.approx(2.0)
+    assert manifest["metadata"]["release_efficiency_profile_count"] == 1
+    assert manifest["metadata"]["release_efficiency_quality_passed"] is True
+    assert manifest["metadata"]["release_efficiency_trace_record_cache_hit_profile_count"] == 1
+    assert manifest["metadata"]["release_efficiency_leaderboard_top_profile"] == "balanced"
+    assert manifest["metadata"]["release_efficiency_manifest"].endswith(
+        "release-efficiency/artifact-manifest.json"
+    )
     assert manifest["metadata"]["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
     )
@@ -6947,6 +7059,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
     assert payload["config"]["selector_replay_report"] is None
     assert payload["config"]["product_runtime_drift_report"] is None
+    assert payload["config"]["release_efficiency_report"] == str(release_efficiency_report)
     assert payload["config"]["product_trace_replay_workflow"] is None
     assert payload["config"]["product_trace_replay_workflow_key"] == (
         "report:product-trace-replay-workflow:0.1"
@@ -6983,6 +7096,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["release_candidate_comparison"]["config"]["product_runtime_drift_report"] == str(
         product_runtime_drift_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["release_efficiency_report"] == str(
+        release_efficiency_report
     )
     assert payload["release_candidate_comparison"]["config"]["required_route_require_non_oracle_evidence"] is True
     assert payload["release_candidate_comparison"]["performance_baseline_gate"][
@@ -7032,6 +7148,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
+    assert record.metadata["release_efficiency_status"] == "promote"
+    assert record.metadata["release_efficiency_report"] == str(release_efficiency_report)
+    assert record.metadata["release_efficiency_recommended_profile"] == "balanced"
+    assert record.metadata["release_efficiency_score"] == pytest.approx(2.0)
+    assert record.metadata["release_efficiency_profile_count"] == 1
+    assert record.metadata["release_efficiency_quality_passed"] is True
+    assert record.metadata["release_efficiency_trace_record_cache_hit_profile_count"] == 1
     assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
@@ -8445,6 +8568,98 @@ def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_co
                     "runner": "compare_product_runtime_baselines",
                     "status": status,
                     "blocked_metric_count": blocked_metric_count,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_release_efficiency_report(
+    output_dir,
+    *,
+    status,
+    recommended_profile,
+    efficiency_score,
+    quality_passed=True,
+    profile_status="promote",
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "release-efficiency-report.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    leaderboard = []
+    if recommended_profile is not None:
+        leaderboard.append({
+            "profile": recommended_profile,
+            "status": profile_status,
+            "blocked": profile_status == "blocked",
+            "efficiency": {
+                "score": efficiency_score,
+                "quality_score": 1.0,
+                "runtime_score": 0.8,
+                "route_fanout_score": 0.9,
+                "cache_bonus": 0.3,
+            },
+            "total_seconds_mean": 0.10,
+            "mean_attempted_route_count": 1.0,
+            "verification_skip_rate_mean": 0.25,
+            "trace_record_cache": {
+                "enabled": True,
+                "cache_hit": True,
+                "cache_written": False,
+            },
+        })
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "release_efficiency_report",
+        "status": status,
+        "decision": {
+            "status": status,
+            "recommended_profile": recommended_profile,
+            "recommended_efficiency_score": efficiency_score,
+            "blocking_reasons": () if status == "promote" else ("release efficiency blocked",),
+        },
+        "summary": {
+            "profile_sweep_status": "promote" if status == "promote" else "blocked",
+            "profile_count": len(leaderboard),
+            "blocked_profile_count": 0 if status == "promote" else 1,
+            "quality_report_count": 1,
+            "quality_passed": quality_passed,
+            "generated_trace_count": 4,
+            "reused_trace_count": 2,
+            "trace_record_cache_enabled_profile_count": 1 if leaderboard else 0,
+            "trace_record_cache_hit_profile_count": 1 if leaderboard else 0,
+            "trace_record_cache_written_profile_count": 0,
+        },
+        "profiles": leaderboard,
+        "leaderboard": leaderboard,
+        "quality": {
+            "report_count": 1,
+            "blocked_count": 0 if quality_passed else 1,
+            "passed": quality_passed,
+        },
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"release_efficiency_report": report_path},
+                root=output_dir,
+                metadata={
+                    "runner": "run_release_efficiency_report",
+                    "status": status,
+                    "recommended_profile": recommended_profile,
+                    "recommended_efficiency_score": efficiency_score,
                 },
             ),
             indent=2,

@@ -44,6 +44,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
+    release_efficiency_report_path: Path | None = None
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
@@ -122,6 +123,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "product_runtime_drift_report_path",
                 Path(self.product_runtime_drift_report_path),
+            )
+        if self.release_efficiency_report_path is not None:
+            object.__setattr__(
+                self,
+                "release_efficiency_report_path",
+                Path(self.release_efficiency_report_path),
             )
         if self.product_trace_replay_workflow_path is not None:
             object.__setattr__(
@@ -219,6 +226,7 @@ def run_release_candidate_registry_workflow(
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
         product_runtime_drift_report_path=config.product_runtime_drift_report_path,
+        release_efficiency_report_path=config.release_efficiency_report_path,
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
@@ -349,6 +357,11 @@ def run_release_candidate_registry_workflow(
                 None
                 if config.product_runtime_drift_report_path is None
                 else str(config.product_runtime_drift_report_path)
+            ),
+            "release_efficiency_report": (
+                None
+                if config.release_efficiency_report_path is None
+                else str(config.release_efficiency_report_path)
             ),
             "product_trace_replay_workflow": (
                 None
@@ -488,6 +501,7 @@ def _write_artifact_manifest(
         "performance_manifest": manifests.get("performance_manifest"),
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
+        "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -575,6 +589,14 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     product_runtime_drift_summary = dict(product_runtime_drift.get("summary") or {})
     product_runtime_drift_baseline = dict(product_runtime_drift.get("baseline") or {})
     product_runtime_drift_current = dict(product_runtime_drift.get("current") or {})
+    release_efficiency = dict(candidate.get("release_efficiency") or {})
+    release_efficiency_summary = dict(release_efficiency.get("summary") or {})
+    release_efficiency_leaderboard = release_efficiency.get("leaderboard")
+    release_efficiency_top = (
+        dict(release_efficiency_leaderboard[0])
+        if isinstance(release_efficiency_leaderboard, (list, tuple)) and release_efficiency_leaderboard
+        else {}
+    )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
@@ -585,6 +607,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_performance_status": decision.get("performance_status"),
         "release_selector_replay_status": decision.get("selector_replay_status"),
         "release_product_runtime_drift_status": decision.get("product_runtime_drift_status"),
+        "release_efficiency_status": decision.get("release_efficiency_status"),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_product_trace_replay_workflow_status": decision.get(
@@ -598,6 +621,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
         "recommended_selector_replay_candidate": decision.get("recommended_selector_replay_candidate"),
         "recommended_product_runtime_drift_report": decision.get("recommended_product_runtime_drift_report"),
+        "recommended_release_efficiency_report": decision.get("recommended_release_efficiency_report"),
+        "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
         "required_adapter_routes": decision.get("required_adapter_routes"),
         "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
@@ -765,6 +790,15 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_blocked_metric_count": product_runtime_drift_summary.get(
             "blocked_metric_count"
         ),
+        "release_efficiency_report": release_efficiency.get("report_path"),
+        "release_efficiency_recommended_profile": release_efficiency.get("recommended_profile"),
+        "release_efficiency_score": release_efficiency.get("recommended_efficiency_score"),
+        "release_efficiency_profile_count": release_efficiency_summary.get("profile_count"),
+        "release_efficiency_quality_passed": release_efficiency_summary.get("quality_passed"),
+        "release_efficiency_trace_record_cache_hit_profile_count": (
+            release_efficiency_summary.get("trace_record_cache_hit_profile_count")
+        ),
+        "release_efficiency_leaderboard_top_profile": release_efficiency_top.get("profile"),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
         "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
         "product_trace_replay_workflow_registry": product_trace_replay_workflow.get("registry"),
@@ -808,6 +842,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "performance_manifest": manifests.get("performance_manifest"),
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
+        "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -891,6 +926,11 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             None
             if args.product_runtime_drift_report is None
             else Path(args.product_runtime_drift_report)
+        ),
+        release_efficiency_report_path=(
+            None
+            if args.release_efficiency_report is None
+            else Path(args.release_efficiency_report)
         ),
         product_trace_replay_workflow_path=(
             None
@@ -1013,6 +1053,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--product-runtime-drift-report", default=None,
                         help="optional product runtime drift report that must promote and verify")
+    parser.add_argument("--release-efficiency-report", default=None,
+                        help="optional release efficiency report that must promote and verify")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "
