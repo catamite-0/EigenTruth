@@ -96,6 +96,9 @@ class ProductRuntimeProfileSweepConfig:
     slo_policy_path: str | Path | None = None
     report_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
+    trace_records_cache_dir: str | Path | None = None
+    refresh_trace_records_cache: bool = False
+    reuse_existing_traces: bool = False
     registry_path: str | Path | None = None
     name: str | None = None
     version: str | None = None
@@ -145,9 +148,24 @@ class ProductRuntimeProfileSweepConfig:
             object.__setattr__(self, "report_path", Path(self.report_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
+        if self.trace_records_cache_dir is not None:
+            object.__setattr__(self, "trace_records_cache_dir", Path(self.trace_records_cache_dir))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "refresh_trace_records_cache",
+            strict_bool(
+                self.refresh_trace_records_cache,
+                name="refresh_trace_records_cache",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "reuse_existing_traces",
+            strict_bool(self.reuse_existing_traces, name="reuse_existing_traces"),
+        )
 
     @property
     def resolved_report_path(self) -> Path:
@@ -405,6 +423,11 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             "promotion_contract": (
                 None if config.promotion_contract_path is None else str(config.promotion_contract_path)
             ),
+            "trace_records_cache_dir": (
+                None
+                if config.trace_records_cache_dir is None
+                else str(config.trace_records_cache_dir)
+            ),
         },
         "config": {
             "profiles": tuple(config.profiles),
@@ -419,6 +442,17 @@ def run_product_runtime_profile_sweep(config: ProductRuntimeProfileSweepConfig) 
             ),
             "max_workers": config.max_workers,
             "compact_json": config.compact_json,
+            "reuse_existing_traces": config.reuse_existing_traces,
+            "trace_records_cache": {
+                "enabled": config.trace_records_cache_dir is not None,
+                "dir": (
+                    None
+                    if config.trace_records_cache_dir is None
+                    else str(config.trace_records_cache_dir)
+                ),
+                "refresh": config.refresh_trace_records_cache,
+                "summary": _trace_record_cache_summary(profiles),
+            },
             "slo_policy_source": slo_policy_source,
             "metadata": dict(config.metadata),
         },
@@ -484,6 +518,8 @@ def _run_profile(
             policy=config.policy,
             policy_path=config.policy_path,
             promotion_contract_path=config.promotion_contract_path,
+            trace_records_cache_path=_profile_trace_records_cache_path(config, profile_name),
+            refresh_trace_records_cache=config.refresh_trace_records_cache,
             compact_json=config.compact_json,
             metadata={
                 "source": "run_product_runtime_profile_sweep",
@@ -507,21 +543,27 @@ def _run_profile_traces(
             request_id = f"{profile_name}-{scenario.name}-r{repeat_index}"
             output_path = _trace_path(config, profile_name, scenario.name, repeat_index)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            payload = demo.run(
-                _demo_args(
-                    config,
-                    profile_name=profile_name,
-                    scenario=scenario,
-                    request_id=request_id,
-                    output_path=output_path,
-                    artifact=artifact,
+            trace_source = "existing_trace"
+            if config.reuse_existing_traces and output_path.exists():
+                payload = _load_trace_payload(output_path)
+            else:
+                trace_source = "demo_run"
+                payload = demo.run(
+                    _demo_args(
+                        config,
+                        profile_name=profile_name,
+                        scenario=scenario,
+                        request_id=request_id,
+                        output_path=output_path,
+                        artifact=artifact,
+                    )
                 )
-            )
             traces.append({
                 "path": str(output_path),
                 "request_id": request_id,
                 "scenario": scenario.name,
                 "repeat": repeat_index,
+                "trace_source": trace_source,
                 "risk_action": _nested(payload, "risk_decision", "action"),
                 "risk_level": _nested(payload, "risk_decision", "risk_level"),
                 "selected_runtime_profile": _nested(payload, "metadata", "runtime_profile"),
@@ -659,7 +701,9 @@ def _profile_record(
             "max_verifier_route_attempts_max": route_attempts.get("max"),
         },
         "runtime_profile_selection": _runtime_profile_selection_summary(traces),
+        "trace_sources": _trace_source_summary(traces),
         "control_defaults": control_defaults,
+        "trace_record_cache": _mapping(_nested(baseline, "config", "trace_record_cache")),
         "budget": _mapping(baseline.get("budget")),
     }
     slo = _evaluate_profile_slo(record, slo_policy)
@@ -697,6 +741,30 @@ def _runtime_profile_selection_summary(traces: Sequence[Mapping[str, Any]]) -> d
     return {
         "counts_by_selected_profile": counts_by_selected_profile,
         "reason_counts": reason_counts,
+    }
+
+
+def _trace_source_summary(traces: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    return {
+        "counts": _counts(trace.get("trace_source") for trace in traces),
+        "reused_count": sum(1 for trace in traces if trace.get("trace_source") == "existing_trace"),
+        "generated_count": sum(1 for trace in traces if trace.get("trace_source") == "demo_run"),
+    }
+
+
+def _trace_record_cache_summary(profiles: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    caches = [_mapping(profile.get("trace_record_cache")) for profile in profiles]
+    enabled = [cache for cache in caches if cache.get("enabled") is True]
+    return {
+        "enabled_profile_count": len(enabled),
+        "hit_profile_count": sum(1 for cache in enabled if cache.get("cache_hit") is True),
+        "written_profile_count": sum(1 for cache in enabled if cache.get("cache_written") is True),
+        "refresh_profile_count": sum(1 for cache in enabled if cache.get("refresh") is True),
+        "invalidation_reason_counts": _counts(
+            cache.get("invalidation_reason")
+            for cache in enabled
+            if cache.get("invalidation_reason") is not None
+        ),
     }
 
 
@@ -867,6 +935,7 @@ def _leaderboard(profiles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for profile in profiles:
         metrics = _mapping(profile.get("metrics"))
+        trace_record_cache = _mapping(profile.get("trace_record_cache"))
         rows.append({
             "profile": profile.get("profile"),
             "status": profile.get("status"),
@@ -891,6 +960,8 @@ def _leaderboard(profiles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
             "max_verifier_route_attempts_max": _float_or_none(
                 metrics.get("max_verifier_route_attempts_max")
             ),
+            "trace_record_cache_hit": trace_record_cache.get("cache_hit"),
+            "trace_record_cache_written": trace_record_cache.get("cache_written"),
             "blocked": profile.get("status") == "blocked",
         })
     return sorted(
@@ -958,6 +1029,7 @@ def _write_artifact_manifest(
     artifacts: Mapping[str, str | Path | None] | None = None,
 ) -> dict[str, Any]:
     slo = _mapping(report.get("slo"))
+    trace_record_cache = _mapping(_nested(report, "config", "trace_records_cache"))
     recommended_profile = _recommended_profile_record(report)
     recommended_metrics = _mapping(
         None if recommended_profile is None else recommended_profile.get("metrics")
@@ -974,6 +1046,13 @@ def _write_artifact_manifest(
             "repeats": config.repeats,
             "max_workers": config.max_workers,
             "compact_json": config.compact_json,
+            "reuse_existing_traces": config.reuse_existing_traces,
+            "trace_records_cache_dir": (
+                None
+                if config.trace_records_cache_dir is None
+                else str(config.trace_records_cache_dir)
+            ),
+            "trace_records_cache_summary": _mapping(trace_record_cache.get("summary")),
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
             "recommended_profile_control_default_summary": _nested(
@@ -1018,6 +1097,8 @@ def _artifact_paths(
         profile_name = _safe_artifact_name(str(profile.get("profile", "profile")))
         artifacts[f"{profile_name}_baseline"] = profile.get("baseline_path")
         artifacts[f"{profile_name}_baseline_manifest"] = profile.get("baseline_artifact_manifest")
+        trace_record_cache = _mapping(profile.get("trace_record_cache"))
+        artifacts[f"{profile_name}_trace_record_cache"] = trace_record_cache.get("path")
         for index, trace_path in enumerate(_sequence(profile.get("trace_paths"))):
             artifacts[f"{profile_name}_trace_{index:04d}"] = str(trace_path)
     return artifacts
@@ -1027,6 +1108,7 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
     if config.registry_path is None:
         return
     slo = _mapping(report.get("slo"))
+    trace_record_cache = _mapping(_nested(report, "config", "trace_records_cache"))
     recommended_profile = _recommended_profile_record(report)
     recommended_metrics = _mapping(
         None if recommended_profile is None else recommended_profile.get("metrics")
@@ -1045,6 +1127,13 @@ def _record_registry(config: ProductRuntimeProfileSweepConfig, report: Mapping[s
             "repeats": config.repeats,
             "max_workers": config.max_workers,
             "compact_json": config.compact_json,
+            "reuse_existing_traces": config.reuse_existing_traces,
+            "trace_records_cache_dir": (
+                None
+                if config.trace_records_cache_dir is None
+                else str(config.trace_records_cache_dir)
+            ),
+            "trace_records_cache_summary": _mapping(trace_record_cache.get("summary")),
             "slo_enabled": slo.get("enabled"),
             "slo_passed": slo.get("passed"),
             "recommended_profile_control_default_summary": _nested(
@@ -1097,8 +1186,24 @@ def _trace_path(
     return config.output_dir / "traces" / profile_name / f"{scenario_name}-r{repeat_index}.json"
 
 
+def _load_trace_payload(path: str | Path) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"ProductTrace JSON must contain an object: {path}")
+    return dict(payload)
+
+
 def _profile_baseline_path(config: ProductRuntimeProfileSweepConfig, profile_name: str) -> Path:
     return config.output_dir / "baselines" / profile_name / "product-runtime-baseline.json"
+
+
+def _profile_trace_records_cache_path(
+    config: ProductRuntimeProfileSweepConfig,
+    profile_name: str,
+) -> Path | None:
+    if config.trace_records_cache_dir is None:
+        return None
+    return Path(config.trace_records_cache_dir) / f"{_safe_artifact_name(profile_name)}-trace-record-cache.json"
 
 
 def _normalize_profile(profile: str) -> str:
@@ -1138,6 +1243,16 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return tuple(value)
     return (value,)
+
+
+def _counts(values: Sequence[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        if value is None:
+            continue
+        key = str(value)
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _numeric_summary(values: Sequence[Any]) -> dict[str, Any]:
@@ -1362,6 +1477,13 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeProfileSweepCon
         slo_policy_path=Path(args.slo_policy) if args.slo_policy else None,
         report_path=Path(args.json) if args.json else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
+        trace_records_cache_dir=(
+            Path(args.trace_records_cache_dir)
+            if args.trace_records_cache_dir
+            else None
+        ),
+        refresh_trace_records_cache=bool(args.refresh_trace_records_cache),
+        reuse_existing_traces=bool(args.reuse_existing_traces),
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
         version=args.version,
@@ -1393,6 +1515,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--slo-policy", default=None, help="ProductRuntimeProfileSLOPolicy JSON path")
     parser.add_argument("--json", default=None, help="top-level sweep report path")
     parser.add_argument("--artifact-manifest", default=None)
+    parser.add_argument("--trace-records-cache-dir", default=None,
+                        help="optional directory for per-profile baseline trace-record caches")
+    parser.add_argument("--refresh-trace-records-cache", action="store_true",
+                        help="rebuild per-profile trace-record caches even when valid caches exist")
+    parser.add_argument("--reuse-existing-traces", action="store_true",
+                        help="reuse existing trace JSON files instead of rerunning demo scenarios")
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)

@@ -2730,6 +2730,7 @@ python benchmarks/run_product_runtime_profile_sweep.py \
   --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --runtime-profile-selector-policy artifacts/product-runtime-profile-sweep/runtime-profile-selector-policy.json \
   --slo-policy artifacts/product-runtime-profile-sweep/runtime-profile-slo-policy.json \
+  --trace-records-cache-dir artifacts/product-runtime-profile-sweep/trace-record-caches \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-profile-sweep \
   --version 0.1 \
@@ -2764,7 +2765,12 @@ they saved verifier work by verifying only triggered claims. Use the default
 coverage scans; within each mode, trace order remains deterministic before its
 baseline is built. Add `--compact-json` to minify generated traces, per-mode
 baselines, the top-level report, and manifests without changing the payload
-schema.
+schema. Add `--trace-records-cache-dir` when repeatedly tuning runtime budget or
+SLO gates over the same traces; the sweep writes one baseline trace-record cache
+per profile and reports cache hits/writes in each profile row, the leaderboard,
+manifest metadata, and registry metadata. Add `--reuse-existing-traces` for
+repeat runs that should skip calibrated-control demo execution and reuse the
+existing trace JSON files before rebuilding or reading the cached baselines.
 
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in

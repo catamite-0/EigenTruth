@@ -13884,6 +13884,55 @@ def test_run_product_runtime_profile_sweep_carries_promotion_control_defaults(tm
     )
 
 
+def test_run_product_runtime_profile_sweep_reuses_traces_and_record_cache(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    output_dir = tmp_path / "profile-sweep"
+    cache_dir = tmp_path / "trace-record-caches"
+    scenario = module.ProductRuntimeScenario(
+        name="low",
+        text="Paris is the capital of France.",
+        diagnostics_mode="low",
+        facts={"Paris is the capital of France": "supported"},
+    )
+    config = module.ProductRuntimeProfileSweepConfig(
+        output_dir=output_dir,
+        profiles=("balanced",),
+        scenarios=(scenario,),
+        trace_records_cache_dir=cache_dir,
+        compact_json=True,
+    )
+
+    first = module.run_product_runtime_profile_sweep(config)
+    second = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=output_dir,
+            profiles=("balanced",),
+            scenarios=(scenario,),
+            trace_records_cache_dir=cache_dir,
+            reuse_existing_traces=True,
+            compact_json=True,
+        )
+    )
+    manifest = json.loads(Path(second["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert first["profiles"][0]["trace_sources"]["generated_count"] == 1
+    assert first["profiles"][0]["trace_sources"]["reused_count"] == 0
+    assert first["profiles"][0]["trace_record_cache"]["cache_hit"] is False
+    assert first["profiles"][0]["trace_record_cache"]["cache_written"] is True
+    assert first["config"]["trace_records_cache"]["summary"]["written_profile_count"] == 1
+    assert Path(first["profiles"][0]["trace_record_cache"]["path"]).exists()
+    assert second["config"]["reuse_existing_traces"] is True
+    assert second["profiles"][0]["traces"][0]["trace_source"] == "existing_trace"
+    assert second["profiles"][0]["trace_sources"]["reused_count"] == 1
+    assert second["profiles"][0]["trace_record_cache"]["cache_hit"] is True
+    assert second["profiles"][0]["trace_record_cache"]["cache_written"] is False
+    assert second["config"]["trace_records_cache"]["summary"]["hit_profile_count"] == 1
+    assert second["leaderboard"][0]["trace_record_cache_hit"] is True
+    assert manifest["metadata"]["trace_records_cache_summary"]["hit_profile_count"] == 1
+    assert "balanced_trace_record_cache" in manifest["artifacts"]
+
+
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
 
@@ -13892,6 +13941,13 @@ def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
         compact_json="false",  # type: ignore[arg-type]
     )
     assert string_bool_config.compact_json is False
+    string_cache_config = module.ProductRuntimeProfileSweepConfig(
+        output_dir=tmp_path / "profile-sweep-string-cache-bool",
+        refresh_trace_records_cache="false",  # type: ignore[arg-type]
+        reuse_existing_traces="false",  # type: ignore[arg-type]
+    )
+    assert string_cache_config.refresh_trace_records_cache is False
+    assert string_cache_config.reuse_existing_traces is False
 
     with pytest.raises(ValueError, match="max_workers"):
         module.ProductRuntimeProfileSweepConfig(
@@ -13912,6 +13968,11 @@ def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
         module.ProductRuntimeProfileSweepConfig(
             output_dir=tmp_path / "profile-sweep-bad-compact-json",
             compact_json="maybe",  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="reuse_existing_traces"):
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep-bad-reuse-existing-traces",
+            reuse_existing_traces="maybe",  # type: ignore[arg-type]
         )
 
 
