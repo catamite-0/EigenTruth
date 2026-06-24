@@ -34,7 +34,11 @@ from benchmarks.run_runtime_profile_selector_replay import (  # noqa: E402
     run_runtime_profile_selector_replay,
 )
 from benchmarks.run_runtime_profile_selector_tuning import RuntimeProfileSelectorCandidate  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    build_artifact_manifest,
+    load_and_verify_artifact_manifest,
+)
 
 
 @dataclass(frozen=True)
@@ -58,6 +62,9 @@ class ProductTraceReplayWorkflowConfig:
     strict: bool = False
     limit: int | None = None
     compact_json: bool = False
+    verify_manifest: bool = False
+    verification_report_path: str | Path | None = None
+    allow_manifest_verification_failures: bool = False
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -89,6 +96,8 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "promotion_contract_path", Path(self.promotion_contract_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
+        if self.verification_report_path is not None:
+            object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
@@ -101,6 +110,15 @@ class ProductTraceReplayWorkflowConfig:
         object.__setattr__(self, "strict", strict_bool(self.strict, name="strict"))
         object.__setattr__(self, "limit", limit)
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
+        object.__setattr__(self, "verify_manifest", strict_bool(self.verify_manifest, name="verify_manifest"))
+        object.__setattr__(
+            self,
+            "allow_manifest_verification_failures",
+            strict_bool(
+                self.allow_manifest_verification_failures,
+                name="allow_manifest_verification_failures",
+            ),
+        )
 
     @property
     def resolved_report_path(self) -> Path:
@@ -113,6 +131,13 @@ class ProductTraceReplayWorkflowConfig:
         if self.artifact_manifest_path is not None:
             return Path(self.artifact_manifest_path)
         return Path(self.output_dir) / "artifact-manifest.json"
+
+    @property
+    def resolved_verification_report_path(self) -> Path:
+        """Return the top-level artifact manifest verification report path."""
+        if self.verification_report_path is not None:
+            return Path(self.verification_report_path)
+        return Path(self.output_dir) / "manifest-verification.json"
 
 
 def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
@@ -160,6 +185,9 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
             "selector_replay_report": _nested(selector_replay, "paths", "report"),
             "selector_replay_manifest": _nested(selector_replay, "paths", "artifact_manifest"),
+            "manifest_verification": (
+                str(config.resolved_verification_report_path) if config.verify_manifest else None
+            ),
         },
         "config": {
             "candidate_names": tuple(candidate.name for candidate in config.candidates),
@@ -179,6 +207,8 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
         },
     }
     _write_report_and_manifest(config, report)
+    if config.verify_manifest:
+        report["manifest_verification"] = _write_manifest_verification(config)
     _record_registry(config, report)
     return report
 
@@ -430,7 +460,11 @@ def _write_artifact_manifest(
 def _record_registry(config: ProductTraceReplayWorkflowConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
-    ArtifactRegistry.load_json(config.registry_path).record_report(
+    manifest_verification = _mapping(report.get("manifest_verification"))
+    verification_payload = _mapping(manifest_verification.get("verification"))
+    verification_report = manifest_verification.get("path")
+    registry = ArtifactRegistry.load_json(config.registry_path)
+    registry.record_report(
         name=str(config.name),
         path=config.resolved_report_path,
         version=str(config.version),
@@ -451,10 +485,51 @@ def _record_registry(config: ProductTraceReplayWorkflowConfig, report: Mapping[s
                 "decision",
                 "recommended_selector_policy_path",
             ),
+            "manifest_verified": verification_payload.get("passed"),
+            "manifest_verification_report": verification_report,
+            "manifest_verification_checked": verification_payload.get("checked"),
+            "manifest_verification_failure_count": _failure_count(verification_payload),
             "compact_json": config.compact_json,
             **dict(config.metadata),
         },
-    ).save_json()
+    )
+    if verification_report is not None:
+        registry.record_manifest_verification(
+            name=f"{config.name}-verification",
+            path=str(verification_report),
+            version=str(config.version),
+            metadata={
+                "manifest_name": str(config.name),
+                "manifest_path": str(config.resolved_artifact_manifest_path),
+                "passed": verification_payload.get("passed"),
+                "recursive": True,
+            },
+        )
+    registry.save_json()
+
+
+def _write_manifest_verification(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
+    verification = load_and_verify_artifact_manifest(
+        config.resolved_artifact_manifest_path,
+        recursive=True,
+    )
+    payload = verification.to_dict()
+    path = config.resolved_verification_report_path
+    _write_json(path, payload, compact=config.compact_json)
+    if not verification.passed and not config.allow_manifest_verification_failures:
+        raise ValueError("product trace replay artifact manifest verification failed")
+    return {"path": str(path), "verification": payload}
+
+
+def _failure_count(verification_payload: Mapping[str, Any]) -> int | None:
+    if not verification_payload:
+        return None
+    count = len(tuple(verification_payload.get("failures", ())))
+    for nested in verification_payload.get("nested", ()):
+        if isinstance(nested, Mapping):
+            nested_count = _failure_count(nested)
+            count += 0 if nested_count is None else nested_count
+    return count
 
 
 def _candidate_from_value(
@@ -572,6 +647,9 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         strict=bool(args.strict),
         limit=args.limit,
         compact_json=bool(args.compact_json),
+        verify_manifest=bool(args.verify_manifest),
+        verification_report_path=Path(args.verification_report) if args.verification_report else None,
+        allow_manifest_verification_failures=bool(args.allow_manifest_verification_failures),
     )
 
 
@@ -605,6 +683,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--strict", action="store_true")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--compact-json", action="store_true")
+    parser.add_argument("--verify-manifest", action="store_true",
+                        help="recursively verify the written workflow artifact manifest")
+    parser.add_argument("--verification-report", default=None,
+                        help="optional path for the manifest verification report")
+    parser.add_argument("--allow-manifest-verification-failures", action="store_true",
+                        help="write and register manifest verification even when it fails")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

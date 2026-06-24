@@ -2466,7 +2466,9 @@ one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the
 provided candidate policies using the corpus runtime-pair index, writes a
 recursive top-level manifest over all child reports, and registers one workflow
-report:
+report. Add `--verify-manifest` to write a separate recursive verification
+report and register `manifest_verification:<name>-verification:<version>` next
+to the workflow report:
 
 ```bash
 python benchmarks/run_product_trace_replay_workflow.py \
@@ -2480,16 +2482,19 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --name smollm2-product-trace-replay-workflow \
   --version 0.1 \
   --require-runtime-trace \
+  --verify-manifest \
   --fail-on-blocked
 ```
 
 The current registered workflow is
 `report:smollm2-product-trace-replay-workflow:0.1`. It promotes the default
-selector, observes 12 runtime traces in the baseline report, recursively
-verifies the corpus/runtime-baseline/selector-replay manifests, and keeps the
-same selector replay evidence as the standalone replay: full paired runtime
-coverage, observed selected-runtime mean around `0.00049s`, and p95 around
-`0.00059s`.
+selector, observes 12 runtime traces in the baseline report, writes
+`corpus/runtime-pair-index.json`, and now also registers
+`manifest_verification:smollm2-product-trace-replay-workflow-verification:0.1`
+after recursively verifying the corpus/runtime-baseline/selector-replay
+manifests. It keeps the same selector replay evidence as the standalone replay:
+full paired runtime coverage, observed selected-runtime mean around `0.00049s`,
+and p95 around `0.00059s`.
 
 Use `run_product_runtime_profile_sweep.py` to generate comparable traces for
 the built-in `latency`, `balanced`, and `audit` product profiles plus the

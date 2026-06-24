@@ -19,7 +19,8 @@
       "source": "run_product_trace_replay_workflow"
     },
     "policy_source": null,
-    "trace_count": 12
+    "trace_count": 12,
+    "trace_records_sidecar": false
   },
   "decision": {
     "blocking_reasons": [],
@@ -30,6 +31,7 @@
     "policy": null,
     "promotion_contract": null,
     "report": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+    "trace_records_jsonl": null,
     "traces": [
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json",
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
@@ -614,6 +616,11 @@
       "p95": 1.4499999999999993,
       "p99": 1.8900000000000006
     }
+  },
+  "trace_records": {
+    "count": 12,
+    "path": null,
+    "storage": "inline"
   },
   "traces": [
     {

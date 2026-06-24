@@ -101,8 +101,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-corpus.json",
-      "sha256": "b5dee6b551e75fc140ae51198a5362765877aee6f1cf73e5e5631753f50d3879",
-      "size_bytes": 9961
+      "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
+      "size_bytes": 10240
     },
     "product_trace_corpus_traces": {
       "exists": true,
@@ -111,6 +111,14 @@
       "path": "traces",
       "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
       "size_bytes": 475128
+    },
+    "product_trace_runtime_pair_index": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-pair-index.json",
+      "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+      "size_bytes": 3709
     }
   },
   "digest_algorithm": "sha256",
@@ -120,15 +128,16 @@
     "redact_text": true,
     "rejected_count": 0,
     "runner": "build_product_trace_corpus",
+    "runtime_pair_index_record_count": 12,
     "runtime_trace_count": 12,
     "source": "run_product_trace_replay_workflow",
     "status": "ready"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 14,
+    "artifact_count": 15,
     "directory_count": 1,
-    "file_count": 13,
+    "file_count": 14,
     "missing_count": 0
   }
 }

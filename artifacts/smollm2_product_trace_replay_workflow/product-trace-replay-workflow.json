@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 21,
+    "artifact_count": 22,
     "directory_count": 1,
-    "file_count": 20,
+    "file_count": 21,
     "missing_count": 0
   },
   "config": {
@@ -42,6 +42,7 @@
     },
     "redacted_trace_count": 12,
     "rejected_count": 0,
+    "runtime_pair_index_record_count": 12,
     "runtime_trace_count": 12,
     "status": "ready",
     "unique_request_key_count": 3
@@ -56,7 +57,9 @@
     "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
     "corpus_manifest": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
     "corpus_report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
+    "corpus_runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
     "corpus_traces_dir": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces",
+    "manifest_verification": "artifacts/smollm2_product_trace_replay_workflow/manifest-verification.json",
     "output_dir": "artifacts/smollm2_product_trace_replay_workflow",
     "report": "artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json",
     "runtime_baseline_manifest": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json",
@@ -86,6 +89,9 @@
         "estimated_cost_units_mean": 2.25,
         "latency_rate": 0.3333333333333333,
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "observed_selected_to_original_ratio_mean": 1.0965569346288282,
         "observed_selected_total_seconds_mean": 0.000494600758732607,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
         "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
@@ -100,6 +106,9 @@
         "estimated_cost_units_mean": 2.25,
         "latency_rate": 0.3333333333333333,
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "observed_selected_to_original_ratio_mean": 1.0965569346288282,
         "observed_selected_total_seconds_mean": 0.000494600758732607,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
         "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/latency_biased.json",
@@ -114,6 +123,9 @@
         "estimated_cost_units_mean": 2.3333333333333335,
         "latency_rate": 0.3333333333333333,
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_selected_minus_original_seconds_mean": -1.8537190044298768e-05,
+        "observed_selected_to_original_ratio_mean": 1.1089315858329243,
         "observed_selected_total_seconds_mean": 0.0004981019689391056,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
         "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/audit_biased.json",

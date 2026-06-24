@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 17,
+    "artifact_count": 18,
     "directory_count": 0,
-    "file_count": 17,
+    "file_count": 18,
     "missing_count": 0
   },
   "candidates": [
@@ -80,12 +80,15 @@
         "passed": true,
         "policy": {
           "max_estimated_cost_units_mean": 2.3,
+          "max_observed_selected_minus_original_seconds_mean": null,
+          "max_observed_selected_to_original_ratio_mean": null,
           "max_observed_selected_total_seconds_mean": 0.0005,
           "max_observed_selected_total_seconds_p95": 0.00061,
           "max_selected_profile_rates": {
             "audit": 0.6
           },
           "min_observed_runtime_coverage_rate": 1.0,
+          "min_observed_runtime_delta_coverage_rate": null,
           "min_selected_profile_counts": {
             "audit": 1,
             "balanced": 1,
@@ -127,7 +130,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/default.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
       "status": "promote",
       "summary": {
         "changed_count": 7,
@@ -187,7 +190,38 @@
           }
         },
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta": {
+          "coverage_rate": 1.0,
+          "paired_count": 12,
+          "selected_equal_count": 1,
+          "selected_faster_count": 5,
+          "selected_minus_original_seconds": {
+            "count": 12,
+            "max_seconds": 0.0002695494331419468,
+            "mean_seconds": -2.203840025079747e-05,
+            "min_seconds": -0.0004489371203817427,
+            "p95_seconds": 0.00020807461987715206,
+            "p99_seconds": 0.00025725447048898794,
+            "total_seconds": -0.00026446080300956964
+          },
+          "selected_slower_count": 6,
+          "selected_to_original_ratio": {
+            "count": 12,
+            "max": 1.9526935032926882,
+            "mean": 1.0965569346288282,
+            "min": 0.5317084102770727,
+            "p95": 1.8022727708504251,
+            "p99": 1.9226093568042357,
+            "total": 13.158683215545938
+          }
+        },
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_runtime_delta_paired_count": 12,
         "observed_runtime_paired_count": 12,
+        "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "observed_selected_minus_original_seconds_p95": 0.00020807461987715206,
+        "observed_selected_to_original_ratio_mean": 1.0965569346288282,
+        "observed_selected_to_original_ratio_p95": 1.8022727708504251,
         "observed_selected_total_seconds_max": 0.0005944980075582862,
         "observed_selected_total_seconds_mean": 0.000494600758732607,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
@@ -235,7 +269,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.000534693943336606,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -246,6 +282,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9533171884260043,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -274,7 +311,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005944980075582862,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -285,6 +324,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -312,7 +352,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.0006751170149073005,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0002850420423783362,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -323,6 +365,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.5777886853918576,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -351,7 +394,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.00048477191012352705,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -362,6 +407,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 1.0514902288793488,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -390,7 +436,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005385909462347627,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 5.590706132352352e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -401,6 +449,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.1038024528900168,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -428,7 +477,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00023229792714118958,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -439,6 +490,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.679201262488574,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -467,7 +519,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005407320568338037,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -3.0999130103737116e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -478,6 +532,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9426719209413086,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -506,7 +561,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005663760239258409,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.8121983632445335e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -517,6 +574,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0496524966532261,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -544,7 +602,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00024313596077263355,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.00014693901175633073,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -555,6 +615,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.6043491521755577,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -583,7 +644,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0009586700471118093,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0004489371203817427,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -594,6 +657,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.5317084102770727,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -622,7 +686,9 @@
           "claim_count": 2,
           "estimated_cost_units": 2.0,
           "observed_original_total_seconds": 0.00028293405193835497,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0002695494331419468,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -633,6 +699,7 @@
             "p99_seconds": 0.0005660981731489301,
             "total_seconds": 0.0011049669701606035
           },
+          "observed_selected_to_original_ratio": 1.9526935032926882,
           "observed_selected_total_seconds": 0.0005524834850803018,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -661,7 +728,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.000547852017916739,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -672,6 +741,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.712007914130284,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -770,12 +840,15 @@
         "passed": true,
         "policy": {
           "max_estimated_cost_units_mean": 2.3,
+          "max_observed_selected_minus_original_seconds_mean": null,
+          "max_observed_selected_to_original_ratio_mean": null,
           "max_observed_selected_total_seconds_mean": 0.0005,
           "max_observed_selected_total_seconds_p95": 0.00061,
           "max_selected_profile_rates": {
             "audit": 0.6
           },
           "min_observed_runtime_coverage_rate": 1.0,
+          "min_observed_runtime_delta_coverage_rate": null,
           "min_selected_profile_counts": {
             "audit": 1,
             "balanced": 1,
@@ -815,7 +888,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/latency_biased.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/latency_biased.json",
       "status": "promote",
       "summary": {
         "changed_count": 7,
@@ -875,7 +948,38 @@
           }
         },
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta": {
+          "coverage_rate": 1.0,
+          "paired_count": 12,
+          "selected_equal_count": 1,
+          "selected_faster_count": 5,
+          "selected_minus_original_seconds": {
+            "count": 12,
+            "max_seconds": 0.0002695494331419468,
+            "mean_seconds": -2.203840025079747e-05,
+            "min_seconds": -0.0004489371203817427,
+            "p95_seconds": 0.00020807461987715206,
+            "p99_seconds": 0.00025725447048898794,
+            "total_seconds": -0.00026446080300956964
+          },
+          "selected_slower_count": 6,
+          "selected_to_original_ratio": {
+            "count": 12,
+            "max": 1.9526935032926882,
+            "mean": 1.0965569346288282,
+            "min": 0.5317084102770727,
+            "p95": 1.8022727708504251,
+            "p99": 1.9226093568042357,
+            "total": 13.158683215545938
+          }
+        },
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_runtime_delta_paired_count": 12,
         "observed_runtime_paired_count": 12,
+        "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "observed_selected_minus_original_seconds_p95": 0.00020807461987715206,
+        "observed_selected_to_original_ratio_mean": 1.0965569346288282,
+        "observed_selected_to_original_ratio_p95": 1.8022727708504251,
         "observed_selected_total_seconds_max": 0.0005944980075582862,
         "observed_selected_total_seconds_mean": 0.000494600758732607,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
@@ -923,7 +1027,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.000534693943336606,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -934,6 +1040,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9533171884260043,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -962,7 +1069,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005944980075582862,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -973,6 +1082,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1000,7 +1110,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.0006751170149073005,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0002850420423783362,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1011,6 +1123,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.5777886853918576,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1039,7 +1152,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.00048477191012352705,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1050,6 +1165,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 1.0514902288793488,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1078,7 +1194,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005385909462347627,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 5.590706132352352e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -1089,6 +1207,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.1038024528900168,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1116,7 +1235,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00023229792714118958,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1127,6 +1248,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.679201262488574,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1155,7 +1277,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005407320568338037,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -3.0999130103737116e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1166,6 +1290,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9426719209413086,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1194,7 +1319,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005663760239258409,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.8121983632445335e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -1205,6 +1332,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0496524966532261,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1232,7 +1360,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00024313596077263355,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.00014693901175633073,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1243,6 +1373,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.6043491521755577,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1271,7 +1402,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0009586700471118093,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0004489371203817427,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1282,6 +1415,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.5317084102770727,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1310,7 +1444,9 @@
           "claim_count": 2,
           "estimated_cost_units": 2.0,
           "observed_original_total_seconds": 0.00028293405193835497,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0002695494331419468,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1321,6 +1457,7 @@
             "p99_seconds": 0.0005660981731489301,
             "total_seconds": 0.0011049669701606035
           },
+          "observed_selected_to_original_ratio": 1.9526935032926882,
           "observed_selected_total_seconds": 0.0005524834850803018,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1349,7 +1486,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.000547852017916739,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1360,6 +1499,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.712007914130284,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1483,12 +1623,15 @@
         "passed": false,
         "policy": {
           "max_estimated_cost_units_mean": 2.3,
+          "max_observed_selected_minus_original_seconds_mean": null,
+          "max_observed_selected_to_original_ratio_mean": null,
           "max_observed_selected_total_seconds_mean": 0.0005,
           "max_observed_selected_total_seconds_p95": 0.00061,
           "max_selected_profile_rates": {
             "audit": 0.6
           },
           "min_observed_runtime_coverage_rate": 1.0,
+          "min_observed_runtime_delta_coverage_rate": null,
           "min_selected_profile_counts": {
             "audit": 1,
             "balanced": 1,
@@ -1531,7 +1674,7 @@
         "sensitive_profile": "audit"
       },
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/audit_biased.json",
-      "source": "artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json",
+      "source": "artifacts/smollm2_runtime_profile_selector_replay/policies/audit_biased.json",
       "status": "blocked",
       "summary": {
         "changed_count": 7,
@@ -1582,7 +1725,38 @@
           }
         },
         "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta": {
+          "coverage_rate": 1.0,
+          "paired_count": 12,
+          "selected_equal_count": 1,
+          "selected_faster_count": 5,
+          "selected_minus_original_seconds": {
+            "count": 12,
+            "max_seconds": 0.0003115639556199312,
+            "mean_seconds": -1.8537190044298768e-05,
+            "min_seconds": -0.0004489371203817427,
+            "p95_seconds": 0.00022698115499224502,
+            "p99_seconds": 0.00029464739549439406,
+            "total_seconds": -0.00022244628053158522
+          },
+          "selected_slower_count": 6,
+          "selected_to_original_ratio": {
+            "count": 12,
+            "max": 2.1011893177418393,
+            "mean": 1.1089315858329243,
+            "min": 0.5317084102770727,
+            "p95": 1.869095887352543,
+            "p99": 2.05477063166398,
+            "total": 13.30717902999509
+          }
+        },
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_runtime_delta_paired_count": 12,
         "observed_runtime_paired_count": 12,
+        "observed_selected_minus_original_seconds_mean": -1.8537190044298768e-05,
+        "observed_selected_minus_original_seconds_p95": 0.00022698115499224502,
+        "observed_selected_to_original_ratio_mean": 1.1089315858329243,
+        "observed_selected_to_original_ratio_p95": 1.869095887352543,
         "observed_selected_total_seconds_max": 0.0005944980075582862,
         "observed_selected_total_seconds_mean": 0.0004981019689391056,
         "observed_selected_total_seconds_p95": 0.0005944980075582862,
@@ -1627,7 +1801,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.000534693943336606,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1638,6 +1814,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9533171884260043,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1666,7 +1843,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005944980075582862,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -1677,6 +1856,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1704,7 +1884,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.0006751170149073005,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0002850420423783362,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1715,6 +1897,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.5777886853918576,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1743,7 +1926,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.00048477191012352705,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.4961016606539488e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1754,6 +1939,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 1.0514902288793488,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1782,7 +1968,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005385909462347627,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 5.590706132352352e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -1793,6 +1981,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.1038024528900168,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1820,7 +2009,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00023229792714118958,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1831,6 +2022,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.679201262488574,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1859,7 +2051,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005407320568338037,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -3.0999130103737116e-05,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1870,6 +2064,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.9426719209413086,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1898,7 +2093,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0005663760239258409,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 2.8121983632445335e-05,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -1909,6 +2106,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 1.0496524966532261,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -1936,7 +2134,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.00024313596077263355,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.00014693901175633073,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1947,6 +2147,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 1.6043491521755577,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -1975,7 +2176,9 @@
           "claim_count": 1,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.0009586700471118093,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0004489371203817427,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -1986,6 +2189,7 @@
             "p99_seconds": 0.0005341947230044753,
             "total_seconds": 0.001019465853460133
           },
+          "observed_selected_to_original_ratio": 0.5317084102770727,
           "observed_selected_total_seconds": 0.0005097329267300665,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
           "observed_selected_trace_paths": [
@@ -2014,7 +2218,9 @@
           "claim_count": 2,
           "estimated_cost_units": 3.0,
           "observed_original_total_seconds": 0.00028293405193835497,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": 0.0003115639556199312,
           "observed_selected_pair_count": 1,
           "observed_selected_pair_stats": {
             "count": 1,
@@ -2025,6 +2231,7 @@
             "p99_seconds": 0.0005944980075582862,
             "total_seconds": 0.0005944980075582862
           },
+          "observed_selected_to_original_ratio": 2.1011893177418393,
           "observed_selected_total_seconds": 0.0005944980075582862,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
           "observed_selected_trace_paths": [
@@ -2052,7 +2259,9 @@
           "claim_count": 1,
           "estimated_cost_units": 1.0,
           "observed_original_total_seconds": 0.000547852017916739,
+          "observed_runtime_delta_paired": true,
           "observed_runtime_paired": true,
+          "observed_selected_minus_original_seconds": -0.0001577770453877747,
           "observed_selected_pair_count": 2,
           "observed_selected_pair_stats": {
             "count": 2,
@@ -2063,6 +2272,7 @@
             "p99_seconds": 0.0005446964770089834,
             "total_seconds": 0.0007801499450579286
           },
+          "observed_selected_to_original_ratio": 0.712007914130284,
           "observed_selected_total_seconds": 0.0003900749725289643,
           "observed_selected_trace_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
           "observed_selected_trace_paths": [
@@ -2095,6 +2305,7 @@
       "audit_biased"
     ],
     "compact_json": false,
+    "detail_limit": null,
     "metadata": {
       "source": "run_product_trace_replay_workflow"
     },
@@ -2106,7 +2317,10 @@
     "replay_policy_source": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json",
     "runtime_pairing": {
       "enabled": true,
-      "indexed_pairs": 9
+      "indexed_observations": 12,
+      "indexed_pairs": 9,
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+      "source": "runtime_pair_index"
     },
     "trace_count": 12
   },
@@ -2130,6 +2344,9 @@
       "estimated_cost_units_mean": 2.25,
       "latency_rate": 0.3333333333333333,
       "observed_runtime_coverage_rate": 1.0,
+      "observed_runtime_delta_coverage_rate": 1.0,
+      "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+      "observed_selected_to_original_ratio_mean": 1.0965569346288282,
       "observed_selected_total_seconds_mean": 0.000494600758732607,
       "observed_selected_total_seconds_p95": 0.0005944980075582862,
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
@@ -2144,6 +2361,9 @@
       "estimated_cost_units_mean": 2.25,
       "latency_rate": 0.3333333333333333,
       "observed_runtime_coverage_rate": 1.0,
+      "observed_runtime_delta_coverage_rate": 1.0,
+      "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+      "observed_selected_to_original_ratio_mean": 1.0965569346288282,
       "observed_selected_total_seconds_mean": 0.000494600758732607,
       "observed_selected_total_seconds_p95": 0.0005944980075582862,
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/latency_biased.json",
@@ -2158,6 +2378,9 @@
       "estimated_cost_units_mean": 2.3333333333333335,
       "latency_rate": 0.3333333333333333,
       "observed_runtime_coverage_rate": 1.0,
+      "observed_runtime_delta_coverage_rate": 1.0,
+      "observed_selected_minus_original_seconds_mean": -1.8537190044298768e-05,
+      "observed_selected_to_original_ratio_mean": 1.1089315858329243,
       "observed_selected_total_seconds_mean": 0.0004981019689391056,
       "observed_selected_total_seconds_p95": 0.0005944980075582862,
       "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/audit_biased.json",
@@ -2169,6 +2392,8 @@
     "output_dir": "artifacts/smollm2_product_trace_replay_workflow/selector-replay",
     "replay_policy": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json",
     "report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json",
+    "runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+    "trace_details": null,
     "traces": [
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json",
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",

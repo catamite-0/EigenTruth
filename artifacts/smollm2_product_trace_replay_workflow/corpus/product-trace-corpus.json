@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 14,
+    "artifact_count": 15,
     "directory_count": 1,
-    "file_count": 13,
+    "file_count": 14,
     "missing_count": 0
   },
   "config": {
@@ -37,9 +37,19 @@
     ],
     "jsonl_inputs": [],
     "report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
+    "runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
     "traces_dir": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces"
   },
   "rejected": [],
+  "runtime_pair_index": {
+    "profile_counts": {
+      "audit": 4,
+      "balanced": 4,
+      "latency": 4
+    },
+    "record_count": 12,
+    "request_key_count": 3
+  },
   "schema_version": 1,
   "status": "ready",
   "summary": {

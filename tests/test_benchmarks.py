@@ -11613,6 +11613,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     output_dir = tmp_path / "workflow"
     registry_path = tmp_path / "registry.json"
     replay_policy_path = tmp_path / "replay-policy.json"
+    verification_report_path = tmp_path / "workflow" / "manifest-verification.json"
     traces_dir = tmp_path / "input-traces"
     traces_dir.mkdir()
     replay_policy_path.write_text(
@@ -11698,13 +11699,16 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             version="0.1",
             require_runtime_trace=True,
             compact_json=True,
+            verify_manifest=True,
+            verification_report_path=verification_report_path,
         )
     )
-    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
-        "report:trace-replay-workflow:0.1"
-    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-workflow:0.1")
+    verification_record = registry.get("manifest_verification:trace-replay-workflow-verification:0.1")
     corpus_trace = next((output_dir / "corpus" / "traces").glob("latency-*.json"))
     saved_trace = json.loads(corpus_trace.read_text(encoding="utf-8"))
+    verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
 
     assert payload["status"] == "promote"
     assert payload["corpus"]["status"] == "ready"
@@ -11715,6 +11719,10 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
+    assert payload["paths"]["manifest_verification"] == str(verification_report_path)
+    assert payload["manifest_verification"]["path"] == str(verification_report_path)
+    assert payload["manifest_verification"]["verification"]["passed"] is True
+    assert verification_report["passed"] is True
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
     selector_replay_report = json.loads(
         Path(payload["paths"]["selector_replay_report"]).read_text(encoding="utf-8")
@@ -11731,6 +11739,12 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["status"] == "promote"
     assert record.metadata["corpus_status"] == "ready"
     assert record.metadata["selector_replay_status"] == "promote"
+    assert record.metadata["manifest_verified"] is True
+    assert record.metadata["manifest_verification_report"] == str(verification_report_path)
+    assert record.metadata["manifest_verification_failure_count"] == 0
+    assert verification_record.path == str(verification_report_path)
+    assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
+    assert verification_record.metadata["passed"] is True
 
 
 def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):

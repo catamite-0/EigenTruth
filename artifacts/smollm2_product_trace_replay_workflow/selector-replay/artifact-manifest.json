@@ -32,13 +32,21 @@
       "sha256": "8aeb547d01d8b66c1c7c29851de9a8c7dfc1c63d4c6cce0228bdfcb201f36bdd",
       "size_bytes": 344
     },
+    "runtime_pair_index": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../corpus/runtime-pair-index.json",
+      "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+      "size_bytes": 3709
+    },
     "runtime_profile_selector_replay_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-profile-selector-replay.json",
-      "sha256": "4063a934d3adcedfecef6d24196a629d3fed91295ef7653f6e2555f8ba86a539",
-      "size_bytes": 93258
+      "sha256": "a2c8b9a576d76bc1773570624be027933f368842512511b304d57bcddf137229",
+      "size_bytes": 105723
     },
     "trace_0000_audit-calculator_refuted-r0": {
       "exists": true,
@@ -141,21 +149,28 @@
   "metadata": {
     "candidate_count": 3,
     "compact_json": false,
+    "detail_limit": null,
     "recommended_candidate": "default",
     "recommended_observed_runtime_coverage_rate": 1.0,
+    "recommended_observed_runtime_delta_coverage_rate": 1.0,
+    "recommended_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+    "recommended_observed_selected_to_original_ratio_mean": 1.0965569346288282,
     "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
     "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
     "recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
     "runner": "run_runtime_profile_selector_replay",
+    "runtime_pair_index_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+    "runtime_pair_index_source": "runtime_pair_index",
     "source": "run_product_trace_replay_workflow",
     "status": "promote",
-    "trace_count": 12
+    "trace_count": 12,
+    "trace_details_path": null
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 17,
+    "artifact_count": 18,
     "directory_count": 0,
-    "file_count": 17,
+    "file_count": 18,
     "missing_count": 0
   }
 }

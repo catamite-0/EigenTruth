@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-baseline.json",
-      "sha256": "009b16146447338412b42f0b7eab01f3cf325ed6557f6885639fe99a7ccd74ac",
-      "size_bytes": 81435
+      "sha256": "bfdb26d8c548d468578105f8efe2a580d3c8143e2415c015a0f6988d08da5127",
+      "size_bytes": 81589
     },
     "trace_0000_audit-calculator_refuted-r0": {
       "exists": true,
@@ -113,7 +113,8 @@
     "runner": "run_product_runtime_baseline",
     "source": "run_product_trace_replay_workflow",
     "status": "observed",
-    "trace_count": 12
+    "trace_count": 12,
+    "trace_records_storage": "inline"
   },
   "schema_version": 1,
   "summary": {

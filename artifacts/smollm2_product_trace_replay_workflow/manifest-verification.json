@@ -1,0 +1,29 @@
+{
+  "checked": 22,
+  "failures": [],
+  "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 15,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 13,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 18,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

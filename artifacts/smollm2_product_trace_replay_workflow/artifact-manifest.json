@@ -5,16 +5,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "corpus/artifact-manifest.json",
-      "sha256": "7ce2c3510b4be8257535052b368ecf00e78674bdf405e0386b316816eb627922",
-      "size_bytes": 4991
+      "sha256": "7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28",
+      "size_bytes": 5301
     },
     "corpus_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "corpus/product-trace-corpus.json",
-      "sha256": "b5dee6b551e75fc140ae51198a5362765877aee6f1cf73e5e5631753f50d3879",
-      "size_bytes": 9961
+      "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
+      "size_bytes": 10240
+    },
+    "corpus_runtime_pair_index": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "corpus/runtime-pair-index.json",
+      "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+      "size_bytes": 3709
     },
     "corpus_traces_dir": {
       "exists": true,
@@ -125,8 +133,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "63a83adb3b022cf2a4f4932e6bef121a7d5231aa5e817d29153da8630b92f627",
-      "size_bytes": 5220
+      "sha256": "af57f09f84f2d8b5cc81a4cc90e084ec8e46042628d8bb47d53639da98853d32",
+      "size_bytes": 6104
     },
     "replay_policy": {
       "exists": true,
@@ -141,32 +149,32 @@
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/artifact-manifest.json",
-      "sha256": "feec705ec7be33d554a8a3f629f36fd422a917e5075983d2630738fc22cc16d7",
-      "size_bytes": 4357
+      "sha256": "fde7c07e5581b95a1497975d6163b67d1d5accacf639fc1ce93254c60ba4e6cb",
+      "size_bytes": 4396
     },
     "runtime_baseline_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/product-runtime-baseline.json",
-      "sha256": "009b16146447338412b42f0b7eab01f3cf325ed6557f6885639fe99a7ccd74ac",
-      "size_bytes": 81435
+      "sha256": "bfdb26d8c548d468578105f8efe2a580d3c8143e2415c015a0f6988d08da5127",
+      "size_bytes": 81589
     },
     "selector_replay_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/artifact-manifest.json",
-      "sha256": "7b9f9759d818e48e69d67be78548eb9c5cc052df061c9a5f305f00b9b325cf95",
-      "size_bytes": 5816
+      "sha256": "77725831ae978b7167c88e12980a1820e16e6ff058affebb338fab9d70e9c073",
+      "size_bytes": 6535
     },
     "selector_replay_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/runtime-profile-selector-replay.json",
-      "sha256": "4063a934d3adcedfecef6d24196a629d3fed91295ef7653f6e2555f8ba86a539",
-      "size_bytes": 93258
+      "sha256": "a2c8b9a576d76bc1773570624be027933f368842512511b304d57bcddf137229",
+      "size_bytes": 105723
     }
   },
   "digest_algorithm": "sha256",
@@ -181,9 +189,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 21,
+    "artifact_count": 22,
     "directory_count": 1,
-    "file_count": 20,
+    "file_count": 21,
     "missing_count": 0
   }
 }

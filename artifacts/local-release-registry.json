@@ -2369,23 +2369,6 @@
       "version": "0.1"
     },
     {
-      "artifact_type": "report",
-      "metadata": {
-        "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
-        "compact_json": false,
-        "corpus_status": "ready",
-        "recommended_selector_candidate": "default",
-        "recommended_selector_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
-        "runtime_baseline_status": "observed",
-        "selector_replay_status": "promote",
-        "status": "promote",
-        "workflow": "run_product_trace_replay_workflow"
-      },
-      "name": "smollm2-product-trace-replay-workflow",
-      "path": "artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json",
-      "version": "0.1"
-    },
-    {
       "artifact_type": "product_runtime_drift_report",
       "metadata": {
         "artifact_manifest": "artifacts/smollm2_product_runtime_drift_v1_5/artifact-manifest.json",
@@ -2762,6 +2745,39 @@
       "name": "smollm2-product-promotion-contract",
       "path": "artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json",
       "version": "1.5"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
+        "compact_json": false,
+        "corpus_status": "ready",
+        "manifest_verification_checked": 22,
+        "manifest_verification_failure_count": 0,
+        "manifest_verification_report": "artifacts/smollm2_product_trace_replay_workflow/manifest-verification.json",
+        "manifest_verified": true,
+        "recommended_selector_candidate": "default",
+        "recommended_selector_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+        "runtime_baseline_status": "observed",
+        "selector_replay_status": "promote",
+        "status": "promote",
+        "workflow": "run_product_trace_replay_workflow"
+      },
+      "name": "smollm2-product-trace-replay-workflow",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-product-trace-replay-workflow",
+        "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-product-trace-replay-workflow-verification",
+      "path": "artifacts/smollm2_product_trace_replay_workflow/manifest-verification.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
