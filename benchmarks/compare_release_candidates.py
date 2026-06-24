@@ -68,6 +68,7 @@ def compare_release_candidates(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    require_non_oracle_evidence: bool = False,
     required_route_min_selected: int | None = None,
     required_route_min_decision_accuracy: float | None = None,
     required_route_max_false_supported_rate: float | None = None,
@@ -83,6 +84,7 @@ def compare_release_candidates(
     required_route_max_retrieval_hit_count: float | None = None,
     required_route_min_claims_cache_hit_rate: float | None = None,
     required_route_min_verifier_trace_cache_hit_rate: float | None = None,
+    required_route_require_non_oracle_evidence: bool = False,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
@@ -221,6 +223,7 @@ def compare_release_candidates(
         max_retrieval_hit_count=max_retrieval_hit_count,
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=require_non_oracle_evidence,
         notes=("release candidate route comparison",),
         fingerprint_cache=cache,
     )
@@ -245,6 +248,7 @@ def compare_release_candidates(
         max_retrieval_hit_count=required_route_max_retrieval_hit_count,
         min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=required_route_require_non_oracle_evidence,
         fingerprint_cache=cache,
     )
     adapter_family = _adapter_family_matrix_gate(
@@ -379,6 +383,7 @@ def compare_release_candidates(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "require_non_oracle_evidence": require_non_oracle_evidence,
             "required_route_min_selected": required_route_min_selected,
             "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
             "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
@@ -394,6 +399,7 @@ def compare_release_candidates(
             "required_route_max_retrieval_hit_count": required_route_max_retrieval_hit_count,
             "required_route_min_claims_cache_hit_rate": required_route_min_claims_cache_hit_rate,
             "required_route_min_verifier_trace_cache_hit_rate": required_route_min_verifier_trace_cache_hit_rate,
+            "required_route_require_non_oracle_evidence": required_route_require_non_oracle_evidence,
         },
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
@@ -679,6 +685,7 @@ def _required_route_baseline_gate(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    require_non_oracle_evidence: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     required_keys = tuple(str(key) for key in required_route_baseline_keys if str(key))
@@ -704,6 +711,7 @@ def _required_route_baseline_gate(
         max_retrieval_hit_count=max_retrieval_hit_count,
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=require_non_oracle_evidence,
         notes=("release candidate required route baseline gate",),
         fingerprint_cache=fingerprint_cache,
     )
@@ -2121,6 +2129,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
         required_route_min_selected=args.required_route_min_selected,
         required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
@@ -2136,6 +2145,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         notes=args.note,
     )
     if args.json:
@@ -2292,6 +2302,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument(
+        "--require-non-oracle-evidence",
+        action="store_true",
+        help="require selected route claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
         "--min-performance-score-dump-cache-jsonl-view-hit-rate",
         type=lambda value: _parse_unit_float(
             value,
@@ -2399,6 +2414,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-verifier-trace-cache-hit-rate",
         ),
         default=None,
+    )
+    parser.add_argument(
+        "--required-route-require-non-oracle-evidence",
+        action="store_true",
+        help="require required route claims to omit labels and include input provenance",
     )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate promotes")

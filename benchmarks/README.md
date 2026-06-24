@@ -905,7 +905,11 @@ The output includes:
   `mean_attempted_route_count`, and `retrieval_use_rate`, plus optional global
   `cache_hit_rate` and staged-verification skip/quality thresholds; missing
   routes, missing metrics, non-finite values, missing cache/staged evidence, or
-  no eligible routes fail the gate. When multiple reports are
+  no eligible routes fail the gate. Use `--require-non-oracle-evidence` on
+  `compare_route_baselines.py` when a retrieval route must prove that generated
+  claims omit labels, labels were not used for retrieval, and
+  `input_provenance` fingerprints the score dump and local corpora. When
+  multiple reports are
   aggregated, any route entry with missing or non-finite source metrics for an
   enabled gate records `invalid_metric_counts` and blocks promotion even if the
   remaining entries produce an aggregate value below the threshold.
@@ -1245,6 +1249,7 @@ python benchmarks/compare_release_candidates.py \
   --required-route-max-runtime-total-seconds 120 \
   --required-route-max-retrieval-hit-count 5000 \
   --required-route-max-retrieval-use-rate 1.0 \
+  --required-route-require-non-oracle-evidence \
   --json artifacts/release-candidate-comparison.json \
   --fail-on-blocked
 ```
@@ -1258,6 +1263,9 @@ additional promoted route baselines, such as a real local-corpus
 low-latency product route. This gate verifies that each required route manifest
 is promoted and recursively valid. Add `--required-route-*` thresholds when the
 audit route needs its own quality, latency, retrieval-hit, or cache-reuse budget;
+add `--required-route-require-non-oracle-evidence` when that required route must
+also prove labels stayed only in the score dump and local input provenance is
+present;
 otherwise the release only checks the route's already-registered promotion
 status and manifest validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
@@ -1346,7 +1354,9 @@ To write, verify, and register that release candidate as its own manifest, use
 `--product-runtime-drift-report` options and
 includes those route/workflow/selector/drift manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
-manifest metadata as `required_route_budget_policy`.
+manifest metadata as `required_route_budget_policy`, including
+`--required-route-require-non-oracle-evidence` when the audit route must prove
+label-free local retrieval claims.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1374,6 +1384,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --min-performance-score-dump-cache-jsonl-view-hit-rate 0.5 \
   --max-performance-uncached-total-seconds-ratio 1.15 \
   --max-performance-score-dump-cache-jsonl-view-hit-rate-drop 0.10 \
+  --required-route-require-non-oracle-evidence \
   --json artifacts/release-candidate-registry-workflow.json \
   --release-report-json artifacts/release-candidate-comparison.json \
   --artifact-manifest artifacts/release-candidate-artifact-manifest.json \

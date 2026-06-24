@@ -43,6 +43,7 @@ def compare_route_baselines(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    require_non_oracle_evidence: bool = False,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
@@ -70,6 +71,7 @@ def compare_route_baselines(
             max_retrieval_hit_count=max_retrieval_hit_count,
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+            require_non_oracle_evidence=require_non_oracle_evidence,
             fingerprint_cache=cache,
         )
         for record in records
@@ -100,6 +102,7 @@ def compare_route_baselines(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "require_non_oracle_evidence": require_non_oracle_evidence,
         },
         "summary": {
             "record_count": len(rows),
@@ -163,6 +166,7 @@ def _route_baseline_row(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    require_non_oracle_evidence: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
@@ -182,6 +186,16 @@ def _route_baseline_row(
         ({}, "route_comparison_report artifact missing")
         if route_report_path is None
         else _load_optional_json(route_report_path)
+    )
+    claims_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="retrieval_claims",
+    )
+    claims_fixture, claims_error = (
+        ({}, "retrieval_claims artifact missing")
+        if claims_path is None
+        else _load_optional_json(claims_path)
     )
     route_decision = _mapping(route_comparison.get("promotion_decision"))
     recommended_route = (
@@ -227,6 +241,12 @@ def _route_baseline_row(
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
         runtime_budget=runtime_budget,
+        evidence_audit=_evidence_audit(
+            manifest_metadata,
+            claims_fixture,
+            claims_error=claims_error,
+            require_non_oracle_evidence=require_non_oracle_evidence,
+        ),
     )
     runtime_metrics = dict(runtime_budget.get("metrics") or {})
     return {
@@ -235,6 +255,7 @@ def _route_baseline_row(
         "version": record.version,
         "manifest_path": str(manifest_path),
         "route_report_path": None if route_report_path is None else str(route_report_path),
+        "claims_path": None if claims_path is None else str(claims_path),
         "verification": verification,
         "gate": gate,
         "route_promotion_status": route_status,
@@ -257,6 +278,7 @@ def _route_baseline_row(
         "claims_cache_hit_rate": _float_or_none(runtime_metrics.get("claims_cache_hit_rate")),
         "verifier_trace_cache_hit_rate": _float_or_none(runtime_metrics.get("verifier_trace_cache_hit_rate")),
         "runtime_budget": runtime_budget,
+        "evidence_audit": gate["evidence_audit"],
     }
 
 
@@ -309,6 +331,7 @@ def _gate(
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
     runtime_budget: Mapping[str, Any],
+    evidence_audit: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -386,9 +409,64 @@ def _gate(
     )
     if runtime_budget.get("enabled") and not runtime_budget.get("passed"):
         failures.extend(_runtime_budget_reasons(runtime_budget))
+    if evidence_audit.get("enabled") and not evidence_audit.get("passed"):
+        failures.extend(f"evidence_audit: {reason}" for reason in evidence_audit.get("blocking_reasons", ()))
     return {
         "passed": not failures,
         "blocking_reasons": failures,
+        "evidence_audit": dict(evidence_audit),
+    }
+
+
+def _evidence_audit(
+    manifest_metadata: Mapping[str, Any],
+    claims_fixture: Mapping[str, Any],
+    *,
+    claims_error: str | None,
+    require_non_oracle_evidence: bool,
+) -> dict[str, Any]:
+    label_usage = _mapping(claims_fixture.get("label_usage"))
+    provenance = _mapping(claims_fixture.get("input_provenance"))
+    score_dump = _mapping(provenance.get("score_dump"))
+    corpora = provenance.get("corpora")
+    corpus_fingerprints = (
+        tuple(item for item in corpora if isinstance(item, Mapping) and item.get("sha256"))
+        if isinstance(corpora, Sequence) and not isinstance(corpora, (str, bytes, bytearray))
+        else ()
+    )
+    labels_used = _first_present(
+        label_usage.get("labels_used_for_retrieval"),
+        manifest_metadata.get("labels_used_for_retrieval"),
+    )
+    labels_copied = _first_present(
+        label_usage.get("labels_copied_to_record_metadata"),
+        manifest_metadata.get("labels_copied_to_record_metadata"),
+    )
+    failures: list[str] = []
+    if require_non_oracle_evidence:
+        if claims_error is not None:
+            failures.append(f"retrieval claims fixture could not be loaded: {claims_error}")
+        if labels_used is not False:
+            failures.append("labels_used_for_retrieval must be false")
+        if labels_copied is not False:
+            failures.append("labels_copied_to_record_metadata must be false")
+        if not provenance:
+            failures.append("input_provenance is missing")
+        if not score_dump:
+            failures.append("input_provenance.score_dump is missing")
+        if not corpus_fingerprints:
+            failures.append("input_provenance.corpora must include at least one corpus fingerprint")
+    return {
+        "enabled": bool(require_non_oracle_evidence),
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "claims_loaded": claims_error is None and bool(claims_fixture),
+        "claims_error": claims_error,
+        "labels_used_for_retrieval": labels_used,
+        "labels_copied_to_record_metadata": labels_copied,
+        "input_provenance_present": bool(provenance),
+        "score_dump_provenance_present": bool(score_dump),
+        "corpus_fingerprint_count": len(corpus_fingerprints),
     }
 
 
@@ -401,6 +479,13 @@ def _runtime_budget_reasons(runtime_budget: Mapping[str, Any]) -> list[str]:
         reason = failure.get("reason") or "failed"
         reasons.append(f"runtime_budget: {metric} {reason}")
     return reasons
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
+    return None
 
 
 def _check_min(failures: list[str], metric: str, value: float | int | None, limit: float | int | None) -> None:
@@ -596,6 +681,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
         notes=args.note,
     )
     if args.json:
@@ -688,6 +774,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument(
+        "--require-non-oracle-evidence",
+        action="store_true",
+        help="require local retrieval claims to omit labels and include input provenance",
+    )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless a route baseline promotes")
     run(parser.parse_args(argv))

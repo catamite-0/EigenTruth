@@ -3220,6 +3220,7 @@ def _write_route_baseline_manifest(
     verifier_trace_cache_enabled: bool | None = None,
     verifier_trace_cache_hit_count: int | None = None,
     verifier_trace_cache_run_count: int | None = None,
+    claims_payload: dict[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -3249,6 +3250,11 @@ def _write_route_baseline_manifest(
         }),
         encoding="utf-8",
     )
+    artifacts = {"route_comparison_report": route_report_path}
+    if claims_payload is not None:
+        claims_path = tmp_path / f"{name}-claims.json"
+        claims_path.write_text(json.dumps(claims_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        artifacts["retrieval_claims"] = claims_path
     metadata = {
         "runner": "run_adapter_promotion_workflow",
         "workflow": "adapter_promotion_workflow",
@@ -3270,13 +3276,35 @@ def _write_route_baseline_manifest(
         for key, value in optional_metadata.items()
         if value is not None
     })
-    manifest = build_artifact_manifest(
-        {"route_comparison_report": route_report_path},
-        root=tmp_path,
-        metadata=metadata,
-    )
+    manifest = build_artifact_manifest(artifacts, root=tmp_path, metadata=metadata)
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest_path
+
+
+def _local_retrieval_claims_payload(
+    *,
+    labels_copied_to_record_metadata: bool,
+    include_provenance: bool = True,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "schema_version": 1,
+        "fixture_type": "local_retrieval_evidence",
+        "label_usage": {
+            "labels_used_for_retrieval": False,
+            "labels_copied_to_record_metadata": labels_copied_to_record_metadata,
+        },
+        "summary": {"n_records": 1, "records_with_hits": 1, "total_hits": 1},
+        "records": [],
+    }
+    if include_provenance:
+        payload["input_provenance"] = {
+            "schema_version": 1,
+            "builder": "build_evidence_fixture",
+            "score_dump": {"path": "scores.json", "exists": True, "sha256": "score-sha"},
+            "corpora": [{"path": "corpus.json", "exists": True, "sha256": "corpus-sha"}],
+            "config": {"include_label_metadata": not labels_copied_to_record_metadata},
+        }
+    return payload
 
 
 def _write_adapter_family_matrix(
@@ -3405,6 +3433,95 @@ def test_compare_route_baselines_blocks_invalid_source_metrics(tmp_path):
     assert payload["decision"]["status"] == "blocked"
     assert payload["summary"]["passing_count"] == 0
     assert "invalid source metrics" in payload["leaderboard"][0]["gate"]["blocking_reasons"][0]
+
+
+def test_compare_route_baselines_can_require_non_oracle_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    clean_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="clean-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+    )
+    leaky_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="leaky-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=True),
+    )
+    unfingerprinted_payload = _local_retrieval_claims_payload(labels_copied_to_record_metadata=False)
+    unfingerprinted_payload["input_provenance"]["corpora"] = [{"path": "corpus.json", "exists": True}]
+    unfingerprinted_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="unfingerprinted-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=unfingerprinted_payload,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="clean-retrieval-route",
+        path=clean_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).record_benchmark_manifest(
+        name="leaky-retrieval-route",
+        path=leaky_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).record_benchmark_manifest(
+        name="unfingerprinted-retrieval-route",
+        path=unfingerprinted_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    clean = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:clean-retrieval-route:0.1",),
+        require_non_oracle_evidence=True,
+    )
+    leaky = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:leaky-retrieval-route:0.1",),
+        require_non_oracle_evidence=True,
+    )
+    unfingerprinted = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:unfingerprinted-retrieval-route:0.1",),
+        require_non_oracle_evidence=True,
+    )
+
+    assert clean["decision"]["status"] == "promote"
+    assert clean["leaderboard"][0]["evidence_audit"]["passed"] is True
+    assert clean["leaderboard"][0]["evidence_audit"]["corpus_fingerprint_count"] == 1
+    assert leaky["decision"]["status"] == "blocked"
+    assert leaky["leaderboard"][0]["evidence_audit"]["passed"] is False
+    assert any(
+        "evidence_audit: labels_copied_to_record_metadata must be false" in reason
+        for reason in leaky["decision"]["blocking_reasons"]
+    )
+    assert unfingerprinted["decision"]["status"] == "blocked"
+    assert any(
+        "evidence_audit: input_provenance.corpora must include at least one corpus fingerprint" in reason
+        for reason in unfingerprinted["decision"]["blocking_reasons"]
+    )
 
 
 def test_runtime_budget_policy_fails_closed_for_missing_or_nonfinite_metrics():
@@ -4940,6 +5057,22 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         retrieval_use_rate=1.0,
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+    )
+    leaky_retrieval_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="leaky-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=0.96,
+        false_supported_rate=0.03,
+        false_refuted_rate=0.60,
+        mean_duration_seconds=0.04,
+        p99_duration_seconds=0.08,
+        mean_attempted_route_count=2.0,
+        retrieval_use_rate=1.0,
+        runtime_total_seconds=2.0,
+        runtime_n_retrieval_hits=24,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=True),
     )
     registry = ArtifactRegistry.load_json(registry_path)
     registry.record_benchmark_manifest(
@@ -4951,6 +5084,12 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     registry.record_benchmark_manifest(
         name="retrieval-route",
         path=retrieval_manifest,
+        version="0.7",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    )
+    registry.record_benchmark_manifest(
+        name="leaky-retrieval-route",
+        path=leaky_retrieval_manifest,
         version="0.7",
         metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
     )
@@ -4971,6 +5110,7 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         required_route_max_runtime_total_seconds=3.0,
         required_route_max_retrieval_hit_count=30,
         required_route_max_retrieval_use_rate=1.0,
+        required_route_require_non_oracle_evidence=True,
     )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -4985,6 +5125,23 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         max_retrieval_use_rate=0.0,
         max_runtime_total_seconds=1.0,
         required_route_max_runtime_total_seconds=1.0,
+    )
+    blocked_oracle = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        required_route_baseline_keys=("benchmark_manifest:leaky-retrieval-route:0.7",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.95,
+        max_false_supported_rate=0.05,
+        min_false_refuted_rate=0.50,
+        max_retrieval_use_rate=0.0,
+        max_runtime_total_seconds=1.0,
+        required_route_max_runtime_total_seconds=3.0,
+        required_route_max_retrieval_hit_count=30,
+        required_route_max_retrieval_use_rate=1.0,
+        required_route_require_non_oracle_evidence=True,
     )
 
     assert promoted["decision"]["status"] == "promote"
@@ -5005,6 +5162,10 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     assert promoted["required_route_baseline_gate"]["comparison"]["config"]["max_runtime_total_seconds"] == (
         pytest.approx(3.0)
     )
+    assert (
+        promoted["required_route_baseline_gate"]["comparison"]["config"]["require_non_oracle_evidence"]
+        is True
+    )
 
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
@@ -5012,6 +5173,12 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     assert any(
         "runtime_budget: total_seconds above 1.0" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_oracle["decision"]["status"] == "blocked"
+    assert blocked_oracle["decision"]["blocking_reasons"][0]["gate"] == "required_route_baselines"
+    assert any(
+        "evidence_audit: labels_copied_to_record_metadata must be false" in reason
+        for reason in blocked_oracle["decision"]["blocking_reasons"][0]["reasons"]
     )
 
 
@@ -5907,6 +6074,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         retrieval_use_rate=1.0,
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
     )
     ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
         name="structured-route",
@@ -6015,6 +6183,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             required_route_max_runtime_total_seconds=3.0,
             required_route_max_retrieval_hit_count=30,
             required_route_max_retrieval_use_rate=1.0,
+            required_route_require_non_oracle_evidence=True,
             promotion_metadata={"scope": "unit"},
         )
     )
@@ -6127,10 +6296,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["required_route_budget_policy"]["required_route_max_runtime_total_seconds"] == (
         pytest.approx(3.0)
     )
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_require_non_oracle_evidence"
+    ] is True
     assert payload["config"]["runtime_profile"] == "balanced"
     assert payload["config"]["route_baseline_keys"] == ("benchmark_manifest:structured-route:0.6",)
     assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
+    assert payload["config"]["required_route_require_non_oracle_evidence"] is True
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["config"]["require_performance_score_dump_cache"] is True
     assert payload["config"]["min_performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.5)
@@ -6175,6 +6348,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"]["product_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert payload["release_candidate_comparison"]["config"]["required_route_require_non_oracle_evidence"] is True
     assert payload["release_candidate_comparison"]["performance_baseline_gate"][
         "performance_trend_gate"
     ]["passed"] is True
@@ -6228,6 +6402,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["required_route_budget_policy"]["required_route_max_retrieval_hit_count"] == (
         pytest.approx(30.0)
     )
+    assert record.metadata["required_route_budget_policy"]["required_route_require_non_oracle_evidence"] is True
     assert record.metadata["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"

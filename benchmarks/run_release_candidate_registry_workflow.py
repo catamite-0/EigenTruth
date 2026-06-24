@@ -78,6 +78,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     max_retrieval_hit_count: float | None = None
     min_claims_cache_hit_rate: float | None = None
     min_verifier_trace_cache_hit_rate: float | None = None
+    require_non_oracle_evidence: bool = False
     required_route_min_selected: int | None = None
     required_route_min_decision_accuracy: float | None = None
     required_route_max_false_supported_rate: float | None = None
@@ -93,6 +94,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     required_route_max_retrieval_hit_count: float | None = None
     required_route_min_claims_cache_hit_rate: float | None = None
     required_route_min_verifier_trace_cache_hit_rate: float | None = None
+    required_route_require_non_oracle_evidence: bool = False
     promotion_metadata: Mapping[str, Any] | None = None
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -240,6 +242,7 @@ def run_release_candidate_registry_workflow(
         max_retrieval_hit_count=config.max_retrieval_hit_count,
         min_claims_cache_hit_rate=config.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=config.min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=config.require_non_oracle_evidence,
         required_route_min_selected=config.required_route_min_selected,
         required_route_min_decision_accuracy=config.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=config.required_route_max_false_supported_rate,
@@ -255,6 +258,7 @@ def run_release_candidate_registry_workflow(
         required_route_max_retrieval_hit_count=config.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=config.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=config.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_require_non_oracle_evidence=config.required_route_require_non_oracle_evidence,
         notes=("release candidate registry workflow",),
         fingerprint_cache=fingerprint_cache,
     )
@@ -372,6 +376,8 @@ def run_release_candidate_registry_workflow(
             "required_route_min_verifier_trace_cache_hit_rate": (
                 config.required_route_min_verifier_trace_cache_hit_rate
             ),
+            "require_non_oracle_evidence": config.require_non_oracle_evidence,
+            "required_route_require_non_oracle_evidence": config.required_route_require_non_oracle_evidence,
         },
         "release_candidate_comparison": comparison,
         "promotion": promotion,
@@ -666,6 +672,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_max_retrieval_hit_count",
                 "required_route_min_claims_cache_hit_rate",
                 "required_route_min_verifier_trace_cache_hit_rate",
+                "required_route_require_non_oracle_evidence",
             )
         },
         "readiness_manifest": manifests.get("readiness_manifest"),
@@ -805,6 +812,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
         required_route_min_selected=args.required_route_min_selected,
         required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
@@ -820,6 +828,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         promotion_metadata=_parse_metadata(args.metadata or ()),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -980,6 +989,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
     parser.add_argument(
+        "--require-non-oracle-evidence",
+        action="store_true",
+        help="require selected route claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
         "--min-performance-score-dump-cache-jsonl-view-hit-rate",
         type=lambda value: _parse_unit_float(
             value,
@@ -1087,6 +1101,11 @@ def main(argv: Sequence[str] | None = None) -> None:
             flag="--required-route-min-verifier-trace-cache-hit-rate",
         ),
         default=None,
+    )
+    parser.add_argument(
+        "--required-route-require-non-oracle-evidence",
+        action="store_true",
+        help="require required route claims to omit labels and include input provenance",
     )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate registry workflow promotes")
