@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 22,
+    "artifact_count": 23,
     "directory_count": 1,
-    "file_count": 21,
+    "file_count": 22,
     "missing_count": 0
   },
   "config": {
@@ -18,9 +18,11 @@
     "metadata": {},
     "promotion_contract": null,
     "redact_text": true,
+    "refresh_selector_trace_inputs": false,
     "replay_policy": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json",
     "require_runtime_trace": true,
     "runtime_policy": null,
+    "selector_trace_inputs": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
     "strict": false,
     "trace_count": 12
   },
@@ -67,7 +69,8 @@
     "runtime_baseline_manifest": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json",
     "runtime_baseline_report": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
     "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
-    "selector_replay_report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json"
+    "selector_replay_report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json",
+    "selector_trace_inputs": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json"
   },
   "runtime_baseline": {
     "budget_enabled": false,
@@ -140,7 +143,11 @@
     "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
     "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
     "recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
-    "status": "promote"
+    "status": "promote",
+    "trace_inputs_cache_hit": true,
+    "trace_inputs_cache_written": false,
+    "trace_inputs_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
+    "trace_inputs_source": "trace_input_cache"
   },
   "status": "promote",
   "workflow": "product_trace_replay_workflow"

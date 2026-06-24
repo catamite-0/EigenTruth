@@ -133,8 +133,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "ea27befacf7b5cc0d86310f45be848801f0013abb91e356d031f03d2fc4f153f",
-      "size_bytes": 6301
+      "sha256": "9b172751821fc1421a8ef5f3b2f643c81ab53190706dafabb1007133e2f49ca6",
+      "size_bytes": 6808
     },
     "replay_policy": {
       "exists": true,
@@ -165,16 +165,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/artifact-manifest.json",
-      "sha256": "77725831ae978b7167c88e12980a1820e16e6ff058affebb338fab9d70e9c073",
-      "size_bytes": 6535
+      "sha256": "6cea16e1cf41daa079d7c504c78aedf77307fb99662ffc361180bf76f2941b19",
+      "size_bytes": 7011
     },
     "selector_replay_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "selector-replay/runtime-profile-selector-replay.json",
-      "sha256": "a2c8b9a576d76bc1773570624be027933f368842512511b304d57bcddf137229",
-      "size_bytes": 105723
+      "sha256": "17ef4c98da64ddbca28cf5b1fb4bf0a88046eb20d9e0ee165c10a2ab3fbb4eeb",
+      "size_bytes": 106180
+    },
+    "selector_trace_inputs": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "selector-replay/trace-inputs.json",
+      "sha256": "80300ffbe7d9f15f4a0f6eab4828c0803023357b74cf546d0d31bcbe49c594fe",
+      "size_bytes": 27445
     }
   },
   "digest_algorithm": "sha256",
@@ -189,9 +197,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 22,
+    "artifact_count": 23,
     "directory_count": 1,
-    "file_count": 21,
+    "file_count": 22,
     "missing_count": 0
   }
 }

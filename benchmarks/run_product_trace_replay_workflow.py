@@ -68,6 +68,8 @@ class ProductTraceReplayWorkflowConfig:
     verification_report_path: str | Path | None = None
     allow_manifest_verification_failures: bool = False
     fingerprint_cache_path: str | Path | None = None
+    selector_trace_inputs_path: str | Path | None = None
+    refresh_selector_trace_inputs: bool = False
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -103,6 +105,8 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
+        if self.selector_trace_inputs_path is not None:
+            object.__setattr__(self, "selector_trace_inputs_path", Path(self.selector_trace_inputs_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
@@ -122,6 +126,14 @@ class ProductTraceReplayWorkflowConfig:
             strict_bool(
                 self.allow_manifest_verification_failures,
                 name="allow_manifest_verification_failures",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "refresh_selector_trace_inputs",
+            strict_bool(
+                self.refresh_selector_trace_inputs,
+                name="refresh_selector_trace_inputs",
             ),
         )
 
@@ -198,6 +210,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "manifest_fingerprint_cache": (
                     None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
                 ),
+                "selector_trace_inputs": _nested(selector_replay, "paths", "trace_inputs"),
             },
             "config": {
                 "candidate_names": tuple(candidate.name for candidate in config.candidates),
@@ -216,6 +229,10 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "fingerprint_cache": (
                     None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
                 ),
+                "selector_trace_inputs": (
+                    None if config.selector_trace_inputs_path is None else str(config.selector_trace_inputs_path)
+                ),
+                "refresh_selector_trace_inputs": config.refresh_selector_trace_inputs,
                 "metadata": dict(config.metadata),
             },
         }
@@ -291,6 +308,8 @@ def _run_selector_replay(
             runtime_pair_index_path=(
                 None if runtime_pair_index_path is None else Path(runtime_pair_index_path)
             ),
+            trace_inputs_path=config.selector_trace_inputs_path,
+            refresh_trace_inputs=config.refresh_selector_trace_inputs,
             compact_json=config.compact_json,
             metadata={
                 "source": "run_product_trace_replay_workflow",
@@ -385,6 +404,7 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
 
 def _selector_replay_summary(selector_replay: Mapping[str, Any]) -> dict[str, Any]:
     recommended = _recommended_leaderboard_row(selector_replay)
+    trace_inputs = _mapping(_nested(selector_replay, "config", "trace_inputs"))
     return {
         "status": selector_replay.get("status"),
         "recommended_candidate": _nested(selector_replay, "decision", "recommended_candidate"),
@@ -397,6 +417,10 @@ def _selector_replay_summary(selector_replay: Mapping[str, Any]) -> dict[str, An
         "recommended_observed_selected_total_seconds_p95": recommended.get(
             "observed_selected_total_seconds_p95"
         ),
+        "trace_inputs_source": trace_inputs.get("source"),
+        "trace_inputs_cache_hit": trace_inputs.get("cache_hit"),
+        "trace_inputs_cache_written": trace_inputs.get("cache_written"),
+        "trace_inputs_path": _nested(selector_replay, "paths", "trace_inputs"),
         "leaderboard": tuple(_sequence(selector_replay.get("leaderboard"))),
     }
 
@@ -443,6 +467,7 @@ def _artifact_paths(
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),
         "selector_replay_manifest": _nested(report, "paths", "selector_replay_manifest"),
+        "selector_trace_inputs": _nested(report, "paths", "selector_trace_inputs"),
         "runtime_policy": config.runtime_policy_path,
         "promotion_contract": config.promotion_contract_path,
         "replay_policy": config.replay_policy_path,
@@ -526,6 +551,14 @@ def _record_registry(
             ),
             "manifest_fingerprint_cache_entries": (
                 None if fingerprint_cache is None else len(fingerprint_cache)
+            ),
+            "selector_trace_inputs_path": _nested(report, "paths", "selector_trace_inputs"),
+            "selector_trace_inputs_source": _nested(report, "selector_replay", "trace_inputs_source"),
+            "selector_trace_inputs_cache_hit": _nested(report, "selector_replay", "trace_inputs_cache_hit"),
+            "selector_trace_inputs_cache_written": _nested(
+                report,
+                "selector_replay",
+                "trace_inputs_cache_written",
             ),
             "compact_json": config.compact_json,
             **dict(config.metadata),
@@ -709,6 +742,10 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         verification_report_path=Path(args.verification_report) if args.verification_report else None,
         allow_manifest_verification_failures=bool(args.allow_manifest_verification_failures),
         fingerprint_cache_path=Path(args.fingerprint_cache) if args.fingerprint_cache else None,
+        selector_trace_inputs_path=(
+            Path(args.selector_trace_inputs_json) if args.selector_trace_inputs_json else None
+        ),
+        refresh_selector_trace_inputs=bool(args.refresh_selector_trace_inputs),
     )
 
 
@@ -750,6 +787,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="write and register manifest verification even when it fails")
     parser.add_argument("--fingerprint-cache", default=None,
                         help="optional JSON cache for manifest fingerprint reads")
+    parser.add_argument("--selector-trace-inputs-json", default=None,
+                        help="optional selector replay input cache path")
+    parser.add_argument("--refresh-selector-trace-inputs", action="store_true",
+                        help="rebuild --selector-trace-inputs-json even when a valid cache exists")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

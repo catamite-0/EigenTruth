@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 18,
+    "artifact_count": 19,
     "directory_count": 0,
-    "file_count": 18,
+    "file_count": 19,
     "missing_count": 0
   },
   "candidates": [
@@ -2322,7 +2322,18 @@
       "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
       "source": "runtime_pair_index"
     },
-    "trace_count": 12
+    "trace_count": 12,
+    "trace_inputs": {
+      "cache_hit": true,
+      "cache_written": false,
+      "enabled": true,
+      "invalidation_reason": null,
+      "path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
+      "refresh": false,
+      "source": "trace_input_cache",
+      "source_count": 12,
+      "trace_count": 12
+    }
   },
   "decision": {
     "blocking_reasons": [
@@ -2394,6 +2405,7 @@
     "report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json",
     "runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
     "trace_details": null,
+    "trace_inputs": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
     "traces": [
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json",
       "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",

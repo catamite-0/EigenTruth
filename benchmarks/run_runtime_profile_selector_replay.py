@@ -25,7 +25,7 @@ from benchmarks.run_runtime_profile_selector_tuning import (  # noqa: E402
     RuntimeProfileSelectorCandidate,
 )
 from eigentruth.control import RUNTIME_PROFILE_NAMES, select_runtime_profile  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
 
 DEFAULT_PROFILE_COST_UNITS: Mapping[str, float] = {
     "latency": 1.0,
@@ -60,6 +60,23 @@ class _TraceReplayCorpus:
 
     def __len__(self) -> int:
         return len(self.paths)
+
+
+@dataclass(frozen=True)
+class _CachedTraceReplayCorpus:
+    """Re-iterable cached ProductTrace replay inputs."""
+
+    inputs: tuple[TraceReplayInput, ...]
+
+    @property
+    def paths(self) -> tuple[Path, ...]:
+        return tuple(trace.path for trace in self.inputs)
+
+    def __iter__(self):
+        return iter(self.inputs)
+
+    def __len__(self) -> int:
+        return len(self.inputs)
 
 
 @dataclass(frozen=True)
@@ -252,6 +269,8 @@ class RuntimeProfileSelectorReplayConfig:
     compact_json: bool = False
     detail_limit: int | None = None
     trace_details_path: str | Path | None = None
+    trace_inputs_path: str | Path | None = None
+    refresh_trace_inputs: bool = False
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -289,8 +308,15 @@ class RuntimeProfileSelectorReplayConfig:
             )
         if self.trace_details_path is not None:
             object.__setattr__(self, "trace_details_path", Path(self.trace_details_path))
+        if self.trace_inputs_path is not None:
+            object.__setattr__(self, "trace_inputs_path", Path(self.trace_inputs_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
+        object.__setattr__(
+            self,
+            "refresh_trace_inputs",
+            strict_bool(self.refresh_trace_inputs, name="refresh_trace_inputs"),
+        )
 
     @property
     def resolved_report_path(self) -> Path:
@@ -315,6 +341,13 @@ class RuntimeProfileSelectorReplayConfig:
             return None
         return Path(self.output_dir) / "runtime-profile-selector-replay-traces.json"
 
+    @property
+    def resolved_trace_inputs_path(self) -> Path | None:
+        """Return the optional replay-input cache path."""
+        if self.trace_inputs_path is not None:
+            return Path(self.trace_inputs_path)
+        return None
+
 
 def run_runtime_profile_selector_replay(
     config: RuntimeProfileSelectorReplayConfig,
@@ -322,7 +355,7 @@ def run_runtime_profile_selector_replay(
     """Replay selector candidates over saved ProductTrace JSON payloads."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     replay_policy, replay_policy_source = _load_replay_policy(config)
-    traces = _TraceReplayCorpus(tuple(config.trace_paths))
+    traces, trace_inputs_summary = _resolve_trace_replay_corpus(config)
     runtime_pair_index, runtime_pair_index_source = _resolve_runtime_pair_index(config, traces)
     candidates = _candidate_records(
         config,
@@ -355,6 +388,9 @@ def run_runtime_profile_selector_replay(
                 None if config.runtime_pair_index_path is None else str(config.runtime_pair_index_path)
             ),
             "trace_details": None if trace_details_path is None else str(trace_details_path),
+            "trace_inputs": (
+                None if config.resolved_trace_inputs_path is None else str(config.resolved_trace_inputs_path)
+            ),
             "traces": [str(path) for path in traces.paths],
         },
         "config": {
@@ -370,6 +406,7 @@ def run_runtime_profile_selector_replay(
                 "indexed_pairs": len(runtime_pair_index),
                 "indexed_observations": sum(len(values) for values in runtime_pair_index.values()),
             },
+            "trace_inputs": trace_inputs_summary,
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
@@ -1039,6 +1076,7 @@ def _artifact_paths(
         "runtime_profile_selector_replay_report": config.resolved_report_path,
         "replay_policy": config.replay_policy_path,
         "runtime_pair_index": config.runtime_pair_index_path,
+        "trace_inputs": config.resolved_trace_inputs_path,
     }
     trace_details = _nested(report, "paths", "trace_details")
     if trace_details is not None:
@@ -1091,6 +1129,10 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             "detail_limit": config.detail_limit,
             "trace_details_path": _nested(report, "paths", "trace_details"),
+            "trace_inputs_path": _nested(report, "paths", "trace_inputs"),
+            "trace_inputs_source": _nested(report, "config", "trace_inputs", "source"),
+            "trace_inputs_cache_hit": _nested(report, "config", "trace_inputs", "cache_hit"),
+            "trace_inputs_cache_written": _nested(report, "config", "trace_inputs", "cache_written"),
             "runtime_pair_index_path": _nested(report, "paths", "runtime_pair_index"),
             "runtime_pair_index_source": _nested(report, "config", "runtime_pairing", "source"),
             **dict(config.metadata),
@@ -1137,6 +1179,10 @@ def _record_registry(config: RuntimeProfileSelectorReplayConfig, report: Mapping
             "compact_json": config.compact_json,
             "detail_limit": config.detail_limit,
             "trace_details_path": _nested(report, "paths", "trace_details"),
+            "trace_inputs_path": _nested(report, "paths", "trace_inputs"),
+            "trace_inputs_source": _nested(report, "config", "trace_inputs", "source"),
+            "trace_inputs_cache_hit": _nested(report, "config", "trace_inputs", "cache_hit"),
+            "trace_inputs_cache_written": _nested(report, "config", "trace_inputs", "cache_written"),
             "runtime_pair_index_path": _nested(report, "paths", "runtime_pair_index"),
             "runtime_pair_index_source": _nested(report, "config", "runtime_pairing", "source"),
             **dict(config.metadata),
@@ -1197,6 +1243,165 @@ def _load_trace_replay_input(path: str | Path) -> TraceReplayInput:
         claims=_selector_claims(payload.get("claims")),
         original_total_seconds=_runtime_total_seconds(payload),
     )
+
+
+def _resolve_trace_replay_corpus(
+    config: RuntimeProfileSelectorReplayConfig,
+) -> tuple[_TraceReplayCorpus | _CachedTraceReplayCorpus, dict[str, Any]]:
+    cache_path = config.resolved_trace_inputs_path
+    if cache_path is None:
+        return _TraceReplayCorpus(tuple(config.trace_paths)), {
+            "enabled": False,
+            "source": "trace_scan",
+            "path": None,
+            "cache_hit": False,
+            "cache_written": False,
+            "trace_count": len(config.trace_paths),
+        }
+    invalidation_reason = None
+    if cache_path.exists() and not config.refresh_trace_inputs:
+        cached = _load_trace_inputs_cache(cache_path, trace_paths=config.trace_paths)
+        if cached is not None:
+            inputs, payload = cached
+            return _CachedTraceReplayCorpus(inputs), {
+                "enabled": True,
+                "source": "trace_input_cache",
+                "path": str(cache_path),
+                "cache_hit": True,
+                "cache_written": False,
+                "trace_count": len(inputs),
+                "source_count": len(_sequence(payload.get("sources"))),
+                "refresh": False,
+                "invalidation_reason": None,
+            }
+        invalidation_reason = "fingerprint_or_schema_mismatch"
+    inputs = tuple(_load_trace_replay_input(path) for path in config.trace_paths)
+    payload = _trace_inputs_cache_payload(config, inputs)
+    _write_json(cache_path, payload, compact=config.compact_json)
+    return _CachedTraceReplayCorpus(inputs), {
+        "enabled": True,
+        "source": "trace_scan",
+        "path": str(cache_path),
+        "cache_hit": False,
+        "cache_written": True,
+        "trace_count": len(inputs),
+        "source_count": len(_sequence(payload.get("sources"))),
+        "refresh": config.refresh_trace_inputs,
+        "invalidation_reason": invalidation_reason,
+    }
+
+
+def _load_trace_inputs_cache(
+    path: str | Path,
+    *,
+    trace_paths: Sequence[Path],
+) -> tuple[tuple[TraceReplayInput, ...], Mapping[str, Any]] | None:
+    cache_path = Path(path)
+    try:
+        payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("workflow") != "runtime_profile_selector_replay_trace_inputs":
+        return None
+    sources = _sequence(payload.get("sources"))
+    records = _sequence(payload.get("traces"))
+    if len(sources) != len(trace_paths) or len(records) != len(trace_paths):
+        return None
+    for trace_path, source in zip(trace_paths, sources, strict=True):
+        if not isinstance(source, Mapping):
+            return None
+        if str(source.get("path")) != str(trace_path):
+            return None
+        expected = _mapping(source.get("fingerprint"))
+        if not expected:
+            return None
+        actual = fingerprint_path(trace_path).to_dict()
+        if not _fingerprint_matches(expected, actual):
+            return None
+    try:
+        inputs = tuple(_trace_input_from_record(record) for record in records)
+    except (TypeError, ValueError):
+        return None
+    if tuple(trace.path for trace in inputs) != tuple(trace_paths):
+        return None
+    return inputs, payload
+
+
+def _trace_inputs_cache_payload(
+    config: RuntimeProfileSelectorReplayConfig,
+    inputs: Sequence[TraceReplayInput],
+) -> dict[str, Any]:
+    cache_path = config.resolved_trace_inputs_path
+    return {
+        "schema_version": 1,
+        "workflow": "runtime_profile_selector_replay_trace_inputs",
+        "paths": {
+            "trace_inputs": None if cache_path is None else str(cache_path),
+            "report": str(config.resolved_report_path),
+        },
+        "summary": {
+            "trace_count": len(inputs),
+            "source_count": len(config.trace_paths),
+        },
+        "sources": [
+            {
+                "path": str(path),
+                "fingerprint": fingerprint_path(path).to_dict(),
+            }
+            for path in config.trace_paths
+        ],
+        "traces": [_trace_input_to_record(trace) for trace in inputs],
+    }
+
+
+def _trace_input_to_record(trace: TraceReplayInput) -> dict[str, Any]:
+    return {
+        "path": str(trace.path),
+        "request_id": trace.request_id,
+        "request_key": trace.request_key,
+        "original_runtime_profile": trace.original_runtime_profile,
+        "runtime_pair_profile": trace.runtime_pair_profile,
+        "risk_decision": dict(trace.risk_decision),
+        "claims": [dict(claim) for claim in trace.claims],
+        "original_total_seconds": trace.original_total_seconds,
+    }
+
+
+def _trace_input_from_record(record: Any) -> TraceReplayInput:
+    if not isinstance(record, Mapping):
+        raise TypeError("trace input cache records must be objects.")
+    risk_decision = record.get("risk_decision")
+    if not isinstance(risk_decision, Mapping):
+        raise ValueError("trace input cache records require risk_decision.")
+    path = record.get("path")
+    request_key = record.get("request_key")
+    if path is None or request_key is None:
+        raise ValueError("trace input cache records require path and request_key.")
+    return TraceReplayInput(
+        path=Path(str(path)),
+        request_id=record.get("request_id"),
+        request_key=str(request_key),
+        original_runtime_profile=_optional_str(record.get("original_runtime_profile")),
+        runtime_pair_profile=_optional_str(record.get("runtime_pair_profile")),
+        risk_decision=dict(risk_decision),
+        claims=_selector_claims(record.get("claims")),
+        original_total_seconds=_float_or_none(record.get("original_total_seconds")),
+    )
+
+
+def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
+    return all(
+        expected.get(field_name) == actual.get(field_name)
+        for field_name in ("exists", "kind", "sha256", "size_bytes", "file_count")
+    )
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 def _selector_claims(value: Any) -> tuple[dict[str, Any], ...]:
@@ -1651,6 +1856,8 @@ def _config_from_args(args: argparse.Namespace) -> RuntimeProfileSelectorReplayC
         compact_json=bool(args.compact_json),
         detail_limit=args.detail_limit,
         trace_details_path=Path(args.trace_details_json) if args.trace_details_json else None,
+        trace_inputs_path=Path(args.trace_inputs_json) if args.trace_inputs_json else None,
+        refresh_trace_inputs=bool(args.refresh_trace_inputs),
     )
 
 
@@ -1686,6 +1893,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="max trace records to inline per candidate; full details move to sidecar")
     parser.add_argument("--trace-details-json", default=None,
                         help="optional sidecar path for full per-trace selector replay details")
+    parser.add_argument("--trace-inputs-json", default=None,
+                        help="optional cache path for minimal ProductTrace replay inputs")
+    parser.add_argument("--refresh-trace-inputs", action="store_true",
+                        help="rebuild --trace-inputs-json even when a valid cache exists")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

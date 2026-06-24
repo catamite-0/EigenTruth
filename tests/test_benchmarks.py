@@ -11623,6 +11623,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     replay_policy_path = tmp_path / "replay-policy.json"
     verification_report_path = tmp_path / "workflow" / "manifest-verification.json"
     fingerprint_cache_path = tmp_path / "workflow" / "fingerprints.json"
+    selector_trace_inputs_path = tmp_path / "workflow" / "selector-replay" / "trace-inputs.json"
     traces_dir = tmp_path / "input-traces"
     traces_dir.mkdir()
     replay_policy_path.write_text(
@@ -11711,6 +11712,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             verify_manifest=True,
             verification_report_path=verification_report_path,
             fingerprint_cache_path=fingerprint_cache_path,
+            selector_trace_inputs_path=selector_trace_inputs_path,
         )
     )
     registry = registry_module.ArtifactRegistry.load_json(registry_path)
@@ -11720,6 +11722,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     saved_trace = json.loads(corpus_trace.read_text(encoding="utf-8"))
     verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
     fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
+    selector_trace_inputs = json.loads(selector_trace_inputs_path.read_text(encoding="utf-8"))
 
     assert payload["status"] == "promote"
     assert payload["corpus"]["status"] == "ready"
@@ -11732,20 +11735,27 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
     assert payload["paths"]["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["paths"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["config"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
     assert payload["manifest_verification"]["verification"]["passed"] is True
     assert verification_report["passed"] is True
     assert len(fingerprint_cache) > 0
+    assert selector_trace_inputs["workflow"] == "runtime_profile_selector_replay_trace_inputs"
+    assert selector_trace_inputs["summary"]["trace_count"] == 3
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
     selector_replay_report = json.loads(
         Path(payload["paths"]["selector_replay_report"]).read_text(encoding="utf-8")
     )
     assert selector_replay_report["config"]["runtime_pairing"]["source"] == "runtime_pair_index"
+    assert selector_replay_report["config"]["trace_inputs"]["cache_written"] is True
     assert selector_replay_report["paths"]["runtime_pair_index"] == payload["paths"]["corpus_runtime_pair_index"]
+    assert selector_replay_report["paths"]["trace_inputs"] == str(selector_trace_inputs_path)
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert "corpus_runtime_pair_index" in manifest["artifacts"]
+    assert "selector_trace_inputs" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"],
         recursive=True,
@@ -11758,6 +11768,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["manifest_verification_failure_count"] == 0
     assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
     assert record.metadata["manifest_fingerprint_cache_entries"] == len(fingerprint_cache)
+    assert record.metadata["selector_trace_inputs_path"] == str(selector_trace_inputs_path)
+    assert record.metadata["selector_trace_inputs_cache_written"] is True
     assert verification_record.path == str(verification_report_path)
     assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
     assert verification_record.metadata["passed"] is True
@@ -11778,6 +11790,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         strict="false",
         compact_json="false",
         fingerprint_cache_path=tmp_path / "fingerprints.json",
+        selector_trace_inputs_path=tmp_path / "selector-trace-inputs.json",
+        refresh_selector_trace_inputs="false",
     )
     replay_config = replay_module.RuntimeProfileSelectorReplayConfig(
         trace_paths=("trace.json",),
@@ -11796,6 +11810,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.strict is False
     assert workflow_config.compact_json is False
     assert workflow_config.fingerprint_cache_path == tmp_path / "fingerprints.json"
+    assert workflow_config.selector_trace_inputs_path == tmp_path / "selector-trace-inputs.json"
+    assert workflow_config.refresh_selector_trace_inputs is False
     assert replay_config.compact_json is False
     assert baseline_config.compact_json is False
 
@@ -11990,6 +12006,72 @@ def test_runtime_profile_selector_replay_uses_external_runtime_pair_index(tmp_pa
     assert payload["candidates"][0]["summary"]["observed_selected_total_seconds_mean"] == pytest.approx(0.12)
     assert manifest["artifacts"]["runtime_pair_index"]["exists"] is True
     assert manifest["metadata"]["runtime_pair_index_source"] == "runtime_pair_index"
+
+
+def test_runtime_profile_selector_replay_reuses_trace_input_cache(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_replay")
+    output_dir = tmp_path / "selector-replay"
+    cache_path = tmp_path / "trace-inputs.json"
+    trace_paths = []
+    for index, runtime_profile in enumerate(("latency", "audit")):
+        trace_path = tmp_path / f"trace-{index}.json"
+        trace_path.write_text(
+            json.dumps({
+                "request_id": f"{runtime_profile}-cached-{index}",
+                "risk_decision": {
+                    "action": "accept",
+                    "risk_level": "low",
+                    "confidence": 1.0,
+                    "reason": "supported",
+                },
+                "claims": [{"claim_id": "c1", "text": "Private text.", "metadata": {}}],
+                "metadata": {"runtime_profile": runtime_profile},
+                "runtime_trace": {"total_seconds": 0.10 + index, "phases": []},
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(trace_path)
+
+    first = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            trace_inputs_path=cache_path,
+        )
+    )
+    cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    manifest = json.loads(Path(first["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert first["config"]["trace_inputs"]["source"] == "trace_scan"
+    assert first["config"]["trace_inputs"]["cache_hit"] is False
+    assert first["config"]["trace_inputs"]["cache_written"] is True
+    assert first["paths"]["trace_inputs"] == str(cache_path)
+    assert cache_payload["workflow"] == "runtime_profile_selector_replay_trace_inputs"
+    assert cache_payload["summary"]["trace_count"] == 2
+    assert manifest["artifacts"]["trace_inputs"]["exists"] is True
+    assert manifest["metadata"]["trace_inputs_cache_written"] is True
+
+    def fail_if_trace_json_is_scanned(path):
+        raise AssertionError(f"trace input cache should avoid ProductTrace JSON scan: {path}")
+
+    monkeypatch.setattr(module, "_load_trace_replay_input", fail_if_trace_json_is_scanned)
+
+    second = module.run_runtime_profile_selector_replay(
+        module.RuntimeProfileSelectorReplayConfig(
+            trace_paths=trace_paths,
+            output_dir=tmp_path / "selector-replay-cached",
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            trace_inputs_path=cache_path,
+        )
+    )
+
+    assert second["config"]["trace_inputs"]["source"] == "trace_input_cache"
+    assert second["config"]["trace_inputs"]["cache_hit"] is True
+    assert second["config"]["trace_inputs"]["cache_written"] is False
+    assert second["candidates"][0]["summary"]["trace_count"] == 2
+    assert second["config"]["runtime_pairing"]["source"] == "trace_scan"
+    assert second["config"]["runtime_pairing"]["indexed_observations"] == 2
 
 
 def test_runtime_profile_selector_replay_reports_observed_runtime_deltas(tmp_path):

@@ -2469,7 +2469,8 @@ recursive top-level manifest over all child reports, and registers one workflow
 report. Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks
-over the same trace corpus:
+over the same trace corpus, and `--selector-trace-inputs-json` when replaying
+selector policies repeatedly over unchanged standardized traces:
 
 ```bash
 python benchmarks/run_product_trace_replay_workflow.py \
@@ -2485,13 +2486,15 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --require-runtime-trace \
   --verify-manifest \
   --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow/fingerprints.json \
+  --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked
 ```
 
 The current registered workflow is
 `report:smollm2-product-trace-replay-workflow:0.1`. It promotes the default
 selector, observes 12 runtime traces in the baseline report, writes
-`corpus/runtime-pair-index.json`, and now also registers
+`corpus/runtime-pair-index.json` and
+`selector-replay/trace-inputs.json`, and now also registers
 `manifest_verification:smollm2-product-trace-replay-workflow-verification:0.1`
 after recursively verifying the corpus/runtime-baseline/selector-replay
 manifests. It keeps the same selector replay evidence as the standalone replay:
@@ -2587,8 +2590,12 @@ was saved under multiple runtime profiles, optionally reads a
 `build_product_trace_corpus.py` runtime-pair index instead of scanning traces to
 build that pairing map, reports selected-vs-original runtime deltas, applies
 optional distribution, observed-runtime, and runtime-delta replay gates, writes
-a manifest, and can register the replay report. The runner expects full
-ProductTrace payloads and rejects bounded telemetry inputs. The
+a manifest, and can register the replay report. Add `--trace-inputs-json` for a
+minimal trace replay-input cache keyed by source trace fingerprints; repeated
+selector sweeps over unchanged traces can then avoid rescanning full
+ProductTrace JSON, while `--refresh-trace-inputs` forces a rebuild. The runner
+expects full ProductTrace payloads when building the cache and rejects bounded
+telemetry inputs. The
 current registered replay report promotes the default selector with
 100% paired runtime coverage, observed mean selected runtime around `0.00045s`,
 and observed p95 selected runtime around `0.00059s` on the local deterministic
@@ -2602,7 +2609,8 @@ python benchmarks/run_runtime_profile_selector_replay.py \
   --candidate latency_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/latency_biased.json \
   --candidate audit_biased=artifacts/smollm2_runtime_profile_selector_tuning/policies/audit_biased.json \
   --replay-policy artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json \
-  --runtime-pair-index artifacts/smollm2_product_trace_corpus/runtime-pair-index.json \
+  --runtime-pair-index artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json \
+  --trace-inputs-json artifacts/smollm2_runtime_profile_selector_replay/trace-inputs.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-runtime-profile-selector-replay \
   --version 0.1 \

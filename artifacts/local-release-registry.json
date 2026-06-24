@@ -2336,25 +2336,6 @@
     {
       "artifact_type": "report",
       "metadata": {
-        "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_replay/artifact-manifest.json",
-        "candidate_count": 3,
-        "compact_json": false,
-        "recommended_candidate": "default",
-        "recommended_observed_runtime_coverage_rate": 1.0,
-        "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
-        "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
-        "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
-        "status": "promote",
-        "trace_count": 12,
-        "workflow": "run_runtime_profile_selector_replay"
-      },
-      "name": "smollm2-runtime-profile-selector-replay",
-      "path": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json",
-      "version": "0.1"
-    },
-    {
-      "artifact_type": "report",
-      "metadata": {
         "accepted_count": 12,
         "artifact_manifest": "artifacts/smollm2_product_trace_corpus/artifact-manifest.json",
         "compact_json": false,
@@ -2749,12 +2730,42 @@
     {
       "artifact_type": "report",
       "metadata": {
+        "artifact_manifest": "artifacts/smollm2_runtime_profile_selector_replay/artifact-manifest.json",
+        "candidate_count": 3,
+        "compact_json": false,
+        "detail_limit": null,
+        "recommended_candidate": "default",
+        "recommended_observed_runtime_coverage_rate": 1.0,
+        "recommended_observed_runtime_delta_coverage_rate": 1.0,
+        "recommended_observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "recommended_observed_selected_to_original_ratio_mean": 1.0965569346288282,
+        "recommended_observed_selected_total_seconds_mean": 0.000494600758732607,
+        "recommended_observed_selected_total_seconds_p95": 0.0005944980075582862,
+        "recommended_policy_path": "artifacts/smollm2_runtime_profile_selector_replay/policies/default.json",
+        "runtime_pair_index_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
+        "runtime_pair_index_source": "runtime_pair_index",
+        "status": "promote",
+        "trace_count": 12,
+        "trace_details_path": null,
+        "trace_inputs_cache_hit": true,
+        "trace_inputs_cache_written": false,
+        "trace_inputs_path": "artifacts/smollm2_runtime_profile_selector_replay/trace-inputs.json",
+        "trace_inputs_source": "trace_input_cache",
+        "workflow": "run_runtime_profile_selector_replay"
+      },
+      "name": "smollm2-runtime-profile-selector-replay",
+      "path": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
         "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
         "compact_json": false,
         "corpus_status": "ready",
         "manifest_fingerprint_cache": "artifacts/smollm2_product_trace_replay_workflow/fingerprints.json",
-        "manifest_fingerprint_cache_entries": 37,
-        "manifest_verification_checked": 22,
+        "manifest_fingerprint_cache_entries": 86,
+        "manifest_verification_checked": 23,
         "manifest_verification_failure_count": 0,
         "manifest_verification_report": "artifacts/smollm2_product_trace_replay_workflow/manifest-verification.json",
         "manifest_verified": true,
@@ -2762,6 +2773,10 @@
         "recommended_selector_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
         "runtime_baseline_status": "observed",
         "selector_replay_status": "promote",
+        "selector_trace_inputs_cache_hit": true,
+        "selector_trace_inputs_cache_written": false,
+        "selector_trace_inputs_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
+        "selector_trace_inputs_source": "trace_input_cache",
         "status": "promote",
         "workflow": "run_product_trace_replay_workflow"
       },
