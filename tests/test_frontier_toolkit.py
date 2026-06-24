@@ -1502,6 +1502,45 @@ def test_timeout_action_executor_preserves_success_metadata():
     assert result.metadata["timeout_seconds"] == pytest.approx(1.0)
 
 
+def test_timeout_action_executor_rejects_non_finite_request_timeout():
+    class RecordingExecutor:
+        def __init__(self):
+            self.calls = 0
+
+        def execute(self, request, context=None):
+            self.calls += 1
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"executor": type(self).__name__, "side_effects": False},
+                request_id=request.request_id,
+            )
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    wrapped = RecordingExecutor()
+    executor = TimeoutActionExecutor(wrapped)
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="invalid timeout",
+        metadata={"timeout_seconds": math.inf},
+        request_id="req-invalid-timeout",
+    )
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-invalid-timeout"
+    assert "positive finite" in result.error
+    assert result.metadata["timeout_enforced"] is False
+    assert wrapped.calls == 0
+
+
 def test_policy_guard_preserves_timeout_enforcement_metadata():
     class FastExecutor:
         def execute(self, request, context=None):

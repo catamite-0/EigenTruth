@@ -111,6 +111,25 @@ def test_action_execution_policy_json_roundtrip():
     assert loaded.required_metadata_keys == ("tenant_id",)
 
 
+def test_action_execution_timeout_values_must_be_positive_finite(tmp_path):
+    for value in (float("nan"), float("inf"), True, 0.0):
+        with pytest.raises(ValueError, match="positive finite"):
+            ActionExecutionPolicy(default_timeout_seconds=value)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="positive finite"):
+            SQLiteActionExecutionLedger(tmp_path / "action-ledger.sqlite", timeout_seconds=value)  # type: ignore[arg-type]
+
+    policy = ActionExecutionPolicy(max_timeout_seconds=5.0)
+    request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        metadata={"timeout_seconds": "nan"},
+    )
+
+    violations = policy.validate_request(request)
+
+    assert violations == ("timeout_seconds must be a positive finite number.",)
+
+
 def test_action_result_json_roundtrip():
     result = ActionResult(
         action=ControlAction.ABSTAIN,
