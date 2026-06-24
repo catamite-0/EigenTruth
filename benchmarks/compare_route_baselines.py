@@ -47,10 +47,12 @@ def compare_route_baselines(
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     json_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered route-promotion baselines."""
     cache = fingerprint_cache if fingerprint_cache is not None else {}
     payload_cache = json_cache if json_cache is not None else {}
+    payload_cache_stats = json_cache_stats if json_cache_stats is not None else _new_json_cache_stats()
     registry = ArtifactRegistry.load_json(registry_path)
     records = _select_records(registry, baseline_keys=baseline_keys)
     rows = [
@@ -76,6 +78,7 @@ def compare_route_baselines(
             require_non_oracle_evidence=require_non_oracle_evidence,
             fingerprint_cache=cache,
             json_cache=payload_cache,
+            json_cache_stats=payload_cache_stats,
         )
         for record in records
     ]
@@ -112,6 +115,7 @@ def compare_route_baselines(
             "passing_count": sum(1 for row in rows if row["gate"]["passed"]),
             "recommended_record": None if recommendation is None else recommendation["record_key"],
             "recommended_route": None if recommendation is None else recommendation.get("recommended_route"),
+            "artifact_json_cache": _json_cache_summary(payload_cache, payload_cache_stats),
         },
         "decision": decision,
         "leaderboard": leaderboard,
@@ -172,9 +176,14 @@ def _route_baseline_row(
     require_non_oracle_evidence: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
     json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
-    manifest, manifest_error = _load_optional_json(manifest_path, json_cache=json_cache)
+    manifest, manifest_error = _load_optional_json(
+        manifest_path,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
     verification = _verify_manifest(
         manifest_path,
         recursive=recursive,
@@ -189,7 +198,11 @@ def _route_baseline_row(
     route_comparison, route_report_error = (
         ({}, "route_comparison_report artifact missing")
         if route_report_path is None
-        else _load_optional_json(route_report_path, json_cache=json_cache)
+        else _load_optional_json(
+            route_report_path,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
     )
     claims_path = _resolve_artifact_path(
         manifest_path,
@@ -202,7 +215,11 @@ def _route_baseline_row(
         claims_fixture, claims_error = (
             ({}, "retrieval_claims artifact missing")
             if claims_path is None
-            else _load_optional_json(claims_path, json_cache=json_cache)
+            else _load_optional_json(
+                claims_path,
+                json_cache=json_cache,
+                json_cache_stats=json_cache_stats,
+            )
         )
     route_decision = _mapping(route_comparison.get("promotion_decision"))
     recommended_route = (
@@ -618,21 +635,30 @@ def _load_optional_json(
     path: Path,
     *,
     json_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> tuple[dict[str, Any], str | None]:
+    _increment_json_cache_stat(json_cache_stats, "requests")
     cache_key = None if json_cache is None else _json_cache_key(path)
     if cache_key is not None:
         cached = json_cache.get(cache_key)
         if cached is not None:
-            return _mapping(cached.get("payload")), cached.get("error")
+            error = cached.get("error")
+            _increment_json_cache_stat(json_cache_stats, "hits")
+            if error is not None:
+                _increment_json_cache_stat(json_cache_stats, "errors")
+            return _mapping(cached.get("payload")), error
+    _increment_json_cache_stat(json_cache_stats, "misses")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         error = str(exc)
+        _increment_json_cache_stat(json_cache_stats, "errors")
         if cache_key is not None:
             json_cache[cache_key] = {"payload": {}, "error": error}
         return {}, error
     if not isinstance(payload, dict):
         error = f"{path} did not contain a JSON object"
+        _increment_json_cache_stat(json_cache_stats, "errors")
         if cache_key is not None:
             json_cache[cache_key] = {"payload": {}, "error": error}
         return {}, error
@@ -651,6 +677,37 @@ def _json_cache_key(path: Path) -> str | None:
     except OSError:
         resolved = path.absolute()
     return f"{resolved}:{stat.st_mtime_ns}:{stat.st_size}:{getattr(stat, 'st_ino', 0)}"
+
+
+def _new_json_cache_stats() -> dict[str, int]:
+    return {
+        "requests": 0,
+        "hits": 0,
+        "misses": 0,
+        "errors": 0,
+    }
+
+
+def _increment_json_cache_stat(stats: MutableMapping[str, int] | None, key: str) -> None:
+    if stats is None:
+        return
+    stats[key] = int(stats.get(key, 0)) + 1
+
+
+def _json_cache_summary(
+    json_cache: Mapping[str, Any],
+    stats: Mapping[str, int],
+) -> dict[str, Any]:
+    requests = int(stats.get("requests", 0))
+    hits = int(stats.get("hits", 0))
+    return {
+        "requests": requests,
+        "hits": hits,
+        "misses": int(stats.get("misses", 0)),
+        "errors": int(stats.get("errors", 0)),
+        "entries": len(json_cache),
+        "hit_rate": 0.0 if requests <= 0 else float(hits) / float(requests),
+    }
 
 
 def _float_or_none(value: Any) -> float | None:

@@ -3564,6 +3564,22 @@ def test_compare_route_baselines_accepts_process_local_json_cache(tmp_path):
 
     assert first["decision"]["status"] == "promote"
     assert second["decision"]["status"] == "promote"
+    assert first["summary"]["artifact_json_cache"] == {
+        "requests": 3,
+        "hits": 0,
+        "misses": 3,
+        "errors": 0,
+        "entries": 3,
+        "hit_rate": pytest.approx(0.0),
+    }
+    assert second["summary"]["artifact_json_cache"] == {
+        "requests": 3,
+        "hits": 3,
+        "misses": 0,
+        "errors": 0,
+        "entries": 3,
+        "hit_rate": pytest.approx(1.0),
+    }
     assert len(cached_keys) >= 3
     assert set(json_cache) == cached_keys
 
@@ -3608,6 +3624,8 @@ def test_compare_route_baselines_skips_claims_load_when_evidence_gate_disabled(t
     )
 
     assert ungated["decision"]["status"] == "promote"
+    assert ungated["summary"]["artifact_json_cache"]["requests"] == 2
+    assert ungated["summary"]["artifact_json_cache"]["errors"] == 0
     assert ungated["leaderboard"][0]["claims_path"] == str(claims_path)
     assert ungated["leaderboard"][0]["evidence_audit"]["enabled"] is False
     assert ungated["leaderboard"][0]["evidence_audit"]["claims_loaded"] is False
@@ -5258,6 +5276,9 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     )
 
     assert promoted["decision"]["status"] == "promote"
+    assert promoted["summary"]["artifact_json_cache"]["requests"] >= 5
+    assert promoted["summary"]["artifact_json_cache"]["entries"] >= 5
+    assert promoted["summary"]["artifact_json_cache"]["errors"] == 0
     assert promoted["decision"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
     assert promoted["decision"]["required_route_baseline_status"] == "promote"
     assert promoted["decision"]["required_route_baseline_records"] == (
