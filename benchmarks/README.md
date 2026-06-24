@@ -2684,6 +2684,32 @@ This recommendation is intentionally deterministic and auditable. It does not
 replace A/B testing or domain review; it creates the policy artifact that can be
 passed into later replay, runtime-profile, or calibrated-control demo runs.
 
+Use `audit_feedback_policy_replay.py` before promoting that candidate policy. It
+does not rerun the model or claim to exactly recompute controller decisions.
+Instead, it audits concrete counterfactual coverage over the same feedback
+labels: accepted-but-wrong cases covered by newly required sensitive-claim
+verification, retrieval failures routed to safer clarification/abstention,
+remaining safety issues, claim-metadata gaps, and overblocking relief:
+
+```bash
+python benchmarks/audit_feedback_policy_replay.py \
+  --feedback-report artifacts/product-feedback-report.json \
+  --policy-recommendation artifacts/feedback-policy-recommendation.json \
+  --json artifacts/feedback-policy-replay-audit.json \
+  --artifact-manifest artifacts/feedback-policy-replay-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name feedback-policy-replay-audit \
+  --version 0.1 \
+  --min-matched-feedback-count 20 \
+  --min-safety-coverage 0.70 \
+  --max-unknown-safety-issue-rate 0.20 \
+  --fail-on-blocked
+```
+
+Treat a passing audit as an offline promotion gate for the candidate policy
+artifact, not as proof that future traffic is fixed. The next step should still
+be trace replay or a controlled product rollout.
+
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,

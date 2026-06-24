@@ -13502,6 +13502,127 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
         )
 
 
+def test_feedback_policy_replay_audit_covers_counterfactual_effects(tmp_path):
+    feedback_module = importlib.import_module("benchmarks.run_product_feedback_report")
+    recommendation_module = importlib.import_module("benchmarks.recommend_control_policy_from_feedback")
+    replay_module = importlib.import_module("benchmarks.audit_feedback_policy_replay")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.control import ProductFeedbackRecord, write_feedback_jsonl
+
+    trace_specs = (
+        (
+            "req-accept",
+            "accept",
+            [{
+                "claim_id": "claim-accept",
+                "text": "Revenue increased by 12 percent.",
+                "metadata": {"features": {"has_number": True}},
+            }],
+        ),
+        ("req-retrieve", "retrieve", []),
+        ("req-abstain", "abstain", []),
+    )
+    trace_paths = []
+    for request_id, action, claims in trace_specs:
+        path = tmp_path / f"{request_id}.json"
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "claims": claims,
+                "risk_decision": {
+                    "action": action,
+                    "risk_level": "low" if action == "accept" else "high",
+                    "confidence": 0.9,
+                    "reason": "unit",
+                },
+                "actions": [{"action": action, "reason": "unit", "payload": {}}],
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(path)
+    feedback_path = tmp_path / "feedback.jsonl"
+    write_feedback_jsonl(
+        feedback_path,
+        (
+            ProductFeedbackRecord(
+                request_id="req-accept",
+                claim_id="claim-accept",
+                outcome="incorrect",
+            ),
+            ProductFeedbackRecord(request_id="req-retrieve", outcome="unsupported"),
+            ProductFeedbackRecord(request_id="req-abstain", outcome="correct"),
+        ),
+    )
+    feedback_report_path = tmp_path / "feedback-report.json"
+    feedback_module.build_product_feedback_report(
+        feedback_module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=feedback_report_path,
+            min_matched_feedback_count=3,
+            max_accepted_but_wrong_rate=1.0,
+            max_retrieved_failure_rate=1.0,
+            max_abstain_false_positive_rate=1.0,
+        )
+    )
+    recommendation_path = tmp_path / "policy-recommendation.json"
+    recommendation_module.build_feedback_policy_recommendation(
+        recommendation_module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report_path,),
+            output_path=recommendation_path,
+            min_matched_feedback_count=3,
+            max_accepted_but_wrong_rate=0.05,
+            max_retrieved_failure_rate=0.10,
+            max_abstain_false_positive_rate=1.0,
+            rate_statistic="estimate",
+        )
+    )
+    replay_path = tmp_path / "policy-replay-audit.json"
+    manifest_path = tmp_path / "policy-replay-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    report = replay_module.build_feedback_policy_replay_audit(
+        replay_module.FeedbackPolicyReplayAuditConfig(
+            feedback_report_path=feedback_report_path,
+            policy_recommendation_path=recommendation_path,
+            output_path=replay_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="feedback-policy-replay",
+            version="0.1",
+            metadata={"suite": "unit"},
+            min_matched_feedback_count=3,
+            min_safety_coverage=1.0,
+            max_unknown_safety_issue_rate=0.0,
+        )
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:feedback-policy-replay:0.1")
+
+    assert report["status"] == "passed"
+    assert report["summary"]["matched_feedback_count"] == 3
+    assert report["summary"]["safety_issue_count"] == 2
+    assert report["summary"]["safety_covered_count"] == 2
+    assert report["summary"]["safety_coverage_rate"]["estimate"] == pytest.approx(1.0)
+    assert report["summary"]["unknown_safety_issue_rate"]["estimate"] == pytest.approx(0.0)
+    assert report["summary"]["overblock_issue_count"] == 1
+    assert report["summary"]["overblock_relief_count"] == 0
+    assert report["summary"]["effect_counts"]["candidate_adds_sensitive_claim_verification"] == 1
+    assert report["summary"]["effect_counts"]["candidate_routes_unsupported_to_clarify"] == 1
+    assert record.metadata["workflow"] == "feedback_policy_replay_audit"
+    assert record.metadata["safety_coverage_rate"] == pytest.approx(1.0)
+    assert record.metadata["suite"] == "unit"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+    with pytest.raises(ValueError, match="not bool"):
+        replay_module.FeedbackPolicyReplayAuditConfig(
+            feedback_report_path=feedback_report_path,
+            policy_recommendation_path=recommendation_path,
+            output_path=tmp_path / "invalid-replay.json",
+            min_safety_coverage=True,
+        )
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
