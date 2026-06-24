@@ -1377,6 +1377,7 @@ def _evidence(
         "worker_recommended_wall_clock_seconds": worker_recommended.get("wall_clock_seconds"),
         "worker_matrix_report_matches": _worker_matrix_report_matches(
             worker_recommended=worker_recommended,
+            matrix_recommended=matrix_recommended,
             matrix_report_path=matrix_report_path,
         ),
         "inside_sampling_report": None
@@ -1422,15 +1423,54 @@ def _evidence(
 def _worker_matrix_report_matches(
     *,
     worker_recommended: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
     matrix_report_path: str | Path | None,
 ) -> bool | None:
     worker_matrix_report = worker_recommended.get("matrix_report")
+    if worker_matrix_report is not None and matrix_report_path is not None:
+        try:
+            if Path(str(worker_matrix_report)).resolve() == Path(str(matrix_report_path)).resolve():
+                return True
+        except OSError:
+            if str(worker_matrix_report) == str(matrix_report_path):
+                return True
+    semantic_match = _worker_matrix_recommended_cell_matches(
+        worker_recommended=worker_recommended,
+        matrix_recommended=matrix_recommended,
+    )
+    if semantic_match is not None:
+        return semantic_match
     if worker_matrix_report is None or matrix_report_path is None:
         return None
-    try:
-        return Path(str(worker_matrix_report)).resolve() == Path(str(matrix_report_path)).resolve()
-    except OSError:
-        return str(worker_matrix_report) == str(matrix_report_path)
+    return False
+
+
+def _worker_matrix_recommended_cell_matches(
+    *,
+    worker_recommended: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+) -> bool | None:
+    matched_any = False
+    worker_cell = worker_recommended.get("recommended_cell")
+    matrix_cell = matrix_recommended.get("id")
+    if worker_cell is not None and matrix_cell is not None:
+        matched_any = True
+        if str(worker_cell) != str(matrix_cell):
+            return False
+    for worker_key, matrix_key, rel_tol, abs_tol in (
+        ("recommended_truth_proj_auroc", "truth_proj_auroc", 1e-9, 1e-12),
+        ("recommended_cache_only_total_seconds", "cache_only_total_seconds", 0.05, 1e-3),
+    ):
+        worker_value = _float_or_none(worker_recommended.get(worker_key))
+        matrix_value = _float_or_none(matrix_recommended.get(matrix_key))
+        if worker_value is None or matrix_value is None:
+            continue
+        matched_any = True
+        if not math.isclose(worker_value, matrix_value, rel_tol=rel_tol, abs_tol=abs_tol):
+            return False
+    if matched_any:
+        return True
+    return None
 
 
 def _prefix_comparison_for_recommendation(

@@ -1,0 +1,103 @@
+{
+  "artifacts": {
+    "matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/artifact-manifest.json",
+      "sha256": "115800c8a9ebafc8cb8be1bdd6c5c553deb21d0a6c0b66cadb0d375c9133fe94",
+      "size_bytes": 2298
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/cache-profile-matrix-report.json",
+      "sha256": "f26579a0400cb18621903d67b3862ea761717ce3dfec11b804e59e5440a34a65",
+      "size_bytes": 53777
+    },
+    "performance_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "performance-baseline-workflow.json",
+      "sha256": "9a06549d00fe6fddf5e97dc63a1713f1ee213f7f7411f60e47702511c51ee285",
+      "size_bytes": 11656
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "10892d36fdb5fcacaee39143446c02276c7b0fc5497886fada0542bf91f044c5",
+      "size_bytes": 4425
+    },
+    "worker_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+      "sha256": "734057ca7d0a8379123777e5d61b1d74f63b5a6004166a5c8fd9975a0662dc10",
+      "size_bytes": 1559
+    },
+    "worker_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json",
+      "sha256": "83b05c348b1373769ca4db325f7f0fba99fdd40c9089f508f033a4130c0461eb",
+      "size_bytes": 3386
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_enabled": false,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_enabled": false,
+    "layers": [
+      -12
+    ],
+    "matrix_report_reused": true,
+    "max_batch_token_budgets": [
+      512
+    ],
+    "max_batch_tokens": 512,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "recommended_batch_size": 4,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "recommended_layer": -12,
+    "recommended_max_workers": 2,
+    "runner": "run_performance_baseline_workflow",
+    "runtime_recommendation_status": "promote",
+    "status": "promote",
+    "worker_sweep_enabled": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 6,
+    "directory_count": 0,
+    "file_count": 6,
+    "missing_count": 0
+  }
+}

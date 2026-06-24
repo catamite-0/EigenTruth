@@ -9609,6 +9609,107 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
     ]
 
 
+def test_runtime_config_worker_matrix_match_allows_equivalent_report_path(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+                "layer": -12,
+                "batch_size": 4,
+                "hidden_state_capture": "outputs",
+                "eval_reps_shard_read_cache_size": 2,
+                "cache_only_total_seconds": 0.1924,
+                "truth_proj_auroc": 0.8297674418604651,
+            },
+        },
+        "cells": [],
+    }
+    worker_report = {
+        "worker_sweep_decision": {
+            "status": "promote",
+            "recommended_worker_count": 2,
+            "blocking_reasons": (),
+            "recommended": {
+                "worker_count": 2,
+                "wall_clock_seconds": 141.38,
+                "matrix_report": str(tmp_path / "workers_2" / "cache-profile-matrix-report.json"),
+                "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+                "recommended_cache_only_total_seconds": 0.191662,
+                "recommended_truth_proj_auroc": 0.8297674418604651,
+            },
+        },
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        worker_sweep_report=worker_report,
+        matrix_report_path=tmp_path / "workers_1" / "cache-profile-matrix-report.json",
+        worker_sweep_report_path=tmp_path / "cache-worker-sweep-report.json",
+    )
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["max_workers"] == 2
+    assert report["evidence"]["worker_matrix_report_matches"] is True
+
+
+def test_runtime_config_worker_matrix_match_rejects_different_cell(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_4_capture_outputs_read_cache_2",
+                "layer": -12,
+                "batch_size": 4,
+                "hidden_state_capture": "outputs",
+                "eval_reps_shard_read_cache_size": 2,
+                "cache_only_total_seconds": 0.1924,
+                "truth_proj_auroc": 0.8297674418604651,
+            },
+        },
+        "cells": [],
+    }
+    worker_report = {
+        "worker_sweep_decision": {
+            "status": "promote",
+            "recommended_worker_count": 2,
+            "blocking_reasons": (),
+            "recommended": {
+                "worker_count": 2,
+                "wall_clock_seconds": 140.0,
+                "matrix_report": str(tmp_path / "workers_2" / "cache-profile-matrix-report.json"),
+                "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_4",
+                "recommended_cache_only_total_seconds": 0.1924,
+                "recommended_truth_proj_auroc": 0.8297674418604651,
+            },
+        },
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        worker_sweep_report=worker_report,
+        matrix_report_path=tmp_path / "workers_1" / "cache-profile-matrix-report.json",
+        worker_sweep_report_path=tmp_path / "cache-worker-sweep-report.json",
+    )
+
+    assert report["status"] == "promote"
+    assert report["evidence"]["worker_matrix_report_matches"] is False
+
+
 def test_runtime_config_recommendation_uses_cell_read_cache_size():
     module = importlib.import_module("benchmarks.recommend_runtime_config")
     matrix_report = {

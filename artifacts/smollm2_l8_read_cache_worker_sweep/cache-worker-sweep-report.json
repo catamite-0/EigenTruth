@@ -1,0 +1,97 @@
+{
+  "artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+  "config": {
+    "batch_sizes": [
+      4
+    ],
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -12
+    ],
+    "length_bucketed_batches": true,
+    "limit": 8,
+    "manifold_questions": 4,
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      512
+    ],
+    "max_batch_tokens": 0,
+    "max_length": 64,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": null,
+    "shared_cache_dir": "artifacts/cache/smollm2_l8_read_cache_worker_sweep",
+    "worker_counts": [
+      2
+    ]
+  },
+  "dry_run": false,
+  "leaderboard": [
+    {
+      "blocking_reasons": [],
+      "candidate_count": 3,
+      "cell_count": 3,
+      "failed_cells": [],
+      "matrix_artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "matrix_report": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "matrix_status": "promote",
+      "recommended_cache_only_total_seconds": 0.191662,
+      "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "recommended_truth_proj_auroc": 0.8297674418604651,
+      "recommended_uncached_forced_answer_forward_seconds": 37.995166,
+      "wall_clock_seconds": 141.3849613420898,
+      "worker_count": 2
+    }
+  ],
+  "report_path": "artifacts/smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json",
+  "schema_version": 1,
+  "worker_reports": [
+    {
+      "blocking_reasons": [],
+      "candidate_count": 3,
+      "cell_count": 3,
+      "failed_cells": [],
+      "matrix_artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "matrix_report": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "matrix_status": "promote",
+      "recommended_cache_only_total_seconds": 0.191662,
+      "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "recommended_truth_proj_auroc": 0.8297674418604651,
+      "recommended_uncached_forced_answer_forward_seconds": 37.995166,
+      "wall_clock_seconds": 141.3849613420898,
+      "worker_count": 2
+    }
+  ],
+  "worker_sweep_decision": {
+    "blocking_reasons": [],
+    "recommended": {
+      "blocking_reasons": [],
+      "candidate_count": 3,
+      "cell_count": 3,
+      "failed_cells": [],
+      "matrix_artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "matrix_report": "artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "matrix_status": "promote",
+      "recommended_cache_only_total_seconds": 0.191662,
+      "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+      "recommended_truth_proj_auroc": 0.8297674418604651,
+      "recommended_uncached_forced_answer_forward_seconds": 37.995166,
+      "wall_clock_seconds": 141.3849613420898,
+      "worker_count": 2
+    },
+    "recommended_worker_count": 2,
+    "status": "promote"
+  },
+  "workflow": "cache_worker_sweep"
+}

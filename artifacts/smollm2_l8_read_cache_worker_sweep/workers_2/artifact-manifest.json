@@ -1,0 +1,79 @@
+{
+  "artifacts": {
+    "cells.layer_m12_batch_4_capture_outputs_read_cache_1.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_4_capture_outputs_read_cache_1/artifact-manifest.json",
+      "sha256": "db91cb143086d9608aa9b7f151283e81ca3e4eb2d99566e8bdcef90bed98454a",
+      "size_bytes": 3873
+    },
+    "cells.layer_m12_batch_4_capture_outputs_read_cache_2.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_4_capture_outputs_read_cache_2/artifact-manifest.json",
+      "sha256": "e43cc8018aa21ec0ba44a849a3eef8116f9ccc2e22e8af5426f28b5e6b64f8cb",
+      "size_bytes": 3876
+    },
+    "cells.layer_m12_batch_4_capture_outputs_read_cache_4.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m12_batch_4_capture_outputs_read_cache_4/artifact-manifest.json",
+      "sha256": "746508c85c80c24ee02ad34a8c4ceeeb4da16be8a215cea5549826423b4c35e9",
+      "size_bytes": 3876
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix-report.json",
+      "sha256": "6fd00d9ab64ee9a1437959196e7a1c4588d4099b82fdace3e6a4608e6c62a2b9",
+      "size_bytes": 53040
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      512
+    ],
+    "max_batch_tokens": 512,
+    "max_workers": 2,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "runner": "run_cache_profile_matrix",
+    "shared_cache_dir": "artifacts/cache/smollm2_l8_read_cache_worker_sweep/workers_2",
+    "wall_clock_seconds": 141.3849613420898
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 4,
+    "directory_count": 0,
+    "file_count": 4,
+    "missing_count": 0
+  }
+}

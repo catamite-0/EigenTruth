@@ -2331,6 +2331,11 @@ including `--derive-from-max-budget` for derived nested top-fraction sweeps. Use
 highest measured INSIDE quality metric is worth the extra sampled generation
 cost. The selected policy is written into the runtime recommendation evidence
 and readiness/registry metadata.
+When the matrix report and worker-sweep child matrix are separate files, the
+recommendation still treats them as compatible if they select the same promoted
+runtime cell and matching quality/cache-only evidence; this lets a serial matrix
+provide the selected quality/cost row while a separate worker-count sweep
+provides the wall-clock worker recommendation.
 The report includes equivalent flags for `eval_truthfulqa.py`,
 `run_cache_profile_matrix.py`, `run_adapter_readiness_workflow.py`, and, when
 sampling evidence is provided, `run_inside_sampling_profile.py` and
@@ -2622,6 +2627,17 @@ for size `1` and `0.195s` for size `4`, with the same `truth_proj` AUROC
 `0.830`. Because the capacity was explicitly swept, runtime recommendation
 marks `cache_tuning.status=ok` and records `read_cache_sweep.status=swept`
 instead of emitting further read-cache heuristic advice.
+The follow-up worker-count baseline at
+`artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/` reuses that
+read-cache sweep matrix as the quality/cost source and folds in
+`artifacts/smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json`.
+It registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-performance-baseline:0.1`,
+selects `max_workers=2`, and records `worker_matrix_report_matches=true` because
+the worker sweep recommends the same runtime cell and quality evidence. On this
+local CPU run, worker count 2 reduces matrix wall-clock from `184.467s` to
+`141.385s` (`23.4%` lower) while keeping read-cache size `2`, cache-only replay
+`0.192s`, and `truth_proj` AUROC `0.830`.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

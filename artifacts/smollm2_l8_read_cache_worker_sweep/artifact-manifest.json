@@ -1,0 +1,64 @@
+{
+  "artifacts": {
+    "worker_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-worker-sweep-report.json",
+      "sha256": "83b05c348b1373769ca4db325f7f0fba99fdd40c9089f508f033a4130c0461eb",
+      "size_bytes": 3386
+    },
+    "workers.2.matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "workers_2/artifact-manifest.json",
+      "sha256": "5b84916b2f697886a9c1479411cd390c2f404df0acc5ccc05b0b7833de9f17bb",
+      "size_bytes": 2301
+    },
+    "workers.2.matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "workers_2/cache-profile-matrix-report.json",
+      "sha256": "6fd00d9ab64ee9a1437959196e7a1c4588d4099b82fdace3e6a4608e6c62a2b9",
+      "size_bytes": 53040
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -12
+    ],
+    "matrix_mode": "triplet",
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "recommended_worker_count": 2,
+    "runner": "run_cache_worker_sweep",
+    "worker_counts": [
+      2
+    ]
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

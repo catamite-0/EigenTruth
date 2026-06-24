@@ -200,6 +200,11 @@ promote this from a heuristic cache-tuning suggestion into a same-machine sweep;
 the recommended runtime then records the selected cell's read-cache size and
 does not emit contradictory read-cache-size heuristic advice after a sweep has
 already compared the candidate capacities.
+The current small CPU SmolLM2 l8 evidence registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-performance-baseline:0.1`;
+it keeps the read-cache sweep winner at size 2 and selects `max_workers=2`,
+lowering matrix wall-clock from 184.467s to 141.385s on this machine while
+preserving `truth_proj` AUROC 0.830.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice
