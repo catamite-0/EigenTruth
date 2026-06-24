@@ -9584,6 +9584,80 @@ def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
 
 
+def test_run_product_runtime_baseline_writes_trace_records_sidecar(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    sidecar_path = tmp_path / "trace-records.jsonl"
+    registry_path = tmp_path / "registry.json"
+    trace_a.write_text(
+        json.dumps({
+            "request_id": "req-a",
+            "runtime_trace": {
+                "total_seconds": 0.10,
+                "phases": [{"name": "initial_verification", "seconds": 0.03}],
+            },
+            "verification_results": [],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+    trace_b.write_text(
+        json.dumps({
+            "request_id": "req-b",
+            "runtime_trace": {
+                "total_seconds": 0.20,
+                "phases": [{"name": "initial_verification", "seconds": 0.06}],
+            },
+            "verification_results": [],
+            "metadata": {},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=report_path,
+            trace_records_path=sidecar_path,
+            registry_path=registry_path,
+            name="runtime-baseline",
+            version="0.2",
+            policy={"max_total_seconds": 0.30},
+        )
+    )
+    records = [
+        json.loads(line)
+        for line in sidecar_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-baseline:0.2"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["traces"] == []
+    assert payload["trace_records"] == {
+        "storage": "jsonl_sidecar",
+        "count": 2,
+        "path": str(sidecar_path),
+    }
+    assert payload["summary"]["n_traces"] == 2
+    assert payload["summary"]["total_seconds"]["mean"] == pytest.approx(0.15)
+    assert payload["budget"]["passed_count"] == 2
+    assert [record["request_id"] for record in records] == ["req-a", "req-b"]
+    assert records[1]["metrics"]["total_seconds"] == pytest.approx(0.20)
+    assert "product_runtime_trace_records" in manifest["artifacts"]
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+    assert record.metadata["trace_records_storage"] == "jsonl_sidecar"
+    assert record.metadata["trace_records_path"] == str(sidecar_path)
+
+
 def test_run_product_runtime_baseline_rejects_bounded_trace_payload(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "bounded-trace.json"

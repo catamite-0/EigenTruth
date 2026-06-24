@@ -2262,7 +2262,10 @@ phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
 `ProductPromotionContract` budget. Use full `ProductTrace.to_dict()` payloads
 for this workflow; bounded telemetry from `--bounded-trace` is intentionally
-rejected because it can truncate replay-relevant evidence and action outputs:
+rejected because it can truncate replay-relevant evidence and action outputs.
+For large trace sets, add `--trace-records-jsonl` to stream per-trace metric and
+budget records into a JSONL sidecar while keeping the main report focused on
+summary, budget, manifest, and registry metadata:
 
 ```bash
 python benchmarks/run_product_runtime_baseline.py \
@@ -2270,6 +2273,7 @@ python benchmarks/run_product_runtime_baseline.py \
   --trace artifacts/demo-request-b.json \
   --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --json artifacts/product-runtime-baseline.json \
+  --trace-records-jsonl artifacts/product-runtime-baseline-trace-records.jsonl \
   --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-baseline \

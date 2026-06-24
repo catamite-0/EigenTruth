@@ -43,6 +43,7 @@ class ProductRuntimeBaselineConfig:
     policy: ProductRuntimeBudgetPolicy | Mapping[str, Any] | None = None
     policy_path: str | Path | None = None
     promotion_contract_path: str | Path | None = None
+    trace_records_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -66,6 +67,8 @@ class ProductRuntimeBaselineConfig:
             object.__setattr__(self, "policy_path", Path(self.policy_path))
         if self.promotion_contract_path is not None:
             object.__setattr__(self, "promotion_contract_path", Path(self.promotion_contract_path))
+        if self.trace_records_path is not None:
+            object.__setattr__(self, "trace_records_path", Path(self.trace_records_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
@@ -84,12 +87,9 @@ class ProductRuntimeBaselineConfig:
 def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict[str, Any]:
     """Aggregate ProductTrace runtime metrics and optional budget results."""
     policy, policy_source = _load_policy(config)
-    traces = tuple((path, _load_trace(path)) for path in config.trace_paths)
-    records = tuple(
-        _trace_record(path, trace, policy=policy)
-        for path, trace in traces
-    )
-    budget_summary = _budget_summary(records, policy=policy)
+    records, summary_records = _build_trace_records(config, policy=policy)
+    trace_record_count = len(summary_records)
+    budget_summary = _budget_summary(summary_records, policy=policy)
     status = _status_from_budget(budget_summary)
     report = {
         "schema_version": 1,
@@ -99,21 +99,28 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "status": status,
             "blocking_reasons": _blocking_reasons(budget_summary),
         },
-        "summary": _aggregate_records(records),
+        "summary": _aggregate_records(summary_records),
         "budget": budget_summary,
         "traces": list(records),
+        "trace_records": {
+            "storage": "jsonl_sidecar" if config.trace_records_path is not None else "inline",
+            "count": trace_record_count,
+            "path": None if config.trace_records_path is None else str(config.trace_records_path),
+        },
         "paths": {
             "report": str(config.report_path),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
+            "trace_records_jsonl": None if config.trace_records_path is None else str(config.trace_records_path),
             "policy": None if config.policy_path is None else str(config.policy_path),
             "promotion_contract": (
                 None if config.promotion_contract_path is None else str(config.promotion_contract_path)
             ),
-            "traces": [str(path) for path, _trace in traces],
+            "traces": [str(path) for path in config.trace_paths],
         },
         "config": {
-            "trace_count": len(traces),
+            "trace_count": trace_record_count,
             "policy_source": policy_source,
+            "trace_records_sidecar": config.trace_records_path is not None,
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
@@ -121,6 +128,32 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
     _write_report_and_manifest(config, report)
     _record_registry(config, report)
     return report
+
+
+def _build_trace_records(
+    config: ProductRuntimeBaselineConfig,
+    *,
+    policy: ProductRuntimeBudgetPolicy | None,
+) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
+    inline_records: list[dict[str, Any]] = []
+    summary_records: list[dict[str, Any]] = []
+    if config.trace_records_path is None:
+        for path in config.trace_paths:
+            record = _trace_record(path, _load_trace(path), policy=policy)
+            inline_records.append(record)
+        return tuple(inline_records), tuple(inline_records)
+
+    output_path = Path(config.trace_records_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as stream:
+        for path in config.trace_paths:
+            record = _trace_record(path, _load_trace(path), policy=policy)
+            stream.write(_jsonl_text(record))
+            summary_records.append({
+                "metrics": record["metrics"],
+                "budget": record["budget"],
+            })
+    return (), tuple(summary_records)
 
 
 def _write_report_and_manifest(
@@ -450,6 +483,7 @@ def _write_artifact_manifest(
             "runner": "run_product_runtime_baseline",
             "status": report.get("status"),
             "trace_count": len(config.trace_paths),
+            "trace_records_storage": _mapping(report.get("trace_records")).get("storage"),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
@@ -463,6 +497,7 @@ def _write_artifact_manifest(
 def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Path | None]:
     artifacts: dict[str, str | Path | None] = {
         "product_runtime_baseline_report": config.report_path,
+        "product_runtime_trace_records": config.trace_records_path,
         "policy": config.policy_path,
         "promotion_contract": config.promotion_contract_path,
     }
@@ -484,6 +519,8 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "status": report.get("status"),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "trace_count": len(config.trace_paths),
+            "trace_records_storage": _mapping(report.get("trace_records")).get("storage"),
+            "trace_records_path": _mapping(report.get("trace_records")).get("path"),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
@@ -519,6 +556,10 @@ def _json_text(payload: Any, *, compact: bool) -> str:
     if compact:
         return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
     return json.dumps(payload, indent=2, sort_keys=True) + "\n"
+
+
+def _jsonl_text(payload: Any) -> str:
+    return json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def _numeric_summary(values: Sequence[Any] | Any) -> dict[str, Any]:
@@ -648,6 +689,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeBaselineConfig:
         report_path=Path(args.json),
         policy_path=Path(args.policy) if args.policy else None,
         promotion_contract_path=Path(args.promotion_contract) if args.promotion_contract else None,
+        trace_records_path=Path(args.trace_records_jsonl) if args.trace_records_jsonl else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -672,6 +714,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--json", required=True, help="output baseline report JSON path")
     parser.add_argument("--policy", default=None, help="ProductRuntimeBudgetPolicy JSON path")
     parser.add_argument("--promotion-contract", default=None, help="ProductPromotionContract/release report JSON path")
+    parser.add_argument("--trace-records-jsonl", default=None,
+                        help="write per-trace records to JSONL sidecar instead of embedding them in the report")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--name", default=None, help="registry product runtime baseline name")
