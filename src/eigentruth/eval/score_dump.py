@@ -609,6 +609,11 @@ def score_dump_file_metadata(
                 **records_fingerprint,
             },
         })
+        if dump is None and records_file.is_file():
+            metadata["summary"] = _jsonl_manifest_summary(
+                manifest,
+                labels=_load_score_dump_jsonl_labels(score_path, manifest),
+            )
     if dump is not None:
         metadata["summary"] = dump.summary()
     return metadata
@@ -872,6 +877,35 @@ def _load_score_dump_jsonl_layer_scores(
         summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
         source_format=JSONL_FORMAT,
     )
+
+
+def _load_score_dump_jsonl_labels(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+) -> tuple[int, ...]:
+    labels: list[int] = []
+    records_file = manifest.records_file(manifest_path)
+    count = 0
+    with records_file.open(encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError("record must be a JSON object.")
+                labels.append(_coerce_record_label(payload.get("label")))
+            except Exception as exc:
+                raise ValueError(
+                    f"invalid score dump JSONL record at {records_file}:{line_number}: {exc}"
+                ) from exc
+            count += 1
+    if manifest.n_total is not None and count != manifest.n_total:
+        raise ValueError(
+            f"score dump JSONL record count does not match manifest "
+            f"({count} records vs {manifest.n_total} expected)."
+        )
+    return tuple(labels)
 
 
 def _score_dump_layer_scores_from_score_dump(

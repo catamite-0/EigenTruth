@@ -441,7 +441,8 @@ the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
 `LayerScoreSweepCalibrator.calibrate_from_file()` use selected JSONL score views
 where possible, so large JSONL inputs materialize only the requested primary,
 statement-bearing, or layer/score columns plus labels. Score-dump metadata
-fingerprints both the manifest and the records file.
+fingerprints both the manifest and the records file, and its JSONL summary uses
+a label-only record scan instead of materializing score columns.
 When `--artifact-manifest` is provided, the conformal report gains
 `artifact_manifest_summary` and `paths.artifact_manifest`; the manifest
 fingerprints the input score dump plus generated conformal, sweep, and

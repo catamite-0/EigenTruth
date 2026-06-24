@@ -371,6 +371,56 @@ class TestScoreDump:
         with pytest.raises(ValueError):
             load_score_dump(manifest_path)
 
+    def test_score_dump_file_metadata_summarizes_jsonl_without_score_materialization(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "config": {"model": "unit-model", "layer": -1},
+                "score_names": ["maha_last", "unused"],
+                "sweep_scores": {"-2": ["truth_proj", "unused"]},
+                "n_total": 3,
+                "has_statements": True,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            "\n".join([
+                json.dumps({
+                    "label": 0,
+                    "scores": {"maha_last": 0.1, "unused": "bad"},
+                    "sweep_scores": {"-2": {"truth_proj": 0.2, "unused": "bad"}},
+                }),
+                json.dumps({
+                    "label": 1,
+                    "scores": {"maha_last": 0.9, "unused": "bad"},
+                    "sweep_scores": {"-2": {"truth_proj": 0.8, "unused": "bad"}},
+                }),
+                json.dumps({
+                    "label": 0,
+                    "scores": {"maha_last": 0.3, "unused": "bad"},
+                    "sweep_scores": {"-2": {"truth_proj": 0.4, "unused": "bad"}},
+                }),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+        metadata = score_dump_file_metadata(manifest_path)
+
+        assert metadata["source_format"] == "eigentruth.score_dump.jsonl"
+        assert metadata["records"]["exists"] is True
+        assert metadata["summary"]["n_total"] == 3
+        assert metadata["summary"]["n_true"] == 2
+        assert metadata["summary"]["n_false"] == 1
+        assert metadata["summary"]["score_names"] == ("maha_last", "unused")
+        assert metadata["summary"]["sweep_layers"] == ("-2",)
+        assert metadata["summary"]["all_signal_names"] == ("maha_last", "truth_proj", "unused")
+        with pytest.raises(ValueError):
+            load_score_dump(manifest_path)
+
     def test_load_score_dump_layer_scores_reads_selected_jsonl_sweep_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
             "config": {"model": "unit-model", "layer": -1},
