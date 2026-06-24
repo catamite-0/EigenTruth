@@ -7514,6 +7514,15 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "compared_metric_count": 9,
                         "blocked_metric_count": 0,
                     },
+                    "current": {
+                        "optimization": {
+                            "policy_hints": {
+                                "candidate_control_defaults": {
+                                    "max_verifier_route_attempts": 2,
+                                },
+                            },
+                        },
+                    },
                 },
                 "product_trace_replay_workflow": {
                     "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
@@ -7561,6 +7570,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert payload["status"] == "exported"
     assert contract["workflow"] == "product_promotion_contract"
     assert contract["runtime_budget_policy"]["max_mean_attempted_route_count"] == 1.1
+    assert contract["control_defaults"] == {"max_verifier_route_attempts": 2}
+    assert payload["contract"]["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert contract["product_trace_replay_workflow"]["record_key"] == (
         "report:trace-replay-workflow:0.1"
     )
@@ -7575,6 +7586,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["summary"]["artifact_count"] == 2
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
+    assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
+    assert record.metadata["control_default_max_verifier_route_attempts"] == 2
     assert record.metadata["recommended_route"] == "structured_qa"
     assert record.metadata["product_trace_replay_workflow_source"] == "registry"
     assert record.metadata["product_trace_replay_workflow_record"] == (
@@ -13117,6 +13130,7 @@ def test_compare_product_runtime_baselines_promotes_within_gates(tmp_path):
         used_retrieval=False,
         cache_hits=5,
         cache_misses=1,
+        max_verifier_route_attempts=1,
     )
     baseline_module.build_product_runtime_baseline(
         baseline_module.ProductRuntimeBaselineConfig(
@@ -13149,6 +13163,9 @@ def test_compare_product_runtime_baselines_promotes_within_gates(tmp_path):
     assert total_metric["ratio_to_baseline"] == pytest.approx(1.1)
     assert total_metric["status"] == "pass"
     assert payload["baseline"]["source"] == "file"
+    assert payload["current"]["optimization"]["policy_hints"]["candidate_control_defaults"] == {
+        "max_verifier_route_attempts": 1
+    }
 
 
 def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
@@ -13540,6 +13557,7 @@ def _write_product_runtime_trace(
     route_budget_limit: int | None = None,
     route_budget_exhausted: bool = False,
     unattempted_routes: Sequence[str] = (),
+    max_verifier_route_attempts: int | None = None,
 ) -> None:
     path.write_text(
         json.dumps({
@@ -13568,7 +13586,10 @@ def _write_product_runtime_trace(
                     },
                 }
             ],
-            "metadata": {"cache": {"verifier": {"hits": cache_hits, "misses": cache_misses}}},
+            "metadata": {
+                "cache": {"verifier": {"hits": cache_hits, "misses": cache_misses}},
+                "max_verifier_route_attempts": max_verifier_route_attempts,
+            },
         }),
         encoding="utf-8",
     )

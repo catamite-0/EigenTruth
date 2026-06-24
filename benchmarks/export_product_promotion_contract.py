@@ -37,6 +37,7 @@ def export_product_promotion_contract(
 
     contract = ProductPromotionContract.from_json(source)
     payload = contract.to_dict()
+    control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
     export_metadata = dict(metadata or {})
     _write_json(output, payload, compact=compact_json)
@@ -71,6 +72,10 @@ def export_product_promotion_contract(
                 "source_workflow": contract.source_workflow,
                 "source_status": contract.source_status,
                 "model_id": contract.model_id,
+                "control_defaults": control_defaults,
+                "control_default_max_verifier_route_attempts": control_defaults.get(
+                    "max_verifier_route_attempts"
+                ),
                 "recommended_route": contract.metadata.get("recommended_route"),
                 "recommended_selector_replay_candidate": contract.metadata.get(
                     "recommended_selector_replay_candidate"
@@ -142,6 +147,7 @@ def export_product_promotion_contract(
             "source_status": contract.source_status,
             "runtime": dict(contract.runtime),
             "verifier_route": dict(contract.verifier_route),
+            "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
             "metadata": dict(contract.metadata),
         },

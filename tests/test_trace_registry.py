@@ -1204,7 +1204,16 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "report_path": "artifacts/runtime-drift/product-runtime-drift.json",
                 "manifest_path": "artifacts/runtime-drift/artifact-manifest.json",
                 "baseline": {"path": "artifacts/runtime-baseline/product-runtime-baseline.json"},
-                "current": {"path": "artifacts/runtime-current/product-runtime-baseline.json"},
+                "current": {
+                    "path": "artifacts/runtime-current/product-runtime-baseline.json",
+                    "optimization": {
+                        "policy_hints": {
+                            "candidate_control_defaults": {
+                                "max_verifier_route_attempts": 2,
+                            },
+                        },
+                    },
+                },
                 "summary": {
                     "gate_enabled": True,
                     "compared_metric_count": 9,
@@ -1378,6 +1387,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_runtime_drift_current_path"] == (
         "artifacts/runtime-current/product-runtime-baseline.json"
     )
+    assert contract.control_defaults == {"max_verifier_route_attempts": 2}
+    assert contract.to_dict()["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert contract.metadata["product_runtime_drift_gate_enabled"] is True
     assert contract.metadata["product_runtime_drift_compared_metric_count"] == 9
     assert contract.metadata["product_runtime_drift_blocked_metric_count"] == 0
@@ -1429,6 +1440,7 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "trace-replay-workflow.json",
             "record_key": "report:trace-replay-workflow:0.1",
         },
+        control_defaults={"max_verifier_route_attempts": 3},
         metadata={"selector_replay_status": "promote"},
     ).save_json(contract_path)
 
@@ -1448,6 +1460,9 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_model_id"] == "demo-model"
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {"route": "structured_qa"}
+    assert metadata["promotion_contract_control_defaults"] == {
+        "max_verifier_route_attempts": 3
+    }
     assert metadata["promotion_contract_product_trace_replay_workflow"] == {
         "report_path": "trace-replay-workflow.json",
         "record_key": "report:trace-replay-workflow:0.1",

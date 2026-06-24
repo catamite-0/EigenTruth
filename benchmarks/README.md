@@ -1486,7 +1486,10 @@ into a `ProductPromotionContract`, writes a manifest, and can register a
 `product_promotion_contract:*:*` record. When the release candidate was gated by
 a product trace replay workflow, the compact contract and registry metadata keep
 the workflow report/manifest plus its selector-replay and runtime-drift child
-report paths for deployment-side provenance:
+report paths for deployment-side provenance. Runtime-drift reports also carry
+baseline/current optimization hints, so exported contracts preserve candidate
+control defaults such as `max_verifier_route_attempts` alongside the budget
+policy:
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \

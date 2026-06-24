@@ -137,10 +137,12 @@ def compare_product_runtime_baselines(
             "registry": source.get("registry"),
             "record_key": source.get("record_key"),
             "record": source.get("record"),
+            "optimization": _runtime_optimization_handoff(baseline_report),
         },
         "current": {
             "path": str(current_report_path),
             "status": current_report.get("status"),
+            "optimization": _runtime_optimization_handoff(current_report),
         },
         "metrics": metrics,
         "runtime_budget_policy_gate": runtime_budget_policy_gate,
@@ -233,6 +235,25 @@ def _comparison_metrics(
             gates.get("min_current_trace_count"),
         ),
     ]
+
+
+def _runtime_optimization_handoff(report: Mapping[str, Any]) -> dict[str, Any]:
+    optimization = _mapping(report.get("optimization"))
+    if not optimization:
+        return {}
+    policy_hints = _mapping(optimization.get("policy_hints"))
+    return {
+        "status": optimization.get("status"),
+        "policy_hints": {
+            "source": policy_hints.get("source"),
+            "candidate_control_defaults": _mapping(
+                policy_hints.get("candidate_control_defaults")
+            ),
+            "candidate_runtime_budget_policy": _mapping(
+                policy_hints.get("candidate_runtime_budget_policy")
+            ),
+        },
+    }
 
 
 def _ratio_metric(

@@ -26,6 +26,7 @@ class ProductPromotionContract:
     runtime_budget_policy: ProductRuntimeBudgetPolicy | Mapping[str, Any] = field(
         default_factory=ProductRuntimeBudgetPolicy
     )
+    control_defaults: Mapping[str, Any] = field(default_factory=dict)
     source_workflow: str | None = None
     source_status: str | None = None
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
@@ -41,6 +42,7 @@ class ProductPromotionContract:
         object.__setattr__(self, "runtime", dict(self.runtime))
         object.__setattr__(self, "verifier_route", dict(self.verifier_route))
         object.__setattr__(self, "runtime_budget_policy", policy)
+        object.__setattr__(self, "control_defaults", dict(self.control_defaults))
         object.__setattr__(
             self,
             "product_trace_replay_workflow",
@@ -68,6 +70,7 @@ class ProductPromotionContract:
                 runtime_budget_policy=ProductRuntimeBudgetPolicy.from_mapping(
                     _mapping(payload.get("runtime_budget_policy"))
                 ),
+                control_defaults=_mapping(payload.get("control_defaults")),
                 product_trace_replay_workflow=_mapping(
                     payload.get("product_trace_replay_workflow")
                 ),
@@ -154,6 +157,9 @@ class ProductPromotionContract:
             runtime=_mapping(candidate.get("runtime")),
             verifier_route=_mapping(candidate.get("verifier_route")),
             runtime_budget_policy=product_runtime_budget_policy_from_release_candidate(
+                comparison
+            ),
+            control_defaults=_product_control_defaults_from_release_candidate(
                 comparison
             ),
             product_trace_replay_workflow=_product_trace_replay_workflow_metadata(
@@ -362,6 +368,7 @@ class ProductPromotionContract:
             "runtime": dict(self.runtime),
             "verifier_route": dict(self.verifier_route),
             "runtime_budget_policy": self.runtime_budget_policy.to_dict(),
+            "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "metadata": dict(self.metadata),
         }
@@ -594,6 +601,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_source_status": contract.source_status,
         "promotion_contract_runtime": dict(contract.runtime),
         "promotion_contract_verifier_route": dict(contract.verifier_route),
+        "promotion_contract_control_defaults": dict(contract.control_defaults),
         "promotion_contract_product_trace_replay_workflow": dict(
             contract.product_trace_replay_workflow
         ),
@@ -627,6 +635,32 @@ def product_runtime_budget_policy_from_release_candidate(
         min_selective_claim_skip_rate=config.get("min_selective_claim_skip_rate"),
         max_verified_claim_count=config.get("max_verified_claim_count"),
     )
+
+
+def _product_control_defaults_from_release_candidate(
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    comparison = _release_candidate_comparison(report)
+    candidate = _mapping(comparison.get("release_candidate"))
+    explicit = _drop_none_values(_mapping(candidate.get("control_defaults")))
+    if explicit:
+        return explicit
+    drift = _mapping(candidate.get("product_runtime_drift"))
+    for branch in ("current", "baseline"):
+        defaults = _drop_none_values(
+            _mapping(
+                _nested(
+                    drift,
+                    branch,
+                    "optimization",
+                    "policy_hints",
+                    "candidate_control_defaults",
+                )
+            )
+        )
+        if defaults:
+            return defaults
+    return {}
 
 
 def _required_route_budget_policy(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -689,6 +723,19 @@ def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _nested(payload: Mapping[str, Any], *path: str) -> Any:
+    value: Any = payload
+    for key in path:
+        if not isinstance(value, Mapping):
+            return None
+        value = value.get(key)
+    return value
+
+
+def _drop_none_values(value: Mapping[str, Any]) -> dict[str, Any]:
+    return {str(key): item for key, item in value.items() if item is not None}
 
 
 def _optional_str(value: Any) -> str | None:
