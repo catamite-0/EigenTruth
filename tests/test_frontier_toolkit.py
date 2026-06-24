@@ -189,6 +189,26 @@ def test_select_runtime_profile_routes_by_risk_and_claim_metadata():
         low,
         claims=(Claim("2 + 2 = 4.", claim_id="calc", metadata={"features": {"has_number": True}}),),
     )
+    string_sensitive_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "2 + 2 = 4.",
+                claim_id="calc-string",
+                metadata={"features": {"has_number": "true"}},
+            ),
+        ),
+    )
+    string_false_selection = select_runtime_profile(
+        low,
+        claims=(
+            Claim(
+                "Paris is the capital of France.",
+                claim_id="false-string",
+                metadata={"features": {"has_number": "false"}},
+            ),
+        ),
+    )
     medium_selection = select_runtime_profile(medium, claims=())
     high_selection = select_runtime_profile(high, claims=())
 
@@ -198,6 +218,9 @@ def test_select_runtime_profile_routes_by_risk_and_claim_metadata():
     assert sensitive_selection.selected_profile == "audit"
     assert sensitive_selection.triggered_claim_ids == ("calc",)
     assert sensitive_selection.triggered_features == {"calc": ("has_number",)}
+    assert string_sensitive_selection.selected_profile == "audit"
+    assert string_sensitive_selection.triggered_features == {"calc-string": ("has_number",)}
+    assert string_false_selection.selected_profile == "latency"
     assert medium_selection.selected_profile == "balanced"
     assert high_selection.selected_profile == "audit"
 
@@ -1221,6 +1244,39 @@ def test_routed_verifier_uses_extracted_calculation_metadata_without_text_patter
     assert result.metadata["expression"] == "2 + 2"
 
 
+def test_routed_verifier_parses_string_feature_flags():
+    verifier = RoutedVerifier((
+        VerifierRoute("calculator", CalculatorVerifier(), feature_flags=("has_calculation",)),
+    ))
+
+    matched = verifier.verify(
+        Claim(
+            "The computed answer is wrong.",
+            metadata={
+                "features": {"has_calculation": "true"},
+                "calculation": {"expression": "2 + 2", "expected": 5},
+            },
+        )
+    )
+    skipped = verifier.verify(
+        Claim(
+            "The computed answer is wrong.",
+            metadata={
+                "features": {"has_calculation": "false"},
+                "calculation": {"expression": "2 + 2", "expected": 5},
+            },
+        )
+    )
+
+    assert matched.status is VerificationStatus.REFUTED
+    assert matched.metadata["selected_route"] == "calculator"
+    assert matched.metadata["matched_route_details"][0]["match_reasons"] == (
+        "feature_flag:has_calculation",
+    )
+    assert skipped.status is VerificationStatus.NOT_APPLICABLE
+    assert skipped.metadata["matched_routes"] == ()
+
+
 def test_routed_verifier_can_prioritize_structured_state_adapter():
     fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
     verifier = RoutedVerifier((
@@ -1762,9 +1818,17 @@ def test_claim_extraction_adds_structured_calculation_metadata():
 def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():
     verifier = GroundednessVerifier(evidence=("AlphaCorp has offices in Europe.",), min_overlap=0.95)
     claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+    explicit_false = Claim(
+        claim.text,
+        metadata={"features": {"is_time_sensitive": "false"}},
+    )
 
     result = verifier.verify(claim)
+    false_result = verifier.verify(explicit_false)
 
     assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert result.metadata["claim_features"]["is_time_sensitive"] is True
     assert "time-sensitive" in result.explanation
+    assert false_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert false_result.metadata["claim_features"]["is_time_sensitive"] is False
+    assert "time-sensitive" not in false_result.explanation

@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
+from eigentruth.verify.features import enabled_feature_names, metadata_path_enabled
 from eigentruth.verify.protocols import Claim
 
 
@@ -135,11 +136,9 @@ class StagedVerificationPolicy:
             features = metadata.get("features", {})
             if not isinstance(features, Mapping):
                 features = {}
-            matched_features = tuple(
-                flag for flag in self.verify_claim_feature_flags if features.get(flag) is True
-            )
+            matched_features = enabled_feature_names(features, self.verify_claim_feature_flags)
             matched_metadata = tuple(
-                key for key in self.verify_claim_metadata_keys if _metadata_key_enabled(metadata, key)
+                key for key in self.verify_claim_metadata_keys if metadata_path_enabled(metadata, key)
             )
             if matched_features:
                 feature_hits[claim_id] = matched_features
@@ -169,16 +168,6 @@ class StagedVerificationPolicy:
             "verify_claim_feature_flags": tuple(self.verify_claim_feature_flags),
             "verify_claim_metadata_keys": tuple(self.verify_claim_metadata_keys),
         }
-
-
-def _metadata_key_enabled(metadata: Mapping[str, Any], key: str) -> bool:
-    current: Any = metadata
-    for part in key.split("."):
-        if not isinstance(current, Mapping) or part not in current:
-            return False
-        current = current[part]
-    return bool(current)
-
 
 def _coerce_risk_level(value: RiskLevel | str) -> RiskLevel:
     if isinstance(value, RiskLevel):

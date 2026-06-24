@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, NamedTuple, Sequence
 
+from eigentruth.verify.features import normalized_feature_flags
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 from eigentruth.verify.rules import normalize_claim_text
 
@@ -204,7 +205,7 @@ def _claim_features(claim: Claim) -> dict[str, bool]:
     raw_features = claim.metadata.get("features", {}) if isinstance(claim.metadata, Mapping) else {}
     if not isinstance(raw_features, Mapping):
         return {}
-    return {str(key): bool(value) for key, value in raw_features.items()}
+    return normalized_feature_flags(raw_features)
 
 
 def _coerce_evidence(value: EvidenceDocument | Mapping[str, Any] | str) -> EvidenceDocument:

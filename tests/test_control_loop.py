@@ -247,6 +247,55 @@ def test_staged_verification_loop_runs_verifier_for_sensitive_claim_metadata():
     )
 
 
+def test_staged_verification_policy_parses_string_feature_and_metadata_flags():
+    controller = RiskController(_artifact())
+    low_decision = controller.decide({"maha_last": 1.0})
+    policy = StagedVerificationPolicy(
+        verify_claim_feature_flags=("has_number",),
+        verify_claim_metadata_keys=("requires_verification",),
+    )
+
+    string_true = policy.decide(
+        low_decision,
+        claims=(
+            Claim(
+                "Numeric claim.",
+                claim_id="c1",
+                metadata={"features": {"has_number": "true"}},
+            ),
+        ),
+    )
+    string_false = policy.decide(
+        low_decision,
+        claims=(
+            Claim(
+                "Explicitly low-risk claim.",
+                claim_id="c2",
+                metadata={
+                    "features": {"has_number": "false"},
+                    "requires_verification": "false",
+                },
+            ),
+        ),
+    )
+    ambiguous = policy.decide(
+        low_decision,
+        claims=(
+            Claim(
+                "Ambiguous routing claim.",
+                claim_id="c3",
+                metadata={"requires_verification": "maybe"},
+            ),
+        ),
+    )
+
+    assert string_true.run_verifier is True
+    assert string_true.triggered_features == {"c1": ("has_number",)}
+    assert string_false.run_verifier is False
+    assert ambiguous.run_verifier is True
+    assert ambiguous.triggered_metadata == {"c3": ("requires_verification",)}
+
+
 def test_staged_verification_loop_runs_verifier_for_diagnostic_risk():
     claims = (Claim("Paris is a city.", claim_id="c1"),)
     verifier = _CountingVerifier(status=VerificationStatus.SUPPORTED)

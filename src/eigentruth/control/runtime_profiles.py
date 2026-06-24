@@ -8,6 +8,8 @@ from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
+from eigentruth.verify.features import enabled_feature_names as _enabled_claim_feature_names
+from eigentruth.verify.features import metadata_path_enabled
 
 _DEFAULT_KEYS = frozenset({
     "inside_trigger_budget_policy",
@@ -717,11 +719,7 @@ def _sensitive_claim_matches(
         features = metadata.get("features", {})
         if not isinstance(features, Mapping):
             features = {}
-        matched_features = tuple(
-            str(flag)
-            for flag in feature_flags
-            if features.get(str(flag)) is True
-        )
+        matched_features = _enabled_claim_feature_names(features, feature_flags)
         matched_metadata = tuple(
             str(key)
             for key in metadata_keys
@@ -757,22 +755,7 @@ def _claim_metadata(claim: Any) -> dict[str, Any]:
 
 
 def _metadata_key_enabled(metadata: Mapping[str, Any], key: str) -> bool:
-    current: Any = metadata
-    for part in key.split("."):
-        if not isinstance(current, Mapping) or part not in current:
-            return False
-        current = current[part]
-    return _metadata_value_enabled(current)
-
-
-def _metadata_value_enabled(value: Any) -> bool:
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized in {"false", "0", "no", "off", ""}:
-            return False
-        if normalized in {"true", "1", "yes", "on"}:
-            return True
-    return bool(value)
+    return metadata_path_enabled(metadata, key)
 
 
 def _validate_profile_names(*names: str) -> None:

@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+from eigentruth.verify.features import flag_value_enabled
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 
 
@@ -72,7 +73,7 @@ class VerifierRoute:
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise ValueError("route name must be non-empty.")
-        object.__setattr__(self, "feature_flags", tuple(self.feature_flags))
+        object.__setattr__(self, "feature_flags", tuple(str(flag) for flag in self.feature_flags))
         object.__setattr__(self, "metadata_keys", tuple(self.metadata_keys))
         object.__setattr__(self, "context_keys", tuple(self.context_keys))
         object.__setattr__(self, "text_patterns", tuple(self.text_patterns))
@@ -95,7 +96,7 @@ class VerifierRoute:
         features = metadata.get("features", {})
         if isinstance(features, Mapping):
             for flag in self.feature_flags:
-                if features.get(flag) is True:
+                if flag_value_enabled(features.get(flag)):
                     reasons.append(f"feature_flag:{flag}")
         for key in self.metadata_keys:
             if _has_path(metadata, key):
