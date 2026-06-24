@@ -429,7 +429,9 @@ layer/score reports and best artifacts are built with
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
 The report config includes `score_dump` metadata from `eigentruth.eval.ScoreDump`:
-record counts, available score names, sweep layers, file size, and SHA-256. This
+record counts, available score names, sweep layers, file size, SHA-256, and a
+stable `identity` payload. That identity records model, dataset, layer, selected
+score schema, scoring-config hash, content hashes, and a canonical cache key. This
 lets later calibration, ensemble, and route-refresh steps confirm they are reusing
 the intended dump without parsing model artifacts again. Post-processing reports
 share a run-local score-dump cache, so duplicate score paths do not require

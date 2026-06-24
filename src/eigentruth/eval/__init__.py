@@ -24,6 +24,7 @@ from eigentruth.eval.metrics import (
 from eigentruth.eval.score_dump import (
     ScoreDump,
     ScoreDumpColumns,
+    ScoreDumpIdentity,
     ScoreDumpJsonlManifest,
     ScoreDumpLayerScores,
     ScoreDumpRecord,
@@ -35,6 +36,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump_statement_scores,
     score_dump_cache_summary,
     score_dump_file_metadata,
+    score_dump_identity,
     write_score_dump_jsonl,
 )
 
@@ -49,6 +51,7 @@ __all__ = [
     "directional_trigger_rate",
     "ScoreDump",
     "ScoreDumpColumns",
+    "ScoreDumpIdentity",
     "ScoreDumpLayerScores",
     "ScoreDumpJsonlManifest",
     "ScoreDumpRecord",
@@ -60,5 +63,6 @@ __all__ = [
     "load_score_dump_statement_scores",
     "score_dump_cache_summary",
     "score_dump_file_metadata",
+    "score_dump_identity",
     "write_score_dump_jsonl",
 ]

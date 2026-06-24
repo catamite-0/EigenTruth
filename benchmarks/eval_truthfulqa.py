@@ -3726,7 +3726,8 @@ def run(args) -> dict:
                 print(f"  {layer:>6}{values}")
 
     payload = {
-        "config": {"model": args.model, "dtype": args.dtype, "layer": args.layer,
+        "config": {"model": args.model, "dataset": "truthfulqa",
+                   "dtype": args.dtype, "layer": args.layer,
                    "offline": args.offline, "max_length": args.max_length,
                    "manifold_n": primary.n, "n_manifold_false": len(manifold_false),
                    "hidden_dim": primary.hidden_dim, "subspace_rank": args.subspace_rank,

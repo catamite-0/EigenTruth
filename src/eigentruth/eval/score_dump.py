@@ -4,12 +4,56 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator, Mapping, MutableMapping, Sequence
 
 JSONL_FORMAT = "eigentruth.score_dump.jsonl"
 _SCORE_DUMP_CACHE_STATS_KEY = "__eigentruth_score_dump_cache_stats_v1__"
+
+
+@dataclass(frozen=True)
+class ScoreDumpIdentity:
+    """Stable experiment identity for score-dump reuse and provenance."""
+
+    schema_version: int
+    source_format: str
+    model_id: str | None
+    dataset_id: str | None
+    target_layer: int | None
+    n_total: int | None
+    primary_score_names: tuple[str, ...]
+    sweep_score_names: Mapping[str, tuple[str, ...]]
+    scoring_config_hash: str
+    score_schema_hash: str
+    content_hash: str | None = None
+    records_hash: str | None = None
+    cache_key: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable identity payload."""
+        return {
+            "schema_version": self.schema_version,
+            "source_format": self.source_format,
+            "model_id": self.model_id,
+            "dataset_id": self.dataset_id,
+            "target_layer": self.target_layer,
+            "n_total": self.n_total,
+            "primary_score_names": list(self.primary_score_names),
+            "sweep_score_names": {
+                str(layer): list(score_names)
+                for layer, score_names in sorted(
+                    self.sweep_score_names.items(),
+                    key=lambda item: _layer_sort_key(str(item[0])),
+                )
+            },
+            "scoring_config_hash": self.scoring_config_hash,
+            "score_schema_hash": self.score_schema_hash,
+            "content_hash": self.content_hash,
+            "records_hash": self.records_hash,
+            "cache_key": self.cache_key,
+        }
 
 
 @dataclass(frozen=True)
@@ -616,6 +660,42 @@ def write_score_dump_jsonl(
     return manifest
 
 
+def score_dump_identity(
+    path: str | Path,
+    dump: ScoreDump | None = None,
+    *,
+    cache: MutableMapping[str, Any] | None = None,
+) -> ScoreDumpIdentity:
+    """Return a stable score-dump identity for cache reuse and provenance."""
+    score_path = Path(path)
+    fingerprint = (
+        _cached_file_fingerprint(score_path, cache)
+        if score_path.is_file()
+        else {"sha256": None, "size_bytes": None}
+    )
+    manifest = _metadata_jsonl_manifest(score_path)
+    if manifest is not None:
+        records_file = manifest.records_file(score_path)
+        records_fingerprint = (
+            _cached_file_fingerprint(records_file, cache)
+            if records_file.is_file()
+            else {"sha256": None, "size_bytes": None}
+        )
+        return _score_dump_identity_from_manifest(
+            manifest,
+            content_hash=_str_or_none(fingerprint.get("sha256")),
+            records_hash=_str_or_none(records_fingerprint.get("sha256")),
+        )
+    if dump is None:
+        dump = load_score_dump(score_path)
+    return _score_dump_identity_from_dump(
+        dump,
+        source_format="json",
+        content_hash=_str_or_none(fingerprint.get("sha256")),
+        records_hash=None,
+    )
+
+
 def score_dump_file_metadata(
     path: str | Path,
     dump: ScoreDump | None = None,
@@ -654,6 +734,11 @@ def score_dump_file_metadata(
                 ),
                 **records_fingerprint,
             },
+            "identity": _score_dump_identity_from_manifest(
+                manifest,
+                content_hash=_str_or_none(fingerprint.get("sha256")),
+                records_hash=_str_or_none(records_fingerprint.get("sha256")),
+            ).to_dict(),
         })
         if dump is None and records_file.is_file():
             metadata["summary"] = _cached_jsonl_manifest_summary(
@@ -663,6 +748,13 @@ def score_dump_file_metadata(
             )
     if dump is not None:
         metadata["summary"] = dump.summary()
+        if "identity" not in metadata:
+            metadata["identity"] = _score_dump_identity_from_dump(
+                dump,
+                source_format="json",
+                content_hash=_str_or_none(fingerprint.get("sha256")),
+                records_hash=None,
+            ).to_dict()
     return metadata
 
 
@@ -686,6 +778,162 @@ def score_dump_cache_summary(cache: Mapping[str, Any] | None) -> dict[str, Any]:
         "jsonl_summary": _cache_counter_payload(_mapping(stats.get("jsonl_summary"))),
         "jsonl_view": _cache_counter_payload(_mapping(stats.get("jsonl_view"))),
     }
+
+
+def _score_dump_identity_from_dump(
+    dump: ScoreDump,
+    *,
+    source_format: str,
+    content_hash: str | None,
+    records_hash: str | None,
+) -> ScoreDumpIdentity:
+    return _score_dump_identity_from_parts(
+        config=dump.config,
+        source_format=source_format,
+        primary_score_names=tuple(dump.scores),
+        sweep_score_names={
+            str(layer): tuple(layer_scores)
+            for layer, layer_scores in dump.sweep_scores.items()
+        },
+        n_total=dump.n_total,
+        has_statements=bool(dump.statements),
+        content_hash=content_hash,
+        records_hash=records_hash,
+    )
+
+
+def _score_dump_identity_from_manifest(
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    content_hash: str | None,
+    records_hash: str | None,
+) -> ScoreDumpIdentity:
+    return _score_dump_identity_from_parts(
+        config=manifest.config,
+        source_format=manifest.format,
+        primary_score_names=manifest.score_names,
+        sweep_score_names=manifest.sweep_score_names,
+        n_total=manifest.n_total,
+        has_statements=manifest.has_statements,
+        content_hash=content_hash,
+        records_hash=records_hash,
+    )
+
+
+def _score_dump_identity_from_parts(
+    *,
+    config: Mapping[str, Any],
+    source_format: str,
+    primary_score_names: Sequence[str],
+    sweep_score_names: Mapping[str, Sequence[str]],
+    n_total: int | None,
+    has_statements: bool,
+    content_hash: str | None,
+    records_hash: str | None,
+) -> ScoreDumpIdentity:
+    normalized_config = _jsonable(dict(config))
+    normalized_primary_scores = tuple(sorted(str(name) for name in primary_score_names))
+    normalized_sweep_scores = {
+        str(layer): tuple(sorted(str(name) for name in score_names))
+        for layer, score_names in sorted(
+            sweep_score_names.items(),
+            key=lambda item: _layer_sort_key(str(item[0])),
+        )
+    }
+    score_schema = {
+        "source_format": str(source_format),
+        "n_total": n_total,
+        "has_statements": bool(has_statements),
+        "primary_score_names": normalized_primary_scores,
+        "sweep_score_names": normalized_sweep_scores,
+    }
+    scoring_config_hash = _stable_payload_hash(normalized_config)
+    score_schema_hash = _stable_payload_hash(score_schema)
+    identity_payload = {
+        "schema_version": 1,
+        "source_format": str(source_format),
+        "model_id": _config_identity_value(config, "model_id", "model"),
+        "dataset_id": _config_identity_value(
+            config,
+            "dataset_id",
+            "dataset",
+            "benchmark",
+            "corpus",
+            "data",
+        ),
+        "target_layer": _config_layer_value(config),
+        "n_total": n_total,
+        "primary_score_names": normalized_primary_scores,
+        "sweep_score_names": normalized_sweep_scores,
+        "scoring_config_hash": scoring_config_hash,
+        "score_schema_hash": score_schema_hash,
+        "content_hash": content_hash,
+        "records_hash": records_hash,
+    }
+    cache_key = "score-dump-identity-v1:" + _stable_payload_hash(identity_payload)
+    return ScoreDumpIdentity(
+        schema_version=1,
+        source_format=str(source_format),
+        model_id=identity_payload["model_id"],
+        dataset_id=identity_payload["dataset_id"],
+        target_layer=identity_payload["target_layer"],
+        n_total=n_total,
+        primary_score_names=normalized_primary_scores,
+        sweep_score_names=normalized_sweep_scores,
+        scoring_config_hash=scoring_config_hash,
+        score_schema_hash=score_schema_hash,
+        content_hash=content_hash,
+        records_hash=records_hash,
+        cache_key=cache_key,
+    )
+
+
+def _config_identity_value(config: Mapping[str, Any], *names: str) -> str | None:
+    for name in names:
+        value = config.get(name)
+        if value is None or value == "":
+            continue
+        return str(value)
+    return None
+
+
+def _config_layer_value(config: Mapping[str, Any]) -> int | None:
+    for name in ("target_layer", "layer"):
+        value = config.get(name)
+        if value is None or value == "":
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _stable_payload_hash(payload: Any) -> str:
+    encoded = json.dumps(
+        _jsonable(payload),
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _jsonable(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {str(key): _jsonable(raw) for key, raw in sorted(value.items(), key=lambda item: str(item[0]))}
+    if isinstance(value, (str, int, bool)) or value is None:
+        return value
+    if isinstance(value, float):
+        return value if math.isfinite(value) else str(value)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return [_jsonable(item) for item in value]
+    return str(value)
+
+
+def _str_or_none(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 def _load_score_dump_path(

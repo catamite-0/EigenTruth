@@ -17,6 +17,7 @@ from eigentruth.eval.metrics import (
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
+    ScoreDumpIdentity,
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
@@ -24,6 +25,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump_statement_scores,
     score_dump_cache_summary,
     score_dump_file_metadata,
+    score_dump_identity,
     write_score_dump_jsonl,
 )
 
@@ -135,7 +137,7 @@ class TestScoreDump:
         path = tmp_path / "scores.json"
         path.write_text(
             json.dumps({
-                "config": {"model": "unit-model", "layer": -2},
+                "config": {"model": "unit-model", "dataset": "unit-dataset", "layer": -2},
                 "labels": [0, 1],
                 "scores": {"maha_last": [0.1, 0.9]},
                 "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
@@ -160,6 +162,42 @@ class TestScoreDump:
         assert metadata["exists"] is True
         assert metadata["sha256"]
         assert metadata["summary"]["all_signal_names"] == ("maha_last", "truth_proj")
+        assert metadata["identity"]["model_id"] == "unit-model"
+        assert metadata["identity"]["dataset_id"] == "unit-dataset"
+        assert metadata["identity"]["target_layer"] == -2
+        assert metadata["identity"]["primary_score_names"] == ["maha_last"]
+        assert metadata["identity"]["sweep_score_names"] == {"-2": ["truth_proj"]}
+
+    def test_score_dump_identity_standardizes_json_dump_metadata(self, tmp_path):
+        path = tmp_path / "scores.json"
+        path.write_text(
+            json.dumps({
+                "config": {"model": "unit-model", "dataset": "unit-dataset", "layer": -2},
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+                "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
+            }),
+            encoding="utf-8",
+        )
+        dump = load_score_dump(path)
+
+        identity = score_dump_identity(path, dump)
+        metadata = score_dump_file_metadata(path, dump)
+
+        assert isinstance(identity, ScoreDumpIdentity)
+        assert identity.to_dict() == metadata["identity"]
+        assert identity.source_format == "json"
+        assert identity.model_id == "unit-model"
+        assert identity.dataset_id == "unit-dataset"
+        assert identity.target_layer == -2
+        assert identity.n_total == 2
+        assert identity.primary_score_names == ("maha_last",)
+        assert identity.sweep_score_names == {"-2": ("truth_proj",)}
+        assert identity.content_hash == metadata["sha256"]
+        assert identity.records_hash is None
+        assert len(identity.scoring_config_hash) == 64
+        assert len(identity.score_schema_hash) == 64
+        assert identity.cache_key.startswith("score-dump-identity-v1:")
 
     def test_validates_lengths_and_required_scores(self, tmp_path):
         path = tmp_path / "bad-scores.json"
@@ -267,6 +305,40 @@ class TestScoreDump:
         assert metadata["source_format"] == "eigentruth.score_dump.jsonl"
         assert metadata["records"]["path"].endswith("scores.manifest.records.jsonl")
         assert metadata["records"]["sha256"]
+        assert metadata["identity"]["source_format"] == "eigentruth.score_dump.jsonl"
+        assert metadata["identity"]["content_hash"] == metadata["sha256"]
+        assert metadata["identity"]["records_hash"] == metadata["records"]["sha256"]
+
+    def test_score_dump_identity_uses_jsonl_manifest_without_materializing_scores(self, tmp_path, monkeypatch):
+        dump = ScoreDump.from_mapping({
+            "config": {"model": "unit-model", "dataset": "unit-dataset", "layer": -1},
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "unused": [99.0, 100.0],
+            },
+            "sweep_scores": {
+                "-2": {"truth_proj": [0.2, 0.8]},
+            },
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(dump, manifest_path)
+
+        def fail_from_mapping(*args, **kwargs):
+            raise AssertionError("JSONL identity should not materialize ScoreDump")
+
+        monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+        identity = score_dump_identity(manifest_path)
+        metadata = score_dump_file_metadata(manifest_path)
+
+        assert identity.to_dict() == metadata["identity"]
+        assert identity.model_id == "unit-model"
+        assert identity.dataset_id == "unit-dataset"
+        assert identity.target_layer == -1
+        assert identity.primary_score_names == ("maha_last", "unused")
+        assert identity.sweep_score_names == {"-2": ("truth_proj",)}
+        assert identity.content_hash == metadata["sha256"]
+        assert identity.records_hash == metadata["records"]["sha256"]
 
     def test_jsonl_writer_rejects_bad_record_extra_length(self, tmp_path):
         dump = ScoreDump.from_mapping({
