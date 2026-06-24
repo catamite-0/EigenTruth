@@ -1207,6 +1207,7 @@ python benchmarks/compare_release_candidates.py \
   --route-registry artifacts/registry.json \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --performance-drift-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.8 \
   --selector-replay-report artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json \
   --product-runtime-drift-report artifacts/product-runtime-drift.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
@@ -1228,6 +1229,10 @@ python benchmarks/compare_release_candidates.py \
   --min-verifier-trace-cache-hit-rate 0.9 \
   --require-performance-score-dump-cache \
   --min-performance-score-dump-cache-jsonl-view-hit-rate 0.5 \
+  --max-performance-uncached-total-seconds-ratio 1.15 \
+  --max-performance-cached-total-seconds-ratio 1.15 \
+  --max-performance-cache-only-total-seconds-ratio 1.15 \
+  --max-performance-score-dump-cache-jsonl-view-hit-rate-drop 0.10 \
   --required-route-max-runtime-total-seconds 120 \
   --required-route-max-retrieval-hit-count 5000 \
   --required-route-max-retrieval-use-rate 1.0 \
@@ -1263,6 +1268,15 @@ unless that bundle contains score-dump cache evidence, and add
 selected JSONL view cache hit rate for post-hoc analysis reuse. Omit
 `--performance-registry` when the performance record lives in the readiness
 registry.
+Add `--performance-drift-baseline-key performance_baseline:<prior-name>:<prior-version>`
+with any `--max-performance-*-ratio` or
+`--max-performance-score-dump-cache-jsonl-view-hit-rate-drop` thresholds when a
+release must prove that the selected performance bundle has not regressed
+against an explicit prior handoff. The gate compares `uncached_total_seconds`,
+`cached_total_seconds`, `cache_only_total_seconds`, and selected JSONL
+score-dump cache hit rate from the two `performance_evidence_bundle` payloads.
+It fails closed if the reference bundle is unverified, not `release_ready`, or
+missing a checked metric.
 Add `--selector-replay-report` when the final candidate must also include a
 promoted runtime-profile selector replay over saved `ProductTrace` payloads.
 The gate verifies the replay artifact manifest, requires `status=promote`, and
@@ -1320,6 +1334,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --name qwen05-local-release-candidate \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
+  --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
   --product-runtime-drift-report artifacts/product-runtime-drift.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
@@ -1334,6 +1349,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --max-p99-duration-seconds 0.20 \
   --require-performance-score-dump-cache \
   --min-performance-score-dump-cache-jsonl-view-hit-rate 0.5 \
+  --max-performance-uncached-total-seconds-ratio 1.15 \
+  --max-performance-score-dump-cache-jsonl-view-hit-rate-drop 0.10 \
   --json artifacts/release-candidate-registry-workflow.json \
   --release-report-json artifacts/release-candidate-comparison.json \
   --artifact-manifest artifacts/release-candidate-artifact-manifest.json \

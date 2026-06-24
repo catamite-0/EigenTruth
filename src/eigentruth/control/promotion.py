@@ -113,6 +113,21 @@ class ProductPromotionContract:
         performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
         performance_score_dump_cache_totals = _mapping(performance_score_dump_cache.get("totals"))
         performance_jsonl_view_cache = _mapping(performance_score_dump_cache_totals.get("jsonl_view"))
+        performance_gate = _mapping(comparison.get("performance_baseline_gate"))
+        performance_trend_gate = _mapping(performance_gate.get("performance_trend_gate"))
+        performance_trend_metrics = _mapping(performance_trend_gate.get("metrics"))
+        performance_uncached_trend = _mapping(
+            performance_trend_metrics.get("uncached_total_seconds")
+        )
+        performance_cached_trend = _mapping(
+            performance_trend_metrics.get("cached_total_seconds")
+        )
+        performance_cache_only_trend = _mapping(
+            performance_trend_metrics.get("cache_only_total_seconds")
+        )
+        performance_cache_hit_rate_trend = _mapping(
+            performance_trend_metrics.get("score_dump_cache_jsonl_view_hit_rate")
+        )
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -162,6 +177,25 @@ class ProductPromotionContract:
                 ),
                 "performance_score_dump_cache_jsonl_view_hit_rate": (
                     performance_jsonl_view_cache.get("hit_rate")
+                ),
+                "performance_drift_baseline_record": config.get(
+                    "performance_drift_baseline_key"
+                ),
+                "performance_trend_gate_passed": performance_trend_gate.get("passed"),
+                "performance_trend_reference_record": performance_trend_gate.get(
+                    "reference_record_key"
+                ),
+                "performance_uncached_total_seconds_ratio_to_drift_baseline": (
+                    performance_uncached_trend.get("observed_ratio")
+                ),
+                "performance_cached_total_seconds_ratio_to_drift_baseline": (
+                    performance_cached_trend.get("observed_ratio")
+                ),
+                "performance_cache_only_total_seconds_ratio_to_drift_baseline": (
+                    performance_cache_only_trend.get("observed_ratio")
+                ),
+                "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline": (
+                    performance_cache_hit_rate_trend.get("observed_drop")
                 ),
                 "recommended_route": decision.get("recommended_route"),
                 "selector_replay_status": decision.get("selector_replay_status"),

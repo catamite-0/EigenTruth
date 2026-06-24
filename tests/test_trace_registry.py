@@ -827,6 +827,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "required_route_max_retrieval_hit_count": 450.0,
             "require_performance_score_dump_cache": True,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
+            "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
         },
         "decision": {
             "status": "promote",
@@ -954,6 +955,18 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
             },
         },
+        "performance_baseline_gate": {
+            "performance_trend_gate": {
+                "passed": True,
+                "reference_record_key": "performance_baseline:runtime-reference:0.8",
+                "metrics": {
+                    "uncached_total_seconds": {"observed_ratio": 1.25},
+                    "cached_total_seconds": {"observed_ratio": 1.20},
+                    "cache_only_total_seconds": {"observed_ratio": 1.0},
+                    "score_dump_cache_jsonl_view_hit_rate": {"observed_drop": 0.3},
+                },
+            },
+        },
     }
     registry_workflow = {
         "workflow": "release_candidate_registry_workflow",
@@ -982,6 +995,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_score_dump_cache_min_jsonl_view_hit_rate"] == 0.5
     assert contract.metadata["performance_score_dump_cache_source_count"] == 1
     assert contract.metadata["performance_score_dump_cache_jsonl_view_hit_rate"] == 0.6
+    assert contract.metadata["performance_drift_baseline_record"] == (
+        "performance_baseline:runtime-reference:0.8"
+    )
+    assert contract.metadata["performance_trend_gate_passed"] is True
+    assert contract.metadata["performance_trend_reference_record"] == (
+        "performance_baseline:runtime-reference:0.8"
+    )
+    assert contract.metadata["performance_uncached_total_seconds_ratio_to_drift_baseline"] == 1.25
+    assert contract.metadata[
+        "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline"
+    ] == 0.3
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
     assert contract.metadata["recommended_product_runtime_drift_report"] == (

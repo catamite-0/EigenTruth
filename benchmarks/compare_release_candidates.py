@@ -36,6 +36,11 @@ def compare_release_candidates(
     required_adapter_routes: Sequence[str] = (),
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
+    performance_drift_baseline_key: str | None = None,
+    max_performance_uncached_total_seconds_ratio: float | None = None,
+    max_performance_cached_total_seconds_ratio: float | None = None,
+    max_performance_cache_only_total_seconds_ratio: float | None = None,
+    max_performance_score_dump_cache_jsonl_view_hit_rate_drop: float | None = None,
     recursive: bool = True,
     allow_unverified: bool = False,
     runtime_profile: str | None = None,
@@ -82,8 +87,20 @@ def compare_release_candidates(
     if performance_baseline_key is None and (
         require_performance_score_dump_cache
         or min_performance_score_dump_cache_jsonl_view_hit_rate is not None
+        or performance_drift_baseline_key is not None
+        or max_performance_uncached_total_seconds_ratio is not None
+        or max_performance_cached_total_seconds_ratio is not None
+        or max_performance_cache_only_total_seconds_ratio is not None
+        or max_performance_score_dump_cache_jsonl_view_hit_rate_drop is not None
     ):
-        raise ValueError("performance score-dump cache gates require performance_baseline_key.")
+        raise ValueError("performance gates require performance_baseline_key.")
+    if performance_drift_baseline_key is None and (
+        max_performance_uncached_total_seconds_ratio is not None
+        or max_performance_cached_total_seconds_ratio is not None
+        or max_performance_cache_only_total_seconds_ratio is not None
+        or max_performance_score_dump_cache_jsonl_view_hit_rate_drop is not None
+    ):
+        raise ValueError("performance drift thresholds require performance_drift_baseline_key.")
     if min_performance_score_dump_cache_jsonl_view_hit_rate is not None:
         cache_hit_rate_threshold = _float_or_none(
             min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -97,6 +114,22 @@ def compare_release_candidates(
                 "min_performance_score_dump_cache_jsonl_view_hit_rate must be between 0 and 1."
             )
         min_performance_score_dump_cache_jsonl_view_hit_rate = cache_hit_rate_threshold
+    max_performance_uncached_total_seconds_ratio = _validate_optional_non_negative_float(
+        max_performance_uncached_total_seconds_ratio,
+        name="max_performance_uncached_total_seconds_ratio",
+    )
+    max_performance_cached_total_seconds_ratio = _validate_optional_non_negative_float(
+        max_performance_cached_total_seconds_ratio,
+        name="max_performance_cached_total_seconds_ratio",
+    )
+    max_performance_cache_only_total_seconds_ratio = _validate_optional_non_negative_float(
+        max_performance_cache_only_total_seconds_ratio,
+        name="max_performance_cache_only_total_seconds_ratio",
+    )
+    max_performance_score_dump_cache_jsonl_view_hit_rate_drop = _validate_optional_unit_float(
+        max_performance_score_dump_cache_jsonl_view_hit_rate_drop,
+        name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
+    )
     cache = fingerprint_cache if fingerprint_cache is not None else {}
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
     performance_registry_path = (
@@ -192,6 +225,13 @@ def compare_release_candidates(
         candidate=raw_candidate,
         require_score_dump_cache=require_performance_score_dump_cache,
         min_score_dump_cache_jsonl_view_hit_rate=min_performance_score_dump_cache_jsonl_view_hit_rate,
+        drift_baseline_key=performance_drift_baseline_key,
+        max_uncached_total_seconds_ratio=max_performance_uncached_total_seconds_ratio,
+        max_cached_total_seconds_ratio=max_performance_cached_total_seconds_ratio,
+        max_cache_only_total_seconds_ratio=max_performance_cache_only_total_seconds_ratio,
+        max_score_dump_cache_jsonl_view_hit_rate_drop=(
+            max_performance_score_dump_cache_jsonl_view_hit_rate_drop
+        ),
         fingerprint_cache=cache,
     )
     selector_replay = _selector_replay_gate(
@@ -252,6 +292,19 @@ def compare_release_candidates(
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 min_performance_score_dump_cache_jsonl_view_hit_rate
+            ),
+            "performance_drift_baseline_key": performance_drift_baseline_key,
+            "max_performance_uncached_total_seconds_ratio": (
+                max_performance_uncached_total_seconds_ratio
+            ),
+            "max_performance_cached_total_seconds_ratio": (
+                max_performance_cached_total_seconds_ratio
+            ),
+            "max_performance_cache_only_total_seconds_ratio": (
+                max_performance_cache_only_total_seconds_ratio
+            ),
+            "max_performance_score_dump_cache_jsonl_view_hit_rate_drop": (
+                max_performance_score_dump_cache_jsonl_view_hit_rate_drop
             ),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
@@ -714,6 +767,11 @@ def _performance_baseline_gate(
     candidate: Mapping[str, Any] | None,
     require_score_dump_cache: bool,
     min_score_dump_cache_jsonl_view_hit_rate: float | None,
+    drift_baseline_key: str | None,
+    max_uncached_total_seconds_ratio: float | None,
+    max_cached_total_seconds_ratio: float | None,
+    max_cache_only_total_seconds_ratio: float | None,
+    max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
@@ -739,6 +797,48 @@ def _performance_baseline_gate(
     performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
     performance_score_dump_cache_totals = _mapping(performance_score_dump_cache.get("totals"))
     performance_jsonl_view_cache = _mapping(performance_score_dump_cache_totals.get("jsonl_view"))
+    drift_record = None
+    drift_report_path = None
+    drift_report: dict[str, Any] = {}
+    drift_report_error = None
+    drift_manifest_path = None
+    drift_verification = None
+    drift_evidence_bundle: dict[str, Any] = {}
+    if drift_baseline_key is not None:
+        drift_record = registry.get(drift_baseline_key)
+        if drift_record.artifact_type != "performance_baseline":
+            raise ValueError(
+                f"registry record {drift_record.key()!r} is not a performance_baseline."
+            )
+        drift_report_path = Path(drift_record.path)
+        drift_report, drift_report_error = _load_optional_json(drift_report_path)
+        drift_manifest_path = _performance_manifest_path(
+            drift_record,
+            drift_report,
+            report_path=drift_report_path,
+        )
+        drift_verification = _verify_performance_manifest(
+            drift_manifest_path,
+            recursive=recursive,
+            fingerprint_cache=fingerprint_cache,
+        )
+        drift_evidence_bundle = _mapping(drift_report.get("performance_evidence_bundle"))
+    performance_trend_gate = _performance_trend_gate(
+        current_bundle=performance_evidence_bundle,
+        reference_bundle=drift_evidence_bundle,
+        reference_report_error=drift_report_error,
+        reference_manifest_path=drift_manifest_path,
+        reference_verification=drift_verification,
+        reference_record_key=None if drift_record is None else drift_record.key(),
+        reference_report_path=drift_report_path,
+        allow_unverified=allow_unverified,
+        max_uncached_total_seconds_ratio=max_uncached_total_seconds_ratio,
+        max_cached_total_seconds_ratio=max_cached_total_seconds_ratio,
+        max_cache_only_total_seconds_ratio=max_cache_only_total_seconds_ratio,
+        max_score_dump_cache_jsonl_view_hit_rate_drop=(
+            max_score_dump_cache_jsonl_view_hit_rate_drop
+        ),
+    )
     gate = _performance_gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -749,6 +849,7 @@ def _performance_baseline_gate(
         candidate=candidate,
         require_score_dump_cache=require_score_dump_cache,
         min_score_dump_cache_jsonl_view_hit_rate=min_score_dump_cache_jsonl_view_hit_rate,
+        performance_trend_gate=performance_trend_gate,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _mapping(recommendation.get("best_quality_signal"))
@@ -761,6 +862,14 @@ def _performance_baseline_gate(
         "report_path": str(report_path),
         "manifest_path": None if manifest_path is None else str(manifest_path),
         "verification": verification,
+        "performance_drift_baseline_record": None if drift_record is None else drift_record.key(),
+        "performance_drift_baseline_report_path": (
+            None if drift_report_path is None else str(drift_report_path)
+        ),
+        "performance_drift_baseline_manifest_path": (
+            None if drift_manifest_path is None else str(drift_manifest_path)
+        ),
+        "performance_drift_baseline_verification": drift_verification,
         "runtime_recommendation_source": runtime_source,
         "runtime_recommendation_status": runtime_recommendation.get("status"),
         "performance_evidence_bundle": (
@@ -774,6 +883,7 @@ def _performance_baseline_gate(
         "performance_score_dump_cache_source_count": performance_score_dump_cache.get("source_count"),
         "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
         "performance_score_dump_cache_gate": gate.get("score_dump_cache"),
+        "performance_trend_gate": gate.get("performance_trend"),
         "runtime": {
             "cell_id": recommendation.get("cell_id"),
             "layer": recommendation.get("layer"),
@@ -1053,6 +1163,7 @@ def _performance_gate(
     candidate: Mapping[str, Any] | None,
     require_score_dump_cache: bool,
     min_score_dump_cache_jsonl_view_hit_rate: float | None,
+    performance_trend_gate: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     failures = []
     performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
@@ -1078,12 +1189,17 @@ def _performance_gate(
             f"{performance_evidence_bundle.get('release_ready')!r}, expected True"
         )
     failures.extend(score_dump_cache_gate["blocking_reasons"])
+    if performance_trend_gate is not None:
+        failures.extend(performance_trend_gate.get("blocking_reasons", ()))
     if candidate is None:
         failures.append("release candidate is unavailable for performance baseline comparison")
         return {
             "passed": False,
             "blocking_reasons": failures,
             "score_dump_cache": score_dump_cache_gate,
+            "performance_trend": (
+                None if performance_trend_gate is None else dict(performance_trend_gate)
+            ),
         }
 
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
@@ -1120,6 +1236,7 @@ def _performance_gate(
         "passed": not failures,
         "blocking_reasons": failures,
         "score_dump_cache": score_dump_cache_gate,
+        "performance_trend": None if performance_trend_gate is None else dict(performance_trend_gate),
     }
 
 
@@ -1155,6 +1272,181 @@ def _performance_score_dump_cache_gate(
         "min_jsonl_view_hit_rate": min_jsonl_view_hit_rate,
         "observed_source_count": source_count,
         "observed_jsonl_view_hit_rate": jsonl_view_hit_rate,
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _performance_trend_gate(
+    *,
+    current_bundle: Mapping[str, Any],
+    reference_bundle: Mapping[str, Any],
+    reference_report_error: str | None,
+    reference_manifest_path: Path | None,
+    reference_verification: Mapping[str, Any] | None,
+    reference_record_key: str | None,
+    reference_report_path: Path | None,
+    allow_unverified: bool,
+    max_uncached_total_seconds_ratio: float | None,
+    max_cached_total_seconds_ratio: float | None,
+    max_cache_only_total_seconds_ratio: float | None,
+    max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
+) -> dict[str, Any] | None:
+    thresholds = {
+        "max_uncached_total_seconds_ratio": max_uncached_total_seconds_ratio,
+        "max_cached_total_seconds_ratio": max_cached_total_seconds_ratio,
+        "max_cache_only_total_seconds_ratio": max_cache_only_total_seconds_ratio,
+        "max_score_dump_cache_jsonl_view_hit_rate_drop": (
+            max_score_dump_cache_jsonl_view_hit_rate_drop
+        ),
+    }
+    enabled = any(value is not None for value in thresholds.values())
+    if reference_record_key is None and not enabled:
+        return None
+
+    failures = []
+    if enabled:
+        if reference_record_key is None:
+            failures.append("performance drift baseline record is missing")
+        if reference_report_error is not None:
+            failures.append(f"performance drift baseline report could not be loaded: {reference_report_error}")
+        if reference_manifest_path is None:
+            failures.append("performance drift baseline artifact manifest is missing")
+        if (
+            reference_verification is not None
+            and not bool(reference_verification.get("passed", False))
+            and not allow_unverified
+        ):
+            failures.append("performance drift baseline manifest verification failed")
+        if reference_bundle.get("release_ready") is not True:
+            failures.append(
+                "performance drift baseline evidence bundle release_ready is "
+                f"{reference_bundle.get('release_ready')!r}, expected True"
+            )
+
+    metrics = {
+        "uncached_total_seconds": _performance_ratio_metric(
+            "uncached_total_seconds",
+            current=_performance_bundle_cost_metric(current_bundle, "uncached_total_seconds"),
+            baseline=_performance_bundle_cost_metric(reference_bundle, "uncached_total_seconds"),
+            threshold=max_uncached_total_seconds_ratio,
+        ),
+        "cached_total_seconds": _performance_ratio_metric(
+            "cached_total_seconds",
+            current=_performance_bundle_cost_metric(current_bundle, "cached_total_seconds"),
+            baseline=_performance_bundle_cost_metric(reference_bundle, "cached_total_seconds"),
+            threshold=max_cached_total_seconds_ratio,
+        ),
+        "cache_only_total_seconds": _performance_ratio_metric(
+            "cache_only_total_seconds",
+            current=_performance_bundle_cost_metric(current_bundle, "cache_only_total_seconds"),
+            baseline=_performance_bundle_cost_metric(reference_bundle, "cache_only_total_seconds"),
+            threshold=max_cache_only_total_seconds_ratio,
+        ),
+        "score_dump_cache_jsonl_view_hit_rate": _performance_drop_metric(
+            "score_dump_cache_jsonl_view_hit_rate",
+            current=_performance_bundle_jsonl_hit_rate(current_bundle),
+            baseline=_performance_bundle_jsonl_hit_rate(reference_bundle),
+            threshold=max_score_dump_cache_jsonl_view_hit_rate_drop,
+        ),
+    }
+    for metric in metrics.values():
+        failures.extend(metric["blocking_reasons"])
+
+    return {
+        "schema_version": 1,
+        "enabled": enabled,
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "reference_record_key": reference_record_key,
+        "reference_report_path": None if reference_report_path is None else str(reference_report_path),
+        "reference_manifest_path": (
+            None if reference_manifest_path is None else str(reference_manifest_path)
+        ),
+        "reference_manifest_verified": (
+            None if reference_verification is None else bool(reference_verification.get("passed", False))
+        ),
+        "thresholds": thresholds,
+        "metrics": metrics,
+    }
+
+
+def _performance_bundle_cost_metric(bundle: Mapping[str, Any], name: str) -> float | None:
+    return _float_or_none(_mapping(bundle.get("cost")).get(name))
+
+
+def _performance_bundle_jsonl_hit_rate(bundle: Mapping[str, Any]) -> float | None:
+    score_dump_cache = _mapping(bundle.get("score_dump_cache"))
+    totals = _mapping(score_dump_cache.get("totals"))
+    jsonl_view = _mapping(totals.get("jsonl_view"))
+    return _float_or_none(jsonl_view.get("hit_rate"))
+
+
+def _performance_ratio_metric(
+    metric: str,
+    *,
+    current: float | None,
+    baseline: float | None,
+    threshold: float | None,
+) -> dict[str, Any]:
+    failures = []
+    observed_ratio = None
+    enabled = threshold is not None
+    if enabled:
+        if current is None:
+            failures.append(f"performance drift {metric} current value is missing")
+        if baseline is None:
+            failures.append(f"performance drift {metric} baseline value is missing")
+        elif baseline <= 0:
+            failures.append(f"performance drift {metric} baseline value must be positive")
+        if current is not None and baseline is not None and baseline > 0:
+            observed_ratio = current / baseline
+            if observed_ratio > threshold:
+                failures.append(
+                    f"performance drift {metric} ratio above {threshold}: {observed_ratio}"
+                )
+    return {
+        "enabled": enabled,
+        "metric": metric,
+        "comparison": "ratio_to_baseline",
+        "current": current,
+        "baseline": baseline,
+        "observed_ratio": observed_ratio,
+        "threshold": threshold,
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _performance_drop_metric(
+    metric: str,
+    *,
+    current: float | None,
+    baseline: float | None,
+    threshold: float | None,
+) -> dict[str, Any]:
+    failures = []
+    observed_drop = None
+    enabled = threshold is not None
+    if enabled:
+        if current is None:
+            failures.append(f"performance drift {metric} current value is missing")
+        if baseline is None:
+            failures.append(f"performance drift {metric} baseline value is missing")
+        if current is not None and baseline is not None:
+            observed_drop = baseline - current
+            if observed_drop > threshold:
+                failures.append(
+                    f"performance drift {metric} drop above {threshold}: {observed_drop}"
+                )
+    return {
+        "enabled": enabled,
+        "metric": metric,
+        "comparison": "absolute_drop_from_baseline",
+        "current": current,
+        "baseline": baseline,
+        "observed_drop": observed_drop,
+        "threshold": threshold,
         "passed": not failures,
         "blocking_reasons": failures,
     }
@@ -1426,6 +1718,22 @@ def _float_or_none(value: Any) -> float | None:
     return numeric if math.isfinite(numeric) else None
 
 
+def _validate_optional_non_negative_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = _float_or_none(value)
+    if numeric is None or numeric < 0:
+        raise ValueError(f"{name} must be a non-negative finite number.")
+    return numeric
+
+
+def _validate_optional_unit_float(value: Any, *, name: str) -> float | None:
+    numeric = _validate_optional_non_negative_float(value, name=name)
+    if numeric is not None and numeric > 1:
+        raise ValueError(f"{name} must be between 0 and 1.")
+    return numeric
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -1500,6 +1808,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
+        ),
+        performance_drift_baseline_key=args.performance_drift_baseline_key,
+        max_performance_uncached_total_seconds_ratio=(
+            args.max_performance_uncached_total_seconds_ratio
+        ),
+        max_performance_cached_total_seconds_ratio=(
+            args.max_performance_cached_total_seconds_ratio
+        ),
+        max_performance_cache_only_total_seconds_ratio=(
+            args.max_performance_cache_only_total_seconds_ratio
+        ),
+        max_performance_score_dump_cache_jsonl_view_hit_rate_drop=(
+            args.max_performance_score_dump_cache_jsonl_view_hit_rate_drop
         ),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
@@ -1581,6 +1902,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "becoming the selected product route; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
+    parser.add_argument("--performance-drift-baseline-key", default=None,
+                        help="optional reference performance_baseline key for trend regression gates")
     parser.add_argument("--selector-replay-report", default=None,
                         help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--product-runtime-drift-report", default=None,
@@ -1692,6 +2015,42 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
         default=None,
         help="minimum selected JSONL score-dump cache hit rate required from the performance baseline",
+    )
+    parser.add_argument(
+        "--max-performance-uncached-total-seconds-ratio",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--max-performance-uncached-total-seconds-ratio",
+        ),
+        default=None,
+        help="maximum selected performance uncached_total_seconds ratio versus drift baseline",
+    )
+    parser.add_argument(
+        "--max-performance-cached-total-seconds-ratio",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--max-performance-cached-total-seconds-ratio",
+        ),
+        default=None,
+        help="maximum selected performance cached_total_seconds ratio versus drift baseline",
+    )
+    parser.add_argument(
+        "--max-performance-cache-only-total-seconds-ratio",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--max-performance-cache-only-total-seconds-ratio",
+        ),
+        default=None,
+        help="maximum selected performance cache_only_total_seconds ratio versus drift baseline",
+    )
+    parser.add_argument(
+        "--max-performance-score-dump-cache-jsonl-view-hit-rate-drop",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--max-performance-score-dump-cache-jsonl-view-hit-rate-drop",
+        ),
+        default=None,
+        help="maximum allowed JSONL score-dump cache hit-rate drop versus drift baseline",
     )
     parser.add_argument("--required-route-min-selected", type=lambda value: _parse_non_negative_int(
         value,
