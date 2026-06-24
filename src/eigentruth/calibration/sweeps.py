@@ -15,6 +15,7 @@ from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
+from eigentruth.eval.score_dump import load_score_dump
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -258,7 +259,7 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Load a score dump and build a layer/score sweep report."""
         dump_path = Path(path)
-        dump = json.loads(dump_path.read_text(encoding="utf-8"))
+        dump = load_score_dump(dump_path).to_mapping()
         return self.calibrate_from_dump(
             dump,
             signals=signals,

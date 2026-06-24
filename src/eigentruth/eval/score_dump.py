@@ -26,14 +26,20 @@ class ScoreDump:
         payload: Mapping[str, Any],
         *,
         allow_empty: bool = False,
+        allow_missing_scores: bool = False,
         require_statements: bool = False,
     ) -> "ScoreDump":
         """Build and validate a score dump from a JSON-like mapping."""
         if not isinstance(payload, Mapping):
             raise ValueError("score dump must be a JSON object.")
         labels = _coerce_labels(payload.get("labels"), allow_empty=allow_empty)
-        scores = _coerce_score_mapping(payload.get("scores"), n_labels=len(labels), name="scores")
-        if not scores:
+        scores = _coerce_score_mapping(
+            payload.get("scores"),
+            n_labels=len(labels),
+            name="scores",
+            allow_missing=allow_missing_scores,
+        )
+        if not scores and not allow_missing_scores:
             raise ValueError("score dump must contain at least one score family.")
         sweep_scores = _coerce_sweep_scores(payload.get("sweep_scores", {}), n_labels=len(labels))
         statements = _coerce_statements(
@@ -61,12 +67,14 @@ class ScoreDump:
         path: str | Path,
         *,
         allow_empty: bool = False,
+        allow_missing_scores: bool = False,
         require_statements: bool = False,
     ) -> "ScoreDump":
         """Load and validate a score dump from a UTF-8 JSON file."""
         return cls.from_mapping(
             json.loads(Path(path).read_text(encoding="utf-8")),
             allow_empty=allow_empty,
+            allow_missing_scores=allow_missing_scores,
             require_statements=require_statements,
         )
 
@@ -149,11 +157,17 @@ def load_score_dump(
     *,
     required_scores: Sequence[str] = (),
     allow_empty: bool = False,
+    allow_missing_scores: bool = False,
     require_statements: bool = False,
     primary_only: bool = True,
 ) -> ScoreDump:
     """Load a validated score dump and optionally require score names."""
-    dump = ScoreDump.load_json(path, allow_empty=allow_empty, require_statements=require_statements)
+    dump = ScoreDump.load_json(
+        path,
+        allow_empty=allow_empty,
+        allow_missing_scores=allow_missing_scores,
+        require_statements=require_statements,
+    )
     dump.require_scores(tuple(required_scores), primary_only=primary_only)
     return dump
 
@@ -185,7 +199,15 @@ def _coerce_labels(value: Any, *, allow_empty: bool) -> tuple[int, ...]:
     return labels
 
 
-def _coerce_score_mapping(value: Any, *, n_labels: int, name: str) -> dict[str, tuple[float, ...]]:
+def _coerce_score_mapping(
+    value: Any,
+    *,
+    n_labels: int,
+    name: str,
+    allow_missing: bool = False,
+) -> dict[str, tuple[float, ...]]:
+    if value is None and allow_missing:
+        return {}
     if not isinstance(value, Mapping):
         raise ValueError(f"score dump {name} must be an object.")
     scores: dict[str, tuple[float, ...]] = {}

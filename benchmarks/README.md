@@ -437,6 +437,9 @@ python benchmarks/eval_verifier_ensemble.py \
 
 Add `--compact-json` for large automated runs when the report is consumed by
 tools and does not need human-readable indentation.
+Each run validates inputs through `eigentruth.eval.ScoreDump` and records a
+`score_dump` summary plus SHA-256 fingerprint, so verifier-cache and route
+promotion evidence can be tied back to the exact score artifact.
 
 Add `--staged-verification` to benchmark the cost-aware control plane path. The
 script first calibrates a cheap internal diagnostic gate with `--staged-alpha`,
@@ -1973,7 +1976,8 @@ contains matching `sweep_scores`, those layer-specific scores are used; otherwis
 the primary `scores` payload is used only when its configured layer matches the
 artifact. The report includes self-application and cross-application false alarm,
 detection, coverage, selective accuracy, and a pass/fail flag for
-`false_alarm <= conformal_alpha + tolerance`.
+`false_alarm <= conformal_alpha + tolerance`. The top-level `score_dumps` field
+records the validated dump summary and SHA-256 for every target input.
 
 Current Qwen l80 / SmolLM2 l80 result: self-application controls false alarms for
 both artifacts, but cross-application controls 0/2. Qwen's l80 threshold applied

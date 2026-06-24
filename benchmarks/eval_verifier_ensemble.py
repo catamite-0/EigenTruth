@@ -45,6 +45,7 @@ from eigentruth.control import (
     VerificationStageDecision,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
+from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
@@ -102,23 +103,15 @@ def _parse_csv(value: str | None) -> tuple[str, ...]:
 
 
 def _load_scores(path: Path, signal: str) -> dict[str, Any]:
-    with open(path, encoding="utf-8") as f:
-        dump = json.load(f)
-    labels = torch.tensor(dump["labels"], dtype=torch.int64)
-    if labels.numel() == 0:
-        raise ValueError("score dump labels must be non-empty.")
-    if not torch.logical_or(labels == 0, labels == 1).all():
-        raise ValueError("score dump labels must be binary values in {0, 1}.")
-    if signal not in dump.get("scores", {}):
-        raise ValueError(f"score dump is missing signal {signal!r}.")
-    scores = torch.tensor(dump["scores"][signal], dtype=torch.float64)
-    if scores.numel() != labels.numel():
-        raise ValueError(f"score {signal!r} length does not match labels.")
+    dump = load_score_dump(path, required_scores=(signal,))
+    labels = torch.tensor(dump.labels, dtype=torch.int64)
+    scores = torch.tensor(dump.scores[signal], dtype=torch.float64)
     return {
-        "config": dict(dump.get("config", {})),
+        "config": dict(dump.config),
         "labels": labels,
         "scores": scores,
-        "statements": tuple(dump.get("statements", ())),
+        "statements": tuple(dump.statements),
+        "score_dump": dump,
     }
 
 
@@ -2000,6 +1993,7 @@ def build_verifier_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
+            "score_dump": score_dump_file_metadata(path, dump["score_dump"]),
             "config": dump["config"],
             "signal": signal,
             "direction": resolved_direction,

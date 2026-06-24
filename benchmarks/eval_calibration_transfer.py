@@ -14,6 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.eval.metrics import selective_classification_report
+from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
 
 DEFAULT_TOLERANCE = 0.03
 
@@ -193,9 +194,11 @@ def build_calibration_transfer_report(
         for name, path in artifacts
     ]
     loaded_dumps = []
+    score_dump_metadata = {}
     for name, path in score_dumps:
-        with open(path, encoding="utf-8") as f:
-            loaded_dumps.append((name, path, json.load(f)))
+        score_dump = load_score_dump(path)
+        loaded_dumps.append((name, path, score_dump.to_mapping()))
+        score_dump_metadata[name] = score_dump_file_metadata(path, score_dump)
 
     results = []
     for artifact_name, artifact_path, artifact in loaded_artifacts:
@@ -215,6 +218,7 @@ def build_calibration_transfer_report(
     return {
         "schema_version": 1,
         "tolerance": tolerance,
+        "score_dumps": score_dump_metadata,
         "summary": _summary(results),
         "results": results,
         "notes": list(notes),

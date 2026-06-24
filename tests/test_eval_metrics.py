@@ -174,3 +174,21 @@ class TestScoreDump:
         )
         with pytest.raises(ValueError, match="missing requested score"):
             load_score_dump(missing_path, required_scores=("truth_proj",))
+
+    def test_can_validate_statement_only_dump_when_explicitly_allowed(self, tmp_path):
+        path = tmp_path / "statement-dump.json"
+        path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "statements": [{"text": "true"}, {"text": "false"}],
+            }),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="scores"):
+            load_score_dump(path, require_statements=True)
+
+        dump = load_score_dump(path, allow_missing_scores=True, require_statements=True)
+
+        assert dump.summary()["score_count"] == 0
+        assert dump.summary()["statement_count"] == 2

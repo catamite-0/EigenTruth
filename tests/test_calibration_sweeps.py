@@ -56,6 +56,31 @@ def test_layer_score_sweep_report_selects_best_artifact(tmp_path):
     assert json.loads(path.read_text())["best"]["score_name"] == "maha_last"
 
 
+def test_layer_score_sweep_from_file_uses_validated_score_dump(tmp_path):
+    path = tmp_path / "scores.json"
+    path.write_text(json.dumps(_score_dump()), encoding="utf-8")
+
+    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_file(path)
+
+    assert report.scores_path == str(path)
+    assert report.best_score().score_name == "maha_last"
+
+    bad_path = tmp_path / "bad-scores.json"
+    bad_path.write_text(
+        json.dumps({
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1]},
+        }),
+        encoding="utf-8",
+    )
+    try:
+        LayerScoreSweepCalibrator().calibrate_from_file(bad_path)
+    except ValueError as exc:
+        assert "length does not match labels" in str(exc)
+    else:
+        raise AssertionError("invalid score dump should be rejected")
+
+
 def test_layer_score_sweep_supports_lower_is_anomalous_scores():
     dump = {
         "config": {"model": "tiny", "layer": 0},

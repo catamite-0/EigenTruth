@@ -180,6 +180,9 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert fixture["records"][1]["metadata"]["retrieval"]["query"] == "The capital of France is Lyon."
     assert fixture["retriever"]["requested_backend"] == "memory"
     assert fixture["retriever"]["actual_backend"] == "memory"
+    assert run["score_dump"]["summary"]["n_total"] == 3
+    assert run["score_dump"]["summary"]["score_names"] == ("truth_proj",)
+    assert run["score_dump"]["sha256"]
     assert quality["label_status_matrix"]["true"]["supported"] == 1
     assert quality["label_status_matrix"]["true"]["insufficient_evidence"] == 1
     assert quality["label_status_matrix"]["false"]["refuted"] == 1
@@ -10175,6 +10178,9 @@ def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
     assert payload["summary"]["self_false_alarm_controlled"] == 1
     assert payload["summary"]["transfer_false_alarm_controlled"] == 0
     assert payload["summary"]["transfer_failures"][0]["target_dump"] == "shifted"
+    assert payload["score_dumps"]["source"]["summary"]["n_total"] == 6
+    assert payload["score_dumps"]["source"]["summary"]["sweep_layers"] == ("-2",)
+    assert payload["score_dumps"]["shifted"]["sha256"]
     assert self_result["score_source"] == "sweep_scores"
     assert self_result["selective_report"]["false_alarm"] == pytest.approx(0.0)
     assert transfer_result["selective_report"]["false_alarm"] == pytest.approx(1.0)

@@ -16,6 +16,8 @@ from typing import Any, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from eigentruth.eval.score_dump import load_score_dump as _load_validated_score_dump
+
 SAMPLE_KEYS = (
     "selfcheck_samples",
     "sampled_responses",
@@ -29,18 +31,11 @@ SAMPLE_KEYS = (
 
 def load_score_dump(path: Path) -> dict[str, Any]:
     """Load and validate a statement-bearing score dump."""
-    with open(path, encoding="utf-8") as f:
-        dump = json.load(f)
-    labels = tuple(int(label) for label in dump.get("labels", ()))
-    statements = tuple(dump.get("statements", ()))
-    if not labels:
-        raise ValueError("score dump must contain non-empty labels.")
-    if len(statements) != len(labels):
-        raise ValueError(
-            "score dump must contain a 'statements' list with one record per label; "
-            f"got {len(statements)} statements and {len(labels)} labels."
-        )
-    return dump
+    return _load_validated_score_dump(
+        path,
+        allow_missing_scores=True,
+        require_statements=True,
+    ).to_mapping()
 
 
 def load_sample_payloads(paths: Sequence[Path]) -> tuple[Mapping[str, Any] | Sequence[Any], ...]:
