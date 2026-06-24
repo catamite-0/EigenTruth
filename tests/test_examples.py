@@ -386,6 +386,58 @@ def test_calibrated_control_demo_pre_generation_profile_records_and_applies():
     assert payload["metadata"]["staged_verification_enabled"] is False
 
 
+def test_calibrated_control_demo_uses_promotion_contract_release_efficiency_profile(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract
+
+    artifact = demo.default_artifact()
+    contract_path = tmp_path / "promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        release_efficiency={
+            "status": "promote",
+            "recommended_profile": "latency",
+            "recommended_efficiency_score": 2.0,
+        },
+        source_status="promote",
+    ).save_json(contract_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=json.dumps(demo.low_diagnostics_for_artifact(artifact)),
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            pre_generation_profile="off",
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=str(contract_path),
+            request_id="contract-release-efficiency-profile",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert payload["metadata"]["runtime_profile"] == "latency"
+    assert payload["metadata"]["runtime_profile_source"] == "promotion_contract_release_efficiency"
+    assert payload["metadata"]["promotion_contract_release_efficiency"] == {
+        "status": "promote",
+        "recommended_profile": "latency",
+        "recommended_efficiency_score": 2.0,
+    }
+    assert payload["metadata"]["staged_verification_enabled"] is True
+    assert payload["metadata"]["verification_stage_summary"]["skipped"] is True
+    assert payload["risk_decision"]["action"] == "accept"
+
+
 def test_calibrated_control_demo_can_record_runtime_budget_result():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

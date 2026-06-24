@@ -122,7 +122,10 @@ verification, using prompt features and optional `--pre-generation-metadata`;
 its assessment is recorded in `metadata.pre_generation_risk_assessment`, and
 `metadata.runtime_profile_source` shows whether the effective runtime profile
 came from pre-generation routing, post-diagnostic auto routing, or an explicit
-profile.
+profile. When no explicit or pre-generation profile is selected, a
+`ProductPromotionContract` with promoted release-efficiency evidence supplies
+the default runtime profile; the trace records this as
+`metadata.runtime_profile_source="promotion_contract_release_efficiency"`.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence

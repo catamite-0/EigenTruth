@@ -11,8 +11,10 @@ used by default; otherwise the script falls back to the Qwen l80 artifact and
 then toy thresholds. When the SmolLM2 structured-retrieval-audit release
 candidate is present, its product promotion contract supplies the default
 verifier route, calibrated control defaults, adapter-family metadata, and
-required-audit metadata; pass it explicitly with `--promotion-contract` to also
-enforce its runtime budget policy.
+required-audit metadata. When that contract carries promoted release-efficiency
+evidence, it also supplies the default runtime profile unless an explicit or
+pre-generation profile is selected; pass it explicitly with
+`--promotion-contract` to also enforce its runtime budget policy.
 """
 
 from __future__ import annotations
@@ -477,6 +479,30 @@ def resolve_runtime_profile(
     return get_runtime_profile(requested_profile), None
 
 
+def runtime_profile_from_release_efficiency(
+    promotion_contract: ProductPromotionContract | None,
+) -> str | None:
+    """Return a promoted release-efficiency runtime profile recommendation."""
+    if promotion_contract is None:
+        return None
+    release_efficiency = dict(promotion_contract.release_efficiency)
+    status = release_efficiency.get("status")
+    if status != "promote":
+        return None
+    raw_profile = release_efficiency.get("recommended_profile")
+    if raw_profile is None:
+        return None
+    profile = str(raw_profile)
+    allowed = {*RUNTIME_PROFILE_NAMES, "auto"}
+    if profile not in allowed:
+        allowed_values = ", ".join((*RUNTIME_PROFILE_NAMES, "auto"))
+        raise ValueError(
+            "promotion contract release_efficiency recommended_profile must be "
+            f"one of: {allowed_values}."
+        )
+    return profile
+
+
 def load_runtime_profile_selector_policy(path: str | None) -> RuntimeProfileSelectorPolicy | None:
     """Load an optional runtime-profile selector policy from JSON."""
     if path is None:
@@ -673,6 +699,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if effective_runtime_profile is None and pre_generation_assessment is not None:
         effective_runtime_profile = pre_generation_assessment.selected_profile
         runtime_profile_source = "pre_generation"
+    elif effective_runtime_profile is None:
+        effective_runtime_profile = runtime_profile_from_release_efficiency(
+            promotion_contract
+        )
+        if effective_runtime_profile is not None:
+            runtime_profile_source = "promotion_contract_release_efficiency"
     elif effective_runtime_profile == "auto":
         runtime_profile_source = "post_diagnostic_auto"
     elif effective_runtime_profile is not None:
