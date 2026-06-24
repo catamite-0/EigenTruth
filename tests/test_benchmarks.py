@@ -589,6 +589,18 @@ def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifie
         "labels_used_for_retrieval": False,
         "labels_copied_to_record_metadata": False,
     }
+    provenance = fixture["input_provenance"]
+    assert provenance["schema_version"] == 1
+    assert provenance["builder"] == "build_evidence_fixture"
+    assert provenance["score_dump"]["path"] == str(scores_path)
+    assert provenance["score_dump"]["exists"] is True
+    assert provenance["score_dump"]["summary"]["n_total"] == 3
+    assert provenance["score_dump"]["identity"]["content_hash"] == provenance["score_dump"]["sha256"]
+    assert provenance["corpora"][0]["path"] == str(corpus_path)
+    assert provenance["corpora"][0]["exists"] is True
+    assert provenance["retriever_index"] is None
+    assert provenance["config"]["include_label_metadata"] is False
+    assert provenance["config"]["query_field"] == "answer"
     assert json.loads(output_path.read_text(encoding="utf-8"))["label_usage"] == fixture["label_usage"]
     assert "score_label" not in fixture["records"][0]["metadata"]
     assert "score_label" not in fixture["records"][1]["metadata"]
@@ -708,6 +720,7 @@ def test_local_retrieval_workflow_can_gate_retrieval_structured_qa(tmp_path):
             query_field="question",
             retriever_min_overlap=1.0,
             retrieval_limit=1,
+            include_label_metadata=False,
             gate_routes=("retrieval_structured_qa",),
             min_selected=4,
             gate_min_selected=4,
@@ -720,8 +733,18 @@ def test_local_retrieval_workflow_can_gate_retrieval_structured_qa(tmp_path):
         )
     )
     route = payload["adapter_promotion"]["route_comparison"]["by_route"]["retrieval_structured_qa"]
+    claims = json.loads((output_dir / "retrieval-claims.json").read_text(encoding="utf-8"))
 
     assert payload["decision"]["status"] == "promote"
+    assert payload["config"]["include_label_metadata"] is False
+    assert claims["label_usage"] == {
+        "labels_used_for_retrieval": False,
+        "labels_copied_to_record_metadata": False,
+    }
+    assert "score_label" not in claims["records"][0]["metadata"]
+    assert claims["input_provenance"]["score_dump"]["path"] == str(scores_path)
+    assert claims["input_provenance"]["corpora"][0]["path"] == str(corpus_path)
+    assert claims["input_provenance"]["config"]["include_label_metadata"] is False
     assert payload["adapter_promotion"]["decision"]["recommended_route"] == "retrieval_structured_qa"
     assert route["selected"] == 4
     assert route["decision_accuracy"] == pytest.approx(1.0)
@@ -2949,6 +2972,8 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert manifest["metadata"]["retriever_backend"] == "auto"
     assert manifest["metadata"]["retriever_requested_index_path"] == str(retriever_index_path)
     assert manifest["metadata"]["retriever_actual_backend"] in {"sqlite_fts", "memory"}
+    assert manifest["metadata"]["labels_used_for_retrieval"] is False
+    assert manifest["metadata"]["labels_copied_to_record_metadata"] is True
     if manifest["metadata"]["retriever_actual_backend"] == "sqlite_fts":
         assert manifest["metadata"]["retriever_actual_index_path"] == str(retriever_index_path)
     else:

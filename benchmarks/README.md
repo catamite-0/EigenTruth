@@ -1765,7 +1765,9 @@ uses dependency-free token-overlap retrieval with optional SQLite FTS candidate
 indexing, and copies labels only into audit metadata; retrieval is driven by
 claim text. Use `--omit-label-metadata` when producing fixture artifacts for
 adapter audits where labels should remain only in the score dump used for
-evaluation.
+evaluation. CLI-built fixtures include `input_provenance` with the score dump
+metadata, corpus fingerprints, optional retriever-index fingerprint, and the
+effective builder config.
 
 ```bash
 python benchmarks/build_evidence_fixture.py \
@@ -1821,6 +1823,7 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --retriever-index-path artifacts/cache/local_retrieval_fts/qwen05_l80.sqlite \
   --retriever-min-overlap 0.95 \
   --retrieval-limit 3 \
+  --omit-label-metadata \
   --claims-cache-dir artifacts/cache/local_retrieval_claims \
   --verifier-trace-cache-dir artifacts/cache/verifier_traces \
   --gate-route retrieval_structured_qa \
@@ -1836,9 +1839,12 @@ Use this when the local corpus baseline should enter `compare_route_baselines.py
 and release-candidate gates. Pass the resulting registry key to
 `compare_release_candidates.py --required-route-baseline-key` when it should be a
 mandatory audit baseline while another route remains the selected product path.
-Unlike `build_evidence_fixture.py` alone, this
-workflow records the full provenance chain needed for recursive manifest
-verification. The workflow report also includes a lightweight `profile` block
+Unlike `build_evidence_fixture.py` alone, this workflow records the full
+provenance chain needed for recursive manifest verification. The generated
+claims fixture also carries `input_provenance` and `label_usage`; use
+`--omit-label-metadata` to keep labels only in the score dump while preserving
+label-conditioned evaluation in the verifier report. The workflow report also
+includes a lightweight `profile` block
 with phase timings, input/output artifact byte sizes, dataset scale, retrieval
 hit counts, and route-count metadata. The same runtime summary is copied into
 the artifact manifest and registry metadata so route baselines can be compared

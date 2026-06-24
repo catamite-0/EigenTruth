@@ -18,7 +18,14 @@ from typing import Any, Mapping, Sequence
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from eigentruth.adapters import InMemoryRetriever, RetrievalHit, RetrievalQuery, SQLiteFTSRetriever
-from eigentruth.eval.score_dump import load_score_dump as _load_validated_score_dump
+from eigentruth.eval.score_dump import (
+    ScoreDump,
+    score_dump_file_metadata,
+)
+from eigentruth.eval.score_dump import (
+    load_score_dump as _load_validated_score_dump,
+)
+from eigentruth.registry import fingerprint_path
 
 RETRIEVER_BACKENDS = ("memory", "sqlite_fts", "auto")
 
@@ -147,10 +154,49 @@ def build_evidence_fixture(
     }
 
 
+def build_evidence_input_provenance(
+    *,
+    scores_path: str | Path,
+    corpus_paths: Sequence[str | Path],
+    score_dump: ScoreDump | Mapping[str, Any] | None = None,
+    retriever_backend: str = "memory",
+    retriever_index_path: str | Path | None = None,
+    retriever_min_overlap: float = 0.2,
+    retrieval_limit: int = 5,
+    query_field: str = "text",
+    include_label_metadata: bool = True,
+) -> dict[str, Any]:
+    """Build input fingerprints and builder settings for fixture reproducibility."""
+    score_dump_obj = _coerce_score_dump_for_metadata(score_dump)
+    index_path = None if retriever_index_path is None else Path(retriever_index_path)
+    return {
+        "schema_version": 1,
+        "builder": "build_evidence_fixture",
+        "score_dump": score_dump_file_metadata(scores_path, score_dump_obj),
+        "corpora": [fingerprint_path(path).to_dict() for path in corpus_paths],
+        "retriever_index": None if index_path is None else fingerprint_path(index_path).to_dict(),
+        "config": {
+            "retriever_backend": retriever_backend,
+            "retriever_min_overlap": float(retriever_min_overlap),
+            "retrieval_limit": int(retrieval_limit),
+            "query_field": query_field,
+            "include_label_metadata": bool(include_label_metadata),
+        },
+    }
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the CLI command."""
-    dump = load_score_dump(Path(args.scores))
-    corpus = load_corpus(tuple(Path(path) for path in args.corpus))
+    scores_path = Path(args.scores)
+    corpus_paths = tuple(Path(path) for path in args.corpus)
+    validated_dump = _load_validated_score_dump(
+        scores_path,
+        allow_missing_scores=True,
+        require_statements=True,
+    )
+    dump = validated_dump.to_mapping()
+    corpus = load_corpus(corpus_paths)
+    include_label_metadata = not bool(args.omit_label_metadata)
     fixture = build_evidence_fixture(
         dump,
         corpus,
@@ -159,7 +205,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         query_field=args.query_field,
         retriever_backend=args.retriever_backend,
         retriever_index_path=args.retriever_index_path,
-        include_label_metadata=not bool(args.omit_label_metadata),
+        include_label_metadata=include_label_metadata,
+    )
+    fixture["input_provenance"] = build_evidence_input_provenance(
+        scores_path=scores_path,
+        corpus_paths=corpus_paths,
+        score_dump=validated_dump,
+        retriever_backend=args.retriever_backend,
+        retriever_index_path=args.retriever_index_path,
+        retriever_min_overlap=args.retriever_min_overlap,
+        retrieval_limit=args.retrieval_limit,
+        query_field=args.query_field,
+        include_label_metadata=include_label_metadata,
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -178,6 +235,18 @@ def _statement_text(statement: Mapping[str, Any]) -> str:
     if not text:
         raise ValueError("statement record is missing claim/text/answer.")
     return text
+
+
+def _coerce_score_dump_for_metadata(score_dump: ScoreDump | Mapping[str, Any] | None) -> ScoreDump | None:
+    if score_dump is None:
+        return None
+    if isinstance(score_dump, ScoreDump):
+        return score_dump
+    return ScoreDump.from_mapping(
+        score_dump,
+        allow_missing_scores=True,
+        require_statements=True,
+    )
 
 
 def _build_retriever(

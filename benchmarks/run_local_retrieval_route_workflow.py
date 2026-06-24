@@ -21,6 +21,7 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.build_evidence_fixture import (  # noqa: E402
     RETRIEVER_BACKENDS,
     build_evidence_fixture,
+    build_evidence_input_provenance,
     load_corpus,
     load_score_dump,
 )
@@ -57,6 +58,7 @@ class LocalRetrievalRouteWorkflowConfig:
     query_field: str = "answer"
     retriever_backend: str = "memory"
     retriever_index_path: Path | None = None
+    include_label_metadata: bool = True
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.20
     retrieval_limit: int = 5
@@ -190,6 +192,18 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
                 query_field=config.query_field,
                 retriever_backend=config.retriever_backend,
                 retriever_index_path=config.retriever_index_path,
+                include_label_metadata=config.include_label_metadata,
+            )
+            claims_fixture["input_provenance"] = build_evidence_input_provenance(
+                scores_path=config.scores_path,
+                corpus_paths=config.corpus_paths,
+                score_dump=score_dump,
+                retriever_backend=config.retriever_backend,
+                retriever_index_path=config.retriever_index_path,
+                retriever_min_overlap=config.retriever_min_overlap,
+                retrieval_limit=config.retrieval_limit,
+                query_field=config.query_field,
+                include_label_metadata=config.include_label_metadata,
             )
         claims_cache = {
             **claims_cache,
@@ -336,6 +350,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "query_field": config.query_field,
             "retriever_backend": config.retriever_backend,
             "retriever_index_path": None if config.retriever_index_path is None else str(config.retriever_index_path),
+            "include_label_metadata": bool(config.include_label_metadata),
             "verifier_min_overlap": float(config.verifier_min_overlap),
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
@@ -449,6 +464,7 @@ def _manifest_metadata(
     quality_gate = dict(route_comparison.get("quality_gate") or {})
     summary = dict(claims_fixture.get("summary") or {})
     retriever_info = dict(claims_fixture.get("retriever") or {})
+    label_usage = dict(claims_fixture.get("label_usage") or {})
     trace_cache = _verifier_trace_cache_summary(verifier_report)
     runtime_summary = dict(runtime_profile.get("summary") or {})
     runtime_scale = dict(runtime_profile.get("scale") or {})
@@ -474,6 +490,8 @@ def _manifest_metadata(
         "retriever_actual_backend": retriever_info.get("actual_backend"),
         "retriever_actual_index_path": retriever_info.get("actual_index_path"),
         "retriever_index_reused": retriever_info.get("index_reused"),
+        "labels_used_for_retrieval": label_usage.get("labels_used_for_retrieval"),
+        "labels_copied_to_record_metadata": label_usage.get("labels_copied_to_record_metadata"),
         "verifier_min_overlap": float(config.verifier_min_overlap),
         "retriever_min_overlap": float(config.retriever_min_overlap),
         "retrieval_limit": int(config.retrieval_limit),
@@ -555,7 +573,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
     return {
         "schema_version": 1,
         "cache_type": "local_retrieval_claims",
-        "builder": "build_evidence_fixture:v2",
+        "builder": "build_evidence_fixture:v3",
         "score_dump": fingerprint_path(config.scores_path).to_dict(),
         "corpora": [fingerprint_path(path).to_dict() for path in config.corpus_paths],
         "retrieval": {
@@ -563,6 +581,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
             "retriever_backend": config.retriever_backend,
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
+            "include_label_metadata": bool(config.include_label_metadata),
         },
     }
 
@@ -943,6 +962,7 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         query_field=args.query_field,
         retriever_backend=args.retriever_backend,
         retriever_index_path=None if args.retriever_index_path is None else Path(args.retriever_index_path),
+        include_label_metadata=not bool(args.omit_label_metadata),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -1024,6 +1044,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--retriever-index-path",
         default=None,
         help="optional persistent SQLite FTS index path for sqlite_fts/auto backends",
+    )
+    parser.add_argument(
+        "--omit-label-metadata",
+        action="store_true",
+        help="do not copy score labels into generated claims fixture record metadata",
     )
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.20)
