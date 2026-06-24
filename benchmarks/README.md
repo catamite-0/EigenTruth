@@ -1257,12 +1257,12 @@ python benchmarks/compare_release_candidates.py \
 Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
-Release and route comparison workflows reuse a process-local JSON artifact cache
-while loading manifests and reports; cache entries are keyed by path, mtime,
-size, and inode so edited artifacts are reloaded in the same process. Reports
-include `summary.artifact_json_cache` with requests, hits, misses, errors,
-entries, and hit rate so large registry sweeps can audit whether artifact IO is
-being reused.
+Readiness, release, and route comparison workflows reuse a process-local JSON
+artifact cache while loading manifests and reports; cache entries are keyed by
+path, mtime, size, and inode so edited artifacts are reloaded in the same
+process. Reports include `summary.artifact_json_cache` with requests, hits,
+misses, errors, entries, and hit rate so large registry sweeps can audit whether
+artifact IO is being reused.
 Repeat `--required-route-baseline-key` when the release should also require
 additional promoted route baselines, such as a real local-corpus
 `retrieval_groundedness` baseline, without making that route the selected

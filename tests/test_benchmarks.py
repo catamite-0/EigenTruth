@@ -4460,6 +4460,55 @@ def test_compare_readiness_baselines_recommends_best_quality_signal_from_matrix(
     }
 
 
+def test_compare_readiness_baselines_accepts_process_local_json_cache(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.5",
+        model="HuggingFaceTB/SmolLM2-135M-Instruct",
+        layer=-16,
+        quality_signals={"truth_proj": 0.61},
+        uncached_forward_seconds=12.0,
+        cache_only_seconds=0.12,
+    )
+    json_cache: dict[str, dict[str, Any]] = {}
+
+    first = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        json_cache=json_cache,
+    )
+    cached_keys = set(json_cache)
+    second = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        json_cache=json_cache,
+    )
+
+    assert first["decision"]["status"] == "promote"
+    assert second["decision"]["status"] == "promote"
+    assert first["summary"]["artifact_json_cache"] == {
+        "requests": 2,
+        "hits": 0,
+        "misses": 2,
+        "errors": 0,
+        "entries": 2,
+        "hit_rate": pytest.approx(0.0),
+    }
+    assert second["summary"]["artifact_json_cache"] == {
+        "requests": 2,
+        "hits": 2,
+        "misses": 0,
+        "errors": 0,
+        "entries": 2,
+        "hit_rate": pytest.approx(1.0),
+    }
+    assert len(cached_keys) == 2
+    assert set(json_cache) == cached_keys
+
+
 def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
     module = importlib.import_module("benchmarks.compare_readiness_baselines")
 
@@ -4719,6 +4768,9 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     )
 
     assert payload["decision"]["status"] == "promote"
+    assert payload["summary"]["artifact_json_cache"]["requests"] >= 6
+    assert payload["summary"]["artifact_json_cache"]["errors"] == 0
+    assert payload["readiness_baseline_comparison"]["summary"]["artifact_json_cache"]["requests"] == 4
     assert payload["decision"]["recommended_readiness_record"] == "benchmark_manifest:qwen-readiness:0.6"
     assert payload["decision"]["recommended_route_record"] == "benchmark_manifest:structured-route:0.6"
     assert candidate["model"] == "Qwen/Qwen2.5-0.5B-Instruct"

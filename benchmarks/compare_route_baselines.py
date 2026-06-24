@@ -14,12 +14,17 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks import artifact_json_cache as _artifact_json_cache  # noqa: E402
 from benchmarks.runtime_budget_policy import (  # noqa: E402
     RuntimeBudgetPolicy,
     evaluate_runtime_budget,
     runtime_metrics_from_metadata,
 )
 from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
+
+_json_cache_summary = _artifact_json_cache.json_cache_summary
+_load_optional_json = _artifact_json_cache.load_optional_json
+_new_json_cache_stats = _artifact_json_cache.new_json_cache_stats
 
 
 def compare_route_baselines(
@@ -629,85 +634,6 @@ def _resolve_artifact_path(
     if path.is_absolute():
         return path
     return manifest_path.parent / path
-
-
-def _load_optional_json(
-    path: Path,
-    *,
-    json_cache: MutableMapping[str, dict[str, Any]] | None = None,
-    json_cache_stats: MutableMapping[str, int] | None = None,
-) -> tuple[dict[str, Any], str | None]:
-    _increment_json_cache_stat(json_cache_stats, "requests")
-    cache_key = None if json_cache is None else _json_cache_key(path)
-    if cache_key is not None:
-        cached = json_cache.get(cache_key)
-        if cached is not None:
-            error = cached.get("error")
-            _increment_json_cache_stat(json_cache_stats, "hits")
-            if error is not None:
-                _increment_json_cache_stat(json_cache_stats, "errors")
-            return _mapping(cached.get("payload")), error
-    _increment_json_cache_stat(json_cache_stats, "misses")
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        error = str(exc)
-        _increment_json_cache_stat(json_cache_stats, "errors")
-        if cache_key is not None:
-            json_cache[cache_key] = {"payload": {}, "error": error}
-        return {}, error
-    if not isinstance(payload, dict):
-        error = f"{path} did not contain a JSON object"
-        _increment_json_cache_stat(json_cache_stats, "errors")
-        if cache_key is not None:
-            json_cache[cache_key] = {"payload": {}, "error": error}
-        return {}, error
-    if cache_key is not None:
-        json_cache[cache_key] = {"payload": dict(payload), "error": None}
-    return payload, None
-
-
-def _json_cache_key(path: Path) -> str | None:
-    try:
-        stat = path.stat()
-    except OSError:
-        return None
-    try:
-        resolved = path.resolve(strict=False)
-    except OSError:
-        resolved = path.absolute()
-    return f"{resolved}:{stat.st_mtime_ns}:{stat.st_size}:{getattr(stat, 'st_ino', 0)}"
-
-
-def _new_json_cache_stats() -> dict[str, int]:
-    return {
-        "requests": 0,
-        "hits": 0,
-        "misses": 0,
-        "errors": 0,
-    }
-
-
-def _increment_json_cache_stat(stats: MutableMapping[str, int] | None, key: str) -> None:
-    if stats is None:
-        return
-    stats[key] = int(stats.get(key, 0)) + 1
-
-
-def _json_cache_summary(
-    json_cache: Mapping[str, Any],
-    stats: Mapping[str, int],
-) -> dict[str, Any]:
-    requests = int(stats.get("requests", 0))
-    hits = int(stats.get("hits", 0))
-    return {
-        "requests": requests,
-        "hits": hits,
-        "misses": int(stats.get("misses", 0)),
-        "errors": int(stats.get("errors", 0)),
-        "entries": len(json_cache),
-        "hit_rate": 0.0 if requests <= 0 else float(hits) / float(requests),
-    }
 
 
 def _float_or_none(value: Any) -> float | None:

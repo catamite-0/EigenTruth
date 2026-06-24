@@ -14,11 +14,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks import artifact_json_cache as _artifact_json_cache  # noqa: E402
 from benchmarks.recommend_runtime_config import (  # noqa: E402
     INSIDE_TRIGGER_BUDGET_POLICIES,
     build_runtime_recommendation,
 )
 from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
+
+_json_cache_summary = _artifact_json_cache.json_cache_summary
+_load_optional_json = _artifact_json_cache.load_optional_json
+_new_json_cache_stats = _artifact_json_cache.new_json_cache_stats
 
 
 def compare_readiness_baselines(
@@ -35,9 +40,13 @@ def compare_readiness_baselines(
     max_inside_generation_seconds_ratio: float | None = None,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered readiness baselines."""
     cache = fingerprint_cache if fingerprint_cache is not None else {}
+    payload_cache = json_cache if json_cache is not None else {}
+    payload_cache_stats = json_cache_stats if json_cache_stats is not None else _new_json_cache_stats()
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
@@ -55,6 +64,8 @@ def compare_readiness_baselines(
             max_inside_sample_count_ratio=max_inside_sample_count_ratio,
             max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
             fingerprint_cache=cache,
+            json_cache=payload_cache,
+            json_cache_stats=payload_cache_stats,
         )
         for record in records
     ]
@@ -80,6 +91,7 @@ def compare_readiness_baselines(
             "record_count": len(rows),
             "passing_count": sum(1 for row in rows if row["gate"]["passed"]),
             "recommended_record": None if recommendation is None else recommendation["record_key"],
+            "artifact_json_cache": _json_cache_summary(payload_cache, payload_cache_stats),
         },
         "decision": decision,
         "leaderboard": leaderboard,
@@ -128,9 +140,15 @@ def _readiness_row(
     max_inside_sample_count_ratio: float | None,
     max_inside_generation_seconds_ratio: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
-    manifest, manifest_error = _load_optional_json(manifest_path)
+    manifest, manifest_error = _load_optional_json(
+        manifest_path,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
     verification = _verify_manifest(
         manifest_path,
         recursive=recursive,
@@ -142,6 +160,8 @@ def _readiness_row(
         manifest,
         manifest_metadata,
         inside_trigger_budget_policy=inside_trigger_budget_policy,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _best_quality(recommendation, manifest_metadata)
@@ -246,6 +266,8 @@ def _runtime_recommendation_from_manifest(
     manifest_metadata: Mapping[str, Any],
     *,
     inside_trigger_budget_policy: str | None,
+    json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
 ) -> tuple[dict[str, Any], str | None]:
     performance_matrix_path = _resolve_artifact_path(
         manifest_path,
@@ -253,7 +275,11 @@ def _runtime_recommendation_from_manifest(
         artifact_name="performance_matrix_report",
     )
     if performance_matrix_path is not None:
-        matrix_report, _ = _load_optional_json(performance_matrix_path)
+        matrix_report, _ = _load_optional_json(
+            performance_matrix_path,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
         if matrix_report:
             inside_sampling_path = _resolve_artifact_path(
                 manifest_path,
@@ -263,7 +289,11 @@ def _runtime_recommendation_from_manifest(
             inside_sampling_report, _ = (
                 ({}, None)
                 if inside_sampling_path is None
-                else _load_optional_json(inside_sampling_path)
+                else _load_optional_json(
+                    inside_sampling_path,
+                    json_cache=json_cache,
+                    json_cache_stats=json_cache_stats,
+                )
             )
             inside_trigger_budget_sweep_path = _resolve_artifact_path(
                 manifest_path,
@@ -273,7 +303,11 @@ def _runtime_recommendation_from_manifest(
             inside_trigger_budget_sweep_report, _ = (
                 ({}, None)
                 if inside_trigger_budget_sweep_path is None
-                else _load_optional_json(inside_trigger_budget_sweep_path)
+                else _load_optional_json(
+                    inside_trigger_budget_sweep_path,
+                    json_cache=json_cache,
+                    json_cache_stats=json_cache_stats,
+                )
             )
             return (
                 build_runtime_recommendation(
@@ -301,7 +335,11 @@ def _runtime_recommendation_from_manifest(
         artifact_name="runtime_recommendation",
     )
     if runtime_path is not None:
-        runtime, _ = _load_optional_json(runtime_path)
+        runtime, _ = _load_optional_json(
+            runtime_path,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
         if runtime:
             return runtime, str(runtime_path)
 
@@ -503,16 +541,6 @@ def _resolve_artifact_path(
     if path.is_absolute():
         return path
     return manifest_path.parent / path
-
-
-def _load_optional_json(path: Path) -> tuple[dict[str, Any], str | None]:
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        return {}, str(exc)
-    if not isinstance(payload, dict):
-        return {}, f"{path} did not contain a JSON object"
-    return payload, None
 
 
 def _best_quality(
