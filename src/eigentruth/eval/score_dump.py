@@ -155,6 +155,28 @@ class ScoreDump:
 
 
 @dataclass(frozen=True)
+class ScoreDumpColumns:
+    """Selected primary score columns loaded from a score dump."""
+
+    labels: tuple[int, ...]
+    scores: Mapping[str, tuple[float, ...]]
+    config: Mapping[str, Any] = field(default_factory=dict)
+    summary: Mapping[str, Any] = field(default_factory=dict)
+    source_format: str = "json"
+
+    @property
+    def n_total(self) -> int:
+        """Return the number of records in the selected view."""
+        return len(self.labels)
+
+    def require_scores(self, names: Sequence[str]) -> None:
+        """Raise if required score columns are missing from this view."""
+        missing = [name for name in names if name not in self.scores]
+        if missing:
+            raise ValueError(f"score dump is missing requested score(s): {missing}.")
+
+
+@dataclass(frozen=True)
 class ScoreDumpRecord:
     """One streaming row from a JSONL score dump."""
 
@@ -345,6 +367,34 @@ def load_score_dump(
     return dump
 
 
+def load_score_dump_columns(
+    path: str | Path,
+    score_names: Sequence[str],
+    *,
+    allow_empty: bool = False,
+) -> ScoreDumpColumns:
+    """Load selected primary score columns without materializing unused JSONL columns."""
+    requested = tuple(str(name) for name in score_names)
+    if not requested:
+        raise ValueError("at least one score name is required.")
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if _is_jsonl_manifest_payload(payload):
+        return _load_score_dump_jsonl_columns(
+            Path(path),
+            ScoreDumpJsonlManifest.from_mapping(payload),
+            score_names=requested,
+            allow_empty=allow_empty,
+        )
+    dump = ScoreDump.from_mapping(payload, allow_empty=allow_empty)
+    dump.require_scores(requested)
+    return ScoreDumpColumns(
+        labels=dump.labels,
+        scores={name: dump.scores[name] for name in requested},
+        config=dict(dump.config),
+        summary=dump.summary(),
+    )
+
+
 def iter_score_dump_jsonl_records(
     manifest_path: str | Path,
     *,
@@ -501,6 +551,71 @@ def _load_score_dump_jsonl_manifest(
         allow_missing_scores=allow_missing_scores,
         require_statements=require_statements,
     )
+
+
+def _load_score_dump_jsonl_columns(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    score_names: Sequence[str],
+    allow_empty: bool,
+) -> ScoreDumpColumns:
+    missing = [name for name in score_names if name not in manifest.score_names]
+    if missing:
+        raise ValueError(f"score dump is missing requested score(s): {missing}.")
+
+    labels: list[int] = []
+    scores = {name: [] for name in score_names}
+    for record in _iter_score_dump_jsonl_records(
+        manifest_path=manifest_path,
+        manifest=manifest,
+        allow_missing_scores=False,
+        require_statements=False,
+    ):
+        labels.append(record.label)
+        for name in score_names:
+            scores[name].append(record.scores[name])
+
+    if not labels and not allow_empty:
+        raise ValueError("score dump labels must be non-empty.")
+    label_tuple = tuple(labels)
+    return ScoreDumpColumns(
+        labels=label_tuple,
+        scores={name: tuple(values) for name, values in scores.items()},
+        config=dict(manifest.config),
+        summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
+        source_format=JSONL_FORMAT,
+    )
+
+
+def _jsonl_manifest_summary(
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    labels: Sequence[int],
+) -> dict[str, Any]:
+    sweep_layers = tuple(sorted((str(layer) for layer in manifest.sweep_score_names), key=_layer_sort_key))
+    sweep_score_names = tuple(sorted({
+        name
+        for layer_scores in manifest.sweep_score_names.values()
+        for name in layer_scores
+    }))
+    score_names = tuple(manifest.score_names)
+    return {
+        "n_total": len(labels),
+        "n_true": sum(1 for label in labels if label == 0),
+        "n_false": sum(1 for label in labels if label == 1),
+        "score_count": len(score_names),
+        "score_names": score_names,
+        "sweep_layer_count": len(manifest.sweep_score_names),
+        "sweep_layers": sweep_layers,
+        "sweep_score_count": sum(len(score_names) for score_names in manifest.sweep_score_names.values()),
+        "sweep_score_names": sweep_score_names,
+        "all_signal_names": tuple(sorted(set(score_names).union(sweep_score_names))),
+        "has_statements": bool(manifest.has_statements),
+        "statement_count": len(labels) if manifest.has_statements else 0,
+        "model": manifest.config.get("model"),
+        "layer": manifest.config.get("layer"),
+    }
 
 
 def _iter_score_dump_jsonl_records(

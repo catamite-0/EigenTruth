@@ -19,6 +19,7 @@ from eigentruth.eval.score_dump import (
     ScoreDump,
     iter_score_dump_jsonl_records,
     load_score_dump,
+    load_score_dump_columns,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -291,3 +292,25 @@ class TestScoreDump:
 
         with pytest.raises(ValueError, match="missing score"):
             load_score_dump(manifest_path)
+
+    def test_load_score_dump_columns_reads_selected_jsonl_scores(self, tmp_path, monkeypatch):
+        dump = ScoreDump.from_mapping({
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "unused": [99.0, 100.0],
+            },
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(dump, manifest_path)
+
+        def fail_from_mapping(*args, **kwargs):
+            raise AssertionError("JSONL column loading should not materialize ScoreDump")
+
+        monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+        columns = load_score_dump_columns(manifest_path, ("maha_last",))
+
+        assert columns.labels == (0, 1)
+        assert columns.scores == {"maha_last": (0.1, 0.9)}
+        assert columns.summary["score_names"] == ("maha_last", "unused")
+        assert columns.source_format == "eigentruth.score_dump.jsonl"

@@ -418,7 +418,8 @@ share a run-local metadata cache, so duplicate score paths do not require
 re-hashing the same file. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
-the whole dump.
+the whole dump. `eval_score_ensemble.py` uses `load_score_dump_columns()`, so
+JSONL inputs materialize only the selected primary score columns plus labels.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.

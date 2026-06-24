@@ -18,7 +18,7 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
-from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
@@ -107,8 +107,8 @@ def _rate_payload(false_alarms: Sequence[float], detections: Sequence[float], al
     }
 
 
-def _load_scores(path: Path) -> dict[str, Any]:
-    dump = load_score_dump(path)
+def _load_scores(path: Path, *, signals: Sequence[str]) -> dict[str, Any]:
+    dump = load_score_dump_columns(path, signals)
     labels = torch.tensor(dump.labels, dtype=torch.int64)
     scores = {
         name: torch.tensor(values, dtype=torch.float64)
@@ -118,7 +118,8 @@ def _load_scores(path: Path) -> dict[str, Any]:
         "config": dict(dump.config),
         "labels": labels,
         "scores": scores,
-        "score_dump": dump,
+        "score_dump_summary": dict(dump.summary),
+        "score_dump_source_format": dump.source_format,
     }
 
 
@@ -252,7 +253,7 @@ def build_ensemble_report(
     runs = []
     score_dump_metadata_cache = {}
     for name, path in score_dumps:
-        dump = _load_scores(path)
+        dump = _load_scores(path, signals=signals)
         labels = dump["labels"]
         missing = [signal for signal in signals if signal not in dump["scores"]]
         if missing:
@@ -288,11 +289,11 @@ def build_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
-            "score_dump": score_dump_file_metadata(
-                path,
-                dump["score_dump"],
-                cache=score_dump_metadata_cache,
-            ),
+            "score_dump": {
+                **score_dump_file_metadata(path, cache=score_dump_metadata_cache),
+                "summary": dump["score_dump_summary"],
+                "source_format": dump["score_dump_source_format"],
+            },
             "config": dump["config"],
             "signals": list(signals),
             "directions": directions,

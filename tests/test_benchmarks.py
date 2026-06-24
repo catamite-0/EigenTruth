@@ -10238,6 +10238,43 @@ def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):
     assert run["ensemble_results"]["max_rank"]["alphas"]["0.2"]["false_alarm"] <= 0.23
 
 
+def test_eval_score_ensemble_reads_jsonl_manifest_columns(tmp_path):
+    module = importlib.import_module("benchmarks.eval_score_ensemble")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    labels = [0] * 20 + [1] * 8
+    truth_proj = list(range(20)) + [40, 41, 42, 43, 0, 1, 2, 3]
+    subspace_resid = list(range(20)) + [0, 1, 2, 3, 40, 41, 42, 43]
+    unused = [999.0] * len(labels)
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "truth_proj": truth_proj,
+            "subspace_resid": subspace_resid,
+            "unused": unused,
+        },
+    })
+    manifest_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(dump, manifest_path)
+
+    payload = module.build_ensemble_report(
+        [("synthetic", manifest_path)],
+        signals=("truth_proj", "subspace_resid"),
+        methods=("max_rank",),
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        best_alpha=0.2,
+    )
+
+    run = payload["runs"][0]
+    assert run["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
+    assert run["score_dump"]["summary"]["score_count"] == 3
+    assert run["signals"] == ["truth_proj", "subspace_resid"]
+    assert "unused" not in run["single_results"]
+
+
 def test_eval_score_ensemble_reports_lower_direction_auroc(tmp_path):
     module = importlib.import_module("benchmarks.eval_score_ensemble")
     scores_path = tmp_path / "scores.json"

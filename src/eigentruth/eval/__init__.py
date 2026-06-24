@@ -23,10 +23,12 @@ from eigentruth.eval.metrics import (
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
+    ScoreDumpColumns,
     ScoreDumpJsonlManifest,
     ScoreDumpRecord,
     iter_score_dump_jsonl_records,
     load_score_dump,
+    load_score_dump_columns,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -41,10 +43,12 @@ __all__ = [
     "directional_conformal_threshold",
     "directional_trigger_rate",
     "ScoreDump",
+    "ScoreDumpColumns",
     "ScoreDumpJsonlManifest",
     "ScoreDumpRecord",
     "iter_score_dump_jsonl_records",
     "load_score_dump",
+    "load_score_dump_columns",
     "score_dump_file_metadata",
     "write_score_dump_jsonl",
 ]
