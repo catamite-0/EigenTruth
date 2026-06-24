@@ -41,6 +41,8 @@ class CacheProfileMatrixConfig:
     layers: Sequence[int] = (-1,)
     batch_sizes: Sequence[int] = (4,)
     hidden_state_captures: Sequence[str] = ("outputs",)
+    covariance_modes: Sequence[str] = ("full",)
+    covariance_low_ranks: Sequence[int] = (16,)
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
@@ -68,6 +70,8 @@ class CacheProfileMatrixConfig:
         layers = tuple(int(layer) for layer in self.layers)
         batch_sizes = tuple(int(batch_size) for batch_size in self.batch_sizes)
         captures = tuple(str(capture).strip() for capture in self.hidden_state_captures if str(capture).strip())
+        covariance_modes = _normalize_covariance_modes(self.covariance_modes)
+        covariance_low_ranks = _normalize_covariance_low_ranks(self.covariance_low_ranks)
         if not layers:
             raise ValueError("layers must not be empty.")
         if not batch_sizes:
@@ -97,6 +101,15 @@ class CacheProfileMatrixConfig:
             raise ValueError("matrix_mode='rescore' requires shared_cache_dir.")
         if matrix_mode == "rescore" and len(token_budgets) > 1:
             raise ValueError("max_batch_token_budgets comparisons require matrix_mode='triplet'.")
+        covariance_candidate_count = sum(
+            len(covariance_low_ranks) if mode == "low_rank" else 1
+            for mode in covariance_modes
+        )
+        if matrix_mode == "rescore" and covariance_candidate_count > 1:
+            raise ValueError(
+                "matrix_mode='rescore' cannot compare multiple covariance mode/rank candidates; "
+                "use matrix_mode='triplet' for covariance sweeps."
+            )
         read_cache_sizes = (
             _normalize_eval_reps_shard_read_cache_sizes(self.eval_reps_shard_read_cache_sizes)
             if self.eval_reps_shard_read_cache_sizes is not None
@@ -107,6 +120,8 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
+        object.__setattr__(self, "covariance_modes", covariance_modes)
+        object.__setattr__(self, "covariance_low_ranks", covariance_low_ranks)
         object.__setattr__(self, "max_batch_token_budgets", token_budgets)
         object.__setattr__(self, "max_batch_tokens", token_budgets[0])
         object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
@@ -135,18 +150,33 @@ def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]
     include_token_component = len(token_budgets) > 1
     read_cache_sizes = config.eval_reps_shard_read_cache_sizes or (int(config.eval_reps_shard_read_cache_size),)
     include_read_cache_component = len(read_cache_sizes) > 1
-    for layer, batch_size, capture, max_batch_tokens, prefix_kv_cache, read_cache_size in itertools.product(
+    covariance_candidates = _covariance_candidates(config)
+    include_covariance_component = len(covariance_candidates) > 1 or covariance_candidates[0] != ("full", 16)
+    for (
+        layer,
+        batch_size,
+        capture,
+        covariance,
+        max_batch_tokens,
+        prefix_kv_cache,
+        read_cache_size,
+    ) in itertools.product(
         config.layers,
         config.batch_sizes,
         config.hidden_state_captures,
+        covariance_candidates,
         token_budgets,
         prefix_modes,
         read_cache_sizes,
     ):
+        covariance_mode, covariance_low_rank = covariance
         base_id = f"layer_{layer}_batch_{batch_size}_capture_{capture}"
+        covariance_component = _covariance_component(covariance_mode, covariance_low_rank)
         prefix_component = "prefix_kv_on" if prefix_kv_cache else "prefix_kv_off"
         token_component = f"token_budget_{int(max_batch_tokens)}"
         read_cache_component = f"read_cache_{int(read_cache_size)}"
+        if include_covariance_component:
+            base_id = f"{base_id}_{covariance_component}"
         if include_token_component:
             base_id = f"{base_id}_{token_component}"
         if include_read_cache_component:
@@ -158,6 +188,9 @@ def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]
             "layer": layer,
             "batch_size": batch_size,
             "hidden_state_capture": capture,
+            "covariance_mode": covariance_mode,
+            "covariance_low_rank": int(covariance_low_rank),
+            "covariance_component": covariance_component if include_covariance_component else None,
             "max_batch_tokens": int(max_batch_tokens),
             "max_batch_tokens_component": token_component if include_token_component else None,
             "prefix_kv_cache": bool(prefix_kv_cache),
@@ -190,6 +223,8 @@ def triplet_config_for_cell(
         max_batch_tokens=int(cell.get("max_batch_tokens", config.max_batch_tokens)),
         max_length=config.max_length,
         hidden_state_capture=str(cell["hidden_state_capture"]),
+        covariance_mode=str(cell.get("covariance_mode", "full")),
+        covariance_low_rank=int(cell.get("covariance_low_rank", 16)),
         prefix_kv_cache=bool(cell.get("prefix_kv_cache", config.prefix_kv_cache)),
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=int(
@@ -236,6 +271,8 @@ def run_matrix(
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "covariance_modes": tuple(config.covariance_modes),
+            "covariance_low_ranks": tuple(config.covariance_low_ranks),
             "limit": config.limit,
             "manifold_questions": config.manifold_questions,
             "max_length": config.max_length,
@@ -397,11 +434,10 @@ def _shared_cache_paths(config: CacheProfileMatrixConfig, cell: Mapping[str, Any
     if config.shared_cache_dir is None:
         return {}
     root = _shared_cache_root(config)
-    group = _shared_cache_group_name(cell)
     return {
         "statement_encoding_cache": root / "statement-encodings.json",
-        "layer_stats_cache": root / group / "layer-stats.pt",
-        "eval_reps_cache": root / group / "eval-reps-cache",
+        "layer_stats_cache": root / _layer_stats_cache_group_name(cell) / "layer-stats.pt",
+        "eval_reps_cache": root / _eval_reps_cache_group_name(cell) / "eval-reps-cache",
     }
 
 
@@ -423,6 +459,8 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "layers": tuple(config.layers),
             "batch_sizes": tuple(config.batch_sizes),
             "hidden_state_captures": tuple(config.hidden_state_captures),
+            "covariance_modes": tuple(config.covariance_modes),
+            "covariance_low_ranks": tuple(config.covariance_low_ranks),
             "max_batch_tokens": config.max_batch_tokens,
             "max_batch_token_budgets": tuple(int(value) for value in (config.max_batch_token_budgets or ())),
             "prefix_kv_cache": config.prefix_kv_cache,
@@ -447,7 +485,7 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
 def _shared_cache_group(config: CacheProfileMatrixConfig, cell: Mapping[str, Any]) -> str | None:
     if config.shared_cache_dir is None:
         return None
-    return str(_shared_cache_root(config) / _shared_cache_group_name(cell))
+    return str(_shared_cache_root(config) / _eval_reps_cache_group_name(cell))
 
 
 def _shared_cache_root(config: CacheProfileMatrixConfig) -> Path:
@@ -466,7 +504,7 @@ def _shared_cache_root(config: CacheProfileMatrixConfig) -> Path:
     return config.shared_cache_dir / f"{_safe_path_component(config.model)}-{digest}"
 
 
-def _shared_cache_group_name(cell: Mapping[str, Any]) -> str:
+def _eval_reps_cache_group_name(cell: Mapping[str, Any]) -> str:
     group_name = (
         f"layer_{_layer_component(int(cell['layer']))}"
         f"_capture_{_safe_path_component(str(cell['hidden_state_capture']))}"
@@ -475,6 +513,13 @@ def _shared_cache_group_name(cell: Mapping[str, Any]) -> str:
     if prefix_component:
         group_name = f"{group_name}_{_safe_path_component(str(prefix_component))}"
     return group_name
+
+
+def _layer_stats_cache_group_name(cell: Mapping[str, Any]) -> str:
+    return (
+        f"{_eval_reps_cache_group_name(cell)}"
+        f"_{_covariance_component(str(cell.get('covariance_mode', 'full')), int(cell.get('covariance_low_rank', 16)))}"
+    )
 
 
 def _layer_component(layer: int) -> str:
@@ -719,6 +764,8 @@ def _leaderboard(
             "layer": cell["layer"],
             "batch_size": cell["batch_size"],
             "hidden_state_capture": cell["hidden_state_capture"],
+            "covariance_mode": cell.get("covariance_mode", "full"),
+            "covariance_low_rank": int(cell.get("covariance_low_rank", 16)),
             "max_batch_tokens": int(cell.get("max_batch_tokens", 0)),
             "prefix_kv_cache": bool(cell.get("prefix_kv_cache", False)),
             "eval_reps_shard_read_cache_size": int(cell.get("eval_reps_shard_read_cache_size", 0) or 0),
@@ -815,7 +862,7 @@ def _matrix_decision(
 
 
 def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, Any], ...]:
-    grouped: dict[tuple[int, int, str], dict[bool, dict[str, Any]]] = {}
+    grouped: dict[tuple[int, int, str, str, int], dict[bool, dict[str, Any]]] = {}
     for cell in cells:
         if cell.get("prefix_kv_cache_component") is None:
             continue
@@ -823,6 +870,8 @@ def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, A
             int(cell["layer"]),
             int(cell["batch_size"]),
             str(cell["hidden_state_capture"]),
+            str(cell.get("covariance_mode", "full")),
+            int(cell.get("covariance_low_rank", 16)),
         )
         grouped.setdefault(key, {})[bool(cell.get("prefix_kv_cache"))] = cell
 
@@ -863,6 +912,8 @@ def _prefix_kv_comparisons(cells: Sequence[dict[str, Any]]) -> tuple[dict[str, A
             "layer": key[0],
             "batch_size": key[1],
             "hidden_state_capture": key[2],
+            "covariance_mode": key[3],
+            "covariance_low_rank": key[4],
             "off_cell": off.get("id"),
             "on_cell": on.get("id"),
             "status": status,
@@ -963,6 +1014,57 @@ def _normalize_eval_reps_shard_read_cache_sizes(values: Sequence[object] | str) 
     return sizes
 
 
+def _normalize_covariance_modes(values: Sequence[object] | str) -> tuple[str, ...]:
+    raw_values: Sequence[object]
+    if isinstance(values, str):
+        raw_values = tuple(item.strip() for item in values.split(",") if item.strip())
+    else:
+        raw_values = tuple(values)
+    if not raw_values:
+        raise ValueError("covariance_modes must not be empty.")
+    modes = tuple(str(value).strip() for value in raw_values if str(value).strip())
+    valid = {"full", "diag", "low_rank"}
+    invalid = tuple(mode for mode in modes if mode not in valid)
+    if invalid:
+        raise ValueError("covariance_modes values must be one of: full, diag, low_rank.")
+    if len(modes) != len(set(modes)):
+        raise ValueError("covariance_modes must not contain duplicate modes.")
+    return modes
+
+
+def _normalize_covariance_low_ranks(values: Sequence[object] | str) -> tuple[int, ...]:
+    raw_values: Sequence[object]
+    if isinstance(values, str):
+        raw_values = tuple(item.strip() for item in values.split(",") if item.strip())
+    else:
+        raw_values = tuple(values)
+    if not raw_values:
+        raise ValueError("covariance_low_ranks must not be empty.")
+    ranks = tuple(int(value) for value in raw_values)
+    if any(value < 1 for value in ranks):
+        raise ValueError("covariance_low_ranks values must be >=1.")
+    if len(ranks) != len(set(ranks)):
+        raise ValueError("covariance_low_ranks must not contain duplicate values.")
+    return ranks
+
+
+def _covariance_candidates(config: CacheProfileMatrixConfig) -> tuple[tuple[str, int], ...]:
+    candidates: list[tuple[str, int]] = []
+    default_rank = int(config.covariance_low_ranks[0])
+    for mode in config.covariance_modes:
+        if mode == "low_rank":
+            candidates.extend(("low_rank", int(rank)) for rank in config.covariance_low_ranks)
+        else:
+            candidates.append((mode, default_rank))
+    return tuple(candidates)
+
+
+def _covariance_component(mode: str, low_rank: int) -> str:
+    if mode == "low_rank":
+        return f"cov_low_rank_{int(low_rank)}"
+    return f"cov_{_safe_path_component(mode)}"
+
+
 def _parse_max_batch_token_budgets(value: str | None) -> tuple[int, ...] | None:
     if value is None:
         return None
@@ -973,6 +1075,18 @@ def _parse_eval_reps_shard_read_cache_sizes(value: str | None) -> tuple[int, ...
     if value is None:
         return None
     return _normalize_eval_reps_shard_read_cache_sizes(value)
+
+
+def _parse_covariance_modes(value: str | None) -> tuple[str, ...] | None:
+    if value is None:
+        return None
+    return _normalize_covariance_modes(value)
+
+
+def _parse_covariance_low_ranks(value: str | None) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    return _normalize_covariance_low_ranks(value)
 
 
 def _parse_str_list(value: str, *, name: str) -> tuple[str, ...]:
@@ -1021,6 +1135,8 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         layers=_parse_int_list(args.layers, name="layers"),
         batch_sizes=_parse_int_list(args.batch_sizes, name="batch_sizes"),
         hidden_state_captures=_parse_str_list(args.hidden_state_captures, name="hidden_state_captures"),
+        covariance_modes=_parse_covariance_modes(args.covariance_modes) or ("full",),
+        covariance_low_ranks=_parse_covariance_low_ranks(args.covariance_low_ranks) or (16,),
         limit=args.limit,
         manifold_questions=args.manifold_questions,
         max_length=args.max_length,
@@ -1075,6 +1191,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="comma-list of eval batch sizes")
     parser.add_argument("--hidden-state-captures", default="outputs",
                         help="comma-list of capture modes, e.g. outputs,hooks")
+    parser.add_argument("--covariance-modes", default=None,
+                        help="comma-list of TruthManifold covariance modes to compare: full,diag,low_rank")
+    parser.add_argument("--covariance-low-ranks", default=None,
+                        help="comma-list of low-rank K values used for low_rank covariance cells")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=64)

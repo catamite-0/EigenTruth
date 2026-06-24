@@ -170,11 +170,15 @@ def _recommendation(
         _int_or_none(matrix_recommended.get("eval_reps_shard_read_cache_size")),
         _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size")),
     )
+    covariance_mode = str(_first_present(matrix_recommended.get("covariance_mode"), "full"))
+    covariance_low_rank = _int_or_none(matrix_recommended.get("covariance_low_rank")) or 16
     recommendation = {
         "cell_id": matrix_recommended.get("id") or matrix_decision.get("recommended_cell"),
         "layer": matrix_recommended.get("layer"),
         "batch_size": matrix_recommended.get("batch_size"),
         "hidden_state_capture": matrix_recommended.get("hidden_state_capture"),
+        "covariance_mode": covariance_mode,
+        "covariance_low_rank": covariance_low_rank,
         "max_batch_tokens": int(matrix_recommended.get("max_batch_tokens") or 0),
         "prefix_kv_cache": bool(matrix_recommended.get("prefix_kv_cache", False)),
         "max_workers": worker_count,
@@ -1141,6 +1145,8 @@ def _benchmark_flags(
     layer = str(recommendation.get("layer"))
     batch_size = str(recommendation.get("batch_size"))
     capture = str(recommendation.get("hidden_state_capture"))
+    covariance_mode = str(recommendation.get("covariance_mode") or "full")
+    covariance_low_rank = _int_or_none(recommendation.get("covariance_low_rank")) or 16
     max_batch_tokens = int(recommendation.get("max_batch_tokens") or 0)
     max_workers = recommendation.get("max_workers")
     prefix_kv_cache = bool(recommendation.get("prefix_kv_cache", False))
@@ -1148,6 +1154,10 @@ def _benchmark_flags(
     length_bucketed = bool(_mapping(matrix_report.get("config")).get("length_bucketed_batches", False))
 
     eval_flags = ["--layer", layer, "--batch-size", batch_size, "--hidden-state-capture", capture]
+    if covariance_mode != "full":
+        eval_flags.extend(["--covariance-mode", covariance_mode])
+    if covariance_mode == "low_rank" or covariance_low_rank != 16:
+        eval_flags.extend(["--covariance-low-rank", str(covariance_low_rank)])
     if max_batch_tokens > 0:
         eval_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])
     if prefix_kv_cache:
@@ -1159,6 +1169,10 @@ def _benchmark_flags(
     eval_flags.extend(_inside_sampling_eval_flags(_mapping(recommendation.get("inside_sampling"))))
 
     matrix_flags = ["--layers", layer, "--batch-sizes", batch_size, "--hidden-state-captures", capture]
+    if covariance_mode != "full":
+        matrix_flags.extend(["--covariance-modes", covariance_mode])
+    if covariance_mode == "low_rank" or covariance_low_rank != 16:
+        matrix_flags.extend(["--covariance-low-ranks", str(covariance_low_rank)])
     if max_batch_tokens > 0:
         matrix_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])
     if prefix_kv_cache:

@@ -2303,6 +2303,8 @@ python benchmarks/run_cache_profile_matrix.py \
   --batch-sizes=1,2,4 \
   --max-batch-token-budgets=0,512,1024 \
   --hidden-state-captures=outputs,hooks \
+  --covariance-modes=full,diag,low_rank \
+  --covariance-low-ranks=4 \
   --max-workers=2 \
   --dry-run
 ```
@@ -2320,6 +2322,15 @@ measure multiple budgets in one matrix, use `--max-batch-token-budgets 0,512`;
 token-budget matrix recommendations are sorted by uncached forced-answer forward
 time because the budget changes forward batching, not cache-only replay
 semantics.
+Use `--covariance-modes full,diag,low_rank` to compare the `maha_last`
+TruthManifold covariance approximation as a gated runtime dimension. Shared
+cache runs reuse statement encodings and eval hidden-state caches across
+covariance modes, but keep layer-stats caches separate by covariance mode/rank
+so warmup statistics cannot be accidentally reused across incompatible scoring
+semantics. Runtime recommendations include the selected covariance flags, and
+thresholds/calibration artifacts should be regenerated for the selected mode.
+Use the default `triplet` matrix mode for covariance sweeps; `rescore` is kept
+for cache-only variants that share the same layer-stats scoring semantics.
 Use `--max-workers` to run independent matrix cells concurrently. The default is
 `1` for fully serial/reproducible local runs. Matrix reports include
 `execution.wall_clock_seconds` plus per-cell `execution_seconds`, so worker-count
@@ -2363,9 +2374,9 @@ python benchmarks/recommend_runtime_config.py \
 ```
 
 The recommendation records the selected layer, batch size, hidden-state capture
-mode, padded-token budget, prefix-KV mode, worker count, all finite AUROC
-quality signals from the promoted cell, optional promoted INSIDE sampling
-settings, the best quality signal, and cache-tuning advice when the promoted
+mode, covariance mode/rank, padded-token budget, prefix-KV mode, worker count,
+all finite AUROC quality signals from the promoted cell, optional promoted
+INSIDE sampling settings, the best quality signal, and cache-tuning advice when the promoted
 cell's eval-reps cache efficiency shows low shard-cache hit rate, high
 cross-shard read rate, or tiny cache read ranges. With `--inside-sampling-report`, the
 recommended sampling run must pass its sample-efficiency gate and expose a

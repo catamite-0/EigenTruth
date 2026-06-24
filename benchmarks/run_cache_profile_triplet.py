@@ -43,6 +43,8 @@ class CacheProfileTripletConfig:
     max_batch_tokens: int = 0
     max_length: int = 64
     hidden_state_capture: str = "outputs"
+    covariance_mode: str = "full"
+    covariance_low_rank: int = 16
     prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
     eval_reps_shard_read_cache_size: int = 2
@@ -88,12 +90,18 @@ class CacheProfileTripletConfig:
             raise ValueError("uncached_cache_mode must be one of: refresh, warm_start, none.")
         if self.prefix_kv_cache and str(self.hidden_state_capture) != "outputs":
             raise ValueError("prefix_kv_cache requires hidden_state_capture='outputs'.")
+        if str(self.covariance_mode) not in {"full", "diag", "low_rank"}:
+            raise ValueError("covariance_mode must be one of: full, diag, low_rank.")
+        if int(self.covariance_low_rank) < 1:
+            raise ValueError("covariance_low_rank must be >=1.")
         run_names = _normalize_run_names(self.run_names)
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
         object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
+        object.__setattr__(self, "covariance_mode", str(self.covariance_mode))
+        object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
         object.__setattr__(self, "uncached_cache_mode", str(self.uncached_cache_mode))
         object.__setattr__(self, "run_names", run_names)
 
@@ -143,6 +151,10 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         str(config.max_length),
         "--hidden-state-capture",
         config.hidden_state_capture,
+        "--covariance-mode",
+        config.covariance_mode,
+        "--covariance-low-rank",
+        str(config.covariance_low_rank),
         "--progress-every",
         str(config.progress_every),
         "--json",
@@ -334,6 +346,8 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
             "batch_size": config.batch_size,
             "max_batch_tokens": config.max_batch_tokens,
             "hidden_state_capture": config.hidden_state_capture,
+            "covariance_mode": config.covariance_mode,
+            "covariance_low_rank": config.covariance_low_rank,
             "prefix_kv_cache": config.prefix_kv_cache,
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
@@ -363,6 +377,8 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         max_batch_tokens=args.max_batch_tokens,
         max_length=args.max_length,
         hidden_state_capture=args.hidden_state_capture,
+        covariance_mode=args.covariance_mode,
+        covariance_low_rank=args.covariance_low_rank,
         prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
@@ -413,6 +429,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--hidden-state-capture", default="outputs",
                         help="hidden state capture mode passed to eval_truthfulqa.py")
+    parser.add_argument("--covariance-mode", default="full", choices=("full", "diag", "low_rank"),
+                        help="TruthManifold covariance approximation passed to eval_truthfulqa.py")
+    parser.add_argument("--covariance-low-rank", type=int, default=16,
+                        help="rank passed to eval_truthfulqa.py when --covariance-mode low_rank")
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache to non-cache-only eval_truthfulqa.py runs")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)

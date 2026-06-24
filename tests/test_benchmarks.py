@@ -8656,6 +8656,8 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert manifest["metadata"]["runner"] == "run_cache_profile_triplet"
     assert manifest["metadata"]["max_batch_tokens"] == 128
     assert manifest["metadata"]["eval_reps_shard_read_cache_size"] == 5
+    assert manifest["metadata"]["covariance_mode"] == "full"
+    assert manifest["metadata"]["covariance_low_rank"] == 16
     assert manifest["artifacts"]["command_log"]["exists"] is True
     assert manifest["artifacts"]["caches.eval_reps_cache"]["exists"] is False
     assert payload["artifact_manifest_summary"]["missing_count"] == 3
@@ -8666,6 +8668,8 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert commands["uncached"][commands["uncached"].index("--dtype") + 1] == "float32"
     assert commands["uncached"][commands["uncached"].index("--max-batch-tokens") + 1] == "128"
     assert commands["uncached"][commands["uncached"].index("--hidden-state-capture") + 1] == "outputs"
+    assert commands["uncached"][commands["uncached"].index("--covariance-mode") + 1] == "full"
+    assert commands["uncached"][commands["uncached"].index("--covariance-low-rank") + 1] == "16"
     assert commands["uncached"].count("--refresh-layer-stats-cache") == 1
     assert commands["uncached"].count("--refresh-eval-reps-cache") == 1
     assert commands["uncached"][commands["uncached"].index("--eval-reps-cache-shard-size") + 1] == "3"
@@ -8675,6 +8679,31 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert "--cache-only" in commands["cache_only"]
     assert commands["cache_only"][commands["cache_only"].index("--eval-reps-shard-read-cache-size") + 1] == "5"
     assert "--statement-encoding-cache" not in commands["cache_only"]
+
+
+def test_run_cache_profile_triplet_passes_covariance_mode(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        covariance_mode="low_rank",
+        covariance_low_rank=4,
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+    command = payload["commands"]["uncached"]
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert command[command.index("--covariance-mode") + 1] == "low_rank"
+    assert command[command.index("--covariance-low-rank") + 1] == "4"
+    assert manifest["metadata"]["covariance_mode"] == "low_rank"
+    assert manifest["metadata"]["covariance_low_rank"] == 4
+
+    with pytest.raises(ValueError, match="covariance_mode"):
+        module.CacheProfileTripletConfig(output_dir=tmp_path / "bad-mode", covariance_mode="bad")
+    with pytest.raises(ValueError, match="covariance_low_rank"):
+        module.CacheProfileTripletConfig(output_dir=tmp_path / "bad-rank", covariance_low_rank=0)
 
 
 def test_run_cache_profile_triplet_builds_real_truthfulqa_commands(tmp_path):
@@ -9792,6 +9821,79 @@ def test_run_cache_profile_matrix_compares_max_batch_token_budgets(tmp_path):
         )
 
 
+def test_run_cache_profile_matrix_compares_covariance_modes(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(2,),
+        covariance_modes=("full", "diag", "low_rank"),
+        covariance_low_ranks=(4,),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    full_cell, diag_cell, low_rank_cell = report["cells"]
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_2_capture_outputs_cov_full",
+        "layer_m2_batch_2_capture_outputs_cov_diag",
+        "layer_m2_batch_2_capture_outputs_cov_low_rank_4",
+    ]
+    assert [cell["covariance_mode"] for cell in report["cells"]] == ["full", "diag", "low_rank"]
+    assert [cell["covariance_low_rank"] for cell in report["cells"]] == [4, 4, 4]
+    assert (
+        full_cell["triplet"]["commands"]["uncached"][
+            full_cell["triplet"]["commands"]["uncached"].index("--covariance-mode") + 1
+        ]
+        == "full"
+    )
+    assert (
+        diag_cell["triplet"]["commands"]["uncached"][
+            diag_cell["triplet"]["commands"]["uncached"].index("--covariance-mode") + 1
+        ]
+        == "diag"
+    )
+    assert (
+        low_rank_cell["triplet"]["commands"]["uncached"][
+            low_rank_cell["triplet"]["commands"]["uncached"].index("--covariance-low-rank") + 1
+        ]
+        == "4"
+    )
+    assert full_cell["shared_cache_group"] == diag_cell["shared_cache_group"] == low_rank_cell["shared_cache_group"]
+    assert (
+        full_cell["triplet"]["caches"]["eval_reps_cache"]
+        == diag_cell["triplet"]["caches"]["eval_reps_cache"]
+        == low_rank_cell["triplet"]["caches"]["eval_reps_cache"]
+    )
+    assert full_cell["triplet"]["caches"]["layer_stats_cache"] != diag_cell["triplet"]["caches"]["layer_stats_cache"]
+    assert (
+        diag_cell["triplet"]["caches"]["layer_stats_cache"]
+        != low_rank_cell["triplet"]["caches"]["layer_stats_cache"]
+    )
+    assert report["config"]["covariance_modes"] == ("full", "diag", "low_rank")
+    assert report["config"]["covariance_low_ranks"] == (4,)
+    assert manifest["metadata"]["covariance_modes"] == ["full", "diag", "low_rank"]
+    assert manifest["metadata"]["covariance_low_ranks"] == [4]
+
+    with pytest.raises(ValueError, match="covariance_modes"):
+        module.CacheProfileMatrixConfig(output_dir=tmp_path / "bad-mode", covariance_modes=("full", "bad"))
+    with pytest.raises(ValueError, match="duplicate"):
+        module.CacheProfileMatrixConfig(output_dir=tmp_path / "bad-duplicate", covariance_modes=("diag", "diag"))
+    with pytest.raises(ValueError, match="covariance_low_ranks"):
+        module.CacheProfileMatrixConfig(output_dir=tmp_path / "bad-rank", covariance_low_ranks=(0,))
+    with pytest.raises(ValueError, match="rescore.*covariance"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-rescore",
+            shared_cache_dir=tmp_path / "shared-cache-rescore",
+            covariance_modes=("full", "diag"),
+            matrix_mode="rescore",
+        )
+
+
 def test_run_cache_profile_matrix_compares_eval_reps_shard_read_cache_sizes(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     config = module.CacheProfileMatrixConfig(
@@ -10582,6 +10684,64 @@ def test_runtime_config_worker_matrix_match_rejects_different_cell(tmp_path):
 
     assert report["status"] == "promote"
     assert report["evidence"]["worker_matrix_report_matches"] is False
+
+
+def test_runtime_config_recommendation_preserves_covariance_mode():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1, "length_bucketed_batches": False},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m2_batch_2_capture_outputs_cov_low_rank_4",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m2_batch_2_capture_outputs_cov_low_rank_4",
+                "layer": -2,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "covariance_mode": "low_rank",
+                "covariance_low_rank": 4,
+                "cache_only_total_seconds": 0.2,
+                "truth_proj_auroc": 0.8,
+            },
+        },
+        "cells": [],
+    }
+
+    report = module.build_runtime_recommendation(matrix_report)
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["covariance_mode"] == "low_rank"
+    assert report["recommendation"]["covariance_low_rank"] == 4
+    assert report["benchmark_flags"]["eval_truthfulqa"] == [
+        "--layer",
+        "-2",
+        "--batch-size",
+        "2",
+        "--hidden-state-capture",
+        "outputs",
+        "--covariance-mode",
+        "low_rank",
+        "--covariance-low-rank",
+        "4",
+    ]
+    assert report["benchmark_flags"]["run_cache_profile_matrix"] == [
+        "--layers",
+        "-2",
+        "--batch-sizes",
+        "2",
+        "--hidden-state-captures",
+        "outputs",
+        "--covariance-modes",
+        "low_rank",
+        "--covariance-low-ranks",
+        "4",
+        "--max-workers",
+        "1",
+    ]
 
 
 def test_runtime_config_recommendation_uses_cell_read_cache_size():
