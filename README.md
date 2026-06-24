@@ -194,7 +194,11 @@ shards through a default 2-shard read-side LRU cache
 (`--eval-reps-shard-read-cache-size`) and report cache IO counters such as read requests,
 records read, shard loads, shard cache hits, and cross-shard reads in JSON output;
 triplet, matrix, worker-sweep, and performance-baseline runners pass the setting
-through for cached/cache-only runs. Profile comparison and matrix reports
+through for cached/cache-only runs. Use
+`run_cache_profile_matrix.py --eval-reps-shard-read-cache-sizes 1,2,4` to
+promote this from a heuristic cache-tuning suggestion into a same-machine sweep;
+the recommended runtime then records the selected cell's read-cache size.
+Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice
 when hit rate is low, cross-shard reads are high, or each cache read returns too

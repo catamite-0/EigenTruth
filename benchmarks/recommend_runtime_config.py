@@ -166,7 +166,10 @@ def _recommendation(
     )
     totals = _runtime_totals(matrix_recommended)
     matrix_config = _mapping(matrix_report.get("config"))
-    eval_reps_shard_read_cache_size = _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size"))
+    eval_reps_shard_read_cache_size = _first_present(
+        _int_or_none(matrix_recommended.get("eval_reps_shard_read_cache_size")),
+        _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size")),
+    )
     recommendation = {
         "cell_id": matrix_recommended.get("id") or matrix_decision.get("recommended_cell"),
         "layer": matrix_recommended.get("layer"),
@@ -247,7 +250,8 @@ def _cache_tuning_recommendation(
     shard_count = _int_or_none(metrics.get("eval_reps_reader.shard_count"))
     shard_capacity = _int_or_none(metrics.get("eval_reps_reader.shard_cache_capacity"))
     read_cache_size = (
-        _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size"))
+        _int_or_none(matrix_recommended.get("eval_reps_shard_read_cache_size"))
+        or _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size"))
         or shard_capacity
         or 2
     )
@@ -1134,6 +1138,8 @@ def _benchmark_flags(
         eval_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])
     if prefix_kv_cache:
         eval_flags.append("--prefix-kv-cache")
+    if eval_reps_shard_read_cache_size is not None and eval_reps_shard_read_cache_size != 2:
+        eval_flags.extend(["--eval-reps-shard-read-cache-size", str(eval_reps_shard_read_cache_size)])
     if length_bucketed:
         eval_flags.append("--length-bucketed-batches")
     eval_flags.extend(_inside_sampling_eval_flags(_mapping(recommendation.get("inside_sampling"))))

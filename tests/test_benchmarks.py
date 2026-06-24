@@ -8918,6 +8918,61 @@ def test_run_cache_profile_matrix_compares_max_batch_token_budgets(tmp_path):
         )
 
 
+def test_run_cache_profile_matrix_compares_eval_reps_shard_read_cache_sizes(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_matrix")
+    config = module.CacheProfileMatrixConfig(
+        output_dir=tmp_path / "runs",
+        shared_cache_dir=tmp_path / "shared-cache",
+        model="tiny-local",
+        layers=(-2,),
+        batch_sizes=(2,),
+        eval_reps_shard_read_cache_sizes=(1, 4),
+        python_executable="/python",
+    )
+
+    report = module.run_matrix(config, clean=True, dry_run=True)
+    small_cache_cell, larger_cache_cell = report["cells"]
+    small_commands = small_cache_cell["triplet"]["commands"]
+    larger_commands = larger_cache_cell["triplet"]["commands"]
+    manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert [cell["id"] for cell in report["cells"]] == [
+        "layer_m2_batch_2_capture_outputs_read_cache_1",
+        "layer_m2_batch_2_capture_outputs_read_cache_4",
+    ]
+    assert small_cache_cell["eval_reps_shard_read_cache_size"] == 1
+    assert larger_cache_cell["eval_reps_shard_read_cache_size"] == 4
+    assert (
+        small_commands["cached"][small_commands["cached"].index("--eval-reps-shard-read-cache-size") + 1]
+        == "1"
+    )
+    assert (
+        larger_commands["cached"][larger_commands["cached"].index("--eval-reps-shard-read-cache-size") + 1]
+        == "4"
+    )
+    assert small_cache_cell["shared_cache_group"] == larger_cache_cell["shared_cache_group"]
+    assert (
+        small_cache_cell["triplet"]["caches"]["eval_reps_cache"]
+        == larger_cache_cell["triplet"]["caches"]["eval_reps_cache"]
+    )
+    assert report["config"]["eval_reps_shard_read_cache_size"] == 1
+    assert report["config"]["eval_reps_shard_read_cache_sizes"] == (1, 4)
+    assert report["leaderboard_sort_metric"] == "cache_only_total_seconds"
+    assert manifest["metadata"]["eval_reps_shard_read_cache_size"] == 1
+    assert manifest["metadata"]["eval_reps_shard_read_cache_sizes"] == [1, 4]
+
+    with pytest.raises(ValueError, match="duplicate"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-duplicate",
+            eval_reps_shard_read_cache_sizes=(1, 1),
+        )
+    with pytest.raises(ValueError, match=">=1"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-zero",
+            eval_reps_shard_read_cache_sizes=(0,),
+        )
+
+
 def test_run_cache_profile_matrix_compares_prefix_kv_cache_modes(tmp_path):
     module = importlib.import_module("benchmarks.run_cache_profile_matrix")
     config = module.CacheProfileMatrixConfig(
@@ -9324,6 +9379,13 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
     assert manifest["artifacts"]["workers.1.matrix_manifest"]["exists"] is True
     assert manifest["artifacts"]["workers.2.matrix_manifest"]["exists"] is True
 
+    string_config = module.CacheWorkerSweepConfig(
+        output_dir=tmp_path / "worker-sweep-string-read-cache",
+        eval_reps_shard_read_cache_sizes="2,10",
+    )
+    assert string_config.eval_reps_shard_read_cache_size == 2
+    assert string_config.eval_reps_shard_read_cache_sizes == (2, 10)
+
     with pytest.raises(ValueError, match="duplicate"):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-duplicate", worker_counts=(1, 1))
     with pytest.raises(ValueError, match=">=1"):
@@ -9527,6 +9589,8 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "outputs",
         "--max-batch-tokens",
         "96",
+        "--eval-reps-shard-read-cache-size",
+        "1",
         "--length-bucketed-batches",
     ]
     assert report["benchmark_flags"]["run_cache_profile_matrix"] == [
@@ -9542,6 +9606,65 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "1",
         "--max-workers",
         "2",
+    ]
+
+
+def test_runtime_config_recommendation_uses_cell_read_cache_size():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {
+            "max_workers": 1,
+            "length_bucketed_batches": False,
+            "eval_reps_shard_read_cache_size": 1,
+            "eval_reps_shard_read_cache_sizes": [1, 4],
+        },
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_2_capture_outputs_read_cache_4",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 2,
+            "checked_cell_count": 2,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_2_capture_outputs_read_cache_4",
+                "layer": -12,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "max_batch_tokens": 0,
+                "prefix_kv_cache": False,
+                "eval_reps_shard_read_cache_size": 4,
+                "cache_only_total_seconds": 0.20,
+                "truth_proj_auroc": 0.88,
+            },
+        },
+        "cells": [],
+    }
+
+    report = module.build_runtime_recommendation(matrix_report)
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["eval_reps_shard_read_cache_size"] == 4
+    assert report["benchmark_flags"]["eval_truthfulqa"] == [
+        "--layer",
+        "-12",
+        "--batch-size",
+        "2",
+        "--hidden-state-capture",
+        "outputs",
+        "--eval-reps-shard-read-cache-size",
+        "4",
+    ]
+    assert report["benchmark_flags"]["run_cache_profile_matrix"] == [
+        "--layers",
+        "-12",
+        "--batch-sizes",
+        "2",
+        "--hidden-state-captures",
+        "outputs",
+        "--eval-reps-shard-read-cache-size",
+        "4",
+        "--max-workers",
+        "1",
     ]
 
 
@@ -10222,6 +10345,13 @@ def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
     assert manifest["metadata"]["worker_sweep_enabled"] is True
     assert Path(payload["paths"]["runtime_recommendation"]).exists()
     assert Path(payload["paths"]["matrix_report"]).exists()
+
+    string_config = module.PerformanceBaselineWorkflowConfig(
+        output_dir=tmp_path / "workflow-string-read-cache",
+        eval_reps_shard_read_cache_sizes="2,10",
+    )
+    assert string_config.eval_reps_shard_read_cache_size == 2
+    assert string_config.eval_reps_shard_read_cache_sizes == (2, 10)
     assert Path(payload["paths"]["worker_sweep_report"]).exists()
 
 

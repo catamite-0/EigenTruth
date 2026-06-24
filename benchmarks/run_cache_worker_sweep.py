@@ -17,6 +17,8 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.run_cache_profile_matrix import (  # noqa: E402
     MATRIX_MODES,
     CacheProfileMatrixConfig,
+    _normalize_eval_reps_shard_read_cache_sizes,
+    _parse_eval_reps_shard_read_cache_sizes,
     _parse_int_list,
     _parse_max_batch_token_budgets,
     _parse_prefix_kv_cache_modes,
@@ -46,6 +48,7 @@ class CacheWorkerSweepConfig:
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
     eval_reps_shard_read_cache_size: int = 2
+    eval_reps_shard_read_cache_sizes: Sequence[int] | None = None
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -74,13 +77,17 @@ class CacheWorkerSweepConfig:
             "hidden_state_captures",
             tuple(str(capture) for capture in self.hidden_state_captures),
         )
-        if int(self.eval_reps_shard_read_cache_size) < 1:
-            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        read_cache_sizes = (
+            _normalize_eval_reps_shard_read_cache_sizes(self.eval_reps_shard_read_cache_sizes)
+            if self.eval_reps_shard_read_cache_sizes is not None
+            else _normalize_eval_reps_shard_read_cache_sizes((self.eval_reps_shard_read_cache_size,))
+        )
         object.__setattr__(
             self,
             "eval_reps_shard_read_cache_size",
-            int(self.eval_reps_shard_read_cache_size),
+            int(read_cache_sizes[0]),
         )
+        object.__setattr__(self, "eval_reps_shard_read_cache_sizes", read_cache_sizes)
 
     @property
     def report_path(self) -> Path:
@@ -131,6 +138,9 @@ def run_worker_sweep(
             ),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+            "eval_reps_shard_read_cache_sizes": tuple(
+                int(value) for value in (config.eval_reps_shard_read_cache_sizes or ())
+            ),
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
@@ -164,6 +174,7 @@ def _matrix_config_for_worker(config: CacheWorkerSweepConfig, worker_count: int)
         prefix_kv_cache_modes=config.prefix_kv_cache_modes,
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=config.eval_reps_shard_read_cache_size,
+        eval_reps_shard_read_cache_sizes=config.eval_reps_shard_read_cache_sizes,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
         python_executable=config.python_executable,
@@ -286,6 +297,9 @@ def _write_artifact_manifest(config: CacheWorkerSweepConfig, report: Mapping[str
             "matrix_mode": config.matrix_mode,
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+            "eval_reps_shard_read_cache_sizes": tuple(
+                int(value) for value in (config.eval_reps_shard_read_cache_sizes or ())
+            ),
             "dry_run": bool(report.get("dry_run")),
             "recommended_worker_count": dict(report.get("worker_sweep_decision") or {}).get(
                 "recommended_worker_count"
@@ -318,6 +332,9 @@ def _config_from_args(args: argparse.Namespace) -> CacheWorkerSweepConfig:
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
+        eval_reps_shard_read_cache_sizes=_parse_eval_reps_shard_read_cache_sizes(
+            args.eval_reps_shard_read_cache_sizes
+        ),
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -358,6 +375,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
                         help="number of eval-reps cache shards cached by cached/cache-only reader runs")
+    parser.add_argument("--eval-reps-shard-read-cache-sizes", default=None,
+                        help="comma-list of eval-reps read-side shard cache capacities to compare")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)
     parser.add_argument("--progress-every", type=int, default=0)

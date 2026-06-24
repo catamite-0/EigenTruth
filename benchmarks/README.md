@@ -165,7 +165,11 @@ These fields help diagnose cache-only IO regressions after changing batch size
 or token budget. `run_cache_profile_triplet.py`, `run_cache_profile_matrix.py`,
 `run_cache_worker_sweep.py`, and `run_performance_baseline_workflow.py` also
 accept `--eval-reps-shard-read-cache-size` so cached/cache-only profile runs can
-reproduce the same read-side LRU capacity.
+reproduce the same read-side LRU capacity. Use
+`run_cache_profile_matrix.py --eval-reps-shard-read-cache-sizes 1,2,4` when the
+read-side cache capacity itself should be a gated matrix dimension; generated
+cell ids include `read_cache_N`, cells share the same eval-reps cache artifact,
+and runtime recommendations use the selected cell's read-cache size.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
 not run sampled INSIDE. New eval reps caches also store eval statement metadata,

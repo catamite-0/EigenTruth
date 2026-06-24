@@ -50,6 +50,7 @@ class CacheProfileMatrixConfig:
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
     eval_reps_shard_read_cache_size: int = 2
+    eval_reps_shard_read_cache_sizes: Sequence[int] | None = None
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -96,8 +97,11 @@ class CacheProfileMatrixConfig:
             raise ValueError("matrix_mode='rescore' requires shared_cache_dir.")
         if matrix_mode == "rescore" and len(token_budgets) > 1:
             raise ValueError("max_batch_token_budgets comparisons require matrix_mode='triplet'.")
-        if int(self.eval_reps_shard_read_cache_size) < 1:
-            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        read_cache_sizes = (
+            _normalize_eval_reps_shard_read_cache_sizes(self.eval_reps_shard_read_cache_sizes)
+            if self.eval_reps_shard_read_cache_sizes is not None
+            else _normalize_eval_reps_shard_read_cache_sizes((self.eval_reps_shard_read_cache_size,))
+        )
         if int(self.max_workers) < 1:
             raise ValueError("max_workers must be >=1.")
         object.__setattr__(self, "layers", layers)
@@ -108,7 +112,8 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
         object.__setattr__(self, "prefix_kv_cache", any(prefix_modes))
         object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
-        object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
+        object.__setattr__(self, "eval_reps_shard_read_cache_size", read_cache_sizes[0])
+        object.__setattr__(self, "eval_reps_shard_read_cache_sizes", read_cache_sizes)
         object.__setattr__(self, "matrix_mode", matrix_mode)
         object.__setattr__(self, "max_workers", int(self.max_workers))
 
@@ -128,18 +133,24 @@ def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]
     include_prefix_component = len(prefix_modes) > 1 or any(prefix_modes)
     token_budgets = config.max_batch_token_budgets or (int(config.max_batch_tokens),)
     include_token_component = len(token_budgets) > 1
-    for layer, batch_size, capture, max_batch_tokens, prefix_kv_cache in itertools.product(
+    read_cache_sizes = config.eval_reps_shard_read_cache_sizes or (int(config.eval_reps_shard_read_cache_size),)
+    include_read_cache_component = len(read_cache_sizes) > 1
+    for layer, batch_size, capture, max_batch_tokens, prefix_kv_cache, read_cache_size in itertools.product(
         config.layers,
         config.batch_sizes,
         config.hidden_state_captures,
         token_budgets,
         prefix_modes,
+        read_cache_sizes,
     ):
         base_id = f"layer_{layer}_batch_{batch_size}_capture_{capture}"
         prefix_component = "prefix_kv_on" if prefix_kv_cache else "prefix_kv_off"
         token_component = f"token_budget_{int(max_batch_tokens)}"
+        read_cache_component = f"read_cache_{int(read_cache_size)}"
         if include_token_component:
             base_id = f"{base_id}_{token_component}"
+        if include_read_cache_component:
+            base_id = f"{base_id}_{read_cache_component}"
         cell_id = f"{base_id}_{prefix_component}" if include_prefix_component else base_id
         cell_id = cell_id.replace("-", "m")
         cells.append({
@@ -151,6 +162,10 @@ def matrix_cells(config: CacheProfileMatrixConfig) -> tuple[dict[str, Any], ...]
             "max_batch_tokens_component": token_component if include_token_component else None,
             "prefix_kv_cache": bool(prefix_kv_cache),
             "prefix_kv_cache_component": prefix_component if include_prefix_component else None,
+            "eval_reps_shard_read_cache_size": int(read_cache_size),
+            "eval_reps_shard_read_cache_size_component": (
+                read_cache_component if include_read_cache_component else None
+            ),
         })
     return tuple(cells)
 
@@ -177,7 +192,9 @@ def triplet_config_for_cell(
         hidden_state_capture=str(cell["hidden_state_capture"]),
         prefix_kv_cache=bool(cell.get("prefix_kv_cache", config.prefix_kv_cache)),
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
-        eval_reps_shard_read_cache_size=config.eval_reps_shard_read_cache_size,
+        eval_reps_shard_read_cache_size=int(
+            cell.get("eval_reps_shard_read_cache_size", config.eval_reps_shard_read_cache_size)
+        ),
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
         python_executable=config.python_executable,
@@ -228,6 +245,9 @@ def run_matrix(
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+            "eval_reps_shard_read_cache_sizes": tuple(
+                int(value) for value in (config.eval_reps_shard_read_cache_sizes or ())
+            ),
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
@@ -409,6 +429,9 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+            "eval_reps_shard_read_cache_sizes": tuple(
+                int(value) for value in (config.eval_reps_shard_read_cache_sizes or ())
+            ),
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "max_workers": config.max_workers,
@@ -698,6 +721,7 @@ def _leaderboard(
             "hidden_state_capture": cell["hidden_state_capture"],
             "max_batch_tokens": int(cell.get("max_batch_tokens", 0)),
             "prefix_kv_cache": bool(cell.get("prefix_kv_cache", False)),
+            "eval_reps_shard_read_cache_size": int(cell.get("eval_reps_shard_read_cache_size", 0) or 0),
             "uncached_cache_mode": cell.get("uncached_cache_mode"),
             "shared_cache_group": cell.get("shared_cache_group"),
             "uncached_total_seconds": uncached_total,
@@ -923,10 +947,32 @@ def _normalize_max_batch_token_budgets(values: Sequence[object] | str) -> tuple[
     return budgets
 
 
+def _normalize_eval_reps_shard_read_cache_sizes(values: Sequence[object] | str) -> tuple[int, ...]:
+    raw_values: Sequence[object]
+    if isinstance(values, str):
+        raw_values = tuple(item.strip() for item in values.split(",") if item.strip())
+    else:
+        raw_values = tuple(values)
+    if not raw_values:
+        raise ValueError("eval_reps_shard_read_cache_sizes must not be empty.")
+    sizes = tuple(int(value) for value in raw_values)
+    if any(value < 1 for value in sizes):
+        raise ValueError("eval_reps_shard_read_cache_sizes values must be >=1.")
+    if len(sizes) != len(set(sizes)):
+        raise ValueError("eval_reps_shard_read_cache_sizes must not contain duplicate values.")
+    return sizes
+
+
 def _parse_max_batch_token_budgets(value: str | None) -> tuple[int, ...] | None:
     if value is None:
         return None
     return _normalize_max_batch_token_budgets(value)
+
+
+def _parse_eval_reps_shard_read_cache_sizes(value: str | None) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    return _normalize_eval_reps_shard_read_cache_sizes(value)
 
 
 def _parse_str_list(value: str, *, name: str) -> tuple[str, ...]:
@@ -984,6 +1030,9 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
+        eval_reps_shard_read_cache_sizes=_parse_eval_reps_shard_read_cache_sizes(
+            args.eval_reps_shard_read_cache_sizes
+        ),
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -1042,6 +1091,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
                         help="number of eval-reps cache shards cached by cached/cache-only reader runs")
+    parser.add_argument("--eval-reps-shard-read-cache-sizes", default=None,
+                        help="comma-list of eval-reps read-side shard cache capacities to compare")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)
     parser.add_argument("--progress-every", type=int, default=0)
