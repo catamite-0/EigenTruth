@@ -4295,6 +4295,89 @@ def test_compare_release_candidates_can_require_selector_replay_report(tmp_path)
     )
 
 
+def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    drift_report = _write_product_runtime_drift_report(
+        tmp_path / "runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
+    blocked_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "blocked-runtime-drift",
+        status="blocked",
+        blocked_metric_count=1,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=drift_report,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=blocked_drift_report,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["product_runtime_drift_status"] == "promote"
+    assert payload["decision"]["recommended_product_runtime_drift_report"] == str(drift_report)
+    assert payload["product_runtime_drift_gate"]["gate"]["passed"] is True
+    candidate = payload["release_candidate"]
+    assert candidate["product_runtime_drift"]["summary"]["blocked_metric_count"] == 0
+    assert candidate["product_runtime_drift"]["baseline"]["path"].endswith("baseline.json")
+    assert candidate["product_runtime_drift"]["current"]["path"].endswith("current.json")
+    assert candidate["manifests"]["product_runtime_drift_manifest"].endswith("artifact-manifest.json")
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "product_runtime_drift"
+    assert any(
+        "product runtime drift status is 'blocked'" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -5126,6 +5209,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         delta_mean=-0.02,
         ratio_mean=0.80,
     )
+    product_runtime_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "product-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
 
     payload = module.run_release_candidate_registry_workflow(
@@ -5140,6 +5228,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             verification_report_path=tmp_path / "release-verification.json",
             performance_baseline_key="performance_baseline:qwen-performance:0.6",
             selector_replay_report_path=selector_replay_report,
+            product_runtime_drift_report_path=product_runtime_drift_report,
             route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
             required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
             adapter_family_matrix_path=adapter_family_matrix_path,
@@ -5168,6 +5257,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert sorted(manifest["artifacts"]) == [
         "adapter_family_matrix_report",
         "performance_manifest",
+        "product_runtime_drift_manifest",
         "readiness_manifest",
         "release_candidate_report",
         "required_route_manifest_1",
@@ -5179,6 +5269,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_runtime_profile"] == "balanced"
     assert manifest["metadata"]["release_performance_status"] == "promote"
     assert manifest["metadata"]["release_selector_replay_status"] == "promote"
+    assert manifest["metadata"]["release_product_runtime_drift_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
@@ -5191,6 +5282,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "performance_baseline:qwen-performance:0.6"
     )
     assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
+    assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -5215,6 +5307,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         -0.02
     )
     assert manifest["metadata"]["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
+    assert manifest["metadata"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
+    assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 2
+    assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
@@ -5228,6 +5324,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["config"]["selector_replay_report"] == str(selector_replay_report)
+    assert payload["config"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
@@ -5252,6 +5349,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
+    assert record.metadata["release_product_runtime_drift_status"] == "promote"
+    assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
@@ -5883,6 +5982,103 @@ def _write_selector_replay_report(
                     "runner": "run_runtime_profile_selector_replay",
                     "status": status,
                     "recommended_candidate": recommended_candidate,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_count):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    baseline_path = output_dir / "baseline.json"
+    current_path = output_dir / "current.json"
+    report_path = output_dir / "product-runtime-drift.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    baseline_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "product_runtime_baseline",
+            "status": "promote",
+            "summary": {"n_traces": 12},
+        }, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    current_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "product_runtime_baseline",
+            "status": status,
+            "summary": {"n_traces": 12},
+        }, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    metrics = [
+        {
+            "metric": "total_seconds.mean",
+            "status": "blocked" if blocked_metric_count else "pass",
+            "comparison": "max_ratio",
+            "baseline": 0.10,
+            "current": 0.11 if not blocked_metric_count else 0.30,
+            "ratio_to_baseline": 1.1 if not blocked_metric_count else 3.0,
+            "absolute_delta": 0.01 if not blocked_metric_count else 0.20,
+            "threshold": 1.25,
+            "reason": None if not blocked_metric_count else "total_seconds.mean: 3 exceeded gate 1.25",
+        },
+        {
+            "metric": "n_traces",
+            "status": "pass",
+            "comparison": "min_current",
+            "baseline": None,
+            "current": 12,
+            "threshold": 10,
+            "reason": None,
+        },
+    ]
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "product_runtime_drift_comparison",
+        "status": status,
+        "decision": {
+            "status": status,
+            "blocking_reasons": () if status == "promote" else ("product runtime drift blocked",),
+        },
+        "summary": {
+            "gate_enabled": True,
+            "compared_metric_count": 2,
+            "blocked_metric_count": blocked_metric_count,
+            "observed_metric_count": 0,
+        },
+        "baseline": {"path": str(baseline_path), "status": "promote", "source": "file"},
+        "current": {"path": str(current_path), "status": status},
+        "metrics": metrics,
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "product_runtime_drift_report": report_path,
+                    "baseline_product_runtime_baseline": baseline_path,
+                    "current_product_runtime_baseline": current_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "compare_product_runtime_baselines",
+                    "status": status,
+                    "blocked_metric_count": blocked_metric_count,
                 },
             ),
             indent=2,

@@ -95,6 +95,10 @@ class ProductPromotionContract:
         required_route_baselines = _mapping(candidate.get("required_route_baselines"))
         selector_replay = _mapping(candidate.get("selector_replay"))
         selector_replay_recommended = _mapping(selector_replay.get("recommended"))
+        product_runtime_drift = _mapping(candidate.get("product_runtime_drift"))
+        product_runtime_drift_summary = _mapping(product_runtime_drift.get("summary"))
+        product_runtime_drift_baseline = _mapping(product_runtime_drift.get("baseline"))
+        product_runtime_drift_current = _mapping(product_runtime_drift.get("current"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -112,6 +116,9 @@ class ProductPromotionContract:
                 ),
                 "recommended_selector_replay_candidate": decision.get(
                     "recommended_selector_replay_candidate"
+                ),
+                "recommended_product_runtime_drift_report": decision.get(
+                    "recommended_product_runtime_drift_report"
                 ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "recommended_route": decision.get("recommended_route"),
@@ -142,6 +149,21 @@ class ProductPromotionContract:
                 ),
                 "selector_replay_observed_selected_to_original_ratio_mean": (
                     selector_replay_recommended.get("observed_selected_to_original_ratio_mean")
+                ),
+                "product_runtime_drift_status": decision.get("product_runtime_drift_status"),
+                "product_runtime_drift_report": product_runtime_drift.get("report_path"),
+                "product_runtime_drift_manifest": (
+                    product_runtime_drift.get("manifest_path")
+                    or manifests.get("product_runtime_drift_manifest")
+                ),
+                "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
+                "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
+                "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
+                "product_runtime_drift_compared_metric_count": (
+                    product_runtime_drift_summary.get("compared_metric_count")
+                ),
+                "product_runtime_drift_blocked_metric_count": (
+                    product_runtime_drift_summary.get("blocked_metric_count")
                 ),
                 "runtime_profile": config.get("runtime_profile"),
                 "inside_trigger_budget_policy": config.get("inside_trigger_budget_policy"),

@@ -667,7 +667,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_route_record": "benchmark_manifest:route:0.8",
             "recommended_performance_baseline_record": "performance_baseline:runtime:0.9",
             "recommended_selector_replay_candidate": "default",
+            "recommended_product_runtime_drift_report": (
+                "artifacts/runtime-drift/product-runtime-drift.json"
+            ),
             "selector_replay_status": "promote",
+            "product_runtime_drift_status": "promote",
             "recommended_route": "structured_state",
             "required_route_baseline_records": [
                 "benchmark_manifest:retrieval-structured-qa:0.5"
@@ -693,6 +697,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "observed_selected_total_seconds_mean": 0.10,
                     "observed_selected_minus_original_seconds_mean": -0.02,
                     "observed_selected_to_original_ratio_mean": 0.80,
+                },
+            },
+            "product_runtime_drift": {
+                "report_path": "artifacts/runtime-drift/product-runtime-drift.json",
+                "manifest_path": "artifacts/runtime-drift/artifact-manifest.json",
+                "baseline": {"path": "artifacts/runtime-baseline/product-runtime-baseline.json"},
+                "current": {"path": "artifacts/runtime-current/product-runtime-baseline.json"},
+                "summary": {
+                    "gate_enabled": True,
+                    "compared_metric_count": 9,
+                    "blocked_metric_count": 0,
                 },
             },
             "adapter_family_matrix": {
@@ -726,6 +741,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "route_manifest": "artifacts/route/artifact-manifest.json",
                 "performance_manifest": "artifacts/performance/artifact-manifest.json",
                 "selector_replay_manifest": "artifacts/selector/artifact-manifest.json",
+                "product_runtime_drift_manifest": "artifacts/runtime-drift/artifact-manifest.json",
                 "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
             },
         },
@@ -749,6 +765,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
+    assert contract.metadata["recommended_product_runtime_drift_report"] == (
+        "artifacts/runtime-drift/product-runtime-drift.json"
+    )
     assert contract.metadata["selector_replay_status"] == "promote"
     assert contract.metadata["selector_replay_report"] == (
         "artifacts/selector/runtime-profile-selector-replay.json"
@@ -764,6 +783,22 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["selector_replay_observed_selected_total_seconds_mean"] == 0.10
     assert contract.metadata["selector_replay_observed_selected_minus_original_seconds_mean"] == -0.02
     assert contract.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == 0.80
+    assert contract.metadata["product_runtime_drift_status"] == "promote"
+    assert contract.metadata["product_runtime_drift_report"] == (
+        "artifacts/runtime-drift/product-runtime-drift.json"
+    )
+    assert contract.metadata["product_runtime_drift_manifest"] == (
+        "artifacts/runtime-drift/artifact-manifest.json"
+    )
+    assert contract.metadata["product_runtime_drift_baseline_path"] == (
+        "artifacts/runtime-baseline/product-runtime-baseline.json"
+    )
+    assert contract.metadata["product_runtime_drift_current_path"] == (
+        "artifacts/runtime-current/product-runtime-baseline.json"
+    )
+    assert contract.metadata["product_runtime_drift_gate_enabled"] is True
+    assert contract.metadata["product_runtime_drift_compared_metric_count"] == 9
+    assert contract.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert contract.metadata["adapter_family_matrix_report"] == "artifacts/adapter-family-matrix.json"
     assert contract.metadata["adapter_family_required_routes"] == [
         "structured_state",

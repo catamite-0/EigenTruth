@@ -1145,6 +1145,7 @@ python benchmarks/compare_release_candidates.py \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --selector-replay-report artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json \
+  --product-runtime-drift-report artifacts/product-runtime-drift.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -1196,6 +1197,13 @@ carries the recommended selector plus observed selected-vs-original runtime
 delta metrics into the release candidate. This makes request-time auto-profile
 changes part of the same fail-closed release evidence instead of a separate
 benchmark note.
+Add `--product-runtime-drift-report` when the final candidate must also prove
+that a fresh `ProductTrace` runtime baseline has not drifted from a registered
+or file-based product runtime baseline. The gate verifies the drift report
+manifest, requires `status=promote`, and carries baseline/current paths plus
+blocked-metric counts into the release candidate. This connects captured product
+traffic replay back into the same release gate as model, route, and selector
+evidence.
 Add `--adapter-family-matrix` when release should also require a promoted
 adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
 `--required-adapter-route` for routes that must be present and promoted in that
@@ -1225,8 +1233,8 @@ without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
-`--required-route-baseline-key` and `--selector-replay-report` options and
-includes those route/selector manifests in the final release-candidate manifest
+`--required-route-baseline-key`, `--selector-replay-report`, and
+`--product-runtime-drift-report` options and includes those route/selector/drift manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`.
 
@@ -1239,6 +1247,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --name qwen05-local-release-candidate \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
+  --product-runtime-drift-report artifacts/product-runtime-drift.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1257,7 +1266,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 ```
 
 The generated manifest fingerprints the release-candidate report and the
-selected readiness, route, optional performance manifests, and optional adapter
+selected readiness, route, optional performance/selector/runtime-drift manifests, and optional adapter
 family matrix report. Recursive verification therefore checks the final
 candidate and all underlying baseline
 manifests before the release candidate is registered. When `--runtime-profile`

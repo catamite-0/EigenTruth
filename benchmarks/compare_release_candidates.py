@@ -31,6 +31,7 @@ def compare_release_candidates(
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
     selector_replay_report_path: str | Path | None = None,
+    product_runtime_drift_report_path: str | Path | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
     recursive: bool = True,
@@ -170,6 +171,11 @@ def compare_release_candidates(
         recursive=recursive,
         allow_unverified=allow_unverified,
     )
+    product_runtime_drift = _product_runtime_drift_gate(
+        product_runtime_drift_report_path=product_runtime_drift_report_path,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+    )
     decision = _decision(
         readiness,
         route,
@@ -178,9 +184,17 @@ def compare_release_candidates(
         adapter_family,
         required_routes,
         selector_replay,
+        product_runtime_drift,
     )
     candidate = (
-        _candidate_with_gates(raw_candidate, performance, adapter_family, required_routes, selector_replay)
+        _candidate_with_gates(
+            raw_candidate,
+            performance,
+            adapter_family,
+            required_routes,
+            selector_replay,
+            product_runtime_drift,
+        )
         if decision["status"] == "promote"
         else None
     )
@@ -197,6 +211,11 @@ def compare_release_candidates(
             "performance_baseline_key": performance_baseline_key,
             "selector_replay_report": (
                 None if selector_replay_report_path is None else str(selector_replay_report_path)
+            ),
+            "product_runtime_drift_report": (
+                None
+                if product_runtime_drift_report_path is None
+                else str(product_runtime_drift_report_path)
             ),
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
@@ -247,6 +266,7 @@ def compare_release_candidates(
         "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
         "selector_replay_gate": selector_replay,
+        "product_runtime_drift_gate": product_runtime_drift,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
@@ -374,6 +394,7 @@ def _decision(
     adapter_family: Mapping[str, Any] | None = None,
     required_routes: Mapping[str, Any] | None = None,
     selector_replay: Mapping[str, Any] | None = None,
+    product_runtime_drift: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -387,6 +408,12 @@ def _decision(
     required_route_status = None if required_routes is None else required_routes.get("status")
     selector_replay_gate = _mapping(None if selector_replay is None else selector_replay.get("gate"))
     selector_replay_status = None if selector_replay is None else selector_replay.get("status")
+    product_runtime_drift_gate = _mapping(
+        None if product_runtime_drift is None else product_runtime_drift.get("gate")
+    )
+    product_runtime_drift_status = (
+        None if product_runtime_drift is None else product_runtime_drift.get("status")
+    )
     blocking_reasons = []
     if readiness_status != "promote":
         blocking_reasons.append({
@@ -424,6 +451,12 @@ def _decision(
             "status": selector_replay_status,
             "reasons": list(selector_replay_gate.get("blocking_reasons", ())),
         })
+    if product_runtime_drift is not None and product_runtime_drift_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "product_runtime_drift",
+            "status": product_runtime_drift_status,
+            "reasons": list(product_runtime_drift_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -441,6 +474,7 @@ def _decision(
         "adapter_family_status": adapter_family_status,
         "required_route_baseline_status": required_route_status,
         "selector_replay_status": selector_replay_status,
+        "product_runtime_drift_status": product_runtime_drift_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
@@ -460,6 +494,11 @@ def _decision(
             None
             if selector_replay is None or selector_replay_gate.get("passed") is not True
             else selector_replay.get("recommended_candidate")
+        ),
+        "recommended_product_runtime_drift_report": (
+            None
+            if product_runtime_drift is None or product_runtime_drift_gate.get("passed") is not True
+            else product_runtime_drift.get("report_path")
         ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
@@ -819,6 +858,125 @@ def _selector_replay_summary(row: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _product_runtime_drift_gate(
+    *,
+    product_runtime_drift_report_path: str | Path | None,
+    recursive: bool,
+    allow_unverified: bool,
+) -> dict[str, Any] | None:
+    if product_runtime_drift_report_path is None:
+        return None
+    report_path = Path(product_runtime_drift_report_path)
+    report, report_error = _load_optional_json(report_path)
+    manifest_path = _product_runtime_drift_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        artifact_name="product_runtime_drift_manifest",
+    )
+    gate = _product_runtime_drift_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        allow_unverified=allow_unverified,
+    )
+    summary = _mapping(report.get("summary"))
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "decision_status": _nested(report, "decision", "status"),
+        "baseline": _mapping(report.get("baseline")),
+        "current": _mapping(report.get("current")),
+        "summary": {
+            "gate_enabled": summary.get("gate_enabled"),
+            "compared_metric_count": summary.get("compared_metric_count"),
+            "blocked_metric_count": summary.get("blocked_metric_count"),
+            "observed_metric_count": summary.get("observed_metric_count"),
+        },
+        "metrics": _product_runtime_drift_metric_summary(report),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _product_runtime_drift_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"product runtime drift report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("product runtime drift artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("product runtime drift manifest verification failed")
+    if report.get("workflow") != "product_runtime_drift_comparison":
+        failures.append(
+            f"product runtime drift workflow is {report.get('workflow')!r}, "
+            "expected 'product_runtime_drift_comparison'"
+        )
+    if report.get("status") != "promote":
+        failures.append(f"product runtime drift status is {report.get('status')!r}, expected 'promote'")
+    decision_status = _nested(report, "decision", "status")
+    if decision_status != "promote":
+        failures.append(
+            f"product runtime drift decision status is {decision_status!r}, expected 'promote'"
+        )
+    summary = _mapping(report.get("summary"))
+    if summary.get("gate_enabled") is not True:
+        failures.append("product runtime drift gate was not enabled")
+    blocked_count = _float_or_none(summary.get("blocked_metric_count"))
+    if blocked_count is None:
+        failures.append("product runtime drift blocked metric count is missing")
+    elif blocked_count > 0:
+        failures.append(f"product runtime drift blocked {int(blocked_count)} metric(s)")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _product_runtime_drift_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _product_runtime_drift_metric_summary(report: Mapping[str, Any]) -> tuple[dict[str, Any], ...]:
+    rows = []
+    for row in report.get("metrics", ()):
+        metric = _mapping(row)
+        if not metric:
+            continue
+        rows.append({
+            "metric": metric.get("metric"),
+            "status": metric.get("status"),
+            "comparison": metric.get("comparison"),
+            "baseline": _float_or_none(metric.get("baseline")),
+            "current": _float_or_none(metric.get("current")),
+            "ratio_to_baseline": _float_or_none(metric.get("ratio_to_baseline")),
+            "absolute_delta": _float_or_none(metric.get("absolute_delta")),
+            "absolute_drop": _float_or_none(metric.get("absolute_drop")),
+            "threshold": metric.get("threshold"),
+            "reason": metric.get("reason"),
+        })
+    return tuple(rows)
+
+
 def _performance_gate(
     *,
     verification: Mapping[str, Any],
@@ -1020,6 +1178,7 @@ def _candidate_with_gates(
     adapter_family: Mapping[str, Any] | None,
     required_routes: Mapping[str, Any] | None,
     selector_replay: Mapping[str, Any] | None,
+    product_runtime_drift: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
@@ -1060,6 +1219,18 @@ def _candidate_with_gates(
             "recommended": _mapping(selector_replay.get("recommended")),
         }
         manifests["selector_replay_manifest"] = selector_replay.get("manifest_path")
+    if product_runtime_drift is not None:
+        payload["product_runtime_drift"] = {
+            "report_path": product_runtime_drift.get("report_path"),
+            "manifest_path": product_runtime_drift.get("manifest_path"),
+            "report_status": product_runtime_drift.get("report_status"),
+            "decision_status": product_runtime_drift.get("decision_status"),
+            "baseline": _mapping(product_runtime_drift.get("baseline")),
+            "current": _mapping(product_runtime_drift.get("current")),
+            "summary": _mapping(product_runtime_drift.get("summary")),
+            "metrics": tuple(_mapping(metric) for metric in product_runtime_drift.get("metrics") or ()),
+        }
+        manifests["product_runtime_drift_manifest"] = product_runtime_drift.get("manifest_path")
     payload["manifests"] = manifests
     return payload
 
@@ -1184,6 +1355,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=args.selector_replay_report,
+        product_runtime_drift_report_path=args.product_runtime_drift_report,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         recursive=not args.no_recursive,
@@ -1238,7 +1410,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"{decision['status']} readiness={decision.get('recommended_readiness_record')} "
         f"route={decision.get('recommended_route_record')} "
         f"performance={decision.get('recommended_performance_baseline_record')} "
-        f"selector_replay={decision.get('recommended_selector_replay_candidate')}"
+        f"selector_replay={decision.get('recommended_selector_replay_candidate')} "
+        f"product_runtime_drift={decision.get('product_runtime_drift_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -1267,6 +1440,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--selector-replay-report", default=None,
                         help="optional runtime-profile selector replay report that must promote and verify")
+    parser.add_argument("--product-runtime-drift-report", default=None,
+                        help="optional product runtime drift report that must promote and verify")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

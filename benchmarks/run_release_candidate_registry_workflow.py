@@ -37,6 +37,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     required_route_baseline_keys: Sequence[str] = ()
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
+    product_runtime_drift_report_path: Path | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
     release_report_path: Path | None = None
@@ -95,6 +96,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "performance_registry_path", Path(self.performance_registry_path))
         if self.selector_replay_report_path is not None:
             object.__setattr__(self, "selector_replay_report_path", Path(self.selector_replay_report_path))
+        if self.product_runtime_drift_report_path is not None:
+            object.__setattr__(
+                self,
+                "product_runtime_drift_report_path",
+                Path(self.product_runtime_drift_report_path),
+            )
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
         if self.release_report_path is not None:
@@ -163,6 +170,7 @@ def run_release_candidate_registry_workflow(
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
+        product_runtime_drift_report_path=config.product_runtime_drift_report_path,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         required_adapter_routes=config.required_adapter_routes,
         recursive=config.recursive,
@@ -251,6 +259,11 @@ def run_release_candidate_registry_workflow(
                 if config.selector_replay_report_path is None
                 else str(config.selector_replay_report_path)
             ),
+            "product_runtime_drift_report": (
+                None
+                if config.product_runtime_drift_report_path is None
+                else str(config.product_runtime_drift_report_path)
+            ),
             "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
             "adapter_family_matrix": (
                 None
@@ -308,6 +321,7 @@ def _write_artifact_manifest(
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
+        "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
     artifacts.update({
@@ -363,6 +377,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
     selector_replay = dict(candidate.get("selector_replay") or {})
     selector_replay_recommended = dict(selector_replay.get("recommended") or {})
+    product_runtime_drift = dict(candidate.get("product_runtime_drift") or {})
+    product_runtime_drift_summary = dict(product_runtime_drift.get("summary") or {})
+    product_runtime_drift_baseline = dict(product_runtime_drift.get("baseline") or {})
+    product_runtime_drift_current = dict(product_runtime_drift.get("current") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -371,6 +389,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_route_status": decision.get("route_status"),
         "release_performance_status": decision.get("performance_status"),
         "release_selector_replay_status": decision.get("selector_replay_status"),
+        "release_product_runtime_drift_status": decision.get("product_runtime_drift_status"),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_runtime_profile": config.get("runtime_profile"),
@@ -380,6 +399,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_record": decision.get("recommended_route_record"),
         "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
         "recommended_selector_replay_candidate": decision.get("recommended_selector_replay_candidate"),
+        "recommended_product_runtime_drift_report": decision.get("recommended_product_runtime_drift_report"),
         "required_adapter_routes": decision.get("required_adapter_routes"),
         "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
@@ -466,6 +486,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "selector_replay_observed_selected_to_original_ratio_mean": selector_replay_recommended.get(
             "observed_selected_to_original_ratio_mean"
         ),
+        "product_runtime_drift_report": product_runtime_drift.get("report_path"),
+        "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
+        "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
+        "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
+        "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
+            "compared_metric_count"
+        ),
+        "product_runtime_drift_blocked_metric_count": product_runtime_drift_summary.get(
+            "blocked_metric_count"
+        ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
@@ -497,6 +527,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
+        "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
         "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
     }
 
@@ -555,6 +586,11 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=(
             None if args.selector_replay_report is None else Path(args.selector_replay_report)
+        ),
+        product_runtime_drift_report_path=(
+            None
+            if args.product_runtime_drift_report is None
+            else Path(args.product_runtime_drift_report)
         ),
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
@@ -640,6 +676,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--selector-replay-report", default=None,
                         help="optional runtime-profile selector replay report that must promote and verify")
+    parser.add_argument("--product-runtime-drift-report", default=None,
+                        help="optional product runtime drift report that must promote and verify")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],
