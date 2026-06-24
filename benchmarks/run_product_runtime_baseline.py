@@ -616,10 +616,15 @@ def _optimization_recommendations(
     verification_stage = _mapping(summary.get("verification_stage"))
     claim_skip_rate = _finite_float(verification_stage.get("claim_skip_rate"))
     enabled_stage_count = _finite_float(verification_stage.get("enabled_trace_count")) or 0.0
+    run_verifier_stage_count = _finite_float(verification_stage.get("run_verifier_trace_count")) or 0.0
+    triggered_scope_count = _finite_float(verification_stage.get("triggered_scope_trace_count")) or 0.0
+    partial_skip_count = _finite_float(verification_stage.get("partial_skip_trace_count")) or 0.0
+    verified_claim_count_mean = _finite_float(_nested(summary, "verified_claim_count", "mean"))
     profiles = _mapping(summary.get("profiles"))
     profile_counts = _mapping(profiles.get("runtime_profile_counts"))
     audit_rate = _count_rate(profile_counts, "audit")
     n_traces = _finite_float(summary.get("n_traces")) or 0.0
+    top_phase_name = None if not phase_hotspots else str(phase_hotspots[0].get("phase"))
 
     if phase_hotspots:
         top_phase = phase_hotspots[0]
@@ -720,6 +725,40 @@ def _optimization_recommendations(
             suggested_action=(
                 "Replay runtime profiles over a trace corpus and adjust sensitive claim features "
                 "or diagnostic-risk thresholds before changing verifier implementations."
+            ),
+        ))
+
+    if (
+        enabled_stage_count > 0
+        and run_verifier_stage_count > 0
+        and partial_skip_count == 0
+        and triggered_scope_count == 0
+        and (
+            top_phase_name == "initial_verification"
+            or (verified_claim_count_mean is not None and verified_claim_count_mean > 1.0)
+        )
+    ):
+        recommendations.append(_recommendation(
+            "enable_selective_staged_verification",
+            priority="medium",
+            area="runtime_profile",
+            title="Enable triggered-claim-only staged verification before widening verifier coverage.",
+            reason=(
+                "Staged verification is enabled, but verifier-running traces did not record "
+                "triggered-scope partial skips."
+            ),
+            evidence={
+                "enabled_trace_count": enabled_stage_count,
+                "run_verifier_trace_count": run_verifier_stage_count,
+                "triggered_scope_trace_count": triggered_scope_count,
+                "partial_skip_trace_count": partial_skip_count,
+                "verified_claim_count_mean": verified_claim_count_mean,
+                "slowest_phase": top_phase_name,
+            },
+            suggested_action=(
+                "Set stage_verify_triggered_claims_only=true for latency or balanced profiles, "
+                "then replay traces and confirm verification_stage.partial_skip_trace_count and "
+                "verification_stage.selective_claim_skip_rate increase without changing risk decisions."
             ),
         ))
 
@@ -892,7 +931,27 @@ def _aggregate_verification_stage(metrics: Sequence[Mapping[str, Any]]) -> dict[
     reason_counts: dict[str, int] = {}
     triggered_feature_counts: dict[str, int] = {}
     triggered_metadata_counts: dict[str, int] = {}
+    verification_scope_counts: dict[str, int] = {}
+    selective_claim_count = 0.0
+    selective_saved_claim_count = 0.0
+    selective_verified_claim_count = 0.0
+    selective_claim_observations = 0
+    partial_skip_count = 0
     for summary in summaries:
+        scope = _verification_scope(summary)
+        verification_scope_counts[scope] = verification_scope_counts.get(scope, 0) + 1
+        saved_claims = _finite_float(summary.get("saved_claim_count")) or 0.0
+        if summary.get("run_verifier") is True and scope == "triggered" and saved_claims > 0:
+            partial_skip_count += 1
+        if scope == "triggered":
+            claim_count = _finite_float(summary.get("claim_count"))
+            verified_claim_count = _finite_float(summary.get("verified_claim_count"))
+            if claim_count is not None:
+                selective_claim_count += claim_count
+                selective_saved_claim_count += saved_claims
+                selective_claim_observations += 1
+            if verified_claim_count is not None:
+                selective_verified_claim_count += verified_claim_count
         reason = summary.get("reason")
         if reason is not None:
             reason_key = str(reason)
@@ -909,16 +968,44 @@ def _aggregate_verification_stage(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "enabled_trace_count": enabled_count,
         "skipped_trace_count": skipped_count,
         "run_verifier_trace_count": sum(1 for summary in summaries if summary.get("run_verifier") is True),
+        "verification_scope_counts": verification_scope_counts,
+        "none_scope_trace_count": verification_scope_counts.get("none", 0),
+        "all_scope_trace_count": verification_scope_counts.get("all", 0),
+        "triggered_scope_trace_count": verification_scope_counts.get("triggered", 0),
+        "partial_skip_trace_count": partial_skip_count,
+        "partial_skip_trace_rate": _safe_div(partial_skip_count, len(summaries)),
         "skip_decision_rate": _safe_div(skipped_count, len(summaries)),
         "claim_count": claim_count,
         "saved_claim_count": saved_claim_count,
         "verified_claim_count": verified_claim_count,
         "claim_skip_rate": _safe_div(saved_claim_count, claim_count),
+        "selective_claim_count": selective_claim_count if selective_claim_observations else None,
+        "selective_saved_claim_count": (
+            selective_saved_claim_count if selective_claim_observations else None
+        ),
+        "selective_verified_claim_count": (
+            selective_verified_claim_count if selective_claim_observations else None
+        ),
+        "selective_claim_skip_rate": _safe_div(
+            selective_saved_claim_count if selective_claim_observations else None,
+            selective_claim_count if selective_claim_observations else None,
+        ),
         "per_trace_skip_rate": _numeric_summary(summary.get("skip_rate") for summary in summaries),
         "reason_counts": reason_counts,
         "triggered_feature_counts": triggered_feature_counts,
         "triggered_metadata_counts": triggered_metadata_counts,
     }
+
+
+def _verification_scope(summary: Mapping[str, Any]) -> str:
+    scope = _optional_string(summary.get("verification_scope"))
+    if scope is not None:
+        return scope.strip().lower()
+    if summary.get("run_verifier") is False:
+        return "none"
+    if summary.get("run_verifier") is True:
+        return "all"
+    return "unknown"
 
 
 def _merge_counts(target: dict[str, int], source: Mapping[str, Any]) -> None:

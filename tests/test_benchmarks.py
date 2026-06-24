@@ -12761,6 +12761,100 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert policy_record.metadata["policy_enabled"] is True
 
 
+def test_run_product_runtime_baseline_recommends_selective_staged_verification(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_path = tmp_path / "trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "req",
+            "claims": [
+                {"claim_id": "c1", "text": "2 + 2 = 4."},
+                {"claim_id": "c2", "text": "Paris is the capital of France."},
+            ],
+            "runtime_trace": {
+                "total_seconds": 0.25,
+                "phases": [
+                    {"name": "diagnostic_risk_decision", "seconds": 0.01},
+                    {"name": "initial_verification", "seconds": 0.20},
+                ],
+            },
+            "events": [
+                {
+                    "event_type": "verification_stage_decision",
+                    "payload": {
+                        "run_verifier": True,
+                        "reason": "diagnostic risk level is medium",
+                        "triggered_claim_ids": ["c1"],
+                        "triggered_features": {"c1": ["has_number"]},
+                    },
+                },
+                {
+                    "event_type": "initial_verification",
+                    "payload": {
+                        "n_claims": 2,
+                        "skipped": False,
+                        "results": [
+                            {"status": "supported", "metadata": {}},
+                            {"status": "supported", "metadata": {}},
+                        ],
+                    },
+                },
+            ],
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_route": "structured_qa",
+                        "total_duration_seconds": 0.20,
+                        "selected_route_duration_seconds": 0.20,
+                        "attempted_route_count": 1,
+                        "used_retrieval": False,
+                        "retrieval_hit_count": 0,
+                    },
+                },
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_route": "structured_qa",
+                        "total_duration_seconds": 0.20,
+                        "selected_route_duration_seconds": 0.20,
+                        "attempted_route_count": 1,
+                        "used_retrieval": False,
+                        "retrieval_hit_count": 0,
+                    },
+                },
+            ],
+            "metadata": {
+                "runtime_profile": "balanced",
+                "staged_verification_enabled": True,
+                "cache": {"verifier": {"hits": 4, "misses": 0}},
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_path,),
+            report_path=tmp_path / "product-runtime-baseline.json",
+        )
+    )
+
+    optimization = payload["optimization"]
+    recommendation = next(
+        item
+        for item in optimization["recommendations"]
+        if item["id"] == "enable_selective_staged_verification"
+    )
+    stage = payload["summary"]["verification_stage"]
+
+    assert stage["verification_scope_counts"] == {"all": 1}
+    assert stage["partial_skip_trace_count"] == 0
+    assert recommendation["priority"] == "medium"
+    assert recommendation["evidence"]["triggered_scope_trace_count"] == 0.0
+    assert recommendation["evidence"]["slowest_phase"] == "initial_verification"
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
@@ -13425,12 +13519,16 @@ def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_
     verified_trace.write_text(
         json.dumps({
             "request_id": "verify",
-            "claims": [{"claim_id": "c1", "text": "2 + 2 = 4."}],
+            "claims": [
+                {"claim_id": "c1", "text": "2 + 2 = 4."},
+                {"claim_id": "c2", "text": "Paris is the capital of France."},
+            ],
             "events": [
                 {
                     "event_type": "verification_stage_decision",
                     "payload": {
                         "run_verifier": True,
+                        "verification_scope": "triggered",
                         "reason": "diagnostic risk level is medium",
                         "triggered_claim_ids": ["c1"],
                         "triggered_features": {"c1": ["has_number"]},
@@ -13439,8 +13537,11 @@ def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_
                 {
                     "event_type": "initial_verification",
                     "payload": {
-                        "n_claims": 1,
+                        "n_claims": 2,
                         "skipped": False,
+                        "verification_scope": "triggered",
+                        "verified_claim_ids": ["c1"],
+                        "skipped_claim_ids": ["c2"],
                         "results": [{"status": "supported", "metadata": {}}],
                     },
                 },
@@ -13467,12 +13568,22 @@ def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_
     assert payload["budget"]["passed_count"] == 2
     assert payload["traces"][0]["metrics"]["verification_skip_rate"] == 1.0
     assert payload["traces"][1]["metrics"]["verified_claim_count"] == 1
-    assert payload["summary"]["verification_skip_rate"]["mean"] == pytest.approx(0.5)
+    assert payload["traces"][1]["metrics"]["verifier_saved_claim_count"] == 1
+    assert payload["summary"]["verification_skip_rate"]["mean"] == pytest.approx(0.75)
     assert stage["enabled_trace_count"] == 2
     assert stage["skipped_trace_count"] == 1
-    assert stage["saved_claim_count"] == pytest.approx(2.0)
+    assert stage["verification_scope_counts"] == {"none": 1, "triggered": 1}
+    assert stage["none_scope_trace_count"] == 1
+    assert stage["triggered_scope_trace_count"] == 1
+    assert stage["partial_skip_trace_count"] == 1
+    assert stage["partial_skip_trace_rate"] == pytest.approx(0.5)
+    assert stage["saved_claim_count"] == pytest.approx(3.0)
     assert stage["verified_claim_count"] == pytest.approx(1.0)
-    assert stage["claim_skip_rate"] == pytest.approx(2 / 3)
+    assert stage["claim_skip_rate"] == pytest.approx(3 / 4)
+    assert stage["selective_claim_count"] == pytest.approx(2.0)
+    assert stage["selective_saved_claim_count"] == pytest.approx(1.0)
+    assert stage["selective_verified_claim_count"] == pytest.approx(1.0)
+    assert stage["selective_claim_skip_rate"] == pytest.approx(0.5)
     assert stage["triggered_feature_counts"] == {"has_number": 1}
     assert stage["reason_counts"]["diagnostic risk level is medium"] == 1
 
@@ -13535,6 +13646,13 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
     assert payload["profiles"][0]["status"] == "observed"
     assert payload["profiles"][1]["status"] == "observed"
     assert payload["profiles"][2]["status"] == "observed"
+    for profile in payload["profiles"]:
+        assert "verification_triggered_scope_trace_count" in profile["metrics"]
+        assert "verification_partial_skip_trace_count" in profile["metrics"]
+        assert "verification_selective_claim_skip_rate" in profile["metrics"]
+    for row in payload["leaderboard"]:
+        assert "verification_partial_skip_trace_count" in row
+        assert "verification_selective_claim_skip_rate" in row
     assert Path(payload["profiles"][0]["baseline_artifact_manifest"]).exists()
     assert Path(payload["profiles"][1]["baseline_artifact_manifest"]).exists()
     assert Path(payload["profiles"][2]["baseline_artifact_manifest"]).exists()

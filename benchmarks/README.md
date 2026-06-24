@@ -2537,12 +2537,14 @@ python benchmarks/run_performance_baseline_workflow.py \
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
-skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
+skip savings, verification-scope counts, triggered-only partial skip savings,
+and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
 `ProductPromotionContract` budget. The output includes `optimization.hotspots`,
 `optimization.recommendations`, and `optimization.policy_hints`, turning the
 baseline into an actionable performance pass over slow phases/routes, low cache
 hit rates, excessive retrieval or verifier fanout, missing staged verification,
-and audit-heavy runtime-profile distributions. Use full `ProductTrace.to_dict()`
+missing triggered-claim-only staged verification, and audit-heavy
+runtime-profile distributions. Use full `ProductTrace.to_dict()`
 payloads for this workflow; bounded telemetry from `--bounded-trace` is
 intentionally rejected because it can truncate replay-relevant evidence and
 action outputs. For large trace sets, add `--trace-records-jsonl` to stream
@@ -2735,7 +2737,11 @@ baseline; `--slo-policy` applies aggregate gates such as
 `max_total_seconds_p95`, `max_mean_attempted_route_count`,
 `min_verification_skip_rate_mean`, `max_verified_claim_count_mean`, and
 `min_auto_selected_profile_counts` to the profile row. This is the
-product-control counterpart to model-side cache/profile sweeps. Use the default
+product-control counterpart to model-side cache/profile sweeps. Profile rows
+also surface selective staged-verification evidence such as
+`verification_partial_skip_trace_count` and
+`verification_selective_claim_skip_rate`, so latency/balanced profiles can prove
+they saved verifier work by verifying only triggered claims. Use the default
 `--max-workers 1` when timing will be used as promotion evidence. Use
 `--max-workers N` to run independent modes concurrently for faster smoke and
 coverage scans; within each mode, trace order remains deterministic before its

@@ -572,6 +572,21 @@ def _profile_record(
             "verifier_saved_claim_count_mean": _nested(summary, "verifier_saved_claim_count", "mean"),
             "verification_claim_skip_rate": _nested(summary, "verification_stage", "claim_skip_rate"),
             "verification_skip_decision_rate": _nested(summary, "verification_stage", "skip_decision_rate"),
+            "verification_triggered_scope_trace_count": _nested(
+                summary,
+                "verification_stage",
+                "triggered_scope_trace_count",
+            ),
+            "verification_partial_skip_trace_count": _nested(
+                summary,
+                "verification_stage",
+                "partial_skip_trace_count",
+            ),
+            "verification_selective_claim_skip_rate": _nested(
+                summary,
+                "verification_stage",
+                "selective_claim_skip_rate",
+            ),
         },
         "runtime_profile_selection": _runtime_profile_selection_summary(traces),
         "budget": _mapping(baseline.get("budget")),
@@ -759,6 +774,12 @@ def _leaderboard(profiles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
             "cache_hit_rate_mean": _float_or_none(metrics.get("cache_hit_rate_mean")),
             "verification_skip_rate_mean": _float_or_none(metrics.get("verification_skip_rate_mean")),
             "verified_claim_count_mean": _float_or_none(metrics.get("verified_claim_count_mean")),
+            "verification_partial_skip_trace_count": _float_or_none(
+                metrics.get("verification_partial_skip_trace_count")
+            ),
+            "verification_selective_claim_skip_rate": _float_or_none(
+                metrics.get("verification_selective_claim_skip_rate")
+            ),
             "blocked": profile.get("status") == "blocked",
         })
     return sorted(
