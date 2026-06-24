@@ -5,24 +5,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "corpus-cache.json",
-      "sha256": "dbf3f7cc18c514f7f17d9651bcb319949e9598d783779d54569157e9c2c2709a",
-      "size_bytes": 11264
+      "sha256": "676ae4da87d868804557caa27b7995d8a4e701602ea398d044c2d00d717288e9",
+      "size_bytes": 12111
     },
     "corpus_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "corpus/artifact-manifest.json",
-      "sha256": "7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28",
-      "size_bytes": 5301
+      "sha256": "b69392f4e704500bf309650b2729a53c69bbc5ca1bf4713cf724e2fd56786b3d",
+      "size_bytes": 5803
     },
     "corpus_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "corpus/product-trace-corpus.json",
-      "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
-      "size_bytes": 10240
+      "sha256": "e785ab965a690a4a2f6c5bf610095fe4904773bf1bd4ffac498ff7e522ad91ce",
+      "size_bytes": 10831
     },
     "corpus_runtime_pair_index": {
       "exists": true,
@@ -31,6 +31,14 @@
       "path": "corpus/runtime-pair-index.json",
       "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
       "size_bytes": 3709
+    },
+    "corpus_source_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "corpus/source-cache.json",
+      "sha256": "9f52fb8be24a30f47d2a14f8a12c25e5a8d0ef20e1ce6241119eff8ca66ca128",
+      "size_bytes": 337032
     },
     "corpus_traces_dir": {
       "exists": true,
@@ -141,8 +149,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "4679a89e88dee191e9ef1caf62695f7cb7061545a48120045827f3a615b064fb",
-      "size_bytes": 9030
+      "sha256": "85810f04032f76f598e281c63666cce69934baafcf46ffaed5f56976be00519a",
+      "size_bytes": 9988
     },
     "replay_policy": {
       "exists": true,
@@ -213,17 +221,17 @@
     "workflow_cache_enabled_count": 3,
     "workflow_cache_hit_count": 3,
     "workflow_cache_hit_rate": 1.0,
-    "workflow_corpus_seconds": 0.007252,
-    "workflow_phase_total_seconds": 0.074145,
-    "workflow_runtime_baseline_seconds": 0.030891,
-    "workflow_selector_replay_seconds": 0.036002,
-    "workflow_total_seconds": 0.074431
+    "workflow_corpus_seconds": 0.007482,
+    "workflow_phase_total_seconds": 0.074286,
+    "workflow_runtime_baseline_seconds": 0.03089,
+    "workflow_selector_replay_seconds": 0.035914,
+    "workflow_total_seconds": 0.074575
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 25,
+    "artifact_count": 26,
     "directory_count": 1,
-    "file_count": 24,
+    "file_count": 25,
     "missing_count": 0
   }
 }

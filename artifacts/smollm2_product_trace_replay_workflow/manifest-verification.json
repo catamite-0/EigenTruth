@@ -1,10 +1,10 @@
 {
-  "checked": 25,
+  "checked": 26,
   "failures": [],
   "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
   "nested": [
     {
-      "checked": 15,
+      "checked": 16,
       "failures": [],
       "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
       "nested": [],

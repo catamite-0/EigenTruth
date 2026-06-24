@@ -11670,6 +11670,93 @@ def test_build_product_trace_corpus_streams_jsonl_limit_and_parses_bool_strings(
         )
 
 
+def test_build_product_trace_corpus_reuses_source_cache_incrementally(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.build_product_trace_corpus")
+    output_dir = tmp_path / "trace-corpus"
+    source_cache_path = tmp_path / "trace-corpus" / "source-cache.json"
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+
+    def trace_payload(request_id, profile, total_seconds):
+        return {
+            "request_id": request_id,
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": f"Private fact {request_id}.", "metadata": {}}],
+            "metadata": {"runtime_profile": profile},
+            "runtime_trace": {"total_seconds": total_seconds, "phases": []},
+        }
+
+    trace_a.write_text(json.dumps(trace_payload("latency-a", "latency", 0.10)), encoding="utf-8")
+    trace_b.write_text(json.dumps(trace_payload("audit-b", "audit", 0.20)), encoding="utf-8")
+
+    first = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_a, trace_b),
+            output_dir=output_dir,
+            source_cache_path=source_cache_path,
+            require_runtime_trace=True,
+        )
+    )
+    cache_payload = json.loads(source_cache_path.read_text(encoding="utf-8"))
+
+    assert first["source_cache"]["source"] == "source_scan"
+    assert first["source_cache"]["hit_count"] == 0
+    assert first["source_cache"]["miss_count"] == 2
+    assert first["source_cache"]["cache_written"] is True
+    assert cache_payload["workflow"] == "product_trace_corpus_source_cache"
+    assert cache_payload["summary"]["source_count"] == 2
+
+    original_load_json = module._load_json
+
+    def fail_if_json_is_reloaded(path):
+        raise AssertionError(f"source cache should avoid reloading {path}")
+
+    monkeypatch.setattr(module, "_load_json", fail_if_json_is_reloaded)
+    second = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_a, trace_b),
+            output_dir=output_dir,
+            source_cache_path=source_cache_path,
+            require_runtime_trace=True,
+        )
+    )
+
+    assert second["source_cache"]["source"] == "source_cache"
+    assert second["source_cache"]["cache_hit"] is True
+    assert second["source_cache"]["hit_count"] == 2
+    assert second["source_cache"]["miss_count"] == 0
+    assert second["summary"]["accepted_count"] == 2
+
+    trace_b.write_text(json.dumps(trace_payload("audit-b", "audit", 0.30)), encoding="utf-8")
+
+    def fail_if_unchanged_trace_is_reloaded(path):
+        if Path(path) == trace_a:
+            raise AssertionError("unchanged source should be served from source cache")
+        return original_load_json(path)
+
+    monkeypatch.setattr(module, "_load_json", fail_if_unchanged_trace_is_reloaded)
+    third = module.build_product_trace_corpus(
+        module.ProductTraceCorpusConfig(
+            trace_paths=(trace_a, trace_b),
+            output_dir=output_dir,
+            source_cache_path=source_cache_path,
+            require_runtime_trace=True,
+        )
+    )
+
+    assert third["source_cache"]["source"] == "source_cache_mixed"
+    assert third["source_cache"]["cache_partial_hit"] is True
+    assert third["source_cache"]["hit_count"] == 1
+    assert third["source_cache"]["miss_count"] == 1
+    assert third["summary"]["accepted_count"] == 2
+    assert third["traces"][1]["total_seconds"] == pytest.approx(0.30)
+
+
 def test_build_product_trace_corpus_rejects_bounded_trace_payload(tmp_path):
     module = importlib.import_module("benchmarks.build_product_trace_corpus")
     trace_path = tmp_path / "bounded-trace.json"
@@ -11707,6 +11794,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     verification_report_path = tmp_path / "workflow" / "manifest-verification.json"
     fingerprint_cache_path = tmp_path / "workflow" / "fingerprints.json"
     corpus_cache_path = tmp_path / "workflow" / "corpus-cache.json"
+    corpus_source_cache_path = tmp_path / "workflow" / "corpus" / "source-cache.json"
     runtime_trace_records_cache_path = tmp_path / "workflow" / "runtime-baseline" / "trace-record-cache.json"
     selector_trace_inputs_path = tmp_path / "workflow" / "selector-replay" / "trace-inputs.json"
     traces_dir = tmp_path / "input-traces"
@@ -11798,6 +11886,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             verification_report_path=verification_report_path,
             fingerprint_cache_path=fingerprint_cache_path,
             corpus_cache_path=corpus_cache_path,
+            corpus_source_cache_path=corpus_source_cache_path,
             runtime_trace_records_cache_path=runtime_trace_records_cache_path,
             selector_trace_inputs_path=selector_trace_inputs_path,
         )
@@ -11810,6 +11899,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
     fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
     corpus_cache = json.loads(corpus_cache_path.read_text(encoding="utf-8"))
+    corpus_source_cache = json.loads(corpus_source_cache_path.read_text(encoding="utf-8"))
     runtime_trace_records_cache = json.loads(runtime_trace_records_cache_path.read_text(encoding="utf-8"))
     selector_trace_inputs = json.loads(selector_trace_inputs_path.read_text(encoding="utf-8"))
 
@@ -11826,21 +11916,24 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["timing"]["phases"]["corpus"]["seconds"] >= 0.0
     assert payload["timing"]["phases"]["runtime_baseline"]["seconds"] >= 0.0
     assert payload["timing"]["phases"]["selector_replay"]["seconds"] >= 0.0
-    assert payload["cache_summary"]["enabled_count"] == 3
+    assert payload["cache_summary"]["enabled_count"] == 4
     assert payload["cache_summary"]["hit_count"] == 0
-    assert payload["cache_summary"]["written_count"] == 3
+    assert payload["cache_summary"]["written_count"] == 4
     assert payload["cache_summary"]["hit_rate"] == pytest.approx(0.0)
     assert payload["cache_summary"]["corpus"]["source"] == "corpus_build"
+    assert payload["cache_summary"]["corpus_source"]["source"] == "source_scan"
     assert payload["cache_summary"]["runtime_trace_records"]["source"] == "trace_scan"
     assert payload["cache_summary"]["selector_trace_inputs"]["source"] == "trace_scan"
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
     assert payload["paths"]["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
     assert payload["paths"]["corpus_cache"] == str(corpus_cache_path)
+    assert payload["paths"]["corpus_source_cache"] == str(corpus_source_cache_path)
     assert payload["paths"]["runtime_trace_records_cache"] == str(runtime_trace_records_cache_path)
     assert payload["paths"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
     assert payload["config"]["corpus_cache"] == str(corpus_cache_path)
+    assert payload["config"]["corpus_source_cache"] == str(corpus_source_cache_path)
     assert payload["config"]["runtime_trace_records_cache"] == str(runtime_trace_records_cache_path)
     assert payload["config"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
@@ -11849,6 +11942,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert len(fingerprint_cache) > 0
     assert corpus_cache["workflow"] == "product_trace_replay_workflow_corpus_cache"
     assert corpus_cache["summary"]["accepted_count"] == 3
+    assert corpus_source_cache["workflow"] == "product_trace_corpus_source_cache"
+    assert corpus_source_cache["summary"]["source_count"] == 3
     assert runtime_trace_records_cache["workflow"] == "product_runtime_baseline_trace_records"
     assert runtime_trace_records_cache["summary"]["trace_count"] == 3
     assert selector_trace_inputs["workflow"] == "runtime_profile_selector_replay_trace_inputs"
@@ -11865,6 +11960,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert "corpus_runtime_pair_index" in manifest["artifacts"]
     assert "corpus_cache" in manifest["artifacts"]
+    assert "corpus_source_cache" in manifest["artifacts"]
     assert "runtime_trace_records_cache" in manifest["artifacts"]
     assert "selector_trace_inputs" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(
@@ -11876,7 +11972,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["selector_replay_status"] == "promote"
     assert record.metadata["workflow_total_seconds"] >= 0.0
     assert record.metadata["workflow_phase_total_seconds"] >= 0.0
-    assert record.metadata["workflow_cache_enabled_count"] == 3
+    assert record.metadata["workflow_cache_enabled_count"] == 4
     assert record.metadata["workflow_cache_hit_count"] == 0
     assert record.metadata["workflow_cache_hit_rate"] == pytest.approx(0.0)
     assert record.metadata["manifest_verified"] is True
@@ -11886,6 +11982,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["manifest_fingerprint_cache_entries"] == len(fingerprint_cache)
     assert record.metadata["corpus_cache_path"] == str(corpus_cache_path)
     assert record.metadata["corpus_cache_written"] is True
+    assert record.metadata["corpus_source_cache_path"] == str(corpus_source_cache_path)
+    assert record.metadata["corpus_source_cache_written"] is True
     assert record.metadata["runtime_trace_records_cache_path"] == str(runtime_trace_records_cache_path)
     assert record.metadata["runtime_trace_records_cache_written"] is True
     assert record.metadata["selector_trace_inputs_path"] == str(selector_trace_inputs_path)
@@ -11977,6 +12075,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         fingerprint_cache_path=tmp_path / "fingerprints.json",
         corpus_cache_path=tmp_path / "corpus-cache.json",
         refresh_corpus_cache="false",
+        corpus_source_cache_path=tmp_path / "corpus-source-cache.json",
+        refresh_corpus_source_cache="false",
         runtime_trace_records_cache_path=tmp_path / "runtime-trace-record-cache.json",
         refresh_runtime_trace_records_cache="false",
         selector_trace_inputs_path=tmp_path / "selector-trace-inputs.json",
@@ -12001,6 +12101,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.fingerprint_cache_path == tmp_path / "fingerprints.json"
     assert workflow_config.corpus_cache_path == tmp_path / "corpus-cache.json"
     assert workflow_config.refresh_corpus_cache is False
+    assert workflow_config.corpus_source_cache_path == tmp_path / "corpus-source-cache.json"
+    assert workflow_config.refresh_corpus_source_cache is False
     assert workflow_config.runtime_trace_records_cache_path == tmp_path / "runtime-trace-record-cache.json"
     assert workflow_config.refresh_runtime_trace_records_cache is False
     assert workflow_config.selector_trace_inputs_path == tmp_path / "selector-trace-inputs.json"

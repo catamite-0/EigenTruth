@@ -101,8 +101,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-corpus.json",
-      "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
-      "size_bytes": 10240
+      "sha256": "e785ab965a690a4a2f6c5bf610095fe4904773bf1bd4ffac498ff7e522ad91ce",
+      "size_bytes": 10831
     },
     "product_trace_corpus_traces": {
       "exists": true,
@@ -119,6 +119,14 @@
       "path": "runtime-pair-index.json",
       "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
       "size_bytes": 3709
+    },
+    "product_trace_source_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "source-cache.json",
+      "sha256": "9f52fb8be24a30f47d2a14f8a12c25e5a8d0ef20e1ce6241119eff8ca66ca128",
+      "size_bytes": 337032
     }
   },
   "digest_algorithm": "sha256",
@@ -131,13 +139,18 @@
     "runtime_pair_index_record_count": 12,
     "runtime_trace_count": 12,
     "source": "run_product_trace_replay_workflow",
+    "source_cache_hit_count": 12,
+    "source_cache_miss_count": 0,
+    "source_cache_path": "artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json",
+    "source_cache_source": "source_cache",
+    "source_cache_written": true,
     "status": "ready"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 15,
+    "artifact_count": 16,
     "directory_count": 1,
-    "file_count": 14,
+    "file_count": 15,
     "missing_count": 0
   }
 }

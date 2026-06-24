@@ -74,6 +74,8 @@ class ProductTraceReplayWorkflowConfig:
     fingerprint_cache_path: str | Path | None = None
     corpus_cache_path: str | Path | None = None
     refresh_corpus_cache: bool = False
+    corpus_source_cache_path: str | Path | None = None
+    refresh_corpus_source_cache: bool = False
     runtime_trace_records_cache_path: str | Path | None = None
     refresh_runtime_trace_records_cache: bool = False
     selector_trace_inputs_path: str | Path | None = None
@@ -115,6 +117,8 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
         if self.corpus_cache_path is not None:
             object.__setattr__(self, "corpus_cache_path", Path(self.corpus_cache_path))
+        if self.corpus_source_cache_path is not None:
+            object.__setattr__(self, "corpus_source_cache_path", Path(self.corpus_source_cache_path))
         if self.runtime_trace_records_cache_path is not None:
             object.__setattr__(
                 self,
@@ -150,6 +154,14 @@ class ProductTraceReplayWorkflowConfig:
             strict_bool(
                 self.refresh_corpus_cache,
                 name="refresh_corpus_cache",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "refresh_corpus_source_cache",
+            strict_bool(
+                self.refresh_corpus_source_cache,
+                name="refresh_corpus_source_cache",
             ),
         )
         object.__setattr__(
@@ -249,6 +261,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "corpus_traces_dir": _nested(corpus, "paths", "traces_dir"),
                 "corpus_runtime_pair_index": _nested(corpus, "paths", "runtime_pair_index"),
                 "corpus_cache": _nested(corpus, "workflow_cache", "path"),
+                "corpus_source_cache": _nested(corpus, "paths", "source_cache"),
                 "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
                 "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
                 "selector_replay_report": _nested(selector_replay, "paths", "report"),
@@ -281,6 +294,10 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 ),
                 "corpus_cache": None if config.corpus_cache_path is None else str(config.corpus_cache_path),
                 "refresh_corpus_cache": config.refresh_corpus_cache,
+                "corpus_source_cache": (
+                    None if config.corpus_source_cache_path is None else str(config.corpus_source_cache_path)
+                ),
+                "refresh_corpus_source_cache": config.refresh_corpus_source_cache,
                 "runtime_trace_records_cache": (
                     None
                     if config.runtime_trace_records_cache_path is None
@@ -344,10 +361,21 @@ def _workflow_cache_summary(
     selector_replay: Mapping[str, Any],
 ) -> dict[str, Any]:
     corpus_cache = _mapping(corpus.get("workflow_cache"))
+    corpus_source_cache = _mapping(corpus.get("source_cache"))
     runtime_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
     selector_cache = _mapping(_nested(selector_replay, "config", "trace_inputs"))
+    corpus_source_entry = _cache_entry_summary(corpus_source_cache)
+    if corpus_cache.get("source") == "corpus_cache" and corpus_source_entry.get("enabled") is True:
+        corpus_source_entry.update({
+            "enabled": False,
+            "source": "covered_by_corpus_cache",
+            "hit": None,
+            "partial_hit": None,
+            "written": False,
+        })
     caches = {
         "corpus": _cache_entry_summary(corpus_cache),
+        "corpus_source": corpus_source_entry,
         "runtime_trace_records": _cache_entry_summary(runtime_cache),
         "selector_trace_inputs": _cache_entry_summary(selector_cache),
     }
@@ -369,6 +397,7 @@ def _cache_entry_summary(cache: Mapping[str, Any]) -> dict[str, Any]:
         "source": cache.get("source"),
         "path": cache.get("path"),
         "hit": cache.get("cache_hit"),
+        "partial_hit": cache.get("cache_partial_hit"),
         "written": cache.get("cache_written"),
         "refresh": cache.get("refresh"),
         "invalidation_reason": cache.get("invalidation_reason"),
@@ -409,6 +438,8 @@ def _run_corpus(
             strict=config.strict,
             limit=config.limit,
             compact_json=config.compact_json,
+            source_cache_path=config.corpus_source_cache_path,
+            refresh_source_cache=config.refresh_corpus_source_cache,
             metadata={
                 "source": "run_product_trace_replay_workflow",
                 **dict(config.metadata),
@@ -498,12 +529,15 @@ def _corpus_cache_payload(
 
 def _corpus_child_paths(config: ProductTraceReplayWorkflowConfig) -> dict[str, Path]:
     output_dir = Path(config.output_dir) / "corpus"
-    return {
+    paths = {
         "report": output_dir / "product-trace-corpus.json",
         "artifact_manifest": output_dir / "artifact-manifest.json",
         "traces_dir": output_dir / "traces",
         "runtime_pair_index": output_dir / "runtime-pair-index.json",
     }
+    if config.corpus_source_cache_path is not None:
+        paths["source_cache"] = Path(config.corpus_source_cache_path)
+    return paths
 
 
 def _corpus_source_fingerprints(
@@ -585,6 +619,8 @@ def _corpus_cache_config_payload(config: ProductTraceReplayWorkflowConfig) -> di
         "strict": config.strict,
         "limit": config.limit,
         "compact_json": config.compact_json,
+        "source_cache": None if config.corpus_source_cache_path is None else str(config.corpus_source_cache_path),
+        "refresh_source_cache": config.refresh_corpus_source_cache,
         "metadata": {
             "source": "run_product_trace_replay_workflow",
             **dict(config.metadata),
@@ -709,6 +745,7 @@ def _blocking_reasons(
 def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(corpus.get("summary"))
     workflow_cache = _mapping(corpus.get("workflow_cache"))
+    source_cache = _mapping(corpus.get("source_cache"))
     return {
         "status": corpus.get("status"),
         "accepted_count": summary.get("accepted_count"),
@@ -724,6 +761,13 @@ def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
         "cache_hit": workflow_cache.get("cache_hit"),
         "cache_written": workflow_cache.get("cache_written"),
         "cache_path": workflow_cache.get("path"),
+        "source_cache_source": source_cache.get("source"),
+        "source_cache_hit": source_cache.get("cache_hit"),
+        "source_cache_partial_hit": source_cache.get("cache_partial_hit"),
+        "source_cache_hit_count": source_cache.get("hit_count"),
+        "source_cache_miss_count": source_cache.get("miss_count"),
+        "source_cache_written": source_cache.get("cache_written"),
+        "source_cache_path": _nested(corpus, "paths", "source_cache"),
     }
 
 
@@ -809,6 +853,7 @@ def _artifact_paths(
         "corpus_traces_dir": _nested(report, "paths", "corpus_traces_dir"),
         "corpus_runtime_pair_index": _nested(report, "paths", "corpus_runtime_pair_index"),
         "corpus_cache": _nested(report, "paths", "corpus_cache"),
+        "corpus_source_cache": _nested(report, "paths", "corpus_source_cache"),
         "runtime_baseline_report": _nested(report, "paths", "runtime_baseline_report"),
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "runtime_trace_records_cache": _nested(report, "paths", "runtime_trace_records_cache"),
@@ -943,6 +988,11 @@ def _record_registry(
             "corpus_cache_source": _nested(report, "corpus", "cache_source"),
             "corpus_cache_hit": _nested(report, "corpus", "cache_hit"),
             "corpus_cache_written": _nested(report, "corpus", "cache_written"),
+            "corpus_source_cache_path": _nested(report, "paths", "corpus_source_cache"),
+            "corpus_source_cache_source": _nested(report, "corpus", "source_cache_source"),
+            "corpus_source_cache_hit_count": _nested(report, "corpus", "source_cache_hit_count"),
+            "corpus_source_cache_miss_count": _nested(report, "corpus", "source_cache_miss_count"),
+            "corpus_source_cache_written": _nested(report, "corpus", "source_cache_written"),
             "runtime_trace_records_cache_path": _nested(report, "paths", "runtime_trace_records_cache"),
             "runtime_trace_records_cache_source": _nested(
                 report,
@@ -1161,6 +1211,10 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         fingerprint_cache_path=Path(args.fingerprint_cache) if args.fingerprint_cache else None,
         corpus_cache_path=Path(args.corpus_cache_json) if args.corpus_cache_json else None,
         refresh_corpus_cache=bool(args.refresh_corpus_cache),
+        corpus_source_cache_path=(
+            Path(args.corpus_source_cache_json) if args.corpus_source_cache_json else None
+        ),
+        refresh_corpus_source_cache=bool(args.refresh_corpus_source_cache),
         runtime_trace_records_cache_path=(
             Path(args.runtime_trace_records_cache_json) if args.runtime_trace_records_cache_json else None
         ),
@@ -1214,6 +1268,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional cache path for replay-ready corpus outputs")
     parser.add_argument("--refresh-corpus-cache", action="store_true",
                         help="rebuild --corpus-cache-json even when a valid cache exists")
+    parser.add_argument("--corpus-source-cache-json", default=None,
+                        help="optional per-source corpus cache for validated/redacted trace entries")
+    parser.add_argument("--refresh-corpus-source-cache", action="store_true",
+                        help="rebuild --corpus-source-cache-json even when a valid cache exists")
     parser.add_argument("--runtime-trace-records-cache-json", default=None,
                         help="optional runtime baseline trace-record cache path")
     parser.add_argument("--refresh-runtime-trace-records-cache", action="store_true",

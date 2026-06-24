@@ -27,7 +27,7 @@ from benchmarks.config_utils import (  # noqa: E402
     strict_bool,
 )
 from eigentruth.control import RUNTIME_PROFILE_NAMES  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
 
 _TEXT_KEYS = frozenset({
     "answer",
@@ -68,6 +68,8 @@ class ProductTraceCorpusConfig:
     name: str | None = None
     version: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
+    source_cache_path: str | Path | None = None
+    refresh_source_cache: bool = False
     redact_text: bool = True
     require_runtime_trace: bool = False
     strict: bool = False
@@ -97,7 +99,14 @@ class ProductTraceCorpusConfig:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        if self.source_cache_path is not None:
+            object.__setattr__(self, "source_cache_path", Path(self.source_cache_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
+        object.__setattr__(
+            self,
+            "refresh_source_cache",
+            strict_bool(self.refresh_source_cache, name="refresh_source_cache"),
+        )
         object.__setattr__(self, "redact_text", strict_bool(self.redact_text, name="redact_text"))
         object.__setattr__(
             self,
@@ -144,16 +153,46 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
     accepted: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     used_names: set[str] = set()
+    source_cache = _load_source_cache(config)
+    source_cache_files: dict[tuple[str, str], dict[str, Any]] = {}
+    source_cache_stats = _source_cache_stats(config, loaded=source_cache is not None)
 
-    for source in _iter_sources(config):
-        payload = source["payload"]
-        reason = _invalid_reason(payload, require_runtime_trace=config.require_runtime_trace)
-        if reason is not None:
-            rejected.append(_rejected_record(source, reason=reason))
-            if config.strict:
-                raise ValueError(f"invalid ProductTrace from {source['source_path']}: {reason}")
-            continue
-        trace = _standardized_trace(source, redact_text=config.redact_text)
+    for item in _iter_source_items(config, source_cache=source_cache):
+        source = dict(item["source"])
+        source_fingerprint = _mapping(item.get("source_fingerprint"))
+        if item.get("cached") is True:
+            source_cache_stats["hit_count"] += 1
+            result = _mapping(item.get("result"))
+            result_status = result.get("status")
+            if result_status == "rejected":
+                reason = str(result.get("reason") or "invalid cached ProductTrace")
+                rejected.append(_rejected_record(source, reason=reason))
+                if config.strict:
+                    raise ValueError(f"invalid ProductTrace from {source['source_path']}: {reason}")
+                _add_source_cache_result(
+                    source_cache_files,
+                    item,
+                    status="rejected",
+                    reason=reason,
+                )
+                continue
+            trace = dict(_mapping(result.get("trace")))
+        else:
+            source_cache_stats["miss_count"] += 1
+            payload = source["payload"]
+            reason = _invalid_reason(payload, require_runtime_trace=config.require_runtime_trace)
+            if reason is not None:
+                rejected.append(_rejected_record(source, reason=reason))
+                _add_source_cache_result(
+                    source_cache_files,
+                    item,
+                    status="rejected",
+                    reason=reason,
+                )
+                if config.strict:
+                    raise ValueError(f"invalid ProductTrace from {source['source_path']}: {reason}")
+                continue
+            trace = _standardized_trace(source, redact_text=config.redact_text)
         output_path = _trace_output_path(
             config.resolved_traces_dir,
             trace,
@@ -162,8 +201,27 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
         )
         _write_json(output_path, trace, compact=config.compact_json)
         accepted.append(_accepted_record(source, trace, output_path=output_path))
+        _add_source_cache_result(
+            source_cache_files,
+            {
+                **item,
+                "source": source,
+                "source_fingerprint": source_fingerprint,
+            },
+            status="accepted",
+            trace=trace,
+        )
         if config.limit is not None and len(accepted) >= config.limit:
             break
+
+    _finalize_source_cache_stats(source_cache_stats)
+    if _source_cache_enabled(config):
+        _write_json(
+            config.source_cache_path,
+            _source_cache_payload(config, source_cache_files, source_cache_stats),
+            compact=True,
+        )
+        source_cache_stats["cache_written"] = True
 
     status = _corpus_status(accepted, rejected)
     runtime_pair_index = _runtime_pair_index_payload(config, accepted)
@@ -189,15 +247,19 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "traces_dir": str(config.resolved_traces_dir),
             "runtime_pair_index": str(config.resolved_runtime_pair_index_path),
+            "source_cache": None if config.source_cache_path is None else str(config.source_cache_path),
             "inputs": [str(path) for path in config.trace_paths],
             "jsonl_inputs": [str(path) for path in config.jsonl_paths],
         },
+        "source_cache": source_cache_stats,
         "config": {
             "redact_text": config.redact_text,
             "require_runtime_trace": config.require_runtime_trace,
             "strict": config.strict,
             "limit": config.limit,
             "compact_json": config.compact_json,
+            "source_cache": None if config.source_cache_path is None else str(config.source_cache_path),
+            "refresh_source_cache": config.refresh_source_cache,
             "metadata": dict(config.metadata),
         },
     }
@@ -206,20 +268,78 @@ def build_product_trace_corpus(config: ProductTraceCorpusConfig) -> dict[str, An
     return report
 
 
-def _iter_sources(config: ProductTraceCorpusConfig) -> Iterator[dict[str, Any]]:
+def _iter_source_items(
+    config: ProductTraceCorpusConfig,
+    *,
+    source_cache: Mapping[str, Any] | None,
+) -> Iterator[dict[str, Any]]:
+    cached_files = _source_cache_file_lookup(source_cache)
     for path in config.trace_paths:
+        yield from _iter_path_source_items(path, kind="trace", cached_files=cached_files)
+    for path in config.jsonl_paths:
+        yield from _iter_path_source_items(path, kind="jsonl", cached_files=cached_files)
+
+
+def _iter_path_source_items(
+    path: Path,
+    *,
+    kind: str,
+    cached_files: Mapping[tuple[str, str], Mapping[str, Any]],
+) -> Iterator[dict[str, Any]]:
+    source_fingerprint = fingerprint_path(path).to_dict()
+    cached_file = cached_files.get((kind, str(path)))
+    if cached_file is not None and _fingerprint_matches(
+        _mapping(cached_file.get("fingerprint")),
+        source_fingerprint,
+    ):
+        for result in _sequence(cached_file.get("entries")):
+            if not isinstance(result, Mapping):
+                continue
+            source = _mapping(result.get("source"))
+            if not source:
+                continue
+            yield {
+                "cached": True,
+                "source_kind": kind,
+                "source": source,
+                "source_fingerprint": source_fingerprint,
+                "result": dict(result),
+            }
+        return
+    if kind == "trace":
         payload = _load_json(path)
         if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray, Mapping)):
             for index, item in enumerate(payload):
-                yield _source_record(path, index, item, source_format="json_array")
-            continue
-        yield _source_record(path, 0, payload, source_format="json")
-    for path in config.jsonl_paths:
-        with Path(path).open("r", encoding="utf-8") as stream:
-            for index, line in enumerate(stream):
-                if not line.strip():
-                    continue
-                yield _source_record(path, index, json.loads(line), source_format="jsonl")
+                yield _source_item(
+                    path,
+                    index,
+                    item,
+                    source_format="json_array",
+                    source_kind=kind,
+                    source_fingerprint=source_fingerprint,
+                )
+            return
+        yield _source_item(
+            path,
+            0,
+            payload,
+            source_format="json",
+            source_kind=kind,
+            source_fingerprint=source_fingerprint,
+        )
+        return
+    with Path(path).open("r", encoding="utf-8") as stream:
+        for index, line in enumerate(stream):
+            if not line.strip():
+                continue
+            yield _source_item(
+                path,
+                index,
+                json.loads(line),
+                source_format="jsonl",
+                source_kind=kind,
+                source_fingerprint=source_fingerprint,
+            )
 
 
 def _source_record(path: str | Path, index: int, payload: Any, *, source_format: str) -> dict[str, Any]:
@@ -229,6 +349,191 @@ def _source_record(path: str | Path, index: int, payload: Any, *, source_format:
         "source_format": source_format,
         "payload": payload,
     }
+
+
+def _source_item(
+    path: str | Path,
+    index: int,
+    payload: Any,
+    *,
+    source_format: str,
+    source_kind: str,
+    source_fingerprint: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "cached": False,
+        "source_kind": source_kind,
+        "source_fingerprint": dict(source_fingerprint),
+        "source": _source_record(path, index, payload, source_format=source_format),
+    }
+
+
+def _source_cache_enabled(config: ProductTraceCorpusConfig) -> bool:
+    return config.source_cache_path is not None and config.limit is None
+
+
+def _source_cache_stats(config: ProductTraceCorpusConfig, *, loaded: bool) -> dict[str, Any]:
+    disabled_reason = None
+    if config.source_cache_path is not None and config.limit is not None:
+        disabled_reason = "limit"
+    return {
+        "enabled": _source_cache_enabled(config),
+        "source": "source_cache" if loaded else "source_scan",
+        "path": None if config.source_cache_path is None else str(config.source_cache_path),
+        "cache_loaded": loaded,
+        "cache_hit": False,
+        "cache_partial_hit": False,
+        "cache_written": False,
+        "hit_count": 0,
+        "miss_count": 0,
+        "refresh": config.refresh_source_cache,
+        "disabled_reason": disabled_reason,
+    }
+
+
+def _finalize_source_cache_stats(stats: dict[str, Any]) -> None:
+    hit_count = int(stats.get("hit_count") or 0)
+    miss_count = int(stats.get("miss_count") or 0)
+    if hit_count and miss_count:
+        stats["source"] = "source_cache_mixed"
+    elif hit_count:
+        stats["source"] = "source_cache"
+    elif stats.get("enabled"):
+        stats["source"] = "source_scan"
+    stats["cache_hit"] = bool(hit_count and not miss_count)
+    stats["cache_partial_hit"] = bool(hit_count and miss_count)
+
+
+def _load_source_cache(config: ProductTraceCorpusConfig) -> dict[str, Any] | None:
+    if (
+        not _source_cache_enabled(config)
+        or config.refresh_source_cache
+        or config.source_cache_path is None
+        or not Path(config.source_cache_path).exists()
+    ):
+        return None
+    try:
+        payload = json.loads(Path(config.source_cache_path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("workflow") != "product_trace_corpus_source_cache":
+        return None
+    if _mapping(payload.get("config")).get("signature") != _source_cache_signature(config):
+        return None
+    return dict(payload)
+
+
+def _source_cache_file_lookup(
+    payload: Mapping[str, Any] | None,
+) -> dict[tuple[str, str], Mapping[str, Any]]:
+    if not payload:
+        return {}
+    lookup: dict[tuple[str, str], Mapping[str, Any]] = {}
+    for item in _sequence(payload.get("files")):
+        if not isinstance(item, Mapping):
+            continue
+        kind = item.get("kind")
+        path = item.get("path")
+        if kind is None or path is None:
+            continue
+        lookup[(str(kind), str(path))] = item
+    return lookup
+
+
+def _add_source_cache_result(
+    files: dict[tuple[str, str], dict[str, Any]],
+    item: Mapping[str, Any],
+    *,
+    status: str,
+    trace: Mapping[str, Any] | None = None,
+    reason: str | None = None,
+) -> None:
+    source = _source_cache_source(_mapping(item.get("source")))
+    source_kind = str(item.get("source_kind") or "trace")
+    source_path = str(source.get("source_path"))
+    key = (source_kind, source_path)
+    file_record = files.setdefault(
+        key,
+        {
+            "kind": source_kind,
+            "path": source_path,
+            "fingerprint": dict(_mapping(item.get("source_fingerprint"))),
+            "entries": [],
+        },
+    )
+    entry: dict[str, Any] = {
+        "source": source,
+        "status": status,
+    }
+    if status == "accepted":
+        entry["trace"] = _jsonable(dict(trace or {}))
+    else:
+        entry["reason"] = str(reason)
+    file_record["entries"].append(entry)
+
+
+def _source_cache_source(source: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "source_path": str(source.get("source_path")),
+        "source_index": source.get("source_index"),
+        "source_format": source.get("source_format"),
+    }
+
+
+def _source_cache_payload(
+    config: ProductTraceCorpusConfig,
+    files: Mapping[tuple[str, str], Mapping[str, Any]],
+    stats: Mapping[str, Any],
+) -> dict[str, Any]:
+    file_records = tuple(dict(record) for record in files.values())
+    entries = [
+        entry
+        for record in file_records
+        for entry in _sequence(record.get("entries"))
+        if isinstance(entry, Mapping)
+    ]
+    return {
+        "schema_version": 1,
+        "workflow": "product_trace_corpus_source_cache",
+        "config": {
+            "signature": _source_cache_signature(config),
+            "payload": _source_cache_config_payload(config),
+        },
+        "summary": {
+            "file_count": len(file_records),
+            "source_count": len(entries),
+            "accepted_count": sum(1 for entry in entries if entry.get("status") == "accepted"),
+            "rejected_count": sum(1 for entry in entries if entry.get("status") == "rejected"),
+            "hit_count": stats.get("hit_count"),
+            "miss_count": stats.get("miss_count"),
+        },
+        "files": file_records,
+    }
+
+
+def _source_cache_signature(config: ProductTraceCorpusConfig) -> str:
+    return json.dumps(
+        _source_cache_config_payload(config),
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _source_cache_config_payload(config: ProductTraceCorpusConfig) -> dict[str, Any]:
+    return {
+        "redact_text": config.redact_text,
+        "require_runtime_trace": config.require_runtime_trace,
+        "strict": config.strict,
+    }
+
+
+def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
+    return all(
+        expected.get(field_name) == actual.get(field_name)
+        for field_name in ("exists", "kind", "sha256", "size_bytes", "file_count")
+    )
 
 
 def _invalid_reason(payload: Any, *, require_runtime_trace: bool) -> str | None:
@@ -383,6 +688,7 @@ def _artifact_paths(config: ProductTraceCorpusConfig) -> dict[str, str | Path | 
         "product_trace_corpus_report": config.resolved_report_path,
         "product_trace_corpus_traces": config.resolved_traces_dir,
         "product_trace_runtime_pair_index": config.resolved_runtime_pair_index_path,
+        "product_trace_source_cache": config.source_cache_path,
     }
     for index, path in enumerate(config.trace_paths):
         artifacts[f"input_trace_{index:04d}_{_safe_artifact_name(path.stem)}"] = path
@@ -407,6 +713,11 @@ def _write_artifact_manifest(
             "rejected_count": _nested(report, "summary", "rejected_count"),
             "runtime_trace_count": _nested(report, "summary", "runtime_trace_count"),
             "runtime_pair_index_record_count": _nested(report, "runtime_pair_index", "record_count"),
+            "source_cache_path": _nested(report, "paths", "source_cache"),
+            "source_cache_source": _nested(report, "source_cache", "source"),
+            "source_cache_hit_count": _nested(report, "source_cache", "hit_count"),
+            "source_cache_miss_count": _nested(report, "source_cache", "miss_count"),
+            "source_cache_written": _nested(report, "source_cache", "cache_written"),
             "redact_text": config.redact_text,
             "compact_json": config.compact_json,
             **dict(config.metadata),
@@ -432,6 +743,11 @@ def _record_registry(config: ProductTraceCorpusConfig, report: Mapping[str, Any]
             "runtime_trace_count": _nested(report, "summary", "runtime_trace_count"),
             "runtime_pair_index": _nested(report, "paths", "runtime_pair_index"),
             "runtime_pair_index_record_count": _nested(report, "runtime_pair_index", "record_count"),
+            "source_cache_path": _nested(report, "paths", "source_cache"),
+            "source_cache_source": _nested(report, "source_cache", "source"),
+            "source_cache_hit_count": _nested(report, "source_cache", "hit_count"),
+            "source_cache_miss_count": _nested(report, "source_cache", "miss_count"),
+            "source_cache_written": _nested(report, "source_cache", "cache_written"),
             "redact_text": config.redact_text,
             "compact_json": config.compact_json,
             **dict(config.metadata),
@@ -614,6 +930,8 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceCorpusConfig:
         name=args.name,
         version=args.version,
         metadata=_parse_mapping_json(args.metadata_json, name="--metadata-json"),
+        source_cache_path=Path(args.source_cache_json) if args.source_cache_json else None,
+        refresh_source_cache=bool(args.refresh_source_cache),
         redact_text=not bool(args.no_redact_text),
         require_runtime_trace=bool(args.require_runtime_trace),
         strict=bool(args.strict),
@@ -646,6 +964,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
     parser.add_argument("--metadata-json", default=None)
+    parser.add_argument("--source-cache-json", default=None,
+                        help="optional per-source cache for validated/redacted trace entries")
+    parser.add_argument("--refresh-source-cache", action="store_true",
+                        help="rebuild --source-cache-json even when a valid cache exists")
     parser.add_argument("--no-redact-text", action="store_true")
     parser.add_argument("--require-runtime-trace", action="store_true")
     parser.add_argument("--strict", action="store_true")

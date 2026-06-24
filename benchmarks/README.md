@@ -2440,7 +2440,9 @@ Use `build_product_trace_corpus.py` before replaying real product traffic. It
 loads ProductTrace JSON files or JSONL streams, validates the control fields,
 optionally requires runtime traces, redacts text-like fields by default, adds a
 stable `metadata.runtime_replay_key`, writes standardized trace files plus
-`runtime-pair-index.json`, builds a manifest, and can register the corpus:
+`runtime-pair-index.json`, can reuse per-source validation/redaction results
+with `--source-cache-json` for repeated local handoffs, builds a manifest, and
+can register the corpus:
 
 ```bash
 python benchmarks/build_product_trace_corpus.py \
@@ -2450,6 +2452,7 @@ python benchmarks/build_product_trace_corpus.py \
   --name smollm2-product-trace-corpus \
   --version 0.1 \
   --require-runtime-trace \
+  --source-cache-json artifacts/smollm2_product_trace_corpus/source-cache.json \
   --fail-on-blocked
 ```
 
@@ -2474,7 +2477,8 @@ summaries for local performance tuning, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
-`--corpus-cache-json` when rebuilding the same raw-trace corpus repeatedly,
+`--corpus-source-cache-json` when only some raw trace files change,
+`--corpus-cache-json` when the entire standardized corpus can be reused,
 `--runtime-trace-records-cache-json` when sweeping runtime budget gates, and
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
@@ -2494,6 +2498,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --verify-manifest \
   --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow/fingerprints.json \
   --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json \
+  --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json \
   --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked
