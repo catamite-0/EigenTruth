@@ -39,7 +39,7 @@ from eigentruth.control import (
     evaluate_product_runtime_budget,
     first_existing_product_promotion_contract_path,
     get_runtime_profile,
-    load_product_promotion_contract,
+    load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
     run_verification_loop,
     select_runtime_profile,
@@ -467,20 +467,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
     explicit_promotion_contract = getattr(args, "promotion_contract", None) is not None
-    loaded_promotion_contract = load_product_promotion_contract(
+    runtime_evidence_bundle = load_product_runtime_evidence_bundle(
         getattr(args, "promotion_contract", None),
-        default_paths=DEFAULT_PROMOTION_CONTRACT_PATHS,
+        default_contract_paths=DEFAULT_PROMOTION_CONTRACT_PATHS,
+        manifest_path=getattr(args, "promotion_contract_manifest", None),
+        registry_path=getattr(args, "promotion_contract_registry", None),
+        registry_key=getattr(args, "promotion_contract_registry_key", None),
     )
-    promotion_contract = None if loaded_promotion_contract is None else loaded_promotion_contract.contract
+    promotion_contract = None if runtime_evidence_bundle is None else runtime_evidence_bundle.contract
     promotion_contract_metadata = (
         product_promotion_contract_metadata(
             None,
             source=None,
             budget_enabled=False,
         )
-        if loaded_promotion_contract is None
-        else loaded_promotion_contract.runtime_metadata(
+        if runtime_evidence_bundle is None
+        else runtime_evidence_bundle.runtime_metadata(
             budget_enabled=explicit_promotion_contract,
+            verify_manifest=bool(getattr(args, "verify_promotion_contract_manifest", False)),
         )
     )
     setattr(args, "_promotion_contract", promotion_contract)
@@ -671,6 +675,14 @@ def main() -> None:
                         help="omit runtime phase timings from ProductTrace output")
     parser.add_argument("--promotion-contract", default=None,
                         help="optional ProductPromotionContract or release-candidate report JSON path")
+    parser.add_argument("--promotion-contract-manifest", default=None,
+                        help="optional artifact manifest for the promotion contract")
+    parser.add_argument("--promotion-contract-registry", default=None,
+                        help="optional ArtifactRegistry JSON containing the promotion contract record")
+    parser.add_argument("--promotion-contract-registry-key", default=None,
+                        help="optional product_promotion_contract registry key")
+    parser.add_argument("--verify-promotion-contract-manifest", action="store_true",
+                        help="verify the promotion contract artifact manifest before recording metadata")
     parser.add_argument("--cache-verifier", action="store_true",
                         help="wrap the selected verifier in request-local CachedVerifier and report cache stats")
     parser.add_argument("--cache-retriever", action="store_true",

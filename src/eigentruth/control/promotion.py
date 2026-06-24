@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from eigentruth.control.runtime_budget import ProductRuntimeBudgetPolicy
+from eigentruth.registry import (
+    ArtifactManifestVerification,
+    ArtifactRegistry,
+    RegistryRecord,
+    load_and_verify_artifact_manifest,
+)
 
 
 @dataclass(frozen=True)
@@ -268,6 +274,151 @@ def load_product_promotion_contract(
     )
 
 
+@dataclass(frozen=True)
+class ProductRuntimeEvidenceBundle:
+    """Lazy runtime evidence bundle for a deployable promotion contract."""
+
+    loaded_contract: LoadedProductPromotionContract
+    manifest_path: Path | None = None
+    registry_path: Path | None = None
+    registry_key: str | None = None
+    manifest_recursive: bool = True
+    _manifest_verification: ArtifactManifestVerification | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+
+    @property
+    def contract(self) -> ProductPromotionContract:
+        """Return the loaded promotion contract."""
+        return self.loaded_contract.contract
+
+    @property
+    def source(self) -> str:
+        """Return the promotion contract source path or label."""
+        return self.loaded_contract.source
+
+    @property
+    def contract_path(self) -> Path | None:
+        """Return the local contract path when it came from a file."""
+        return self.loaded_contract.path
+
+    def verify_manifest(self) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional artifact manifest."""
+        if self.manifest_path is None:
+            return None
+        if self._manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    self.manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._manifest_verification
+
+    def registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional registry record."""
+        if self.registry_path is None:
+            return None
+        if self._registry_record is None:
+            registry = ArtifactRegistry.load_json(self.registry_path)
+            record = (
+                registry.get(self.registry_key)
+                if self.registry_key is not None
+                else _find_product_promotion_contract_record(
+                    registry,
+                    contract_path=self.contract_path,
+                    source=self.source,
+                )
+            )
+            object.__setattr__(self, "_registry_record", record)
+        return self._registry_record
+
+    def evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = True,
+    ) -> dict[str, Any]:
+        """Return JSON-ready provenance metadata for this evidence bundle."""
+        manifest_verification = self.verify_manifest() if verify_manifest else None
+        registry_record = self.registry_record() if include_registry_record else None
+        return {
+            "promotion_contract_manifest": (
+                None if self.manifest_path is None else str(self.manifest_path)
+            ),
+            "promotion_contract_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "promotion_contract_registry": (
+                None if self.registry_path is None else str(self.registry_path)
+            ),
+            "promotion_contract_registry_key": (
+                None if registry_record is None else registry_record.key()
+            ),
+            "promotion_contract_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+        }
+
+    def runtime_metadata(
+        self,
+        *,
+        budget_enabled: bool,
+        verify_manifest: bool = False,
+        include_registry_record: bool = True,
+    ) -> dict[str, Any]:
+        """Return ProductTrace metadata for contract and provenance evidence."""
+        return {
+            **self.loaded_contract.runtime_metadata(budget_enabled=budget_enabled),
+            **self.evidence_metadata(
+                verify_manifest=verify_manifest,
+                include_registry_record=include_registry_record,
+            ),
+        }
+
+
+def load_product_runtime_evidence_bundle(
+    path: str | Path | None = None,
+    *,
+    default_contract_paths: Iterable[str | Path] = (),
+    manifest_path: str | Path | None = None,
+    registry_path: str | Path | None = None,
+    registry_key: str | None = None,
+    require_promoted: bool = True,
+    manifest_recursive: bool = True,
+) -> ProductRuntimeEvidenceBundle | None:
+    """Load a promotion contract plus optional manifest and registry provenance."""
+    loaded_contract = load_product_promotion_contract(
+        path,
+        default_paths=default_contract_paths,
+        require_promoted=require_promoted,
+    )
+    if loaded_contract is None:
+        return None
+    resolved_manifest_path = _resolve_product_promotion_contract_manifest_path(
+        loaded_contract.path,
+        manifest_path=manifest_path,
+    )
+    return ProductRuntimeEvidenceBundle(
+        loaded_contract=loaded_contract,
+        manifest_path=resolved_manifest_path,
+        registry_path=None if registry_path is None else Path(registry_path),
+        registry_key=registry_key,
+        manifest_recursive=manifest_recursive,
+    )
+
+
 def product_promotion_contract_metadata(
     contract: ProductPromotionContract | None,
     *,
@@ -360,3 +511,47 @@ def _optional_str(value: Any) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _resolve_product_promotion_contract_manifest_path(
+    contract_path: Path | None,
+    *,
+    manifest_path: str | Path | None,
+) -> Path | None:
+    if manifest_path is not None:
+        return Path(manifest_path)
+    if contract_path is None:
+        return None
+    sibling_manifest = contract_path.parent / "artifact-manifest.json"
+    if sibling_manifest.exists():
+        return sibling_manifest
+    return None
+
+
+def _find_product_promotion_contract_record(
+    registry: ArtifactRegistry,
+    *,
+    contract_path: Path | None,
+    source: str,
+) -> RegistryRecord | None:
+    for record in registry.list_records(artifact_type="product_promotion_contract"):
+        if _record_path_matches(record.path, contract_path=contract_path, source=source):
+            return record
+    return None
+
+
+def _record_path_matches(
+    record_path: str,
+    *,
+    contract_path: Path | None,
+    source: str,
+) -> bool:
+    if record_path == source:
+        return True
+    if contract_path is None:
+        return False
+    raw_record_path = Path(record_path)
+    try:
+        return raw_record_path.resolve() == contract_path.resolve()
+    except OSError:
+        return False

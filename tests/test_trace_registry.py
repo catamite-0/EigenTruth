@@ -19,6 +19,7 @@ from eigentruth.control import (
     evaluate_product_runtime_budget,
     first_existing_product_promotion_contract_path,
     load_product_promotion_contract,
+    load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
     product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
@@ -869,6 +870,61 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "promotion_contract_source": None,
         "promotion_contract_budget_enabled": False,
     }
+
+
+def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_path):
+    contract_path = tmp_path / "product-promotion-contract.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -2},
+        verifier_route={"route": "structured_qa"},
+        runtime_budget_policy=ProductRuntimeBudgetPolicy(max_retrieval_use_rate=0.0),
+        source_workflow="release_candidate_comparison",
+        source_status="promote",
+        metadata={"product_runtime_drift_status": "promote"},
+    ).save_json(contract_path)
+    manifest = build_artifact_manifest(
+        {"product_promotion_contract": contract_path},
+        root=tmp_path,
+        metadata={"release": "demo"},
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    ArtifactRegistry.load_json(registry_path).record_product_promotion_contract(
+        name="demo-product-promotion-contract",
+        path=contract_path,
+        version="1.0",
+        metadata={"artifact_manifest": str(manifest_path)},
+    ).save_json()
+
+    bundle = load_product_runtime_evidence_bundle(
+        default_contract_paths=(contract_path,),
+        registry_path=registry_path,
+    )
+    assert bundle is not None
+    assert bundle.contract.model_id == "demo-model"
+    assert bundle.manifest_path == manifest_path
+    assert bundle.registry_record() is not None
+    assert bundle.registry_record().key() == "product_promotion_contract:demo-product-promotion-contract:1.0"
+
+    metadata_without_verification = bundle.runtime_metadata(budget_enabled=True)
+    assert metadata_without_verification["promotion_contract_manifest"] == str(manifest_path)
+    assert metadata_without_verification["promotion_contract_manifest_verification"] is None
+    assert metadata_without_verification["promotion_contract_registry"] == str(registry_path)
+    assert metadata_without_verification["promotion_contract_registry_key"] == (
+        "product_promotion_contract:demo-product-promotion-contract:1.0"
+    )
+    assert metadata_without_verification["promotion_contract_registry_record"]["metadata"] == {
+        "artifact_manifest": str(manifest_path)
+    }
+
+    metadata_with_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_manifest=True,
+    )
+    assert metadata_with_verification["promotion_contract_manifest_verification"]["passed"] is True
+    assert metadata_with_verification["promotion_contract_manifest_verification"]["checked"] == 1
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):

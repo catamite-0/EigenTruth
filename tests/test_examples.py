@@ -487,6 +487,10 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
             staged_verification=None,
             runtime_trace=True,
             promotion_contract=str(contract_path),
+            promotion_contract_manifest=None,
+            promotion_contract_registry="artifacts/local-release-registry.json",
+            promotion_contract_registry_key=None,
+            verify_promotion_contract_manifest=True,
             cache_verifier=False,
             cache_retriever=False,
             max_runtime_total_seconds=None,
@@ -512,6 +516,13 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     route_summary = payload["metadata"]["route_cost_summary"]
 
     assert payload["metadata"]["promotion_contract_budget_enabled"] is True
+    assert payload["metadata"]["promotion_contract_manifest"].endswith("artifact-manifest.json")
+    assert payload["metadata"]["promotion_contract_manifest_verification"]["passed"] is True
+    assert payload["metadata"]["promotion_contract_manifest_verification"]["checked"] == 2
+    assert payload["metadata"]["promotion_contract_registry"] == "artifacts/local-release-registry.json"
+    assert payload["metadata"]["promotion_contract_registry_key"] == (
+        "product_promotion_contract:smollm2-product-promotion-contract:1.5"
+    )
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:smollm2-l20-performance-baseline:0.9"
     )

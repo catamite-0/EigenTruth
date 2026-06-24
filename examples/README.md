@@ -135,6 +135,10 @@ python examples/calibrated_control_demo.py \
 python examples/calibrated_control_demo.py \
   --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json
 python examples/calibrated_control_demo.py \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
+  --promotion-contract-registry artifacts/local-release-registry.json \
+  --verify-promotion-contract-manifest
+python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
 python examples/calibrated_control_demo.py \
@@ -150,7 +154,10 @@ promotion contract artifact, which also carries
 selector replay and product-runtime-drift evidence. Passing the same file
 explicitly with `--promotion-contract` also enforces its runtime budget, including the
 low-latency product-route gates `max_retrieval_use_rate=0.0` and
-`max_mean_attempted_route_count=1.1`. Staged-verification runs also emit
+`max_mean_attempted_route_count=1.1`. The demo uses `ProductRuntimeEvidenceBundle`
+to infer the sibling artifact manifest and can optionally attach manifest
+verification plus local registry provenance with `--verify-promotion-contract-manifest`
+and `--promotion-contract-registry`. Staged-verification runs also emit
 `verification_stage_summary`, so low-risk fast-path savings can be gated with
 `--min-verification-skip-rate` and `--max-verified-claim-count`.
 

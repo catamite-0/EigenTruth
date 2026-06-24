@@ -30,8 +30,10 @@ from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.control.promotion import (
     LoadedProductPromotionContract,
     ProductPromotionContract,
+    ProductRuntimeEvidenceBundle,
     first_existing_product_promotion_contract_path,
     load_product_promotion_contract,
+    load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
     product_runtime_budget_policy_from_release_candidate,
 )
@@ -77,6 +79,7 @@ __all__ = [
     "ProductTrace",
     "LoadedProductPromotionContract",
     "ProductPromotionContract",
+    "ProductRuntimeEvidenceBundle",
     "ProductRuntimeBudgetPolicy",
     "RuntimePhaseTiming",
     "RuntimeProfile",
@@ -94,6 +97,7 @@ __all__ = [
     "first_existing_product_promotion_contract_path",
     "get_runtime_profile",
     "load_product_promotion_contract",
+    "load_product_runtime_evidence_bundle",
     "product_promotion_contract_metadata",
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
