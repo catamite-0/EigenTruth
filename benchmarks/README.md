@@ -1430,6 +1430,29 @@ manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
 release report, manifest metadata, and registry record.
 
+To quantify local release-gate overhead after collecting one cold and one warm
+registry-workflow run, aggregate their timing/cache summaries without rerunning
+the gate:
+
+```bash
+python benchmarks/run_release_gate_overhead_baseline.py \
+  --report artifacts/release-candidate-registry-workflow-cold.json \
+  --report artifacts/release-candidate-registry-workflow-warm.json \
+  --json artifacts/release-gate-overhead-baseline.json \
+  --registry artifacts/release-registry.json \
+  --name release-gate-overhead \
+  --version 0.1 \
+  --max-total-seconds 30 \
+  --min-last-fingerprint-cache-hit-rate 0.90 \
+  --min-report-count 2 \
+  --fail-on-blocked
+```
+
+The report records `total_seconds`, `phase_total_seconds`, per-phase timing,
+artifact fingerprint/JSON cache hit rates, and the slowest observed phase. Use
+`--min-last-fingerprint-cache-hit-rate` to verify the warm run actually reused
+the persisted fingerprint cache.
+
 Use `export_product_promotion_contract.py` after a release candidate promotes to
 write the smaller product handoff artifact consumed by demos and control-plane
 jobs. It converts either a release-candidate comparison or registry-workflow JSON

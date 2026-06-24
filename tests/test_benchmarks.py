@@ -7066,6 +7066,169 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
 
 
+def _write_release_gate_overhead_source_report(
+    path,
+    *,
+    status="promote",
+    total_seconds=1.0,
+    phase_total_seconds=0.9,
+    compare_seconds=0.4,
+    manifest_build_seconds=0.2,
+    promotion_seconds=0.3,
+    fingerprint_requests=0,
+    fingerprint_hits=0,
+    fingerprint_misses=0,
+    fingerprint_entries=0,
+    fingerprint_hit_rate=None,
+):
+    path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "release_candidate_registry_workflow",
+            "decision": {
+                "status": status,
+                "release_candidate_status": status,
+                "registry_record": "benchmark_manifest:demo:0.1",
+            },
+            "config": {"fingerprint_cache": str(path.parent / "fingerprints.json")},
+            "timing": {
+                "total_seconds": total_seconds,
+                "phase_total_seconds": phase_total_seconds,
+                "phases": {
+                    "compare": {"seconds": compare_seconds},
+                    "comparison_write": {"seconds": 0.01},
+                    "manifest_build": {"seconds": manifest_build_seconds},
+                    "promotion": {"seconds": promotion_seconds},
+                    "workflow_report_write": {"seconds": 0.01},
+                },
+            },
+            "artifact_cache": {
+                "artifact_fingerprint_cache": {
+                    "requests": fingerprint_requests,
+                    "hits": fingerprint_hits,
+                    "misses": fingerprint_misses,
+                    "entries": fingerprint_entries,
+                    "hit_rate": fingerprint_hit_rate,
+                },
+                "artifact_json_cache": {
+                    "requests": 2,
+                    "hits": 1,
+                    "misses": 1,
+                    "entries": 1,
+                    "hit_rate": 0.5,
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+
+
+def test_release_gate_overhead_baseline_summarizes_cache_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_gate_overhead_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    cold_report = tmp_path / "release-cold.json"
+    warm_report = tmp_path / "release-warm.json"
+    output_path = tmp_path / "release-gate-overhead.json"
+    registry_path = tmp_path / "registry.json"
+    _write_release_gate_overhead_source_report(
+        cold_report,
+        total_seconds=1.5,
+        phase_total_seconds=1.4,
+        compare_seconds=0.7,
+        manifest_build_seconds=0.2,
+        promotion_seconds=0.49,
+        fingerprint_requests=10,
+        fingerprint_hits=0,
+        fingerprint_misses=10,
+        fingerprint_entries=10,
+        fingerprint_hit_rate=0.0,
+    )
+    _write_release_gate_overhead_source_report(
+        warm_report,
+        total_seconds=0.6,
+        phase_total_seconds=0.55,
+        compare_seconds=0.25,
+        manifest_build_seconds=0.1,
+        promotion_seconds=0.18,
+        fingerprint_requests=10,
+        fingerprint_hits=9,
+        fingerprint_misses=1,
+        fingerprint_entries=10,
+        fingerprint_hit_rate=0.9,
+    )
+
+    payload = module.build_release_gate_overhead_baseline(
+        module.ReleaseGateOverheadBaselineConfig(
+            report_paths=(cold_report, warm_report),
+            output_path=output_path,
+            registry_path=registry_path,
+            name="release-gate-overhead",
+            version="0.1",
+            max_total_seconds=2.0,
+            min_last_fingerprint_cache_hit_rate=0.9,
+            min_report_count=2,
+            compact_json=True,
+            metadata={"suite": "unit"},
+        )
+    )
+    saved_text = output_path.read_text(encoding="utf-8")
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:release-gate-overhead:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["report_count"] == 2
+    assert payload["summary"]["total_seconds"]["mean"] == pytest.approx(1.05)
+    assert payload["summary"]["total_seconds"]["max"] == pytest.approx(1.5)
+    assert payload["summary"]["phases"]["compare"]["seconds"]["mean"] == pytest.approx(0.475)
+    assert payload["summary"]["artifact_fingerprint_cache"]["requests"] == 20
+    assert payload["summary"]["artifact_fingerprint_cache"]["hits"] == 9
+    assert payload["summary"]["artifact_fingerprint_cache"]["weighted_hit_rate"] == pytest.approx(0.45)
+    assert payload["summary"]["artifact_fingerprint_cache"]["last_hit_rate"] == pytest.approx(0.9)
+    assert payload["summary"]["optimization"]["fingerprint_cache_status"] == "warm_reuse_observed"
+    assert payload["registry_record"] == "report:release-gate-overhead:0.1"
+    assert record.metadata["workflow"] == "release_gate_overhead_baseline"
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["report_count"] == 2
+    assert record.metadata["fingerprint_cache_last_hit_rate"] == pytest.approx(0.9)
+    assert record.metadata["suite"] == "unit"
+    assert "\n  " not in saved_text
+
+
+def test_release_gate_overhead_baseline_cli_blocks_slow_report(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_gate_overhead_baseline")
+    source_report = tmp_path / "release-slow.json"
+    output_path = tmp_path / "release-gate-overhead.json"
+    _write_release_gate_overhead_source_report(
+        source_report,
+        total_seconds=1.2,
+        phase_total_seconds=1.1,
+        fingerprint_requests=4,
+        fingerprint_hits=0,
+        fingerprint_misses=4,
+        fingerprint_entries=4,
+        fingerprint_hit_rate=0.0,
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        module.main([
+            "--report",
+            str(source_report),
+            "--json",
+            str(output_path),
+            "--max-total-seconds",
+            "1.0",
+            "--fail-on-blocked",
+        ])
+
+    assert exc_info.value.code == 1
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["status"] == "blocked"
+    assert payload["metrics"][0]["metric"] == "total_seconds.max"
+    assert payload["metrics"][0]["status"] == "blocked"
+    assert payload["decision"]["blocking_reasons"]
+
+
 def test_run_release_candidate_registry_workflow_cli_blocks_without_registration(tmp_path):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     from eigentruth.registry import ArtifactRegistry
