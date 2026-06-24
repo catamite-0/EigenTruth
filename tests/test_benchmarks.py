@@ -4077,6 +4077,16 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert verification.nested
 
 
+def test_adapter_readiness_workflow_rejects_bool_performance_workers(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    with pytest.raises(ValueError, match="performance_max_workers"):
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            performance_max_workers=True,  # type: ignore[arg-type]
+        )
+
+
 def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pass(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
 
@@ -6585,6 +6595,14 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
             version="0.1",
             manifest_fingerprint_workers=0,
         )
+    with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            manifest_fingerprint_workers=True,  # type: ignore[arg-type]
+        )
 
 
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):
@@ -7153,6 +7171,19 @@ def test_manifest_fingerprint_worker_sweep_recommends_worker_and_registers(tmp_p
     assert record.metadata["repeats"] == 2
     assert record.metadata["recursive"] is True
     assert record.metadata["suite"] == "unit"
+
+    with pytest.raises(ValueError, match="worker_counts"):
+        module.ManifestFingerprintWorkerSweepConfig(
+            manifest_paths=(root_manifest_path,),
+            output_path=tmp_path / "bad-bool-workers.json",
+            worker_counts=(True,),  # type: ignore[list-item]
+        )
+    with pytest.raises(ValueError, match="repeats"):
+        module.ManifestFingerprintWorkerSweepConfig(
+            manifest_paths=(root_manifest_path,),
+            output_path=tmp_path / "bad-bool-repeats.json",
+            repeats=True,  # type: ignore[arg-type]
+        )
 
 
 def test_manifest_fingerprint_worker_sweep_allows_failed_worker_when_configured(tmp_path, monkeypatch):
@@ -10323,6 +10354,11 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
 
     with pytest.raises(ValueError, match="max_workers"):
         module.CacheProfileMatrixConfig(output_dir=tmp_path / "bad-workers", max_workers=0)
+    with pytest.raises(ValueError, match="max_workers"):
+        module.CacheProfileMatrixConfig(
+            output_dir=tmp_path / "bad-bool-workers",
+            max_workers=True,  # type: ignore[arg-type]
+        )
 
 
 def test_run_cache_profile_matrix_can_run_cells_in_parallel(tmp_path, monkeypatch):
@@ -11069,8 +11105,13 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
 
     with pytest.raises(ValueError, match="duplicate"):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-duplicate", worker_counts=(1, 1))
-    with pytest.raises(ValueError, match=">=1"):
+    with pytest.raises(ValueError, match="positive integer"):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-zero", worker_counts=(0,))
+    with pytest.raises(ValueError, match="worker_counts"):
+        module.CacheWorkerSweepConfig(
+            output_dir=tmp_path / "bad-bool-worker",
+            worker_counts=(True,),  # type: ignore[list-item]
+        )
     with pytest.raises(ValueError, match="eval_reps_shard_read_cache_size"):
         module.CacheWorkerSweepConfig(output_dir=tmp_path / "bad-read-cache", eval_reps_shard_read_cache_size=0)
 
@@ -12467,6 +12508,17 @@ def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
     assert string_config.eval_reps_shard_read_cache_sizes == (2, 10)
     assert Path(payload["paths"]["worker_sweep_report"]).exists()
 
+    with pytest.raises(ValueError, match="max_workers"):
+        module.PerformanceBaselineWorkflowConfig(
+            output_dir=tmp_path / "bad-bool-workers",
+            max_workers=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="worker_counts"):
+        module.PerformanceBaselineWorkflowConfig(
+            output_dir=tmp_path / "bad-bool-worker-counts",
+            worker_counts=(True,),  # type: ignore[list-item]
+        )
+
 
 def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
@@ -13504,6 +13556,16 @@ def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
         module.ProductRuntimeProfileSweepConfig(
             output_dir=tmp_path / "profile-sweep",
             max_workers=0,
+        )
+    with pytest.raises(ValueError, match="max_workers"):
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep-bool-workers",
+            max_workers=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="repeats"):
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep-bool-repeats",
+            repeats=True,  # type: ignore[arg-type]
         )
 
 

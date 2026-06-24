@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_positive_int  # noqa: E402
 from benchmarks.recommend_runtime_config import (  # noqa: E402
     INSIDE_TRIGGER_BUDGET_POLICIES,
     build_runtime_recommendation,
@@ -162,7 +162,12 @@ class PerformanceBaselineWorkflowConfig:
             "hidden_state_captures",
             tuple(str(value) for value in self.hidden_state_captures),
         )
-        object.__setattr__(self, "worker_counts", tuple(int(value) for value in self.worker_counts))
+        object.__setattr__(self, "max_workers", strict_positive_int(self.max_workers, name="max_workers"))
+        object.__setattr__(
+            self,
+            "worker_counts",
+            tuple(strict_positive_int(value, name="worker_counts") for value in self.worker_counts),
+        )
         object.__setattr__(self, "inside_run_names", _parse_run_names(",".join(self.inside_run_names)))
         object.__setattr__(self, "inside_trigger_budgets", tuple(self.inside_trigger_budgets))
         read_cache_sizes = (
@@ -1088,7 +1093,7 @@ def _effective_runtime_config(
             None if config.shared_cache_dir is None else str(config.shared_cache_dir),
         ),
         "matrix_mode": str(value("matrix_mode", config.matrix_mode)),
-        "max_workers": int(value("max_workers", config.max_workers)),
+        "max_workers": strict_positive_int(value("max_workers", config.max_workers), name="max_workers"),
     }
 
 

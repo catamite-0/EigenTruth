@@ -16,7 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import strict_bool  # noqa: E402
+from benchmarks.config_utils import strict_bool, strict_positive_int  # noqa: E402
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
     ArtifactVerificationContext,
@@ -47,17 +47,13 @@ class ManifestFingerprintWorkerSweepConfig:
             raise ValueError("manifest_paths must not be empty.")
         object.__setattr__(self, "manifest_paths", manifest_paths)
         object.__setattr__(self, "output_path", Path(self.output_path))
-        worker_counts = tuple(int(value) for value in self.worker_counts)
+        worker_counts = tuple(strict_positive_int(value, name="worker_counts") for value in self.worker_counts)
         if not worker_counts:
             raise ValueError("worker_counts must not be empty.")
-        if any(value < 1 for value in worker_counts):
-            raise ValueError("worker_counts values must be at least 1.")
         if len(worker_counts) != len(set(worker_counts)):
             raise ValueError("worker_counts must not contain duplicates.")
         object.__setattr__(self, "worker_counts", worker_counts)
-        repeats = int(self.repeats)
-        if repeats < 1:
-            raise ValueError("repeats must be at least 1.")
+        repeats = strict_positive_int(self.repeats, name="repeats")
         object.__setattr__(self, "repeats", repeats)
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))

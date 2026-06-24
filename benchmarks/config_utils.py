@@ -21,6 +21,25 @@ def strict_bool(value: Any, *, name: str) -> bool:
     raise ValueError(f"{name} must be a boolean or boolean string.")
 
 
+def strict_positive_int(value: Any, *, name: str) -> int:
+    """Parse a positive integer without accepting bool or lossy numeric casts."""
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer, not bool.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        signless = stripped[1:] if stripped[:1] in {"+", "-"} else stripped
+        if not signless or not signless.isdecimal():
+            raise ValueError(f"{name} must be a positive integer.")
+        parsed = int(stripped)
+    else:
+        raise ValueError(f"{name} must be a positive integer.")
+    if parsed < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return parsed
+
+
 def bounded_product_trace_reason(payload: Any) -> str | None:
     """Return why a bounded ProductTrace cannot be used for replay inputs."""
     if isinstance(payload, Mapping) and payload.get("trace_format") == BOUNDED_PRODUCT_TRACE_FORMAT:

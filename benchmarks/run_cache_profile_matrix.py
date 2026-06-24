@@ -25,6 +25,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.compare_profiles import _cache_efficiency_values, build_profile_comparison  # noqa: E402
+from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.run_cache_profile_triplet import CacheProfileTripletConfig, run_triplet  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
@@ -115,8 +116,7 @@ class CacheProfileMatrixConfig:
             if self.eval_reps_shard_read_cache_sizes is not None
             else _normalize_eval_reps_shard_read_cache_sizes((self.eval_reps_shard_read_cache_size,))
         )
-        if int(self.max_workers) < 1:
-            raise ValueError("max_workers must be >=1.")
+        max_workers = strict_positive_int(self.max_workers, name="max_workers")
         object.__setattr__(self, "layers", layers)
         object.__setattr__(self, "batch_sizes", batch_sizes)
         object.__setattr__(self, "hidden_state_captures", captures)
@@ -130,7 +130,7 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "eval_reps_shard_read_cache_size", read_cache_sizes[0])
         object.__setattr__(self, "eval_reps_shard_read_cache_sizes", read_cache_sizes)
         object.__setattr__(self, "matrix_mode", matrix_mode)
-        object.__setattr__(self, "max_workers", int(self.max_workers))
+        object.__setattr__(self, "max_workers", max_workers)
 
     @property
     def report_path(self) -> Path:

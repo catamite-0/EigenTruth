@@ -14,6 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.run_cache_profile_matrix import (  # noqa: E402
     MATRIX_MODES,
     CacheProfileMatrixConfig,
@@ -62,11 +63,9 @@ class CacheWorkerSweepConfig:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
         if self.shared_cache_dir is not None:
             object.__setattr__(self, "shared_cache_dir", Path(self.shared_cache_dir))
-        worker_counts = tuple(int(value) for value in self.worker_counts)
+        worker_counts = tuple(strict_positive_int(value, name="worker_counts") for value in self.worker_counts)
         if not worker_counts:
             raise ValueError("worker_counts must not be empty.")
-        if any(value < 1 for value in worker_counts):
-            raise ValueError("worker_counts values must be >=1.")
         if len(worker_counts) != len(set(worker_counts)):
             raise ValueError("worker_counts must not contain duplicate values.")
         object.__setattr__(self, "worker_counts", worker_counts)

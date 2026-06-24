@@ -531,9 +531,7 @@ class TimeoutActionExecutor:
             self.default_timeout_seconds,
             name="default_timeout_seconds",
         )
-        max_workers = int(self.max_workers)
-        if max_workers < 1:
-            raise ValueError("max_workers must be >=1.")
+        max_workers = _coerce_positive_int(self.max_workers, name="max_workers")
         object.__setattr__(self, "default_timeout_seconds", default_timeout)
         object.__setattr__(self, "max_workers", max_workers)
         object.__setattr__(
@@ -839,6 +837,24 @@ def _coerce_optional_positive_float(value: Any, *, name: str) -> float | None:
     if not math.isfinite(number) or number <= 0.0:
         raise ValueError(f"{name} must be a positive finite number.")
     return number
+
+
+def _coerce_positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer, not bool.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        signless = stripped[1:] if stripped[:1] in {"+", "-"} else stripped
+        if not signless or not signless.isdecimal():
+            raise ValueError(f"{name} must be a positive integer.")
+        parsed = int(stripped)
+    else:
+        raise ValueError(f"{name} must be a positive integer.")
+    if parsed < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return parsed
 
 
 def _non_empty_string(value: Any) -> str | None:

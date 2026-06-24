@@ -1541,6 +1541,15 @@ def test_timeout_action_executor_rejects_non_finite_request_timeout():
     assert wrapped.calls == 0
 
 
+def test_timeout_action_executor_rejects_bool_max_workers():
+    class FastExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(action=request.action, status=ActionExecutionStatus.SUCCEEDED)
+
+    with pytest.raises(ValueError, match="max_workers"):
+        TimeoutActionExecutor(FastExecutor(), max_workers=True)  # type: ignore[arg-type]
+
+
 def test_policy_guard_preserves_timeout_enforcement_metadata():
     class FastExecutor:
         def execute(self, request, context=None):

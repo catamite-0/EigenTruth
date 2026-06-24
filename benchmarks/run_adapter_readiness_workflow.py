@@ -21,6 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.recommend_runtime_config import (  # noqa: E402
     INSIDE_TRIGGER_BUDGET_POLICIES,
     build_runtime_recommendation,
@@ -121,12 +122,14 @@ class AdapterReadinessWorkflowConfig:
         object.__setattr__(self, "batch_sizes", tuple(int(batch_size) for batch_size in self.batch_sizes))
         if int(self.max_batch_tokens) < 0:
             raise ValueError("max_batch_tokens must be >=0.")
-        if int(self.performance_max_workers) < 1:
-            raise ValueError("performance_max_workers must be >=1.")
+        performance_max_workers = strict_positive_int(
+            self.performance_max_workers,
+            name="performance_max_workers",
+        )
         if int(self.retrieval_limit) <= 0:
             raise ValueError("retrieval_limit must be positive.")
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
-        object.__setattr__(self, "performance_max_workers", int(self.performance_max_workers))
+        object.__setattr__(self, "performance_max_workers", performance_max_workers)
         object.__setattr__(self, "retrieval_limit", int(self.retrieval_limit))
         if self.max_batch_token_budgets is not None:
             object.__setattr__(

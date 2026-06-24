@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.compare_release_candidates import compare_release_candidates  # noqa: E402
+from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
@@ -146,9 +147,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
-        manifest_fingerprint_workers = int(self.manifest_fingerprint_workers)
-        if manifest_fingerprint_workers < 1:
-            raise ValueError("manifest_fingerprint_workers must be at least 1.")
+        manifest_fingerprint_workers = strict_positive_int(
+            self.manifest_fingerprint_workers,
+            name="manifest_fingerprint_workers",
+        )
         object.__setattr__(self, "manifest_fingerprint_workers", manifest_fingerprint_workers)
         if self.runtime_profile is not None:
             profile = get_runtime_profile(self.runtime_profile)

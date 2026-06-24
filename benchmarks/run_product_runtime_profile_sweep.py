@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_positive_int  # noqa: E402
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
     build_product_runtime_baseline,
@@ -111,12 +111,8 @@ class ProductRuntimeProfileSweepConfig:
         scenarios = tuple(self.scenarios)
         if not scenarios:
             raise ValueError("at least one runtime scenario is required.")
-        repeats = int(self.repeats)
-        if repeats <= 0:
-            raise ValueError("repeats must be positive.")
-        max_workers = int(self.max_workers)
-        if max_workers < 1:
-            raise ValueError("max_workers must be >=1.")
+        repeats = strict_positive_int(self.repeats, name="repeats")
+        max_workers = strict_positive_int(self.max_workers, name="max_workers")
         if self.policy is not None and (self.policy_path is not None or self.promotion_contract_path is not None):
             raise ValueError("policy object is mutually exclusive with policy_path and promotion_contract_path.")
         if self.policy_path is not None and self.promotion_contract_path is not None:
