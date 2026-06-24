@@ -9644,6 +9644,17 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         "name": "subspace_resid",
         "auroc": pytest.approx(0.94),
     }
+    assert payload["performance_evidence_bundle"]["status"] == "promote"
+    assert payload["performance_evidence_bundle"]["release_ready"] is True
+    assert payload["performance_evidence_bundle"]["recommendation"]["cell_id"] == (
+        "layer_m12_batch_2_capture_outputs"
+    )
+    assert payload["performance_evidence_bundle"]["recommendation"]["best_quality_signal"] == (
+        "subspace_resid"
+    )
+    assert payload["performance_evidence_bundle"]["cost"]["cache_only_total_seconds"] == pytest.approx(0.2)
+    assert payload["performance_evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
+    assert saved["performance_evidence_bundle"]["status"] == "promote"
     assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"
     assert manifest["metadata"]["runner"] == "run_performance_baseline_workflow"
     assert manifest["metadata"]["matrix_report_reused"] is True
@@ -9654,6 +9665,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert record.path == str(workflow_report_path)
     assert record.metadata["runtime_recommendation_status"] == "promote"
     assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
+    assert record.metadata["performance_evidence_bundle_status"] == "promote"
+    assert record.metadata["performance_evidence_bundle_release_ready"] is True
 
 
 def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
@@ -9674,6 +9687,10 @@ def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
 
     assert payload["status"] == "needs_evidence"
     assert payload["runtime_recommendation"]["status"] == "needs_evidence"
+    assert payload["performance_evidence_bundle"]["status"] == "needs_evidence"
+    assert payload["performance_evidence_bundle"]["release_ready"] is False
+    assert payload["performance_evidence_bundle"]["recommendation"]["status"] == "needs_evidence"
+    assert payload["performance_evidence_bundle"]["runtime"]["model"] == "tiny-local"
     assert payload["execution"]["matrix_report_reused"] is False
     assert payload["execution"]["worker_sweep_report_reused"] is False
     assert manifest["metadata"]["dry_run"] is True

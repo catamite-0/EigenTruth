@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import shutil
 import sys
 import time
@@ -22,6 +23,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
 from benchmarks.recommend_runtime_config import (  # noqa: E402
     INSIDE_TRIGGER_BUDGET_POLICIES,
     build_runtime_recommendation,
@@ -208,6 +210,21 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
     )
 
     decision = _workflow_decision(runtime_recommendation)
+    artifacts = _artifact_paths(
+        config,
+        matrix_report=matrix_report,
+        matrix_report_path=matrix_report_path,
+        worker_sweep_report=worker_sweep_report,
+        worker_sweep_report_path=worker_sweep_report_path,
+        inside_sampling_report=inside_sampling_report,
+        inside_sampling_report_path=inside_sampling_report_path,
+        trigger_sweep_report=trigger_sweep_report,
+        trigger_sweep_report_path=trigger_sweep_report_path,
+    )
+    artifact_manifest_summary = planned_artifact_manifest_summary(
+        artifacts,
+        assume_file_paths=(config.resolved_report_path,),
+    )
     report = {
         "schema_version": 1,
         "workflow": "performance_baseline_workflow",
@@ -235,9 +252,16 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
                 config.inside_trigger_budget_sweep_report_path is not None
             ),
         },
+        "artifact_manifest_summary": artifact_manifest_summary,
     }
     if config.registry_path is not None:
         report["registry_record"] = f"performance_baseline:{config.name}:{config.version}"
+    report["performance_evidence_bundle"] = _performance_evidence_bundle_summary(
+        config,
+        report=report,
+        runtime_recommendation=runtime_recommendation,
+        artifact_manifest_summary=artifact_manifest_summary,
+    )
 
     config.resolved_report_path.parent.mkdir(parents=True, exist_ok=True)
     config.resolved_report_path.write_text(
@@ -257,6 +281,12 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         report=report,
     )
     report["artifact_manifest_summary"] = manifest["summary"]
+    report["performance_evidence_bundle"] = _performance_evidence_bundle_summary(
+        config,
+        report=report,
+        runtime_recommendation=runtime_recommendation,
+        artifact_manifest_summary=manifest["summary"],
+    )
     _record_registry(config, report)
     return report
 
@@ -499,22 +529,17 @@ def _write_artifact_manifest(
     trigger_sweep_report_path: Path | None,
     report: Mapping[str, Any],
 ) -> dict[str, Any]:
-    artifacts: dict[str, str | Path | None] = {
-        "performance_baseline_report": config.resolved_report_path,
-        "runtime_recommendation": config.runtime_recommendation_path,
-        "matrix_report": matrix_report_path,
-        "matrix_manifest": matrix_report.get("artifact_manifest"),
-        "worker_sweep_report": worker_sweep_report_path,
-        "worker_sweep_manifest": None if worker_sweep_report is None else worker_sweep_report.get("artifact_manifest"),
-        "inside_sampling_report": inside_sampling_report_path,
-        "inside_sampling_manifest": (
-            None if inside_sampling_report is None else inside_sampling_report.get("artifact_manifest")
-        ),
-        "inside_trigger_budget_sweep_report": trigger_sweep_report_path,
-        "inside_trigger_budget_sweep_manifest": (
-            None if trigger_sweep_report is None else trigger_sweep_report.get("artifact_manifest")
-        ),
-    }
+    artifacts = _artifact_paths(
+        config,
+        matrix_report=matrix_report,
+        matrix_report_path=matrix_report_path,
+        worker_sweep_report=worker_sweep_report,
+        worker_sweep_report_path=worker_sweep_report_path,
+        inside_sampling_report=inside_sampling_report,
+        inside_sampling_report_path=inside_sampling_report_path,
+        trigger_sweep_report=trigger_sweep_report,
+        trigger_sweep_report_path=trigger_sweep_report_path,
+    )
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -550,6 +575,138 @@ def _write_artifact_manifest(
     return manifest
 
 
+def _artifact_paths(
+    config: PerformanceBaselineWorkflowConfig,
+    *,
+    matrix_report: Mapping[str, Any],
+    matrix_report_path: Path | None,
+    worker_sweep_report: Mapping[str, Any] | None,
+    worker_sweep_report_path: Path | None,
+    inside_sampling_report: Mapping[str, Any] | None,
+    inside_sampling_report_path: Path | None,
+    trigger_sweep_report: Mapping[str, Any] | None,
+    trigger_sweep_report_path: Path | None,
+) -> dict[str, str | Path | None]:
+    return {
+        "performance_baseline_report": config.resolved_report_path,
+        "runtime_recommendation": config.runtime_recommendation_path,
+        "matrix_report": matrix_report_path,
+        "matrix_manifest": matrix_report.get("artifact_manifest"),
+        "worker_sweep_report": worker_sweep_report_path,
+        "worker_sweep_manifest": None if worker_sweep_report is None else worker_sweep_report.get("artifact_manifest"),
+        "inside_sampling_report": inside_sampling_report_path,
+        "inside_sampling_manifest": (
+            None if inside_sampling_report is None else inside_sampling_report.get("artifact_manifest")
+        ),
+        "inside_trigger_budget_sweep_report": trigger_sweep_report_path,
+        "inside_trigger_budget_sweep_manifest": (
+            None if trigger_sweep_report is None else trigger_sweep_report.get("artifact_manifest")
+        ),
+    }
+
+
+def _performance_evidence_bundle_summary(
+    config: PerformanceBaselineWorkflowConfig,
+    *,
+    report: Mapping[str, Any],
+    runtime_recommendation: Mapping[str, Any],
+    artifact_manifest_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    status = str(report.get("status"))
+    recommendation_status = str(runtime_recommendation.get("status") or "missing")
+    recommendation = _mapping(runtime_recommendation.get("recommendation"))
+    evidence = _mapping(runtime_recommendation.get("evidence"))
+    cache_tuning = _mapping(recommendation.get("cache_tuning"))
+    inside_sampling = _mapping(recommendation.get("inside_sampling"))
+    inside_trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
+    missing_count = _int_or_zero(artifact_manifest_summary.get("missing_count"))
+    release_ready = status == "promote" and recommendation_status == "promote" and missing_count == 0
+    uncached_total = _float_or_none(recommendation.get("uncached_total_seconds"))
+    cached_total = _float_or_none(recommendation.get("cached_total_seconds"))
+    cache_only_total = _float_or_none(recommendation.get("cache_only_total_seconds"))
+    forced_answer_forward = _float_or_none(
+        recommendation.get("uncached_forced_answer_forward_seconds")
+    )
+    best_quality = _mapping(recommendation.get("best_quality_signal"))
+    return {
+        "schema_version": 1,
+        "status": status,
+        "release_ready": release_ready,
+        "runtime": {
+            "model": config.model,
+            "dtype": config.dtype,
+            "layers": tuple(config.layers),
+            "batch_sizes": tuple(config.batch_sizes),
+            "hidden_state_captures": tuple(config.hidden_state_captures),
+            "max_batch_tokens": config.max_batch_tokens,
+            "max_batch_token_budgets": (
+                None if config.max_batch_token_budgets is None else tuple(config.max_batch_token_budgets)
+            ),
+            "prefix_kv_cache": config.prefix_kv_cache,
+            "prefix_kv_cache_modes": (
+                None if config.prefix_kv_cache_modes is None else tuple(config.prefix_kv_cache_modes)
+            ),
+            "max_workers": config.max_workers,
+            "length_bucketed_batches": config.length_bucketed_batches,
+            "offline": config.offline,
+            "matrix_mode": config.matrix_mode,
+        },
+        "recommendation": {
+            "status": recommendation_status,
+            "cell_id": recommendation.get("cell_id"),
+            "layer": recommendation.get("layer"),
+            "batch_size": recommendation.get("batch_size"),
+            "hidden_state_capture": recommendation.get("hidden_state_capture"),
+            "max_batch_tokens": recommendation.get("max_batch_tokens"),
+            "prefix_kv_cache": recommendation.get("prefix_kv_cache"),
+            "max_workers": recommendation.get("max_workers"),
+            "recommendation_metric": recommendation.get("recommendation_metric"),
+            "best_quality_signal": best_quality.get("name"),
+            "best_quality_auroc": best_quality.get("auroc"),
+            "quality_signal_count": evidence.get("quality_signal_count"),
+            "cache_tuning_status": cache_tuning.get("status"),
+            "inside_sampling_run": inside_sampling.get("recommended_run"),
+            "inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
+        },
+        "cost": {
+            "uncached_total_seconds": uncached_total,
+            "cached_total_seconds": cached_total,
+            "cache_only_total_seconds": cache_only_total,
+            "uncached_forced_answer_forward_seconds": forced_answer_forward,
+            "cached_total_ratio": _safe_ratio(cached_total, uncached_total),
+            "cache_only_total_ratio": _safe_ratio(cache_only_total, uncached_total),
+        },
+        "evidence": {
+            "matrix_report": evidence.get("matrix_report"),
+            "matrix_status": evidence.get("matrix_status"),
+            "matrix_recommended_cell": evidence.get("matrix_recommended_cell"),
+            "matrix_candidate_count": evidence.get("matrix_candidate_count"),
+            "matrix_checked_cell_count": evidence.get("matrix_checked_cell_count"),
+            "matrix_wall_clock_seconds": evidence.get("matrix_wall_clock_seconds"),
+            "configured_matrix_workers": evidence.get("configured_matrix_workers"),
+            "worker_sweep_report": evidence.get("worker_sweep_report"),
+            "worker_sweep_status": evidence.get("worker_sweep_status"),
+            "worker_recommended_worker_count": evidence.get("worker_recommended_worker_count"),
+            "inside_sampling_report": evidence.get("inside_sampling_report"),
+            "inside_sampling_status": evidence.get("inside_sampling_status"),
+            "inside_sampling_gate_passed": evidence.get("inside_sampling_gate_passed"),
+            "inside_trigger_budget_sweep_report": evidence.get("inside_trigger_budget_sweep_report"),
+            "inside_trigger_budget_policy": evidence.get("inside_trigger_budget_policy"),
+            "inside_trigger_budget_sweep_status": evidence.get("inside_trigger_budget_sweep_status"),
+            "inside_trigger_budget_gate_passed": evidence.get("inside_trigger_budget_gate_passed"),
+        },
+        "artifacts": {
+            "summary": dict(artifact_manifest_summary),
+            "artifact_manifest": str(config.artifact_manifest_path),
+            "runtime_recommendation": str(config.runtime_recommendation_path),
+        },
+        "registry": {
+            "record": report.get("registry_record"),
+            "path": None if config.registry_path is None else str(config.registry_path),
+        },
+    }
+
+
 def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[str, Any]) -> None:
     if config.registry_path is None:
         return
@@ -570,6 +727,22 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_max_workers": dict(report.get("decision") or {}).get("recommended_max_workers"),
             "recommended_best_quality_signal": dict(report.get("decision") or {}).get(
                 "recommended_best_quality_signal"
+            ),
+            "performance_evidence_bundle_status": _nested(
+                report,
+                "performance_evidence_bundle",
+                "status",
+            ),
+            "performance_evidence_bundle_release_ready": _nested(
+                report,
+                "performance_evidence_bundle",
+                "release_ready",
+            ),
+            "performance_cache_tuning_status": _nested(
+                report,
+                "performance_evidence_bundle",
+                "recommendation",
+                "cache_tuning_status",
             ),
         },
     )
@@ -622,6 +795,44 @@ def _load_json(path: str | Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON payload must be an object: {path}")
     return payload
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = mapping
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
+def _float_or_none(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def _int_or_zero(value: Any) -> int:
+    if isinstance(value, bool) or value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _safe_ratio(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None or denominator == 0:
+        return None
+    return numerator / denominator
 
 
 def _parse_trigger_budget(value: str) -> TriggerBudgetSpec:
