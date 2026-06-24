@@ -139,6 +139,8 @@ class ArtifactVerificationContext:
             manifest_path=manifest_path,
             recursive=recursive,
             fingerprint_cache=self.fingerprint_cache,
+            json_cache=self.json_cache,
+            json_cache_stats=self.json_cache_stats,
         )
 
     def load_and_verify_artifact_manifest(
@@ -278,6 +280,8 @@ def verify_artifact_manifest(
     manifest_path: str | Path | None = None,
     recursive: bool = False,
     fingerprint_cache: _FingerprintCache | None = None,
+    json_cache: _JsonCache | None = None,
+    json_cache_stats: _JsonCacheStats | None = None,
 ) -> ArtifactManifestVerification:
     """Verify current local artifact state against a saved manifest."""
     manifest_root = _verification_root(root=root, manifest_path=manifest_path)
@@ -306,6 +310,8 @@ def verify_artifact_manifest(
                 artifact_path,
                 recursive=recursive,
                 fingerprint_cache=cache,
+                json_cache=json_cache,
+                json_cache_stats=json_cache_stats,
             ))
     return ArtifactManifestVerification(
         manifest_path=None if manifest_path is None else str(manifest_path),
@@ -321,16 +327,25 @@ def load_and_verify_artifact_manifest(
     root: str | Path | None = None,
     recursive: bool = False,
     fingerprint_cache: _FingerprintCache | None = None,
+    json_cache: _JsonCache | None = None,
+    json_cache_stats: _JsonCacheStats | None = None,
 ) -> ArtifactManifestVerification:
     """Load and verify a UTF-8 JSON artifact manifest."""
     path = Path(manifest_path)
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    if json_cache is None and json_cache_stats is None:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        manifest, error = load_json_object(path, json_cache=json_cache, json_cache_stats=json_cache_stats)
+        if error is not None:
+            raise ValueError(f"artifact manifest could not be loaded: {path}: {error}")
     return verify_artifact_manifest(
         manifest,
         root=root,
         manifest_path=path,
         recursive=recursive,
         fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
     )
 
 
@@ -583,6 +598,8 @@ def _verify_nested_manifest(
     *,
     recursive: bool,
     fingerprint_cache: _FingerprintCache,
+    json_cache: _JsonCache | None = None,
+    json_cache_stats: _JsonCacheStats | None = None,
 ) -> tuple[ArtifactManifestVerification, ...]:
     try:
         return (
@@ -590,6 +607,8 @@ def _verify_nested_manifest(
                 path,
                 recursive=recursive,
                 fingerprint_cache=fingerprint_cache,
+                json_cache=json_cache,
+                json_cache_stats=json_cache_stats,
             ),
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:

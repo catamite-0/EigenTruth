@@ -6622,6 +6622,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert record.metadata["scope"] == "unit"
+    assert payload["artifact_cache"]["artifact_json_cache"]["hits"] >= 1
+    assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
+    assert record.metadata["artifact_json_cache"]["hits"] >= 1
+    assert record.metadata["artifact_fingerprint_cache_entries"] > 0
     assert fingerprint_calls_by_path[str((tmp_path / "structured-route-comparison.json").resolve())] == 1
     assert fingerprint_calls_by_path[str((tmp_path / "retrieval-route-comparison.json").resolve())] == 1
 
@@ -8185,6 +8189,9 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
     assert manifest_record.metadata["verified"] is True
     assert manifest_record.metadata["machine"] == "local"
     assert manifest_record.metadata["manifest_metadata"] == {"runner": "unit"}
+    assert manifest_record.metadata["artifact_json_cache"]["hits"] == 1
+    assert manifest_record.metadata["artifact_json_cache"]["entries"] == 1
+    assert manifest_record.metadata["artifact_fingerprint_cache_entries"] > 0
     assert verification_record.path == str(verification_path)
     assert verification_record.metadata["passed"] is True
 
@@ -8253,6 +8260,8 @@ def test_compare_registry_baseline_uses_verified_manifest_profile(tmp_path):
 
     assert payload["registry_baseline"]["verification"]["passed"] is True
     assert payload["registry_baseline"]["profile_path"] == str(baseline_profile)
+    assert payload["registry_baseline"]["artifact_cache"]["artifact_json_cache"]["hits"] == 1
+    assert payload["registry_baseline"]["artifact_cache"]["artifact_json_cache"]["entries"] == 1
     assert payload["comparison"]["regression_gate"]["passed"] is True
     assert payload["comparison"]["runs"][1]["total_delta"]["ratio_to_baseline"] == pytest.approx(1.05)
 
@@ -8390,6 +8399,8 @@ def test_compare_registry_baseline_resolves_nested_manifest_profile(tmp_path):
 
     assert payload["registry_baseline"]["verification"]["passed"] is True
     assert payload["registry_baseline"]["profile_path"] == str(baseline_profile)
+    assert payload["registry_baseline"]["artifact_cache"]["artifact_json_cache"]["hits"] >= 2
+    assert payload["registry_baseline"]["artifact_cache"]["artifact_json_cache"]["entries"] == 2
     assert payload["comparison"]["regression_gate"]["passed"] is True
 
 

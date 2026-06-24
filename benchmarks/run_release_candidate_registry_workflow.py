@@ -19,7 +19,7 @@ from benchmarks.compare_release_candidates import compare_release_candidates  # 
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
-from eigentruth.registry import build_artifact_manifest  # noqa: E402
+from eigentruth.registry import ArtifactVerificationContext  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -185,8 +185,9 @@ def run_release_candidate_registry_workflow(
     config: ReleaseCandidateRegistryWorkflowConfig,
 ) -> dict[str, Any]:
     """Run release comparison, write an artifact manifest, and register when eligible."""
-    fingerprint_cache: dict[str, dict[str, Any]] = {}
-    json_cache: dict[str, dict[str, Any]] = {}
+    verification_context = ArtifactVerificationContext()
+    fingerprint_cache = verification_context.fingerprint_cache
+    json_cache = verification_context.json_cache
     comparison = compare_release_candidates(
         readiness_registry_path=config.readiness_registry_path,
         route_registry_path=config.route_registry_path,
@@ -266,7 +267,7 @@ def run_release_candidate_registry_workflow(
     )
     config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
     config.comparison_path.write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    _write_artifact_manifest(config, comparison, fingerprint_cache=fingerprint_cache)
+    _write_artifact_manifest(config, comparison, verification_context=verification_context)
 
     release_decision = dict(comparison.get("decision") or {})
     release_status = str(release_decision.get("status"))
@@ -285,7 +286,7 @@ def run_release_candidate_registry_workflow(
             recursive=True,
             allow_failures=config.allow_promotion_failures,
             metadata=_promotion_metadata(config, comparison),
-            fingerprint_cache=fingerprint_cache,
+            verification_context=verification_context,
         )
         if not dict(promotion.get("verification") or {}).get("passed", False):
             blocking_reasons.append("release candidate manifest verification did not pass")
@@ -384,6 +385,7 @@ def run_release_candidate_registry_workflow(
         "release_candidate_comparison": comparison,
         "promotion": promotion,
         "decision": decision,
+        "artifact_cache": verification_context.cache_summary(),
     }
     config.report_path.parent.mkdir(parents=True, exist_ok=True)
     config.report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -394,7 +396,7 @@ def _write_artifact_manifest(
     config: ReleaseCandidateRegistryWorkflowConfig,
     comparison: Mapping[str, Any],
     *,
-    fingerprint_cache: dict[str, dict[str, Any]] | None = None,
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
     candidate = dict(comparison.get("release_candidate") or {})
     manifests = dict(candidate.get("manifests") or {})
@@ -415,11 +417,10 @@ def _write_artifact_manifest(
         for name, path in manifests.items()
         if str(name).startswith("required_route_manifest_")
     })
-    manifest = build_artifact_manifest(
+    manifest = verification_context.build_artifact_manifest(
         artifacts,
         root=config.manifest_path.parent,
         metadata=_manifest_metadata(comparison),
-        fingerprint_cache=fingerprint_cache,
     )
     config.manifest_path.parent.mkdir(parents=True, exist_ok=True)
     config.manifest_path.write_text(

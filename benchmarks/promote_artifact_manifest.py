@@ -15,7 +15,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
-    load_and_verify_artifact_manifest,
+    ArtifactVerificationContext,
     load_fingerprint_cache,
     save_fingerprint_cache,
 )
@@ -33,20 +33,21 @@ def promote_artifact_manifest(
     metadata: Mapping[str, Any] | None = None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     fingerprint_cache_path: str | Path | None = None,
+    verification_context: ArtifactVerificationContext | None = None,
 ) -> dict[str, Any]:
     """Verify a manifest and record it in a local artifact registry."""
     manifest_path = Path(manifest_path)
     registry_path = Path(registry_path)
     verification_report_path = Path(verification_report_path or manifest_path.with_name("manifest-verification.json"))
     cache = fingerprint_cache if fingerprint_cache is not None else load_fingerprint_cache(fingerprint_cache_path)
+    context = verification_context or ArtifactVerificationContext(fingerprint_cache=cache)
     try:
-        verification = load_and_verify_artifact_manifest(
+        verification = context.load_and_verify_artifact_manifest(
             manifest_path,
             recursive=recursive,
-            fingerprint_cache=cache,
         )
     finally:
-        save_fingerprint_cache(fingerprint_cache_path, cache)
+        save_fingerprint_cache(fingerprint_cache_path, context.fingerprint_cache or {})
     verification_payload = verification.to_dict()
     verification_report_path.parent.mkdir(parents=True, exist_ok=True)
     if not verification.passed and not allow_failures:
@@ -56,7 +57,9 @@ def promote_artifact_manifest(
         )
         raise ValueError("artifact manifest verification failed; use --allow-failures to register anyway")
 
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest, manifest_error = context.load_json_object(manifest_path)
+    if manifest_error is not None:
+        raise ValueError(f"artifact manifest could not be loaded: {manifest_path}: {manifest_error}")
     manifest_metadata = dict(manifest.get("metadata", {})) if isinstance(manifest.get("metadata", {}), Mapping) else {}
     registry_metadata = {
         "verified": verification.passed,
@@ -65,6 +68,8 @@ def promote_artifact_manifest(
         "checked": verification.checked,
         "nested_count": len(verification.nested),
         "failure_count": _failure_count(verification_payload),
+        "artifact_json_cache": context.json_cache_summary(),
+        "artifact_fingerprint_cache_entries": len(context.fingerprint_cache or {}),
         "manifest_summary": (
             dict(manifest.get("summary", {})) if isinstance(manifest.get("summary", {}), Mapping) else {}
         ),

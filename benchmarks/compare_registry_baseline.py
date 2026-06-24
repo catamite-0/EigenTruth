@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from benchmarks.compare_profiles import build_profile_comparison  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, ArtifactVerificationContext, RegistryRecord  # noqa: E402
 
 
 def compare_registry_baseline(
@@ -32,10 +32,18 @@ def compare_registry_baseline(
     max_phase_ratios: Mapping[str, float] | None = None,
     min_throughput_ratios: Mapping[str, float] | None = None,
     notes: Sequence[str] = (),
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Build a profile regression report from a registered benchmark manifest."""
     if not candidate_profiles:
         raise ValueError("at least one candidate profile is required.")
+    verification_context = ArtifactVerificationContext(
+        fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
     registry = ArtifactRegistry.load_json(registry_path)
     record = _select_manifest_record(
         registry,
@@ -44,14 +52,22 @@ def compare_registry_baseline(
         baseline_version=baseline_version,
     )
     manifest_path = Path(record.path)
-    verification = load_and_verify_artifact_manifest(manifest_path, recursive=recursive)
+    verification = verification_context.load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+    )
     verification_payload = verification.to_dict()
     if not verification.passed and not allow_unverified:
         raise ValueError("baseline artifact manifest verification failed; use --allow-unverified to compare anyway")
+    manifest, manifest_error = verification_context.load_json_object(manifest_path)
+    if manifest_error is not None:
+        raise ValueError(f"artifact manifest could not be loaded: {manifest_path}: {manifest_error}")
 
     baseline_profile_path = _resolve_manifest_artifact_path(
         manifest_path,
+        manifest=manifest,
         artifact_name=baseline_profile_artifact,
+        verification_context=verification_context,
     )
     comparison = build_profile_comparison(
         [("baseline", baseline_profile_path), *_normalize_candidate_profiles(candidate_profiles)],
@@ -75,6 +91,7 @@ def compare_registry_baseline(
             "profile_path": str(baseline_profile_path),
             "verification": verification_payload,
             "allow_unverified": allow_unverified,
+            "artifact_cache": verification_context.cache_summary(),
         },
         "comparison": comparison,
     }
@@ -98,21 +115,39 @@ def _select_manifest_record(
     return record
 
 
-def _resolve_manifest_artifact_path(manifest_path: Path, *, artifact_name: str) -> Path:
+def _resolve_manifest_artifact_path(
+    manifest_path: Path,
+    *,
+    manifest: Mapping[str, Any],
+    artifact_name: str,
+    verification_context: ArtifactVerificationContext,
+) -> Path:
     parts = tuple(part.strip() for part in artifact_name.split("::"))
     if not parts or any(not part for part in parts):
         raise ValueError("artifact reference must not be empty.")
     current_manifest_path = manifest_path
+    current_manifest = manifest
     for index, part in enumerate(parts):
-        path = _resolve_single_manifest_artifact_path(current_manifest_path, artifact_name=part)
+        path = _resolve_single_manifest_artifact_path(
+            current_manifest_path,
+            manifest=current_manifest,
+            artifact_name=part,
+        )
         if index == len(parts) - 1:
             return path
         current_manifest_path = path
+        current_manifest, manifest_error = verification_context.load_json_object(current_manifest_path)
+        if manifest_error is not None:
+            raise ValueError(f"artifact manifest could not be loaded: {current_manifest_path}: {manifest_error}")
     raise AssertionError("unreachable artifact reference resolution path")
 
 
-def _resolve_single_manifest_artifact_path(manifest_path: Path, *, artifact_name: str) -> Path:
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+def _resolve_single_manifest_artifact_path(
+    manifest_path: Path,
+    *,
+    manifest: Mapping[str, Any],
+    artifact_name: str,
+) -> Path:
     artifacts = manifest.get("artifacts", {})
     if not isinstance(artifacts, Mapping):
         raise ValueError("artifact manifest must contain an 'artifacts' mapping.")

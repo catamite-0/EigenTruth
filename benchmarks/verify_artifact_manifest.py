@@ -14,7 +14,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from eigentruth.registry import (  # noqa: E402
-    load_and_verify_artifact_manifest,
+    ArtifactVerificationContext,
     load_fingerprint_cache,
     save_fingerprint_cache,
 )
@@ -26,25 +26,29 @@ def verify_manifest_file(
     root: str | Path | None = None,
     recursive: bool = False,
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    verification_context: ArtifactVerificationContext | None = None,
 ) -> dict[str, Any]:
     """Return a JSON-ready verification report for one artifact manifest."""
-    return load_and_verify_artifact_manifest(
+    context = verification_context or ArtifactVerificationContext(
+        fingerprint_cache=fingerprint_cache,
+    )
+    return context.load_and_verify_artifact_manifest(
         manifest_path,
         root=root,
         recursive=recursive,
-        fingerprint_cache=fingerprint_cache,
     ).to_dict()
 
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     fingerprint_cache = load_fingerprint_cache(args.fingerprint_cache)
+    verification_context = ArtifactVerificationContext(fingerprint_cache=fingerprint_cache)
     try:
         report = verify_manifest_file(
             args.manifest,
             root=Path(args.root) if args.root else None,
             recursive=bool(args.recursive),
-            fingerprint_cache=fingerprint_cache,
+            verification_context=verification_context,
         )
         if args.json:
             Path(args.json).write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -53,7 +57,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             raise SystemExit(1)
         return report
     finally:
-        save_fingerprint_cache(args.fingerprint_cache, fingerprint_cache)
+        save_fingerprint_cache(args.fingerprint_cache, verification_context.fingerprint_cache or {})
 
 
 def main(argv: Sequence[str] | None = None) -> None:
