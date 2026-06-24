@@ -128,3 +128,13 @@ class TestConformalThreshold:
             directional_conformal_threshold(torch.tensor([1.0]), 0.1, "sideways")
         with pytest.raises(ValueError, match="direction"):
             directional_trigger_rate(torch.tensor([1.0]), 0.0, "sideways")
+
+    def test_conformal_helpers_reject_non_finite_scores(self):
+        with pytest.raises(ValueError, match="finite"):
+            conformal_threshold(torch.tensor([1.0, float("nan")]), 0.1)
+        with pytest.raises(ValueError, match="finite"):
+            conformal_pvalues(torch.tensor([1.0, 2.0]), torch.tensor([float("inf")]))
+        with pytest.raises(ValueError, match="finite"):
+            directional_conformal_threshold(torch.tensor([1.0, float("-inf")]), 0.1, "lower")
+        with pytest.raises(ValueError, match="NaN"):
+            directional_trigger_rate(torch.tensor([1.0]), float("nan"), "higher")

@@ -225,6 +225,55 @@ class TestScoreDump:
         with pytest.raises(ValueError, match="missing requested score"):
             load_score_dump(missing_path, required_scores=("truth_proj",))
 
+    def test_rejects_non_finite_score_values(self, tmp_path):
+        path = tmp_path / "non-finite-scores.json"
+        path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, float("nan")]},
+            }),
+            encoding="utf-8",
+        )
+        sweep_path = tmp_path / "non-finite-sweep.json"
+        sweep_path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+                "sweep_scores": {"-2": {"truth_proj": [0.3, float("inf")]}},
+            }),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="finite"):
+            load_score_dump(path)
+        with pytest.raises(ValueError, match="finite"):
+            load_score_dump(sweep_path)
+
+    def test_selected_jsonl_loader_rejects_selected_non_finite_score(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "score_names": ["maha_last", "unused"],
+                "sweep_scores": {},
+                "n_total": 1,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            json.dumps({
+                "label": 0,
+                "scores": {"maha_last": float("nan"), "unused": 1.0},
+            }) + "\n",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="finite"):
+            load_score_dump_columns(manifest_path, ("maha_last",))
+
     def test_can_validate_statement_only_dump_when_explicitly_allowed(self, tmp_path):
         path = tmp_path / "statement-dump.json"
         path.write_text(

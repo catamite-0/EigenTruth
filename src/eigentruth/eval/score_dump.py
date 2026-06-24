@@ -1758,7 +1758,7 @@ def _selected_record_scores(
         if not found:
             missing.append(str(name))
             continue
-        selected[str(name)] = float(raw_value)
+        selected[str(name)] = _coerce_score_value(raw_value, name=f"score {str(name)!r}")
     if missing:
         raise ValueError(f"score dump JSONL record is missing score(s): {sorted(missing)}.")
     return selected
@@ -1799,7 +1799,10 @@ def _selected_record_sweep_scores(
             if not found:
                 missing_scores.append(score_name)
                 continue
-            selected_layer[score_name] = float(raw_value)
+            selected_layer[score_name] = _coerce_score_value(
+                raw_value,
+                name=f"sweep score {score_name!r} for layer {layer_key!r}",
+            )
         if missing_scores:
             raise ValueError(
                 f"score dump JSONL record is missing sweep score(s) for layer {layer_key!r}: "
@@ -1852,7 +1855,10 @@ def _coerce_record_scores(
             raise ValueError(f"score dump JSONL record is missing score(s): {missing}.")
         if extra:
             raise ValueError(f"score dump JSONL record has unexpected score(s): {extra}.")
-    return {name: float(raw_scores[name]) for name in raw_scores}
+    return {
+        name: _coerce_score_value(raw_scores[name], name=f"score {name!r}")
+        for name in raw_scores
+    }
 
 
 def _coerce_record_sweep_scores(
@@ -1870,7 +1876,10 @@ def _coerce_record_sweep_scores(
     if sweep_score_names is None:
         return {
             str(layer): {
-                str(name): float(raw_value)
+                str(name): _coerce_score_value(
+                    raw_value,
+                    name=f"sweep score {str(name)!r} for layer {str(layer)!r}",
+                )
                 for name, raw_value in _required_mapping(layer_scores, f"sweep_scores[{layer!r}]").items()
             }
             for layer, layer_scores in raw_sweep_scores.items()
@@ -1908,7 +1917,10 @@ def _coerce_record_sweep_scores(
                 f"score dump JSONL record has unexpected sweep score(s) for layer {layer_key!r}: {extra}."
             )
         sweep_scores[layer_key] = {
-            name: float(raw_layer_scores[name])
+            name: _coerce_score_value(
+                raw_layer_scores[name],
+                name=f"sweep score {name!r} for layer {layer_key!r}",
+            )
             for name in raw_layer_scores
         }
     return sweep_scores
@@ -1978,7 +1990,10 @@ def _coerce_score_mapping(
     for score_name, raw_values in value.items():
         if not isinstance(raw_values, Sequence) or isinstance(raw_values, (str, bytes, bytearray)):
             raise ValueError(f"score {score_name!r} must be a list.")
-        values = tuple(float(item) for item in raw_values)
+        values = tuple(
+            _coerce_score_value(item, name=f"score {str(score_name)!r}")
+            for item in raw_values
+        )
         if len(values) != n_labels:
             raise ValueError(
                 f"score {score_name!r} length does not match labels "
@@ -2001,6 +2016,16 @@ def _coerce_sweep_scores(value: Any, *, n_labels: int) -> dict[str, Mapping[str,
             name=f"sweep_scores[{layer!r}]",
         )
     return sweep_scores
+
+
+def _coerce_score_value(value: Any, *, name: str) -> float:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"score dump {name} must be numeric.") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"score dump {name} must be finite.")
+    return numeric
 
 
 def _coerce_statements(
