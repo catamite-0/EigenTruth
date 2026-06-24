@@ -195,10 +195,15 @@ def build_calibration_transfer_report(
     ]
     loaded_dumps = []
     score_dump_metadata = {}
+    score_dump_metadata_cache = {}
     for name, path in score_dumps:
         score_dump = load_score_dump(path)
         loaded_dumps.append((name, path, score_dump.to_mapping()))
-        score_dump_metadata[name] = score_dump_file_metadata(path, score_dump)
+        score_dump_metadata[name] = score_dump_file_metadata(
+            path,
+            score_dump,
+            cache=score_dump_metadata_cache,
+        )
 
     results = []
     for artifact_name, artifact_path, artifact in loaded_artifacts:

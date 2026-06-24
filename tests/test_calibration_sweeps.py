@@ -3,6 +3,7 @@
 import json
 
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
+from eigentruth.eval.score_dump import ScoreDump
 
 
 def _score_dump():
@@ -60,7 +61,16 @@ def test_layer_score_sweep_from_file_uses_validated_score_dump(tmp_path):
     path = tmp_path / "scores.json"
     path.write_text(json.dumps(_score_dump()), encoding="utf-8")
 
-    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_file(path)
+    original_to_mapping = ScoreDump.to_mapping
+
+    def fail_to_mapping(self):
+        raise AssertionError("calibrate_from_file should consume ScoreDump directly")
+
+    ScoreDump.to_mapping = fail_to_mapping
+    try:
+        report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_file(path)
+    finally:
+        ScoreDump.to_mapping = original_to_mapping
 
     assert report.scores_path == str(path)
     assert report.best_score().score_name == "maha_last"
@@ -79,6 +89,19 @@ def test_layer_score_sweep_from_file_uses_validated_score_dump(tmp_path):
         assert "length does not match labels" in str(exc)
     else:
         raise AssertionError("invalid score dump should be rejected")
+
+
+def test_layer_score_sweep_from_score_dump_public_api():
+    score_dump = ScoreDump.from_mapping(_score_dump())
+
+    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_score_dump(
+        score_dump,
+        scores_path="scores.json",
+    )
+
+    assert report.scores_path == "scores.json"
+    assert report.best_score().layer == -2
+    assert report.best_score().score_name == "maha_last"
 
 
 def test_layer_score_sweep_supports_lower_is_anomalous_scores():

@@ -413,7 +413,9 @@ score's `higher` or `lower` anomalous direction while score dumps remain unchang
 The report config includes `score_dump` metadata from `eigentruth.eval.ScoreDump`:
 record counts, available score names, sweep layers, file size, and SHA-256. This
 lets later calibration, ensemble, and route-refresh steps confirm they are reusing
-the intended dump without parsing model artifacts again.
+the intended dump without parsing model artifacts again. Post-processing reports
+share a run-local metadata cache, so duplicate score paths do not require
+re-hashing the same file.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.

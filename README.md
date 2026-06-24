@@ -276,8 +276,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
 | `directional_conformal_threshold` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions. |
-| `ScoreDump` / `load_score_dump` / `score_dump_file_metadata` | Validate per-statement score dumps once, expose compact run summaries, and attach SHA-256 provenance to post-hoc calibration or ensemble reports without rerunning models. |
-| `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps. |
+| `ScoreDump` / `load_score_dump` / `score_dump_file_metadata` | Validate per-statement score dumps once, expose compact run summaries, and attach SHA-256 provenance to post-hoc calibration or ensemble reports without rerunning models; callers can share an optional metadata cache to avoid repeated file hashing inside one run. |
+| `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps, including direct `ScoreDump` inputs via `calibrate_from_score_dump()`. |
 | `ArtifactRegistry` / `build_artifact_manifest` / `fingerprint_path` / `verify_artifact_manifest` | Records and verifies local artifact metadata with dependency-free file/directory SHA-256 provenance for reproducible benchmark chains. |
 | `RuntimeProfile` / `RuntimeProfileSelectorPolicy` / `select_runtime_profile` | Defines shared `latency`, `balanced`, and `audit` defaults, plus a configurable cheap diagnostic/claim-metadata selector for product control-plane staging. |
 | `ProductPromotionContract` | Converts promoted release-candidate reports into product runtime, verifier-route, and budget-policy contracts. |
@@ -345,8 +345,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
 | `directional_conformal_threshold` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率。 |
-| `ScoreDump` / `load_score_dump` / `score_dump_file_metadata` | 对逐陈述 score dump 做统一校验，暴露紧凑 run summary，并给后处理校准或 ensemble report 附带 SHA-256 provenance，不重跑模型。 |
-| `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact。 |
+| `ScoreDump` / `load_score_dump` / `score_dump_file_metadata` | 对逐陈述 score dump 做统一校验，暴露紧凑 run summary，并给后处理校准或 ensemble report 附带 SHA-256 provenance，不重跑模型；调用方可共享可选 metadata cache，避免单次运行内重复 hash 文件。 |
+| `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact，并支持通过 `calibrate_from_score_dump()` 直接消费 `ScoreDump`。 |
 | `RuntimeProfile` / `RuntimeProfileSelectorPolicy` / `select_runtime_profile` | 定义 release gate 和产品控制面共用的 `latency`、`balanced`、`audit` 默认档位，并提供基于诊断和 claim metadata 的可配置低成本自动选择器。 |
 | `ProductPromotionContract` | 将已 promoted release-candidate report 转成产品 runtime、verifier route 和 budget policy contract。 |
 | `RiskController` / `ProductTrace` | 将校准诊断和可选验证结果转为结构化路由决策与 JSON trace；非法诊断值会路由到 `clarify/unknown`，route summary 会暴露选中、匹配和跳过的 verifier 工具，runtime/cache/tail-latency/route-cost summary 支持可选预算门禁。 |

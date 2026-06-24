@@ -1854,6 +1854,7 @@ def build_verifier_ensemble_report(
         else None
     )
     runs = []
+    score_dump_metadata_cache = {}
     any_state_enabled = False
     any_transition_enabled = False
     any_selfcheck_enabled = False
@@ -1993,7 +1994,11 @@ def build_verifier_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
-            "score_dump": score_dump_file_metadata(path, dump["score_dump"]),
+            "score_dump": score_dump_file_metadata(
+                path,
+                dump["score_dump"],
+                cache=score_dump_metadata_cache,
+            ),
             "config": dump["config"],
             "signal": signal,
             "direction": resolved_direction,

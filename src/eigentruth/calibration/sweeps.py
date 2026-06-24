@@ -15,7 +15,7 @@ from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
-from eigentruth.eval.score_dump import load_score_dump
+from eigentruth.eval.score_dump import ScoreDump, load_score_dump
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -259,14 +259,47 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Load a score dump and build a layer/score sweep report."""
         dump_path = Path(path)
-        dump = load_score_dump(dump_path).to_mapping()
-        return self.calibrate_from_dump(
+        dump = load_score_dump(dump_path)
+        return self.calibrate_from_score_dump(
             dump,
             signals=signals,
             directions=directions,
             model_id=model_id,
             model_revision=model_revision,
             scores_path=str(dump_path),
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def calibrate_from_score_dump(
+        self,
+        score_dump: ScoreDump,
+        *,
+        signals: Optional[Sequence[str]] = None,
+        directions: Optional[Mapping[str, str]] = None,
+        model_id: Optional[str] = None,
+        model_revision: Optional[str] = None,
+        scores_path: Optional[str] = None,
+        created_at: Optional[str] = None,
+        commit_sha: Optional[str] = None,
+        eigentruth_version: str = __version__,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from a validated ``ScoreDump``."""
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.int64)
+        config = dict(score_dump.config)
+        layer_scores = _collect_layer_scores_from_score_dump(score_dump)
+        return self._calibrate_layer_scores(
+            labels=labels,
+            config=config,
+            layer_scores=layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
             created_at=created_at,
             commit_sha=commit_sha,
             eigentruth_version=eigentruth_version,
@@ -291,6 +324,38 @@ class LayerScoreSweepCalibrator:
         labels = torch.as_tensor(dump["labels"], dtype=torch.int64)
         config = dict(dump.get("config", {}))
         layer_scores = _collect_layer_scores(dump)
+        return self._calibrate_layer_scores(
+            labels=labels,
+            config=config,
+            layer_scores=layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def _calibrate_layer_scores(
+        self,
+        *,
+        labels: torch.Tensor,
+        config: Mapping[str, Any],
+        layer_scores: Mapping[int, Mapping[str, Sequence[float]]],
+        signals: Optional[Sequence[str]],
+        directions: Optional[Mapping[str, str]],
+        model_id: Optional[str],
+        model_revision: Optional[str],
+        scores_path: Optional[str],
+        created_at: Optional[str],
+        commit_sha: Optional[str],
+        eigentruth_version: str,
+        metadata: Optional[Mapping[str, Any]],
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from validated score families."""
         selected = set(signals) if signals is not None else _all_score_names(layer_scores)
         results = []
         for layer in sorted(layer_scores):
@@ -327,6 +392,15 @@ class LayerScoreSweepCalibrator:
             commit_sha=commit_sha,
             metadata=metadata or {"source": "eval_truthfulqa.py", "config": config},
         )
+
+
+def _collect_layer_scores_from_score_dump(score_dump: ScoreDump) -> dict[int, dict[str, Sequence[float]]]:
+    primary_layer = int(score_dump.config.get("layer", 0))
+    layer_scores: dict[int, dict[str, Sequence[float]]] = {primary_layer: dict(score_dump.scores)}
+    for layer_key, scores in score_dump.sweep_scores.items():
+        layer = int(layer_key)
+        layer_scores.setdefault(layer, {}).update(dict(scores))
+    return layer_scores
 
 
 def _collect_layer_scores(dump: Mapping[str, Any]) -> dict[int, dict[str, Sequence[float]]]:

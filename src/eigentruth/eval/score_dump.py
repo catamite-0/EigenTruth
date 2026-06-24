@@ -6,7 +6,7 @@ import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 
 @dataclass(frozen=True)
@@ -172,15 +172,23 @@ def load_score_dump(
     return dump
 
 
-def score_dump_file_metadata(path: str | Path, dump: ScoreDump | None = None) -> dict[str, Any]:
+def score_dump_file_metadata(
+    path: str | Path,
+    dump: ScoreDump | None = None,
+    *,
+    cache: MutableMapping[str, Mapping[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Return a stable local fingerprint plus optional parsed score-dump summary."""
     score_path = Path(path)
+    fingerprint = _cached_file_fingerprint(score_path, cache) if score_path.is_file() else {
+        "sha256": None,
+        "size_bytes": None,
+    }
     metadata: dict[str, Any] = {
         "path": str(score_path),
         "exists": score_path.exists(),
         "kind": "file" if score_path.is_file() else ("missing" if not score_path.exists() else "other"),
-        "sha256": _sha256_file(score_path) if score_path.is_file() else None,
-        "size_bytes": score_path.stat().st_size if score_path.is_file() else None,
+        **fingerprint,
     }
     if dump is not None:
         metadata["summary"] = dump.summary()
@@ -269,6 +277,22 @@ def _layer_sort_key(value: str) -> tuple[int, int | str]:
         return (0, int(value))
     except ValueError:
         return (1, value)
+
+
+def _cached_file_fingerprint(
+    path: Path,
+    cache: MutableMapping[str, Mapping[str, Any]] | None,
+) -> dict[str, Any]:
+    stat = path.stat()
+    if cache is None:
+        return {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
+    cache_key = f"{path.resolve(strict=False)}:{stat.st_size}:{stat.st_mtime_ns}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return dict(cached)
+    fingerprint = {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
+    cache[cache_key] = dict(fingerprint)
+    return fingerprint
 
 
 def _sha256_file(path: Path) -> str:

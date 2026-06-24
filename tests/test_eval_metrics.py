@@ -192,3 +192,30 @@ class TestScoreDump:
 
         assert dump.summary()["score_count"] == 0
         assert dump.summary()["statement_count"] == 2
+
+    def test_file_metadata_cache_reuses_fingerprint(self, tmp_path, monkeypatch):
+        path = tmp_path / "scores.json"
+        path.write_text(
+            json.dumps({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+            }),
+            encoding="utf-8",
+        )
+        calls = []
+
+        def fake_sha256_file(sha_path):
+            calls.append(sha_path)
+            return "cached-sha"
+
+        monkeypatch.setattr("eigentruth.eval.score_dump._sha256_file", fake_sha256_file)
+        dump = load_score_dump(path)
+        cache = {}
+
+        first = score_dump_file_metadata(path, dump, cache=cache)
+        second = score_dump_file_metadata(path, dump, cache=cache)
+
+        assert first["sha256"] == "cached-sha"
+        assert second["sha256"] == "cached-sha"
+        assert first["summary"] == second["summary"]
+        assert len(calls) == 1

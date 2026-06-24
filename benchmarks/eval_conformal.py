@@ -65,6 +65,7 @@ def run(args) -> dict:
         pass
 
     score_dump = load_score_dump(args.scores, required_scores=(args.signal,))
+    score_dump_metadata_cache = {}
     dump = score_dump.to_mapping()
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
@@ -121,7 +122,11 @@ def run(args) -> dict:
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
     payload = {"config": {"scores": args.scores, "signal": args.signal,
-                          "score_dump": score_dump_file_metadata(args.scores, score_dump),
+                          "score_dump": score_dump_file_metadata(
+                              args.scores,
+                              score_dump,
+                              cache=score_dump_metadata_cache,
+                          ),
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}

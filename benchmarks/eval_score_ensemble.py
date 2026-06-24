@@ -250,6 +250,7 @@ def build_ensemble_report(
         raise ValueError("alphas must be in (0, 1).")
 
     runs = []
+    score_dump_metadata_cache = {}
     for name, path in score_dumps:
         dump = _load_scores(path)
         labels = dump["labels"]
@@ -287,7 +288,11 @@ def build_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
-            "score_dump": score_dump_file_metadata(path, dump["score_dump"]),
+            "score_dump": score_dump_file_metadata(
+                path,
+                dump["score_dump"],
+                cache=score_dump_metadata_cache,
+            ),
             "config": dump["config"],
             "signals": list(signals),
             "directions": directions,
