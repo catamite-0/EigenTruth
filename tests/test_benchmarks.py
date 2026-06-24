@@ -13623,6 +13623,124 @@ def test_feedback_policy_replay_audit_covers_counterfactual_effects(tmp_path):
         )
 
 
+def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_feedback_policy_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.control import ProductFeedbackRecord, write_feedback_jsonl
+
+    trace_specs = (
+        (
+            "req-accept",
+            "accept",
+            [{
+                "claim_id": "claim-accept",
+                "text": "Revenue increased by 12 percent.",
+                "metadata": {"features": {"has_number": True}},
+            }],
+        ),
+        ("req-retrieve", "retrieve", []),
+        ("req-abstain", "abstain", []),
+    )
+    trace_paths = []
+    for request_id, action, claims in trace_specs:
+        path = tmp_path / f"{request_id}.json"
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "claims": claims,
+                "risk_decision": {
+                    "action": action,
+                    "risk_level": "low" if action == "accept" else "high",
+                    "confidence": 0.9,
+                    "reason": "unit",
+                },
+                "actions": [{"action": action, "reason": "unit", "payload": {}}],
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(path)
+
+    feedback_path = tmp_path / "feedback.jsonl"
+    write_feedback_jsonl(
+        feedback_path,
+        (
+            ProductFeedbackRecord(
+                request_id="req-accept",
+                claim_id="claim-accept",
+                outcome="incorrect",
+            ),
+            ProductFeedbackRecord(request_id="req-retrieve", outcome="unsupported"),
+            ProductFeedbackRecord(request_id="req-abstain", outcome="correct"),
+        ),
+    )
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+
+    report = module.run_feedback_policy_workflow(
+        module.FeedbackPolicyWorkflowConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="feedback-policy-workflow",
+            version="0.1",
+            metadata={"suite": "unit"},
+            recommendation_min_matched_feedback_count=3,
+            recommendation_max_accepted_but_wrong_rate=0.05,
+            recommendation_max_retrieved_failure_rate=0.10,
+            recommendation_max_abstain_false_positive_rate=1.0,
+            rate_statistic="estimate",
+            replay_min_matched_feedback_count=3,
+            min_safety_coverage=1.0,
+            max_unknown_safety_issue_rate=0.0,
+            compact_json="false",
+        )
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:feedback-policy-workflow:0.1")
+    saved = json.loads((output_dir / "feedback-policy-workflow.json").read_text(encoding="utf-8"))
+
+    assert report["status"] == "recommend"
+    assert report["decision"]["promotion_decision"] == "promote_candidate_policy"
+    assert report["decision"]["feedback_report_status"] == "observed"
+    assert report["decision"]["policy_recommendation_status"] == "recommend"
+    assert report["decision"]["replay_audit_status"] == "passed"
+    assert report["decision"]["matched_feedback_count"] == 3
+    assert report["decision"]["safety_coverage_rate"] == pytest.approx(1.0)
+    assert report["children"]["product_feedback_report"]["status"] == "observed"
+    assert report["children"]["feedback_policy_recommendation"]["status"] == "recommend"
+    assert report["children"]["feedback_policy_replay_audit"]["status"] == "passed"
+    assert saved["artifact_manifest_summary"]["artifact_count"] == 9
+    assert (output_dir / "candidate-control-policy.json").exists()
+    assert (output_dir / "candidate-control-defaults.json").exists()
+    assert record.metadata["workflow"] == "feedback_policy_workflow"
+    assert record.metadata["status"] == "recommend"
+    assert record.metadata["promotion_decision"] == "promote_candidate_policy"
+    assert record.metadata["matched_feedback_count"] == 3
+    assert record.metadata["safety_coverage_rate"] == pytest.approx(1.0)
+    assert record.metadata["suite"] == "unit"
+    assert registry_module.load_and_verify_artifact_manifest(
+        output_dir / "artifact-manifest.json",
+        recursive=True,
+    ).passed is True
+
+    with pytest.raises(ValueError, match="registry_path requires name and version"):
+        module.FeedbackPolicyWorkflowConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            output_dir=tmp_path / "invalid-workflow",
+            registry_path=tmp_path / "invalid-registry.json",
+        )
+
+    with pytest.raises(ValueError, match="compact_json"):
+        module.FeedbackPolicyWorkflowConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            output_dir=tmp_path / "invalid-bool-workflow",
+            compact_json="maybe",
+        )
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"

@@ -2710,6 +2710,37 @@ Treat a passing audit as an offline promotion gate for the candidate policy
 artifact, not as proof that future traffic is fixed. The next step should still
 be trace replay or a controlled product rollout.
 
+Use `run_feedback_policy_workflow.py` when the same handoff should be produced
+as one reproducible artifact bundle. It builds or reuses the product feedback
+report, writes the candidate `ControlPolicyConfig` and runtime defaults, runs
+the replay audit, fingerprints the child reports/manifests, and optionally
+records the top-level workflow report in the local registry:
+
+```bash
+python benchmarks/run_feedback_policy_workflow.py \
+  --trace artifacts/demo-request-a.json \
+  --trace artifacts/demo-request-b.json \
+  --feedback-jsonl artifacts/product-feedback.jsonl \
+  --output-dir artifacts/feedback-policy-workflow \
+  --registry artifacts/local-release-registry.json \
+  --name feedback-policy-workflow \
+  --version 0.1 \
+  --recommendation-min-matched-feedback-count 20 \
+  --recommendation-max-accepted-but-wrong-rate 0.05 \
+  --recommendation-max-retrieved-failure-rate 0.10 \
+  --recommendation-max-abstain-false-positive-rate 0.20 \
+  --replay-min-matched-feedback-count 20 \
+  --min-safety-coverage 0.70 \
+  --max-unknown-safety-issue-rate 0.20 \
+  --fail-on-blocked \
+  --fail-on-needs-evidence
+```
+
+The top-level workflow status is `recommend` when the feedback-derived
+candidate policy is recommended and the replay audit passes. It remains
+`observed` when no policy change is needed, `needs_evidence` when feedback count
+is insufficient, and `blocked` when a child gate fails.
+
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
