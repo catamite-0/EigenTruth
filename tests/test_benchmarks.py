@@ -5681,6 +5681,108 @@ def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_p
     assert candidate["product_runtime_drift"]["summary"]["blocked_metric_count"] == 0
 
 
+def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    feedback_workflow = _write_feedback_policy_workflow_report(
+        tmp_path / "feedback-policy-workflow",
+        status="recommend",
+        matched_feedback_count=30,
+        safety_coverage_rate=1.0,
+        unknown_safety_issue_rate=0.0,
+    )
+    blocked_feedback_workflow = _write_feedback_policy_workflow_report(
+        tmp_path / "blocked-feedback-policy-workflow",
+        status="recommend",
+        matched_feedback_count=3,
+        safety_coverage_rate=0.50,
+        unknown_safety_issue_rate=0.75,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        feedback_policy_workflow_path=feedback_workflow,
+        feedback_policy_min_matched_feedback_count=20,
+        feedback_policy_min_safety_coverage=0.70,
+        feedback_policy_max_unknown_safety_issue_rate=0.20,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        feedback_policy_workflow_path=blocked_feedback_workflow,
+        feedback_policy_min_matched_feedback_count=20,
+        feedback_policy_min_safety_coverage=0.70,
+        feedback_policy_max_unknown_safety_issue_rate=0.20,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["feedback_policy_workflow_status"] == "promote"
+    assert payload["decision"]["recommended_feedback_policy_workflow_report"] == str(feedback_workflow)
+    assert payload["decision"]["recommended_feedback_policy_candidate_control_policy"].endswith(
+        "candidate-control-policy.json"
+    )
+    assert payload["feedback_policy_workflow_gate"]["gate"]["passed"] is True
+    assert payload["feedback_policy_workflow_gate"]["matched_feedback_count"] == pytest.approx(30)
+    assert payload["feedback_policy_workflow_gate"]["safety_coverage_rate"] == pytest.approx(1.0)
+    assert payload["feedback_policy_workflow_gate"]["unknown_safety_issue_rate"] == pytest.approx(0.0)
+    candidate = payload["release_candidate"]
+    assert candidate["feedback_policy_workflow"]["promotion_decision"] == "promote_candidate_policy"
+    assert candidate["feedback_policy_workflow"]["candidate_control_defaults"].endswith(
+        "candidate-control-defaults.json"
+    )
+    assert candidate["manifests"]["feedback_policy_workflow_manifest"].endswith(
+        "feedback-policy-workflow/artifact-manifest.json"
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "feedback_policy_workflow"
+    assert any(
+        "matched feedback count below 20" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -6998,11 +7100,23 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         drift_report=product_runtime_drift_report,
         status="promote",
     )
+    feedback_policy_workflow_report = _write_feedback_policy_workflow_report(
+        tmp_path / "feedback-policy-workflow",
+        status="recommend",
+        matched_feedback_count=30,
+        safety_coverage_rate=1.0,
+        unknown_safety_issue_rate=0.0,
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_report(
         name="product-trace-replay-workflow",
         path=product_trace_replay_workflow_report,
         version="0.1",
         metadata={"workflow": "run_product_trace_replay_workflow", "status": "promote"},
+    ).record_report(
+        name="feedback-policy-workflow",
+        path=feedback_policy_workflow_report,
+        version="0.1",
+        metadata={"workflow": "run_feedback_policy_workflow", "status": "recommend"},
     ).save_json()
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
     original_sha256_file = provenance_module._sha256_file
@@ -7038,6 +7152,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
         release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
+        feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
+        feedback_policy_min_matched_feedback_count=20,
+        feedback_policy_min_safety_coverage=0.70,
+        feedback_policy_max_unknown_safety_issue_rate=0.20,
         route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
         required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
         adapter_family_matrix_path=adapter_family_matrix_path,
@@ -7067,6 +7185,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
     assert sorted(manifest["artifacts"]) == [
         "adapter_family_matrix_report",
+        "feedback_policy_workflow_manifest",
         "performance_manifest",
         "product_runtime_drift_manifest",
         "product_trace_replay_workflow_manifest",
@@ -7085,6 +7204,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_product_runtime_drift_status"] == "promote"
     assert manifest["metadata"]["release_efficiency_status"] == "promote"
     assert manifest["metadata"]["release_product_trace_replay_workflow_status"] == "promote"
+    assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
@@ -7141,6 +7261,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["recommended_release_efficiency_report"] == str(release_efficiency_report)
     assert manifest["metadata"]["recommended_release_efficiency_profile"] == "balanced"
+    assert manifest["metadata"]["recommended_feedback_policy_workflow_report"] == str(
+        feedback_policy_workflow_report
+    )
+    assert manifest["metadata"]["recommended_feedback_policy_candidate_control_policy"].endswith(
+        "candidate-control-policy.json"
+    )
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -7191,6 +7317,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_trace_replay_workflow_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert manifest["metadata"]["feedback_policy_workflow_report"] == str(feedback_policy_workflow_report)
+    assert manifest["metadata"]["feedback_policy_workflow_source"] == "registry"
+    assert manifest["metadata"]["feedback_policy_workflow_record"] == (
+        "report:feedback-policy-workflow:0.1"
+    )
+    assert manifest["metadata"]["feedback_policy_workflow_promotion_decision"] == (
+        "promote_candidate_policy"
+    )
+    assert manifest["metadata"]["feedback_policy_workflow_matched_feedback_count"] == pytest.approx(30)
+    assert manifest["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(1.0)
+    assert manifest["metadata"]["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.0)
+    assert manifest["metadata"]["feedback_policy_workflow_manifest"].endswith(
+        "feedback-policy-workflow/artifact-manifest.json"
+    )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
@@ -7224,6 +7364,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["product_trace_replay_workflow_key"] == (
         "report:product-trace-replay-workflow:0.1"
     )
+    assert payload["config"]["feedback_policy_workflow_key"] == "report:feedback-policy-workflow:0.1"
+    assert payload["config"]["feedback_policy_min_matched_feedback_count"] == 20
+    assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
+    assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
@@ -7250,6 +7394,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["release_candidate_comparison"]["config"]["product_trace_replay_workflow_key"] == (
         "report:product-trace-replay-workflow:0.1"
+    )
+    assert payload["release_candidate_comparison"]["config"]["feedback_policy_workflow"] == str(
+        feedback_policy_workflow_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["feedback_policy_workflow_key"] == (
+        "report:feedback-policy-workflow:0.1"
     )
     assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
         selector_replay_report
@@ -7316,6 +7466,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_efficiency_quality_passed"] is True
     assert record.metadata["release_efficiency_trace_record_cache_hit_profile_count"] == 1
     assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
+    assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
     )
@@ -7326,6 +7477,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert record.metadata["feedback_policy_workflow_report"] == str(feedback_policy_workflow_report)
+    assert record.metadata["feedback_policy_workflow_source"] == "registry"
+    assert record.metadata["feedback_policy_workflow_record"] == (
+        "report:feedback-policy-workflow:0.1"
+    )
+    assert record.metadata["feedback_policy_workflow_matched_feedback_count"] == pytest.approx(30)
+    assert record.metadata["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(1.0)
+    assert record.metadata["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.0)
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
@@ -7788,6 +7947,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "recommended_route": "structured_qa",
                 "recommended_selector_replay_candidate": "default",
                 "product_runtime_drift_status": "promote",
+                "feedback_policy_workflow_status": "promote",
+                "recommended_feedback_policy_workflow_report": (
+                    "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
+                ),
+                "recommended_feedback_policy_candidate_control_policy": (
+                    "artifacts/feedback-policy-workflow/candidate-control-policy.json"
+                ),
+                "recommended_feedback_policy_candidate_control_defaults": (
+                    "artifacts/feedback-policy-workflow/candidate-control-defaults.json"
+                ),
             },
             "release_candidate": {
                 "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
@@ -7830,7 +7999,31 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "selector_replay_report_path": "artifacts/selector/selector-replay.json",
                     "product_runtime_drift_report_path": "artifacts/runtime-drift/runtime-drift.json",
                 },
+                "feedback_policy_workflow": {
+                    "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
+                    "manifest_path": "artifacts/feedback-policy-workflow/artifact-manifest.json",
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:feedback-policy-workflow:0.1",
+                    "report_status": "recommend",
+                    "promotion_decision": "promote_candidate_policy",
+                    "candidate_control_policy": (
+                        "artifacts/feedback-policy-workflow/candidate-control-policy.json"
+                    ),
+                    "candidate_control_defaults": (
+                        "artifacts/feedback-policy-workflow/candidate-control-defaults.json"
+                    ),
+                    "matched_feedback_count": 30,
+                    "accepted_but_wrong_rate": 0.03,
+                    "retrieved_failure_rate": 0.04,
+                    "abstain_false_positive_rate": 0.02,
+                    "safety_coverage_rate": 0.92,
+                    "unknown_safety_issue_rate": 0.05,
+                },
                 "manifests": {
+                    "feedback_policy_workflow_manifest": (
+                        "artifacts/feedback-policy-workflow/artifact-manifest.json"
+                    ),
                     "product_trace_replay_workflow_manifest": (
                         "artifacts/trace-replay-workflow/artifact-manifest.json"
                     ),
@@ -7898,15 +8091,30 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["product_trace_replay_workflow"]["record_key"] == (
         "report:trace-replay-workflow:0.1"
     )
+    assert contract["feedback_policy_workflow"]["record_key"] == (
+        "report:feedback-policy-workflow:0.1"
+    )
+    assert contract["feedback_policy_workflow"]["candidate_control_policy"].endswith(
+        "candidate-control-policy.json"
+    )
     assert contract["release_efficiency"]["recommended_profile"] == "balanced"
     assert contract["release_efficiency"]["recommended_efficiency_score"] == 2.0
     assert contract["metadata"]["release_efficiency_recommended_profile"] == "balanced"
     assert payload["contract"]["product_trace_replay_workflow"]["report_path"] == (
         "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
     )
+    assert payload["contract"]["feedback_policy_workflow"]["report_path"] == (
+        "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
+    )
     assert payload["paths"]["release_efficiency_report"] == str(release_efficiency_path)
     assert payload["contract"]["release_efficiency"]["status"] == "promote"
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
+    assert contract["metadata"]["recommended_feedback_policy_workflow_report"] == (
+        "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
+    )
+    assert contract["metadata"]["feedback_policy_workflow_status"] == "promote"
+    assert contract["metadata"]["feedback_policy_workflow_report_status"] == "recommend"
+    assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
@@ -7925,6 +8133,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"
     )
+    assert record.metadata["feedback_policy_workflow_source"] == "registry"
+    assert record.metadata["feedback_policy_workflow_record"] == (
+        "report:feedback-policy-workflow:0.1"
+    )
+    assert record.metadata["feedback_policy_workflow_promotion_decision"] == (
+        "promote_candidate_policy"
+    )
+    assert record.metadata["feedback_policy_workflow_candidate_control_defaults"].endswith(
+        "candidate-control-defaults.json"
+    )
+    assert record.metadata["feedback_policy_workflow_matched_feedback_count"] == 30
+    assert record.metadata["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(0.92)
+    assert record.metadata["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.05)
     assert record.metadata["release_efficiency_report"] == str(release_efficiency_path)
     assert record.metadata["release_efficiency_manifest"] == (
         "artifacts/efficiency/artifact-manifest.json"
@@ -8894,6 +9115,88 @@ def _write_product_trace_replay_workflow_report(
                 metadata={
                     "runner": "run_product_trace_replay_workflow",
                     "status": status,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_feedback_policy_workflow_report(
+    output_dir,
+    *,
+    status="recommend",
+    promotion_decision="promote_candidate_policy",
+    matched_feedback_count=30,
+    safety_coverage_rate=1.0,
+    unknown_safety_issue_rate=0.0,
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "feedback-policy-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    policy_path = output_dir / "candidate-control-policy.json"
+    defaults_path = output_dir / "candidate-control-defaults.json"
+    policy_path.write_text(
+        json.dumps({"unsupported_action": "clarify", "compound_risk_action": "abstain"}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    defaults_path.write_text(
+        json.dumps({"staged_verification": True, "max_verifier_route_attempts": 2}, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "feedback_policy_workflow",
+        "status": status,
+        "decision": {
+            "status": status,
+            "promotion_decision": promotion_decision,
+            "candidate_control_policy": str(policy_path),
+            "candidate_control_defaults": str(defaults_path),
+            "matched_feedback_count": matched_feedback_count,
+            "safety_coverage_rate": safety_coverage_rate,
+            "unknown_safety_issue_rate": unknown_safety_issue_rate,
+            "blocking_reasons": () if status in {"recommend", "observed"} else ("feedback policy blocked",),
+        },
+        "feedback_summary": {
+            "trace_matched_feedback_count": matched_feedback_count,
+            "accepted_but_wrong_rate": {"estimate": 0.10},
+            "retrieved_failure_rate": {"estimate": 0.05},
+            "abstain_false_positive_rate": {"estimate": 0.0},
+        },
+        "replay_summary": {
+            "matched_feedback_count": matched_feedback_count,
+            "safety_coverage_rate": {"estimate": safety_coverage_rate},
+            "unknown_safety_issue_rate": {"estimate": unknown_safety_issue_rate},
+        },
+        "paths": {
+            "workflow_report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+            "candidate_control_policy": str(policy_path),
+            "candidate_control_defaults": str(defaults_path),
+        },
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "feedback_policy_workflow": report_path,
+                    "candidate_control_policy": policy_path,
+                    "candidate_control_defaults": defaults_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_feedback_policy_workflow",
+                    "status": status,
+                    "matched_feedback_count": matched_feedback_count,
+                    "safety_coverage_rate": safety_coverage_rate,
                 },
             ),
             indent=2,

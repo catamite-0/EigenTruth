@@ -50,6 +50,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
+    feedback_policy_workflow_path: Path | None = None
+    feedback_policy_workflow_registry_path: Path | None = None
+    feedback_policy_workflow_key: str | None = None
+    feedback_policy_min_matched_feedback_count: int | None = None
+    feedback_policy_min_safety_coverage: float | None = None
+    feedback_policy_max_unknown_safety_issue_rate: float | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
     require_performance_score_dump_cache: bool = False
@@ -145,6 +151,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 "product_trace_replay_workflow_registry_path",
                 Path(self.product_trace_replay_workflow_registry_path),
             )
+        if self.feedback_policy_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "feedback_policy_workflow_path",
+                Path(self.feedback_policy_workflow_path),
+            )
+        if self.feedback_policy_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "feedback_policy_workflow_registry_path",
+                Path(self.feedback_policy_workflow_registry_path),
+            )
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
         if self.release_report_path is not None:
@@ -237,6 +255,12 @@ def run_release_candidate_registry_workflow(
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
+        feedback_policy_workflow_path=config.feedback_policy_workflow_path,
+        feedback_policy_workflow_registry_path=config.feedback_policy_workflow_registry_path,
+        feedback_policy_workflow_key=config.feedback_policy_workflow_key,
+        feedback_policy_min_matched_feedback_count=config.feedback_policy_min_matched_feedback_count,
+        feedback_policy_min_safety_coverage=config.feedback_policy_min_safety_coverage,
+        feedback_policy_max_unknown_safety_issue_rate=config.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         required_adapter_routes=config.required_adapter_routes,
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
@@ -383,6 +407,22 @@ def run_release_candidate_registry_workflow(
                 else str(config.product_trace_replay_workflow_registry_path)
             ),
             "product_trace_replay_workflow_key": config.product_trace_replay_workflow_key,
+            "feedback_policy_workflow": (
+                None
+                if config.feedback_policy_workflow_path is None
+                else str(config.feedback_policy_workflow_path)
+            ),
+            "feedback_policy_workflow_registry": (
+                None
+                if config.feedback_policy_workflow_registry_path is None
+                else str(config.feedback_policy_workflow_registry_path)
+            ),
+            "feedback_policy_workflow_key": config.feedback_policy_workflow_key,
+            "feedback_policy_min_matched_feedback_count": config.feedback_policy_min_matched_feedback_count,
+            "feedback_policy_min_safety_coverage": config.feedback_policy_min_safety_coverage,
+            "feedback_policy_max_unknown_safety_issue_rate": (
+                config.feedback_policy_max_unknown_safety_issue_rate
+            ),
             "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
             "adapter_family_matrix": (
                 None
@@ -519,6 +559,7 @@ def _write_artifact_manifest(
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
+        "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
     artifacts.update({
@@ -612,6 +653,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         else {}
     )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
+    feedback_policy_workflow = dict(candidate.get("feedback_policy_workflow") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -627,6 +669,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_product_trace_replay_workflow_status": decision.get(
             "product_trace_replay_workflow_status"
         ),
+        "release_feedback_policy_workflow_status": decision.get("feedback_policy_workflow_status"),
         "release_runtime_profile": config.get("runtime_profile"),
         "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
         "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
@@ -637,6 +680,15 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_product_runtime_drift_report": decision.get("recommended_product_runtime_drift_report"),
         "recommended_release_efficiency_report": decision.get("recommended_release_efficiency_report"),
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
+        "recommended_feedback_policy_workflow_report": decision.get(
+            "recommended_feedback_policy_workflow_report"
+        ),
+        "recommended_feedback_policy_candidate_control_policy": decision.get(
+            "recommended_feedback_policy_candidate_control_policy"
+        ),
+        "recommended_feedback_policy_candidate_control_defaults": decision.get(
+            "recommended_feedback_policy_candidate_control_defaults"
+        ),
         "required_adapter_routes": decision.get("required_adapter_routes"),
         "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
@@ -823,6 +875,37 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_trace_replay_workflow_runtime_drift_report": product_trace_replay_workflow.get(
             "product_runtime_drift_report_path"
         ),
+        "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
+        "feedback_policy_workflow_source": feedback_policy_workflow.get("source"),
+        "feedback_policy_workflow_registry": feedback_policy_workflow.get("registry"),
+        "feedback_policy_workflow_record": feedback_policy_workflow.get("record_key"),
+        "feedback_policy_workflow_promotion_decision": feedback_policy_workflow.get(
+            "promotion_decision"
+        ),
+        "feedback_policy_workflow_candidate_control_policy": feedback_policy_workflow.get(
+            "candidate_control_policy"
+        ),
+        "feedback_policy_workflow_candidate_control_defaults": feedback_policy_workflow.get(
+            "candidate_control_defaults"
+        ),
+        "feedback_policy_workflow_matched_feedback_count": feedback_policy_workflow.get(
+            "matched_feedback_count"
+        ),
+        "feedback_policy_workflow_accepted_but_wrong_rate": feedback_policy_workflow.get(
+            "accepted_but_wrong_rate"
+        ),
+        "feedback_policy_workflow_retrieved_failure_rate": feedback_policy_workflow.get(
+            "retrieved_failure_rate"
+        ),
+        "feedback_policy_workflow_abstain_false_positive_rate": feedback_policy_workflow.get(
+            "abstain_false_positive_rate"
+        ),
+        "feedback_policy_workflow_safety_coverage_rate": feedback_policy_workflow.get(
+            "safety_coverage_rate"
+        ),
+        "feedback_policy_workflow_unknown_safety_issue_rate": feedback_policy_workflow.get(
+            "unknown_safety_issue_rate"
+        ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
@@ -860,6 +943,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
+        "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
     }
 
@@ -960,6 +1044,20 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.product_trace_replay_workflow_registry)
         ),
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        feedback_policy_workflow_path=(
+            None
+            if args.feedback_policy_workflow is None
+            else Path(args.feedback_policy_workflow)
+        ),
+        feedback_policy_workflow_registry_path=(
+            None
+            if args.feedback_policy_workflow_registry is None
+            else Path(args.feedback_policy_workflow_registry)
+        ),
+        feedback_policy_workflow_key=args.feedback_policy_workflow_key,
+        feedback_policy_min_matched_feedback_count=args.feedback_policy_min_matched_feedback_count,
+        feedback_policy_min_safety_coverage=args.feedback_policy_min_safety_coverage,
+        feedback_policy_max_unknown_safety_issue_rate=args.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
@@ -1082,6 +1180,28 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--feedback-policy-workflow", default=None,
+                        help="optional feedback-policy workflow report that must recommend/observe and verify")
+    parser.add_argument("--feedback-policy-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --feedback-policy-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--feedback-policy-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a feedback-policy workflow")
+    parser.add_argument("--feedback-policy-min-matched-feedback-count", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--feedback-policy-min-matched-feedback-count",
+    ), default=None,
+                        help="optional minimum matched feedback count forwarded to the feedback-policy workflow gate")
+    parser.add_argument("--feedback-policy-min-safety-coverage", type=lambda value: _parse_unit_float(
+        value,
+        flag="--feedback-policy-min-safety-coverage",
+    ), default=None,
+                        help="optional minimum feedback replay safety coverage forwarded to the feedback-policy gate")
+    parser.add_argument("--feedback-policy-max-unknown-safety-issue-rate", type=lambda value: _parse_unit_float(
+        value,
+        flag="--feedback-policy-max-unknown-safety-issue-rate",
+    ), default=None,
+                        help="optional maximum unknown safety issue rate forwarded to the feedback-policy gate")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

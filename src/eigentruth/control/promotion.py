@@ -30,6 +30,7 @@ class ProductPromotionContract:
     source_workflow: str | None = None
     source_status: str | None = None
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
+    feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
@@ -48,6 +49,11 @@ class ProductPromotionContract:
             self,
             "product_trace_replay_workflow",
             dict(self.product_trace_replay_workflow),
+        )
+        object.__setattr__(
+            self,
+            "feedback_policy_workflow",
+            dict(self.feedback_policy_workflow),
         )
         object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
         object.__setattr__(self, "metadata", dict(self.metadata))
@@ -76,6 +82,7 @@ class ProductPromotionContract:
                 product_trace_replay_workflow=_mapping(
                     payload.get("product_trace_replay_workflow")
                 ),
+                feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
                 metadata=_mapping(payload.get("metadata")),
             )
@@ -117,6 +124,7 @@ class ProductPromotionContract:
         product_trace_replay_workflow = _mapping(
             candidate.get("product_trace_replay_workflow")
         )
+        feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
         release_efficiency = _release_efficiency_metadata(
             _mapping(candidate.get("release_efficiency")),
             manifests=manifests,
@@ -173,6 +181,10 @@ class ProductPromotionContract:
                 product_trace_replay_workflow,
                 manifests=manifests,
             ),
+            feedback_policy_workflow=_feedback_policy_workflow_metadata(
+                feedback_policy_workflow,
+                manifests=manifests,
+            ),
             release_efficiency=release_efficiency,
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
@@ -185,6 +197,15 @@ class ProductPromotionContract:
                 ),
                 "recommended_product_runtime_drift_report": decision.get(
                     "recommended_product_runtime_drift_report"
+                ),
+                "recommended_feedback_policy_workflow_report": decision.get(
+                    "recommended_feedback_policy_workflow_report"
+                ),
+                "recommended_feedback_policy_candidate_control_policy": decision.get(
+                    "recommended_feedback_policy_candidate_control_policy"
+                ),
+                "recommended_feedback_policy_candidate_control_defaults": decision.get(
+                    "recommended_feedback_policy_candidate_control_defaults"
                 ),
                 "product_trace_replay_workflow_status": decision.get(
                     "product_trace_replay_workflow_status"
@@ -213,6 +234,47 @@ class ProductPromotionContract:
                 ),
                 "product_trace_replay_workflow_runtime_drift_report": (
                     product_trace_replay_workflow.get("product_runtime_drift_report_path")
+                ),
+                "feedback_policy_workflow_status": decision.get(
+                    "feedback_policy_workflow_status"
+                ),
+                "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
+                "feedback_policy_workflow_manifest": (
+                    feedback_policy_workflow.get("manifest_path")
+                    or manifests.get("feedback_policy_workflow_manifest")
+                ),
+                "feedback_policy_workflow_source": feedback_policy_workflow.get("source"),
+                "feedback_policy_workflow_registry": feedback_policy_workflow.get("registry"),
+                "feedback_policy_workflow_record": feedback_policy_workflow.get("record_key"),
+                "feedback_policy_workflow_report_status": (
+                    feedback_policy_workflow.get("report_status")
+                ),
+                "feedback_policy_workflow_promotion_decision": (
+                    feedback_policy_workflow.get("promotion_decision")
+                ),
+                "feedback_policy_workflow_candidate_control_policy": (
+                    feedback_policy_workflow.get("candidate_control_policy")
+                ),
+                "feedback_policy_workflow_candidate_control_defaults": (
+                    feedback_policy_workflow.get("candidate_control_defaults")
+                ),
+                "feedback_policy_workflow_matched_feedback_count": (
+                    feedback_policy_workflow.get("matched_feedback_count")
+                ),
+                "feedback_policy_workflow_accepted_but_wrong_rate": (
+                    feedback_policy_workflow.get("accepted_but_wrong_rate")
+                ),
+                "feedback_policy_workflow_retrieved_failure_rate": (
+                    feedback_policy_workflow.get("retrieved_failure_rate")
+                ),
+                "feedback_policy_workflow_abstain_false_positive_rate": (
+                    feedback_policy_workflow.get("abstain_false_positive_rate")
+                ),
+                "feedback_policy_workflow_safety_coverage_rate": (
+                    feedback_policy_workflow.get("safety_coverage_rate")
+                ),
+                "feedback_policy_workflow_unknown_safety_issue_rate": (
+                    feedback_policy_workflow.get("unknown_safety_issue_rate")
                 ),
                 **_release_efficiency_flat_metadata(release_efficiency),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
@@ -379,6 +441,7 @@ class ProductPromotionContract:
             "runtime_budget_policy": self.runtime_budget_policy.to_dict(),
             "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
+            "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
         }
@@ -615,6 +678,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_product_trace_replay_workflow": dict(
             contract.product_trace_replay_workflow
         ),
+        "promotion_contract_feedback_policy_workflow": dict(
+            contract.feedback_policy_workflow
+        ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
     }
@@ -727,6 +793,35 @@ def _product_trace_replay_workflow_metadata(
         "product_runtime_drift_report_path": workflow.get(
             "product_runtime_drift_report_path"
         ),
+    }
+
+
+def _feedback_policy_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("feedback_policy_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "report_status": workflow.get("report_status"),
+        "promotion_decision": workflow.get("promotion_decision"),
+        "candidate_control_policy": workflow.get("candidate_control_policy"),
+        "candidate_control_defaults": workflow.get("candidate_control_defaults"),
+        "matched_feedback_count": workflow.get("matched_feedback_count"),
+        "accepted_but_wrong_rate": workflow.get("accepted_but_wrong_rate"),
+        "retrieved_failure_rate": workflow.get("retrieved_failure_rate"),
+        "abstain_false_positive_rate": workflow.get("abstain_false_positive_rate"),
+        "safety_coverage_rate": workflow.get("safety_coverage_rate"),
+        "unknown_safety_issue_rate": workflow.get("unknown_safety_issue_rate"),
     }
 
 

@@ -1601,6 +1601,11 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "trace-replay-workflow.json",
             "record_key": "report:trace-replay-workflow:0.1",
         },
+        feedback_policy_workflow={
+            "report_path": "feedback-policy-workflow.json",
+            "record_key": "report:feedback-policy-workflow:0.1",
+            "promotion_decision": "promote_candidate_policy",
+        },
         release_efficiency={
             "report_path": "release-efficiency.json",
             "recommended_profile": "balanced",
@@ -1631,6 +1636,11 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_product_trace_replay_workflow"] == {
         "report_path": "trace-replay-workflow.json",
         "record_key": "report:trace-replay-workflow:0.1",
+    }
+    assert metadata["promotion_contract_feedback_policy_workflow"] == {
+        "report_path": "feedback-policy-workflow.json",
+        "record_key": "report:feedback-policy-workflow:0.1",
+        "promotion_decision": "promote_candidate_policy",
     }
     assert metadata["promotion_contract_release_efficiency"] == {
         "report_path": "release-efficiency.json",

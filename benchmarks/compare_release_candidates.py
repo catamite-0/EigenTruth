@@ -42,6 +42,12 @@ def compare_release_candidates(
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
+    feedback_policy_workflow_path: str | Path | None = None,
+    feedback_policy_workflow_registry_path: str | Path | None = None,
+    feedback_policy_workflow_key: str | None = None,
+    feedback_policy_min_matched_feedback_count: int | None = None,
+    feedback_policy_min_safety_coverage: float | None = None,
+    feedback_policy_max_unknown_safety_issue_rate: float | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
     require_performance_score_dump_cache: bool = False,
@@ -146,6 +152,18 @@ def compare_release_candidates(
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop,
         name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
     )
+    feedback_policy_min_matched_feedback_count = _validate_optional_non_negative_int(
+        feedback_policy_min_matched_feedback_count,
+        name="feedback_policy_min_matched_feedback_count",
+    )
+    feedback_policy_min_safety_coverage = _validate_optional_unit_float(
+        feedback_policy_min_safety_coverage,
+        name="feedback_policy_min_safety_coverage",
+    )
+    feedback_policy_max_unknown_safety_issue_rate = _validate_optional_unit_float(
+        feedback_policy_max_unknown_safety_issue_rate,
+        name="feedback_policy_max_unknown_safety_issue_rate",
+    )
     max_covariance_maha_last_auroc_drop = _validate_optional_non_negative_float(
         max_covariance_maha_last_auroc_drop,
         name="max_covariance_maha_last_auroc_drop",
@@ -216,6 +234,26 @@ def compare_release_candidates(
             product_runtime_drift_report_path = str(
                 product_trace_replay_workflow["product_runtime_drift_report_path"]
             )
+    feedback_policy_workflow_source = _resolve_feedback_policy_workflow_source(
+        feedback_policy_workflow_path=feedback_policy_workflow_path,
+        feedback_policy_workflow_registry_path=(
+            feedback_policy_workflow_registry_path
+            if feedback_policy_workflow_key is not None
+            else None
+        ),
+        feedback_policy_workflow_key=feedback_policy_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    feedback_policy_workflow = _feedback_policy_workflow_gate(
+        feedback_policy_workflow_source=feedback_policy_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        min_matched_feedback_count=feedback_policy_min_matched_feedback_count,
+        min_safety_coverage=feedback_policy_min_safety_coverage,
+        max_unknown_safety_issue_rate=feedback_policy_max_unknown_safety_issue_rate,
+        verification_context=verification_context,
+    )
     readiness = compare_readiness_baselines(
         registry_path=readiness_registry_path,
         baseline_keys=readiness_baseline_keys,
@@ -341,6 +379,7 @@ def compare_release_candidates(
         selector_replay,
         product_runtime_drift,
         release_efficiency,
+        feedback_policy_workflow,
     )
     candidate = (
         _candidate_with_gates(
@@ -352,6 +391,7 @@ def compare_release_candidates(
             selector_replay,
             product_runtime_drift,
             release_efficiency,
+            feedback_policy_workflow,
         )
         if decision["status"] == "promote"
         else None
@@ -394,6 +434,20 @@ def compare_release_candidates(
                 else product_trace_replay_workflow_source.get("registry")
             ),
             "product_trace_replay_workflow_key": product_trace_replay_workflow_key,
+            "feedback_policy_workflow": (
+                None
+                if feedback_policy_workflow_source is None
+                else str(feedback_policy_workflow_source["path"])
+            ),
+            "feedback_policy_workflow_registry": (
+                None
+                if feedback_policy_workflow_source is None
+                else feedback_policy_workflow_source.get("registry")
+            ),
+            "feedback_policy_workflow_key": feedback_policy_workflow_key,
+            "feedback_policy_min_matched_feedback_count": feedback_policy_min_matched_feedback_count,
+            "feedback_policy_min_safety_coverage": feedback_policy_min_safety_coverage,
+            "feedback_policy_max_unknown_safety_issue_rate": feedback_policy_max_unknown_safety_issue_rate,
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
@@ -464,6 +518,7 @@ def compare_release_candidates(
         "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
         "product_trace_replay_workflow_gate": product_trace_replay_workflow,
+        "feedback_policy_workflow_gate": feedback_policy_workflow,
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
         "release_efficiency_gate": release_efficiency,
@@ -601,6 +656,7 @@ def _decision(
     selector_replay: Mapping[str, Any] | None = None,
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
+    feedback_policy_workflow: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -631,6 +687,12 @@ def _decision(
     )
     release_efficiency_status = (
         None if release_efficiency is None else release_efficiency.get("status")
+    )
+    feedback_policy_workflow_gate = _mapping(
+        None if feedback_policy_workflow is None else feedback_policy_workflow.get("gate")
+    )
+    feedback_policy_workflow_status = (
+        None if feedback_policy_workflow is None else feedback_policy_workflow.get("status")
     )
     blocking_reasons = []
     if readiness_status != "promote":
@@ -690,6 +752,15 @@ def _decision(
             "status": release_efficiency_status,
             "reasons": list(release_efficiency_gate.get("blocking_reasons", ())),
         })
+    if (
+        feedback_policy_workflow is not None
+        and feedback_policy_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "feedback_policy_workflow",
+            "status": feedback_policy_workflow_status,
+            "reasons": list(feedback_policy_workflow_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -710,6 +781,7 @@ def _decision(
         "selector_replay_status": selector_replay_status,
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
+        "feedback_policy_workflow_status": feedback_policy_workflow_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
@@ -744,6 +816,21 @@ def _decision(
             None
             if release_efficiency is None or release_efficiency_gate.get("passed") is not True
             else release_efficiency.get("recommended_profile")
+        ),
+        "recommended_feedback_policy_workflow_report": (
+            None
+            if feedback_policy_workflow is None or feedback_policy_workflow_gate.get("passed") is not True
+            else feedback_policy_workflow.get("report_path")
+        ),
+        "recommended_feedback_policy_candidate_control_policy": (
+            None
+            if feedback_policy_workflow is None or feedback_policy_workflow_gate.get("passed") is not True
+            else feedback_policy_workflow.get("candidate_control_policy")
+        ),
+        "recommended_feedback_policy_candidate_control_defaults": (
+            None
+            if feedback_policy_workflow is None or feedback_policy_workflow_gate.get("passed") is not True
+            else feedback_policy_workflow.get("candidate_control_defaults")
         ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
@@ -1261,6 +1348,232 @@ def _product_trace_replay_workflow_child_path(
         return None
     path = _resolve_path(raw_path, base_path=report_path)
     return path.resolve() if path.exists() else path
+
+
+def _feedback_policy_workflow_gate(
+    *,
+    feedback_policy_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    min_matched_feedback_count: int | None,
+    min_safety_coverage: float | None,
+    max_unknown_safety_issue_rate: float | None,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if feedback_policy_workflow_source is None:
+        return None
+    report_path = Path(feedback_policy_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _feedback_policy_workflow_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="feedback_policy_workflow_manifest",
+        verification_context=verification_context,
+    )
+    gate = _feedback_policy_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        allow_unverified=allow_unverified,
+        min_matched_feedback_count=min_matched_feedback_count,
+        min_safety_coverage=min_safety_coverage,
+        max_unknown_safety_issue_rate=max_unknown_safety_issue_rate,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": feedback_policy_workflow_source.get("source"),
+        "registry": feedback_policy_workflow_source.get("registry"),
+        "record_key": feedback_policy_workflow_source.get("record_key"),
+        "record": feedback_policy_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "promotion_decision": _nested(report, "decision", "promotion_decision"),
+        "candidate_control_policy": _first_present(
+            _nested(report, "decision", "candidate_control_policy"),
+            _nested(report, "paths", "candidate_control_policy"),
+        ),
+        "candidate_control_defaults": _first_present(
+            _nested(report, "decision", "candidate_control_defaults"),
+            _nested(report, "paths", "candidate_control_defaults"),
+        ),
+        "matched_feedback_count": _float_or_none(_feedback_policy_matched_feedback_count(report)),
+        "accepted_but_wrong_rate": _float_or_none(
+            _nested(report, "feedback_summary", "accepted_but_wrong_rate", "estimate")
+        ),
+        "retrieved_failure_rate": _float_or_none(
+            _nested(report, "feedback_summary", "retrieved_failure_rate", "estimate")
+        ),
+        "abstain_false_positive_rate": _float_or_none(
+            _nested(report, "feedback_summary", "abstain_false_positive_rate", "estimate")
+        ),
+        "safety_coverage_rate": _float_or_none(_feedback_policy_safety_coverage_rate(report)),
+        "unknown_safety_issue_rate": _float_or_none(_feedback_policy_unknown_safety_issue_rate(report)),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _resolve_feedback_policy_workflow_source(
+    *,
+    feedback_policy_workflow_path: str | Path | None,
+    feedback_policy_workflow_registry_path: str | Path | None,
+    feedback_policy_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if feedback_policy_workflow_path is not None:
+        if feedback_policy_workflow_key is not None:
+            raise ValueError(
+                "feedback_policy_workflow_path is mutually exclusive with "
+                "feedback_policy_workflow_key."
+            )
+        return {"source": "file", "path": Path(feedback_policy_workflow_path)}
+    if feedback_policy_workflow_key is None:
+        if feedback_policy_workflow_registry_path is not None:
+            raise ValueError(
+                "feedback_policy_workflow_registry_path requires "
+                "feedback_policy_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if feedback_policy_workflow_registry_path is None
+        else feedback_policy_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(feedback_policy_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _feedback_policy_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+    min_matched_feedback_count: int | None,
+    min_safety_coverage: float | None,
+    max_unknown_safety_issue_rate: float | None,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"feedback policy workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("feedback policy workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("feedback policy workflow manifest verification failed")
+    if report.get("workflow") != "feedback_policy_workflow":
+        failures.append(
+            f"feedback policy workflow is {report.get('workflow')!r}, "
+            "expected 'feedback_policy_workflow'"
+        )
+    status = report.get("status")
+    if status not in {"recommend", "observed"}:
+        failures.append(
+            f"feedback policy workflow status is {status!r}, expected 'recommend' or 'observed'"
+        )
+    promotion_decision = _nested(report, "decision", "promotion_decision")
+    if promotion_decision not in {"promote_candidate_policy", "keep_current_policy"}:
+        failures.append(
+            "feedback policy workflow promotion_decision is "
+            f"{promotion_decision!r}, expected a policy recommendation or keep-current decision"
+        )
+    if status == "recommend":
+        if _first_present(
+            _nested(report, "decision", "candidate_control_policy"),
+            _nested(report, "paths", "candidate_control_policy"),
+        ) is None:
+            failures.append("feedback policy workflow candidate control policy is missing")
+        if _first_present(
+            _nested(report, "decision", "candidate_control_defaults"),
+            _nested(report, "paths", "candidate_control_defaults"),
+        ) is None:
+            failures.append("feedback policy workflow candidate control defaults are missing")
+
+    matched = _float_or_none(_feedback_policy_matched_feedback_count(report))
+    if min_matched_feedback_count is not None:
+        if matched is None:
+            failures.append("feedback policy workflow matched feedback count is missing")
+        elif matched < min_matched_feedback_count:
+            failures.append(
+                "feedback policy workflow matched feedback count below "
+                f"{min_matched_feedback_count}: {matched}"
+            )
+    safety_coverage = _float_or_none(_feedback_policy_safety_coverage_rate(report))
+    if min_safety_coverage is not None:
+        if safety_coverage is None:
+            failures.append("feedback policy workflow safety coverage rate is missing")
+        elif safety_coverage < min_safety_coverage:
+            failures.append(
+                "feedback policy workflow safety coverage below "
+                f"{min_safety_coverage}: {safety_coverage}"
+            )
+    unknown_rate = _float_or_none(_feedback_policy_unknown_safety_issue_rate(report))
+    if max_unknown_safety_issue_rate is not None:
+        if unknown_rate is None:
+            failures.append("feedback policy workflow unknown safety issue rate is missing")
+        elif unknown_rate > max_unknown_safety_issue_rate:
+            failures.append(
+                "feedback policy workflow unknown safety issue rate above "
+                f"{max_unknown_safety_issue_rate}: {unknown_rate}"
+            )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "policy": {
+            "min_matched_feedback_count": min_matched_feedback_count,
+            "min_safety_coverage": min_safety_coverage,
+            "max_unknown_safety_issue_rate": max_unknown_safety_issue_rate,
+        },
+    }
+
+
+def _feedback_policy_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _feedback_policy_matched_feedback_count(report: Mapping[str, Any]) -> Any:
+    return _first_present(
+        _nested(report, "decision", "matched_feedback_count"),
+        _nested(report, "feedback_summary", "trace_matched_feedback_count"),
+        _nested(report, "replay_summary", "matched_feedback_count"),
+    )
+
+
+def _feedback_policy_safety_coverage_rate(report: Mapping[str, Any]) -> Any:
+    return _first_present(
+        _nested(report, "decision", "safety_coverage_rate"),
+        _nested(report, "replay_summary", "safety_coverage_rate", "estimate"),
+    )
+
+
+def _feedback_policy_unknown_safety_issue_rate(report: Mapping[str, Any]) -> Any:
+    return _first_present(
+        _nested(report, "decision", "unknown_safety_issue_rate"),
+        _nested(report, "replay_summary", "unknown_safety_issue_rate", "estimate"),
+    )
 
 
 def _selector_replay_gate(
@@ -2148,6 +2461,7 @@ def _candidate_with_gates(
     selector_replay: Mapping[str, Any] | None,
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
+    feedback_policy_workflow: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
@@ -2244,6 +2558,25 @@ def _candidate_with_gates(
             "leaderboard": (leaderboard_top,) if leaderboard_top else (),
         }
         manifests["release_efficiency_manifest"] = release_efficiency.get("manifest_path")
+    if feedback_policy_workflow is not None:
+        payload["feedback_policy_workflow"] = {
+            "report_path": feedback_policy_workflow.get("report_path"),
+            "manifest_path": feedback_policy_workflow.get("manifest_path"),
+            "source": feedback_policy_workflow.get("source"),
+            "registry": feedback_policy_workflow.get("registry"),
+            "record_key": feedback_policy_workflow.get("record_key"),
+            "report_status": feedback_policy_workflow.get("report_status"),
+            "promotion_decision": feedback_policy_workflow.get("promotion_decision"),
+            "candidate_control_policy": feedback_policy_workflow.get("candidate_control_policy"),
+            "candidate_control_defaults": feedback_policy_workflow.get("candidate_control_defaults"),
+            "matched_feedback_count": feedback_policy_workflow.get("matched_feedback_count"),
+            "accepted_but_wrong_rate": feedback_policy_workflow.get("accepted_but_wrong_rate"),
+            "retrieved_failure_rate": feedback_policy_workflow.get("retrieved_failure_rate"),
+            "abstain_false_positive_rate": feedback_policy_workflow.get("abstain_false_positive_rate"),
+            "safety_coverage_rate": feedback_policy_workflow.get("safety_coverage_rate"),
+            "unknown_safety_issue_rate": feedback_policy_workflow.get("unknown_safety_issue_rate"),
+        }
+        manifests["feedback_policy_workflow_manifest"] = feedback_policy_workflow.get("manifest_path")
     payload["manifests"] = manifests
     return payload
 
@@ -2318,6 +2651,20 @@ def _validate_optional_unit_float(value: Any, *, name: str) -> float | None:
     numeric = _validate_optional_non_negative_float(value, name=name)
     if numeric is not None and numeric > 1:
         raise ValueError(f"{name} must be between 0 and 1.")
+    return numeric
+
+
+def _validate_optional_non_negative_int(value: Any, *, name: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a non-negative integer.")
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative integer.") from exc
+    if numeric < 0:
+        raise ValueError(f"{name} must be a non-negative integer.")
     return numeric
 
 
@@ -2413,6 +2760,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        feedback_policy_workflow_path=args.feedback_policy_workflow,
+        feedback_policy_workflow_registry_path=args.feedback_policy_workflow_registry,
+        feedback_policy_workflow_key=args.feedback_policy_workflow_key,
+        feedback_policy_min_matched_feedback_count=args.feedback_policy_min_matched_feedback_count,
+        feedback_policy_min_safety_coverage=args.feedback_policy_min_safety_coverage,
+        feedback_policy_max_unknown_safety_issue_rate=args.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
@@ -2534,6 +2887,28 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--feedback-policy-workflow", default=None,
+                        help="optional feedback-policy workflow report that must recommend/observe and verify")
+    parser.add_argument("--feedback-policy-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --feedback-policy-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--feedback-policy-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a feedback-policy workflow")
+    parser.add_argument("--feedback-policy-min-matched-feedback-count", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--feedback-policy-min-matched-feedback-count",
+    ), default=None,
+                        help="optional minimum matched feedback count for the feedback-policy workflow gate")
+    parser.add_argument("--feedback-policy-min-safety-coverage", type=lambda value: _parse_unit_float(
+        value,
+        flag="--feedback-policy-min-safety-coverage",
+    ), default=None,
+                        help="optional minimum feedback replay safety coverage for the feedback-policy workflow gate")
+    parser.add_argument("--feedback-policy-max-unknown-safety-issue-rate", type=lambda value: _parse_unit_float(
+        value,
+        flag="--feedback-policy-max-unknown-safety-issue-rate",
+    ), default=None,
+                        help="optional maximum unknown safety issue rate for the feedback-policy workflow gate")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

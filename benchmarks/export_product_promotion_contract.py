@@ -50,6 +50,7 @@ def export_product_promotion_contract(
     payload = contract.to_dict()
     control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
+    feedback_policy_workflow = dict(contract.feedback_policy_workflow)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
     export_metadata = dict(metadata or {})
@@ -142,6 +143,31 @@ def export_product_promotion_contract(
                 "product_trace_replay_workflow_runtime_drift_report": (
                     trace_replay_workflow.get("product_runtime_drift_report_path")
                 ),
+                "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
+                "feedback_policy_workflow_manifest": feedback_policy_workflow.get(
+                    "manifest_path"
+                ),
+                "feedback_policy_workflow_source": feedback_policy_workflow.get("source"),
+                "feedback_policy_workflow_registry": feedback_policy_workflow.get("registry"),
+                "feedback_policy_workflow_record": feedback_policy_workflow.get("record_key"),
+                "feedback_policy_workflow_promotion_decision": (
+                    feedback_policy_workflow.get("promotion_decision")
+                ),
+                "feedback_policy_workflow_candidate_control_policy": (
+                    feedback_policy_workflow.get("candidate_control_policy")
+                ),
+                "feedback_policy_workflow_candidate_control_defaults": (
+                    feedback_policy_workflow.get("candidate_control_defaults")
+                ),
+                "feedback_policy_workflow_matched_feedback_count": (
+                    feedback_policy_workflow.get("matched_feedback_count")
+                ),
+                "feedback_policy_workflow_safety_coverage_rate": (
+                    feedback_policy_workflow.get("safety_coverage_rate")
+                ),
+                "feedback_policy_workflow_unknown_safety_issue_rate": (
+                    feedback_policy_workflow.get("unknown_safety_issue_rate")
+                ),
                 **release_efficiency_metadata,
                 "compact_json": compact_json,
                 **export_metadata,
@@ -170,6 +196,7 @@ def export_product_promotion_contract(
             "verifier_route": dict(contract.verifier_route),
             "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
+            "feedback_policy_workflow": feedback_policy_workflow,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
         },

@@ -1245,6 +1245,10 @@ python benchmarks/compare_release_candidates.py \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --performance-drift-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.8 \
   --product-trace-replay-workflow-key report:smollm2-product-trace-replay-workflow:0.1 \
+  --feedback-policy-workflow-key report:<feedback-policy-workflow-name>:<version> \
+  --feedback-policy-min-matched-feedback-count 20 \
+  --feedback-policy-min-safety-coverage 0.70 \
+  --feedback-policy-max-unknown-safety-issue-rate 0.20 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
@@ -1342,6 +1346,20 @@ provided. The key form defaults to `--readiness-registry`; pass
 elsewhere. This is the safer default for release promotion because the release
 candidate consumes the same raw-trace handoff artifact that generated the child
 reports.
+Add `--feedback-policy-workflow-key report:<name>:<version>` when feedback-derived
+control policy evidence was produced and registered by
+`run_feedback_policy_workflow.py`; use `--feedback-policy-workflow` for an
+unregistered local JSON file. The release gate verifies the workflow artifact
+manifest, requires `workflow=feedback_policy_workflow`, accepts top-level
+`status=recommend` or `status=observed`, and requires a valid promotion decision
+(`promote_candidate_policy` or `keep_current_policy`). A `recommend` workflow
+must include candidate control-policy/default artifacts. Use
+`--feedback-policy-workflow-registry` only when the workflow record lives outside
+`--readiness-registry`. Optional thresholds
+`--feedback-policy-min-matched-feedback-count`,
+`--feedback-policy-min-safety-coverage`, and
+`--feedback-policy-max-unknown-safety-issue-rate` fail closed on weak feedback
+coverage or unresolved safety issues.
 Add `--product-runtime-drift-report` when the final candidate must also prove
 that a fresh `ProductTrace` runtime baseline has not drifted from a registered
 or file-based product runtime baseline. The gate verifies the drift report
@@ -1391,9 +1409,11 @@ without rerunning model or INSIDE generation work.
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
 `--required-route-baseline-key`, `--product-trace-replay-workflow-key`,
-`--product-trace-replay-workflow`, `--selector-replay-report`, and
+`--product-trace-replay-workflow`, `--feedback-policy-workflow-key`,
+`--feedback-policy-workflow`, `--feedback-policy-workflow-registry`,
+feedback-policy threshold options, `--selector-replay-report`,
 `--product-runtime-drift-report`, and `--release-efficiency-report` options and
-includes those route/workflow/selector/drift/efficiency manifests in the final release-candidate manifest
+includes those route/workflow/feedback-policy/selector/drift/efficiency manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
@@ -1426,6 +1446,10 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
   --max-covariance-maha-last-auroc-drop 0.05 \
   --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \
+  --feedback-policy-workflow-key report:<feedback-policy-workflow-name>:<version> \
+  --feedback-policy-min-matched-feedback-count 20 \
+  --feedback-policy-min-safety-coverage 0.70 \
+  --feedback-policy-max-unknown-safety-issue-rate 0.20 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
@@ -1453,12 +1477,14 @@ python benchmarks/run_release_candidate_registry_workflow.py \
 ```
 
 The generated manifest fingerprints the release-candidate report and the
-selected readiness, route, optional performance/selector/runtime-drift/release-efficiency manifests,
+selected readiness, route, optional performance/product-trace-replay/feedback-policy/selector/runtime-drift/release-efficiency manifests,
 and optional adapter family matrix report. Recursive verification therefore checks the final
 candidate and all underlying baseline
 manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
-release report, manifest metadata, and registry record.
+release report, manifest metadata, and registry record. Feedback-policy workflow
+metadata includes the report/source/record, promotion decision, candidate policy
+paths, matched feedback count, safety coverage, and unknown safety issue rate.
 
 To choose a local value for `--manifest-fingerprint-workers` without rerunning
 model work or release gates, replay manifest verification across worker counts:
@@ -1515,9 +1541,12 @@ the workflow report/manifest plus its selector-replay and runtime-drift child
 report paths for deployment-side provenance. Runtime-drift reports also carry
 baseline/current optimization hints, so exported contracts preserve candidate
 control defaults such as `max_verifier_route_attempts` alongside the budget
-policy. When the release candidate was gated by a release-efficiency report,
-the promotion contract inherits the recommended runtime profile and efficiency
-score from the candidate. For older release-candidate reports, pass the
+policy. When the release candidate was gated by a feedback-policy workflow, the
+contract and registry metadata also retain the feedback-policy report/manifest,
+promotion decision, candidate control-policy/default paths, and replay safety
+metrics. When the release candidate was gated by a release-efficiency report, the
+promotion contract inherits the recommended runtime profile and efficiency score
+from the candidate. For older release-candidate reports, pass the
 release-efficiency report explicitly so the promotion contract, manifest, and
 registry record also carry the same handoff evidence:
 
@@ -2740,6 +2769,14 @@ The top-level workflow status is `recommend` when the feedback-derived
 candidate policy is recommended and the replay audit passes. It remains
 `observed` when no policy change is needed, `needs_evidence` when feedback count
 is insufficient, and `blocked` when a child gate fails.
+
+Registered workflow records can be passed directly to
+`compare_release_candidates.py` or `run_release_candidate_registry_workflow.py`
+with `--feedback-policy-workflow-key report:<name>:<version>`. `recommend`
+means the workflow produced a candidate policy change; `observed` means the
+feedback audit was healthy and no policy change was needed. Both statuses can
+pass the release gate when the manifest verifies and any configured feedback
+coverage/safety thresholds pass.
 
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
