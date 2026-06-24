@@ -44,6 +44,10 @@ from eigentruth.calibration import (  # noqa: E402
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate  # noqa: E402
 from eigentruth.eval.metrics import selective_classification_report  # noqa: E402
 from eigentruth.eval.score_dump import (  # noqa: E402
+    JSONL_FORMAT,
+    ScoreDump,
+    ScoreDumpColumns,
+    load_score_dump,
     load_score_dump_columns,
     score_dump_cache_summary,
     score_dump_file_metadata,
@@ -69,6 +73,38 @@ def _all_dump_signals(summary: dict) -> tuple[str, ...]:
 
 def _direction_for(signal: str, override: str | None = None) -> str:
     return override or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+
+
+def _load_primary_score_dump_view(
+    path: str | Path,
+    signal: str,
+    *,
+    cache: dict,
+) -> tuple[ScoreDumpColumns, dict, ScoreDump | None]:
+    metadata = score_dump_file_metadata(path, cache=cache)
+    if metadata.get("source_format") == JSONL_FORMAT:
+        columns = load_score_dump_columns(path, (signal,), cache=cache)
+        metadata = score_dump_file_metadata(path, cache=cache)
+        metadata.update({
+            "summary": dict(columns.summary),
+            "source_format": columns.source_format,
+        })
+        return columns, metadata, None
+
+    dump = load_score_dump(path, required_scores=(signal,))
+    columns = ScoreDumpColumns(
+        labels=dump.labels,
+        scores={signal: dump.scores[signal]},
+        config=dict(dump.config),
+        summary=dump.summary(),
+        source_format="json",
+    )
+    metadata = score_dump_file_metadata(path, dump=dump, cache=cache)
+    metadata.update({
+        "summary": dict(columns.summary),
+        "source_format": columns.source_format,
+    })
+    return columns, metadata, dump
 
 
 def _artifact_paths(args) -> dict[str, str | Path | None]:
@@ -127,7 +163,11 @@ def run(args) -> dict:
         pass
 
     score_dump_metadata_cache = {}
-    score_dump = load_score_dump_columns(args.scores, (args.signal,), cache=score_dump_metadata_cache)
+    score_dump, score_dump_metadata, full_score_dump = _load_primary_score_dump_view(
+        args.scores,
+        args.signal,
+        cache=score_dump_metadata_cache,
+    )
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
     dump_config = score_dump.config
@@ -182,11 +222,6 @@ def run(args) -> dict:
           if all_pass else
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
-    score_dump_metadata = score_dump_file_metadata(args.scores, cache=score_dump_metadata_cache)
-    score_dump_metadata.update({
-        "summary": dict(score_dump.summary),
-        "source_format": score_dump.source_format,
-    })
     payload = {"config": {"scores": args.scores, "signal": args.signal,
                           "score_dump": score_dump_metadata,
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
@@ -217,21 +252,32 @@ def run(args) -> dict:
         direction_override = None if args.direction is None else {
             signal: args.direction for signal in selected_signals
         }
-        report = LayerScoreSweepCalibrator(
+        calibrator = LayerScoreSweepCalibrator(
             alpha=args.artifact_alpha,
             best_by=args.best_by,
             max_workers=getattr(args, "sweep_workers", 1),
-        ).calibrate_from_file(
-            args.scores,
-            signals=selected_signals,
-            directions=direction_override,
-            model_id=args.model_id or dump_config.get("model", "unknown"),
-            model_revision=args.model_revision,
-            created_at=args.created_at,
-            commit_sha=args.commit_sha,
-            metadata={"source": "eval_conformal.py", "config": dump_config},
-            cache=score_dump_metadata_cache,
         )
+        sweep_kwargs = {
+            "signals": selected_signals,
+            "directions": direction_override,
+            "model_id": args.model_id or dump_config.get("model", "unknown"),
+            "model_revision": args.model_revision,
+            "created_at": args.created_at,
+            "commit_sha": args.commit_sha,
+            "metadata": {"source": "eval_conformal.py", "config": dump_config},
+        }
+        if full_score_dump is None:
+            report = calibrator.calibrate_from_file(
+                args.scores,
+                cache=score_dump_metadata_cache,
+                **sweep_kwargs,
+            )
+        else:
+            report = calibrator.calibrate_from_score_dump(
+                full_score_dump,
+                scores_path=args.scores,
+                **sweep_kwargs,
+            )
         payload["sweep_report"] = report.to_dict()
         if args.save_sweep_report:
             report.save_json(args.save_sweep_report)

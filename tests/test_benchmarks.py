@@ -120,6 +120,67 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert sweep_report_path.exists()
 
 
+def test_eval_conformal_run_reuses_json_score_dump_for_sweep(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.eval.score_dump import ScoreDump
+
+    scores_path = tmp_path / "scores.json"
+    sweep_report_path = tmp_path / "sweep-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": -1},
+            "labels": [0, 0, 0, 0, 0, 0, 1, 1, 1],
+            "scores": {
+                "maha_last": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 4.0, 4.5, 5.0],
+                "truth_proj": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 3.0, 3.5, 4.0],
+            },
+            "sweep_scores": {
+                "-2": {
+                    "maha_last": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 3.0, 3.5, 4.0],
+                    "truth_proj": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 5.0, 5.5, 6.0],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    original_from_mapping = ScoreDump.from_mapping
+    calls = {"count": 0}
+
+    def counted_from_mapping(cls, payload, **kwargs):
+        calls["count"] += 1
+        return original_from_mapping(payload, **kwargs)
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", classmethod(counted_from_mapping))
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals="maha_last,truth_proj",
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_sweep_report=str(sweep_report_path),
+        save_best_calibration=None,
+        best_by="auroc",
+        sweep_workers=1,
+        artifact_alpha=0.20,
+        direction=None,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+    )
+
+    payload = module.run(args)
+
+    assert calls["count"] == 1
+    assert payload["config"]["score_dump"]["source_format"] == "json"
+    assert payload["score_dump_cache"]["enabled"] is True
+    assert payload["sweep_report"]["best"]["score_name"] in {"maha_last", "truth_proj"}
+    assert sweep_report_path.exists()
+
+
 def test_eval_conformal_writes_artifact_manifest_for_outputs(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     registry_module = importlib.import_module("eigentruth.registry")
