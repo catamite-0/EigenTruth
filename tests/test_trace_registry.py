@@ -437,6 +437,45 @@ def test_artifact_verification_context_caches_manifest_json_and_fingerprints(tmp
     json.dumps(context.cache_summary())
 
 
+def test_artifact_manifest_parallel_fingerprinting_matches_serial_and_reuses_cache(tmp_path):
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    first_path.write_text('{"score": 1}\n', encoding="utf-8")
+    second_path.write_text('{"score": 2}\n', encoding="utf-8")
+    (cache_dir / "records.jsonl").write_text('{"id": 1}\n', encoding="utf-8")
+    artifacts = {
+        "first": first_path,
+        "second": second_path,
+        "cache": cache_dir,
+        "missing": tmp_path / "missing.json",
+    }
+
+    serial = build_artifact_manifest(artifacts, root=tmp_path)
+    parallel = build_artifact_manifest(artifacts, root=tmp_path, max_workers=3)
+
+    assert parallel == serial
+
+    context = ArtifactVerificationContext()
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(context.build_artifact_manifest(artifacts, root=tmp_path, max_workers=3)),
+        encoding="utf-8",
+    )
+
+    first = context.load_and_verify_artifact_manifest(manifest_path, max_workers=3)
+    second = context.load_and_verify_artifact_manifest(manifest_path, max_workers=3)
+
+    assert first.passed is True
+    assert second.passed is True
+    fingerprint_summary = context.cache_summary()["artifact_fingerprint_cache"]
+    assert fingerprint_summary["requests"] == 12
+    assert fingerprint_summary["hits"] == 8
+    assert fingerprint_summary["misses"] == 4
+    assert fingerprint_summary["entries"] == 4
+
+
 def test_product_trace_action_execution_summary_counts_results():
     trace = ProductTrace(
         action_results=(

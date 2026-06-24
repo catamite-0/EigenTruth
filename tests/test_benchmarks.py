@@ -6564,6 +6564,29 @@ def test_compare_release_candidates_runtime_profile_fills_unset_cost_gates(tmp_p
     assert override_candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.45)
 
 
+def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+
+    config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=tmp_path / "readiness-registry.json",
+        release_registry_path=tmp_path / "release-registry.json",
+        name="unit-release",
+        version="0.1",
+        manifest_fingerprint_workers="2",
+    )
+
+    assert config.manifest_fingerprint_workers == 2
+
+    with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            manifest_fingerprint_workers=0,
+        )
+
+
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     provenance_module = importlib.import_module("eigentruth.registry.provenance")
@@ -8883,6 +8906,7 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
         verification_report_path=verification_path,
         metadata={"machine": "local"},
         fingerprint_cache_path=fingerprint_cache_path,
+        manifest_fingerprint_workers=2,
     )
     registry = ArtifactRegistry.load_json(registry_path)
     manifest_record = registry.get("benchmark_manifest:unit-baseline:0.3")
@@ -8898,6 +8922,7 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
     assert manifest_record.metadata["artifact_json_cache"]["hits"] == 1
     assert manifest_record.metadata["artifact_json_cache"]["entries"] == 1
     assert manifest_record.metadata["artifact_fingerprint_cache_entries"] > 0
+    assert manifest_record.metadata["manifest_fingerprint_workers"] == 2
     assert verification_record.path == str(verification_path)
     assert verification_record.metadata["passed"] is True
 

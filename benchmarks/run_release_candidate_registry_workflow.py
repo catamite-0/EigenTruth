@@ -60,6 +60,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     verification_report_path: Path | None = None
     workflow_report_path: Path | None = None
     fingerprint_cache_path: Path | None = None
+    manifest_fingerprint_workers: int = 1
     recursive: bool = True
     allow_unverified: bool = False
     runtime_profile: str | None = None
@@ -145,6 +146,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
+        manifest_fingerprint_workers = int(self.manifest_fingerprint_workers)
+        if manifest_fingerprint_workers < 1:
+            raise ValueError("manifest_fingerprint_workers must be at least 1.")
+        object.__setattr__(self, "manifest_fingerprint_workers", manifest_fingerprint_workers)
         if self.runtime_profile is not None:
             profile = get_runtime_profile(self.runtime_profile)
             object.__setattr__(self, "runtime_profile", profile.name)
@@ -307,6 +312,7 @@ def run_release_candidate_registry_workflow(
             allow_failures=config.allow_promotion_failures,
             metadata=_promotion_metadata(config, comparison),
             verification_context=verification_context,
+            manifest_fingerprint_workers=config.manifest_fingerprint_workers,
         )
         _record_phase_seconds("promotion", phase_timings, phase_started)
         if not dict(promotion.get("verification") or {}).get("passed", False):
@@ -385,6 +391,7 @@ def run_release_candidate_registry_workflow(
             "fingerprint_cache": (
                 None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
             ),
+            "manifest_fingerprint_workers": config.manifest_fingerprint_workers,
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
             "runtime_profile": config.runtime_profile,
@@ -493,6 +500,7 @@ def _write_artifact_manifest(
         artifacts,
         root=config.manifest_path.parent,
         metadata=_manifest_metadata(comparison),
+        max_workers=config.manifest_fingerprint_workers,
     )
     config.manifest_path.parent.mkdir(parents=True, exist_ok=True)
     config.manifest_path.write_text(
@@ -848,6 +856,13 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_positive_int(value: str, *, flag: str) -> int:
+    numeric = int(value)
+    if numeric < 1:
+        raise ValueError(f"{flag} must be a positive integer.")
+    return numeric
+
+
 def _parse_unit_float(value: str, *, flag: str) -> float:
     numeric = _parse_non_negative_float(value, flag=flag)
     if numeric > 1:
@@ -910,6 +925,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
         workflow_report_path=None if args.json is None else Path(args.json),
         fingerprint_cache_path=None if args.fingerprint_cache is None else Path(args.fingerprint_cache),
+        manifest_fingerprint_workers=args.manifest_fingerprint_workers,
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
         runtime_profile=args.runtime_profile,
@@ -1018,6 +1034,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--verification-report", default=None)
     parser.add_argument("--fingerprint-cache", default=None,
                         help="optional JSON cache for recursive manifest fingerprint reads")
+    parser.add_argument(
+        "--manifest-fingerprint-workers",
+        type=lambda value: _parse_positive_int(value, flag="--manifest-fingerprint-workers"),
+        default=1,
+        help="bounded worker count for release manifest artifact fingerprinting",
+    )
     parser.add_argument("--metadata", action="append", default=[], help="extra promotion metadata as key=value")
     parser.add_argument("--allow-non-promote", action="store_true",
                         help="register even when the release candidate comparison does not promote")

@@ -34,6 +34,7 @@ def promote_artifact_manifest(
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     fingerprint_cache_path: str | Path | None = None,
     verification_context: ArtifactVerificationContext | None = None,
+    manifest_fingerprint_workers: int = 1,
 ) -> dict[str, Any]:
     """Verify a manifest and record it in a local artifact registry."""
     manifest_path = Path(manifest_path)
@@ -45,6 +46,7 @@ def promote_artifact_manifest(
         verification = context.load_and_verify_artifact_manifest(
             manifest_path,
             recursive=recursive,
+            max_workers=manifest_fingerprint_workers,
         )
     finally:
         save_fingerprint_cache(fingerprint_cache_path, context.fingerprint_cache or {})
@@ -70,6 +72,7 @@ def promote_artifact_manifest(
         "failure_count": _failure_count(verification_payload),
         "artifact_json_cache": context.json_cache_summary(),
         "artifact_fingerprint_cache_entries": len(context.fingerprint_cache or {}),
+        "manifest_fingerprint_workers": int(manifest_fingerprint_workers),
         "manifest_summary": (
             dict(manifest.get("summary", {})) if isinstance(manifest.get("summary", {}), Mapping) else {}
         ),
@@ -135,6 +138,13 @@ def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
     return metadata
 
 
+def _parse_positive_int(value: str, *, flag: str) -> int:
+    numeric = int(value)
+    if numeric < 1:
+        raise ValueError(f"{flag} must be a positive integer.")
+    return numeric
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     payload = promote_artifact_manifest(
@@ -147,6 +157,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         allow_failures=bool(args.allow_failures),
         metadata=_parse_metadata(args.metadata or ()),
         fingerprint_cache_path=args.fingerprint_cache,
+        manifest_fingerprint_workers=args.manifest_fingerprint_workers,
     )
     print(json.dumps(payload, indent=2, sort_keys=True))
     return payload
@@ -161,6 +172,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--verification-report", default=None, help="path for the verification report JSON")
     parser.add_argument("--metadata", action="append", default=[], help="extra registry metadata as key=value")
     parser.add_argument("--fingerprint-cache", default=None, help="optional JSON cache for manifest fingerprint reads")
+    parser.add_argument(
+        "--manifest-fingerprint-workers",
+        type=lambda value: _parse_positive_int(value, flag="--manifest-fingerprint-workers"),
+        default=1,
+        help="bounded worker count for manifest artifact fingerprinting",
+    )
     parser.add_argument("--no-recursive", action="store_true", help="only verify the root manifest")
     parser.add_argument("--allow-failures", action="store_true", help="register even when verification fails")
     run(parser.parse_args(argv))

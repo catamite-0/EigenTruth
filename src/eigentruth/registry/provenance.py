@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from dataclasses import dataclass
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping
+from typing import Any, Mapping, MutableMapping, Sequence
 
 _FingerprintCache = MutableMapping[str, dict[str, Any]]
 _FingerprintCacheStats = MutableMapping[str, int]
@@ -93,12 +95,15 @@ class ArtifactVerificationContext:
     fingerprint_cache_stats: _FingerprintCacheStats | None = None
     json_cache: _JsonCache | None = None
     json_cache_stats: _JsonCacheStats | None = None
+    fingerprint_cache_lock: Any | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         if self.fingerprint_cache is None:
             self.fingerprint_cache = {}
         if self.fingerprint_cache_stats is None:
             self.fingerprint_cache_stats = new_fingerprint_cache_stats()
+        if self.fingerprint_cache_lock is None:
+            self.fingerprint_cache_lock = threading.Lock()
         if self.json_cache is None:
             self.json_cache = {}
         if self.json_cache_stats is None:
@@ -116,6 +121,7 @@ class ArtifactVerificationContext:
             root=root,
             fingerprint_cache=self.fingerprint_cache,
             fingerprint_cache_stats=self.fingerprint_cache_stats,
+            fingerprint_cache_lock=self.fingerprint_cache_lock,
         )
 
     def build_artifact_manifest(
@@ -124,6 +130,7 @@ class ArtifactVerificationContext:
         *,
         root: str | Path | None = None,
         metadata: Mapping[str, Any] | None = None,
+        max_workers: int = 1,
     ) -> dict[str, Any]:
         """Build an artifact manifest using this context's fingerprint cache."""
         return build_artifact_manifest(
@@ -132,6 +139,8 @@ class ArtifactVerificationContext:
             metadata=metadata,
             fingerprint_cache=self.fingerprint_cache,
             fingerprint_cache_stats=self.fingerprint_cache_stats,
+            fingerprint_cache_lock=self.fingerprint_cache_lock,
+            max_workers=max_workers,
         )
 
     def verify_artifact_manifest(
@@ -141,6 +150,7 @@ class ArtifactVerificationContext:
         root: str | Path | None = None,
         manifest_path: str | Path | None = None,
         recursive: bool = False,
+        max_workers: int = 1,
     ) -> ArtifactManifestVerification:
         """Verify a manifest using this context's fingerprint cache."""
         return verify_artifact_manifest(
@@ -150,8 +160,10 @@ class ArtifactVerificationContext:
             recursive=recursive,
             fingerprint_cache=self.fingerprint_cache,
             fingerprint_cache_stats=self.fingerprint_cache_stats,
+            fingerprint_cache_lock=self.fingerprint_cache_lock,
             json_cache=self.json_cache,
             json_cache_stats=self.json_cache_stats,
+            max_workers=max_workers,
         )
 
     def load_and_verify_artifact_manifest(
@@ -160,6 +172,7 @@ class ArtifactVerificationContext:
         *,
         root: str | Path | None = None,
         recursive: bool = False,
+        max_workers: int = 1,
     ) -> ArtifactManifestVerification:
         """Load a manifest through this context's JSON cache and verify it."""
         path = Path(manifest_path)
@@ -171,6 +184,7 @@ class ArtifactVerificationContext:
             root=root,
             manifest_path=path,
             recursive=recursive,
+            max_workers=max_workers,
         )
 
     def load_json_object(self, path: str | Path) -> tuple[dict[str, Any], str | None]:
@@ -202,19 +216,30 @@ def fingerprint_path(
     root: str | Path | None = None,
     fingerprint_cache: _FingerprintCache | None = None,
     fingerprint_cache_stats: _FingerprintCacheStats | None = None,
+    fingerprint_cache_lock: Any | None = None,
 ) -> ArtifactFingerprint:
     """Fingerprint one path with deterministic directory hashing."""
-    increment_fingerprint_cache_stat(fingerprint_cache_stats, "requests")
+    _increment_fingerprint_cache_stat(fingerprint_cache_stats, "requests", fingerprint_cache_lock)
     artifact_path = Path(path)
     display_path = _display_path(artifact_path, root=root)
     if not artifact_path.exists():
         cache_key = _fingerprint_cache_key(artifact_path, kind="missing")
-        if fingerprint_cache is not None and cache_key in fingerprint_cache:
-            increment_fingerprint_cache_stat(fingerprint_cache_stats, "hits")
-            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
-        increment_fingerprint_cache_stat(fingerprint_cache_stats, "misses")
+        cached = _load_fingerprint_cache_entry(
+            fingerprint_cache,
+            cache_key,
+            display_path,
+            stats=fingerprint_cache_stats,
+            lock=fingerprint_cache_lock,
+        )
+        if cached is not None:
+            return cached
         fingerprint = ArtifactFingerprint(path=display_path, exists=False, kind="missing")
-        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        _store_fingerprint_cache(
+            fingerprint_cache,
+            cache_key,
+            fingerprint,
+            lock=fingerprint_cache_lock,
+        )
         return fingerprint
     if artifact_path.is_file():
         stat = artifact_path.stat()
@@ -223,10 +248,15 @@ def fingerprint_path(
             kind="file",
             signature=_file_cache_signature(artifact_path, stat=stat),
         )
-        if fingerprint_cache is not None and cache_key in fingerprint_cache:
-            increment_fingerprint_cache_stat(fingerprint_cache_stats, "hits")
-            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
-        increment_fingerprint_cache_stat(fingerprint_cache_stats, "misses")
+        cached = _load_fingerprint_cache_entry(
+            fingerprint_cache,
+            cache_key,
+            display_path,
+            stats=fingerprint_cache_stats,
+            lock=fingerprint_cache_lock,
+        )
+        if cached is not None:
+            return cached
         fingerprint = ArtifactFingerprint(
             path=display_path,
             exists=True,
@@ -235,7 +265,12 @@ def fingerprint_path(
             size_bytes=stat.st_size,
             file_count=1,
         )
-        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        _store_fingerprint_cache(
+            fingerprint_cache,
+            cache_key,
+            fingerprint,
+            lock=fingerprint_cache_lock,
+        )
         return fingerprint
     if artifact_path.is_dir():
         cache_key = _fingerprint_cache_key(
@@ -243,10 +278,15 @@ def fingerprint_path(
             kind="directory",
             signature=_directory_cache_signature(artifact_path),
         )
-        if fingerprint_cache is not None and cache_key in fingerprint_cache:
-            increment_fingerprint_cache_stat(fingerprint_cache_stats, "hits")
-            return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
-        increment_fingerprint_cache_stat(fingerprint_cache_stats, "misses")
+        cached = _load_fingerprint_cache_entry(
+            fingerprint_cache,
+            cache_key,
+            display_path,
+            stats=fingerprint_cache_stats,
+            lock=fingerprint_cache_lock,
+        )
+        if cached is not None:
+            return cached
         digest, size_bytes, file_count = _sha256_directory(artifact_path)
         fingerprint = ArtifactFingerprint(
             path=display_path,
@@ -256,15 +296,30 @@ def fingerprint_path(
             size_bytes=size_bytes,
             file_count=file_count,
         )
-        _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+        _store_fingerprint_cache(
+            fingerprint_cache,
+            cache_key,
+            fingerprint,
+            lock=fingerprint_cache_lock,
+        )
         return fingerprint
     cache_key = _fingerprint_cache_key(artifact_path, kind="other")
-    if fingerprint_cache is not None and cache_key in fingerprint_cache:
-        increment_fingerprint_cache_stat(fingerprint_cache_stats, "hits")
-        return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
-    increment_fingerprint_cache_stat(fingerprint_cache_stats, "misses")
+    cached = _load_fingerprint_cache_entry(
+        fingerprint_cache,
+        cache_key,
+        display_path,
+        stats=fingerprint_cache_stats,
+        lock=fingerprint_cache_lock,
+    )
+    if cached is not None:
+        return cached
     fingerprint = ArtifactFingerprint(path=display_path, exists=True, kind="other")
-    _store_fingerprint_cache(fingerprint_cache, cache_key, fingerprint)
+    _store_fingerprint_cache(
+        fingerprint_cache,
+        cache_key,
+        fingerprint,
+        lock=fingerprint_cache_lock,
+    )
     return fingerprint
 
 
@@ -275,17 +330,26 @@ def build_artifact_manifest(
     metadata: Mapping[str, Any] | None = None,
     fingerprint_cache: _FingerprintCache | None = None,
     fingerprint_cache_stats: _FingerprintCacheStats | None = None,
+    fingerprint_cache_lock: Any | None = None,
+    max_workers: int = 1,
 ) -> dict[str, Any]:
     """Build a dependency-free manifest with content fingerprints."""
-    records = {
-        str(name): fingerprint_path(
-            path,
-            root=root,
-            fingerprint_cache=fingerprint_cache,
-            fingerprint_cache_stats=fingerprint_cache_stats,
-        ).to_dict()
+    items = [
+        (str(name), Path(path))
         for name, path in sorted(artifacts.items())
         if path is not None
+    ]
+    fingerprints = _fingerprint_artifacts(
+        items,
+        root=root,
+        fingerprint_cache=fingerprint_cache,
+        fingerprint_cache_stats=fingerprint_cache_stats,
+        fingerprint_cache_lock=fingerprint_cache_lock,
+        max_workers=max_workers,
+    )
+    records = {
+        name: fingerprint.to_dict()
+        for name, fingerprint in fingerprints
     }
     return {
         "schema_version": 1,
@@ -309,8 +373,10 @@ def verify_artifact_manifest(
     recursive: bool = False,
     fingerprint_cache: _FingerprintCache | None = None,
     fingerprint_cache_stats: _FingerprintCacheStats | None = None,
+    fingerprint_cache_lock: Any | None = None,
     json_cache: _JsonCache | None = None,
     json_cache_stats: _JsonCacheStats | None = None,
+    max_workers: int = 1,
 ) -> ArtifactManifestVerification:
     """Verify current local artifact state against a saved manifest."""
     manifest_root = _verification_root(root=root, manifest_path=manifest_path)
@@ -320,6 +386,9 @@ def verify_artifact_manifest(
     artifacts = manifest.get("artifacts", {})
     if not isinstance(artifacts, Mapping):
         raise ValueError("artifact manifest must contain an 'artifacts' mapping.")
+    fingerprint_items: list[tuple[str, Path]] = []
+    expected_records: dict[str, Mapping[str, Any]] = {}
+    expected_paths: dict[str, str] = {}
     for name, expected_record in sorted(artifacts.items()):
         if not isinstance(expected_record, Mapping):
             failures.append(
@@ -328,21 +397,38 @@ def verify_artifact_manifest(
             continue
         expected_path = str(expected_record.get("path", ""))
         artifact_path = _resolve_manifest_path(expected_path, root=manifest_root)
-        actual_record = fingerprint_path(
-            artifact_path,
+        name_key = str(name)
+        expected_records[name_key] = expected_record
+        expected_paths[name_key] = expected_path
+        fingerprint_items.append((name_key, artifact_path))
+
+    actual_records = {
+        name: fingerprint.to_dict()
+        for name, fingerprint in _fingerprint_artifacts(
+            fingerprint_items,
             root=manifest_root,
             fingerprint_cache=cache,
             fingerprint_cache_stats=fingerprint_cache_stats,
-        ).to_dict()
-        failures.extend(_compare_manifest_record(str(name), expected_record, actual_record))
+            fingerprint_cache_lock=fingerprint_cache_lock,
+            max_workers=max_workers,
+        )
+    }
+    for name, _artifact_path in fingerprint_items:
+        expected_record = expected_records[name]
+        expected_path = expected_paths[name]
+        actual_record = actual_records[name]
+        failures.extend(_compare_manifest_record(name, expected_record, actual_record))
+        artifact_path = _resolve_manifest_path(expected_path, root=manifest_root)
         if recursive and _is_nested_manifest(str(name), expected_path) and Path(artifact_path).is_file():
             nested.extend(_verify_nested_manifest(
                 artifact_path,
                 recursive=recursive,
                 fingerprint_cache=cache,
                 fingerprint_cache_stats=fingerprint_cache_stats,
+                fingerprint_cache_lock=fingerprint_cache_lock,
                 json_cache=json_cache,
                 json_cache_stats=json_cache_stats,
+                max_workers=max_workers,
             ))
     return ArtifactManifestVerification(
         manifest_path=None if manifest_path is None else str(manifest_path),
@@ -359,8 +445,10 @@ def load_and_verify_artifact_manifest(
     recursive: bool = False,
     fingerprint_cache: _FingerprintCache | None = None,
     fingerprint_cache_stats: _FingerprintCacheStats | None = None,
+    fingerprint_cache_lock: Any | None = None,
     json_cache: _JsonCache | None = None,
     json_cache_stats: _JsonCacheStats | None = None,
+    max_workers: int = 1,
 ) -> ArtifactManifestVerification:
     """Load and verify a UTF-8 JSON artifact manifest."""
     path = Path(manifest_path)
@@ -377,9 +465,70 @@ def load_and_verify_artifact_manifest(
         recursive=recursive,
         fingerprint_cache=fingerprint_cache,
         fingerprint_cache_stats=fingerprint_cache_stats,
+        fingerprint_cache_lock=fingerprint_cache_lock,
         json_cache=json_cache,
         json_cache_stats=json_cache_stats,
+        max_workers=max_workers,
     )
+
+
+def _fingerprint_artifacts(
+    items: Sequence[tuple[str, Path]],
+    *,
+    root: str | Path | None,
+    fingerprint_cache: _FingerprintCache | None,
+    fingerprint_cache_stats: _FingerprintCacheStats | None,
+    fingerprint_cache_lock: Any | None,
+    max_workers: int,
+) -> tuple[tuple[str, ArtifactFingerprint], ...]:
+    workers = _normalize_max_workers(max_workers)
+    if not items:
+        return ()
+    active_lock = fingerprint_cache_lock
+    if workers > 1 and active_lock is None and (
+        fingerprint_cache is not None or fingerprint_cache_stats is not None
+    ):
+        active_lock = threading.Lock()
+    if workers <= 1 or len(items) <= 1:
+        return tuple(
+            (
+                name,
+                fingerprint_path(
+                    path,
+                    root=root,
+                    fingerprint_cache=fingerprint_cache,
+                    fingerprint_cache_stats=fingerprint_cache_stats,
+                    fingerprint_cache_lock=active_lock,
+                ),
+            )
+            for name, path in items
+        )
+
+    results: list[tuple[str, ArtifactFingerprint] | None] = [None] * len(items)
+    with ThreadPoolExecutor(max_workers=min(workers, len(items))) as executor:
+        futures = {
+            executor.submit(
+                fingerprint_path,
+                path,
+                root=root,
+                fingerprint_cache=fingerprint_cache,
+                fingerprint_cache_stats=fingerprint_cache_stats,
+                fingerprint_cache_lock=active_lock,
+            ): index
+            for index, (_name, path) in enumerate(items)
+        }
+        for future in as_completed(futures):
+            index = futures[future]
+            name = items[index][0]
+            results[index] = (name, future.result())
+    return tuple(result for result in results if result is not None)
+
+
+def _normalize_max_workers(max_workers: int) -> int:
+    workers = int(max_workers)
+    if workers < 1:
+        raise ValueError("max_workers must be at least 1.")
+    return workers
 
 
 def load_json_object(
@@ -457,6 +606,40 @@ def increment_fingerprint_cache_stat(stats: _FingerprintCacheStats | None, key: 
     if stats is None:
         return
     stats[key] = int(stats.get(key, 0)) + 1
+
+
+def _increment_fingerprint_cache_stat(
+    stats: _FingerprintCacheStats | None,
+    key: str,
+    lock: Any | None,
+) -> None:
+    if lock is None:
+        increment_fingerprint_cache_stat(stats, key)
+        return
+    with lock:
+        increment_fingerprint_cache_stat(stats, key)
+
+
+def _load_fingerprint_cache_entry(
+    cache: _FingerprintCache | None,
+    key: str,
+    display_path: str,
+    *,
+    stats: _FingerprintCacheStats | None,
+    lock: Any | None,
+) -> ArtifactFingerprint | None:
+    if lock is None:
+        if cache is not None and key in cache:
+            increment_fingerprint_cache_stat(stats, "hits")
+            return _fingerprint_from_cache(display_path, cache[key])
+        increment_fingerprint_cache_stat(stats, "misses")
+        return None
+    with lock:
+        if cache is not None and key in cache:
+            increment_fingerprint_cache_stat(stats, "hits")
+            return _fingerprint_from_cache(display_path, cache[key])
+        increment_fingerprint_cache_stat(stats, "misses")
+        return None
 
 
 def fingerprint_cache_summary(
@@ -600,12 +783,18 @@ def _store_fingerprint_cache(
     cache: _FingerprintCache | None,
     key: str,
     fingerprint: ArtifactFingerprint,
+    *,
+    lock: Any | None = None,
 ) -> None:
     if cache is None:
         return
     payload = fingerprint.to_dict()
     payload.pop("path", None)
-    cache[key] = payload
+    if lock is None:
+        cache[key] = payload
+        return
+    with lock:
+        cache[key] = payload
 
 
 def _display_path(path: Path, *, root: str | Path | None) -> str:
@@ -664,8 +853,10 @@ def _verify_nested_manifest(
     recursive: bool,
     fingerprint_cache: _FingerprintCache,
     fingerprint_cache_stats: _FingerprintCacheStats | None = None,
+    fingerprint_cache_lock: Any | None = None,
     json_cache: _JsonCache | None = None,
     json_cache_stats: _JsonCacheStats | None = None,
+    max_workers: int = 1,
 ) -> tuple[ArtifactManifestVerification, ...]:
     try:
         return (
@@ -674,8 +865,10 @@ def _verify_nested_manifest(
                 recursive=recursive,
                 fingerprint_cache=fingerprint_cache,
                 fingerprint_cache_stats=fingerprint_cache_stats,
+                fingerprint_cache_lock=fingerprint_cache_lock,
                 json_cache=json_cache,
                 json_cache_stats=json_cache_stats,
+                max_workers=max_workers,
             ),
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
