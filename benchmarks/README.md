@@ -2472,9 +2472,10 @@ provided candidate policies using the corpus runtime-pair index, writes a
 recursive top-level manifest over all child reports, and registers one workflow
 report. Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
-to the workflow report. Add `--fingerprint-cache` when repeating local checks
-over the same trace corpus, `--runtime-trace-records-cache-json` when sweeping
-runtime budget gates, and `--selector-trace-inputs-json` when replaying
+to the workflow report. Add `--fingerprint-cache` when repeating local checks,
+`--corpus-cache-json` when rebuilding the same raw-trace corpus repeatedly,
+`--runtime-trace-records-cache-json` when sweeping runtime budget gates, and
+`--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
 ```bash
@@ -2491,6 +2492,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --require-runtime-trace \
   --verify-manifest \
   --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow/fingerprints.json \
+  --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json \
   --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked

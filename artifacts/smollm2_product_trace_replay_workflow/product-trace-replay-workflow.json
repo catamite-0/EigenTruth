@@ -1,8 +1,8 @@
 {
   "artifact_manifest_summary": {
-    "artifact_count": 24,
+    "artifact_count": 25,
     "directory_count": 1,
-    "file_count": 23,
+    "file_count": 24,
     "missing_count": 0
   },
   "config": {
@@ -12,12 +12,14 @@
       "audit_biased"
     ],
     "compact_json": false,
+    "corpus_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json",
     "fingerprint_cache": "artifacts/smollm2_product_trace_replay_workflow/fingerprints.json",
     "jsonl_count": 0,
     "limit": null,
     "metadata": {},
     "promotion_contract": null,
     "redact_text": true,
+    "refresh_corpus_cache": false,
     "refresh_runtime_trace_records_cache": false,
     "refresh_selector_trace_inputs": false,
     "replay_policy": "artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json",
@@ -30,6 +32,10 @@
   },
   "corpus": {
     "accepted_count": 12,
+    "cache_hit": true,
+    "cache_path": "artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json",
+    "cache_source": "corpus_cache",
+    "cache_written": false,
     "counts_by_action": {
       "abstain": 7,
       "accept": 4,
@@ -60,6 +66,7 @@
   },
   "paths": {
     "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/artifact-manifest.json",
+    "corpus_cache": "artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json",
     "corpus_manifest": "artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json",
     "corpus_report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
     "corpus_runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",

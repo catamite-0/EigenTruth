@@ -11706,6 +11706,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     replay_policy_path = tmp_path / "replay-policy.json"
     verification_report_path = tmp_path / "workflow" / "manifest-verification.json"
     fingerprint_cache_path = tmp_path / "workflow" / "fingerprints.json"
+    corpus_cache_path = tmp_path / "workflow" / "corpus-cache.json"
     runtime_trace_records_cache_path = tmp_path / "workflow" / "runtime-baseline" / "trace-record-cache.json"
     selector_trace_inputs_path = tmp_path / "workflow" / "selector-replay" / "trace-inputs.json"
     traces_dir = tmp_path / "input-traces"
@@ -11796,6 +11797,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             verify_manifest=True,
             verification_report_path=verification_report_path,
             fingerprint_cache_path=fingerprint_cache_path,
+            corpus_cache_path=corpus_cache_path,
             runtime_trace_records_cache_path=runtime_trace_records_cache_path,
             selector_trace_inputs_path=selector_trace_inputs_path,
         )
@@ -11807,6 +11809,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     saved_trace = json.loads(corpus_trace.read_text(encoding="utf-8"))
     verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
     fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
+    corpus_cache = json.loads(corpus_cache_path.read_text(encoding="utf-8"))
     runtime_trace_records_cache = json.loads(runtime_trace_records_cache_path.read_text(encoding="utf-8"))
     selector_trace_inputs = json.loads(selector_trace_inputs_path.read_text(encoding="utf-8"))
 
@@ -11821,15 +11824,19 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
     assert payload["paths"]["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["paths"]["corpus_cache"] == str(corpus_cache_path)
     assert payload["paths"]["runtime_trace_records_cache"] == str(runtime_trace_records_cache_path)
     assert payload["paths"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["config"]["corpus_cache"] == str(corpus_cache_path)
     assert payload["config"]["runtime_trace_records_cache"] == str(runtime_trace_records_cache_path)
     assert payload["config"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
     assert payload["manifest_verification"]["verification"]["passed"] is True
     assert verification_report["passed"] is True
     assert len(fingerprint_cache) > 0
+    assert corpus_cache["workflow"] == "product_trace_replay_workflow_corpus_cache"
+    assert corpus_cache["summary"]["accepted_count"] == 3
     assert runtime_trace_records_cache["workflow"] == "product_runtime_baseline_trace_records"
     assert runtime_trace_records_cache["summary"]["trace_count"] == 3
     assert selector_trace_inputs["workflow"] == "runtime_profile_selector_replay_trace_inputs"
@@ -11845,6 +11852,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     assert payload["artifact_manifest_summary"] == manifest["summary"]
     assert "corpus_runtime_pair_index" in manifest["artifacts"]
+    assert "corpus_cache" in manifest["artifacts"]
     assert "runtime_trace_records_cache" in manifest["artifacts"]
     assert "selector_trace_inputs" in manifest["artifacts"]
     assert registry_module.load_and_verify_artifact_manifest(
@@ -11859,6 +11867,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["manifest_verification_failure_count"] == 0
     assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
     assert record.metadata["manifest_fingerprint_cache_entries"] == len(fingerprint_cache)
+    assert record.metadata["corpus_cache_path"] == str(corpus_cache_path)
+    assert record.metadata["corpus_cache_written"] is True
     assert record.metadata["runtime_trace_records_cache_path"] == str(runtime_trace_records_cache_path)
     assert record.metadata["runtime_trace_records_cache_written"] is True
     assert record.metadata["selector_trace_inputs_path"] == str(selector_trace_inputs_path)
@@ -11866,6 +11876,66 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert verification_record.path == str(verification_report_path)
     assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
     assert verification_record.metadata["passed"] is True
+
+
+def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    output_dir = tmp_path / "workflow"
+    corpus_cache_path = tmp_path / "workflow" / "corpus-cache.json"
+    trace_path = tmp_path / "trace.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "latency-low-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private fact.", "metadata": {}}],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        }),
+        encoding="utf-8",
+    )
+
+    first = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            corpus_cache_path=corpus_cache_path,
+            require_runtime_trace=True,
+        )
+    )
+    cache_payload = json.loads(corpus_cache_path.read_text(encoding="utf-8"))
+
+    assert first["corpus"]["cache_source"] == "corpus_build"
+    assert first["corpus"]["cache_hit"] is False
+    assert first["corpus"]["cache_written"] is True
+    assert cache_payload["workflow"] == "product_trace_replay_workflow_corpus_cache"
+    assert cache_payload["summary"]["accepted_count"] == 1
+
+    def fail_if_corpus_is_rebuilt(config):
+        raise AssertionError("corpus cache should avoid rebuilding standardized traces")
+
+    monkeypatch.setattr(module, "build_product_trace_corpus", fail_if_corpus_is_rebuilt)
+
+    second = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=(trace_path,),
+            output_dir=output_dir,
+            candidates=(module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            corpus_cache_path=corpus_cache_path,
+            require_runtime_trace=True,
+        )
+    )
+
+    assert second["corpus"]["cache_source"] == "corpus_cache"
+    assert second["corpus"]["cache_hit"] is True
+    assert second["corpus"]["cache_written"] is False
+    assert second["corpus"]["accepted_count"] == 1
+    assert second["paths"]["corpus_cache"] == str(corpus_cache_path)
 
 
 def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
@@ -11883,6 +11953,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         strict="false",
         compact_json="false",
         fingerprint_cache_path=tmp_path / "fingerprints.json",
+        corpus_cache_path=tmp_path / "corpus-cache.json",
+        refresh_corpus_cache="false",
         runtime_trace_records_cache_path=tmp_path / "runtime-trace-record-cache.json",
         refresh_runtime_trace_records_cache="false",
         selector_trace_inputs_path=tmp_path / "selector-trace-inputs.json",
@@ -11905,6 +11977,8 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.strict is False
     assert workflow_config.compact_json is False
     assert workflow_config.fingerprint_cache_path == tmp_path / "fingerprints.json"
+    assert workflow_config.corpus_cache_path == tmp_path / "corpus-cache.json"
+    assert workflow_config.refresh_corpus_cache is False
     assert workflow_config.runtime_trace_records_cache_path == tmp_path / "runtime-trace-record-cache.json"
     assert workflow_config.refresh_runtime_trace_records_cache is False
     assert workflow_config.selector_trace_inputs_path == tmp_path / "selector-trace-inputs.json"

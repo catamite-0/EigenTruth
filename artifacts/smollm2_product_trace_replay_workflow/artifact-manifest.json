@@ -1,5 +1,13 @@
 {
   "artifacts": {
+    "corpus_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "corpus-cache.json",
+      "sha256": "dbf3f7cc18c514f7f17d9651bcb319949e9598d783779d54569157e9c2c2709a",
+      "size_bytes": 11264
+    },
     "corpus_manifest": {
       "exists": true,
       "file_count": 1,
@@ -133,8 +141,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "89fe9142d0324a7b785a5db54a7222db93777fbfa7340d95c189f53fbbefaa88",
-      "size_bytes": 7371
+      "sha256": "4a3c62fecbaad375df0146be3affa7c8d3ea57f27c19a73ec76ca6d5ad8a3d9a",
+      "size_bytes": 7758
     },
     "replay_policy": {
       "exists": true,
@@ -205,9 +213,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 24,
+    "artifact_count": 25,
     "directory_count": 1,
-    "file_count": 23,
+    "file_count": 24,
     "missing_count": 0
   }
 }
