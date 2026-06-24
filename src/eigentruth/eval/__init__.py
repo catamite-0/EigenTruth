@@ -39,6 +39,12 @@ from eigentruth.eval.score_dump import (
     score_dump_identity,
     write_score_dump_jsonl,
 )
+from eigentruth.eval.score_fusion import (
+    RANK_SCORE_FUSION_METHODS,
+    combine_rank_anomaly_scores,
+    directional_rank_anomaly_scores,
+    native_anomaly_scores,
+)
 
 __all__ = [
     "roc_auc",
@@ -49,6 +55,10 @@ __all__ = [
     "conformal_threshold",
     "directional_conformal_threshold",
     "directional_trigger_rate",
+    "RANK_SCORE_FUSION_METHODS",
+    "native_anomaly_scores",
+    "directional_rank_anomaly_scores",
+    "combine_rank_anomaly_scores",
     "ScoreDump",
     "ScoreDumpColumns",
     "ScoreDumpIdentity",

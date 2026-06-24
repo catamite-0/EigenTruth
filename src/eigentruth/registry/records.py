@@ -106,6 +106,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_score_fusion_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a calibrated diagnostic score-fusion artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="score_fusion_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_truth_subspace_artifact(
         self,
         *,

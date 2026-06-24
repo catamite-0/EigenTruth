@@ -8,6 +8,8 @@ from eigentruth.calibration import (
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
+    RankScoreFusionArtifact,
+    RankScoreFusionCalibrator,
     SteeringPolicyConfig,
 )
 
@@ -87,3 +89,38 @@ def test_conformal_calibrator_rejects_invalid_inputs():
             calibration_scores={"score": [1.0, 2.0]},
             directions={"score": "sideways"},
         )
+
+
+def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):
+    labels = [0, 0, 0, 0, 1]
+    scores = {
+        "truth_proj": [0.0, 1.0, 2.0, 3.0, 10.0],
+        "support_score": [10.0, 9.0, 8.0, 7.0, 0.0],
+    }
+    calibrator = RankScoreFusionCalibrator(alpha=0.4, method="max_rank")
+    artifact = calibrator.calibrate(
+        labels=labels,
+        scores=scores,
+        directions={"truth_proj": "higher", "support_score": "lower"},
+        model_id="synthetic",
+        target_layer=-1,
+        score_dump_metadata={"sha256": "abc"},
+    )
+
+    path = tmp_path / "fusion.json"
+    artifact.save_json(path)
+    loaded = RankScoreFusionArtifact.load_json(path)
+    flags = loaded.flags(scores)
+    evaluation = calibrator.evaluate(
+        labels=labels,
+        scores=scores,
+        directions={"truth_proj": "higher", "support_score": "lower"},
+    )
+
+    assert loaded == artifact
+    assert loaded.signal_names() == ("truth_proj", "support_score")
+    assert loaded.threshold == pytest.approx(0.75)
+    assert flags.tolist() == [False, False, False, True, True]
+    assert evaluation["false_alarm"] == pytest.approx(0.25)
+    assert evaluation["detection"] == pytest.approx(1.0)
+    assert evaluation["auroc"] > 0.5

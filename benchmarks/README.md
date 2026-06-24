@@ -2166,13 +2166,29 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/truthfulqa_score_ensemble_report.json
 ```
 
+For a single score dump, the same runner can also save a deployable
+`RankScoreFusionArtifact` for the best ensemble at `--best-alpha`:
+
+```bash
+python benchmarks/eval_score_ensemble.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --signals truth_proj,maha_last,subspace_resid \
+  --methods max_rank,mean_rank \
+  --best-alpha 0.10 \
+  --save-best-fusion-artifact artifacts/qwen05_score_fusion_artifact.json \
+  --json artifacts/qwen05_score_ensemble_report.json
+```
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
 then thresholded with the same split-conformal false-alarm check as the single
 signals. Each run records the same validated score-dump summary and file
 fingerprint used by `eval_conformal.py`, so ensemble comparisons can be checked
-against exact input artifacts.
+against exact input artifacts. Saved fusion artifacts preserve the normal-score
+reference distributions, signal directions, fusion method, conformal alpha, and
+threshold; they are intended for controlled follow-up experiments rather than as
+a default product policy.
 
 Current Qwen l80 / SmolLM2 l80 result: simple internal-score ensembles do not
 beat `truth_proj`. At alpha 0.100, Qwen's best single signal detects 0.279 while

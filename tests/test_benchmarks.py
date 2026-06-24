@@ -14778,6 +14778,51 @@ def test_eval_score_ensemble_reports_lower_direction_auroc(tmp_path):
     assert run["single_results"]["support"]["alphas"]["0.5"]["detection"] == pytest.approx(1.0)
 
 
+def test_eval_score_ensemble_saves_best_fusion_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.eval_score_ensemble")
+    scores_path = tmp_path / "scores.json"
+    report_path = tmp_path / "report.json"
+    artifact_path = tmp_path / "fusion.json"
+    labels = [0] * 20 + [1] * 8
+    truth_proj = list(range(20)) + [40, 41, 42, 43, 0, 1, 2, 3]
+    subspace_resid = list(range(20)) + [0, 1, 2, 3, 40, 41, 42, 43]
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": labels,
+            "scores": {
+                "truth_proj": truth_proj,
+                "subspace_resid": subspace_resid,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        SimpleNamespace(
+            scores=[str(scores_path)],
+            signals="truth_proj,subspace_resid",
+            methods="max_rank,mean_rank",
+            alphas="0.2",
+            repeats=1,
+            seed=0,
+            best_alpha=0.2,
+            save_best_fusion_artifact=str(artifact_path),
+            json=str(report_path),
+        )
+    )
+
+    artifact = module.RankScoreFusionArtifact.load_json(artifact_path)
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert artifact.method == "max_rank"
+    assert artifact.conformal_alpha == pytest.approx(0.2)
+    assert artifact.signal_names() == ("truth_proj", "subspace_resid")
+    assert artifact.score_dump_metadata["summary"]["n_total"] == len(labels)
+    assert payload["runs"][0]["best_fusion_artifact"]["path"] == str(artifact_path)
+    assert saved_report["runs"][0]["best_fusion_artifact"]["method"] == "max_rank"
+
+
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

@@ -212,3 +212,18 @@ def test_registry_record_key():
     )
 
     assert record.key() == "calibration:truthfulqa-gpt2-l8:2026-06-16"
+
+
+def test_artifact_registry_records_score_fusion_artifact(tmp_path):
+    from eigentruth.registry import ArtifactRegistry
+
+    registry = ArtifactRegistry(tmp_path / "registry.json").record_score_fusion_artifact(
+        name="fusion",
+        path=tmp_path / "fusion.json",
+        version="0.1",
+        metadata={"method": "max_rank"},
+    )
+
+    record = registry.get("score_fusion_artifact:fusion:0.1")
+    assert record.artifact_type == "score_fusion_artifact"
+    assert record.metadata["method"] == "max_rank"

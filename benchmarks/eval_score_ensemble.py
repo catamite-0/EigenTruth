@@ -15,13 +15,18 @@ from typing import Any, Mapping, MutableMapping, Sequence
 
 import torch
 
-from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, RankScoreFusionArtifact, RankScoreFusionCalibrator
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
 from eigentruth.eval.score_dump import (
     load_score_dump_columns,
     score_dump_cache_summary,
     score_dump_file_metadata,
+)
+from eigentruth.eval.score_fusion import (
+    combine_rank_anomaly_scores,
+    directional_rank_anomaly_scores,
+    native_anomaly_scores,
 )
 
 ALPHAS = (0.05, 0.10, 0.20)
@@ -47,51 +52,6 @@ def _parse_csv(value: str | None, *, name: str) -> tuple[str, ...] | None:
     if not parts:
         raise ValueError(f"{name} must contain at least one value.")
     return parts
-
-
-def _directional_rank_anomaly_scores(
-    calibration_scores: torch.Tensor,
-    scores: torch.Tensor,
-    *,
-    direction: str,
-) -> torch.Tensor:
-    """Map native scores to calibration-set anomaly ranks in [0, 1]."""
-    if direction not in {"higher", "lower"}:
-        raise ValueError("direction must be 'higher' or 'lower'.")
-    calibration_scores = calibration_scores.to(torch.float64).flatten()
-    scores = scores.to(torch.float64).flatten()
-    if calibration_scores.numel() == 0:
-        raise ValueError("calibration scores must be non-empty.")
-    sorted_calib, _ = torch.sort(calibration_scores)
-    n = float(calibration_scores.numel())
-    if direction == "higher":
-        counts = torch.searchsorted(sorted_calib, scores, right=True).to(torch.float64)
-    else:
-        counts = (calibration_scores.numel() - torch.searchsorted(
-            sorted_calib,
-            scores,
-            right=False,
-        )).to(torch.float64)
-    return counts / n
-
-
-def _combine_rank_scores(rank_scores: Sequence[torch.Tensor], method: str) -> torch.Tensor:
-    if method not in METHODS:
-        raise ValueError(f"method must be one of {METHODS}.")
-    if not rank_scores:
-        raise ValueError("at least one rank score is required.")
-    stacked = torch.stack([score.to(torch.float64).flatten() for score in rank_scores], dim=0)
-    if method == "max_rank":
-        return stacked.max(dim=0).values
-    return stacked.mean(dim=0)
-
-
-def _native_anomaly_scores(scores: torch.Tensor, direction: str) -> torch.Tensor:
-    if direction == "higher":
-        return scores
-    if direction == "lower":
-        return -scores
-    raise ValueError("direction must be 'higher' or 'lower'.")
 
 
 def _mean(values: Sequence[float]) -> float:
@@ -161,7 +121,7 @@ def _score_signal(
             )
     return {
         "direction": direction,
-        "auroc": roc_auc(_native_anomaly_scores(scores, direction), labels),
+        "auroc": roc_auc(native_anomaly_scores(scores, direction), labels),
         "alphas": {
             str(alpha): _rate_payload(false_alarm_by_alpha[alpha], detection_by_alpha[alpha], alpha)
             for alpha in alphas
@@ -191,14 +151,14 @@ def _score_ensemble(
         calib_idx = perm[:half]
         test_true_idx = perm[half:]
         rank_scores = [
-            _directional_rank_anomaly_scores(
+            directional_rank_anomaly_scores(
                 scores[calib_idx],
                 scores,
                 direction=directions[name],
             )
             for name, scores in selected_scores.items()
         ]
-        ensemble_scores = _combine_rank_scores(rank_scores, method)
+        ensemble_scores = combine_rank_anomaly_scores(rank_scores, method)
         aurocs.append(roc_auc(ensemble_scores, labels))
         for alpha in alphas:
             threshold = directional_conformal_threshold(ensemble_scores[calib_idx], alpha, "higher")
@@ -328,6 +288,43 @@ def build_ensemble_report(
     }
 
 
+def build_fusion_artifact_from_score_dump(
+    score_dump: tuple[str, Path],
+    *,
+    signals: Sequence[str],
+    method: str,
+    alpha: float,
+    cache: MutableMapping[str, Any] | None = None,
+) -> RankScoreFusionArtifact:
+    """Fit a deployable fusion artifact from all normal records in one score dump."""
+    name, path = score_dump
+    dump = _load_scores(path, signals=signals, cache=cache)
+    missing = [signal for signal in signals if signal not in dump["scores"]]
+    if missing:
+        raise ValueError(f"{path} is missing requested score(s): {missing}.")
+    config = dump["config"]
+    directions = {
+        signal: DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+        for signal in signals
+    }
+    target_layer = config.get("layer")
+    calibrator = RankScoreFusionCalibrator(alpha=alpha, method=method)
+    return calibrator.calibrate(
+        labels=dump["labels"].tolist(),
+        scores={signal: dump["scores"][signal].tolist() for signal in signals},
+        directions=directions,
+        model_id=None if config.get("model") is None else str(config.get("model")),
+        target_layer=None if target_layer is None else int(target_layer),
+        model_revision=None if config.get("model_revision") is None else str(config.get("model_revision")),
+        score_dump_metadata={
+            "run_name": name,
+            **score_dump_file_metadata(path, cache=cache),
+            "summary": dump["score_dump_summary"],
+            "source_format": dump["score_dump_source_format"],
+        },
+    )
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     score_dumps = [_parse_named_path(value) for value in args.scores]
     signals = _parse_csv(args.signals, name="signals")
@@ -344,6 +341,32 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         seed=args.seed,
         best_alpha=args.best_alpha,
     )
+    if args.save_best_fusion_artifact:
+        if len(score_dumps) != 1:
+            raise ValueError("--save-best-fusion-artifact requires exactly one --scores input.")
+        run_payload = payload["runs"][0]
+        best_ensemble = run_payload["best_ensemble_at_alpha"]
+        if best_ensemble is None:
+            raise ValueError("no best ensemble is available at --best-alpha.")
+        artifact_path = Path(args.save_best_fusion_artifact)
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact = build_fusion_artifact_from_score_dump(
+            score_dumps[0],
+            signals=signals,
+            method=str(best_ensemble["name"]),
+            alpha=args.best_alpha,
+            cache={},
+        )
+        artifact.save_json(artifact_path)
+        run_payload["best_fusion_artifact"] = {
+            "path": str(artifact_path),
+            "method": artifact.method,
+            "threshold": artifact.threshold,
+            "conformal_alpha": artifact.conformal_alpha,
+            "signals": list(artifact.signal_names()),
+            "calibration_size": artifact.calibration_size(),
+        }
+        print(f"Wrote score fusion artifact to {artifact_path}")
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -367,6 +390,8 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--best-alpha", type=float, default=0.10,
                         help="alpha used for best single/ensemble summary")
+    parser.add_argument("--save-best-fusion-artifact", default=None,
+                        help="optional path to save a deployable artifact for the best ensemble")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     args = parser.parse_args()
     payload = run(args)
