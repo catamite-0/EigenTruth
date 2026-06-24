@@ -1461,6 +1461,10 @@ class EvalRepsCacheReader:
         self._cached_shard_records: list[object] | None = None
         self._shard_loads = 0
         self._shard_cache_hits = 0
+        self._read_requests = 0
+        self._records_read = 0
+        self._shard_read_requests = 0
+        self._cross_shard_reads = 0
         if _is_sharded_eval_reps_cache(self.path):
             manifest = _load_eval_reps_manifest(self.path)
             self.metadata = dict(manifest.get("metadata", {}))
@@ -1497,11 +1501,14 @@ class EvalRepsCacheReader:
             raise ValueError("eval reps cache read range is out of bounds.")
         if count == 0:
             return []
+        self._read_requests += 1
+        self._records_read += count
         if self._records is not None:
             return self._records[start:start + count]
 
         end = start + count
         records: list[Optional[dict]] = []
+        touched_shards = 0
         for shard in self._shards:
             shard_start = int(shard["start"])
             shard_count = int(shard["count"])
@@ -1514,6 +1521,10 @@ class EvalRepsCacheReader:
             local_start = max(start, shard_start) - shard_start
             local_end = min(end, shard_end) - shard_start
             records.extend(_reps_from_cache_state(record) for record in raw_records[local_start:local_end])
+            touched_shards += 1
+        self._shard_read_requests += touched_shards
+        if touched_shards > 1:
+            self._cross_shard_reads += 1
         if len(records) != count:
             raise ValueError(f"eval reps cache returned {len(records)} records for a {count}-record range.")
         return records
@@ -1522,8 +1533,14 @@ class EvalRepsCacheReader:
         return self.read_range(0, self.record_count)
 
     def cache_stats(self) -> dict[str, int]:
-        """Return reader-local shard IO reuse counters."""
+        """Return reader-local cache IO counters."""
         return {
+            "record_count": int(self.record_count),
+            "read_requests": int(self._read_requests),
+            "records_read": int(self._records_read),
+            "shard_count": len(self._shards),
+            "shard_read_requests": int(self._shard_read_requests),
+            "cross_shard_reads": int(self._cross_shard_reads),
             "shard_loads": int(self._shard_loads),
             "shard_cache_hits": int(self._shard_cache_hits),
         }

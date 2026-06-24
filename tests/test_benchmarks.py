@@ -10889,6 +10889,13 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
 
     cache_path = tmp_path / "eval-reps.pt"
     module.save_eval_reps_cache(cache_path, [reps, None], metadata=metadata)
+    reader = module.EvalRepsCacheReader(
+        cache_path,
+        expected_metadata=metadata,
+        expected_records=2,
+    )
+    ranged = reader.read_range(0, 2)
+    reader_stats = reader.cache_stats()
     loaded, loaded_metadata = module.load_eval_reps_cache(
         cache_path,
         expected_metadata=metadata,
@@ -10896,6 +10903,18 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     )
 
     assert loaded_metadata == metadata
+    assert torch.allclose(ranged[0]["last"][-1], reps["last"][-1])
+    assert ranged[1] is None
+    assert reader_stats == {
+        "record_count": 2,
+        "read_requests": 1,
+        "records_read": 2,
+        "shard_count": 0,
+        "shard_read_requests": 0,
+        "cross_shard_reads": 0,
+        "shard_loads": 0,
+        "shard_cache_hits": 0,
+    }
     assert torch.allclose(loaded[0]["last"][-1], reps["last"][-1])
     assert torch.allclose(loaded[0]["ans_hs"], reps["ans_hs"])
     assert loaded[0]["eigenscore_by_layer"][-2] == pytest.approx(0.25)
@@ -10981,7 +11000,16 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
         "records-000001.pt",
         "records-000000.pt",
     ]
-    assert reader_stats == {"shard_loads": 3, "shard_cache_hits": 2}
+    assert reader_stats == {
+        "record_count": 3,
+        "read_requests": 4,
+        "records_read": 5,
+        "shard_count": 2,
+        "shard_read_requests": 5,
+        "cross_shard_reads": 1,
+        "shard_loads": 3,
+        "shard_cache_hits": 2,
+    }
     assert loaded_metadata == metadata
     assert torch.allclose(loaded[0]["ans_hs"], reps_a["ans_hs"])
     assert loaded[1] is None

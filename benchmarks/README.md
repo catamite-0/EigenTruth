@@ -155,7 +155,10 @@ Use `--eval-reps-cache-shard-size N` to write the eval reps cache as a directory
 containing a JSON manifest and `records-*.pt` shards. Existing sharded caches are
 loaded batch-by-batch, reuse the active shard across adjacent reads, and remain
 compatible with `--cache-only`; old single-file `.pt` caches remain the default
-and continue to load normally.
+and continue to load normally. JSON output includes `cache_stats.eval_reps_reader`
+with read requests, records read, shard read requests, cross-shard reads, shard
+loads, and shard cache hits, which helps diagnose cache-only IO regressions after
+changing batch size or token budget.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
 not run sampled INSIDE. New eval reps caches also store eval statement metadata,

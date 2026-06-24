@@ -171,7 +171,8 @@ run serially before dependent warm-start cells, and reports include end-to-end
 `--auto-batch-size` on long runs to halve and retry after retriable memory
 errors. For repeated rescoring, pair `--eval-reps-cache` with
 `--eval-reps-cache-shard-size`; sharded cache readers reuse the active shard
-across adjacent batch reads and report shard IO counters in JSON output. Pair
+across adjacent batch reads and report cache IO counters such as read requests,
+records read, shard loads, shard cache hits, and cross-shard reads in JSON output. Pair
 repeated INSIDE sweeps with `--inside-diagnostics-cache` or the sweep-level
 `--shared-cache-dir` to reuse sampled diagnostics for statements that appear in
 nested trigger budgets. `run_adapter_readiness_workflow.py --performance-report`
