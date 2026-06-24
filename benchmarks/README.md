@@ -2554,7 +2554,10 @@ manifest, and registry metadata. Add `--save-recommended-policy` to write
 `optimization.policy_hints.candidate_runtime_budget_policy` as a reusable
 `ProductRuntimeBudgetPolicy` JSON that can be passed back through `--policy` in
 later baseline, replay, profile-sweep, or
-`compare_product_runtime_baselines.py --runtime-budget-policy` gates. Add
+`compare_product_runtime_baselines.py --runtime-budget-policy` gates. The same
+`optimization.policy_hints` block also emits `candidate_control_defaults`, such
+as a recommended `max_verifier_route_attempts` when route-budget exhaustion is
+observed. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
 resolved policy payload. `ProductRuntimeBudgetPolicy` can gate overall staged

@@ -12706,6 +12706,7 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
                     "runtime_profile": "audit",
                     "runtime_profile_source": "pre_generation",
                     "pre_generation_profile_requested": "auto",
+                    "max_verifier_route_attempts": 1,
                     "staged_verification_enabled": False,
                     "cache": {"verifier": {"hits": 0, "misses": 4}},
                 },
@@ -12737,7 +12738,9 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert optimization["hotspots"]["routes"][0]["route"] == "retrieval_structured_qa"
     assert payload["summary"]["profiles"]["runtime_profile_counts"] == {"audit": 2}
     assert payload["summary"]["profiles"]["runtime_profile_source_counts"] == {"pre_generation": 2}
+    assert payload["summary"]["profiles"]["max_verifier_route_attempts"]["max"] == 1.0
     assert payload["traces"][0]["context"]["runtime_profile"] == "audit"
+    assert payload["traces"][0]["context"]["max_verifier_route_attempts"] == 1.0
     assert {
         "improve_cache_keys",
         "reduce_verifier_route_fanout",
@@ -12750,6 +12753,9 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
         "max_route_budget_exhaustion_rate"
     ] == 1.0
+    assert optimization["policy_hints"]["candidate_control_defaults"] == {
+        "max_verifier_route_attempts": 2,
+    }
     assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
         "max_phase_p95_seconds"
     ]["initial_verification"] > 0.0
@@ -13015,6 +13021,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
+    assert cache_payload["schema_version"] == 2
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3

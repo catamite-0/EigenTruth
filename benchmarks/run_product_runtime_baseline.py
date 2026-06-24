@@ -272,6 +272,7 @@ def _trace_context(trace: Mapping[str, Any]) -> dict[str, Any]:
         "pre_generation_profile_requested": _optional_string(
             metadata.get("pre_generation_profile_requested")
         ),
+        "max_verifier_route_attempts": _finite_float(metadata.get("max_verifier_route_attempts")),
         "staged_verification_enabled": metadata.get("staged_verification_enabled"),
         "risk_level": _optional_string(risk_decision.get("risk_level")),
         "action": _optional_string(risk_decision.get("action")),
@@ -290,7 +291,7 @@ def _load_trace_records_cache(
         return None
     if not isinstance(payload, Mapping):
         return None
-    if payload.get("schema_version") != 1:
+    if payload.get("schema_version") != 2:
         return None
     if payload.get("workflow") != "product_runtime_baseline_trace_records":
         return None
@@ -327,7 +328,7 @@ def _trace_records_cache_payload(
     policy: ProductRuntimeBudgetPolicy | None,
 ) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "workflow": "product_runtime_baseline_trace_records",
         "paths": {
             "trace_records_cache": (
@@ -493,6 +494,9 @@ def _aggregate_contexts(contexts: Sequence[Mapping[str, Any]]) -> dict[str, Any]
         "pre_generation_profile_requested_counts": _counts(
             context.get("pre_generation_profile_requested") for context in contexts
         ),
+        "max_verifier_route_attempts": _numeric_summary(
+            context.get("max_verifier_route_attempts") for context in contexts
+        ),
         "risk_level_counts": _counts(context.get("risk_level") for context in contexts),
         "action_counts": _counts(context.get("action") for context in contexts),
         "staged_verification_enabled_count": sum(1 for value in staged_values if _truthy_flag(value)),
@@ -645,6 +649,7 @@ def _optimization_recommendations(
     verified_claim_count_mean = _finite_float(_nested(summary, "verified_claim_count", "mean"))
     profiles = _mapping(summary.get("profiles"))
     profile_counts = _mapping(profiles.get("runtime_profile_counts"))
+    recommended_route_attempts = _recommended_max_verifier_route_attempts(summary)
     audit_rate = _count_rate(profile_counts, "audit")
     n_traces = _finite_float(summary.get("n_traces")) or 0.0
     top_phase_name = None if not phase_hotspots else str(phase_hotspots[0].get("phase"))
@@ -720,10 +725,19 @@ def _optimization_recommendations(
             evidence={
                 "route_budget_exhaustion_rate": route_budget_exhaustion_rate,
                 "target": 0.0,
+                "recommended_max_verifier_route_attempts": recommended_route_attempts,
             },
             suggested_action=(
-                "Inspect unattempted routes and move decisive cheap routes earlier before reducing "
-                "max_verifier_route_attempts further."
+                (
+                    "Raise max_verifier_route_attempts to at least "
+                    f"{recommended_route_attempts}, then inspect unattempted routes and move decisive "
+                    "cheap routes earlier."
+                )
+                if recommended_route_attempts is not None
+                else (
+                    "Inspect unattempted routes and move decisive cheap routes earlier before reducing "
+                    "max_verifier_route_attempts further."
+                )
             ),
         ))
 
@@ -862,6 +876,7 @@ def _optimization_policy_hints(
         _nested(summary, "routes", "overall", "route_budget_exhaustion_rate")
     )
     retrieval_use_rate = _finite_float(_nested(summary, "routes", "overall", "retrieval_use_rate"))
+    recommended_route_attempts = _recommended_max_verifier_route_attempts(summary)
     phase_p95_budget = {
         str(phase["phase"]): _with_headroom(phase.get("p95_seconds"))
         for phase in phase_hotspots[:3]
@@ -869,6 +884,9 @@ def _optimization_policy_hints(
     }
     return {
         "source": "observed_baseline_with_25_percent_headroom",
+        "candidate_control_defaults": {
+            "max_verifier_route_attempts": recommended_route_attempts,
+        },
         "candidate_runtime_budget_policy": {
             "max_total_seconds": _with_headroom(total_seconds_p95),
             "max_phase_p95_seconds": phase_p95_budget,
@@ -891,6 +909,19 @@ def _optimization_policy_hints(
             "run_product_runtime_profile_sweep.py",
         ),
     }
+
+
+def _recommended_max_verifier_route_attempts(summary: Mapping[str, Any]) -> int | None:
+    observed = _finite_float(_nested(summary, "profiles", "max_verifier_route_attempts", "max"))
+    if observed is None:
+        return None
+    route_budget_exhaustion_rate = _finite_float(
+        _nested(summary, "routes", "overall", "route_budget_exhaustion_rate")
+    )
+    recommended = math.ceil(observed)
+    if route_budget_exhaustion_rate is not None and route_budget_exhaustion_rate > 0.0:
+        recommended += 1
+    return max(1, recommended)
 
 
 def _recommendation(
