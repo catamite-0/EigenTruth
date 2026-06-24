@@ -36,6 +36,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     route_baseline_keys: Sequence[str] = ()
     required_route_baseline_keys: Sequence[str] = ()
     performance_baseline_key: str | None = None
+    selector_replay_report_path: Path | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
     release_report_path: Path | None = None
@@ -92,6 +93,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "route_registry_path", Path(self.route_registry_path))
         if self.performance_registry_path is not None:
             object.__setattr__(self, "performance_registry_path", Path(self.performance_registry_path))
+        if self.selector_replay_report_path is not None:
+            object.__setattr__(self, "selector_replay_report_path", Path(self.selector_replay_report_path))
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
         if self.release_report_path is not None:
@@ -159,6 +162,7 @@ def run_release_candidate_registry_workflow(
         required_route_baseline_keys=config.required_route_baseline_keys,
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
+        selector_replay_report_path=config.selector_replay_report_path,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         required_adapter_routes=config.required_adapter_routes,
         recursive=config.recursive,
@@ -242,6 +246,11 @@ def run_release_candidate_registry_workflow(
             "readiness_baseline_keys": tuple(config.readiness_baseline_keys),
             "route_baseline_keys": tuple(config.route_baseline_keys),
             "performance_baseline_key": config.performance_baseline_key,
+            "selector_replay_report": (
+                None
+                if config.selector_replay_report_path is None
+                else str(config.selector_replay_report_path)
+            ),
             "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
             "adapter_family_matrix": (
                 None
@@ -298,6 +307,7 @@ def _write_artifact_manifest(
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
+        "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
     artifacts.update({
@@ -351,6 +361,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
+    selector_replay = dict(candidate.get("selector_replay") or {})
+    selector_replay_recommended = dict(selector_replay.get("recommended") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -358,6 +370,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_readiness_status": decision.get("readiness_status"),
         "release_route_status": decision.get("route_status"),
         "release_performance_status": decision.get("performance_status"),
+        "release_selector_replay_status": decision.get("selector_replay_status"),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_runtime_profile": config.get("runtime_profile"),
@@ -366,6 +379,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_readiness_record": decision.get("recommended_readiness_record"),
         "recommended_route_record": decision.get("recommended_route_record"),
         "recommended_performance_baseline_record": decision.get("recommended_performance_baseline_record"),
+        "recommended_selector_replay_candidate": decision.get("recommended_selector_replay_candidate"),
         "required_adapter_routes": decision.get("required_adapter_routes"),
         "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
@@ -432,6 +446,26 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_runtime_retrieval_hit_count": verifier_route.get("runtime_retrieval_hit_count"),
         "recommended_route_claims_cache_hit_rate": verifier_route.get("claims_cache_hit_rate"),
         "recommended_route_verifier_trace_cache_hit_rate": verifier_route.get("verifier_trace_cache_hit_rate"),
+        "selector_replay_report": selector_replay.get("report_path"),
+        "selector_replay_recommended_policy_path": selector_replay.get("recommended_policy_path"),
+        "selector_replay_estimated_cost_units_mean": selector_replay_recommended.get(
+            "estimated_cost_units_mean"
+        ),
+        "selector_replay_observed_runtime_coverage_rate": selector_replay_recommended.get(
+            "observed_runtime_coverage_rate"
+        ),
+        "selector_replay_observed_runtime_delta_coverage_rate": selector_replay_recommended.get(
+            "observed_runtime_delta_coverage_rate"
+        ),
+        "selector_replay_observed_selected_total_seconds_mean": selector_replay_recommended.get(
+            "observed_selected_total_seconds_mean"
+        ),
+        "selector_replay_observed_selected_minus_original_seconds_mean": (
+            selector_replay_recommended.get("observed_selected_minus_original_seconds_mean")
+        ),
+        "selector_replay_observed_selected_to_original_ratio_mean": selector_replay_recommended.get(
+            "observed_selected_to_original_ratio_mean"
+        ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
@@ -462,6 +496,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "readiness_manifest": manifests.get("readiness_manifest"),
         "route_manifest": manifests.get("route_manifest"),
         "performance_manifest": manifests.get("performance_manifest"),
+        "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
     }
 
@@ -518,6 +553,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
         performance_baseline_key=args.performance_baseline_key,
+        selector_replay_report_path=(
+            None if args.selector_replay_report is None else Path(args.selector_replay_report)
+        ),
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         release_report_path=None if args.release_report_json is None else Path(args.release_report_json),
@@ -600,6 +638,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "becoming the selected product route; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
+    parser.add_argument("--selector-replay-report", default=None,
+                        help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

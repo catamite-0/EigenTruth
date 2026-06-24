@@ -4204,6 +4204,96 @@ def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
     assert candidate["manifests"]["performance_manifest"].endswith("artifact-manifest.json")
 
 
+def test_compare_release_candidates_can_require_selector_replay_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    selector_report = _write_selector_replay_report(
+        tmp_path / "selector-replay",
+        status="promote",
+        recommended_candidate="default",
+        delta_mean=-0.02,
+        ratio_mean=0.80,
+    )
+    blocked_selector_report = _write_selector_replay_report(
+        tmp_path / "blocked-selector-replay",
+        status="blocked",
+        recommended_candidate=None,
+        candidate_status="blocked",
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        selector_replay_report_path=selector_report,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        selector_replay_report_path=blocked_selector_report,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["selector_replay_status"] == "promote"
+    assert payload["decision"]["recommended_selector_replay_candidate"] == "default"
+    assert payload["selector_replay_gate"]["gate"]["passed"] is True
+    assert payload["selector_replay_gate"]["recommended"]["observed_selected_minus_original_seconds_mean"] == (
+        pytest.approx(-0.02)
+    )
+    candidate = payload["release_candidate"]
+    assert candidate["selector_replay"]["recommended_candidate"] == "default"
+    assert candidate["selector_replay"]["recommended"]["observed_selected_to_original_ratio_mean"] == (
+        pytest.approx(0.80)
+    )
+    assert candidate["manifests"]["selector_replay_manifest"].endswith("artifact-manifest.json")
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "selector_replay"
+    assert any(
+        "selector replay status is 'blocked'" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -5028,6 +5118,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         inside_trigger_budget_id="top_0p4",
         inside_trigger_budget_policy="cost_first",
     )
+    selector_replay_report = _write_selector_replay_report(
+        tmp_path / "selector-replay",
+        status="promote",
+        recommended_candidate="default",
+        delta_mean=-0.02,
+        ratio_mean=0.80,
+    )
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
 
     payload = module.run_release_candidate_registry_workflow(
@@ -5041,6 +5138,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             artifact_manifest_path=tmp_path / "release-manifest.json",
             verification_report_path=tmp_path / "release-verification.json",
             performance_baseline_key="performance_baseline:qwen-performance:0.6",
+            selector_replay_report_path=selector_replay_report,
             route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
             required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
             adapter_family_matrix_path=adapter_family_matrix_path,
@@ -5073,11 +5171,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "release_candidate_report",
         "required_route_manifest_1",
         "route_manifest",
+        "selector_replay_manifest",
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
     assert manifest["metadata"]["release_candidate_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile"] == "balanced"
     assert manifest["metadata"]["release_performance_status"] == "promote"
+    assert manifest["metadata"]["release_selector_replay_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
@@ -5089,6 +5189,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
+    assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -5108,6 +5209,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["recommended_inside_trigger_budget_derive_from_max_budget"] is True
     assert manifest["metadata"]["performance_manifest"].endswith("performance/artifact-manifest.json")
+    assert manifest["metadata"]["selector_replay_manifest"].endswith("selector-replay/artifact-manifest.json")
+    assert manifest["metadata"]["selector_replay_observed_selected_minus_original_seconds_mean"] == pytest.approx(
+        -0.02
+    )
+    assert manifest["metadata"]["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
@@ -5120,6 +5226,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
+    assert payload["config"]["selector_replay_report"] == str(selector_replay_report)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
@@ -5142,6 +5249,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
+    assert record.metadata["recommended_selector_replay_candidate"] == "default"
+    assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
@@ -5709,6 +5818,79 @@ def _write_performance_baseline_record(
         },
     ).save_json()
     return manifest_path
+
+
+def _write_selector_replay_report(
+    output_dir,
+    *,
+    status,
+    recommended_candidate,
+    candidate_status="promote",
+    delta_mean=0.0,
+    ratio_mean=1.0,
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    policy_path = output_dir / "default-policy.json"
+    report_path = output_dir / "runtime-profile-selector-replay.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    policy_path.write_text(json.dumps({}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    leaderboard = [
+        {
+            "candidate": "default",
+            "status": candidate_status,
+            "policy_path": str(policy_path),
+            "estimated_cost_units_mean": 1.0,
+            "observed_runtime_coverage_rate": 1.0,
+            "observed_selected_total_seconds_mean": 0.10,
+            "observed_selected_total_seconds_p95": 0.12,
+            "observed_runtime_delta_coverage_rate": 1.0,
+            "observed_selected_minus_original_seconds_mean": delta_mean,
+            "observed_selected_to_original_ratio_mean": ratio_mean,
+            "changed_rate": 0.25,
+            "blocked": candidate_status == "blocked",
+        }
+    ]
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "runtime_profile_selector_replay",
+        "status": status,
+        "decision": {
+            "status": status,
+            "recommended_candidate": recommended_candidate,
+            "recommended_policy_path": None if recommended_candidate is None else str(policy_path),
+            "blocking_reasons": () if status == "promote" else ("selector replay blocked",),
+        },
+        "leaderboard": leaderboard,
+        "candidates": [],
+        "paths": {
+            "report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "runtime_profile_selector_replay_report": report_path,
+                    "default_selector_policy": policy_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_runtime_profile_selector_replay",
+                    "status": status,
+                    "recommended_candidate": recommended_candidate,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
 
 
 def _write_fake_readiness_report(output_dir, *, status, runtime_status):

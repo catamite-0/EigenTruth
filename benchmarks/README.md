@@ -1144,6 +1144,7 @@ python benchmarks/compare_release_candidates.py \
   --route-registry artifacts/registry.json \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --selector-replay-report artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -1188,6 +1189,13 @@ and fails closed when layer, batch size, capture mode, token budget, prefix cach
 worker count, trigger budget, trigger policy, or best quality signal differ from
 the readiness-selected runtime. Omit `--performance-registry` when the
 performance record lives in the readiness registry.
+Add `--selector-replay-report` when the final candidate must also include a
+promoted runtime-profile selector replay over saved `ProductTrace` payloads.
+The gate verifies the replay artifact manifest, requires `status=promote`, and
+carries the recommended selector plus observed selected-vs-original runtime
+delta metrics into the release candidate. This makes request-time auto-profile
+changes part of the same fail-closed release evidence instead of a separate
+benchmark note.
 Add `--adapter-family-matrix` when release should also require a promoted
 adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
 `--required-adapter-route` for routes that must be present and promoted in that
@@ -1217,9 +1225,10 @@ without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
-`--required-route-baseline-key` option and includes those route manifests in the
-final release-candidate manifest when the gate promotes. Required-route budget
-settings are also copied into manifest metadata as `required_route_budget_policy`.
+`--required-route-baseline-key` and `--selector-replay-report` options and
+includes those route/selector manifests in the final release-candidate manifest
+when the gate promotes. Required-route budget settings are also copied into
+manifest metadata as `required_route_budget_policy`.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \

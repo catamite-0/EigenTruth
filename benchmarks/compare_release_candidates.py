@@ -30,6 +30,7 @@ def compare_release_candidates(
     required_route_baseline_keys: Sequence[str] = (),
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
+    selector_replay_report_path: str | Path | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
     recursive: bool = True,
@@ -164,9 +165,22 @@ def compare_release_candidates(
         allow_unverified=allow_unverified,
         candidate=raw_candidate,
     )
-    decision = _decision(readiness, route, raw_candidate, performance, adapter_family, required_routes)
+    selector_replay = _selector_replay_gate(
+        selector_replay_report_path=selector_replay_report_path,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+    )
+    decision = _decision(
+        readiness,
+        route,
+        raw_candidate,
+        performance,
+        adapter_family,
+        required_routes,
+        selector_replay,
+    )
     candidate = (
-        _candidate_with_gates(raw_candidate, performance, adapter_family, required_routes)
+        _candidate_with_gates(raw_candidate, performance, adapter_family, required_routes, selector_replay)
         if decision["status"] == "promote"
         else None
     )
@@ -181,6 +195,9 @@ def compare_release_candidates(
             "route_baseline_keys": list(route_baseline_keys),
             "required_route_baseline_keys": list(required_route_baseline_keys),
             "performance_baseline_key": performance_baseline_key,
+            "selector_replay_report": (
+                None if selector_replay_report_path is None else str(selector_replay_report_path)
+            ),
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
             "recursive": recursive,
@@ -229,6 +246,7 @@ def compare_release_candidates(
         "route_baseline_comparison": route,
         "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
+        "selector_replay_gate": selector_replay,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
@@ -355,6 +373,7 @@ def _decision(
     performance: Mapping[str, Any] | None = None,
     adapter_family: Mapping[str, Any] | None = None,
     required_routes: Mapping[str, Any] | None = None,
+    selector_replay: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
     route_decision = _mapping(route.get("decision"))
@@ -366,6 +385,8 @@ def _decision(
     adapter_family_status = None if adapter_family is None else adapter_family.get("status")
     required_routes_gate = _mapping(None if required_routes is None else required_routes.get("gate"))
     required_route_status = None if required_routes is None else required_routes.get("status")
+    selector_replay_gate = _mapping(None if selector_replay is None else selector_replay.get("gate"))
+    selector_replay_status = None if selector_replay is None else selector_replay.get("status")
     blocking_reasons = []
     if readiness_status != "promote":
         blocking_reasons.append({
@@ -397,6 +418,12 @@ def _decision(
             "status": required_route_status,
             "reasons": list(required_routes_gate.get("blocking_reasons", ())),
         })
+    if selector_replay is not None and selector_replay_gate.get("passed") is not True:
+        blocking_reasons.append({
+            "gate": "selector_replay",
+            "status": selector_replay_status,
+            "reasons": list(selector_replay_gate.get("blocking_reasons", ())),
+        })
     if candidate is None and not blocking_reasons:
         blocking_reasons.append({
             "gate": "release_candidate",
@@ -413,6 +440,7 @@ def _decision(
         "performance_status": performance_status,
         "adapter_family_status": adapter_family_status,
         "required_route_baseline_status": required_route_status,
+        "selector_replay_status": selector_replay_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
         "recommended_performance_baseline_record": (
@@ -427,6 +455,11 @@ def _decision(
             ()
             if required_routes is None or required_routes_gate.get("passed") is not True
             else tuple(required_routes.get("required_keys", ()))
+        ),
+        "recommended_selector_replay_candidate": (
+            None
+            if selector_replay is None or selector_replay_gate.get("passed") is not True
+            else selector_replay.get("recommended_candidate")
         ),
         "recommended_model": None if candidate is None else candidate.get("model"),
         "recommended_route": None if candidate is None else _mapping(candidate.get("verifier_route")).get("route"),
@@ -664,6 +697,128 @@ def _performance_baseline_gate(
     }
 
 
+def _selector_replay_gate(
+    *,
+    selector_replay_report_path: str | Path | None,
+    recursive: bool,
+    allow_unverified: bool,
+) -> dict[str, Any] | None:
+    if selector_replay_report_path is None:
+        return None
+    report_path = Path(selector_replay_report_path)
+    report, report_error = _load_optional_json(report_path)
+    manifest_path = _selector_replay_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        artifact_name="selector_replay_manifest",
+    )
+    recommended = _selector_replay_recommended_row(report)
+    gate = _selector_replay_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        recommended=recommended,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "recommended_candidate": _nested(report, "decision", "recommended_candidate"),
+        "recommended_policy_path": _nested(report, "decision", "recommended_policy_path"),
+        "recommended": _selector_replay_summary(recommended),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _selector_replay_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    recommended: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"selector replay report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("selector replay artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("selector replay manifest verification failed")
+    if report.get("status") != "promote":
+        failures.append(f"selector replay status is {report.get('status')!r}, expected 'promote'")
+    if _nested(report, "decision", "recommended_candidate") is None:
+        failures.append("selector replay recommended candidate is missing")
+    if not recommended:
+        failures.append("selector replay recommended candidate is missing from leaderboard")
+    elif recommended.get("status") == "blocked" or bool(recommended.get("blocked")):
+        failures.append(
+            f"selector replay recommended candidate status is {recommended.get('status')!r}, expected promoted"
+        )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _selector_replay_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _selector_replay_recommended_row(report: Mapping[str, Any]) -> dict[str, Any]:
+    recommended_candidate = _nested(report, "decision", "recommended_candidate")
+    if recommended_candidate is None:
+        return {}
+    for row in report.get("leaderboard", ()):
+        row_map = _mapping(row)
+        if row_map.get("candidate") == recommended_candidate:
+            return row_map
+    return {}
+
+
+def _selector_replay_summary(row: Mapping[str, Any]) -> dict[str, Any]:
+    if not row:
+        return {}
+    return {
+        "candidate": row.get("candidate"),
+        "status": row.get("status"),
+        "policy_path": row.get("policy_path"),
+        "estimated_cost_units_mean": _float_or_none(row.get("estimated_cost_units_mean")),
+        "observed_runtime_coverage_rate": _float_or_none(row.get("observed_runtime_coverage_rate")),
+        "observed_selected_total_seconds_mean": _float_or_none(
+            row.get("observed_selected_total_seconds_mean")
+        ),
+        "observed_selected_total_seconds_p95": _float_or_none(
+            row.get("observed_selected_total_seconds_p95")
+        ),
+        "observed_runtime_delta_coverage_rate": _float_or_none(
+            row.get("observed_runtime_delta_coverage_rate")
+        ),
+        "observed_selected_minus_original_seconds_mean": _float_or_none(
+            row.get("observed_selected_minus_original_seconds_mean")
+        ),
+        "observed_selected_to_original_ratio_mean": _float_or_none(
+            row.get("observed_selected_to_original_ratio_mean")
+        ),
+        "changed_rate": _float_or_none(row.get("changed_rate")),
+    }
+
+
 def _performance_gate(
     *,
     verification: Mapping[str, Any],
@@ -814,13 +969,26 @@ def _verify_performance_manifest(
     *,
     recursive: bool,
 ) -> dict[str, Any]:
+    return _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        artifact_name="performance_baseline_manifest",
+    )
+
+
+def _verify_artifact_manifest(
+    manifest_path: Path | None,
+    *,
+    recursive: bool,
+    artifact_name: str,
+) -> dict[str, Any]:
     if manifest_path is None:
         return {
             "manifest_path": None,
             "passed": False,
             "checked": 0,
             "failures": [{
-                "name": "performance_baseline_manifest",
+                "name": artifact_name,
                 "path": "",
                 "field": "path",
                 "expected": "artifact manifest path",
@@ -836,7 +1004,7 @@ def _verify_performance_manifest(
             "passed": False,
             "checked": 0,
             "failures": [{
-                "name": "performance_baseline_manifest",
+                "name": artifact_name,
                 "path": str(manifest_path),
                 "field": "load",
                 "expected": "readable artifact manifest",
@@ -851,6 +1019,7 @@ def _candidate_with_gates(
     performance: Mapping[str, Any] | None,
     adapter_family: Mapping[str, Any] | None,
     required_routes: Mapping[str, Any] | None,
+    selector_replay: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
         return None
@@ -882,6 +1051,15 @@ def _candidate_with_gates(
         }
         for idx, manifest_path in enumerate(required_manifest_paths, start=1):
             manifests[f"required_route_manifest_{idx}"] = manifest_path
+    if selector_replay is not None:
+        payload["selector_replay"] = {
+            "report_path": selector_replay.get("report_path"),
+            "manifest_path": selector_replay.get("manifest_path"),
+            "recommended_candidate": selector_replay.get("recommended_candidate"),
+            "recommended_policy_path": selector_replay.get("recommended_policy_path"),
+            "recommended": _mapping(selector_replay.get("recommended")),
+        }
+        manifests["selector_replay_manifest"] = selector_replay.get("manifest_path")
     payload["manifests"] = manifests
     return payload
 
@@ -951,6 +1129,15 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
 def _apply_runtime_profile(
     runtime_profile: str | None,
     values: Mapping[str, Any],
@@ -996,6 +1183,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
+        selector_replay_report_path=args.selector_replay_report,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         recursive=not args.no_recursive,
@@ -1049,7 +1237,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "release_candidate_comparison="
         f"{decision['status']} readiness={decision.get('recommended_readiness_record')} "
         f"route={decision.get('recommended_route_record')} "
-        f"performance={decision.get('recommended_performance_baseline_record')}"
+        f"performance={decision.get('recommended_performance_baseline_record')} "
+        f"selector_replay={decision.get('recommended_selector_replay_candidate')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -1076,6 +1265,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "becoming the selected product route; repeatable")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
+    parser.add_argument("--selector-replay-report", default=None,
+                        help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],
