@@ -191,6 +191,13 @@ def _recommendation(
         "quality_signals": quality["signals"],
         "best_quality_signal": quality["best"],
     }
+    covariance_tradeoff = _covariance_tradeoff_summary(
+        matrix_report,
+        matrix_recommended,
+        matrix_report_path=matrix_report_path,
+    )
+    if covariance_tradeoff is not None:
+        recommendation["covariance_tradeoff"] = covariance_tradeoff
     if eval_reps_shard_read_cache_size is not None:
         recommendation["eval_reps_shard_read_cache_size"] = eval_reps_shard_read_cache_size
     cache_tuning = _cache_tuning_recommendation(matrix_recommended, matrix_report)
@@ -231,6 +238,145 @@ def _runtime_totals(matrix_recommended: Mapping[str, Any]) -> dict[str, Any]:
             uncached.get("forced_answer_forward_seconds"),
         ),
     }
+
+
+def _covariance_tradeoff_summary(
+    matrix_report: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+    *,
+    matrix_report_path: str | Path | None,
+) -> dict[str, Any] | None:
+    cells = matrix_report.get("cells")
+    if not isinstance(cells, Sequence) or isinstance(cells, str):
+        return None
+    comparable = [
+        _covariance_tradeoff_row(cell, matrix_report_path=matrix_report_path)
+        for cell in cells
+        if _same_non_covariance_runtime(_mapping(cell), matrix_recommended)
+    ]
+    comparable = [row for row in comparable if row]
+    if len(comparable) < 2:
+        return None
+
+    comparable.sort(key=lambda row: (
+        str(row["covariance_mode"]),
+        int(row["covariance_low_rank"]),
+        str(row["cell_id"]),
+    ))
+    selected_cell = matrix_recommended.get("id")
+    selected = next((row for row in comparable if row["cell_id"] == selected_cell), None)
+    baseline = next((row for row in comparable if row["covariance_mode"] == "full"), comparable[0])
+    fastest = min(
+        comparable,
+        key=lambda row: (
+            math.inf if row["cache_only_total_seconds"] is None else float(row["cache_only_total_seconds"]),
+            str(row["cell_id"]),
+        ),
+    )
+    best_maha = max(
+        comparable,
+        key=lambda row: (
+            -math.inf if row["maha_last_auroc"] is None else float(row["maha_last_auroc"]),
+            str(row["cell_id"]),
+        ),
+    )
+    baseline_cache = _float_or_none(baseline.get("cache_only_total_seconds"))
+    baseline_maha = _float_or_none(baseline.get("maha_last_auroc"))
+    for row in comparable:
+        row_cache = _float_or_none(row.get("cache_only_total_seconds"))
+        row_maha = _float_or_none(row.get("maha_last_auroc"))
+        row["cache_only_delta_vs_baseline"] = (
+            None if baseline_cache is None or row_cache is None else row_cache - baseline_cache
+        )
+        row["cache_only_speedup_vs_baseline"] = (
+            None if baseline_cache is None or row_cache is None or row_cache <= 0 else baseline_cache / row_cache
+        )
+        row["maha_last_delta_vs_baseline"] = (
+            None if baseline_maha is None or row_maha is None else row_maha - baseline_maha
+        )
+
+    selected_maha_delta = None if selected is None else _float_or_none(selected.get("maha_last_delta_vs_baseline"))
+    if selected is None:
+        status = "no_selected_candidate"
+    elif selected_maha_delta is None:
+        status = "no_maha_last_data"
+    elif selected_maha_delta < -0.02:
+        status = "speed_quality_tradeoff"
+    else:
+        status = "quality_preserved"
+
+    notes = []
+    if status == "speed_quality_tradeoff":
+        notes.append(
+            "selected covariance mode is fastest for cache-only replay but lowers maha_last AUROC versus full"
+        )
+        notes.append("prefer full or a low_rank candidate when calibrated maha_last is part of the deployment signal")
+    return {
+        "status": status,
+        "baseline_cell": baseline["cell_id"],
+        "baseline_covariance_mode": baseline["covariance_mode"],
+        "baseline_covariance_low_rank": baseline["covariance_low_rank"],
+        "selected_cell": None if selected is None else selected["cell_id"],
+        "fastest_cell": fastest["cell_id"],
+        "best_maha_last_cell": best_maha["cell_id"],
+        "candidate_count": len(comparable),
+        "notes": notes,
+        "candidates": comparable,
+    }
+
+
+def _covariance_tradeoff_row(
+    cell: Any,
+    *,
+    matrix_report_path: str | Path | None,
+) -> dict[str, Any]:
+    cell_map = _mapping(cell)
+    if not cell_map:
+        return {}
+    quality_signals, _ = _quality_signals_from_cell(cell_map, matrix_report_path=matrix_report_path)
+    totals = _runtime_totals(cell_map)
+    return {
+        "cell_id": cell_map.get("id"),
+        "covariance_mode": str(cell_map.get("covariance_mode", "full")),
+        "covariance_low_rank": _int_or_none(cell_map.get("covariance_low_rank")) or 16,
+        "cache_only_total_seconds": _float_or_none(totals.get("cache_only_total_seconds")),
+        "uncached_forced_answer_forward_seconds": _float_or_none(
+            totals.get("uncached_forced_answer_forward_seconds")
+        ),
+        "maha_last_auroc": _float_or_none(quality_signals.get("maha_last")),
+        "truth_proj_auroc": _float_or_none(quality_signals.get("truth_proj")),
+        "best_quality_signal": _best_quality_signal(quality_signals),
+    }
+
+
+def _same_non_covariance_runtime(
+    cell: Mapping[str, Any],
+    matrix_recommended: Mapping[str, Any],
+) -> bool:
+    for key in (
+        "layer",
+        "batch_size",
+        "hidden_state_capture",
+        "max_batch_tokens",
+        "prefix_kv_cache",
+        "eval_reps_shard_read_cache_size",
+    ):
+        if _first_present(cell.get(key), _default_runtime_dimension(key)) != _first_present(
+            matrix_recommended.get(key),
+            _default_runtime_dimension(key),
+        ):
+            return False
+    return True
+
+
+def _default_runtime_dimension(key: str) -> Any:
+    if key == "max_batch_tokens":
+        return 0
+    if key == "prefix_kv_cache":
+        return False
+    if key == "eval_reps_shard_read_cache_size":
+        return 2
+    return None
 
 
 def _cache_tuning_recommendation(

@@ -10744,6 +10744,79 @@ def test_runtime_config_recommendation_preserves_covariance_mode():
     ]
 
 
+def test_runtime_config_recommendation_reports_covariance_tradeoff():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+
+    def cell(cell_id, mode, rank, cache_only, maha_last, truth_proj=0.83):
+        return {
+            "id": cell_id,
+            "layer": -12,
+            "batch_size": 4,
+            "hidden_state_capture": "outputs",
+            "covariance_mode": mode,
+            "covariance_low_rank": rank,
+            "max_batch_tokens": 512,
+            "prefix_kv_cache": False,
+            "eval_reps_shard_read_cache_size": 2,
+            "summary": {
+                "quality_signals": {
+                    "maha_last": maha_last,
+                    "truth_proj": truth_proj,
+                },
+                "totals": {
+                    "cache_only": {"total_seconds": cache_only},
+                    "uncached": {"forced_answer_forward_seconds": 18.0},
+                },
+            },
+        }
+
+    matrix_report = {
+        "config": {"max_workers": 1, "length_bucketed_batches": False},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m12_batch_4_capture_outputs_cov_diag",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 3,
+            "checked_cell_count": 3,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m12_batch_4_capture_outputs_cov_diag",
+                "layer": -12,
+                "batch_size": 4,
+                "hidden_state_capture": "outputs",
+                "covariance_mode": "diag",
+                "covariance_low_rank": 4,
+                "max_batch_tokens": 512,
+                "prefix_kv_cache": False,
+                "eval_reps_shard_read_cache_size": 2,
+                "cache_only_total_seconds": 0.15,
+                "truth_proj_auroc": 0.83,
+            },
+        },
+        "cells": [
+            cell("layer_m12_batch_4_capture_outputs_cov_full", "full", 4, 0.21, 0.61),
+            cell("layer_m12_batch_4_capture_outputs_cov_diag", "diag", 4, 0.15, 0.50),
+            cell("layer_m12_batch_4_capture_outputs_cov_low_rank_8", "low_rank", 8, 0.20, 0.60),
+        ],
+    }
+
+    report = module.build_runtime_recommendation(matrix_report)
+
+    tradeoff = report["recommendation"]["covariance_tradeoff"]
+    assert tradeoff["status"] == "speed_quality_tradeoff"
+    assert tradeoff["baseline_cell"] == "layer_m12_batch_4_capture_outputs_cov_full"
+    assert tradeoff["selected_cell"] == "layer_m12_batch_4_capture_outputs_cov_diag"
+    assert tradeoff["fastest_cell"] == "layer_m12_batch_4_capture_outputs_cov_diag"
+    assert tradeoff["best_maha_last_cell"] == "layer_m12_batch_4_capture_outputs_cov_full"
+    selected = next(
+        item for item in tradeoff["candidates"]
+        if item["cell_id"] == "layer_m12_batch_4_capture_outputs_cov_diag"
+    )
+    assert selected["cache_only_speedup_vs_baseline"] == pytest.approx(1.4)
+    assert selected["maha_last_delta_vs_baseline"] == pytest.approx(-0.11)
+    assert any("maha_last" in note for note in tradeoff["notes"])
+
+
 def test_runtime_config_recommendation_uses_cell_read_cache_size():
     module = importlib.import_module("benchmarks.recommend_runtime_config")
     matrix_report = {

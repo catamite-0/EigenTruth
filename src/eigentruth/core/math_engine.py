@@ -315,7 +315,11 @@ class TruthManifold:
 
     def is_ready(self) -> bool:
         """流形至少经过 2 个样本后方可使用。"""
-        return self.n >= 2 and self.mean is not None and self._M2 is not None
+        if self.n < 2 or self.mean is None:
+            return False
+        if self.covariance_mode == "diag":
+            return self._M2_diag is not None
+        return self._M2 is not None
 
     def save(self, path: Union[str, Path]) -> None:
         """将流形序列化到磁盘。

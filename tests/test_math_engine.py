@@ -433,7 +433,7 @@ class TestTruthManifold:
         assert torch.allclose(m2.false_mean, m.false_mean)
         assert torch.allclose(m2.contrastive_direction, m.contrastive_direction)
 
-    def test_diag_covariance_mode_avoids_full_scatter_and_matches_manual_distance(self):
+    def test_diag_covariance_mode_avoids_full_scatter_and_matches_manual_distance(self, tmp_path):
         """diag 模式只保存对角散布，距离与手工对角精度一致。"""
         torch.manual_seed(101)
         d = 10
@@ -442,6 +442,7 @@ class TestTruthManifold:
         for sample in samples:
             m.update(sample)
 
+        assert m.is_ready()
         assert m._M2 is None  # noqa: SLF001 - verifies memory-saving mode.
         assert m._M2_diag is not None  # noqa: SLF001
         probe = torch.randn(d)
@@ -452,6 +453,13 @@ class TestTruthManifold:
 
         assert torch.isclose(m.mahalanobis_distance(probe), expected, atol=1e-6)
         assert m.cov_inv.shape == (d, d)  # legacy dense property remains available.
+
+        loaded_path = tmp_path / "diag_manifold.pt"
+        m.save(loaded_path)
+        loaded = TruthManifold.load(loaded_path)
+        assert loaded.is_ready()
+        assert loaded._M2 is None  # noqa: SLF001
+        assert loaded._M2_diag is not None  # noqa: SLF001
 
     def test_low_rank_covariance_mode_is_finite_and_roundtrips(self, tmp_path):
         """low_rank 模式产生有限距离，并保留序列化配置。"""

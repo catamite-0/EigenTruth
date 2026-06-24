@@ -2331,6 +2331,16 @@ semantics. Runtime recommendations include the selected covariance flags, and
 thresholds/calibration artifacts should be regenerated for the selected mode.
 Use the default `triplet` matrix mode for covariance sweeps; `rescore` is kept
 for cache-only variants that share the same layer-stats scoring semantics.
+Runtime recommendations also include `recommendation.covariance_tradeoff` when
+the matrix compares covariance candidates. A small real SmolLM2 l8 CPU sweep
+(`layer=-12`, `batch_size=4`, `max_batch_tokens=512`, `limit=8`,
+`manifold_questions=4`) selected `diag` by cache-only replay time (`0.156s`
+versus `0.211s` for `full`) but marked `speed_quality_tradeoff` because
+`maha_last` AUROC dropped from `0.614` to `0.500`. `low_rank` with rank 8 kept
+`maha_last` close to `full` (`0.610`) with cache-only replay `0.197s`. Treat
+`diag` as a latency/memory candidate only when `maha_last` is not the deployed
+calibrated signal; prefer `full` or validated `low_rank` when `maha_last`
+quality matters.
 Use `--max-workers` to run independent matrix cells concurrently. The default is
 `1` for fully serial/reproducible local runs. Matrix reports include
 `execution.wall_clock_seconds` plus per-cell `execution_seconds`, so worker-count
@@ -2376,7 +2386,8 @@ python benchmarks/recommend_runtime_config.py \
 The recommendation records the selected layer, batch size, hidden-state capture
 mode, covariance mode/rank, padded-token budget, prefix-KV mode, worker count,
 all finite AUROC quality signals from the promoted cell, optional promoted
-INSIDE sampling settings, the best quality signal, and cache-tuning advice when the promoted
+INSIDE sampling settings, the best quality signal, covariance tradeoff details
+when covariance candidates were swept, and cache-tuning advice when the promoted
 cell's eval-reps cache efficiency shows low shard-cache hit rate, high
 cross-shard read rate, or tiny cache read ranges. With `--inside-sampling-report`, the
 recommended sampling run must pass its sample-efficiency gate and expose a
