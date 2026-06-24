@@ -1398,8 +1398,9 @@ without changing gate semantics. The workflow also shares one JSON artifact
 cache and its stats across compare, manifest build, and promotion verification,
 so `artifact_cache.artifact_json_cache` reflects cache reuse from the full
 release gate. Add `--artifact-json-cache` to persist that JSON cache across
-repeated local release checks; stale entries are keyed by path signatures and
-ignored when artifacts change. Add `--manifest-fingerprint-workers N` when large local
+repeated local release checks; stale entries are keyed by path signatures,
+ignored when artifacts change, and pruned for the same path on save. Add
+`--manifest-fingerprint-workers N` when large local
 manifests spend meaningful time hashing independent artifacts; the default is
 `1`, so existing release checks remain serial unless explicitly configured.
 

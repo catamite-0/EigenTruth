@@ -457,7 +457,11 @@ def load_and_verify_artifact_manifest(
     if json_cache is None and json_cache_stats is None:
         manifest = json.loads(path.read_text(encoding="utf-8"))
     else:
-        manifest, error = load_json_object(path, json_cache=json_cache, json_cache_stats=json_cache_stats)
+        manifest, error = load_json_object(
+            path,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
         if error is not None:
             raise ValueError(f"artifact manifest could not be loaded: {path}: {error}")
     return verify_artifact_manifest(
@@ -760,14 +764,16 @@ def save_json_cache(
     cache: Mapping[str, Mapping[str, Any]],
     *,
     compact: bool = False,
+    prune_stale: bool = True,
 ) -> None:
     """Persist a JSON artifact cache."""
     if path is None:
         return
     cache_path = Path(path)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
+    entries = _prune_json_cache_entries(cache.items()) if prune_stale else tuple(cache.items())
     payload = {}
-    for key, value in sorted(cache.items()):
+    for key, value in sorted(entries):
         cached_payload = value.get("payload", {})
         payload[str(key)] = {
             "payload": copy.deepcopy(dict(cached_payload)) if isinstance(cached_payload, Mapping) else {},
@@ -778,6 +784,37 @@ def save_json_cache(
     else:
         text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     cache_path.write_text(text, encoding="utf-8")
+
+
+def _prune_json_cache_entries(
+    entries: Sequence[tuple[str, Mapping[str, Any]]],
+) -> tuple[tuple[str, Mapping[str, Any]], ...]:
+    latest_by_path: dict[str, tuple[str, Mapping[str, Any]]] = {}
+    unparsed: list[tuple[str, Mapping[str, Any]]] = []
+    for key, value in entries:
+        path = _json_cache_path_from_key(str(key))
+        if path is None:
+            unparsed.append((str(key), value))
+            continue
+        latest_by_path[path] = (str(key), value)
+    return tuple(unparsed) + tuple(latest_by_path.values())
+
+
+def _json_cache_path_from_key(key: str) -> str | None:
+    parts = key.rsplit(":", 5)
+    if len(parts) != 6:
+        return None
+    path, size, mtime_ns, ctime_ns, inode, sample_digest = parts
+    if not path or not sample_digest:
+        return None
+    try:
+        int(size)
+        int(mtime_ns)
+        int(ctime_ns)
+        int(inode)
+    except ValueError:
+        return None
+    return path
 
 
 def _fingerprint_cache_key(path: Path, *, kind: str, signature: str = "") -> str:

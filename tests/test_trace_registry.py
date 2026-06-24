@@ -463,6 +463,29 @@ def test_persisted_json_cache_reuses_unchanged_object(tmp_path, monkeypatch):
     assert load_json_cache(tmp_path / "missing-json-cache.json") == {}
 
 
+def test_save_json_cache_prunes_stale_same_path_signatures(tmp_path):
+    cache_path = tmp_path / "json-cache.json"
+    data_path = tmp_path / "payload.json"
+    old_key = f"{data_path}:16:1:1:100:old"
+    latest_key = f"{data_path}:16:2:2:100:latest"
+    unrelated_key = f"{tmp_path / 'other.json'}:16:1:1:200:other"
+
+    save_json_cache(
+        cache_path,
+        {
+            old_key: {"payload": {"score": 1}, "error": None},
+            unrelated_key: {"payload": {"score": 3}, "error": None},
+            latest_key: {"payload": {"score": 2}, "error": None},
+        },
+    )
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+
+    assert old_key not in payload
+    assert payload[latest_key]["payload"] == {"score": 2}
+    assert payload[unrelated_key]["payload"] == {"score": 3}
+    assert len(payload) == 2
+
+
 def test_json_cache_returns_isolated_nested_payload_copies(tmp_path):
     data_path = tmp_path / "nested.json"
     data_path.write_text(
