@@ -45,10 +45,13 @@ from eigentruth.control.runtime_budget import (
 from eigentruth.control.runtime_profiles import (
     RUNTIME_PROFILE_NAMES,
     RUNTIME_PROFILES,
+    PreGenerationRiskAssessment,
+    PreGenerationRiskPolicy,
     RuntimeProfile,
     RuntimeProfileSelection,
     RuntimeProfileSelectorPolicy,
     get_runtime_profile,
+    select_pre_generation_profile,
     select_runtime_profile,
 )
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
@@ -81,6 +84,8 @@ __all__ = [
     "ProductPromotionContract",
     "ProductRuntimeEvidenceBundle",
     "ProductRuntimeBudgetPolicy",
+    "PreGenerationRiskAssessment",
+    "PreGenerationRiskPolicy",
     "RuntimePhaseTiming",
     "RuntimeProfile",
     "RuntimeProfileSelectorPolicy",
@@ -102,5 +107,6 @@ __all__ = [
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "run_verification_loop",
+    "select_pre_generation_profile",
     "select_runtime_profile",
 ]

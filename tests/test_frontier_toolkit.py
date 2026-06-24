@@ -42,6 +42,8 @@ from eigentruth.control import (
     DryRunActionExecutor,
     InMemoryActionExecutionLedger,
     PolicyGuardedActionExecutor,
+    PreGenerationRiskAssessment,
+    PreGenerationRiskPolicy,
     RiskController,
     RiskDecision,
     RiskLevel,
@@ -50,6 +52,7 @@ from eigentruth.control import (
     RuntimeProfileSelectorPolicy,
     TimeoutActionExecutor,
     get_runtime_profile,
+    select_pre_generation_profile,
     select_runtime_profile,
 )
 from eigentruth.core import TruthSubspace
@@ -242,6 +245,62 @@ def test_runtime_profile_selector_policy_roundtrip_and_routes():
     assert policy.to_dict()["sensitive_claim_feature_flags"] == ("has_citation",)
     with pytest.raises(ValueError, match="high_risk_levels"):
         RuntimeProfileSelectorPolicy(high_risk_levels=("bad",))
+
+
+def test_select_pre_generation_profile_routes_prompt_risk():
+    low = select_pre_generation_profile("Explain why warmup examples help calibration.")
+    current = select_pre_generation_profile("What is the latest price of BTC today?")
+    calculation = select_pre_generation_profile("Calculate 42 / 7 and explain the result.")
+    domain_state = select_pre_generation_profile(
+        "Can this order ship from inventory?",
+        metadata={"requires_domain_state": True},
+    )
+
+    assert isinstance(low, PreGenerationRiskAssessment)
+    assert low.selected_profile == "latency"
+    assert low.risk_level == "low"
+    assert low.triggered_features == ()
+    assert current.selected_profile == "audit"
+    assert current.risk_level == "high"
+    assert current.triggered_features == ("requires_retrieval", "is_time_sensitive")
+    assert current.prompt_features["has_number"] is False
+    assert calculation.selected_profile == "balanced"
+    assert calculation.risk_level == "medium"
+    assert calculation.triggered_features == ("has_number", "has_calculation")
+    assert domain_state.selected_profile == "audit"
+    assert domain_state.triggered_features == ("requires_domain_state",)
+    assert domain_state.triggered_metadata == ("requires_domain_state",)
+
+
+def test_pre_generation_risk_policy_roundtrip_and_bool_metadata():
+    policy = PreGenerationRiskPolicy.from_mapping({
+        "high_risk_profile": "balanced",
+        "high_risk_metadata_keys": ["needs_audit"],
+        "medium_risk_feature_flags": ["has_citation"],
+    })
+
+    disabled = select_pre_generation_profile(
+        "General explanation with no external facts.",
+        metadata={"needs_audit": "false"},
+        risk_policy=policy.to_dict(),
+    )
+    enabled = select_pre_generation_profile(
+        "General explanation with no external facts.",
+        metadata={"needs_audit": "yes"},
+        risk_policy=policy,
+    )
+    citation = select_pre_generation_profile("Use [1] as the reference.", risk_policy=policy)
+
+    assert disabled.selected_profile == "latency"
+    assert disabled.metadata_flags["needs_audit"] is False
+    assert enabled.selected_profile == "balanced"
+    assert enabled.risk_level == "high"
+    assert enabled.triggered_metadata == ("needs_audit",)
+    assert citation.selected_profile == "balanced"
+    assert citation.risk_level == "medium"
+    assert policy.to_dict()["high_risk_metadata_keys"] == ("needs_audit",)
+    with pytest.raises(ValueError, match="runtime profile selection"):
+        PreGenerationRiskPolicy(low_risk_profile="fast")
 
 
 def test_risk_controller_accepts_and_routes_threshold_exceedance():

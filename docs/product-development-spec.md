@@ -16,6 +16,7 @@ Implemented today:
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy`: INSIDE/EigenScore-style spectral diversity and dependency-free sampled semantic-entropy proxies, including adaptive sampling budget support in benchmarks.
 - `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
+- `eigentruth.control.PreGenerationRiskPolicy` / `select_pre_generation_profile`: dependency-free pre-generation runtime-profile routing from prompt features and caller metadata before model or verifier work.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/execute-tool/abstain/clarify flows.
 - `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution and best-effort timeout wrapping for local control-loop traces.
 - `eigentruth.control.ActionExecutionPolicy` / `PolicyGuardedActionExecutor`: validates side-effecting action requests, replays idempotent results when a ledger is configured, and records audit metadata such as request ids, idempotency keys, timeout bounds, and timeout-enforcement status.
@@ -83,11 +84,12 @@ An application developer should be able to:
 
 A product system should be able to:
 
-1. Generate a draft answer creatively.
-2. Extract atomic claims from the draft.
-3. Score internal drift and semantic instability.
-4. Verify high-risk claims with external tools or world models.
-5. Produce a final answer with confidence, evidence, and correction trace.
+1. Route the request to a latency, balanced, or audit runtime profile from cheap pre-generation signals.
+2. Generate a draft answer creatively under the selected runtime budget.
+3. Extract atomic claims from the draft.
+4. Score internal drift and semantic instability.
+5. Verify high-risk claims with external tools or world models.
+6. Produce a final answer with confidence, evidence, and correction trace.
 
 ## Proposed Runtime Architecture
 
@@ -95,7 +97,9 @@ A product system should be able to:
 user request
   |
   v
-task and risk router
+pre-generation risk router
+  |
+  +--> latency / balanced / audit runtime profile
   |
   v
 LLM draft generation <---- optional retrieval/context injection
@@ -181,7 +185,7 @@ Current modules should remain narrow:
 - `eigentruth.models`: user-facing wrappers around model instances.
 - `eigentruth.eval`: metrics, conformal thresholds, selective reports, and benchmark helpers.
 - `eigentruth.calibration`: calibration artifacts and parameter sweeps.
-- `eigentruth.control`: risk controller, policy configuration, correction policy, action executor registry, verification loops, and traces.
+- `eigentruth.control`: pre-generation routing, risk controller, policy configuration, correction policy, action executor registry, verification loops, and traces.
 - `eigentruth.verify`: claim extraction, verifier protocols, in-memory verification, and lexical groundedness.
 - `eigentruth.registry`: local artifact metadata records.
 - `eigentruth.adapters`: optional integration shells, including retrieval and world models.
@@ -265,7 +269,7 @@ For product features:
 - `SelfConsistencyVerifier` can be evaluated as a `self_consistency` verifier-ensemble route when fixtures provide sampled responses, giving claim-level support/refutation rates before retrieval fallback.
 - `build_selfcheck_fixture.py` converts dumped INSIDE sampled continuations or external sampled-generation files into verifier-ensemble fixtures for reproducible self-consistency route evaluation.
 - `RoutedVerifier` records route match reasons such as metadata keys, context keys, text patterns, feature flags, or fallback selection; `ProductTrace.verification_route_summary()` aggregates selected, matched, and skipped verifier routes for runtime trace review.
-- `RuntimeProfile` now exposes shared `latency`, `balanced`, and `audit` defaults for release gates and product control-plane staging; `RuntimeProfileSelectorPolicy` makes the cheap auto selector configurable by diagnostic risk/action, sensitive claim features, and metadata keys; `select_runtime_profile()` chooses among profiles before verifier work, and `calibrated_control_demo.py --runtime-profile auto --runtime-profile-selector-policy` writes the selected profile, selection reason, selector policy, and staging behavior into trace and registry metadata.
+- `RuntimeProfile` now exposes shared `latency`, `balanced`, and `audit` defaults for release gates and product control-plane staging; `PreGenerationRiskPolicy` / `select_pre_generation_profile()` choose a profile before generation from cheap prompt/metadata risk markers; `RuntimeProfileSelectorPolicy` makes the post-diagnostic auto selector configurable by diagnostic risk/action, sensitive claim features, and metadata keys; `select_runtime_profile()` chooses among profiles before verifier work, and `calibrated_control_demo.py --runtime-profile auto --runtime-profile-selector-policy` writes the selected profile, selection reason, selector policy, and staging behavior into trace and registry metadata.
 - `RuntimeTrace` / `RuntimePhaseTiming` records dependency-free request phase timings in `ProductTrace.runtime_trace`, so product runs can compare diagnostic, verification, action execution, retrieval evidence, and re-verification costs before changing performance defaults.
 - `ProductRuntimeBudgetPolicy` / `evaluate_product_runtime_budget` turns `ProductTrace.runtime_trace`, cache metadata, verifier route metadata, and staged-verification skip events into optional fail-closed product gates over total request time, named phase timings, phase p95/p99 timings, route duration, mean attempted routes, retrieval use rate, aggregate/named cache hit rates, minimum verification skip rate, and maximum verified claim count; `calibrated_control_demo.py --max-runtime-total-seconds/--max-runtime-phase-seconds/--max-runtime-phase-p95-seconds/--max-runtime-phase-p99-seconds/--max-mean-attempted-route-count/--max-retrieval-use-rate/--min-cache-hit-rate/--min-verification-skip-rate/--max-verified-claim-count` writes the evaluated result into trace and registry metadata.
 - `eval_verifier_ensemble.py` now supports `--state-source` JSON state and SQLite query specs plus fixture-level `state_check` and `state_transition` routes, and reports `route_summary`, `route_quality`, route-level cost/tail-latency metrics, optional `--staged-verification` skip-rate/cost gating metrics, and per-alpha `route_control_impact` for structured QA, state transition, structured state, lexical groundedness, retrieval-backed groundedness, and staged verifier skips; `--verified-records-jsonl` writes per-claim verifier outputs to a compact sidecar for audit/debug without embedding them in the main report, and `--compact-json` keeps large automated report artifacts smaller without changing payload semantics.

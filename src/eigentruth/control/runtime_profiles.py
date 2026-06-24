@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any, Mapping, Sequence
@@ -29,6 +30,48 @@ _DEFAULT_SENSITIVE_CLAIM_FEATURE_FLAGS = (
     "has_calculation",
 )
 _DEFAULT_SENSITIVE_CLAIM_METADATA_KEYS = ("requires_verification",)
+_DEFAULT_HIGH_RISK_PROMPT_FEATURE_FLAGS = (
+    "requires_retrieval",
+    "is_time_sensitive",
+    "requires_domain_state",
+)
+_DEFAULT_MEDIUM_RISK_PROMPT_FEATURE_FLAGS = (
+    "has_number",
+    "has_citation",
+    "has_calculation",
+)
+_DEFAULT_HIGH_RISK_PROMPT_METADATA_KEYS = (
+    "requires_verification",
+    "requires_retrieval",
+    "requires_current_facts",
+    "requires_domain_state",
+)
+_DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS = (
+    "sensitive",
+    "requires_calculation",
+)
+_TIME_SENSITIVE_RE = re.compile(
+    r"\b("
+    r"as of|current|currently|latest|newest|recent|today|tonight|tomorrow|"
+    r"yesterday|now|news|price|prices|weather|schedule|score|scores|"
+    r"president|ceo|law|regulation|deadline|release|version"
+    r")\b",
+    re.IGNORECASE,
+)
+_CITATION_RE = re.compile(r"(https?://|www\.|\bdoi:|\[[A-Za-z0-9][A-Za-z0-9, .:-]{0,40}\])", re.IGNORECASE)
+_CALCULATION_RE = re.compile(
+    r"(\d+(?:\.\d+)?\s*[-+*/=]\s*\d+)|\b("
+    r"calculate|compute|sum|total|average|mean|percent|percentage|ratio|rate"
+    r")\b",
+    re.IGNORECASE,
+)
+_DOMAIN_STATE_RE = re.compile(
+    r"\b("
+    r"account|balance|budget|contract|customer|database|inventory|invoice|"
+    r"order|permission|policy|quota|stock|transaction|workflow"
+    r")\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -248,6 +291,154 @@ class RuntimeProfileSelectorPolicy:
         }
 
 
+@dataclass(frozen=True)
+class PreGenerationRiskPolicy:
+    """Policy for routing a request before model generation.
+
+    The policy is intentionally cheap and dependency-free. It does not verify
+    facts; it decides which runtime profile should handle the prompt before
+    generation based on deterministic prompt features and caller-provided
+    metadata flags.
+    """
+
+    low_risk_profile: str = "latency"
+    default_profile: str = "balanced"
+    high_risk_profile: str = "audit"
+    high_risk_feature_flags: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_FEATURE_FLAGS
+    medium_risk_feature_flags: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_FEATURE_FLAGS
+    high_risk_metadata_keys: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_METADATA_KEYS
+    medium_risk_metadata_keys: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS
+
+    def __post_init__(self) -> None:
+        low_risk_profile = _normalize_profile_name(self.low_risk_profile)
+        default_profile = _normalize_profile_name(self.default_profile)
+        high_risk_profile = _normalize_profile_name(self.high_risk_profile)
+        _validate_profile_names(low_risk_profile, default_profile, high_risk_profile)
+        object.__setattr__(self, "low_risk_profile", low_risk_profile)
+        object.__setattr__(self, "default_profile", default_profile)
+        object.__setattr__(self, "high_risk_profile", high_risk_profile)
+        object.__setattr__(
+            self,
+            "high_risk_feature_flags",
+            _non_empty_string_tuple(
+                self.high_risk_feature_flags,
+                field_name="high_risk_feature_flags",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "medium_risk_feature_flags",
+            _non_empty_string_tuple(
+                self.medium_risk_feature_flags,
+                field_name="medium_risk_feature_flags",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "high_risk_metadata_keys",
+            _non_empty_string_tuple(
+                self.high_risk_metadata_keys,
+                field_name="high_risk_metadata_keys",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "medium_risk_metadata_keys",
+            _non_empty_string_tuple(
+                self.medium_risk_metadata_keys,
+                field_name="medium_risk_metadata_keys",
+            ),
+        )
+
+    @classmethod
+    def from_mapping(cls, payload: Mapping[str, Any]) -> "PreGenerationRiskPolicy":
+        """Build a pre-generation risk policy from a JSON-like mapping."""
+        return cls(
+            low_risk_profile=payload.get("low_risk_profile", cls.low_risk_profile),
+            default_profile=payload.get("default_profile", cls.default_profile),
+            high_risk_profile=payload.get("high_risk_profile", cls.high_risk_profile),
+            high_risk_feature_flags=_as_sequence(
+                payload.get("high_risk_feature_flags", cls.high_risk_feature_flags)
+            ),
+            medium_risk_feature_flags=_as_sequence(
+                payload.get("medium_risk_feature_flags", cls.medium_risk_feature_flags)
+            ),
+            high_risk_metadata_keys=_as_sequence(
+                payload.get("high_risk_metadata_keys", cls.high_risk_metadata_keys)
+            ),
+            medium_risk_metadata_keys=_as_sequence(
+                payload.get("medium_risk_metadata_keys", cls.medium_risk_metadata_keys)
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "low_risk_profile": self.low_risk_profile,
+            "default_profile": self.default_profile,
+            "high_risk_profile": self.high_risk_profile,
+            "high_risk_feature_flags": tuple(self.high_risk_feature_flags),
+            "medium_risk_feature_flags": tuple(self.medium_risk_feature_flags),
+            "high_risk_metadata_keys": tuple(self.high_risk_metadata_keys),
+            "medium_risk_metadata_keys": tuple(self.medium_risk_metadata_keys),
+        }
+
+
+@dataclass(frozen=True)
+class PreGenerationRiskAssessment:
+    """Auditable pre-generation profile routing result."""
+
+    selected_profile: str
+    risk_level: str
+    reason: str
+    triggered_features: Sequence[str] = ()
+    triggered_metadata: Sequence[str] = ()
+    prompt_features: Mapping[str, bool] = field(default_factory=dict)
+    metadata_flags: Mapping[str, bool] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        selected_profile = _normalize_profile_name(self.selected_profile)
+        if selected_profile not in RUNTIME_PROFILES:
+            choices = ", ".join(RUNTIME_PROFILE_NAMES)
+            raise ValueError(f"selected_profile must be one of: {choices}")
+        risk_level = RiskLevel(str(self.risk_level)).value
+        object.__setattr__(self, "selected_profile", selected_profile)
+        object.__setattr__(self, "risk_level", risk_level)
+        object.__setattr__(self, "reason", str(self.reason))
+        object.__setattr__(
+            self,
+            "triggered_features",
+            tuple(str(item) for item in self.triggered_features),
+        )
+        object.__setattr__(
+            self,
+            "triggered_metadata",
+            tuple(str(item) for item in self.triggered_metadata),
+        )
+        object.__setattr__(
+            self,
+            "prompt_features",
+            {str(key): bool(value) for key, value in self.prompt_features.items()},
+        )
+        object.__setattr__(
+            self,
+            "metadata_flags",
+            {str(key): bool(value) for key, value in self.metadata_flags.items()},
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "selected_profile": self.selected_profile,
+            "risk_level": self.risk_level,
+            "reason": self.reason,
+            "triggered_features": tuple(self.triggered_features),
+            "triggered_metadata": tuple(self.triggered_metadata),
+            "prompt_features": dict(self.prompt_features),
+            "metadata_flags": dict(self.metadata_flags),
+        }
+
+
 RUNTIME_PROFILES: Mapping[str, RuntimeProfile] = MappingProxyType({
     "latency": RuntimeProfile(
         name="latency",
@@ -319,6 +510,83 @@ def get_runtime_profile(name: str | None) -> RuntimeProfile | None:
         choices = ", ".join(RUNTIME_PROFILE_NAMES)
         raise ValueError(f"runtime_profile must be one of: {choices}")
     return RUNTIME_PROFILES[normalized]
+
+
+def select_pre_generation_profile(
+    prompt: str,
+    *,
+    metadata: Mapping[str, Any] | None = None,
+    risk_policy: PreGenerationRiskPolicy | Mapping[str, Any] | None = None,
+    low_risk_profile: str = "latency",
+    default_profile: str = "balanced",
+    high_risk_profile: str = "audit",
+    high_risk_feature_flags: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_FEATURE_FLAGS,
+    medium_risk_feature_flags: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_FEATURE_FLAGS,
+    high_risk_metadata_keys: Sequence[str] = _DEFAULT_HIGH_RISK_PROMPT_METADATA_KEYS,
+    medium_risk_metadata_keys: Sequence[str] = _DEFAULT_MEDIUM_RISK_PROMPT_METADATA_KEYS,
+) -> PreGenerationRiskAssessment:
+    """Choose a runtime profile before generation from cheap prompt signals.
+
+    This function is a deterministic routing shell for confidence-aware
+    generation. It does not call a model, retriever, verifier, or network
+    service. High-risk prompts that appear to require current facts, retrieval,
+    or domain state route to the audit profile; prompts with numbers, citations,
+    or calculation markers route to the default profile; otherwise the latency
+    profile is selected.
+    """
+    if risk_policy is None:
+        policy = PreGenerationRiskPolicy(
+            low_risk_profile=low_risk_profile,
+            default_profile=default_profile,
+            high_risk_profile=high_risk_profile,
+            high_risk_feature_flags=high_risk_feature_flags,
+            medium_risk_feature_flags=medium_risk_feature_flags,
+            high_risk_metadata_keys=high_risk_metadata_keys,
+            medium_risk_metadata_keys=medium_risk_metadata_keys,
+        )
+    else:
+        policy = (
+            risk_policy
+            if isinstance(risk_policy, PreGenerationRiskPolicy)
+            else PreGenerationRiskPolicy.from_mapping(risk_policy)
+        )
+    prompt_features = _prompt_feature_flags(prompt)
+    metadata_payload = dict(metadata or {})
+    metadata_flags = _metadata_flags(
+        metadata_payload,
+        keys=(*policy.high_risk_metadata_keys, *policy.medium_risk_metadata_keys),
+    )
+    high_features = _enabled_feature_names(prompt_features, policy.high_risk_feature_flags)
+    high_metadata = _enabled_feature_names(metadata_flags, policy.high_risk_metadata_keys)
+    if high_features or high_metadata:
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.high_risk_profile,
+            risk_level=RiskLevel.HIGH.value,
+            reason="pre-generation input requires current facts, retrieval, or domain state",
+            triggered_features=high_features,
+            triggered_metadata=high_metadata,
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+        )
+    medium_features = _enabled_feature_names(prompt_features, policy.medium_risk_feature_flags)
+    medium_metadata = _enabled_feature_names(metadata_flags, policy.medium_risk_metadata_keys)
+    if medium_features or medium_metadata:
+        return PreGenerationRiskAssessment(
+            selected_profile=policy.default_profile,
+            risk_level=RiskLevel.MEDIUM.value,
+            reason="pre-generation input contains sensitive factual or calculation markers",
+            triggered_features=medium_features,
+            triggered_metadata=medium_metadata,
+            prompt_features=prompt_features,
+            metadata_flags=metadata_flags,
+        )
+    return PreGenerationRiskAssessment(
+        selected_profile=policy.low_risk_profile,
+        risk_level=RiskLevel.LOW.value,
+        reason="pre-generation input has no configured risk triggers",
+        prompt_features=prompt_features,
+        metadata_flags=metadata_flags,
+    )
 
 
 def select_runtime_profile(
@@ -400,6 +668,33 @@ def select_runtime_profile(
     )
 
 
+def _prompt_feature_flags(prompt: str) -> dict[str, bool]:
+    text = "" if prompt is None else str(prompt)
+    return {
+        "has_number": any(char.isdigit() for char in text),
+        "has_citation": bool(_CITATION_RE.search(text)),
+        "has_calculation": bool(_CALCULATION_RE.search(text)),
+        "is_time_sensitive": bool(_TIME_SENSITIVE_RE.search(text)),
+        "requires_retrieval": bool(_TIME_SENSITIVE_RE.search(text)),
+        "requires_domain_state": bool(_DOMAIN_STATE_RE.search(text)),
+    }
+
+
+def _metadata_flags(metadata: Mapping[str, Any], *, keys: Sequence[str]) -> dict[str, bool]:
+    flags = {}
+    for key in dict.fromkeys(str(item) for item in keys):
+        flags[key] = _metadata_key_enabled(metadata, key)
+    return flags
+
+
+def _enabled_feature_names(flags: Mapping[str, Any], feature_names: Sequence[str]) -> tuple[str, ...]:
+    return tuple(
+        str(name)
+        for name in feature_names
+        if flags.get(str(name)) is True
+    )
+
+
 def _decision_fields(decision: RiskDecision | Mapping[str, Any]) -> tuple[RiskLevel, ControlAction]:
     if isinstance(decision, RiskDecision):
         return decision.risk_level, decision.action
@@ -467,7 +762,17 @@ def _metadata_key_enabled(metadata: Mapping[str, Any], key: str) -> bool:
         if not isinstance(current, Mapping) or part not in current:
             return False
         current = current[part]
-    return bool(current)
+    return _metadata_value_enabled(current)
+
+
+def _metadata_value_enabled(value: Any) -> bool:
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"false", "0", "no", "off", ""}:
+            return False
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+    return bool(value)
 
 
 def _validate_profile_names(*names: str) -> None:
