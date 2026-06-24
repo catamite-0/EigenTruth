@@ -110,6 +110,9 @@ class ProductPromotionContract:
             performance_evidence_bundle.get("recommendation")
         )
         performance_evidence_cost = _mapping(performance_evidence_bundle.get("cost"))
+        performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
+        performance_score_dump_cache_totals = _mapping(performance_score_dump_cache.get("totals"))
+        performance_jsonl_view_cache = _mapping(performance_score_dump_cache_totals.get("jsonl_view"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -147,6 +150,12 @@ class ProductPromotionContract:
                 ),
                 "performance_cache_only_total_ratio": performance_evidence_cost.get(
                     "cache_only_total_ratio"
+                ),
+                "performance_score_dump_cache_source_count": (
+                    performance_score_dump_cache.get("source_count")
+                ),
+                "performance_score_dump_cache_jsonl_view_hit_rate": (
+                    performance_jsonl_view_cache.get("hit_rate")
                 ),
                 "recommended_route": decision.get("recommended_route"),
                 "selector_replay_status": decision.get("selector_replay_status"),

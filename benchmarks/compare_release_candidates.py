@@ -708,6 +708,9 @@ def _performance_baseline_gate(
         report_path=report_path,
     )
     performance_evidence_bundle = _mapping(report.get("performance_evidence_bundle"))
+    performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
+    performance_score_dump_cache_totals = _mapping(performance_score_dump_cache.get("totals"))
+    performance_jsonl_view_cache = _mapping(performance_score_dump_cache_totals.get("jsonl_view"))
     gate = _performance_gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -735,6 +738,11 @@ def _performance_baseline_gate(
         ),
         "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
         "performance_evidence_bundle_release_ready": performance_evidence_bundle.get("release_ready"),
+        "performance_score_dump_cache": (
+            None if not performance_score_dump_cache else performance_score_dump_cache
+        ),
+        "performance_score_dump_cache_source_count": performance_score_dump_cache.get("source_count"),
+        "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
         "runtime": {
             "cell_id": recommendation.get("cell_id"),
             "layer": recommendation.get("layer"),

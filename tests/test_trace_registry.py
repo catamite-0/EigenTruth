@@ -860,6 +860,34 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "cached_total_ratio": 0.50,
                     "cache_only_total_ratio": 0.02,
                 },
+                "score_dump_cache": {
+                    "enabled": True,
+                    "source_count": 1,
+                    "cache_entries": 5,
+                    "totals": {
+                        "fingerprint": {
+                            "hits": 1,
+                            "misses": 2,
+                            "writes": 2,
+                            "attempts": 3,
+                            "hit_rate": 1 / 3,
+                        },
+                        "jsonl_summary": {
+                            "hits": 1,
+                            "misses": 1,
+                            "writes": 1,
+                            "attempts": 2,
+                            "hit_rate": 0.5,
+                        },
+                        "jsonl_view": {
+                            "hits": 3,
+                            "misses": 2,
+                            "writes": 2,
+                            "attempts": 5,
+                            "hit_rate": 0.6,
+                        },
+                    },
+                },
             },
             "selector_replay": {
                 "report_path": "artifacts/selector/runtime-profile-selector-replay.json",
@@ -948,6 +976,8 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_uncached_total_seconds"] == 10.0
     assert contract.metadata["performance_cached_total_ratio"] == 0.50
     assert contract.metadata["performance_cache_only_total_ratio"] == 0.02
+    assert contract.metadata["performance_score_dump_cache_source_count"] == 1
+    assert contract.metadata["performance_score_dump_cache_jsonl_view_hit_rate"] == 0.6
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
     assert contract.metadata["recommended_product_runtime_drift_report"] == (

@@ -2304,7 +2304,8 @@ registered, fingerprinted artifact bundle. It can run the cache-profile matrix
 directly or reuse existing matrix/worker/INSIDE reports, then writes
 `performance-baseline-workflow.json`, `runtime-recommendation.json`, an artifact
 manifest, a top-level `performance_evidence_bundle` summary with recommendation
-cost ratios / evidence status / artifact readiness, and an optional
+cost ratios / evidence status / artifact readiness / score-dump cache evidence,
+and an optional
 `performance_baseline:*:*` registry record:
 
 ```bash

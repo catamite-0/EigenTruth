@@ -5016,9 +5016,19 @@ def test_compare_release_candidates_accepts_repo_relative_performance_paths(tmp_
 
     assert payload["decision"]["status"] == "promote"
     assert payload["performance_baseline_gate"]["verification"]["passed"] is True
+    assert payload["performance_baseline_gate"]["performance_score_dump_cache_source_count"] == 1
+    assert payload["performance_baseline_gate"]["performance_score_dump_cache_jsonl_view_hit_rate"] == (
+        pytest.approx(0.6)
+    )
     assert payload["release_candidate"]["performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
+    assert payload["release_candidate"]["performance_evidence_bundle"]["score_dump_cache"][
+        "source_count"
+    ] == 1
+    assert payload["release_candidate"]["performance_evidence_bundle"]["score_dump_cache"][
+        "totals"
+    ]["jsonl_view"]["hit_rate"] == pytest.approx(0.6)
 
 
 def test_compare_release_candidates_cli_blocks_when_route_gate_fails(tmp_path):
@@ -5615,6 +5625,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert manifest["metadata"]["performance_cache_only_total_ratio"] == pytest.approx(0.02)
+    assert manifest["metadata"]["performance_score_dump_cache_source_count"] == 1
+    assert manifest["metadata"]["performance_score_dump_cache_jsonl_view_hit_rate"] == (
+        pytest.approx(0.6)
+    )
     assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
@@ -5687,6 +5701,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
+    assert record.metadata["performance_score_dump_cache_source_count"] == 1
+    assert record.metadata["performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.6)
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
@@ -6320,6 +6336,26 @@ def _write_performance_baseline_record(
             "matrix_status": "promote",
             "worker_sweep_status": None,
             "inside_trigger_budget_sweep_status": "promote",
+        },
+        "score_dump_cache": {
+            "enabled": True,
+            "source_count": 1,
+            "cache_entries": 5,
+            "totals": {
+                "fingerprint": {"hits": 1, "misses": 2, "writes": 2, "attempts": 3, "hit_rate": 1 / 3},
+                "jsonl_summary": {"hits": 1, "misses": 1, "writes": 1, "attempts": 2, "hit_rate": 0.5},
+                "jsonl_view": {"hits": 3, "misses": 2, "writes": 2, "attempts": 5, "hit_rate": 0.6},
+            },
+            "sources": [
+                {
+                    "source": "matrix_report",
+                    "enabled": True,
+                    "cache_entries": 5,
+                    "fingerprint": {"hits": 1, "misses": 2, "writes": 2, "attempts": 3, "hit_rate": 1 / 3},
+                    "jsonl_summary": {"hits": 1, "misses": 1, "writes": 1, "attempts": 2, "hit_rate": 0.5},
+                    "jsonl_view": {"hits": 3, "misses": 2, "writes": 2, "attempts": 5, "hit_rate": 0.6},
+                }
+            ],
         },
         "artifacts": {
             "summary": {"artifact_count": 2, "missing_count": 0, "directory_count": 0, "file_count": 2},
@@ -9736,6 +9772,13 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
             "artifact_manifest": str(matrix_manifest_path),
             "report_path": str(matrix_report_path),
             "config": {"max_workers": 1, "length_bucketed_batches": True},
+            "score_dump_cache": {
+                "enabled": True,
+                "cache_entries": 5,
+                "fingerprint": {"hits": 1, "misses": 2, "writes": 2, "attempts": 3, "hit_rate": 1 / 3},
+                "jsonl_summary": {"hits": 1, "misses": 1, "writes": 1, "attempts": 2, "hit_rate": 0.5},
+                "jsonl_view": {"hits": 3, "misses": 2, "writes": 2, "attempts": 5, "hit_rate": 0.6},
+            },
             "matrix_decision": {
                 "status": "promote",
                 "recommended_cell": "layer_m12_batch_2_capture_outputs",
@@ -9798,6 +9841,13 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         "subspace_resid"
     )
     assert payload["performance_evidence_bundle"]["cost"]["cache_only_total_seconds"] == pytest.approx(0.2)
+    assert payload["performance_evidence_bundle"]["score_dump_cache"]["enabled"] is True
+    assert payload["performance_evidence_bundle"]["score_dump_cache"]["source_count"] == 1
+    assert payload["performance_evidence_bundle"]["score_dump_cache"]["cache_entries"] == 5
+    assert payload["performance_evidence_bundle"]["score_dump_cache"]["totals"]["jsonl_view"]["hit_rate"] == (
+        pytest.approx(0.6)
+    )
+    assert payload["performance_evidence_bundle"]["score_dump_cache"]["sources"][0]["source"] == "matrix_report"
     assert payload["performance_evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
     assert saved["performance_evidence_bundle"]["status"] == "promote"
     assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"

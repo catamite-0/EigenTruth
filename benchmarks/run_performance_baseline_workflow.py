@@ -204,6 +204,12 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=trigger_sweep_report_path,
     )
+    score_dump_cache_evidence = _score_dump_cache_evidence_summary(
+        matrix_report=matrix_report,
+        worker_sweep_report=worker_sweep_report,
+        inside_sampling_report=inside_sampling_report,
+        inside_trigger_budget_sweep_report=trigger_sweep_report,
+    )
     config.runtime_recommendation_path.write_text(
         json.dumps(runtime_recommendation, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -261,6 +267,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         report=report,
         runtime_recommendation=runtime_recommendation,
         artifact_manifest_summary=artifact_manifest_summary,
+        score_dump_cache_evidence=score_dump_cache_evidence,
     )
 
     config.resolved_report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -286,6 +293,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         report=report,
         runtime_recommendation=runtime_recommendation,
         artifact_manifest_summary=manifest["summary"],
+        score_dump_cache_evidence=score_dump_cache_evidence,
     )
     _record_registry(config, report)
     return report
@@ -611,6 +619,7 @@ def _performance_evidence_bundle_summary(
     report: Mapping[str, Any],
     runtime_recommendation: Mapping[str, Any],
     artifact_manifest_summary: Mapping[str, Any],
+    score_dump_cache_evidence: Mapping[str, Any],
 ) -> dict[str, Any]:
     status = str(report.get("status"))
     recommendation_status = str(runtime_recommendation.get("status") or "missing")
@@ -695,6 +704,7 @@ def _performance_evidence_bundle_summary(
             "inside_trigger_budget_sweep_status": evidence.get("inside_trigger_budget_sweep_status"),
             "inside_trigger_budget_gate_passed": evidence.get("inside_trigger_budget_gate_passed"),
         },
+        "score_dump_cache": dict(score_dump_cache_evidence),
         "artifacts": {
             "summary": dict(artifact_manifest_summary),
             "artifact_manifest": str(config.artifact_manifest_path),
@@ -747,6 +757,90 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
         },
     )
     registry.save_json()
+
+
+_SCORE_DUMP_CACHE_SECTIONS = ("fingerprint", "jsonl_summary", "jsonl_view")
+
+
+def _score_dump_cache_evidence_summary(
+    *,
+    matrix_report: Mapping[str, Any],
+    worker_sweep_report: Mapping[str, Any] | None,
+    inside_sampling_report: Mapping[str, Any] | None,
+    inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    sources = []
+    totals = _empty_score_dump_cache_totals()
+    for source_name, source_report in (
+        ("matrix_report", matrix_report),
+        ("worker_sweep_report", worker_sweep_report),
+        ("inside_sampling_report", inside_sampling_report),
+        ("inside_trigger_budget_sweep_report", inside_trigger_budget_sweep_report),
+    ):
+        if source_report is None:
+            continue
+        summary = _mapping(source_report.get("score_dump_cache"))
+        if not summary or summary.get("enabled") is not True:
+            continue
+        source = _score_dump_cache_source_summary(source_name, summary)
+        sources.append(source)
+        totals["cache_entries"] += int(source.get("cache_entries", 0) or 0)
+        for section in _SCORE_DUMP_CACHE_SECTIONS:
+            _add_cache_counter(totals[section], _mapping(source.get(section)))
+    return {
+        "enabled": bool(sources),
+        "source_count": len(sources),
+        "cache_entries": totals["cache_entries"],
+        "totals": _score_dump_cache_totals_payload(totals),
+        "sources": sources,
+    }
+
+
+def _score_dump_cache_source_summary(source_name: str, summary: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "source": source_name,
+        "enabled": bool(summary.get("enabled", False)),
+        "cache_entries": _int_or_zero(summary.get("cache_entries")),
+        "fingerprint": _cache_counter_payload(_mapping(summary.get("fingerprint"))),
+        "jsonl_summary": _cache_counter_payload(_mapping(summary.get("jsonl_summary"))),
+        "jsonl_view": _cache_counter_payload(_mapping(summary.get("jsonl_view"))),
+    }
+
+
+def _empty_score_dump_cache_totals() -> dict[str, Any]:
+    return {
+        "cache_entries": 0,
+        "fingerprint": {"hits": 0, "misses": 0, "writes": 0},
+        "jsonl_summary": {"hits": 0, "misses": 0, "writes": 0},
+        "jsonl_view": {"hits": 0, "misses": 0, "writes": 0},
+    }
+
+
+def _score_dump_cache_totals_payload(totals: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "fingerprint": _cache_counter_payload(_mapping(totals.get("fingerprint"))),
+        "jsonl_summary": _cache_counter_payload(_mapping(totals.get("jsonl_summary"))),
+        "jsonl_view": _cache_counter_payload(_mapping(totals.get("jsonl_view"))),
+    }
+
+
+def _add_cache_counter(target: dict[str, int], source: Mapping[str, Any]) -> None:
+    for key in ("hits", "misses", "writes"):
+        target[key] = int(target.get(key, 0)) + _int_or_zero(source.get(key))
+
+
+def _cache_counter_payload(counter: Mapping[str, Any]) -> dict[str, Any]:
+    hits = _int_or_zero(counter.get("hits"))
+    misses = _int_or_zero(counter.get("misses"))
+    writes = _int_or_zero(counter.get("writes"))
+    attempts = hits + misses
+    return {
+        "hits": hits,
+        "misses": misses,
+        "writes": writes,
+        "attempts": attempts,
+        "hit_rate": None if attempts == 0 else hits / attempts,
+    }
 
 
 def _config_payload(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:

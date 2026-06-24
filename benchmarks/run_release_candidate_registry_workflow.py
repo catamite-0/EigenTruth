@@ -382,6 +382,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         performance_evidence_bundle.get("recommendation") or {}
     )
     performance_evidence_cost = dict(performance_evidence_bundle.get("cost") or {})
+    performance_score_dump_cache = dict(performance_evidence_bundle.get("score_dump_cache") or {})
+    performance_score_dump_cache_totals = dict(performance_score_dump_cache.get("totals") or {})
+    performance_jsonl_view_cache = dict(performance_score_dump_cache_totals.get("jsonl_view") or {})
     verifier_route = dict(candidate.get("verifier_route") or {})
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
@@ -438,6 +441,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "performance_cache_only_total_ratio": performance_evidence_cost.get(
             "cache_only_total_ratio"
         ),
+        "performance_score_dump_cache_source_count": performance_score_dump_cache.get("source_count"),
+        "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
         "recommended_uncached_forward_cost_seconds": runtime_cost.get("uncached_forward_cost_seconds"),
         "recommended_uncached_forward_cost_source": runtime_cost.get("uncached_forward_cost_source"),
         "recommended_cache_only_total_seconds": runtime_cost.get("cache_only_total_seconds"),
