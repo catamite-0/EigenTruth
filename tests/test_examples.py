@@ -50,11 +50,16 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["metadata"]["artifact_model_id"] == demo.default_artifact().model_id
     assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
     if demo.default_promotion_contract_path() is not None:
+        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
         assert payload["metadata"]["promotion_contract_model_id"] == "HuggingFaceTB/SmolLM2-135M-Instruct"
         assert payload["metadata"]["promotion_contract_budget_enabled"] is False
         assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
             "performance_baseline:smollm2-l20-performance-baseline:0.9"
         )
+        assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
+        assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
+        assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_status"] == "promote"
+        assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_blocked_metric_count"] == 0
         assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
             "structured_state",
             "state_transition",
@@ -465,6 +470,7 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     contract_path = demo.default_promotion_contract_path()
     assert contract_path is not None
     assert "strict_structured_retrieval_audit" in contract_path.name
+    assert "v1_5" in contract_path.name
 
     payload = demo.run(
         SimpleNamespace(
@@ -509,6 +515,10 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     assert payload["metadata"]["promotion_contract_metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:smollm2-l20-performance-baseline:0.9"
     )
+    assert payload["metadata"]["promotion_contract_metadata"]["recommended_selector_replay_candidate"] == "default"
+    assert payload["metadata"]["promotion_contract_metadata"]["selector_replay_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_status"] == "promote"
+    assert payload["metadata"]["promotion_contract_metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_promotion_status"] == "promote"
     assert payload["metadata"]["promotion_contract_metadata"]["adapter_family_required_routes"] == [
         "structured_state",

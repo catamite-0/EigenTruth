@@ -64,6 +64,10 @@ DEFAULT_QWEN_ARTIFACT_PATH = (
 DEFAULT_PROMOTION_CONTRACT_FILENAMES = (
     (
         "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
+        "staged_release_candidate_v1_5_registry_workflow.json"
+    ),
+    (
+        "smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_"
         "staged_release_candidate_v1_4_registry_workflow.json"
     ),
     (
