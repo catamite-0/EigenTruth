@@ -11,6 +11,7 @@ from typing import Any, Iterator, Mapping, MutableMapping, Sequence
 
 JSONL_FORMAT = "eigentruth.score_dump.jsonl"
 _SCORE_DUMP_CACHE_STATS_KEY = "__eigentruth_score_dump_cache_stats_v1__"
+_FILE_CACHE_SAMPLE_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -1552,11 +1553,21 @@ def _file_cache_signature(path: Path) -> dict[str, Any]:
         stat = path.stat()
     except OSError:
         return {"exists": False}
+    try:
+        return _file_cache_signature_from_stat(path, stat)
+    except OSError:
+        return {"exists": False}
+
+
+def _file_cache_signature_from_stat(path: Path, stat: Any) -> dict[str, Any]:
+    sample_digest = _file_cache_sample_digest(path, size_bytes=stat.st_size)
     return {
         "exists": True,
         "size_bytes": stat.st_size,
         "mtime_ns": stat.st_mtime_ns,
         "ctime_ns": stat.st_ctime_ns,
+        "inode": getattr(stat, "st_ino", 0),
+        "sample_sha256": sample_digest,
     }
 
 
@@ -2067,37 +2078,48 @@ def _cached_file_fingerprint(
     stat = path.stat()
     if cache is None:
         return {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
-    cache_key = _file_fingerprint_cache_key(path, stat)
+    signature = _file_cache_signature_from_stat(path, stat)
+    cache_key = _file_fingerprint_cache_key(path, signature)
     cached = cache.get(cache_key)
     if cached is not None:
         _score_dump_cache_event(cache, "fingerprint", "hits")
         return dict(cached)
     _score_dump_cache_event(cache, "fingerprint", "misses")
     fingerprint = {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
-    cache[cache_key] = dict(fingerprint)
-    _score_dump_cache_event(cache, "fingerprint", "writes")
+    if _file_cache_signature(path) == signature:
+        cache[cache_key] = dict(fingerprint)
+        _score_dump_cache_event(cache, "fingerprint", "writes")
     return fingerprint
 
 
-def _file_fingerprint_cache_key(path: Path, stat: Any) -> str:
-    return f"{path.resolve(strict=False)}:{stat.st_size}:{stat.st_mtime_ns}"
+def _file_fingerprint_cache_key(path: Path, signature: Mapping[str, Any]) -> str:
+    payload = {
+        "path": str(path.resolve(strict=False)),
+        "signature": dict(signature),
+    }
+    return "score-dump-file-fingerprint-v2:" + json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
 
 
 def _start_stream_fingerprint_cache_write(
     path: Path,
     cache: MutableMapping[str, Any] | None,
-) -> tuple[Any, str, int, int] | None:
+) -> tuple[Any, str, dict[str, Any]] | None:
     if cache is None:
         return None
     stat = path.stat()
-    cache_key = _file_fingerprint_cache_key(path, stat)
+    signature = _file_cache_signature_from_stat(path, stat)
+    cache_key = _file_fingerprint_cache_key(path, signature)
     if cache_key in cache:
         return None
-    return hashlib.sha256(), cache_key, stat.st_size, stat.st_mtime_ns
+    return hashlib.sha256(), cache_key, signature
 
 
 def _update_stream_fingerprint(
-    stream_fingerprint: tuple[Any, str, int, int] | None,
+    stream_fingerprint: tuple[Any, str, dict[str, Any]] | None,
     data: bytes,
 ) -> None:
     if stream_fingerprint is not None:
@@ -2107,21 +2129,32 @@ def _update_stream_fingerprint(
 def _finish_stream_fingerprint_cache_write(
     path: Path,
     cache: MutableMapping[str, Any] | None,
-    stream_fingerprint: tuple[Any, str, int, int] | None,
+    stream_fingerprint: tuple[Any, str, dict[str, Any]] | None,
 ) -> None:
     if cache is None or stream_fingerprint is None:
         return
-    digest, cache_key, size_bytes, mtime_ns = stream_fingerprint
-    try:
-        stat = path.stat()
-    except OSError:
+    digest, cache_key, signature = stream_fingerprint
+    if _file_cache_signature(path) != signature:
         return
-    if stat.st_size != size_bytes or stat.st_mtime_ns != mtime_ns:
+    size_bytes = signature.get("size_bytes")
+    if not isinstance(size_bytes, int):
         return
     if cache_key in cache:
         return
     cache[cache_key] = {"sha256": digest.hexdigest(), "size_bytes": size_bytes}
     _score_dump_cache_event(cache, "fingerprint", "writes")
+
+
+def _file_cache_sample_digest(path: Path, *, size_bytes: int) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        if size_bytes <= _FILE_CACHE_SAMPLE_BYTES * 2:
+            digest.update(stream.read())
+        else:
+            digest.update(stream.read(_FILE_CACHE_SAMPLE_BYTES))
+            stream.seek(max(size_bytes - _FILE_CACHE_SAMPLE_BYTES, 0))
+            digest.update(stream.read(_FILE_CACHE_SAMPLE_BYTES))
+    return digest.hexdigest()
 
 
 def _sha256_file(path: Path) -> str:

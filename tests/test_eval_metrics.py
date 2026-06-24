@@ -6,6 +6,7 @@
 import hashlib
 import json
 import math
+import os
 
 import pytest
 import torch
@@ -318,6 +319,32 @@ class TestScoreDump:
         assert second["sha256"] == "cached-sha"
         assert first["summary"] == second["summary"]
         assert len(calls) == 1
+
+    def test_file_metadata_cache_invalidates_same_size_same_mtime_jsonl_records(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        manifest = write_score_dump_jsonl(
+            ScoreDump.from_mapping({
+                "labels": [0, 1],
+                "scores": {"maha_last": [0.1, 0.9]},
+            }),
+            manifest_path,
+        )
+        records_path = manifest.records_file(manifest_path)
+        cache = {}
+
+        first = score_dump_file_metadata(manifest_path, cache=cache)
+        stat = records_path.stat()
+        old_text = records_path.read_text(encoding="utf-8")
+        new_text = old_text.replace("0.9", "0.8")
+        assert len(new_text) == len(old_text)
+        records_path.write_text(new_text, encoding="utf-8")
+        os.utime(records_path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+
+        second = score_dump_file_metadata(manifest_path, cache=cache)
+        current_records_sha = hashlib.sha256(records_path.read_bytes()).hexdigest()
+
+        assert first["records"]["sha256"] != current_records_sha
+        assert second["records"]["sha256"] == current_records_sha
 
     def test_jsonl_manifest_roundtrip_and_streaming_records(self, tmp_path):
         dump = ScoreDump.from_mapping({
