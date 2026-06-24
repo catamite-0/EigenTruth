@@ -6720,46 +6720,47 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
 
     monkeypatch.setattr(provenance_module, "_sha256_file", counted_sha256_file)
 
-    payload = module.run_release_candidate_registry_workflow(
-        module.ReleaseCandidateRegistryWorkflowConfig(
-            readiness_registry_path=baseline_registry_path,
-            release_registry_path=release_registry_path,
-            name="qwen-release-candidate",
-            version="0.7",
-            workflow_report_path=tmp_path / "workflow.json",
-            release_report_path=tmp_path / "release-candidate.json",
-            artifact_manifest_path=tmp_path / "release-manifest.json",
-            verification_report_path=tmp_path / "release-verification.json",
-            performance_baseline_key="performance_baseline:qwen-performance:0.6",
-            require_performance_score_dump_cache=True,
-            min_performance_score_dump_cache_jsonl_view_hit_rate=0.5,
-            performance_drift_baseline_key="performance_baseline:qwen-performance-reference:0.5",
-            max_performance_uncached_total_seconds_ratio=1.3,
-            max_performance_cached_total_seconds_ratio=1.5,
-            max_performance_cache_only_total_seconds_ratio=1.5,
-            max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
-            product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
-            route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
-            required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
-            adapter_family_matrix_path=adapter_family_matrix_path,
-            required_adapter_routes=("structured_state", "state_transition"),
-            runtime_profile="balanced",
-            inside_trigger_budget_policy="cost_first",
-            min_best_quality_auroc=0.70,
-            max_uncached_forward_seconds=20.0,
-            max_covariance_maha_last_auroc_drop=0.05,
-            max_inside_sample_count_ratio=0.6,
-            max_inside_generation_seconds_ratio=0.8,
-            min_selected=4,
-            min_decision_accuracy=0.99,
-            max_p99_duration_seconds=0.03,
-            required_route_max_runtime_total_seconds=3.0,
-            required_route_max_retrieval_hit_count=30,
-            required_route_max_retrieval_use_rate=1.0,
-            required_route_require_non_oracle_evidence=True,
-            promotion_metadata={"scope": "unit"},
-        )
+    fingerprint_cache_path = tmp_path / "fingerprints.json"
+    workflow_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=baseline_registry_path,
+        release_registry_path=release_registry_path,
+        name="qwen-release-candidate",
+        version="0.7",
+        workflow_report_path=tmp_path / "workflow.json",
+        release_report_path=tmp_path / "release-candidate.json",
+        artifact_manifest_path=tmp_path / "release-manifest.json",
+        verification_report_path=tmp_path / "release-verification.json",
+        fingerprint_cache_path=fingerprint_cache_path,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+        require_performance_score_dump_cache=True,
+        min_performance_score_dump_cache_jsonl_view_hit_rate=0.5,
+        performance_drift_baseline_key="performance_baseline:qwen-performance-reference:0.5",
+        max_performance_uncached_total_seconds_ratio=1.3,
+        max_performance_cached_total_seconds_ratio=1.5,
+        max_performance_cache_only_total_seconds_ratio=1.5,
+        max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
+        product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
+        adapter_family_matrix_path=adapter_family_matrix_path,
+        required_adapter_routes=("structured_state", "state_transition"),
+        runtime_profile="balanced",
+        inside_trigger_budget_policy="cost_first",
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_covariance_maha_last_auroc_drop=0.05,
+        max_inside_sample_count_ratio=0.6,
+        max_inside_generation_seconds_ratio=0.8,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_p99_duration_seconds=0.03,
+        required_route_max_runtime_total_seconds=3.0,
+        required_route_max_retrieval_hit_count=30,
+        required_route_max_retrieval_use_rate=1.0,
+        required_route_require_non_oracle_evidence=True,
+        promotion_metadata={"scope": "unit"},
     )
+    payload = module.run_release_candidate_registry_workflow(workflow_config)
 
     assert payload["decision"]["status"] == "promote"
     assert payload["decision"]["manifest_promoted"] is True
@@ -6894,6 +6895,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["required_route_require_non_oracle_evidence"] is True
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
+    assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
     assert payload["config"]["require_performance_score_dump_cache"] is True
     assert payload["config"]["min_performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.5)
     assert payload["config"]["performance_drift_baseline_key"] == (
@@ -7020,13 +7022,31 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_generation_seconds_ratio_to_reference"] == pytest.approx(0.35)
     assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
+    assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
     assert record.metadata["scope"] == "unit"
     assert payload["artifact_cache"]["artifact_json_cache"]["hits"] >= 1
     assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
     assert record.metadata["artifact_json_cache"]["hits"] >= 1
     assert record.metadata["artifact_fingerprint_cache_entries"] > 0
-    assert fingerprint_calls_by_path[str((tmp_path / "structured-route-comparison.json").resolve())] == 1
-    assert fingerprint_calls_by_path[str((tmp_path / "retrieval-route-comparison.json").resolve())] == 1
+    assert fingerprint_cache_path.exists()
+    fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
+    assert len(fingerprint_cache) > 0
+    structured_route_report_key = str((tmp_path / "structured-route-comparison.json").resolve())
+    retrieval_route_report_key = str((tmp_path / "retrieval-route-comparison.json").resolve())
+    assert fingerprint_calls_by_path[structured_route_report_key] == 1
+    assert fingerprint_calls_by_path[retrieval_route_report_key] == 1
+
+    fingerprint_calls_after_first = dict(fingerprint_calls_by_path)
+    second_payload = module.run_release_candidate_registry_workflow(workflow_config)
+
+    assert second_payload["decision"]["status"] == "promote"
+    assert second_payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert fingerprint_calls_by_path[structured_route_report_key] == (
+        fingerprint_calls_after_first[structured_route_report_key]
+    )
+    assert fingerprint_calls_by_path[retrieval_route_report_key] == (
+        fingerprint_calls_after_first[retrieval_route_report_key]
+    )
 
 
 def test_run_release_candidate_registry_workflow_cli_blocks_without_registration(tmp_path):

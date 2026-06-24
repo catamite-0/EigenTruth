@@ -19,7 +19,11 @@ from benchmarks.compare_release_candidates import compare_release_candidates  # 
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
-from eigentruth.registry import ArtifactVerificationContext  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactVerificationContext,
+    load_fingerprint_cache,
+    save_fingerprint_cache,
+)
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     artifact_manifest_path: Path | None = None
     verification_report_path: Path | None = None
     workflow_report_path: Path | None = None
+    fingerprint_cache_path: Path | None = None
     recursive: bool = True
     allow_unverified: bool = False
     runtime_profile: str | None = None
@@ -137,6 +142,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.workflow_report_path is not None:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
+        if self.fingerprint_cache_path is not None:
+            object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
         if self.runtime_profile is not None:
             profile = get_runtime_profile(self.runtime_profile)
             object.__setattr__(self, "runtime_profile", profile.name)
@@ -186,7 +193,9 @@ def run_release_candidate_registry_workflow(
     config: ReleaseCandidateRegistryWorkflowConfig,
 ) -> dict[str, Any]:
     """Run release comparison, write an artifact manifest, and register when eligible."""
-    verification_context = ArtifactVerificationContext()
+    verification_context = ArtifactVerificationContext(
+        fingerprint_cache=load_fingerprint_cache(config.fingerprint_cache_path),
+    )
     fingerprint_cache = verification_context.fingerprint_cache
     json_cache = verification_context.json_cache
     comparison = compare_release_candidates(
@@ -358,6 +367,9 @@ def run_release_candidate_registry_workflow(
             "version": config.version,
             "release_report": str(config.comparison_path),
             "artifact_manifest": str(config.manifest_path),
+            "fingerprint_cache": (
+                None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
+            ),
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
             "runtime_profile": config.runtime_profile,
@@ -392,6 +404,7 @@ def run_release_candidate_registry_workflow(
     }
     config.report_path.parent.mkdir(parents=True, exist_ok=True)
     config.report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    save_fingerprint_cache(config.fingerprint_cache_path, verification_context.fingerprint_cache or {})
     return payload
 
 
@@ -743,6 +756,9 @@ def _promotion_metadata(
     metadata = {
         **_manifest_metadata(comparison),
         "workflow": "run_release_candidate_registry_workflow",
+        "manifest_fingerprint_cache": (
+            None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
+        ),
     }
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
@@ -837,6 +853,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         artifact_manifest_path=None if args.artifact_manifest is None else Path(args.artifact_manifest),
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
         workflow_report_path=None if args.json is None else Path(args.json),
+        fingerprint_cache_path=None if args.fingerprint_cache is None else Path(args.fingerprint_cache),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
         runtime_profile=args.runtime_profile,
@@ -943,6 +960,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--artifact-manifest", default=None,
                         help="optional path for the release candidate artifact manifest")
     parser.add_argument("--verification-report", default=None)
+    parser.add_argument("--fingerprint-cache", default=None,
+                        help="optional JSON cache for recursive manifest fingerprint reads")
     parser.add_argument("--metadata", action="append", default=[], help="extra promotion metadata as key=value")
     parser.add_argument("--allow-non-promote", action="store_true",
                         help="register even when the release candidate comparison does not promote")

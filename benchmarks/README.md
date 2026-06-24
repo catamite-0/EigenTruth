@@ -1382,7 +1382,10 @@ manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
 label-free local retrieval claims.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
-readiness and performance-baseline covariance tradeoff gates.
+readiness and performance-baseline covariance tradeoff gates. Add
+`--fingerprint-cache` for repeated local release checks so recursive manifest
+verification can reuse unchanged file/directory fingerprints across runs
+without changing gate semantics.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1415,6 +1418,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --json artifacts/release-candidate-registry-workflow.json \
   --release-report-json artifacts/release-candidate-comparison.json \
   --artifact-manifest artifacts/release-candidate-artifact-manifest.json \
+  --fingerprint-cache artifacts/release-candidate-fingerprints.json \
   --fail-on-blocked
 ```
 
