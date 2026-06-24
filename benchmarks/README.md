@@ -2376,12 +2376,17 @@ Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
 phase timings, route costs, cache hit rates, retrieval use, staged-verification
 skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
-`ProductPromotionContract` budget. Use full `ProductTrace.to_dict()` payloads
-for this workflow; bounded telemetry from `--bounded-trace` is intentionally
-rejected because it can truncate replay-relevant evidence and action outputs.
-For large trace sets, add `--trace-records-jsonl` to stream per-trace metric and
-budget records into a JSONL sidecar while keeping the main report focused on
-summary, budget, manifest, and registry metadata. Add
+`ProductPromotionContract` budget. The output includes `optimization.hotspots`,
+`optimization.recommendations`, and `optimization.policy_hints`, turning the
+baseline into an actionable performance pass over slow phases/routes, low cache
+hit rates, excessive retrieval or verifier fanout, missing staged verification,
+and audit-heavy runtime-profile distributions. Use full `ProductTrace.to_dict()`
+payloads for this workflow; bounded telemetry from `--bounded-trace` is
+intentionally rejected because it can truncate replay-relevant evidence and
+action outputs. For large trace sets, add `--trace-records-jsonl` to stream
+per-trace metric, budget, and runtime-profile context records into a JSONL
+sidecar while keeping the main report focused on summary, budget, optimization,
+manifest, and registry metadata. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
 resolved policy payload:

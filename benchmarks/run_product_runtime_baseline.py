@@ -102,6 +102,7 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
     records, summary_records, trace_record_cache = _build_trace_records(config, policy=policy)
     trace_record_count = len(summary_records)
     budget_summary = _budget_summary(summary_records, policy=policy)
+    summary = _aggregate_records(summary_records)
     status = _status_from_budget(budget_summary)
     report = {
         "schema_version": 1,
@@ -111,7 +112,12 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "status": status,
             "blocking_reasons": _blocking_reasons(budget_summary),
         },
-        "summary": _aggregate_records(summary_records),
+        "summary": summary,
+        "optimization": _optimization_report(
+            summary,
+            budget=budget_summary,
+            trace_record_cache=trace_record_cache,
+        ),
         "budget": budget_summary,
         "traces": list(records),
         "trace_records": {
@@ -209,6 +215,7 @@ def _emit_trace_records(
         for record in records:
             stream.write(_jsonl_text(record))
             summary_records.append({
+                "context": dict(_mapping(record.get("context"))),
                 "metrics": record["metrics"],
                 "budget": record["budget"],
             })
@@ -239,8 +246,24 @@ def _trace_record(
     return {
         "path": str(path),
         "request_id": trace.get("request_id"),
+        "context": _trace_context(trace),
         "metrics": _compact_metrics(metrics),
         "budget": budget,
+    }
+
+
+def _trace_context(trace: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = _mapping(trace.get("metadata"))
+    risk_decision = _mapping(trace.get("risk_decision"))
+    return {
+        "runtime_profile": _optional_string(metadata.get("runtime_profile")),
+        "runtime_profile_source": _optional_string(metadata.get("runtime_profile_source")),
+        "pre_generation_profile_requested": _optional_string(
+            metadata.get("pre_generation_profile_requested")
+        ),
+        "staged_verification_enabled": metadata.get("staged_verification_enabled"),
+        "risk_level": _optional_string(risk_decision.get("risk_level")),
+        "action": _optional_string(risk_decision.get("action")),
     }
 
 
@@ -322,6 +345,7 @@ def _trace_record_to_cache(record: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "path": str(record.get("path")),
         "request_id": record.get("request_id"),
+        "context": dict(_mapping(record.get("context"))),
         "metrics": dict(_mapping(record.get("metrics"))),
         "budget": None if record.get("budget") is None else dict(_mapping(record.get("budget"))),
     }
@@ -341,6 +365,7 @@ def _trace_record_from_cache(record: Any) -> dict[str, Any]:
     return {
         "path": str(record.get("path")),
         "request_id": record.get("request_id"),
+        "context": dict(_mapping(record.get("context"))),
         "metrics": dict(metrics),
         "budget": None if budget is None else dict(budget),
     }
@@ -393,6 +418,7 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
 
 def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     metrics = [_mapping(record.get("metrics")) for record in records]
+    contexts = [_mapping(record.get("context")) for record in records]
     return {
         "n_traces": len(records),
         "runtime_trace_count": sum(1 for item in metrics if bool(item.get("has_runtime_trace"))),
@@ -423,6 +449,368 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_stage": _aggregate_verification_stage(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
+        "profiles": _aggregate_contexts(contexts),
+    }
+
+
+def _aggregate_contexts(contexts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    staged_values = [context.get("staged_verification_enabled") for context in contexts]
+    return {
+        "source_trace_count": len(contexts),
+        "runtime_profile_counts": _counts(context.get("runtime_profile") for context in contexts),
+        "runtime_profile_source_counts": _counts(
+            context.get("runtime_profile_source") for context in contexts
+        ),
+        "pre_generation_profile_requested_counts": _counts(
+            context.get("pre_generation_profile_requested") for context in contexts
+        ),
+        "risk_level_counts": _counts(context.get("risk_level") for context in contexts),
+        "action_counts": _counts(context.get("action") for context in contexts),
+        "staged_verification_enabled_count": sum(1 for value in staged_values if _truthy_flag(value)),
+    }
+
+
+def _optimization_report(
+    summary: Mapping[str, Any],
+    *,
+    budget: Mapping[str, Any],
+    trace_record_cache: Mapping[str, Any],
+) -> dict[str, Any]:
+    phase_hotspots = _phase_hotspots(summary)
+    route_hotspots = _route_hotspots(summary)
+    recommendations = _optimization_recommendations(
+        summary,
+        phase_hotspots=phase_hotspots,
+        route_hotspots=route_hotspots,
+        trace_record_cache=trace_record_cache,
+    )
+    return {
+        "schema_version": 1,
+        "status": _optimization_status(summary, recommendations),
+        "summary": {
+            "n_traces": summary.get("n_traces"),
+            "runtime_trace_count": summary.get("runtime_trace_count"),
+            "runtime_trace_coverage": _safe_div(
+                _finite_float(summary.get("runtime_trace_count")),
+                _finite_float(summary.get("n_traces")),
+            ),
+            "cache_hit_rate_mean": _nested(summary, "cache_hit_rate", "mean"),
+            "retrieval_use_rate": _nested(summary, "routes", "overall", "retrieval_use_rate"),
+            "verification_claim_skip_rate": _nested(
+                summary,
+                "verification_stage",
+                "claim_skip_rate",
+            ),
+            "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
+            "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
+            "budget_enabled": budget.get("enabled"),
+            "budget_passed": budget.get("passed"),
+        },
+        "hotspots": {
+            "phases": phase_hotspots,
+            "routes": route_hotspots,
+        },
+        "recommendations": recommendations,
+        "policy_hints": _optimization_policy_hints(summary, phase_hotspots=phase_hotspots),
+    }
+
+
+def _optimization_status(
+    summary: Mapping[str, Any],
+    recommendations: Sequence[Mapping[str, Any]],
+) -> str:
+    if not _finite_float(summary.get("n_traces")):
+        return "insufficient_data"
+    if any(item.get("priority") == "high" for item in recommendations):
+        return "needs_attention"
+    if recommendations:
+        return "has_recommendations"
+    return "ok"
+
+
+def _phase_hotspots(summary: Mapping[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for phase, stats in _mapping(summary.get("phases")).items():
+        phase_stats = _mapping(stats)
+        seconds = _mapping(phase_stats.get("seconds"))
+        count = _finite_float(seconds.get("count"))
+        mean = _finite_float(seconds.get("mean"))
+        total = None if count is None or mean is None else count * mean
+        rows.append({
+            "phase": str(phase),
+            "observation_count": int(count or 0),
+            "phase_count": phase_stats.get("phase_count"),
+            "total_observed_seconds": total,
+            "mean_seconds": mean,
+            "p95_seconds": _finite_float(seconds.get("p95")),
+            "p99_seconds": _finite_float(seconds.get("p99")),
+            "max_seconds": _finite_float(seconds.get("max")),
+        })
+    rows.sort(
+        key=lambda row: (
+            _sort_value(row.get("total_observed_seconds")),
+            _sort_value(row.get("mean_seconds")),
+            row["phase"],
+        ),
+        reverse=True,
+    )
+    return rows[:limit]
+
+
+def _route_hotspots(summary: Mapping[str, Any], *, limit: int = 5) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for route, stats in _mapping(_nested(summary, "routes", "by_route")).items():
+        route_stats = _mapping(stats)
+        rows.append({
+            "route": str(route),
+            "total": route_stats.get("total"),
+            "routed_total": route_stats.get("routed_total"),
+            "total_duration_seconds": _finite_float(route_stats.get("total_duration_seconds")),
+            "mean_duration_seconds": _finite_float(route_stats.get("mean_duration_seconds")),
+            "mean_selected_route_duration_seconds": _finite_float(
+                route_stats.get("mean_selected_route_duration_seconds")
+            ),
+            "max_duration_seconds": _finite_float(route_stats.get("max_duration_seconds")),
+            "mean_attempted_route_count": _finite_float(
+                route_stats.get("mean_attempted_route_count")
+            ),
+            "retrieval_use_rate": _finite_float(route_stats.get("retrieval_use_rate")),
+            "mean_retrieval_hits": _finite_float(route_stats.get("mean_retrieval_hits")),
+        })
+    rows.sort(
+        key=lambda row: (
+            _sort_value(row.get("total_duration_seconds")),
+            _sort_value(row.get("mean_duration_seconds")),
+            row["route"],
+        ),
+        reverse=True,
+    )
+    return rows[:limit]
+
+
+def _optimization_recommendations(
+    summary: Mapping[str, Any],
+    *,
+    phase_hotspots: Sequence[Mapping[str, Any]],
+    route_hotspots: Sequence[Mapping[str, Any]],
+    trace_record_cache: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    recommendations: list[dict[str, Any]] = []
+    overall_routes = _mapping(_nested(summary, "routes", "overall"))
+    mean_attempted = _finite_float(overall_routes.get("mean_attempted_route_count"))
+    retrieval_use_rate = _finite_float(overall_routes.get("retrieval_use_rate"))
+    cache_hit_rate = _finite_float(_nested(summary, "cache_hit_rate", "mean"))
+    verification_stage = _mapping(summary.get("verification_stage"))
+    claim_skip_rate = _finite_float(verification_stage.get("claim_skip_rate"))
+    enabled_stage_count = _finite_float(verification_stage.get("enabled_trace_count")) or 0.0
+    profiles = _mapping(summary.get("profiles"))
+    profile_counts = _mapping(profiles.get("runtime_profile_counts"))
+    audit_rate = _count_rate(profile_counts, "audit")
+    n_traces = _finite_float(summary.get("n_traces")) or 0.0
+
+    if phase_hotspots:
+        top_phase = phase_hotspots[0]
+        if _finite_float(top_phase.get("mean_seconds")):
+            recommendations.append(_recommendation(
+                "phase_hotspot_review",
+                priority="medium",
+                area="runtime_trace",
+                title="Review the dominant runtime phase before widening model or verifier work.",
+                reason=f"{top_phase['phase']} is the largest observed phase in this baseline.",
+                evidence={
+                    "phase": top_phase["phase"],
+                    "mean_seconds": top_phase.get("mean_seconds"),
+                    "total_observed_seconds": top_phase.get("total_observed_seconds"),
+                },
+                suggested_action=(
+                    "Use this phase as the first optimization target; keep model-forward, "
+                    "retrieval, and verifier changes gated by phase-level p95/p99 budgets."
+                ),
+            ))
+
+    if cache_hit_rate is None:
+        recommendations.append(_recommendation(
+            "instrument_cache_hit_rates",
+            priority="medium",
+            area="cache",
+            title="Record named cache hit rates in ProductTrace metadata.",
+            reason="The baseline cannot evaluate cache effectiveness without cache hit/miss telemetry.",
+            evidence={"cache_hit_rate_mean": None},
+            suggested_action=(
+                "Populate metadata.cache for verifier, retrieval, state, and score-dump caches "
+                "before using this report as a release gate."
+            ),
+        ))
+    elif cache_hit_rate < 0.60:
+        recommendations.append(_recommendation(
+            "improve_cache_keys",
+            priority="high",
+            area="cache",
+            title="Normalize cache keys before adding more expensive verifier routes.",
+            reason="The aggregate cache hit rate is below the default performance target.",
+            evidence={"cache_hit_rate_mean": cache_hit_rate, "target": 0.60},
+            suggested_action=(
+                "Normalize claim text, retrieval queries, and state-source inputs; then rerun "
+                "the trace baseline with trace-record caching enabled."
+            ),
+        ))
+
+    if mean_attempted is not None and mean_attempted > 1.5:
+        recommendations.append(_recommendation(
+            "reduce_verifier_route_fanout",
+            priority="high",
+            area="verifier_routes",
+            title="Reduce verifier route fanout for common requests.",
+            reason="The mean attempted verifier route count is above the balanced-profile target.",
+            evidence={"mean_attempted_route_count": mean_attempted, "target": 1.5},
+            suggested_action=(
+                "Prefer routed verifier adapters by claim metadata and stop after decisive support "
+                "or refutation instead of trying broad fallback chains."
+            ),
+        ))
+
+    if retrieval_use_rate is not None and retrieval_use_rate > 0.50:
+        recommendations.append(_recommendation(
+            "gate_retrieval_to_unsupported_claims",
+            priority="high",
+            area="retrieval",
+            title="Gate retrieval to unsupported, high-risk, or time-sensitive claims.",
+            reason="Retrieval is used on more than half of routed verification decisions.",
+            evidence={"retrieval_use_rate": retrieval_use_rate, "target": 0.50},
+            suggested_action=(
+                "Run cheap structured/rule/self-consistency routes first, then retrieve only "
+                "for unsupported or freshness-sensitive claims with bounded top_k."
+            ),
+        ))
+
+    if enabled_stage_count == 0.0:
+        recommendations.append(_recommendation(
+            "enable_staged_verification",
+            priority="medium",
+            area="runtime_profile",
+            title="Enable staged verification for low-risk traces.",
+            reason="No traces in this baseline recorded staged-verification decisions.",
+            evidence={"enabled_trace_count": 0, "n_traces": n_traces},
+            suggested_action=(
+                "Use latency/balanced runtime profiles so low-risk, non-sensitive claims skip "
+                "expensive verifier routes while high-risk claims still audit."
+            ),
+        ))
+    elif claim_skip_rate is not None and claim_skip_rate < 0.25:
+        recommendations.append(_recommendation(
+            "tune_staged_verification_policy",
+            priority="medium",
+            area="runtime_profile",
+            title="Tune staged verification to save more verifier work.",
+            reason="Staged verification is enabled but saves fewer than 25% of claims.",
+            evidence={"claim_skip_rate": claim_skip_rate, "target": 0.25},
+            suggested_action=(
+                "Replay runtime profiles over a trace corpus and adjust sensitive claim features "
+                "or diagnostic-risk thresholds before changing verifier implementations."
+            ),
+        ))
+
+    if audit_rate is not None and audit_rate > 0.50 and n_traces >= 2:
+        recommendations.append(_recommendation(
+            "replay_runtime_profile_selector",
+            priority="medium",
+            area="runtime_profile",
+            title="Replay selector policies before making audit the default path.",
+            reason="More than half of observed traces ran with the audit profile.",
+            evidence={"audit_profile_rate": audit_rate, "runtime_profile_counts": profile_counts},
+            suggested_action=(
+                "Run run_product_trace_replay_workflow.py with latency/balanced/audit candidates "
+                "and gate observed selected runtime deltas before promoting a selector policy."
+            ),
+        ))
+
+    if trace_record_cache.get("enabled") is not True and n_traces >= 10:
+        recommendations.append(_recommendation(
+            "enable_trace_record_cache",
+            priority="low",
+            area="benchmarking",
+            title="Enable trace-record cache for repeated runtime baseline runs.",
+            reason="Large trace baselines can avoid repeated ProductTrace JSON scans.",
+            evidence={"n_traces": n_traces, "trace_record_cache_enabled": False},
+            suggested_action="Pass --trace-records-cache-json on repeated baseline and replay workflows.",
+        ))
+
+    if route_hotspots:
+        top_route = route_hotspots[0]
+        if _finite_float(top_route.get("mean_duration_seconds")):
+            recommendations.append(_recommendation(
+                "route_hotspot_review",
+                priority="medium",
+                area="verifier_routes",
+                title="Review the slowest verifier route before increasing verifier coverage.",
+                reason=f"{top_route['route']} contributes the largest observed verifier duration.",
+                evidence={
+                    "route": top_route["route"],
+                    "mean_duration_seconds": top_route.get("mean_duration_seconds"),
+                    "retrieval_use_rate": top_route.get("retrieval_use_rate"),
+                },
+                suggested_action=(
+                    "Compare this route against cheaper structured/state/self-consistency routes "
+                    "and keep it behind explicit metadata or risk triggers."
+                ),
+            ))
+
+    return recommendations
+
+
+def _optimization_policy_hints(
+    summary: Mapping[str, Any],
+    *,
+    phase_hotspots: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    total_seconds_p95 = _finite_float(_nested(summary, "total_seconds", "p95"))
+    cache_hit_rate = _finite_float(_nested(summary, "cache_hit_rate", "mean"))
+    mean_attempted = _finite_float(_nested(summary, "routes", "overall", "mean_attempted_route_count"))
+    retrieval_use_rate = _finite_float(_nested(summary, "routes", "overall", "retrieval_use_rate"))
+    phase_p95_budget = {
+        str(phase["phase"]): _with_headroom(phase.get("p95_seconds"))
+        for phase in phase_hotspots[:3]
+        if _with_headroom(phase.get("p95_seconds")) is not None
+    }
+    return {
+        "source": "observed_baseline_with_25_percent_headroom",
+        "candidate_runtime_budget_policy": {
+            "max_total_seconds": _with_headroom(total_seconds_p95),
+            "max_phase_p95_seconds": phase_p95_budget,
+            "max_mean_attempted_route_count": _with_headroom(mean_attempted),
+            "max_retrieval_use_rate": (
+                None
+                if retrieval_use_rate is None
+                else min(1.0, _with_headroom(retrieval_use_rate) or 1.0)
+            ),
+            "min_cache_hit_rate": None if cache_hit_rate is None else max(0.0, min(1.0, cache_hit_rate * 0.80)),
+        },
+        "next_workflows": (
+            "run_product_trace_replay_workflow.py",
+            "run_runtime_profile_selector_replay.py",
+            "run_product_runtime_profile_sweep.py",
+        ),
+    }
+
+
+def _recommendation(
+    recommendation_id: str,
+    *,
+    priority: str,
+    area: str,
+    title: str,
+    reason: str,
+    evidence: Mapping[str, Any],
+    suggested_action: str,
+) -> dict[str, Any]:
+    return {
+        "id": recommendation_id,
+        "priority": priority,
+        "area": area,
+        "title": title,
+        "reason": reason,
+        "evidence": dict(evidence),
+        "suggested_action": suggested_action,
     }
 
 
@@ -857,6 +1245,52 @@ def _sequence(value: Any) -> tuple[Any, ...]:
 def _safe_artifact_name(value: str) -> str:
     cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "_" for char in value.strip())
     return cleaned or "trace"
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _truthy_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _counts(values: Sequence[Any] | Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        text = _optional_string(value)
+        if text is None:
+            continue
+        counts[text] = counts.get(text, 0) + 1
+    return counts
+
+
+def _count_rate(counts: Mapping[str, Any], key: str) -> float | None:
+    values = [_finite_float(value) for value in counts.values()]
+    finite = [value for value in values if value is not None]
+    total = sum(finite)
+    if total <= 0:
+        return None
+    return (_finite_float(counts.get(key)) or 0.0) / total
+
+
+def _sort_value(value: Any) -> float:
+    numeric = _finite_float(value)
+    return float("-inf") if numeric is None else numeric
+
+
+def _with_headroom(value: Any, *, ratio: float = 1.25) -> float | None:
+    numeric = _finite_float(value)
+    if numeric is None:
+        return None
+    return round(numeric * ratio, 6)
 
 
 def _parse_metadata(values: Sequence[str]) -> dict[str, Any]:

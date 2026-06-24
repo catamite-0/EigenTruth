@@ -10608,6 +10608,81 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert record.metadata["compact_json"] is True
 
 
+def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    trace_a = tmp_path / "trace-a.json"
+    trace_b = tmp_path / "trace-b.json"
+    for path, request_id, total_seconds, route_seconds in (
+        (trace_a, "req-a", 0.30, 0.22),
+        (trace_b, "req-b", 0.40, 0.30),
+    ):
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "risk_decision": {
+                    "action": "retrieve",
+                    "risk_level": "high",
+                    "confidence": 0.8,
+                    "reason": "needs evidence",
+                },
+                "runtime_trace": {
+                    "total_seconds": total_seconds,
+                    "phases": [
+                        {"name": "diagnostic_risk_decision", "seconds": 0.01},
+                        {"name": "initial_verification", "seconds": route_seconds},
+                    ],
+                },
+                "verification_results": [
+                    {
+                        "status": "supported",
+                        "metadata": {
+                            "selected_route": "retrieval_structured_qa",
+                            "total_duration_seconds": route_seconds,
+                            "selected_route_duration_seconds": route_seconds,
+                            "attempted_route_count": 2,
+                            "used_retrieval": True,
+                            "retrieval_hit_count": 2,
+                        },
+                    }
+                ],
+                "metadata": {
+                    "runtime_profile": "audit",
+                    "runtime_profile_source": "pre_generation",
+                    "pre_generation_profile_requested": "auto",
+                    "staged_verification_enabled": False,
+                    "cache": {"verifier": {"hits": 0, "misses": 4}},
+                },
+            }),
+            encoding="utf-8",
+        )
+
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_a, trace_b),
+            report_path=tmp_path / "product-runtime-baseline.json",
+        )
+    )
+    optimization = payload["optimization"]
+    recommendation_ids = {item["id"] for item in optimization["recommendations"]}
+
+    assert optimization["status"] == "needs_attention"
+    assert optimization["hotspots"]["phases"][0]["phase"] == "initial_verification"
+    assert optimization["hotspots"]["routes"][0]["route"] == "retrieval_structured_qa"
+    assert payload["summary"]["profiles"]["runtime_profile_counts"] == {"audit": 2}
+    assert payload["summary"]["profiles"]["runtime_profile_source_counts"] == {"pre_generation": 2}
+    assert payload["traces"][0]["context"]["runtime_profile"] == "audit"
+    assert {
+        "improve_cache_keys",
+        "reduce_verifier_route_fanout",
+        "gate_retrieval_to_unsupported_claims",
+        "enable_staged_verification",
+        "replay_runtime_profile_selector",
+    }.issubset(recommendation_ids)
+    assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
+        "max_phase_p95_seconds"
+    ]["initial_verification"] > 0.0
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
