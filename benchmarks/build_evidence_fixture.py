@@ -56,6 +56,7 @@ def build_evidence_fixture(
     query_field: str = "text",
     retriever_backend: str = "memory",
     retriever_index_path: str | Path | None = None,
+    include_label_metadata: bool = True,
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
@@ -90,30 +91,32 @@ def build_evidence_fixture(
             limit=retrieval_limit,
         ))
         total_hits += len(hits)
+        record_metadata: dict[str, Any] = {
+            "index": idx - 1,
+            "statement": statement,
+            "retrieval": {
+                "n_hits": len(hits),
+                "retriever": retriever_info["type"],
+                "requested_backend": retriever_info["requested_backend"],
+                "actual_backend": retriever_info["actual_backend"],
+                "fallback_reason": retriever_info.get("fallback_reason"),
+                "requested_index_path": retriever_info.get("requested_index_path"),
+                "actual_index_path": retriever_info.get("actual_index_path"),
+                "index_reused": retriever_info.get("index_reused"),
+                "min_overlap": retriever_min_overlap,
+                "limit": retrieval_limit,
+                "query_field": query_field,
+                "query": query_text,
+            },
+        }
+        if include_label_metadata:
+            record_metadata["score_label"] = label
         records.append({
             "claim": claim_text,
             "claim_id": claim_id,
             "claim_metadata": dict(statement.get("metadata", {})),
             "retrieval_documents": [hit.to_dict() for hit in hits],
-            "metadata": {
-                "index": idx - 1,
-                "score_label": label,
-                "statement": statement,
-                "retrieval": {
-                    "n_hits": len(hits),
-                    "retriever": retriever_info["type"],
-                    "requested_backend": retriever_info["requested_backend"],
-                    "actual_backend": retriever_info["actual_backend"],
-                    "fallback_reason": retriever_info.get("fallback_reason"),
-                    "requested_index_path": retriever_info.get("requested_index_path"),
-                    "actual_index_path": retriever_info.get("actual_index_path"),
-                    "index_reused": retriever_info.get("index_reused"),
-                    "min_overlap": retriever_min_overlap,
-                    "limit": retrieval_limit,
-                    "query_field": query_field,
-                    "query": query_text,
-                },
-            },
+            "metadata": record_metadata,
         })
 
     return {
@@ -121,8 +124,12 @@ def build_evidence_fixture(
         "fixture_type": "local_retrieval_evidence",
         "description": (
             "Evidence fixture built by local token-overlap retrieval over a supplied corpus. "
-            "Labels are copied only for audit metadata; retrieval uses claim text only."
+            "Labels are optional audit metadata only; retrieval uses claim text only."
         ),
+        "label_usage": {
+            "labels_used_for_retrieval": False,
+            "labels_copied_to_record_metadata": include_label_metadata,
+        },
         "retriever": {
             **retriever_info,
             "min_overlap": retriever_min_overlap,
@@ -152,6 +159,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         query_field=args.query_field,
         retriever_backend=args.retriever_backend,
         retriever_index_path=args.retriever_index_path,
+        include_label_metadata=not bool(args.omit_label_metadata),
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -317,6 +325,8 @@ def main() -> None:
                         help="optional persistent SQLite FTS index path for sqlite_fts/auto backends")
     parser.add_argument("--query-field", choices=("text", "answer", "question", "question_answer"), default="text",
                         help="statement field used for retrieval query; claim text remains unchanged")
+    parser.add_argument("--omit-label-metadata", action="store_true",
+                        help="do not copy score labels into fixture record metadata")
     run(parser.parse_args())
 
 

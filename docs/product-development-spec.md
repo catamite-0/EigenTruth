@@ -248,7 +248,7 @@ For product features:
 - Demo and tests for unsupported -> retrieve -> supported, no-hit retrieve, and refuted-claim hard stop paths.
 - `eval_verifier_ensemble.py` benchmark shell for comparing calibrated internal diagnostics against retrieval/verifier suppression and refutation policies, including structured QA, static state, and action-conditioned state-transition routes.
 - `build_truthfulqa_corpus.py` for creating a local TruthfulQA correct-answer evidence corpus.
-- `build_evidence_fixture.py` for building non-oracle verifier fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora.
+- `build_evidence_fixture.py` for building non-oracle verifier fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora, with explicit `label_usage` metadata and an `--omit-label-metadata` mode so adapter-audit fixtures can keep labels only in the score dump used for evaluation.
 - `backfill_truthfulqa_statements.py` for adding statement metadata to older TruthfulQA score dumps without rerunning models.
 - Qwen l80 / SmolLM2 l80 oracle verifier-ensemble upper-bound report: label-derived perfect evidence drives verified false alarm to 0.000 and detection to 1.000 at alpha 0.100.
 - Verifier ensemble reports include label-conditioned `verification_quality`, so evidence fixture quality can be measured separately from downstream control-policy metrics.

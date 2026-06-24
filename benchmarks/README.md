@@ -1763,7 +1763,9 @@ Builds a non-oracle claim/evidence fixture from a statement-bearing score dump
 and local evidence corpus files. It supports JSON, JSONL, and plain text corpora,
 uses dependency-free token-overlap retrieval with optional SQLite FTS candidate
 indexing, and copies labels only into audit metadata; retrieval is driven by
-claim text.
+claim text. Use `--omit-label-metadata` when producing fixture artifacts for
+adapter audits where labels should remain only in the score dump used for
+evaluation.
 
 ```bash
 python benchmarks/build_evidence_fixture.py \
@@ -1774,7 +1776,8 @@ python benchmarks/build_evidence_fixture.py \
   --retriever-backend auto \
   --retriever-index-path artifacts/cache/local_retrieval_fts/truthfulqa_l80.sqlite \
   --retriever-min-overlap 0.95 \
-  --retrieval-limit 3
+  --retrieval-limit 3 \
+  --omit-label-metadata
 
 python benchmarks/eval_verifier_ensemble.py \
   --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \

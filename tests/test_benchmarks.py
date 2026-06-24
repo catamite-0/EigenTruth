@@ -480,9 +480,15 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     groundedness_route_quality = run["route_quality"]["groundedness"]
 
     assert fixture["fixture_type"] == "local_retrieval_evidence"
+    assert fixture["label_usage"] == {
+        "labels_used_for_retrieval": False,
+        "labels_copied_to_record_metadata": True,
+    }
     assert fixture["summary"]["records_with_hits"] == 2
     assert fixture["records"][0]["retrieval_documents"][0]["source"] == "facts:paris"
+    assert fixture["records"][0]["metadata"]["score_label"] == 0
     assert fixture["records"][1]["retrieval_documents"][0]["source"] == "facts:lyon"
+    assert fixture["records"][1]["metadata"]["score_label"] == 1
     assert fixture["records"][1]["metadata"]["retrieval"]["query_field"] == "answer"
     assert fixture["records"][1]["metadata"]["retrieval"]["query"] == "The capital of France is Lyon."
     assert fixture["retriever"]["requested_backend"] == "memory"
@@ -520,6 +526,81 @@ def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path
     assert cache_stats["groundedness_verifiers"]["requests"] >= 3
     assert cache_stats["retrievers"]["requests"] == 2
     assert cache_stats["total"]["requests"] >= cache_stats["retrievers"]["requests"]
+
+
+def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifier_path(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    fixture_path = tmp_path / "fixture.json"
+    output_path = tmp_path / "fixture_from_cli.json"
+    dump = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 1, 0],
+        "scores": {"truth_proj": [0.1, 0.9, 0.2]},
+        "statements": [
+            {"question": "What is the capital of France?", "answer": "The capital of France is Paris.",
+             "text": "What is the capital of France? The capital of France is Paris."},
+            {"question": "What is the capital of France?", "answer": "The capital of France is Lyon.",
+             "text": "What is the capital of France? The capital of France is Lyon."},
+            {"question": "What color is the sky?", "answer": "The sky is blue.",
+             "text": "What color is the sky? The sky is blue."},
+        ],
+    }
+    scores_path.write_text(json.dumps(dump), encoding="utf-8")
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {"text": "The capital of France is Paris.", "source": "facts:paris"},
+                {"text": "The capital of France is not Lyon.", "source": "facts:lyon"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.run(SimpleNamespace(
+        scores=str(scores_path),
+        corpus=(str(corpus_path),),
+        output=str(output_path),
+        retriever_min_overlap=0.6,
+        retrieval_limit=1,
+        query_field="answer",
+        retriever_backend="memory",
+        retriever_index_path=None,
+        omit_label_metadata=True,
+    ))
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.65,
+        retriever_min_overlap=0.6,
+    )
+    run = payload["runs"][0]
+    quality = run["verification_quality"]
+
+    assert fixture["label_usage"] == {
+        "labels_used_for_retrieval": False,
+        "labels_copied_to_record_metadata": False,
+    }
+    assert json.loads(output_path.read_text(encoding="utf-8"))["label_usage"] == fixture["label_usage"]
+    assert "score_label" not in fixture["records"][0]["metadata"]
+    assert "score_label" not in fixture["records"][1]["metadata"]
+    assert "score_label" not in fixture["records"][2]["metadata"]
+    assert fixture["records"][0]["metadata"]["retrieval"]["query"] == "The capital of France is Paris."
+    assert fixture["records"][1]["metadata"]["retrieval"]["query"] == "The capital of France is Lyon."
+    assert fixture["records"][0]["retrieval_documents"][0]["source"] == "facts:paris"
+    assert fixture["records"][1]["retrieval_documents"][0]["source"] == "facts:lyon"
+    assert quality["label_status_matrix"]["true"]["supported"] == 1
+    assert quality["label_status_matrix"]["true"]["insufficient_evidence"] == 1
+    assert quality["label_status_matrix"]["false"]["refuted"] == 1
+    assert run["route_summary"]["selected_counts"] == {"retrieval_groundedness": 2, "groundedness": 1}
 
 
 def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
