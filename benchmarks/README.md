@@ -1257,6 +1257,9 @@ python benchmarks/compare_release_candidates.py \
 Use explicit `--readiness-baseline-key` and `--route-baseline-key` values when a
 release should be constrained to named registry records. Omit `--route-registry`
 when readiness and route manifests are stored in the same local registry file.
+Release and route comparison workflows reuse a process-local JSON artifact cache
+while loading manifests and reports; cache entries are keyed by path, mtime,
+size, and inode so edited artifacts are reloaded in the same process.
 Repeat `--required-route-baseline-key` when the release should also require
 additional promoted route baselines, such as a real local-corpus
 `retrieval_groundedness` baseline, without making that route the selected
@@ -1265,8 +1268,7 @@ is promoted and recursively valid. Add `--required-route-*` thresholds when the
 audit route needs its own quality, latency, retrieval-hit, or cache-reuse budget;
 add `--required-route-require-non-oracle-evidence` when that required route must
 also prove labels stayed only in the score dump and local input provenance is
-present;
-otherwise the release only checks the route's already-registered promotion
+present. Otherwise the release only checks the route's already-registered promotion
 status and manifest validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
 retrieval or world-model adapters.

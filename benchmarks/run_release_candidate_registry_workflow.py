@@ -186,6 +186,7 @@ def run_release_candidate_registry_workflow(
 ) -> dict[str, Any]:
     """Run release comparison, write an artifact manifest, and register when eligible."""
     fingerprint_cache: dict[str, dict[str, Any]] = {}
+    json_cache: dict[str, dict[str, Any]] = {}
     comparison = compare_release_candidates(
         readiness_registry_path=config.readiness_registry_path,
         route_registry_path=config.route_registry_path,
@@ -261,6 +262,7 @@ def run_release_candidate_registry_workflow(
         required_route_require_non_oracle_evidence=config.required_route_require_non_oracle_evidence,
         notes=("release candidate registry workflow",),
         fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
     )
     config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
     config.comparison_path.write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")

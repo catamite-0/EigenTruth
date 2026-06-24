@@ -87,6 +87,7 @@ def compare_release_candidates(
     required_route_require_non_oracle_evidence: bool = False,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    json_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
     if performance_baseline_key is None and (
@@ -136,6 +137,7 @@ def compare_release_candidates(
         name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
     )
     cache = fingerprint_cache if fingerprint_cache is not None else {}
+    payload_cache = json_cache if json_cache is not None else {}
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
     performance_registry_path = (
         readiness_registry_path if performance_registry_path is None else performance_registry_path
@@ -175,6 +177,7 @@ def compare_release_candidates(
         recursive=recursive,
         allow_unverified=allow_unverified,
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     if product_trace_replay_workflow is not None:
         if selector_replay_report_path is None and product_trace_replay_workflow.get(
@@ -226,6 +229,7 @@ def compare_release_candidates(
         require_non_oracle_evidence=require_non_oracle_evidence,
         notes=("release candidate route comparison",),
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     raw_candidate = _release_candidate(readiness, route)
     required_routes = _required_route_baseline_gate(
@@ -250,10 +254,12 @@ def compare_release_candidates(
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=required_route_require_non_oracle_evidence,
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
         required_routes=required_adapter_routes,
+        json_cache=payload_cache,
     )
     performance = _performance_baseline_gate(
         performance_registry_path=performance_registry_path,
@@ -271,18 +277,21 @@ def compare_release_candidates(
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop
         ),
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     selector_replay = _selector_replay_gate(
         selector_replay_report_path=selector_replay_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     product_runtime_drift = _product_runtime_drift_gate(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
         fingerprint_cache=cache,
+        json_cache=payload_cache,
     )
     decision = _decision(
         readiness,
@@ -687,6 +696,7 @@ def _required_route_baseline_gate(
     min_verifier_trace_cache_hit_rate: float | None,
     require_non_oracle_evidence: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     required_keys = tuple(str(key) for key in required_route_baseline_keys if str(key))
     if not required_keys:
@@ -714,6 +724,7 @@ def _required_route_baseline_gate(
         require_non_oracle_evidence=require_non_oracle_evidence,
         notes=("release candidate required route baseline gate",),
         fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
     )
     rows = tuple(_mapping(row) for row in comparison.get("leaderboard", ()))
     rows_by_key = {str(row.get("record_key")): row for row in rows if row.get("record_key") is not None}
@@ -747,11 +758,12 @@ def _adapter_family_matrix_gate(
     *,
     adapter_family_matrix_path: str | Path | None,
     required_routes: Sequence[str],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if adapter_family_matrix_path is None:
         return None
     matrix_path = Path(adapter_family_matrix_path)
-    report, report_error = _load_optional_json(matrix_path)
+    report, report_error = _load_optional_json(matrix_path, json_cache=json_cache)
     routes = tuple(str(route) for route in report.get("routes", ()) if str(route))
     required = tuple(str(route) for route in required_routes if str(route))
     family_statuses = _adapter_family_statuses(report)
@@ -846,6 +858,7 @@ def _performance_baseline_gate(
     max_cache_only_total_seconds_ratio: float | None,
     max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
         return None
@@ -854,7 +867,7 @@ def _performance_baseline_gate(
     if record.artifact_type != "performance_baseline":
         raise ValueError(f"registry record {record.key()!r} is not a performance_baseline.")
     report_path = Path(record.path)
-    report, report_error = _load_optional_json(report_path)
+    report, report_error = _load_optional_json(report_path, json_cache=json_cache)
     manifest_path = _performance_manifest_path(record, report, report_path=report_path)
     verification = _verify_performance_manifest(
         manifest_path,
@@ -865,6 +878,7 @@ def _performance_baseline_gate(
         record,
         report,
         report_path=report_path,
+        json_cache=json_cache,
     )
     performance_evidence_bundle = _mapping(report.get("performance_evidence_bundle"))
     performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
@@ -884,7 +898,7 @@ def _performance_baseline_gate(
                 f"registry record {drift_record.key()!r} is not a performance_baseline."
             )
         drift_report_path = Path(drift_record.path)
-        drift_report, drift_report_error = _load_optional_json(drift_report_path)
+        drift_report, drift_report_error = _load_optional_json(drift_report_path, json_cache=json_cache)
         drift_manifest_path = _performance_manifest_path(
             drift_record,
             drift_report,
@@ -988,11 +1002,12 @@ def _product_trace_replay_workflow_gate(
     recursive: bool,
     allow_unverified: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if product_trace_replay_workflow_source is None:
         return None
     report_path = Path(product_trace_replay_workflow_source["path"])
-    report, report_error = _load_optional_json(report_path)
+    report, report_error = _load_optional_json(report_path, json_cache=json_cache)
     manifest_path = _product_trace_replay_workflow_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
@@ -1166,11 +1181,12 @@ def _selector_replay_gate(
     recursive: bool,
     allow_unverified: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if selector_replay_report_path is None:
         return None
     report_path = Path(selector_replay_report_path)
-    report, report_error = _load_optional_json(report_path)
+    report, report_error = _load_optional_json(report_path, json_cache=json_cache)
     manifest_path = _selector_replay_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
@@ -1290,11 +1306,12 @@ def _product_runtime_drift_gate(
     recursive: bool,
     allow_unverified: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if product_runtime_drift_report_path is None:
         return None
     report_path = Path(product_runtime_drift_report_path)
-    report, report_error = _load_optional_json(report_path)
+    report, report_error = _load_optional_json(report_path, json_cache=json_cache)
     manifest_path = _product_runtime_drift_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
@@ -1773,6 +1790,7 @@ def _performance_runtime_recommendation(
     report: Mapping[str, Any],
     *,
     report_path: Path,
+    json_cache: MutableMapping[str, dict[str, Any]],
 ) -> tuple[dict[str, Any], str | None]:
     runtime = _mapping(report.get("runtime_recommendation"))
     if runtime:
@@ -1785,7 +1803,7 @@ def _performance_runtime_recommendation(
     if raw_path is None:
         return {}, None
     path = _resolve_path(raw_path, base_path=report_path)
-    payload, _ = _load_optional_json(path)
+    payload, _ = _load_optional_json(path, json_cache=json_cache)
     return payload, str(path)
 
 
@@ -1960,14 +1978,43 @@ def _resolve_path(raw_path: Any, *, base_path: Path) -> Path:
     return path
 
 
-def _load_optional_json(path: Path) -> tuple[dict[str, Any], str | None]:
+def _load_optional_json(
+    path: Path,
+    *,
+    json_cache: MutableMapping[str, dict[str, Any]] | None = None,
+) -> tuple[dict[str, Any], str | None]:
+    cache_key = None if json_cache is None else _json_cache_key(path)
+    if cache_key is not None:
+        cached = json_cache.get(cache_key)
+        if cached is not None:
+            return _mapping(cached.get("payload")), cached.get("error")
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        return {}, str(exc)
+        error = str(exc)
+        if cache_key is not None:
+            json_cache[cache_key] = {"payload": {}, "error": error}
+        return {}, error
     if not isinstance(payload, dict):
-        return {}, f"{path} did not contain a JSON object"
+        error = f"{path} did not contain a JSON object"
+        if cache_key is not None:
+            json_cache[cache_key] = {"payload": {}, "error": error}
+        return {}, error
+    if cache_key is not None:
+        json_cache[cache_key] = {"payload": dict(payload), "error": None}
     return payload, None
+
+
+def _json_cache_key(path: Path) -> str | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    try:
+        resolved = path.resolve(strict=False)
+    except OSError:
+        resolved = path.absolute()
+    return f"{resolved}:{stat.st_mtime_ns}:{stat.st_size}:{getattr(stat, 'st_ino', 0)}"
 
 
 def _resolve_registry_record_path(registry_path: Path, record: Any) -> Path:

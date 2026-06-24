@@ -3524,6 +3524,68 @@ def test_compare_route_baselines_can_require_non_oracle_evidence(tmp_path):
     )
 
 
+def test_compare_route_baselines_accepts_process_local_json_cache(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="cached-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="cached-retrieval-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    json_cache: dict[str, dict[str, Any]] = {}
+    first = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:cached-retrieval-route:0.1",),
+        require_non_oracle_evidence=True,
+        json_cache=json_cache,
+    )
+    cached_keys = set(json_cache)
+    second = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:cached-retrieval-route:0.1",),
+        require_non_oracle_evidence=True,
+        json_cache=json_cache,
+    )
+
+    assert first["decision"]["status"] == "promote"
+    assert second["decision"]["status"] == "promote"
+    assert len(cached_keys) >= 3
+    assert set(json_cache) == cached_keys
+
+
+def test_json_cache_invalidates_when_file_signature_changes(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+
+    path = tmp_path / "payload.json"
+    path.write_text(json.dumps({"value": 1}) + "\n", encoding="utf-8")
+    json_cache: dict[str, dict[str, Any]] = {}
+
+    first, first_error = module._load_optional_json(path, json_cache=json_cache)
+    path.write_text(json.dumps({"value": 200, "extra": True}) + "\n", encoding="utf-8")
+    second, second_error = module._load_optional_json(path, json_cache=json_cache)
+
+    assert first_error is None
+    assert second_error is None
+    assert first["value"] == 1
+    assert second["value"] == 200
+    assert len(json_cache) == 2
+
+
 def test_runtime_budget_policy_fails_closed_for_missing_or_nonfinite_metrics():
     module = importlib.import_module("benchmarks.runtime_budget_policy")
 
