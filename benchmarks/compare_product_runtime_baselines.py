@@ -294,7 +294,10 @@ def _gate_metric(
         return row
     if fail(value, threshold):
         row["status"] = "blocked"
-        row["reason"] = f"{row['metric']}: {value:.6g} exceeded gate {threshold:.6g}"
+        if row.get("comparison") == "min_current":
+            row["reason"] = f"{row['metric']}: {value:.6g} below gate {threshold:.6g}"
+        else:
+            row["reason"] = f"{row['metric']}: {value:.6g} exceeded gate {threshold:.6g}"
         return row
     row["status"] = "pass"
     row["reason"] = None
