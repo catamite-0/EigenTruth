@@ -451,11 +451,15 @@ python benchmarks/eval_verifier_ensemble.py \
   --signal truth_proj \
   --alphas 0.05,0.1,0.2 \
   --repeats 50 \
+  --verified-records-jsonl artifacts/verifier_ensemble_verified_records.jsonl \
   --json artifacts/verifier_ensemble_report.json
 ```
 
 Add `--compact-json` for large automated runs when the report is consumed by
 tools and does not need human-readable indentation.
+Add `--verified-records-jsonl` when per-claim verifier outputs are needed for
+audit or debugging; the main report keeps summary metrics and references the
+sidecar path/count instead of embedding those records.
 Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
 views and records a `score_dump` summary plus SHA-256 fingerprint, so
 verifier-cache and route promotion evidence can be tied back to the exact score
@@ -1781,7 +1785,7 @@ skips local score dump/corpus parsing for claim construction, then still reruns
 verifier-route metrics and promotion against the current score dump and emitted
 claims file.
 
-`--verifier-trace-cache-dir` is optional. It caches verifier ensemble
+`--verification-cache-dir` is optional. It caches verifier ensemble
 `verified_records`, so repeated workflow runs can reuse claim verification and
 retrieval route traces while still recalculating alpha-specific control metrics,
 promotion gates, manifests, and registry output.

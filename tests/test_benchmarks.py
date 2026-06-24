@@ -11540,6 +11540,68 @@ def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(
     assert result["verified"]["detection"] == pytest.approx(1.0)
 
 
+def test_eval_verifier_ensemble_writes_verified_records_sidecar(tmp_path):
+    module = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "claims.json"
+    sidecar_path = tmp_path / "verified-records.jsonl"
+    labels = [0, 0, 1, 1]
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": labels,
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {"claim": "True item zero is supported.", "retrieval_documents": ["True item zero is supported."]},
+                {"claim": "True item one is supported.", "retrieval_documents": ["True item one is supported."]},
+                {"claim": "False item two is correct.", "retrieval_documents": ["False item two is not correct."]},
+                {"claim": "False item three is correct.", "retrieval_documents": ["False item three is not correct."]},
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verified_records_path=sidecar_path,
+    )
+    records = [
+        json.loads(line)
+        for line in sidecar_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert payload["verified_records"] == {
+        "storage": "jsonl_sidecar",
+        "count": 4,
+        "path": str(sidecar_path),
+        "run_counts": {"synthetic": 4},
+    }
+    assert payload["runs"][0]["verified_records"] == {
+        "storage": "jsonl_sidecar",
+        "count": 4,
+        "path": str(sidecar_path),
+    }
+    assert len(records) == 4
+    assert records[0]["workflow"] == "verifier_ensemble_verified_record"
+    assert records[0]["run"] == "synthetic"
+    assert records[0]["label"] == 0
+    assert records[0]["score"] == pytest.approx(0.1)
+    assert records[0]["record"]["final"]["status"] == "supported"
+    assert records[2]["record"]["final"]["status"] == "refuted"
+    assert not sidecar_path.with_name(f"{sidecar_path.name}.tmp").exists()
+
+
 def test_eval_verifier_ensemble_reads_jsonl_statement_scores(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl

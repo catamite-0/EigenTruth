@@ -1770,6 +1770,40 @@ def _trace_cache_stats(
     }
 
 
+def _write_verified_records_jsonl(
+    stream: Any,
+    *,
+    run_name: str,
+    score_path: Path,
+    signal: str,
+    labels: torch.Tensor,
+    scores: torch.Tensor,
+    records: Sequence[Mapping[str, Any]],
+) -> None:
+    """Write one compact verified-record detail per line."""
+    label_values = labels.tolist()
+    score_values = scores.tolist()
+    for record_index, record in enumerate(records):
+        stream.write(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "workflow": "verifier_ensemble_verified_record",
+                    "run": run_name,
+                    "score_path": str(score_path),
+                    "signal": signal,
+                    "record_index": record_index,
+                    "label": int(label_values[record_index]),
+                    "score": float(score_values[record_index]),
+                    "record": dict(record),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            + "\n"
+        )
+
+
 def build_verifier_ensemble_report(
     score_dumps: Sequence[tuple[str, Path]],
     *,
@@ -1808,6 +1842,7 @@ def build_verifier_ensemble_report(
         "is_time_sensitive",
     ),
     staged_verify_metadata_keys: Sequence[str] = ("requires_verification",),
+    verified_records_path: str | Path | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
         raise ValueError("at least one score dump is required.")
@@ -1859,80 +1894,67 @@ def build_verifier_ensemble_report(
     any_state_enabled = False
     any_transition_enabled = False
     any_selfcheck_enabled = False
-    for name, path in score_dumps:
-        dump = _load_scores(path, signal)
-        labels = dump["labels"]
-        scores = dump["scores"]
-        resolved_direction = direction or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
-        records = _records_from_dump_and_fixture(
-            dump=dump,
-            fixture=fixture,
-            expected_count=int(labels.numel()),
-        )
-        stage_threshold = None
-        if stage_policy is not None:
-            true_scores = scores[labels == 0]
-            if true_scores.numel() == 0:
-                raise ValueError("staged verification requires at least one true-labeled calibration score.")
-            stage_threshold = directional_conformal_threshold(
-                true_scores,
-                float(staged_alpha),
-                resolved_direction,
+    verified_record_counts: dict[str, int] = {}
+    verified_record_total = 0
+    verified_records_sidecar_path = None if verified_records_path is None else Path(verified_records_path)
+    verified_records_tmp_path = (
+        None
+        if verified_records_sidecar_path is None
+        else verified_records_sidecar_path.with_name(f"{verified_records_sidecar_path.name}.tmp")
+    )
+    verified_records_stream = None
+    if verified_records_tmp_path is not None:
+        verified_records_tmp_path.parent.mkdir(parents=True, exist_ok=True)
+        verified_records_stream = verified_records_tmp_path.open("w", encoding="utf-8")
+
+    try:
+        for name, path in score_dumps:
+            dump = _load_scores(path, signal)
+            labels = dump["labels"]
+            scores = dump["scores"]
+            resolved_direction = direction or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+            records = _records_from_dump_and_fixture(
+                dump=dump,
+                fixture=fixture,
+                expected_count=int(labels.numel()),
             )
-        transition_enabled = _transition_routes_enabled(records, global_state, global_state_transitions)
-        state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
-        any_transition_enabled = any_transition_enabled or transition_enabled
-        any_state_enabled = any_state_enabled or state_enabled
-        selfcheck_enabled = any(record.selfcheck_samples for record in records)
-        any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
-        transition_verifier = (
-            StateTransitionVerifier(
-                world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
-                state=global_state,
+            stage_threshold = None
+            if stage_policy is not None:
+                true_scores = scores[labels == 0]
+                if true_scores.numel() == 0:
+                    raise ValueError("staged verification requires at least one true-labeled calibration score.")
+                stage_threshold = directional_conformal_threshold(
+                    true_scores,
+                    float(staged_alpha),
+                    resolved_direction,
+                )
+            transition_enabled = _transition_routes_enabled(records, global_state, global_state_transitions)
+            state_enabled = _state_routes_enabled(records, global_state, global_state_checks)
+            any_transition_enabled = any_transition_enabled or transition_enabled
+            any_state_enabled = any_state_enabled or state_enabled
+            selfcheck_enabled = any(record.selfcheck_samples for record in records)
+            any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
+            transition_verifier = (
+                StateTransitionVerifier(
+                    world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
+                    state=global_state,
+                )
+                if transition_enabled
+                else None
             )
-            if transition_enabled
-            else None
-        )
-        state_verifier = StructuredStateVerifier(global_state) if state_enabled else None
-        run_cache_stats: dict[str, Any] = {}
-        trace_key, trace_material = _verification_trace_cache_key(
-            name=name,
-            score_path=path,
-            signal=signal,
-            claims_path=claims_path,
-            qa_corpus_path=qa_corpus_path,
-            state_path=state_path,
-            records=records,
-            global_state=global_state,
-            global_state_checks=global_state_checks,
-            global_state_transitions=global_state_transitions,
-            verifier_min_overlap=verifier_min_overlap,
-            retriever_min_overlap=retriever_min_overlap,
-            retrieval_limit=retrieval_limit,
-            selfcheck_min_samples=selfcheck_min_samples,
-            selfcheck_min_overlap=selfcheck_min_overlap,
-            selfcheck_support_threshold=selfcheck_support_threshold,
-            selfcheck_refute_threshold=selfcheck_refute_threshold,
-            selfcheck_early_stop=selfcheck_early_stop,
-            selfcheck_max_samples=selfcheck_max_samples,
-            staged_verification=stage_policy is not None,
-            staged_alpha=float(staged_alpha),
-            staged_direction=resolved_direction,
-            staged_policy=stage_policy,
-        )
-        cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
-        if cached_trace is not None:
-            verified_records, cached_stats = cached_trace
-            run_cache_stats.update(cached_stats)
-            run_cache_stats["trace_cache"] = _trace_cache_stats(
-                enabled=True,
-                hit=True,
-                cache=trace_cache,
-                key=trace_key,
-            )
-        else:
-            verified_records = _verify_records(
-                records,
+            state_verifier = StructuredStateVerifier(global_state) if state_enabled else None
+            run_cache_stats: dict[str, Any] = {}
+            trace_key, trace_material = _verification_trace_cache_key(
+                name=name,
+                score_path=path,
+                signal=signal,
+                claims_path=claims_path,
+                qa_corpus_path=qa_corpus_path,
+                state_path=state_path,
+                records=records,
+                global_state=global_state,
+                global_state_checks=global_state_checks,
+                global_state_transitions=global_state_transitions,
                 verifier_min_overlap=verifier_min_overlap,
                 retriever_min_overlap=retriever_min_overlap,
                 retrieval_limit=retrieval_limit,
@@ -1942,149 +1964,206 @@ def build_verifier_ensemble_report(
                 selfcheck_refute_threshold=selfcheck_refute_threshold,
                 selfcheck_early_stop=selfcheck_early_stop,
                 selfcheck_max_samples=selfcheck_max_samples,
-                qa_verifier=qa_verifier,
-                state_verifier=state_verifier,
-                state_checks=global_state_checks,
-                transition_verifier=transition_verifier,
-                state_transitions=global_state_transitions,
-                cache_stats=run_cache_stats,
-                stage_policy=stage_policy,
-                stage_scores=scores,
-                stage_threshold=stage_threshold,
-                stage_direction=resolved_direction,
-                stage_alpha=float(staged_alpha),
-                stage_signal=signal,
+                staged_verification=stage_policy is not None,
+                staged_alpha=float(staged_alpha),
+                staged_direction=resolved_direction,
+                staged_policy=stage_policy,
             )
-            if trace_cache is not None:
-                trace_cache.put(
-                    trace_key,
-                    {
-                        "verified_records": tuple(verified_records),
-                        "cache_stats": dict(run_cache_stats),
-                    },
-                    metadata={
-                        "builder": "eval_verifier_ensemble:verified_records:v4",
-                        "name": name,
-                        "signal": signal,
-                        "material": trace_material,
-                    },
+            cached_trace = _load_verified_records_from_cache(trace_cache, trace_key)
+            if cached_trace is not None:
+                verified_records, cached_stats = cached_trace
+                run_cache_stats.update(cached_stats)
+                run_cache_stats["trace_cache"] = _trace_cache_stats(
+                    enabled=True,
+                    hit=True,
+                    cache=trace_cache,
+                    key=trace_key,
                 )
-            run_cache_stats["trace_cache"] = _trace_cache_stats(
-                enabled=trace_cache is not None,
-                hit=False,
-                cache=trace_cache,
-                key=trace_key if trace_cache is not None else None,
+            else:
+                verified_records = _verify_records(
+                    records,
+                    verifier_min_overlap=verifier_min_overlap,
+                    retriever_min_overlap=retriever_min_overlap,
+                    retrieval_limit=retrieval_limit,
+                    selfcheck_min_samples=selfcheck_min_samples,
+                    selfcheck_min_overlap=selfcheck_min_overlap,
+                    selfcheck_support_threshold=selfcheck_support_threshold,
+                    selfcheck_refute_threshold=selfcheck_refute_threshold,
+                    selfcheck_early_stop=selfcheck_early_stop,
+                    selfcheck_max_samples=selfcheck_max_samples,
+                    qa_verifier=qa_verifier,
+                    state_verifier=state_verifier,
+                    state_checks=global_state_checks,
+                    transition_verifier=transition_verifier,
+                    state_transitions=global_state_transitions,
+                    cache_stats=run_cache_stats,
+                    stage_policy=stage_policy,
+                    stage_scores=scores,
+                    stage_threshold=stage_threshold,
+                    stage_direction=resolved_direction,
+                    stage_alpha=float(staged_alpha),
+                    stage_signal=signal,
+                )
+                if trace_cache is not None:
+                    trace_cache.put(
+                        trace_key,
+                        {
+                            "verified_records": tuple(verified_records),
+                            "cache_stats": dict(run_cache_stats),
+                        },
+                        metadata={
+                            "builder": "eval_verifier_ensemble:verified_records:v4",
+                            "name": name,
+                            "signal": signal,
+                            "material": trace_material,
+                        },
+                    )
+                run_cache_stats["trace_cache"] = _trace_cache_stats(
+                    enabled=trace_cache is not None,
+                    hit=False,
+                    cache=trace_cache,
+                    key=trace_key if trace_cache is not None else None,
+                )
+            if verified_records_stream is not None:
+                _write_verified_records_jsonl(
+                    verified_records_stream,
+                    run_name=name,
+                    score_path=path,
+                    signal=signal,
+                    labels=labels,
+                    scores=scores,
+                    records=verified_records,
+                )
+            verified_record_count = len(verified_records)
+            verified_record_counts[name] = verified_record_count
+            verified_record_total += verified_record_count
+            alpha_results = {
+                str(alpha): _evaluate_alpha(
+                    scores=scores,
+                    labels=labels,
+                    verified_records=verified_records,
+                    alpha=float(alpha),
+                    direction=resolved_direction,
+                    repeats=repeats,
+                    seed=seed,
+                )
+                for alpha in alphas
+            }
+            selfcheck_execution = _selfcheck_execution_summary(verified_records)
+            staged_execution = _staged_verification_summary(
+                verified_records,
+                enabled=stage_policy is not None,
             )
-        alpha_results = {
-            str(alpha): _evaluate_alpha(
-                scores=scores,
-                labels=labels,
-                verified_records=verified_records,
-                alpha=float(alpha),
-                direction=resolved_direction,
-                repeats=repeats,
-                seed=seed,
-            )
-            for alpha in alphas
-        }
-        selfcheck_execution = _selfcheck_execution_summary(verified_records)
-        staged_execution = _staged_verification_summary(
-            verified_records,
-            enabled=stage_policy is not None,
-        )
-        runs.append({
-            "name": name,
-            "scores_path": str(path),
-            "score_dump": {
-                **score_dump_file_metadata(path, cache=score_dump_metadata_cache),
-                "summary": dump["score_dump_summary"],
-                "source_format": dump["score_dump_source_format"],
-            },
-            "config": dump["config"],
-            "signal": signal,
-            "direction": resolved_direction,
-            "n_total": int(labels.numel()),
-            "n_true": int((labels == 0).sum().item()),
-            "n_false": int((labels == 1).sum().item()),
-            "verification_status_counts": _status_counts(verified_records),
-            "verification_quality": _verification_quality(verified_records, labels),
-            "route_summary": _route_summary(verified_records, labels),
-            "route_quality": _route_quality(verified_records, labels),
-            "qa": {
-                "enabled": qa_verifier is not None,
-                "decided_records": sum(
-                    1 for record in verified_records
-                    if record.get("qa") is not None
-                    and record["qa"]["status"] in {
-                        VerificationStatus.SUPPORTED.value,
-                        VerificationStatus.REFUTED.value,
-                    }
-                ),
-            },
-            "retrieval_qa": {
-                "enabled": any(record.get("retrieval_qa") is not None for record in verified_records),
-                "decided_records": sum(
-                    1 for record in verified_records
-                    if record.get("retrieval_qa") is not None
-                    and record["retrieval_qa"]["status"] in {
-                        VerificationStatus.SUPPORTED.value,
-                        VerificationStatus.REFUTED.value,
-                    }
-                ),
-            },
-            "state_verifier": {
-                "enabled": state_enabled,
-                "decided_records": sum(
-                    1 for record in verified_records
-                    if record.get("state") is not None
-                    and record["state"]["status"] in {
-                        VerificationStatus.SUPPORTED.value,
-                        VerificationStatus.REFUTED.value,
-                    }
-                ),
-                "global_checks": len(global_state_checks),
-            },
-            "transition_verifier": {
-                "enabled": transition_enabled,
-                "decided_records": sum(
-                    1 for record in verified_records
-                    if record.get("transition") is not None
-                    and record["transition"]["status"] in {
-                        VerificationStatus.SUPPORTED.value,
-                        VerificationStatus.REFUTED.value,
-                    }
-                ),
-                "global_transitions": len(global_state_transitions),
-            },
-            "selfcheck_verifier": {
-                "enabled": selfcheck_enabled,
-                "early_stop": bool(selfcheck_early_stop),
-                "max_samples": selfcheck_max_samples,
-                "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
-                "decided_records": sum(
-                    1 for record in verified_records
-                    if record.get("selfcheck") is not None
-                    and record["selfcheck"]["status"] in {
-                        VerificationStatus.SUPPORTED.value,
-                        VerificationStatus.REFUTED.value,
-                    }
-                ),
-                **selfcheck_execution,
-            },
-            "retrieval": {
-                "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
-                "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
-                "retrieval_limit": retrieval_limit,
-            },
-            "staged_verification": {
-                **staged_execution,
-                "alpha": float(staged_alpha),
-                "threshold": stage_threshold,
-                "policy": None if stage_policy is None else stage_policy.to_dict(),
-            },
-            "cache_stats": run_cache_stats,
-            "alphas": alpha_results,
-        })
+            runs.append({
+                "name": name,
+                "scores_path": str(path),
+                "score_dump": {
+                    **score_dump_file_metadata(path, cache=score_dump_metadata_cache),
+                    "summary": dump["score_dump_summary"],
+                    "source_format": dump["score_dump_source_format"],
+                },
+                "config": dump["config"],
+                "signal": signal,
+                "direction": resolved_direction,
+                "n_total": int(labels.numel()),
+                "n_true": int((labels == 0).sum().item()),
+                "n_false": int((labels == 1).sum().item()),
+                "verified_records": {
+                    "storage": "jsonl_sidecar" if verified_records_sidecar_path is not None else "summary_only",
+                    "count": verified_record_count,
+                    "path": None if verified_records_sidecar_path is None else str(verified_records_sidecar_path),
+                },
+                "verification_status_counts": _status_counts(verified_records),
+                "verification_quality": _verification_quality(verified_records, labels),
+                "route_summary": _route_summary(verified_records, labels),
+                "route_quality": _route_quality(verified_records, labels),
+                "qa": {
+                    "enabled": qa_verifier is not None,
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("qa") is not None
+                        and record["qa"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                },
+                "retrieval_qa": {
+                    "enabled": any(record.get("retrieval_qa") is not None for record in verified_records),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("retrieval_qa") is not None
+                        and record["retrieval_qa"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                },
+                "state_verifier": {
+                    "enabled": state_enabled,
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("state") is not None
+                        and record["state"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                    "global_checks": len(global_state_checks),
+                },
+                "transition_verifier": {
+                    "enabled": transition_enabled,
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("transition") is not None
+                        and record["transition"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                    "global_transitions": len(global_state_transitions),
+                },
+                "selfcheck_verifier": {
+                    "enabled": selfcheck_enabled,
+                    "early_stop": bool(selfcheck_early_stop),
+                    "max_samples": selfcheck_max_samples,
+                    "records_with_samples": sum(1 for record in records if record.selfcheck_samples),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("selfcheck") is not None
+                        and record["selfcheck"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                    **selfcheck_execution,
+                },
+                "retrieval": {
+                    "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
+                    "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
+                    "retrieval_limit": retrieval_limit,
+                },
+                "staged_verification": {
+                    **staged_execution,
+                    "alpha": float(staged_alpha),
+                    "threshold": stage_threshold,
+                    "policy": None if stage_policy is None else stage_policy.to_dict(),
+                },
+                "cache_stats": run_cache_stats,
+                "alphas": alpha_results,
+            })
+    except Exception:
+        if verified_records_stream is not None:
+            verified_records_stream.close()
+        if verified_records_tmp_path is not None:
+            verified_records_tmp_path.unlink(missing_ok=True)
+        raise
+    else:
+        if verified_records_stream is not None:
+            verified_records_stream.close()
+            assert verified_records_tmp_path is not None
+            assert verified_records_sidecar_path is not None
+            verified_records_tmp_path.replace(verified_records_sidecar_path)
 
     return {
         "schema_version": 1,
@@ -2093,6 +2172,12 @@ def build_verifier_ensemble_report(
         "alphas": [float(alpha) for alpha in alphas],
         "repeats": int(repeats),
         "seed": int(seed),
+        "verified_records": {
+            "storage": "jsonl_sidecar" if verified_records_sidecar_path is not None else "summary_only",
+            "count": verified_record_total,
+            "path": None if verified_records_sidecar_path is None else str(verified_records_sidecar_path),
+            "run_counts": verified_record_counts,
+        },
         "policy": {
             "name": "refute_or_internal_unless_supported",
             "refuted": "trigger",
@@ -2204,6 +2289,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         staged_verify_metadata_keys=_parse_csv(
             getattr(args, "staged_verify_metadata_keys", "requires_verification")
         ),
+        verified_records_path=(
+            None
+            if getattr(args, "verified_records_jsonl", None) is None
+            else Path(args.verified_records_jsonl)
+        ),
     )
     if args.json:
         output_path = Path(args.json)
@@ -2262,6 +2352,8 @@ def main() -> None:
                         help="optional cap on self-consistency samples considered per claim")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
+    parser.add_argument("--verified-records-jsonl", default=None,
+                        help="optional JSONL sidecar for per-record verifier outputs")
     parser.add_argument("--staged-verification", action="store_true",
                         help="gate expensive verifier routes with the staged control policy")
     parser.add_argument("--staged-alpha", type=float, default=0.10,
