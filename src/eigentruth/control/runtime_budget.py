@@ -31,6 +31,7 @@ class ProductRuntimeBudgetPolicy:
     min_cache_hit_rate: float | None = None
     min_named_cache_hit_rate: Mapping[str, float] = field(default_factory=dict)
     min_verification_skip_rate: float | None = None
+    min_selective_claim_skip_rate: float | None = None
     max_verified_claim_count: float | None = None
     require_runtime_trace: bool = True
 
@@ -92,6 +93,10 @@ class ProductRuntimeBudgetPolicy:
             self.min_verification_skip_rate,
             name="min_verification_skip_rate",
         )
+        min_selective_claim_skip_rate = _optional_rate_float(
+            self.min_selective_claim_skip_rate,
+            name="min_selective_claim_skip_rate",
+        )
         max_verified_claim_count = _optional_non_negative_float(
             self.max_verified_claim_count,
             name="max_verified_claim_count",
@@ -139,6 +144,7 @@ class ProductRuntimeBudgetPolicy:
         object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
         object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
         object.__setattr__(self, "min_verification_skip_rate", min_verification_skip_rate)
+        object.__setattr__(self, "min_selective_claim_skip_rate", min_selective_claim_skip_rate)
         object.__setattr__(self, "max_verified_claim_count", max_verified_claim_count)
         object.__setattr__(
             self,
@@ -164,6 +170,7 @@ class ProductRuntimeBudgetPolicy:
             min_cache_hit_rate=payload.get("min_cache_hit_rate"),
             min_named_cache_hit_rate=dict(_mapping(payload.get("min_named_cache_hit_rate"))),
             min_verification_skip_rate=payload.get("min_verification_skip_rate"),
+            min_selective_claim_skip_rate=payload.get("min_selective_claim_skip_rate"),
             max_verified_claim_count=payload.get("max_verified_claim_count"),
             require_runtime_trace=_bool_value(payload.get("require_runtime_trace", True)),
         )
@@ -185,6 +192,7 @@ class ProductRuntimeBudgetPolicy:
             or self.min_cache_hit_rate is not None
             or bool(self.min_named_cache_hit_rate)
             or self.min_verification_skip_rate is not None
+            or self.min_selective_claim_skip_rate is not None
             or self.max_verified_claim_count is not None
         )
 
@@ -205,6 +213,7 @@ class ProductRuntimeBudgetPolicy:
             "min_cache_hit_rate": self.min_cache_hit_rate,
             "min_named_cache_hit_rate": dict(self.min_named_cache_hit_rate),
             "min_verification_skip_rate": self.min_verification_skip_rate,
+            "min_selective_claim_skip_rate": self.min_selective_claim_skip_rate,
             "max_verified_claim_count": self.max_verified_claim_count,
             "require_runtime_trace": self.require_runtime_trace,
         }
@@ -334,6 +343,16 @@ def evaluate_product_runtime_budget(
         if not check["passed"]:
             failures.append(_failure_from_check(check))
 
+    if resolved.min_selective_claim_skip_rate is not None:
+        check = _min_metric_check(
+            metrics,
+            metric="selective_claim_skip_rate",
+            limit=resolved.min_selective_claim_skip_rate,
+        )
+        checks.append(check)
+        if not check["passed"]:
+            failures.append(_failure_from_check(check))
+
     named_cache_hit_rates = _mapping(metrics.get("named_cache_hit_rates"))
     raw_named_cache_hit_rates = _mapping(metrics.get("raw_named_cache_hit_rates"))
     for cache_name, limit in resolved.min_named_cache_hit_rate.items():
@@ -381,6 +400,7 @@ def evaluate_product_runtime_budget(
             "verification_stage_enabled": metrics.get("verification_stage_enabled"),
             "verification_stage_skipped": metrics.get("verification_stage_skipped"),
             "verification_skip_rate": metrics.get("verification_skip_rate"),
+            "selective_claim_skip_rate": metrics.get("selective_claim_skip_rate"),
             "verified_claim_count": metrics.get("verified_claim_count"),
             "verifier_saved_claim_count": metrics.get("verifier_saved_claim_count"),
         },
@@ -548,6 +568,11 @@ def _verification_stage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "verification_stage_enabled": bool(summary.get("enabled")),
         "verification_stage_skipped": bool(summary.get("skipped")),
         "verification_skip_rate": _finite_float(summary.get("skip_rate")),
+        "selective_claim_skip_rate": (
+            _finite_float(summary.get("skip_rate"))
+            if str(summary.get("verification_scope", "")).strip().lower() == "triggered"
+            else None
+        ),
         "verified_claim_count": _finite_float(summary.get("verified_claim_count")),
         "verifier_saved_claim_count": _finite_float(summary.get("saved_claim_count")),
     }

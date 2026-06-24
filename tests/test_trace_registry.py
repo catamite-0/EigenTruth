@@ -647,7 +647,7 @@ def test_product_trace_verification_stage_summary_counts_saved_claims():
     assert stage_only["skipped"] is True
     assert stage_only["saved_claim_count"] == 1
 
-    partial = ProductTrace(
+    partial_trace = ProductTrace(
         claims=claims,
         verification_results=(
             VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9),
@@ -674,12 +674,33 @@ def test_product_trace_verification_stage_summary_counts_saved_claims():
                 },
             ),
         ),
-    ).verification_stage_summary()
+    )
+    partial = partial_trace.verification_stage_summary()
+    partial_metrics = product_runtime_metrics(partial_trace)
+    partial_report = evaluate_product_runtime_budget(
+        partial_trace,
+        ProductRuntimeBudgetPolicy(
+            min_selective_claim_skip_rate=0.5,
+            require_runtime_trace=False,
+        ),
+    )
+    failing_partial_report = evaluate_product_runtime_budget(
+        partial_trace,
+        ProductRuntimeBudgetPolicy(
+            min_selective_claim_skip_rate=0.75,
+            require_runtime_trace=False,
+        ),
+    )
     assert partial["skipped"] is False
     assert partial["verification_scope"] == "triggered"
     assert partial["verified_claim_count"] == 1
     assert partial["saved_claim_count"] == 1
     assert partial["skip_rate"] == 0.5
+    assert partial_metrics["selective_claim_skip_rate"] == 0.5
+    assert partial_report["passed"] is True
+    assert partial_report["policy"]["min_selective_claim_skip_rate"] == 0.5
+    assert failing_partial_report["passed"] is False
+    assert failing_partial_report["failures"][0]["metric"] == "selective_claim_skip_rate"
 
 
 def test_product_runtime_budget_evaluates_trace_phase_limits():

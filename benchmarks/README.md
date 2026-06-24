@@ -2557,7 +2557,11 @@ later baseline, replay, profile-sweep, or
 `compare_product_runtime_baselines.py --runtime-budget-policy` gates. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
-resolved policy payload:
+resolved policy payload. `ProductRuntimeBudgetPolicy` can gate overall staged
+verification savings with `min_verification_skip_rate`, and can specifically
+gate triggered-only partial verification with `min_selective_claim_skip_rate`.
+The latter fails closed unless the trace records `verification_scope="triggered"`
+and a finite selective claim skip rate:
 
 ```bash
 python benchmarks/run_product_runtime_baseline.py \
@@ -2735,7 +2739,9 @@ request-time `auto` selector before each trace is emitted. `--policy` still
 applies the `ProductRuntimeBudgetPolicy` to each trace in each per-mode
 baseline; `--slo-policy` applies aggregate gates such as
 `max_total_seconds_p95`, `max_mean_attempted_route_count`,
-`min_verification_skip_rate_mean`, `max_verified_claim_count_mean`, and
+`min_verification_skip_rate_mean`, `max_verified_claim_count_mean`,
+`min_verification_partial_skip_trace_count`,
+`min_verification_selective_claim_skip_rate`, and
 `min_auto_selected_profile_counts` to the profile row. This is the
 product-control counterpart to model-side cache/profile sweeps. Profile rows
 also surface selective staged-verification evidence such as

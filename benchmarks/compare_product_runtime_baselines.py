@@ -585,6 +585,12 @@ def _runtime_budget_policy_checks(
             policy.min_verification_skip_rate,
             policy_field="min_verification_skip_rate",
         ),
+        _policy_min_check(
+            "verification_stage.selective_claim_skip_rate",
+            _nested_float(summary, ("verification_stage", "selective_claim_skip_rate")),
+            policy.min_selective_claim_skip_rate,
+            policy_field="min_selective_claim_skip_rate",
+        ),
         _policy_max_check(
             "verified_claim_count.p95",
             _nested_float(summary, ("verified_claim_count", "p95")),

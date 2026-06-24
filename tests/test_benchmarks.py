@@ -13440,6 +13440,72 @@ def test_compare_product_runtime_baselines_applies_runtime_budget_policy_gate(tm
     assert record.metadata["runtime_budget_policy_passed"] is False
 
 
+def test_compare_product_runtime_baselines_gates_selective_claim_savings(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    trace_path = tmp_path / "trace.json"
+    report_path = tmp_path / "baseline.json"
+    policy_path = tmp_path / "policy.json"
+    trace_path.write_text(
+        json.dumps({
+            "request_id": "selective",
+            "claims": [
+                {"claim_id": "c1", "text": "2 + 2 = 4."},
+                {"claim_id": "c2", "text": "Paris is the capital of France."},
+            ],
+            "events": [
+                {
+                    "event_type": "verification_stage_decision",
+                    "payload": {
+                        "run_verifier": True,
+                        "verification_scope": "triggered",
+                        "triggered_claim_ids": ["c1"],
+                        "triggered_features": {"c1": ["has_number"]},
+                    },
+                },
+                {
+                    "event_type": "initial_verification",
+                    "payload": {
+                        "n_claims": 2,
+                        "verification_scope": "triggered",
+                        "verified_claim_ids": ["c1"],
+                        "skipped_claim_ids": ["c2"],
+                        "results": [{"status": "supported", "metadata": {}}],
+                    },
+                },
+            ],
+            "verification_results": [{"status": "supported", "metadata": {}}],
+            "metadata": {"staged_verification_enabled": True},
+        }),
+        encoding="utf-8",
+    )
+    policy_path.write_text(
+        json.dumps({"min_selective_claim_skip_rate": 0.75}),
+        encoding="utf-8",
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(trace_path,),
+            report_path=report_path,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=report_path,
+        current_path=report_path,
+        runtime_budget_policy_path=policy_path,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["runtime_budget_policy_gate"]["failed_count"] == 1
+    assert payload["runtime_budget_policy_gate"]["failures"][0]["metric"] == (
+        "verification_stage.selective_claim_skip_rate"
+    )
+    assert "runtime_budget_policy: verification_stage.selective_claim_skip_rate" in (
+        payload["decision"]["blocking_reasons"][0]
+    )
+
+
 def _write_product_runtime_trace(
     path: Path,
     *,
@@ -13791,6 +13857,45 @@ def test_run_product_runtime_profile_sweep_applies_slo_policy(tmp_path):
         "auto_selected_profile_count.latency",
         "auto_selected_profile_count.balanced",
         "auto_selected_profile_count.audit",
+    }
+
+
+def test_run_product_runtime_profile_sweep_gates_selective_verification_slo(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("latency",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="number_and_fact",
+                    text="2 + 2 = 4. Paris is the capital of France.",
+                    diagnostics_mode="low",
+                    facts={
+                        "2 + 2 = 4": "supported",
+                        "Paris is the capital of France": "supported",
+                    },
+                ),
+            ),
+            slo_policy={
+                "min_verification_partial_skip_trace_count": 1,
+                "min_verification_selective_claim_skip_rate": 0.5,
+            },
+        )
+    )
+
+    profile = payload["profiles"][0]
+    assert payload["status"] == "promote"
+    assert profile["status"] == "promote"
+    assert profile["metrics"]["verification_partial_skip_trace_count"] == 1
+    assert profile["metrics"]["verification_selective_claim_skip_rate"] == pytest.approx(0.5)
+    assert {
+        check["metric"]
+        for check in profile["slo"]["checks"]
+    } >= {
+        "verification_partial_skip_trace_count",
+        "verification_selective_claim_skip_rate",
     }
 
 

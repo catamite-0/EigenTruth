@@ -424,6 +424,7 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_stage_enabled": bool(metrics.get("verification_stage_enabled")),
         "verification_stage_skipped": bool(metrics.get("verification_stage_skipped")),
         "verification_skip_rate": metrics.get("verification_skip_rate"),
+        "selective_claim_skip_rate": metrics.get("selective_claim_skip_rate"),
         "verified_claim_count": metrics.get("verified_claim_count"),
         "verifier_saved_claim_count": metrics.get("verifier_saved_claim_count"),
     }
@@ -457,6 +458,9 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "retrieval_hit_count": _numeric_summary(item.get("retrieval_hit_count") for item in metrics),
         "cache_hit_rate": _numeric_summary(item.get("cache_hit_rate") for item in metrics),
         "verification_skip_rate": _numeric_summary(item.get("verification_skip_rate") for item in metrics),
+        "selective_claim_skip_rate": _numeric_summary(
+            item.get("selective_claim_skip_rate") for item in metrics
+        ),
         "verified_claim_count": _numeric_summary(item.get("verified_claim_count") for item in metrics),
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
@@ -1176,6 +1180,7 @@ def _policy_threshold_count(policy_payload: Mapping[str, Any]) -> int:
         "min_cache_hit_rate",
         "min_named_cache_hit_rate",
         "min_verification_skip_rate",
+        "min_selective_claim_skip_rate",
         "max_verified_claim_count",
     )
     count = 0

@@ -623,6 +623,7 @@ def product_runtime_budget_policy_from_release_candidate(
         min_cache_hit_rate=config.get("min_cache_hit_rate"),
         min_named_cache_hit_rate=named_cache_hit_rates,
         min_verification_skip_rate=config.get("min_verification_skip_rate"),
+        min_selective_claim_skip_rate=config.get("min_selective_claim_skip_rate"),
         max_verified_claim_count=config.get("max_verified_claim_count"),
     )
 

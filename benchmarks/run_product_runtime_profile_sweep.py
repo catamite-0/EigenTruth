@@ -177,6 +177,8 @@ class ProductRuntimeProfileSLOPolicy:
     max_retrieval_hit_count: float | None = None
     min_cache_hit_rate_mean: float | None = None
     min_verification_skip_rate_mean: float | None = None
+    min_verification_selective_claim_skip_rate: float | None = None
+    min_verification_partial_skip_trace_count: float | None = None
     max_verified_claim_count_mean: float | None = None
     min_auto_selected_profile_counts: Mapping[str, int] = field(default_factory=dict)
     max_auto_selected_profile_counts: Mapping[str, int] = field(default_factory=dict)
@@ -238,6 +240,22 @@ class ProductRuntimeProfileSLOPolicy:
         )
         object.__setattr__(
             self,
+            "min_verification_selective_claim_skip_rate",
+            _optional_rate_float(
+                self.min_verification_selective_claim_skip_rate,
+                name="min_verification_selective_claim_skip_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "min_verification_partial_skip_trace_count",
+            _optional_non_negative_float(
+                self.min_verification_partial_skip_trace_count,
+                name="min_verification_partial_skip_trace_count",
+            ),
+        )
+        object.__setattr__(
+            self,
             "max_verified_claim_count_mean",
             _optional_non_negative_float(
                 self.max_verified_claim_count_mean,
@@ -274,6 +292,12 @@ class ProductRuntimeProfileSLOPolicy:
             max_retrieval_hit_count=payload.get("max_retrieval_hit_count"),
             min_cache_hit_rate_mean=payload.get("min_cache_hit_rate_mean"),
             min_verification_skip_rate_mean=payload.get("min_verification_skip_rate_mean"),
+            min_verification_selective_claim_skip_rate=payload.get(
+                "min_verification_selective_claim_skip_rate"
+            ),
+            min_verification_partial_skip_trace_count=payload.get(
+                "min_verification_partial_skip_trace_count"
+            ),
             max_verified_claim_count_mean=payload.get("max_verified_claim_count_mean"),
             min_auto_selected_profile_counts=dict(_mapping(payload.get("min_auto_selected_profile_counts"))),
             max_auto_selected_profile_counts=dict(_mapping(payload.get("max_auto_selected_profile_counts"))),
@@ -291,6 +315,8 @@ class ProductRuntimeProfileSLOPolicy:
             or self.max_retrieval_hit_count is not None
             or self.min_cache_hit_rate_mean is not None
             or self.min_verification_skip_rate_mean is not None
+            or self.min_verification_selective_claim_skip_rate is not None
+            or self.min_verification_partial_skip_trace_count is not None
             or self.max_verified_claim_count_mean is not None
             or bool(self.min_auto_selected_profile_counts)
             or bool(self.max_auto_selected_profile_counts)
@@ -308,6 +334,12 @@ class ProductRuntimeProfileSLOPolicy:
             "max_retrieval_hit_count": self.max_retrieval_hit_count,
             "min_cache_hit_rate_mean": self.min_cache_hit_rate_mean,
             "min_verification_skip_rate_mean": self.min_verification_skip_rate_mean,
+            "min_verification_selective_claim_skip_rate": (
+                self.min_verification_selective_claim_skip_rate
+            ),
+            "min_verification_partial_skip_trace_count": (
+                self.min_verification_partial_skip_trace_count
+            ),
             "max_verified_claim_count_mean": self.max_verified_claim_count_mean,
             "min_auto_selected_profile_counts": dict(self.min_auto_selected_profile_counts),
             "max_auto_selected_profile_counts": dict(self.max_auto_selected_profile_counts),
@@ -663,6 +695,14 @@ def _evaluate_profile_slo(
     for metric, limit in (
         ("cache_hit_rate_mean", policy.min_cache_hit_rate_mean),
         ("verification_skip_rate_mean", policy.min_verification_skip_rate_mean),
+        (
+            "verification_selective_claim_skip_rate",
+            policy.min_verification_selective_claim_skip_rate,
+        ),
+        (
+            "verification_partial_skip_trace_count",
+            policy.min_verification_partial_skip_trace_count,
+        ),
     ):
         if limit is None:
             continue
