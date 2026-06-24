@@ -24,7 +24,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.compare_profiles import build_profile_comparison  # noqa: E402
+from benchmarks.compare_profiles import _cache_efficiency_values, build_profile_comparison  # noqa: E402
 from benchmarks.run_cache_profile_triplet import CacheProfileTripletConfig, run_triplet  # noqa: E402
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
@@ -593,11 +593,17 @@ def _run_summary(run: Mapping[str, Any], profile_path: Any) -> dict[str, Any]:
         "speedup_vs_baseline": run.get("total_delta", {}).get("speedup_vs_baseline"),
         "ratio_to_baseline": run.get("total_delta", {}).get("ratio_to_baseline"),
     }
+    cache_efficiency = run.get("cache_efficiency")
+    if isinstance(cache_efficiency, Mapping):
+        summary["cache_efficiency"] = dict(cache_efficiency)
+    cache_efficiency_deltas = run.get("cache_efficiency_deltas")
+    if isinstance(cache_efficiency_deltas, Mapping):
+        summary["cache_efficiency_deltas"] = dict(cache_efficiency_deltas)
     summary.update(_profile_runtime_metrics(profile_path))
     return summary
 
 
-def _profile_runtime_metrics(profile_path: Any) -> dict[str, float]:
+def _profile_runtime_metrics(profile_path: Any) -> dict[str, Any]:
     if not profile_path:
         return {}
     path = Path(str(profile_path))
@@ -619,6 +625,9 @@ def _profile_runtime_metrics(profile_path: Any) -> dict[str, float]:
         metrics["forced_answer_forward_seconds"] = forced_answer
     if model_forward is not None:
         metrics["model_forward_seconds"] = model_forward
+    cache_efficiency = _cache_efficiency_values(profile_summary) if isinstance(profile_summary, Mapping) else {}
+    if cache_efficiency:
+        metrics["cache_efficiency"] = cache_efficiency
     return metrics
 
 

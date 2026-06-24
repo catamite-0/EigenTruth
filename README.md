@@ -173,7 +173,9 @@ errors. For repeated rescoring, pair `--eval-reps-cache` with
 `--eval-reps-cache-shard-size`; sharded cache readers reuse recently touched
 shards through a default 2-shard read-side LRU cache
 (`--eval-reps-shard-read-cache-size`) and report cache IO counters such as read requests,
-records read, shard loads, shard cache hits, and cross-shard reads in JSON output. Pair
+records read, shard loads, shard cache hits, and cross-shard reads in JSON output;
+profile comparison and matrix reports propagate the derived cache-efficiency hit-rate
+metrics for IO diagnosis. Pair
 repeated INSIDE sweeps with `--inside-diagnostics-cache` or the sweep-level
 `--shared-cache-dir` to reuse sampled diagnostics for statements that appear in
 nested trigger budgets. `run_adapter_readiness_workflow.py --performance-report`

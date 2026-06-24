@@ -1337,6 +1337,12 @@ def test_compare_profiles_builds_baseline_deltas_from_profile_payloads(tmp_path)
                         "postprocess": {"seconds": 5.0, "share": 0.05},
                     },
                     "throughput": {"forced_answer_records_per_second": 5.0},
+                    "cache_efficiency": {
+                        "eval_reps_reader": {
+                            "shard_cache_hit_rate": 0.25,
+                            "cross_shard_read_rate": 0.50,
+                        }
+                    },
                 },
             },
         }),
@@ -1360,6 +1366,13 @@ def test_compare_profiles_builds_baseline_deltas_from_profile_payloads(tmp_path)
                     "postprocess": {"seconds": 5.0, "share": 0.1},
                 },
                 "throughput": {"forced_answer_records_per_second": 10.0},
+                "cache_efficiency": {
+                    "eval_reps_reader": {
+                        "shard_cache_hit_rate": 0.75,
+                        "cross_shard_read_rate": 0.10,
+                        "records_per_read": 8.0,
+                    }
+                },
             },
         }),
         encoding="utf-8",
@@ -1379,6 +1392,14 @@ def test_compare_profiles_builds_baseline_deltas_from_profile_payloads(tmp_path)
     assert cached["phase_deltas"]["build_layer_stats"]["seconds"] == pytest.approx(0.0)
     assert cached["phase_deltas"]["build_layer_stats"]["baseline_seconds"] == pytest.approx(60.0)
     assert cached["throughput_deltas"]["forced_answer_records_per_second"]["ratio_to_baseline"] == pytest.approx(2.0)
+    assert cached["cache_efficiency"]["eval_reps_reader.shard_cache_hit_rate"] == pytest.approx(0.75)
+    assert cached["cache_efficiency_deltas"]["eval_reps_reader.shard_cache_hit_rate"]["delta"] == pytest.approx(0.50)
+    assert cached["cache_efficiency_deltas"]["eval_reps_reader.shard_cache_hit_rate"][
+        "ratio_to_baseline"
+    ] == pytest.approx(3.0)
+    assert cached["cache_efficiency_deltas"]["eval_reps_reader.records_per_read"]["baseline_value"] == pytest.approx(
+        0.0
+    )
 
 
 def test_compare_profiles_accepts_legacy_profile_without_summary(tmp_path):
@@ -1398,6 +1419,7 @@ def test_compare_profiles_accepts_legacy_profile_without_summary(tmp_path):
     assert run["bottleneck"] == "forced_answer_forward"
     assert run["top_phases"][0]["name"] == "forced_answer_forward"
     assert run["total_delta"]["ratio_to_baseline"] == pytest.approx(1.0)
+    assert run["cache_efficiency"] == {}
 
 
 def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
@@ -7995,6 +8017,18 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
                             "speedup_vs_baseline": 100.0 / cache_only_total,
                             "ratio_to_baseline": cache_only_total / 100.0,
                         },
+                        "cache_efficiency": {
+                            "eval_reps_reader.shard_cache_hit_rate": 0.75,
+                            "eval_reps_reader.cross_shard_read_rate": 0.10,
+                        },
+                        "cache_efficiency_deltas": {
+                            "eval_reps_reader.shard_cache_hit_rate": {
+                                "value": 0.75,
+                                "baseline_value": 0.0,
+                                "delta": 0.75,
+                                "ratio_to_baseline": None,
+                            }
+                        },
                     },
                 ],
                 "fastest": {"name": "cache_only", "total_seconds": cache_only_total},
@@ -8035,6 +8069,9 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
     assert saved["matrix_decision"]["recommended_cell"] == "layer_m1_batch_2_capture_outputs"
     assert saved["cells"][0]["summary"]["truth_proj_auroc"] == pytest.approx(0.82)
     assert saved["cells"][0]["summary"]["totals"]["cache_only"]["bottleneck"] == "load_data"
+    assert saved["cells"][0]["summary"]["totals"]["cache_only"]["cache_efficiency"][
+        "eval_reps_reader.shard_cache_hit_rate"
+    ] == pytest.approx(0.75)
 
 
 def test_run_cache_profile_matrix_blocks_when_any_checked_cell_fails(tmp_path, monkeypatch):

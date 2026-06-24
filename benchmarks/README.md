@@ -2022,9 +2022,11 @@ python benchmarks/compare_profiles.py \
 ```
 
 The report includes total time deltas, speedup versus the baseline, phase
-deltas, grouped time deltas, and throughput ratios. Older profile payloads that
-only contain `total_seconds` and `phases` remain readable, but grouped deltas are
-available only when the newer `summary` field exists.
+deltas, grouped time deltas, throughput ratios, and cache efficiency metrics
+such as eval-reps shard cache hit rate / cross-shard read rate when the source
+profile summary includes them. Older profile payloads that only contain
+`total_seconds` and `phases` remain readable, but grouped deltas and cache
+efficiency comparisons are available only when the newer `summary` field exists.
 
 For CI or local regression checks, add optional gate thresholds. The command
 exits non-zero and writes `regression_gate.failures` when any non-baseline run

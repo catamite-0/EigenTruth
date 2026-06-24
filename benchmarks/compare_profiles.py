@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -74,6 +75,7 @@ def _minimal_profile_summary(phases: Mapping[str, float], total_seconds: float) 
         "top_phases": top_phases,
         "groups": {},
         "throughput": {},
+        "cache_efficiency": {},
     }
 
 
@@ -120,7 +122,37 @@ def _throughput_values(summary: Mapping[str, Any]) -> dict[str, float]:
     return {str(name): float(value) for name, value in values.items()}
 
 
-def _throughput_deltas(
+def _float_metric(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        metric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(metric):
+        return None
+    return metric
+
+
+def _cache_efficiency_values(summary: Mapping[str, Any]) -> dict[str, float]:
+    values = summary.get("cache_efficiency", {})
+    if not isinstance(values, Mapping):
+        return {}
+    result = {}
+    for name, payload in values.items():
+        if isinstance(payload, Mapping):
+            for metric_name, value in payload.items():
+                metric = _float_metric(value)
+                if metric is not None:
+                    result[f"{name}.{metric_name}"] = metric
+            continue
+        metric = _float_metric(payload)
+        if metric is not None:
+            result[str(name)] = metric
+    return result
+
+
+def _numeric_metric_deltas(
     current: Mapping[str, float],
     baseline: Mapping[str, float],
 ) -> dict[str, dict[str, float | None]]:
@@ -136,6 +168,13 @@ def _throughput_deltas(
             "ratio_to_baseline": _safe_div(current_value, baseline_value),
         }
     return payload
+
+
+def _throughput_deltas(
+    current: Mapping[str, float],
+    baseline: Mapping[str, float],
+) -> dict[str, dict[str, float | None]]:
+    return _numeric_metric_deltas(current, baseline)
 
 
 def _check_max_ratio(
@@ -329,11 +368,13 @@ def build_profile_comparison(
     baseline_phases = baseline_profile["phases"]
     baseline_groups = _group_seconds(baseline_profile["summary"])
     baseline_throughput = _throughput_values(baseline_profile["summary"])
+    baseline_cache_efficiency = _cache_efficiency_values(baseline_profile["summary"])
 
     runs = []
     for item in loaded:
         total_seconds = float(item["total_seconds"])
         summary = item["summary"]
+        cache_efficiency = _cache_efficiency_values(summary)
         runs.append({
             "name": item["name"],
             "source": item["source"],
@@ -343,6 +384,8 @@ def build_profile_comparison(
             "phase_deltas": _phase_deltas(item["phases"], baseline_phases),
             "group_deltas": _phase_deltas(_group_seconds(summary), baseline_groups),
             "throughput_deltas": _throughput_deltas(_throughput_values(summary), baseline_throughput),
+            "cache_efficiency": cache_efficiency,
+            "cache_efficiency_deltas": _numeric_metric_deltas(cache_efficiency, baseline_cache_efficiency),
             "top_phases": summary.get("top_phases", []),
         })
 
