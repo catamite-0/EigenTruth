@@ -110,6 +110,10 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert payload["config"]["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
     assert payload["config"]["score_dump"]["records"]["sha256"]
     assert payload["config"]["score_dump"]["summary"]["score_count"] == 2
+    assert payload["score_dump_cache"]["enabled"] is True
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] >= 1
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
+    assert payload["score_dump_cache"]["jsonl_summary"]["hits"] >= 1
     assert payload["sweep_report"]["best"]["score_name"] == "truth_proj"
     assert sweep_report_path.exists()
 
@@ -11771,6 +11775,9 @@ def test_eval_calibration_transfer_reads_jsonl_layer_scores(tmp_path, monkeypatc
     result = payload["results"][0]
     assert payload["score_dumps"]["target"]["source_format"] == "eigentruth.score_dump.jsonl"
     assert payload["score_dumps"]["target"]["records"]["sha256"]
+    assert payload["score_dump_cache"]["enabled"] is True
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] >= 1
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
     assert result["score_source"] == "sweep_scores"
     assert result["selective_report"]["detection"] == pytest.approx(1.0)
 
@@ -11852,6 +11859,9 @@ def test_eval_score_ensemble_reads_jsonl_manifest_columns(tmp_path):
     run = payload["runs"][0]
     assert run["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
     assert run["score_dump"]["summary"]["score_count"] == 3
+    assert payload["score_dump_cache"]["enabled"] is True
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] >= 1
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
     assert run["signals"] == ["truth_proj", "subspace_resid"]
     assert "unused" not in run["single_results"]
 
@@ -12041,6 +12051,9 @@ def test_eval_verifier_ensemble_reads_jsonl_statement_scores(tmp_path, monkeypat
     assert run["score_dump"]["records"]["sha256"]
     assert run["score_dump"]["summary"]["score_count"] == 2
     assert run["score_dump"]["summary"]["statement_count"] == len(labels)
+    assert payload["score_dump_cache"]["enabled"] is True
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] >= 1
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
     assert run["verification_status_counts"]["insufficient_evidence"] == len(labels)
 
 

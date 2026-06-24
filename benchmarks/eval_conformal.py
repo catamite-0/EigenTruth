@@ -43,7 +43,11 @@ from eigentruth.calibration import (  # noqa: E402
 )
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate  # noqa: E402
 from eigentruth.eval.metrics import selective_classification_report  # noqa: E402
-from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata  # noqa: E402
+from eigentruth.eval.score_dump import (  # noqa: E402
+    load_score_dump_columns,
+    score_dump_cache_summary,
+    score_dump_file_metadata,
+)
 from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 ALPHAS = (0.05, 0.10, 0.20)
@@ -238,6 +242,7 @@ def run(args) -> dict:
             artifact.save_json(args.save_best_calibration)
             print(f"\nWrote best calibration artifact to {args.save_best_calibration}")
 
+    payload["score_dump_cache"] = score_dump_cache_summary(score_dump_metadata_cache)
     _add_planned_manifest_fields(args, payload)
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:

@@ -45,7 +45,11 @@ from eigentruth.control import (
     VerificationStageDecision,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
-from eigentruth.eval.score_dump import load_score_dump_statement_scores, score_dump_file_metadata
+from eigentruth.eval.score_dump import (
+    load_score_dump_statement_scores,
+    score_dump_cache_summary,
+    score_dump_file_metadata,
+)
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
@@ -2241,6 +2245,7 @@ def build_verifier_ensemble_report(
             "enabled": trace_cache is not None,
             "path": None if trace_cache is None else str(trace_cache.path),
         },
+        "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "staged_verification": {
             "enabled": stage_policy is not None,
             "alpha": float(staged_alpha),

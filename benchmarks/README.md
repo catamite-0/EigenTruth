@@ -433,7 +433,9 @@ record counts, available score names, sweep layers, file size, and SHA-256. This
 lets later calibration, ensemble, and route-refresh steps confirm they are reusing
 the intended dump without parsing model artifacts again. Post-processing reports
 share a run-local score-dump cache, so duplicate score paths do not require
-re-hashing the same file or re-scanning the same selected JSONL view. For larger score artifacts, `load_score_dump()` also
+re-hashing the same file or re-scanning the same selected JSONL view. Reports
+include a top-level `score_dump_cache` summary with fingerprint, JSONL summary,
+and selected-view hits/misses/writes. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
 the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
@@ -442,7 +444,8 @@ the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
 where possible, so large JSONL inputs materialize only the requested primary,
 statement-bearing, or layer/score columns plus labels. These selected loaders
 accept the same optional run-local cache and invalidate cached views when the
-manifest or records file changes. Score-dump metadata
+manifest or records file changes. `score_dump_cache_summary()` exposes the same
+counters for custom post-processing scripts. Score-dump metadata
 fingerprints both the manifest and the records file, and its JSONL summary uses
 a cached label-only record scan instead of materializing score columns.
 When `--artifact-manifest` is provided, the conformal report gains

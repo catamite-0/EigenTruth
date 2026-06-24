@@ -33,6 +33,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump_columns,
     load_score_dump_layer_scores,
     load_score_dump_statement_scores,
+    score_dump_cache_summary,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -57,6 +58,7 @@ __all__ = [
     "load_score_dump_columns",
     "load_score_dump_layer_scores",
     "load_score_dump_statement_scores",
+    "score_dump_cache_summary",
     "score_dump_file_metadata",
     "write_score_dump_jsonl",
 ]

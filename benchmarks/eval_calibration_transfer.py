@@ -14,7 +14,12 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.eval.metrics import selective_classification_report
-from eigentruth.eval.score_dump import ScoreDumpLayerScores, load_score_dump_layer_scores, score_dump_file_metadata
+from eigentruth.eval.score_dump import (
+    ScoreDumpLayerScores,
+    load_score_dump_layer_scores,
+    score_dump_cache_summary,
+    score_dump_file_metadata,
+)
 
 DEFAULT_TOLERANCE = 0.03
 
@@ -207,6 +212,7 @@ def build_calibration_transfer_report(
     return {
         "schema_version": 1,
         "tolerance": tolerance,
+        "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "score_dumps": score_dump_metadata,
         "summary": _summary(results),
         "results": results,

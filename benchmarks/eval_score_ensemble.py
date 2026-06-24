@@ -18,7 +18,11 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
-from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata
+from eigentruth.eval.score_dump import (
+    load_score_dump_columns,
+    score_dump_cache_summary,
+    score_dump_file_metadata,
+)
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
@@ -319,6 +323,7 @@ def build_ensemble_report(
         "repeats": int(repeats),
         "seed": int(seed),
         "best_alpha": float(best_alpha),
+        "score_dump_cache": score_dump_cache_summary(score_dump_metadata_cache),
         "runs": runs,
     }
 

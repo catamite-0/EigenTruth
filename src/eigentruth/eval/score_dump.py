@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, MutableMapping, Sequence
 
 JSONL_FORMAT = "eigentruth.score_dump.jsonl"
+_SCORE_DUMP_CACHE_STATS_KEY = "__eigentruth_score_dump_cache_stats_v1__"
 
 
 @dataclass(frozen=True)
@@ -665,6 +666,28 @@ def score_dump_file_metadata(
     return metadata
 
 
+def score_dump_cache_summary(cache: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Return run-local score-dump cache hit/miss counters."""
+    if cache is None:
+        return {
+            "enabled": False,
+            "cache_entries": 0,
+            "fingerprint": _cache_counter_payload({}),
+            "jsonl_summary": _cache_counter_payload({}),
+            "jsonl_view": _cache_counter_payload({}),
+        }
+    stats = cache.get(_SCORE_DUMP_CACHE_STATS_KEY)
+    if not isinstance(stats, Mapping):
+        stats = {}
+    return {
+        "enabled": True,
+        "cache_entries": sum(1 for key in cache if key != _SCORE_DUMP_CACHE_STATS_KEY),
+        "fingerprint": _cache_counter_payload(_mapping(stats.get("fingerprint"))),
+        "jsonl_summary": _cache_counter_payload(_mapping(stats.get("jsonl_summary"))),
+        "jsonl_view": _cache_counter_payload(_mapping(stats.get("jsonl_view"))),
+    }
+
+
 def _load_score_dump_path(
     path: Path,
     *,
@@ -1039,12 +1062,15 @@ def _cached_jsonl_manifest_summary(
     cache_key = _jsonl_summary_cache_key(manifest_path, manifest)
     cached = cache.get(cache_key)
     if cached is not None:
+        _score_dump_cache_event(cache, "jsonl_summary", "hits")
         return dict(cached)
+    _score_dump_cache_event(cache, "jsonl_summary", "misses")
     summary = _jsonl_manifest_summary(
         manifest,
         labels=_load_score_dump_jsonl_labels(manifest_path, manifest),
     )
     cache[cache_key] = dict(summary)
+    _score_dump_cache_event(cache, "jsonl_summary", "writes")
     return summary
 
 
@@ -1056,6 +1082,7 @@ def _score_dump_jsonl_summary_cache_set(
 ) -> None:
     if cache is not None:
         cache[_jsonl_summary_cache_key(manifest_path, manifest)] = dict(summary)
+        _score_dump_cache_event(cache, "jsonl_summary", "writes")
 
 
 def _jsonl_summary_cache_key(
@@ -1108,7 +1135,9 @@ def _score_dump_view_cache_get(
         return None
     cached = cache.get(key)
     if isinstance(cached, expected_type):
+        _score_dump_cache_event(cache, "jsonl_view", "hits")
         return cached
+    _score_dump_cache_event(cache, "jsonl_view", "misses")
     return None
 
 
@@ -1119,6 +1148,37 @@ def _score_dump_view_cache_set(
 ) -> None:
     if cache is not None:
         cache[key] = value
+        _score_dump_cache_event(cache, "jsonl_view", "writes")
+
+
+def _score_dump_cache_event(
+    cache: MutableMapping[str, Any] | None,
+    section: str,
+    event: str,
+) -> None:
+    if cache is None:
+        return
+    stats = cache.get(_SCORE_DUMP_CACHE_STATS_KEY)
+    if not isinstance(stats, dict):
+        stats = {}
+        cache[_SCORE_DUMP_CACHE_STATS_KEY] = stats
+    section_stats = stats.setdefault(section, {})
+    if isinstance(section_stats, dict):
+        section_stats[event] = int(section_stats.get(event, 0)) + 1
+
+
+def _cache_counter_payload(counter: Mapping[str, Any]) -> dict[str, Any]:
+    hits = int(counter.get("hits", 0) or 0)
+    misses = int(counter.get("misses", 0) or 0)
+    writes = int(counter.get("writes", 0) or 0)
+    attempts = hits + misses
+    return {
+        "hits": hits,
+        "misses": misses,
+        "writes": writes,
+        "attempts": attempts,
+        "hit_rate": None if attempts == 0 else hits / attempts,
+    }
 
 
 def _file_cache_signature(path: Path) -> dict[str, Any]:
@@ -1570,9 +1630,12 @@ def _cached_file_fingerprint(
     cache_key = f"{path.resolve(strict=False)}:{stat.st_size}:{stat.st_mtime_ns}"
     cached = cache.get(cache_key)
     if cached is not None:
+        _score_dump_cache_event(cache, "fingerprint", "hits")
         return dict(cached)
+    _score_dump_cache_event(cache, "fingerprint", "misses")
     fingerprint = {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
     cache[cache_key] = dict(fingerprint)
+    _score_dump_cache_event(cache, "fingerprint", "writes")
     return fingerprint
 
 

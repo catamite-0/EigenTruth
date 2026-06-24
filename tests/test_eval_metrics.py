@@ -22,6 +22,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump_columns,
     load_score_dump_layer_scores,
     load_score_dump_statement_scores,
+    score_dump_cache_summary,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -521,11 +522,21 @@ class TestScoreDump:
 
         monkeypatch.setattr(score_dump_module, "_load_score_dump_jsonl_labels", fail_label_loader)
         metadata = score_dump_file_metadata(manifest_path, cache=cache)
+        summary = score_dump_cache_summary(cache)
 
         assert first_columns is second_columns
         assert first_layers is second_layers
         assert first_statements is second_statements
         assert metadata["summary"] == first_columns.summary
+        assert summary["enabled"] is True
+        assert summary["jsonl_view"]["hits"] == 3
+        assert summary["jsonl_view"]["misses"] == 3
+        assert summary["jsonl_view"]["writes"] == 3
+        assert summary["jsonl_summary"]["hits"] == 1
+        assert summary["jsonl_summary"]["writes"] == 3
+        assert summary["fingerprint"]["misses"] == 2
+        assert summary["fingerprint"]["writes"] == 2
+        assert summary["cache_entries"] >= 5
         assert first_columns.scores == {"maha_last": (0.1, 0.9)}
         assert first_layers.layer_scores == {
             -2: {"truth_proj": (0.3, 0.7)},
@@ -570,12 +581,25 @@ class TestScoreDump:
             manifest_path,
         )
         third = load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        summary = score_dump_cache_summary(cache)
 
         assert first is second
         assert first.labels == (0, 1)
         assert third.labels == (0, 1, 0)
         assert third.scores == {"maha_last": (0.4, 0.8, 0.2)}
         assert len(calls) == 2
+        assert summary["jsonl_view"]["hits"] == 1
+        assert summary["jsonl_view"]["misses"] == 2
+        assert summary["jsonl_view"]["writes"] == 2
+
+    def test_score_dump_cache_summary_handles_empty_cache(self):
+        assert score_dump_cache_summary(None) == {
+            "enabled": False,
+            "cache_entries": 0,
+            "fingerprint": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
+            "jsonl_summary": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
+            "jsonl_view": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
+        }
 
     def test_load_score_dump_layer_scores_reads_selected_jsonl_sweep_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
