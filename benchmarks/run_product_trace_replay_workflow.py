@@ -11,9 +11,10 @@ import argparse
 import glob
 import json
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, MutableMapping, Sequence
+from typing import Any, Callable, Mapping, MutableMapping, Sequence, TypeVar
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +43,8 @@ from eigentruth.registry import (  # noqa: E402
     load_fingerprint_cache,
     save_fingerprint_cache,
 )
+
+_T = TypeVar("_T")
 
 
 @dataclass(frozen=True)
@@ -189,15 +192,29 @@ class ProductTraceReplayWorkflowConfig:
 def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     """Run corpus build, runtime baseline, and selector replay in one workflow."""
     fingerprint_cache = _load_fingerprint_cache(config)
+    workflow_started = time.perf_counter()
+    phase_timings: dict[str, dict[str, Any]] = {}
     try:
         config.output_dir.mkdir(parents=True, exist_ok=True)
-        corpus = _run_corpus(config, fingerprint_cache=fingerprint_cache)
+        corpus = _timed_phase(
+            "corpus",
+            phase_timings,
+            lambda: _run_corpus(config, fingerprint_cache=fingerprint_cache),
+        )
         corpus_trace_paths = tuple(Path(record["path"]) for record in _sequence(corpus.get("traces")))
-        runtime_baseline = _run_runtime_baseline(config, corpus_trace_paths)
-        selector_replay = _run_selector_replay(
-            config,
-            corpus_trace_paths,
-            runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
+        runtime_baseline = _timed_phase(
+            "runtime_baseline",
+            phase_timings,
+            lambda: _run_runtime_baseline(config, corpus_trace_paths),
+        )
+        selector_replay = _timed_phase(
+            "selector_replay",
+            phase_timings,
+            lambda: _run_selector_replay(
+                config,
+                corpus_trace_paths,
+                runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
+            ),
         )
         status = _workflow_status(corpus, runtime_baseline, selector_replay)
         report = {
@@ -221,6 +238,8 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             "corpus": _corpus_summary(corpus),
             "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
             "selector_replay": _selector_replay_summary(selector_replay),
+            "cache_summary": _workflow_cache_summary(corpus, runtime_baseline, selector_replay),
+            "timing": _workflow_timing(phase_timings, started_at=workflow_started),
             "paths": {
                 "report": str(config.resolved_report_path),
                 "artifact_manifest": str(config.resolved_artifact_manifest_path),
@@ -285,6 +304,75 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
         return report
     finally:
         _save_fingerprint_cache(config, fingerprint_cache)
+
+
+def _timed_phase(
+    name: str,
+    timings: MutableMapping[str, dict[str, Any]],
+    func: Callable[[], _T],
+) -> _T:
+    started = time.perf_counter()
+    try:
+        return func()
+    finally:
+        timings[name] = {
+            "seconds": _round_seconds(time.perf_counter() - started),
+        }
+
+
+def _workflow_timing(
+    phases: Mapping[str, Mapping[str, Any]],
+    *,
+    started_at: float,
+) -> dict[str, Any]:
+    phase_payload = {name: dict(payload) for name, payload in phases.items()}
+    phase_total = sum(
+        float(payload.get("seconds", 0.0))
+        for payload in phase_payload.values()
+        if not isinstance(payload.get("seconds"), bool)
+    )
+    return {
+        "total_seconds": _round_seconds(time.perf_counter() - started_at),
+        "phase_total_seconds": _round_seconds(phase_total),
+        "phases": phase_payload,
+    }
+
+
+def _workflow_cache_summary(
+    corpus: Mapping[str, Any],
+    runtime_baseline: Mapping[str, Any],
+    selector_replay: Mapping[str, Any],
+) -> dict[str, Any]:
+    corpus_cache = _mapping(corpus.get("workflow_cache"))
+    runtime_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
+    selector_cache = _mapping(_nested(selector_replay, "config", "trace_inputs"))
+    caches = {
+        "corpus": _cache_entry_summary(corpus_cache),
+        "runtime_trace_records": _cache_entry_summary(runtime_cache),
+        "selector_trace_inputs": _cache_entry_summary(selector_cache),
+    }
+    enabled = [entry for entry in caches.values() if entry.get("enabled") is True]
+    hit_count = sum(1 for entry in enabled if entry.get("hit") is True)
+    written_count = sum(1 for entry in enabled if entry.get("written") is True)
+    return {
+        "enabled_count": len(enabled),
+        "hit_count": hit_count,
+        "written_count": written_count,
+        "hit_rate": _safe_div(hit_count, len(enabled)),
+        **caches,
+    }
+
+
+def _cache_entry_summary(cache: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "enabled": cache.get("enabled"),
+        "source": cache.get("source"),
+        "path": cache.get("path"),
+        "hit": cache.get("cache_hit"),
+        "written": cache.get("cache_written"),
+        "refresh": cache.get("refresh"),
+        "invalidation_reason": cache.get("invalidation_reason"),
+    }
 
 
 def _run_corpus(
@@ -754,6 +842,26 @@ def _write_artifact_manifest(
             "corpus_status": _nested(report, "corpus", "status"),
             "runtime_baseline_status": _nested(report, "runtime_baseline", "status"),
             "selector_replay_status": _nested(report, "selector_replay", "status"),
+            "workflow_total_seconds": _nested(report, "timing", "total_seconds"),
+            "workflow_phase_total_seconds": _nested(report, "timing", "phase_total_seconds"),
+            "workflow_corpus_seconds": _nested(report, "timing", "phases", "corpus", "seconds"),
+            "workflow_runtime_baseline_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "runtime_baseline",
+                "seconds",
+            ),
+            "workflow_selector_replay_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "selector_replay",
+                "seconds",
+            ),
+            "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
+            "workflow_cache_hit_count": _nested(report, "cache_summary", "hit_count"),
+            "workflow_cache_hit_rate": _nested(report, "cache_summary", "hit_rate"),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -791,6 +899,26 @@ def _record_registry(
             "corpus_status": _nested(report, "corpus", "status"),
             "runtime_baseline_status": _nested(report, "runtime_baseline", "status"),
             "selector_replay_status": _nested(report, "selector_replay", "status"),
+            "workflow_total_seconds": _nested(report, "timing", "total_seconds"),
+            "workflow_phase_total_seconds": _nested(report, "timing", "phase_total_seconds"),
+            "workflow_corpus_seconds": _nested(report, "timing", "phases", "corpus", "seconds"),
+            "workflow_runtime_baseline_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "runtime_baseline",
+                "seconds",
+            ),
+            "workflow_selector_replay_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "selector_replay",
+                "seconds",
+            ),
+            "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
+            "workflow_cache_hit_count": _nested(report, "cache_summary", "hit_count"),
+            "workflow_cache_hit_rate": _nested(report, "cache_summary", "hit_rate"),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -900,6 +1028,16 @@ def _failure_count(verification_payload: Mapping[str, Any]) -> int | None:
             nested_count = _failure_count(nested)
             count += 0 if nested_count is None else nested_count
     return count
+
+
+def _round_seconds(value: float) -> float:
+    return round(max(0.0, float(value)), 6)
+
+
+def _safe_div(numerator: int | float | None, denominator: int | float | None) -> float | None:
+    if numerator is None or denominator in (None, 0):
+        return None
+    return float(numerator) / float(denominator)
 
 
 def _candidate_from_value(

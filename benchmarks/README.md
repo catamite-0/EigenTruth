@@ -2469,8 +2469,9 @@ Use `run_product_trace_replay_workflow.py` when the raw-trace handoff should be
 one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the
 provided candidate policies using the corpus runtime-pair index, writes a
-recursive top-level manifest over all child reports, and registers one workflow
-report. Add `--verify-manifest` to write a separate recursive verification
+recursive top-level manifest over all child reports, records phase timing/cache
+summaries for local performance tuning, and registers one workflow report.
+Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
 `--corpus-cache-json` when rebuilding the same raw-trace corpus repeatedly,

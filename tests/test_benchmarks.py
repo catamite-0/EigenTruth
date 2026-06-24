@@ -11821,6 +11821,18 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["runtime_baseline"]["n_traces"] == 3
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
+    assert payload["timing"]["total_seconds"] >= 0.0
+    assert payload["timing"]["phase_total_seconds"] >= 0.0
+    assert payload["timing"]["phases"]["corpus"]["seconds"] >= 0.0
+    assert payload["timing"]["phases"]["runtime_baseline"]["seconds"] >= 0.0
+    assert payload["timing"]["phases"]["selector_replay"]["seconds"] >= 0.0
+    assert payload["cache_summary"]["enabled_count"] == 3
+    assert payload["cache_summary"]["hit_count"] == 0
+    assert payload["cache_summary"]["written_count"] == 3
+    assert payload["cache_summary"]["hit_rate"] == pytest.approx(0.0)
+    assert payload["cache_summary"]["corpus"]["source"] == "corpus_build"
+    assert payload["cache_summary"]["runtime_trace_records"]["source"] == "trace_scan"
+    assert payload["cache_summary"]["selector_trace_inputs"]["source"] == "trace_scan"
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
     assert payload["paths"]["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
@@ -11862,6 +11874,11 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["status"] == "promote"
     assert record.metadata["corpus_status"] == "ready"
     assert record.metadata["selector_replay_status"] == "promote"
+    assert record.metadata["workflow_total_seconds"] >= 0.0
+    assert record.metadata["workflow_phase_total_seconds"] >= 0.0
+    assert record.metadata["workflow_cache_enabled_count"] == 3
+    assert record.metadata["workflow_cache_hit_count"] == 0
+    assert record.metadata["workflow_cache_hit_rate"] == pytest.approx(0.0)
     assert record.metadata["manifest_verified"] is True
     assert record.metadata["manifest_verification_report"] == str(verification_report_path)
     assert record.metadata["manifest_verification_failure_count"] == 0
@@ -11935,6 +11952,11 @@ def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeyp
     assert second["corpus"]["cache_hit"] is True
     assert second["corpus"]["cache_written"] is False
     assert second["corpus"]["accepted_count"] == 1
+    assert second["cache_summary"]["enabled_count"] == 1
+    assert second["cache_summary"]["hit_count"] == 1
+    assert second["cache_summary"]["hit_rate"] == pytest.approx(1.0)
+    assert second["cache_summary"]["corpus"]["source"] == "corpus_cache"
+    assert second["timing"]["phases"]["corpus"]["seconds"] >= 0.0
     assert second["paths"]["corpus_cache"] == str(corpus_cache_path)
 
 

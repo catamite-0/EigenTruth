@@ -5,6 +5,39 @@
     "file_count": 24,
     "missing_count": 0
   },
+  "cache_summary": {
+    "corpus": {
+      "enabled": true,
+      "hit": true,
+      "invalidation_reason": null,
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json",
+      "refresh": false,
+      "source": "corpus_cache",
+      "written": false
+    },
+    "enabled_count": 3,
+    "hit_count": 3,
+    "hit_rate": 1.0,
+    "runtime_trace_records": {
+      "enabled": true,
+      "hit": true,
+      "invalidation_reason": null,
+      "path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json",
+      "refresh": false,
+      "source": "trace_record_cache",
+      "written": false
+    },
+    "selector_trace_inputs": {
+      "enabled": true,
+      "hit": true,
+      "invalidation_reason": null,
+      "path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json",
+      "refresh": false,
+      "source": "trace_input_cache",
+      "written": false
+    },
+    "written_count": 0
+  },
   "config": {
     "candidate_names": [
       "default",
@@ -164,5 +197,20 @@
     "trace_inputs_source": "trace_input_cache"
   },
   "status": "promote",
+  "timing": {
+    "phase_total_seconds": 0.074145,
+    "phases": {
+      "corpus": {
+        "seconds": 0.007252
+      },
+      "runtime_baseline": {
+        "seconds": 0.030891
+      },
+      "selector_replay": {
+        "seconds": 0.036002
+      }
+    },
+    "total_seconds": 0.074431
+  },
   "workflow": "product_trace_replay_workflow"
 }

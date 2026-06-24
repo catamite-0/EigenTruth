@@ -141,8 +141,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "4a3c62fecbaad375df0146be3affa7c8d3ea57f27c19a73ec76ca6d5ad8a3d9a",
-      "size_bytes": 7758
+      "sha256": "4679a89e88dee191e9ef1caf62695f7cb7061545a48120045827f3a615b064fb",
+      "size_bytes": 9030
     },
     "replay_policy": {
       "exists": true,
@@ -209,7 +209,15 @@
     "runner": "run_product_trace_replay_workflow",
     "runtime_baseline_status": "observed",
     "selector_replay_status": "promote",
-    "status": "promote"
+    "status": "promote",
+    "workflow_cache_enabled_count": 3,
+    "workflow_cache_hit_count": 3,
+    "workflow_cache_hit_rate": 1.0,
+    "workflow_corpus_seconds": 0.007252,
+    "workflow_phase_total_seconds": 0.074145,
+    "workflow_runtime_baseline_seconds": 0.030891,
+    "workflow_selector_replay_seconds": 0.036002,
+    "workflow_total_seconds": 0.074431
   },
   "schema_version": 1,
   "summary": {
