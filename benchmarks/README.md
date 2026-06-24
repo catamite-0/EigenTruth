@@ -1394,10 +1394,12 @@ It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest
 verification can reuse unchanged file/directory fingerprints across runs
-without changing gate semantics. Add `--manifest-fingerprint-workers N` when
-large local manifests spend meaningful time hashing independent artifacts; the
-default is `1`, so existing release checks remain serial unless explicitly
-configured.
+without changing gate semantics. The workflow also shares one run-local JSON
+artifact cache and its stats across compare, manifest build, and promotion
+verification, so `artifact_cache.artifact_json_cache` reflects cache reuse from
+the full release gate. Add `--manifest-fingerprint-workers N` when large local
+manifests spend meaningful time hashing independent artifacts; the default is
+`1`, so existing release checks remain serial unless explicitly configured.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \

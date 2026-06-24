@@ -215,6 +215,7 @@ def run_release_candidate_registry_workflow(
     )
     fingerprint_cache = verification_context.fingerprint_cache
     json_cache = verification_context.json_cache
+    json_cache_stats = verification_context.json_cache_stats
     phase_started = time.perf_counter()
     comparison = compare_release_candidates(
         readiness_registry_path=config.readiness_registry_path,
@@ -294,6 +295,7 @@ def run_release_candidate_registry_workflow(
         notes=("release candidate registry workflow",),
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
     )
     _record_phase_seconds("compare", phase_timings, phase_started)
     phase_started = time.perf_counter()

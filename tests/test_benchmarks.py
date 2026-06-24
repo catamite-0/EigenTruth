@@ -7188,6 +7188,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
     assert record.metadata["scope"] == "unit"
+    compare_json_cache = payload["release_candidate_comparison"]["summary"]["artifact_json_cache"]
+    workflow_json_cache = payload["artifact_cache"]["artifact_json_cache"]
+    assert workflow_json_cache["requests"] >= compare_json_cache["requests"]
+    assert workflow_json_cache["entries"] >= compare_json_cache["entries"]
     assert payload["artifact_cache"]["artifact_json_cache"]["hits"] >= 1
     assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
     assert payload["timing"]["total_seconds"] >= 0.0
