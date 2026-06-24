@@ -90,6 +90,97 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     json.dumps(payload)
 
 
+def test_product_trace_bounded_payload_summarizes_large_fields():
+    trace = ProductTrace(
+        request_id="req-bounded",
+        diagnostics={f"score_{index}": float(index) for index in range(5)},
+        claims=tuple(
+            {
+                "claim_id": f"c{index}",
+                "text": f"Claim {index}",
+                "metadata": {"feature": index},
+            }
+            for index in range(4)
+        ),
+        verification_results=tuple(
+            {
+                "status": "supported",
+                "confidence": 0.9,
+                "evidence": tuple(f"evidence-{index}-{item}" for item in range(5)),
+                "explanation": "x" * 80,
+                "metadata": {
+                    "selected_route": "structured_qa",
+                    "retrieval_hits": tuple({"doc": item} for item in range(5)),
+                    "total_duration_seconds": 0.01,
+                },
+            }
+            for index in range(4)
+        ),
+        actions=tuple(
+            ActionRequest(
+                action=ControlAction.RETRIEVE,
+                reason="unsupported",
+                payload={"claim_ids": (f"c{index}",), "extra": tuple(range(10))},
+            )
+            for index in range(3)
+        ),
+        action_results=tuple(
+            ActionResult(
+                action=ControlAction.RETRIEVE,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"hits": tuple({"id": item, "text": "y" * 80} for item in range(6))},
+                metadata={"side_effects": False},
+            )
+            for _ in range(3)
+        ),
+        events=tuple(
+            TraceEvent("event", {"items": tuple(range(10))})
+            for _ in range(3)
+        ),
+        metadata={
+            "artifact_source": "artifact.json",
+            "promotion_contract_source": "contract.json",
+            "runtime_budget": {"passed": True},
+            "large_unselected_metadata": tuple(range(100)),
+        },
+        runtime_trace=RuntimeTrace(
+            phases=(RuntimePhaseTiming("phase", 0.01),),
+        ),
+    )
+
+    payload = trace.to_bounded_dict(
+        max_diagnostics=2,
+        max_claims=1,
+        max_verification_results=2,
+        max_actions=1,
+        max_action_results=1,
+        max_events=1,
+        max_nested_items=2,
+        max_string_length=40,
+    )
+
+    assert payload["trace_format"] == "bounded_product_trace"
+    assert payload["request_id"] == "req-bounded"
+    assert len(payload["diagnostics"]) == 2
+    assert payload["truncation"]["diagnostics"] == {"total": 5, "included": 2, "omitted": 3}
+    assert payload["truncation"]["claims"]["omitted"] == 3
+    assert payload["truncation"]["verification_results"]["omitted"] == 2
+    assert payload["truncation"]["actions"]["omitted"] == 2
+    assert payload["truncation"]["action_results"]["omitted"] == 2
+    assert payload["truncation"]["events"]["omitted"] == 2
+    assert payload["runtime_trace"] is None
+    assert payload["summaries"]["runtime"]["measured_phases"] == 1
+    assert payload["summaries"]["action_execution"]["total"] == 3
+    assert payload["verification_results"][0]["evidence_count"] == 5
+    assert len(payload["verification_results"][0]["evidence"]) == 2
+    assert len(payload["verification_results"][0]["explanation"]) <= 40
+    assert payload["action_results"][0]["output_summary"]["key_count"] == 1
+    assert "large_unselected_metadata" not in payload["metadata"]
+    assert payload["metadata"]["artifact_source"] == "artifact.json"
+    assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    json.dumps(payload)
+
+
 def test_artifact_registry_json_roundtrip(tmp_path):
     registry_path = tmp_path / "registry.json"
     registry = ArtifactRegistry.load_json(registry_path)

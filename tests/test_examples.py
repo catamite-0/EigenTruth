@@ -75,6 +75,49 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     assert payload["runtime_trace"]["summary"]["phase_counts"]["action_execution"] == 1
 
 
+def test_calibrated_control_demo_can_emit_bounded_trace():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=None,
+            text=demo.DEFAULT_TEXT,
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            request_id="test-bounded-demo",
+            output=None,
+            registry=None,
+            bounded_trace=True,
+            bounded_trace_max_claims=1,
+            bounded_trace_max_verification_results=1,
+            bounded_trace_max_actions=1,
+            bounded_trace_max_action_results=1,
+            bounded_trace_max_events=2,
+            bounded_trace_max_nested_items=4,
+            bounded_trace_include_runtime_trace=False,
+        )
+    )
+
+    assert payload["trace_format"] == "bounded_product_trace"
+    assert payload["request_id"] == "test-bounded-demo"
+    assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["runtime_trace"] is None
+    assert payload["truncation"]["runtime_trace_included"] is False
+    assert payload["summaries"]["runtime"]["measured_phases"] > 0
+    assert payload["truncation"]["claims"]["included"] <= 1
+    assert payload["truncation"]["verification_results"]["included"] <= 1
+    assert payload["metadata"]["artifact_source"] == demo.artifact_source(None)
+    if demo.default_promotion_contract_path() is not None:
+        assert "v1_5" in payload["metadata"]["promotion_contract_source"]
+
+
 def test_calibrated_control_demo_can_route_calculator_refutations():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

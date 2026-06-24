@@ -592,11 +592,31 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     cache_summary = trace.cache_summary()
     route_cost_summary = trace.verification_route_cost_summary()
     verification_stage_summary = trace.verification_stage_summary()
-    payload = trace.to_dict()
+    bounded_trace = bool(getattr(args, "bounded_trace", False))
+    if bounded_trace:
+        payload = trace.to_bounded_dict(
+            max_claims=int(getattr(args, "bounded_trace_max_claims", 20)),
+            max_verification_results=int(
+                getattr(args, "bounded_trace_max_verification_results", 20)
+            ),
+            max_actions=int(getattr(args, "bounded_trace_max_actions", 20)),
+            max_action_results=int(getattr(args, "bounded_trace_max_action_results", 20)),
+            max_events=int(getattr(args, "bounded_trace_max_events", 20)),
+            max_nested_items=int(getattr(args, "bounded_trace_max_nested_items", 16)),
+            include_runtime_trace=bool(getattr(args, "bounded_trace_include_runtime_trace", False)),
+        )
+    else:
+        payload = trace.to_dict()
     if cache_metadata:
-        payload["metadata"]["cache_summary"] = cache_summary
-    payload["metadata"]["route_cost_summary"] = route_cost_summary
-    payload["metadata"]["verification_stage_summary"] = verification_stage_summary
+        payload["metadata"]["cache_summary"] = (
+            payload["summaries"]["cache"] if bounded_trace else cache_summary
+        )
+    payload["metadata"]["route_cost_summary"] = (
+        payload["summaries"]["verification_route_cost"] if bounded_trace else route_cost_summary
+    )
+    payload["metadata"]["verification_stage_summary"] = (
+        payload["summaries"]["verification_stage"] if bounded_trace else verification_stage_summary
+    )
     runtime_budget_policy = runtime_budget_policy_from_args(args)
     runtime_budget = (
         None
@@ -722,6 +742,16 @@ def main() -> None:
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified ProductTrace JSON for automated artifact runs")
+    parser.add_argument("--bounded-trace", action="store_true",
+                        help="write a bounded ProductTrace payload with summaries and truncated lists")
+    parser.add_argument("--bounded-trace-max-claims", type=int, default=20)
+    parser.add_argument("--bounded-trace-max-verification-results", type=int, default=20)
+    parser.add_argument("--bounded-trace-max-actions", type=int, default=20)
+    parser.add_argument("--bounded-trace-max-action-results", type=int, default=20)
+    parser.add_argument("--bounded-trace-max-events", type=int, default=20)
+    parser.add_argument("--bounded-trace-max-nested-items", type=int, default=16)
+    parser.add_argument("--bounded-trace-include-runtime-trace", action="store_true",
+                        help="include full runtime_trace in bounded output instead of summaries only")
     parsed = parser.parse_args()
     payload = run(parsed)
     print(_json_text(payload, compact=bool(parsed.compact_json)), end="")

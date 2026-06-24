@@ -179,6 +179,117 @@ class ProductTrace:
             "runtime_trace": _runtime_trace_to_dict(self.runtime_trace),
         }
 
+    def to_bounded_dict(
+        self,
+        *,
+        max_diagnostics: int = 64,
+        max_claims: int = 20,
+        max_verification_results: int = 20,
+        max_actions: int = 20,
+        max_action_results: int = 20,
+        max_events: int = 20,
+        max_nested_items: int = 16,
+        max_string_length: int = 500,
+        include_runtime_trace: bool = False,
+        metadata_keys: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        """Return a bounded ProductTrace payload for product telemetry.
+
+        The full ``to_dict()`` schema is preserved for offline reproduction. This
+        method is for online traces where large evidence, action output, event,
+        and metadata payloads should be summarized while keeping routing and
+        budget diagnostics available.
+        """
+        diagnostics = _bounded_mapping_payload(
+            self.diagnostics,
+            max_items=max_diagnostics,
+            max_nested_items=max_nested_items,
+            max_string_length=max_string_length,
+        )
+        claims = [_claim_to_dict(claim) for claim in self.claims]
+        verification_results = [
+            _bounded_verification_result(
+                _verification_result_to_dict(result),
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for result in self.verification_results
+        ]
+        actions = [
+            _bounded_jsonable(
+                _action_to_dict(action),
+                max_depth=4,
+                max_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for action in self.actions
+        ]
+        action_results = [
+            _bounded_action_result(
+                _action_result_to_dict(result),
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for result in self.action_results
+        ]
+        events = [
+            _bounded_event(
+                _event_to_dict(event),
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for event in self.events
+        ]
+        runtime_trace = _runtime_trace_to_dict(self.runtime_trace)
+        summaries = {
+            "action_execution": self.action_execution_summary(),
+            "verification_route": self.verification_route_summary(),
+            "verification_route_cost": self.verification_route_cost_summary(),
+            "runtime": self.runtime_summary(),
+            "cache": self.cache_summary(),
+            "verification_stage": self.verification_stage_summary(),
+        }
+        payload = {
+            "schema_version": 1,
+            "trace_format": "bounded_product_trace",
+            "request_id": self.request_id,
+            "diagnostics": diagnostics["items"],
+            "risk_decision": _risk_decision_to_dict(self.risk_decision),
+            "summaries": _bounded_summaries(
+                summaries,
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            ),
+            "claims": _bounded_sequence(claims, max_claims),
+            "verification_results": _bounded_sequence(
+                verification_results,
+                max_verification_results,
+            ),
+            "actions": _bounded_sequence(actions, max_actions),
+            "action_results": _bounded_sequence(action_results, max_action_results),
+            "events": _bounded_sequence(events, max_events),
+            "metadata": _bounded_metadata(
+                self.metadata,
+                metadata_keys=metadata_keys,
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            ),
+            "runtime_trace": runtime_trace if include_runtime_trace else None,
+            "truncation": {
+                "diagnostics": diagnostics["summary"],
+                "claims": _truncation_summary(len(claims), max_claims),
+                "verification_results": _truncation_summary(
+                    len(verification_results),
+                    max_verification_results,
+                ),
+                "actions": _truncation_summary(len(actions), max_actions),
+                "action_results": _truncation_summary(len(action_results), max_action_results),
+                "events": _truncation_summary(len(events), max_events),
+                "runtime_trace_included": include_runtime_trace,
+            },
+        }
+        return payload
+
     def action_execution_summary(self) -> dict[str, Any]:
         """Summarize action execution results for trace/registry metadata."""
         results = [_action_result_to_dict(result) for result in self.action_results]
@@ -363,6 +474,290 @@ def _verification_result_to_dict(result: VerificationResult | Mapping[str, Any])
             "metadata": _to_jsonable(result.metadata),
         }
     return dict(_to_jsonable(result))
+
+
+DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
+    "artifact_model_id",
+    "artifact_source",
+    "artifact_target_layer",
+    "artifact_scores",
+    "source",
+    "promotion_contract_source",
+    "promotion_contract_budget_enabled",
+    "promotion_contract_model_id",
+    "promotion_contract_source_workflow",
+    "promotion_contract_source_status",
+    "promotion_contract_manifest",
+    "promotion_contract_manifest_verification",
+    "promotion_contract_registry",
+    "promotion_contract_registry_key",
+    "promotion_contract_runtime",
+    "promotion_contract_verifier_route",
+    "runtime_profile",
+    "runtime_profile_requested",
+    "runtime_profile_selection",
+    "runtime_profile_selector_policy",
+    "staged_verification_enabled",
+    "verifier_type",
+    "calculator_enabled",
+    "action_executor_type",
+    "registered_actions",
+    "runtime_budget",
+    "cache_summary",
+    "route_cost_summary",
+    "verification_stage_summary",
+)
+
+
+def _bounded_sequence(items: Sequence[Any], max_items: int) -> list[Any]:
+    limit = _non_negative_limit(max_items)
+    return list(items[:limit])
+
+
+def _bounded_mapping_payload(
+    value: Mapping[str, Any],
+    *,
+    max_items: int,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    normalized = _to_jsonable(value)
+    if not isinstance(normalized, Mapping):
+        normalized = {}
+    limit = _non_negative_limit(max_items)
+    items = list(normalized.items())
+    return {
+        "items": {
+            str(key): _bounded_jsonable(
+                item,
+                max_depth=3,
+                max_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for key, item in items[:limit]
+        },
+        "summary": _truncation_summary(len(items), limit),
+    }
+
+
+def _bounded_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    metadata_keys: Sequence[str] | None,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    normalized = _to_jsonable(metadata)
+    if not isinstance(normalized, Mapping):
+        normalized = {}
+    selected_keys = tuple(metadata_keys or DEFAULT_BOUNDED_TRACE_METADATA_KEYS)
+    return {
+        key: _bounded_jsonable(
+            normalized[key],
+            max_depth=4,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        )
+        for key in selected_keys
+        if key in normalized
+    }
+
+
+def _bounded_summaries(
+    summaries: Mapping[str, Mapping[str, Any]],
+    *,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    return {
+        str(name): {
+            str(key): _bounded_jsonable(
+                value,
+                max_depth=4,
+                max_items=max_nested_items,
+                max_string_length=max_string_length,
+            )
+            for key, value in summary.items()
+        }
+        for name, summary in summaries.items()
+    }
+
+
+def _bounded_verification_result(
+    result: Mapping[str, Any],
+    *,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    evidence = _as_sequence(result.get("evidence", ()))
+    metadata = result.get("metadata", {})
+    return {
+        "status": result.get("status"),
+        "confidence": result.get("confidence"),
+        "evidence_count": len(evidence),
+        "evidence": _bounded_sequence(
+            [
+                _bounded_jsonable(
+                    item,
+                    max_depth=2,
+                    max_items=max_nested_items,
+                    max_string_length=max_string_length,
+                )
+                for item in evidence
+            ],
+            min(max_nested_items, 3),
+        ),
+        "explanation": _truncate_string(result.get("explanation"), max_string_length=max_string_length),
+        "metadata": _bounded_jsonable(
+            metadata if isinstance(metadata, Mapping) else {},
+            max_depth=4,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+    }
+
+
+def _bounded_action_result(
+    result: Mapping[str, Any],
+    *,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    output = result.get("output", {})
+    metadata = result.get("metadata", {})
+    return {
+        "action": result.get("action"),
+        "status": result.get("status"),
+        "request_id": result.get("request_id"),
+        "error": _truncate_string(result.get("error"), max_string_length=max_string_length),
+        "output_summary": _mapping_summary(output),
+        "output": _bounded_jsonable(
+            output if isinstance(output, Mapping) else {},
+            max_depth=3,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+        "metadata": _bounded_jsonable(
+            metadata if isinstance(metadata, Mapping) else {},
+            max_depth=4,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+    }
+
+
+def _bounded_event(
+    event: Mapping[str, Any],
+    *,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any]:
+    payload = event.get("payload", {})
+    return {
+        "event_type": event.get("event_type"),
+        "created_at": event.get("created_at"),
+        "payload": _bounded_jsonable(
+            payload if isinstance(payload, Mapping) else {},
+            max_depth=4,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+    }
+
+
+def _bounded_jsonable(
+    value: Any,
+    *,
+    max_depth: int,
+    max_items: int,
+    max_string_length: int,
+) -> Any:
+    normalized = _to_jsonable(value)
+    if max_depth <= 0:
+        return _summarize_leaf(normalized)
+    if isinstance(normalized, Mapping):
+        limit = _non_negative_limit(max_items)
+        items = list(normalized.items())
+        bounded = {
+            str(key): _bounded_jsonable(
+                item,
+                max_depth=max_depth - 1,
+                max_items=max_items,
+                max_string_length=max_string_length,
+            )
+            for key, item in items[:limit]
+        }
+        if len(items) > limit:
+            bounded["_truncated"] = True
+            bounded["_omitted_keys"] = len(items) - limit
+        return bounded
+    if isinstance(normalized, Sequence) and not isinstance(normalized, (str, bytes, bytearray)):
+        limit = _non_negative_limit(max_items)
+        values = list(normalized)
+        bounded_items = [
+            _bounded_jsonable(
+                item,
+                max_depth=max_depth - 1,
+                max_items=max_items,
+                max_string_length=max_string_length,
+            )
+            for item in values[:limit]
+        ]
+        if len(values) > limit:
+            bounded_items.append({"_truncated": True, "_omitted_items": len(values) - limit})
+        return bounded_items
+    if isinstance(normalized, str):
+        return _truncate_string(normalized, max_string_length=max_string_length)
+    return normalized
+
+
+def _mapping_summary(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        keys = tuple(str(key) for key in value.keys())
+        return {
+            "kind": "mapping",
+            "key_count": len(keys),
+            "keys": keys[:16],
+        }
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return {"kind": "sequence", "item_count": len(value)}
+    return {"kind": type(value).__name__}
+
+
+def _truncation_summary(total: int, max_items: int) -> dict[str, int]:
+    limit = _non_negative_limit(max_items)
+    included = min(total, limit)
+    return {
+        "total": total,
+        "included": included,
+        "omitted": max(total - included, 0),
+    }
+
+
+def _non_negative_limit(value: int) -> int:
+    return max(int(value), 0)
+
+
+def _truncate_string(value: Any, *, max_string_length: int) -> Any:
+    if not isinstance(value, str):
+        return value
+    limit = _non_negative_limit(max_string_length)
+    if len(value) <= limit:
+        return value
+    if limit == 0:
+        return ""
+    suffix = f"...[truncated {len(value) - limit} chars]"
+    if len(suffix) >= limit:
+        return value[:limit]
+    return value[: limit - len(suffix)] + suffix
+
+
+def _summarize_leaf(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {"kind": "mapping", "key_count": len(value)}
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return {"kind": "sequence", "item_count": len(value)}
+    return value
 
 
 def _risk_decision_to_dict(decision: RiskDecision | Mapping[str, Any] | None) -> dict[str, Any] | None:
