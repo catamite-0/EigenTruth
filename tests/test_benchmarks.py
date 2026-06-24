@@ -7026,6 +7026,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["scope"] == "unit"
     assert payload["artifact_cache"]["artifact_json_cache"]["hits"] >= 1
     assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
+    assert payload["timing"]["total_seconds"] >= 0.0
+    assert payload["timing"]["phase_total_seconds"] >= 0.0
+    assert set(payload["timing"]["phases"]) == {
+        "compare",
+        "comparison_write",
+        "manifest_build",
+        "promotion",
+        "workflow_report_write",
+    }
+    for phase in payload["timing"]["phases"].values():
+        assert phase["seconds"] >= 0.0
     assert record.metadata["artifact_json_cache"]["hits"] >= 1
     assert record.metadata["artifact_fingerprint_cache_entries"] > 0
     assert fingerprint_cache_path.exists()
@@ -7041,6 +7052,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
 
     assert second_payload["decision"]["status"] == "promote"
     assert second_payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert second_payload["timing"]["total_seconds"] >= 0.0
+    assert second_payload["timing"]["phases"]["promotion"]["seconds"] >= 0.0
     second_fingerprint_cache = second_payload["artifact_cache"]["artifact_fingerprint_cache"]
     assert second_fingerprint_cache["hits"] > 0
     assert second_fingerprint_cache["misses"] >= 0
@@ -7111,6 +7124,12 @@ def test_run_release_candidate_registry_workflow_cli_blocks_without_registration
     assert payload["decision"]["manifest_promoted"] is False
     assert payload["decision"]["manifest_verified"] is False
     assert payload["promotion"] is None
+    assert payload["timing"]["total_seconds"] >= 0.0
+    assert payload["timing"]["phase_total_seconds"] >= 0.0
+    assert payload["timing"]["phases"]["promotion"] == {
+        "seconds": 0.0,
+        "skipped": True,
+    }
     assert payload["decision"]["blocking_reasons"] == [
         "release candidate comparison did not promote",
     ]

@@ -6,6 +6,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -193,11 +194,14 @@ def run_release_candidate_registry_workflow(
     config: ReleaseCandidateRegistryWorkflowConfig,
 ) -> dict[str, Any]:
     """Run release comparison, write an artifact manifest, and register when eligible."""
+    workflow_started = time.perf_counter()
+    phase_timings: dict[str, dict[str, Any]] = {}
     verification_context = ArtifactVerificationContext(
         fingerprint_cache=load_fingerprint_cache(config.fingerprint_cache_path),
     )
     fingerprint_cache = verification_context.fingerprint_cache
     json_cache = verification_context.json_cache
+    phase_started = time.perf_counter()
     comparison = compare_release_candidates(
         readiness_registry_path=config.readiness_registry_path,
         route_registry_path=config.route_registry_path,
@@ -276,9 +280,13 @@ def run_release_candidate_registry_workflow(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
     )
-    config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
-    config.comparison_path.write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _record_phase_seconds("compare", phase_timings, phase_started)
+    phase_started = time.perf_counter()
+    _write_json_payload(config.comparison_path, comparison)
+    _record_phase_seconds("comparison_write", phase_timings, phase_started)
+    phase_started = time.perf_counter()
     _write_artifact_manifest(config, comparison, verification_context=verification_context)
+    _record_phase_seconds("manifest_build", phase_timings, phase_started)
 
     release_decision = dict(comparison.get("decision") or {})
     release_status = str(release_decision.get("status"))
@@ -288,6 +296,7 @@ def run_release_candidate_registry_workflow(
         blocking_reasons.append("release candidate comparison did not promote")
 
     if release_status == "promote" or config.allow_non_promote:
+        phase_started = time.perf_counter()
         promotion = promote_artifact_manifest(
             manifest_path=config.manifest_path,
             registry_path=config.release_registry_path,
@@ -299,8 +308,14 @@ def run_release_candidate_registry_workflow(
             metadata=_promotion_metadata(config, comparison),
             verification_context=verification_context,
         )
+        _record_phase_seconds("promotion", phase_timings, phase_started)
         if not dict(promotion.get("verification") or {}).get("passed", False):
             blocking_reasons.append("release candidate manifest verification did not pass")
+    else:
+        phase_timings["promotion"] = {
+            "seconds": 0.0,
+            "skipped": True,
+        }
 
     decision = _registry_workflow_decision(
         release_status=release_status,
@@ -401,11 +416,52 @@ def run_release_candidate_registry_workflow(
         "promotion": promotion,
         "decision": decision,
         "artifact_cache": verification_context.cache_summary(),
+        "timing": _workflow_timing(phase_timings, started_at=workflow_started),
     }
-    config.report_path.parent.mkdir(parents=True, exist_ok=True)
-    config.report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    phase_started = time.perf_counter()
+    _write_json_payload(config.report_path, payload)
+    _record_phase_seconds("workflow_report_write", phase_timings, phase_started)
+    payload["timing"] = _workflow_timing(phase_timings, started_at=workflow_started)
+    _write_json_payload(config.report_path, payload)
     save_fingerprint_cache(config.fingerprint_cache_path, verification_context.fingerprint_cache or {})
     return payload
+
+
+def _record_phase_seconds(
+    name: str,
+    timings: dict[str, dict[str, Any]],
+    started_at: float,
+) -> None:
+    timings[name] = {
+        "seconds": _round_seconds(time.perf_counter() - started_at),
+    }
+
+
+def _workflow_timing(
+    phases: Mapping[str, Mapping[str, Any]],
+    *,
+    started_at: float,
+) -> dict[str, Any]:
+    phase_payload = {name: dict(payload) for name, payload in phases.items()}
+    phase_total = sum(
+        float(payload.get("seconds", 0.0))
+        for payload in phase_payload.values()
+        if not isinstance(payload.get("seconds"), bool)
+    )
+    return {
+        "total_seconds": _round_seconds(time.perf_counter() - started_at),
+        "phase_total_seconds": _round_seconds(phase_total),
+        "phases": phase_payload,
+    }
+
+
+def _write_json_payload(path: Path, payload: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _round_seconds(value: float) -> float:
+    return round(max(0.0, float(value)), 6)
 
 
 def _write_artifact_manifest(
