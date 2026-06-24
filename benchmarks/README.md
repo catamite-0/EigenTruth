@@ -446,6 +446,14 @@ for deterministic low-resource local runs. Structured reports also include
 `selective_report` fields for threshold, coverage, selective accuracy, detection,
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
+When a primary confidence proxy such as `nll_answer` is present, `eval_conformal.py`
+also adds a `confidence_error_report` under each alpha result. By default it treats
+the lowest 25% `nll_answer` rows as the high-confidence region and reports how many
+high-confidence false statements were accepted, flagged, or missed by the calibrated
+anomaly gate. Use `--confidence-signal`, `--confidence-direction`,
+`--confidence-top-fraction`, or `--disable-confidence-audit` to tune or skip this
+audit. This is meant to expose high-confidence error regimes; it does not change
+the score dump schema or the conformal threshold.
 The report config includes `score_dump` metadata from `eigentruth.eval.ScoreDump`:
 record counts, available score names, sweep layers, file size, SHA-256, and a
 stable `identity` payload. That identity records model, dataset, layer, selected
@@ -1400,9 +1408,11 @@ so `artifact_cache.artifact_json_cache` reflects cache reuse from the full
 release gate. Add `--artifact-json-cache` to persist that JSON cache across
 repeated local release checks; stale entries are keyed by path signatures,
 ignored when artifacts change, and pruned for the same path on save. Add
-`--manifest-fingerprint-workers N` when large local
-manifests spend meaningful time hashing independent artifacts; the default is
-`1`, so existing release checks remain serial unless explicitly configured.
+`--manifest-fingerprint-workers N` when large local manifests spend meaningful
+time hashing independent artifacts; the setting is passed through compare-time
+manifest gates, release-manifest build verification, and promotion verification.
+The default is `1`, so existing release checks remain serial unless explicitly
+configured.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \

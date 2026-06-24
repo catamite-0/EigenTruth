@@ -17,6 +17,7 @@ from eigentruth.eval.conformal import (
 )
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
+    confidence_error_report,
     euclidean_dispersion,
     roc_auc,
     selective_classification_report,
@@ -51,6 +52,7 @@ __all__ = [
     "euclidean_dispersion",
     "binomial_confidence_interval",
     "selective_classification_report",
+    "confidence_error_report",
     "conformal_pvalues",
     "conformal_threshold",
     "directional_conformal_threshold",

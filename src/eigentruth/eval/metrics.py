@@ -6,6 +6,7 @@ Pure functions over scores/representations (no model or dataset deps); CPU-testa
 
 from __future__ import annotations
 
+import math
 from typing import Any, Sequence, Union
 
 import torch
@@ -180,3 +181,116 @@ def selective_classification_report(
         "false_alarm_ci": false_alarm_ci,
     }
 
+
+def confidence_error_report(
+    anomaly_scores: ArrayLike,
+    labels: ArrayLike,
+    anomaly_threshold: float,
+    confidence_scores: ArrayLike,
+    *,
+    anomaly_direction: str = "higher",
+    confidence_direction: str = "higher",
+    confidence_top_fraction: float = 0.25,
+) -> dict[str, Any]:
+    """Summarize high-confidence errors under a calibrated anomaly gate.
+
+    ``label == 1`` denotes the anomalous/false class. ``confidence_scores`` are
+    transformed so higher values mean higher confidence; set
+    ``confidence_direction="lower"`` for signals such as NLL where lower values
+    mean the model is more confident.
+    """
+    if anomaly_direction not in {"higher", "lower"}:
+        raise ValueError("anomaly_direction must be 'higher' or 'lower'.")
+    if confidence_direction not in {"higher", "lower"}:
+        raise ValueError("confidence_direction must be 'higher' or 'lower'.")
+    if not (0.0 < confidence_top_fraction <= 1.0):
+        raise ValueError("confidence_top_fraction must be in (0, 1].")
+
+    anomaly_t = torch.as_tensor(anomaly_scores, dtype=torch.float64).flatten()
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    confidence_raw = torch.as_tensor(confidence_scores, dtype=torch.float64).flatten()
+    if anomaly_t.numel() != labels_t.numel() or confidence_raw.numel() != labels_t.numel():
+        raise ValueError("scores and labels must have the same length.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    if not torch.isfinite(anomaly_t).all() or not torch.isfinite(confidence_raw).all():
+        raise ValueError("scores must contain only finite values.")
+
+    if anomaly_direction == "higher":
+        flagged = anomaly_t > float(anomaly_threshold)
+    else:
+        flagged = anomaly_t < float(anomaly_threshold)
+    accepted = ~flagged
+
+    confidence_native = confidence_raw if confidence_direction == "higher" else -confidence_raw
+    top_count = max(1, int(math.ceil(float(confidence_top_fraction) * confidence_native.numel())))
+    sorted_confidence, _ = torch.sort(confidence_native)
+    confidence_native_threshold = sorted_confidence[-top_count]
+    high_confidence = confidence_native >= confidence_native_threshold
+    confidence_threshold = (
+        float(confidence_native_threshold.item())
+        if confidence_direction == "higher"
+        else float((-confidence_native_threshold).item())
+    )
+
+    normal = labels_t == 0
+    anomalous = labels_t == 1
+    high_false = torch.logical_and(high_confidence, anomalous)
+    high_true = torch.logical_and(high_confidence, normal)
+    high_accepted = torch.logical_and(high_confidence, accepted)
+    high_flagged = torch.logical_and(high_confidence, flagged)
+    high_accepted_false = torch.logical_and(high_accepted, anomalous)
+    high_accepted_true = torch.logical_and(high_accepted, normal)
+    high_flagged_false = torch.logical_and(high_flagged, anomalous)
+    low_confidence = ~high_confidence
+    low_true = torch.logical_and(low_confidence, normal)
+    low_false = torch.logical_and(low_confidence, anomalous)
+
+    n_total = int(labels_t.numel())
+    n_high = int(high_confidence.sum().item())
+    n_high_false = int(high_false.sum().item())
+    n_high_true = int(high_true.sum().item())
+    n_high_accepted = int(high_accepted.sum().item())
+    n_high_accepted_false = int(high_accepted_false.sum().item())
+    n_high_accepted_true = int(high_accepted_true.sum().item())
+    n_high_flagged = int(high_flagged.sum().item())
+    n_high_flagged_false = int(high_flagged_false.sum().item())
+    n_low_true = int(low_true.sum().item())
+    n_low_false = int(low_false.sum().item())
+
+    return {
+        "anomaly_threshold": float(anomaly_threshold),
+        "anomaly_direction": anomaly_direction,
+        "confidence_direction": confidence_direction,
+        "confidence_top_fraction": float(confidence_top_fraction),
+        "confidence_threshold": confidence_threshold,
+        "n_total": n_total,
+        "n_high_confidence": n_high,
+        "n_low_confidence": n_total - n_high,
+        "n_high_confidence_true": n_high_true,
+        "n_high_confidence_false": n_high_false,
+        "n_low_confidence_true": n_low_true,
+        "n_low_confidence_false": n_low_false,
+        "high_confidence_false_rate": binomial_confidence_interval(n_high_false, n_high),
+        "n_high_confidence_accepted": n_high_accepted,
+        "n_high_confidence_accepted_true": n_high_accepted_true,
+        "n_high_confidence_accepted_false": n_high_accepted_false,
+        "high_confidence_accepted_false_rate": binomial_confidence_interval(
+            n_high_accepted_false,
+            n_high_accepted,
+        ),
+        "high_confidence_accepted_selective_accuracy": binomial_confidence_interval(
+            n_high_accepted_true,
+            n_high_accepted,
+        ),
+        "n_high_confidence_flagged": n_high_flagged,
+        "n_high_confidence_flagged_false": n_high_flagged_false,
+        "high_confidence_false_capture_rate": binomial_confidence_interval(
+            n_high_flagged_false,
+            n_high_false,
+        ),
+        "high_confidence_false_miss_rate": binomial_confidence_interval(
+            n_high_accepted_false,
+            n_high_false,
+        ),
+    }

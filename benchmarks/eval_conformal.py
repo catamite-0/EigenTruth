@@ -42,12 +42,11 @@ from eigentruth.calibration import (  # noqa: E402
     LayerScoreSweepCalibrator,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate  # noqa: E402
-from eigentruth.eval.metrics import selective_classification_report  # noqa: E402
+from eigentruth.eval.metrics import confidence_error_report, selective_classification_report  # noqa: E402
 from eigentruth.eval.score_dump import (  # noqa: E402
     JSONL_FORMAT,
     ScoreDump,
     ScoreDumpColumns,
-    load_score_dump,
     load_score_dump_columns,
     score_dump_cache_summary,
     score_dump_file_metadata,
@@ -75,26 +74,84 @@ def _direction_for(signal: str, override: str | None = None) -> str:
     return override or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
 
 
+def _confidence_direction_for(signal: str, override: str | None = None) -> str:
+    if override is not None:
+        return override
+    return "lower" if signal == "nll_answer" else "higher"
+
+
+def _available_primary_signals(metadata: dict) -> set[str]:
+    summary = metadata.get("summary", {})
+    if not isinstance(summary, dict):
+        return set()
+    return {str(name) for name in summary.get("score_names", ())}
+
+
+def _confidence_audit_status(
+    *,
+    signal: str | None,
+    available_primary_signals: set[str],
+    disabled: bool,
+) -> dict:
+    if disabled:
+        return {"enabled": False, "reason": "disabled"}
+    if signal is None:
+        return {"enabled": False, "reason": "no_confidence_signal"}
+    if signal not in available_primary_signals:
+        return {
+            "enabled": False,
+            "reason": "missing_confidence_signal",
+            "confidence_signal": signal,
+            "available_primary_signals": tuple(sorted(available_primary_signals)),
+        }
+    return {"enabled": True, "confidence_signal": signal}
+
+
 def _load_primary_score_dump_view(
     path: str | Path,
     signal: str,
     *,
+    confidence_signal: str | None = None,
+    disable_confidence_audit: bool = False,
     cache: dict,
-) -> tuple[ScoreDumpColumns, dict, ScoreDump | None]:
-    metadata = score_dump_file_metadata(path, cache=cache)
-    if metadata.get("source_format") == JSONL_FORMAT:
-        columns = load_score_dump_columns(path, (signal,), cache=cache)
+) -> tuple[ScoreDumpColumns, dict, ScoreDump | None, dict]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if isinstance(payload, dict) and payload.get("format") == JSONL_FORMAT:
+        metadata = score_dump_file_metadata(path, cache=cache)
+        available = _available_primary_signals(metadata)
+        confidence_audit = _confidence_audit_status(
+            signal=confidence_signal,
+            available_primary_signals=available,
+            disabled=disable_confidence_audit,
+        )
+        requested = tuple(dict.fromkeys((
+            signal,
+            *(name for name in (confidence_signal,) if name is not None and name in available),
+        )))
+        columns = load_score_dump_columns(path, requested, cache=cache)
         metadata = score_dump_file_metadata(path, cache=cache)
         metadata.update({
             "summary": dict(columns.summary),
             "source_format": columns.source_format,
         })
-        return columns, metadata, None
+        return columns, metadata, None, confidence_audit
 
-    dump = load_score_dump(path, required_scores=(signal,))
+    dump = ScoreDump.from_mapping(payload)
+    dump.require_scores((signal,))
+    available = {str(name) for name in dump.scores}
+    confidence_audit = _confidence_audit_status(
+        signal=confidence_signal,
+        available_primary_signals=available,
+        disabled=disable_confidence_audit,
+    )
+    requested = tuple(dict.fromkeys((
+        signal,
+        *(name for name in (confidence_signal,) if name is not None and name in available),
+    )))
+    dump.require_scores(requested)
     columns = ScoreDumpColumns(
         labels=dump.labels,
-        scores={signal: dump.scores[signal]},
+        scores={name: dump.scores[name] for name in requested},
         config=dict(dump.config),
         summary=dump.summary(),
         source_format="json",
@@ -104,7 +161,7 @@ def _load_primary_score_dump_view(
         "summary": dict(columns.summary),
         "source_format": columns.source_format,
     })
-    return columns, metadata, dump
+    return columns, metadata, dump, confidence_audit
 
 
 def _artifact_paths(args) -> dict[str, str | Path | None]:
@@ -163,15 +220,28 @@ def run(args) -> dict:
         pass
 
     score_dump_metadata_cache = {}
-    score_dump, score_dump_metadata, full_score_dump = _load_primary_score_dump_view(
+    disable_confidence_audit = bool(getattr(args, "disable_confidence_audit", False))
+    raw_confidence_signal = getattr(args, "confidence_signal", "nll_answer")
+    confidence_signal = (
+        None
+        if disable_confidence_audit or raw_confidence_signal is None
+        else str(raw_confidence_signal)
+    )
+    score_dump, score_dump_metadata, full_score_dump, confidence_audit = _load_primary_score_dump_view(
         args.scores,
         args.signal,
+        confidence_signal=confidence_signal,
+        disable_confidence_audit=disable_confidence_audit,
         cache=score_dump_metadata_cache,
     )
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
     dump_config = score_dump.config
     direction = _direction_for(args.signal, args.direction)
+    confidence_direction = _confidence_direction_for(
+        str(confidence_signal) if confidence_signal is not None else "",
+        getattr(args, "confidence_direction", None),
+    )
 
     true_scores = scores[labels == 0]   # 正常总体（可交换假设的对象）
     false_scores = scores[labels == 1]  # 希望被报警的对象（仅报告 power）
@@ -206,6 +276,17 @@ def run(args) -> dict:
         selective_report = selective_classification_report(
             scores, labels, full_threshold, direction=direction
         )
+        confidence_report = None
+        if confidence_audit.get("enabled") is True and confidence_signal in score_dump.scores:
+            confidence_report = confidence_error_report(
+                scores,
+                labels,
+                full_threshold,
+                score_dump.scores[str(confidence_signal)],
+                anomaly_direction=direction,
+                confidence_direction=confidence_direction,
+                confidence_top_fraction=float(getattr(args, "confidence_top_fraction", 0.25)),
+            )
         results[str(a)] = {
             "false_alarm": fa,
             "coverage": 1.0 - fa,
@@ -214,6 +295,8 @@ def run(args) -> dict:
             "threshold": full_threshold,
             "selective_report": selective_report,
         }
+        if confidence_report is not None:
+            results[str(a)]["confidence_error_report"] = confidence_report
         print(f"  {a:>6.2f} {1 - a:>12.2f} {fa:>12.3f} {1 - fa:>9.3f} "
               f"{det:>8.3f}   {'PASS' if ok else 'FAIL'}")
     print("  " + "-" * 66)
@@ -222,10 +305,18 @@ def run(args) -> dict:
           if all_pass else
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
+    if confidence_audit.get("enabled") is True:
+        confidence_audit = {
+            **confidence_audit,
+            "confidence_direction": confidence_direction,
+            "confidence_top_fraction": float(getattr(args, "confidence_top_fraction", 0.25)),
+        }
+
     payload = {"config": {"scores": args.scores, "signal": args.signal,
                           "score_dump": score_dump_metadata,
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
-                          "n_true": n_true, "n_false": n_false},
+                          "n_true": n_true, "n_false": n_false,
+                          "confidence_audit": confidence_audit},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
 
     if args.save_calibration:
@@ -328,6 +419,15 @@ def main():
                    help="alpha used for --save-calibration artifact threshold")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,
                    help="optional override for whether higher or lower signal values are more anomalous")
+    p.add_argument("--confidence-signal", default="nll_answer",
+                   help="optional primary score used to audit high-confidence errors when present")
+    p.add_argument("--confidence-direction", choices=("higher", "lower"), default=None,
+                   help="whether higher or lower confidence-signal values mean more confidence "
+                        "(default: lower for nll_answer, higher otherwise)")
+    p.add_argument("--confidence-top-fraction", type=float, default=0.25,
+                   help="fraction of records treated as the high-confidence region for confidence-error audit")
+    p.add_argument("--disable-confidence-audit", action="store_true",
+                   help="disable high-confidence error audit even when the confidence signal is present")
     p.add_argument("--model-id", default=None, help="override model_id stored in the artifact")
     p.add_argument("--model-revision", default=None, help="optional model revision stored in the artifact")
     p.add_argument("--target-layer", type=int, default=None, help="override target layer stored in the artifact")

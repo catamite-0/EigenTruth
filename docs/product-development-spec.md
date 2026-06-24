@@ -11,7 +11,7 @@ Implemented today:
 - `TruthManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support.
 - `TruthProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, HSE tracking, and optional activation steering.
 - `EigenTruthWrapper`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
-- `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, and confidence intervals.
+- `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, confidence intervals, and high-confidence error audits.
 - `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, layer/score sweep reports, and rank-calibrated multi-score fusion artifacts.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy`: INSIDE/EigenScore-style spectral diversity and dependency-free sampled semantic-entropy proxies, including adaptive sampling budget support in benchmarks.

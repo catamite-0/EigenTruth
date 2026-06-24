@@ -59,6 +59,57 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     assert report["detection"] == pytest.approx(1.0)
 
 
+def test_eval_conformal_run_reports_high_confidence_errors(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 0, 0, 0, 1, 1, 1, 1],
+            "scores": {
+                "maha_last": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9, 1.1, 1.2],
+                "nll_answer": [0.2, 0.3, 1.8, 2.0, 0.1, 1.4, 1.5, 1.6],
+            },
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        direction=None,
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=False,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+    )
+
+    payload = module.run(args)
+    confidence_audit = payload["config"]["confidence_audit"]
+    confidence_report = payload["results"]["0.2"]["confidence_error_report"]
+
+    assert confidence_audit["enabled"] is True
+    assert confidence_audit["confidence_signal"] == "nll_answer"
+    assert confidence_audit["confidence_direction"] == "lower"
+    assert confidence_report["n_high_confidence"] == 2
+    assert confidence_report["n_high_confidence_false"] == 1
+    assert confidence_report["n_high_confidence_accepted_false"] == 1
+    assert confidence_report["high_confidence_false_miss_rate"]["estimate"] == pytest.approx(1.0)
+
+
 def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_conformal")
     from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
@@ -5037,6 +5088,64 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
     )
 
 
+def test_compare_release_candidates_verify_manifest_uses_requested_workers(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    calls: list[dict[str, object]] = []
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text('{"schema_version": 1, "artifacts": {}}\n', encoding="utf-8")
+
+    class FakeVerification:
+        def to_dict(self):
+            return {
+                "manifest_path": str(manifest_path),
+                "passed": True,
+                "checked": 0,
+                "failures": [],
+                "nested": [],
+            }
+
+    def fake_load_and_verify(self, path, *, root=None, recursive=False, max_workers=1):
+        calls.append({
+            "path": path,
+            "root": root,
+            "recursive": recursive,
+            "max_workers": max_workers,
+        })
+        return FakeVerification()
+
+    monkeypatch.setattr(
+        module.ArtifactVerificationContext,
+        "load_and_verify_artifact_manifest",
+        fake_load_and_verify,
+    )
+
+    result = module._verify_artifact_manifest(
+        manifest_path,
+        recursive=True,
+        max_workers=4,
+        artifact_name="unit_manifest",
+        verification_context=module.ArtifactVerificationContext(),
+    )
+
+    assert result["passed"] is True
+    assert calls == [{
+        "path": manifest_path,
+        "root": None,
+        "recursive": True,
+        "max_workers": 4,
+    }]
+    with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
+        module.compare_release_candidates(
+            readiness_registry_path=tmp_path / "registry.json",
+            manifest_fingerprint_workers=0,
+        )
+    with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
+        module.compare_release_candidates(
+            readiness_registry_path=tmp_path / "registry.json",
+            manifest_fingerprint_workers=True,  # type: ignore[arg-type]
+        )
+
+
 def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -6699,8 +6808,10 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
 def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     captured: dict[str, object] = {}
+    compare_captured: dict[str, object] = {}
 
-    def fake_compare_release_candidates(**_kwargs):
+    def fake_compare_release_candidates(**kwargs):
+        compare_captured.update(kwargs)
         return {
             "schema_version": 1,
             "workflow": "fake_release_candidate_comparison",
@@ -6729,12 +6840,16 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             release_report_path=tmp_path / "comparison.json",
             artifact_manifest_path=tmp_path / "manifest.json",
             verification_report_path=tmp_path / "verification.json",
+            manifest_fingerprint_workers=3,
             recursive=False,
         )
     )
 
     assert captured["recursive"] is False
+    assert captured["manifest_fingerprint_workers"] == 3
+    assert compare_captured["manifest_fingerprint_workers"] == 3
     assert payload["config"]["recursive"] is False
+    assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["decision"]["status"] == "promote"
 
 

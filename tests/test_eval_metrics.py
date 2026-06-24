@@ -13,6 +13,7 @@ import torch
 
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
+    confidence_error_report,
     euclidean_dispersion,
     roc_auc,
     selective_classification_report,
@@ -131,6 +132,45 @@ class TestSelectiveClassificationReport:
         ci = binomial_confidence_interval(0, 0)
 
         assert ci == {"estimate": None, "lower": None, "upper": None, "successes": 0, "total": 0}
+
+
+class TestConfidenceErrorReport:
+    """High-confidence error audit tests."""
+
+    def test_reports_high_confidence_false_misses_for_lower_confidence_signal(self):
+        report = confidence_error_report(
+            anomaly_scores=[0.1, 0.4, 0.9, 0.2],
+            labels=[0, 1, 1, 0],
+            anomaly_threshold=0.5,
+            confidence_scores=[0.2, 0.1, 1.5, 2.0],
+            anomaly_direction="higher",
+            confidence_direction="lower",
+            confidence_top_fraction=0.5,
+        )
+
+        assert report["confidence_threshold"] == pytest.approx(0.2)
+        assert report["n_high_confidence"] == 2
+        assert report["n_high_confidence_false"] == 1
+        assert report["n_high_confidence_accepted_false"] == 1
+        assert report["high_confidence_accepted_false_rate"]["estimate"] == pytest.approx(0.5)
+        assert report["high_confidence_false_capture_rate"]["estimate"] == pytest.approx(0.0)
+        assert report["high_confidence_false_miss_rate"]["estimate"] == pytest.approx(1.0)
+
+    def test_reports_high_confidence_false_capture(self):
+        report = confidence_error_report(
+            anomaly_scores=[0.1, 0.9, 0.4, 0.2],
+            labels=[0, 1, 1, 0],
+            anomaly_threshold=0.5,
+            confidence_scores=[0.2, 0.1, 1.5, 2.0],
+            anomaly_direction="higher",
+            confidence_direction="lower",
+            confidence_top_fraction=0.5,
+        )
+
+        assert report["n_high_confidence_false"] == 1
+        assert report["n_high_confidence_flagged_false"] == 1
+        assert report["high_confidence_false_capture_rate"]["estimate"] == pytest.approx(1.0)
+        assert report["high_confidence_false_miss_rate"]["estimate"] == pytest.approx(0.0)
 
 
 class TestScoreDump:

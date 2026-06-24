@@ -53,6 +53,7 @@ def compare_release_candidates(
     max_performance_score_dump_cache_jsonl_view_hit_rate_drop: float | None = None,
     recursive: bool = True,
     allow_unverified: bool = False,
+    manifest_fingerprint_workers: int = 1,
     runtime_profile: str | None = None,
     inside_trigger_budget_policy: str | None = None,
     min_best_quality_auroc: float | None = None,
@@ -149,6 +150,10 @@ def compare_release_candidates(
         max_covariance_maha_last_auroc_drop,
         name="max_covariance_maha_last_auroc_drop",
     )
+    manifest_fingerprint_workers = _validate_positive_int(
+        manifest_fingerprint_workers,
+        name="manifest_fingerprint_workers",
+    )
     verification_context = ArtifactVerificationContext(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
@@ -195,6 +200,7 @@ def compare_release_candidates(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     if product_trace_replay_workflow is not None:
@@ -300,24 +306,28 @@ def compare_release_candidates(
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop
         ),
         max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     selector_replay = _selector_replay_gate(
         selector_replay_report_path=selector_replay_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     product_runtime_drift = _product_runtime_drift_gate(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     release_efficiency = _release_efficiency_gate(
         release_efficiency_report_path=release_efficiency_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     decision = _decision(
@@ -405,6 +415,7 @@ def compare_release_candidates(
             ),
             "recursive": recursive,
             "allow_unverified": allow_unverified,
+            "manifest_fingerprint_workers": manifest_fingerprint_workers,
             "runtime_profile": None if profile is None else profile.name,
             "runtime_profile_defaults": None if profile is None else dict(profile.defaults),
             "runtime_profile_applied_defaults": profile_applied,
@@ -927,6 +938,7 @@ def _performance_baseline_gate(
     max_cache_only_total_seconds_ratio: float | None,
     max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
     max_covariance_maha_last_auroc_drop: float | None,
+    manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
@@ -941,6 +953,7 @@ def _performance_baseline_gate(
     verification = _verify_performance_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
     runtime_recommendation, runtime_source = _performance_runtime_recommendation(
@@ -976,6 +989,7 @@ def _performance_baseline_gate(
         drift_verification = _verify_performance_manifest(
             drift_manifest_path,
             recursive=recursive,
+            max_workers=manifest_fingerprint_workers,
             verification_context=verification_context,
         )
         drift_evidence_bundle = _mapping(drift_report.get("performance_evidence_bundle"))
@@ -1074,6 +1088,7 @@ def _product_trace_replay_workflow_gate(
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if product_trace_replay_workflow_source is None:
@@ -1084,6 +1099,7 @@ def _product_trace_replay_workflow_gate(
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
         artifact_name="product_trace_replay_workflow_manifest",
         verification_context=verification_context,
     )
@@ -1252,6 +1268,7 @@ def _selector_replay_gate(
     selector_replay_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if selector_replay_report_path is None:
@@ -1262,6 +1279,7 @@ def _selector_replay_gate(
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
         artifact_name="selector_replay_manifest",
         verification_context=verification_context,
     )
@@ -1376,6 +1394,7 @@ def _product_runtime_drift_gate(
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if product_runtime_drift_report_path is None:
@@ -1386,6 +1405,7 @@ def _product_runtime_drift_gate(
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
         artifact_name="product_runtime_drift_manifest",
         verification_context=verification_context,
     )
@@ -1497,6 +1517,7 @@ def _release_efficiency_gate(
     release_efficiency_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    manifest_fingerprint_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if release_efficiency_report_path is None:
@@ -1507,6 +1528,7 @@ def _release_efficiency_gate(
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
         artifact_name="release_efficiency_manifest",
         verification_context=verification_context,
     )
@@ -2061,11 +2083,13 @@ def _verify_performance_manifest(
     manifest_path: Path | None,
     *,
     recursive: bool,
+    max_workers: int,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
     return _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
+        max_workers=max_workers,
         artifact_name="performance_baseline_manifest",
         verification_context=verification_context,
     )
@@ -2075,6 +2099,7 @@ def _verify_artifact_manifest(
     manifest_path: Path | None,
     *,
     recursive: bool,
+    max_workers: int,
     artifact_name: str,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
@@ -2096,6 +2121,7 @@ def _verify_artifact_manifest(
         return verification_context.load_and_verify_artifact_manifest(
             manifest_path,
             recursive=recursive,
+            max_workers=max_workers,
         ).to_dict()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
@@ -2295,6 +2321,18 @@ def _validate_optional_unit_float(value: Any, *, name: str) -> float | None:
     return numeric
 
 
+def _validate_positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer.")
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if numeric < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return numeric
+
+
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
@@ -2345,6 +2383,13 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_positive_int(value: str, *, flag: str) -> int:
+    numeric = int(value)
+    if numeric < 1:
+        raise ValueError(f"{flag} must be a positive integer.")
+    return numeric
+
+
 def _parse_unit_float(value: str, *, flag: str) -> float:
     numeric = _parse_non_negative_float(value, flag=flag)
     if numeric > 1:
@@ -2389,6 +2434,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ),
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
+        manifest_fingerprint_workers=args.manifest_fingerprint_workers,
         runtime_profile=args.runtime_profile,
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
         min_best_quality_auroc=args.min_best_quality_auroc,
@@ -2500,6 +2546,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--no-recursive", action="store_true", help="only verify root manifests")
     parser.add_argument("--allow-unverified", action="store_true",
                         help="allow unverified manifests to become candidates")
+    parser.add_argument("--manifest-fingerprint-workers", type=lambda value: _parse_positive_int(
+        value,
+        flag="--manifest-fingerprint-workers",
+    ), default=1,
+                        help="maximum worker threads for recursive artifact-manifest fingerprinting")
     parser.add_argument("--runtime-profile", default=None, choices=RUNTIME_PROFILE_NAMES,
                         help="optional release profile that fills unset runtime/cost gates; explicit flags "
                              "override profile defaults")

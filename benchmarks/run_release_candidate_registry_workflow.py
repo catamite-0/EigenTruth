@@ -302,6 +302,7 @@ def run_release_candidate_registry_workflow(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
         json_cache_stats=json_cache_stats,
+        manifest_fingerprint_workers=config.manifest_fingerprint_workers,
     )
     _record_phase_seconds("compare", phase_timings, phase_started)
     phase_started = time.perf_counter()
