@@ -7,7 +7,7 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -74,8 +74,10 @@ def compare_release_candidates(
     required_route_min_claims_cache_hit_rate: float | None = None,
     required_route_min_verifier_trace_cache_hit_rate: float | None = None,
     notes: Sequence[str] = (),
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
+    cache = fingerprint_cache if fingerprint_cache is not None else {}
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
     performance_registry_path = (
         readiness_registry_path if performance_registry_path is None else performance_registry_path
@@ -110,6 +112,7 @@ def compare_release_candidates(
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
         notes=("release candidate readiness comparison",),
+        fingerprint_cache=cache,
     )
     route = compare_route_baselines(
         registry_path=route_registry_path,
@@ -132,6 +135,7 @@ def compare_release_candidates(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         notes=("release candidate route comparison",),
+        fingerprint_cache=cache,
     )
     raw_candidate = _release_candidate(readiness, route)
     required_routes = _required_route_baseline_gate(
@@ -154,6 +158,7 @@ def compare_release_candidates(
         max_retrieval_hit_count=required_route_max_retrieval_hit_count,
         min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
+        fingerprint_cache=cache,
     )
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
@@ -165,16 +170,19 @@ def compare_release_candidates(
         recursive=recursive,
         allow_unverified=allow_unverified,
         candidate=raw_candidate,
+        fingerprint_cache=cache,
     )
     selector_replay = _selector_replay_gate(
         selector_replay_report_path=selector_replay_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        fingerprint_cache=cache,
     )
     product_runtime_drift = _product_runtime_drift_gate(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
+        fingerprint_cache=cache,
     )
     decision = _decision(
         readiness,
@@ -527,6 +535,7 @@ def _required_route_baseline_gate(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     required_keys = tuple(str(key) for key in required_route_baseline_keys if str(key))
     if not required_keys:
@@ -552,6 +561,7 @@ def _required_route_baseline_gate(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         notes=("release candidate required route baseline gate",),
+        fingerprint_cache=fingerprint_cache,
     )
     rows = tuple(_mapping(row) for row in comparison.get("leaderboard", ()))
     rows_by_key = {str(row.get("record_key")): row for row in rows if row.get("record_key") is not None}
@@ -676,6 +686,7 @@ def _performance_baseline_gate(
     recursive: bool,
     allow_unverified: bool,
     candidate: Mapping[str, Any] | None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
         return None
@@ -686,7 +697,11 @@ def _performance_baseline_gate(
     report_path = Path(record.path)
     report, report_error = _load_optional_json(report_path)
     manifest_path = _performance_manifest_path(record, report, report_path=report_path)
-    verification = _verify_performance_manifest(manifest_path, recursive=recursive)
+    verification = _verify_performance_manifest(
+        manifest_path,
+        recursive=recursive,
+        fingerprint_cache=fingerprint_cache,
+    )
     runtime_recommendation, runtime_source = _performance_runtime_recommendation(
         record,
         report,
@@ -748,6 +763,7 @@ def _selector_replay_gate(
     selector_replay_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if selector_replay_report_path is None:
         return None
@@ -758,6 +774,7 @@ def _selector_replay_gate(
         manifest_path,
         recursive=recursive,
         artifact_name="selector_replay_manifest",
+        fingerprint_cache=fingerprint_cache,
     )
     recommended = _selector_replay_recommended_row(report)
     gate = _selector_replay_report_gate(
@@ -870,6 +887,7 @@ def _product_runtime_drift_gate(
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
     if product_runtime_drift_report_path is None:
         return None
@@ -880,6 +898,7 @@ def _product_runtime_drift_gate(
         manifest_path,
         recursive=recursive,
         artifact_name="product_runtime_drift_manifest",
+        fingerprint_cache=fingerprint_cache,
     )
     gate = _product_runtime_drift_report_gate(
         report=report,
@@ -1139,11 +1158,13 @@ def _verify_performance_manifest(
     manifest_path: Path | None,
     *,
     recursive: bool,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any]:
     return _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
         artifact_name="performance_baseline_manifest",
+        fingerprint_cache=fingerprint_cache,
     )
 
 
@@ -1152,6 +1173,7 @@ def _verify_artifact_manifest(
     *,
     recursive: bool,
     artifact_name: str,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any]:
     if manifest_path is None:
         return {
@@ -1168,7 +1190,11 @@ def _verify_artifact_manifest(
             "nested": [],
         }
     try:
-        return load_and_verify_artifact_manifest(manifest_path, recursive=recursive).to_dict()
+        return load_and_verify_artifact_manifest(
+            manifest_path,
+            recursive=recursive,
+            fingerprint_cache=fingerprint_cache,
+        ).to_dict()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
             "manifest_path": str(manifest_path),

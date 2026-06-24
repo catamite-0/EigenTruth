@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,12 +26,17 @@ def promote_artifact_manifest(
     recursive: bool = True,
     allow_failures: bool = False,
     metadata: Mapping[str, Any] | None = None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Verify a manifest and record it in a local artifact registry."""
     manifest_path = Path(manifest_path)
     registry_path = Path(registry_path)
     verification_report_path = Path(verification_report_path or manifest_path.with_name("manifest-verification.json"))
-    verification = load_and_verify_artifact_manifest(manifest_path, recursive=recursive)
+    verification = load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        fingerprint_cache=fingerprint_cache,
+    )
     verification_payload = verification.to_dict()
     verification_report_path.parent.mkdir(parents=True, exist_ok=True)
     if not verification.passed and not allow_failures:

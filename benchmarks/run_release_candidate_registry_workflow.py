@@ -161,6 +161,7 @@ def run_release_candidate_registry_workflow(
     config: ReleaseCandidateRegistryWorkflowConfig,
 ) -> dict[str, Any]:
     """Run release comparison, write an artifact manifest, and register when eligible."""
+    fingerprint_cache: dict[str, dict[str, Any]] = {}
     comparison = compare_release_candidates(
         readiness_registry_path=config.readiness_registry_path,
         route_registry_path=config.route_registry_path,
@@ -213,10 +214,11 @@ def run_release_candidate_registry_workflow(
         required_route_min_claims_cache_hit_rate=config.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=config.required_route_min_verifier_trace_cache_hit_rate,
         notes=("release candidate registry workflow",),
+        fingerprint_cache=fingerprint_cache,
     )
     config.comparison_path.parent.mkdir(parents=True, exist_ok=True)
     config.comparison_path.write_text(json.dumps(comparison, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    _write_artifact_manifest(config, comparison)
+    _write_artifact_manifest(config, comparison, fingerprint_cache=fingerprint_cache)
 
     release_decision = dict(comparison.get("decision") or {})
     release_status = str(release_decision.get("status"))
@@ -235,6 +237,7 @@ def run_release_candidate_registry_workflow(
             recursive=True,
             allow_failures=config.allow_promotion_failures,
             metadata=_promotion_metadata(config, comparison),
+            fingerprint_cache=fingerprint_cache,
         )
         if not dict(promotion.get("verification") or {}).get("passed", False):
             blocking_reasons.append("release candidate manifest verification did not pass")
@@ -312,6 +315,8 @@ def run_release_candidate_registry_workflow(
 def _write_artifact_manifest(
     config: ReleaseCandidateRegistryWorkflowConfig,
     comparison: Mapping[str, Any],
+    *,
+    fingerprint_cache: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     candidate = dict(comparison.get("release_candidate") or {})
     manifests = dict(candidate.get("manifests") or {})
@@ -333,6 +338,7 @@ def _write_artifact_manifest(
         artifacts,
         root=config.manifest_path.parent,
         metadata=_manifest_metadata(comparison),
+        fingerprint_cache=fingerprint_cache,
     )
     config.manifest_path.parent.mkdir(parents=True, exist_ok=True)
     config.manifest_path.write_text(

@@ -7,7 +7,7 @@ import json
 import math
 import sys
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -44,8 +44,10 @@ def compare_route_baselines(
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
     notes: Sequence[str] = (),
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered route-promotion baselines."""
+    cache = fingerprint_cache if fingerprint_cache is not None else {}
     registry = ArtifactRegistry.load_json(registry_path)
     records = _select_records(registry, baseline_keys=baseline_keys)
     rows = [
@@ -68,6 +70,7 @@ def compare_route_baselines(
             max_retrieval_hit_count=max_retrieval_hit_count,
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+            fingerprint_cache=cache,
         )
         for record in records
     ]
@@ -160,10 +163,15 @@ def _route_baseline_row(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any]:
     manifest_path = Path(record.path)
     manifest, manifest_error = _load_optional_json(manifest_path)
-    verification = _verify_manifest(manifest_path, recursive=recursive)
+    verification = _verify_manifest(
+        manifest_path,
+        recursive=recursive,
+        fingerprint_cache=fingerprint_cache,
+    )
     manifest_metadata = _manifest_metadata(record, manifest)
     route_report_path = _resolve_artifact_path(
         manifest_path,
@@ -463,9 +471,18 @@ def _manifest_metadata(record: RegistryRecord, manifest: Mapping[str, Any]) -> d
     return merged
 
 
-def _verify_manifest(manifest_path: Path, *, recursive: bool) -> dict[str, Any]:
+def _verify_manifest(
+    manifest_path: Path,
+    *,
+    recursive: bool,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
+) -> dict[str, Any]:
     try:
-        return load_and_verify_artifact_manifest(manifest_path, recursive=recursive).to_dict()
+        return load_and_verify_artifact_manifest(
+            manifest_path,
+            recursive=recursive,
+            fingerprint_cache=fingerprint_cache,
+        ).to_dict()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {
             "manifest_path": str(manifest_path),

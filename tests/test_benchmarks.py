@@ -5449,8 +5449,9 @@ def test_compare_release_candidates_runtime_profile_fills_unset_cost_gates(tmp_p
     assert override_candidate["runtime_cost"]["inside_generation_seconds_ratio_for_gate"] == pytest.approx(0.45)
 
 
-def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path):
+def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    provenance_module = importlib.import_module("eigentruth.registry.provenance")
     from eigentruth.registry import ArtifactRegistry
 
     baseline_registry_path = tmp_path / "baseline-registry.json"
@@ -5529,6 +5530,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         blocked_metric_count=0,
     )
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
+    original_sha256_file = provenance_module._sha256_file
+    fingerprint_calls_by_path: dict[str, int] = {}
+
+    def counted_sha256_file(path):
+        key = str(path.resolve())
+        fingerprint_calls_by_path[key] = fingerprint_calls_by_path.get(key, 0) + 1
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(provenance_module, "_sha256_file", counted_sha256_file)
 
     payload = module.run_release_candidate_registry_workflow(
         module.ReleaseCandidateRegistryWorkflowConfig(
@@ -5697,6 +5707,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert record.metadata["scope"] == "unit"
+    assert fingerprint_calls_by_path[str((tmp_path / "structured-route-comparison.json").resolve())] == 1
+    assert fingerprint_calls_by_path[str((tmp_path / "retrieval-route-comparison.json").resolve())] == 1
 
 
 def test_run_release_candidate_registry_workflow_cli_blocks_without_registration(tmp_path):
