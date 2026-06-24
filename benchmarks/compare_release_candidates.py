@@ -14,7 +14,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks import artifact_json_cache as _artifact_json_cache  # noqa: E402
 from benchmarks.compare_readiness_baselines import compare_readiness_baselines  # noqa: E402
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
@@ -22,10 +21,7 @@ from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noq
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
     ArtifactVerificationContext,
-    load_and_verify_artifact_manifest,
 )
-
-_load_optional_json = _artifact_json_cache.load_optional_json
 
 
 def compare_release_candidates(
@@ -190,9 +186,7 @@ def compare_release_candidates(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
-        fingerprint_cache=cache,
-        json_cache=payload_cache,
-        json_cache_stats=payload_cache_stats,
+        verification_context=verification_context,
     )
     if product_trace_replay_workflow is not None:
         if selector_replay_report_path is None and product_trace_replay_workflow.get(
@@ -278,8 +272,7 @@ def compare_release_candidates(
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
         required_routes=required_adapter_routes,
-        json_cache=payload_cache,
-        json_cache_stats=payload_cache_stats,
+        verification_context=verification_context,
     )
     performance = _performance_baseline_gate(
         performance_registry_path=performance_registry_path,
@@ -296,25 +289,19 @@ def compare_release_candidates(
         max_score_dump_cache_jsonl_view_hit_rate_drop=(
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop
         ),
-        fingerprint_cache=cache,
-        json_cache=payload_cache,
-        json_cache_stats=payload_cache_stats,
+        verification_context=verification_context,
     )
     selector_replay = _selector_replay_gate(
         selector_replay_report_path=selector_replay_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
-        fingerprint_cache=cache,
-        json_cache=payload_cache,
-        json_cache_stats=payload_cache_stats,
+        verification_context=verification_context,
     )
     product_runtime_drift = _product_runtime_drift_gate(
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
         allow_unverified=allow_unverified,
-        fingerprint_cache=cache,
-        json_cache=payload_cache,
-        json_cache_stats=payload_cache_stats,
+        verification_context=verification_context,
     )
     decision = _decision(
         readiness,
@@ -786,17 +773,12 @@ def _adapter_family_matrix_gate(
     *,
     adapter_family_matrix_path: str | Path | None,
     required_routes: Sequence[str],
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if adapter_family_matrix_path is None:
         return None
     matrix_path = Path(adapter_family_matrix_path)
-    report, report_error = _load_optional_json(
-        matrix_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    report, report_error = verification_context.load_json_object(matrix_path)
     routes = tuple(str(route) for route in report.get("routes", ()) if str(route))
     required = tuple(str(route) for route in required_routes if str(route))
     family_statuses = _adapter_family_statuses(report)
@@ -890,9 +872,7 @@ def _performance_baseline_gate(
     max_cached_total_seconds_ratio: float | None,
     max_cache_only_total_seconds_ratio: float | None,
     max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
         return None
@@ -901,23 +881,18 @@ def _performance_baseline_gate(
     if record.artifact_type != "performance_baseline":
         raise ValueError(f"registry record {record.key()!r} is not a performance_baseline.")
     report_path = Path(record.path)
-    report, report_error = _load_optional_json(
-        report_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    report, report_error = verification_context.load_json_object(report_path)
     manifest_path = _performance_manifest_path(record, report, report_path=report_path)
     verification = _verify_performance_manifest(
         manifest_path,
         recursive=recursive,
-        fingerprint_cache=fingerprint_cache,
+        verification_context=verification_context,
     )
     runtime_recommendation, runtime_source = _performance_runtime_recommendation(
         record,
         report,
         report_path=report_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
+        verification_context=verification_context,
     )
     performance_evidence_bundle = _mapping(report.get("performance_evidence_bundle"))
     performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
@@ -935,13 +910,9 @@ def _performance_baseline_gate(
         if drift_record.artifact_type != "performance_baseline":
             raise ValueError(
                 f"registry record {drift_record.key()!r} is not a performance_baseline."
-            )
-        drift_report_path = Path(drift_record.path)
-        drift_report, drift_report_error = _load_optional_json(
-            drift_report_path,
-            json_cache=json_cache,
-            json_cache_stats=json_cache_stats,
         )
+        drift_report_path = Path(drift_record.path)
+        drift_report, drift_report_error = verification_context.load_json_object(drift_report_path)
         drift_manifest_path = _performance_manifest_path(
             drift_record,
             drift_report,
@@ -950,7 +921,7 @@ def _performance_baseline_gate(
         drift_verification = _verify_performance_manifest(
             drift_manifest_path,
             recursive=recursive,
-            fingerprint_cache=fingerprint_cache,
+            verification_context=verification_context,
         )
         drift_evidence_bundle = _mapping(drift_report.get("performance_evidence_bundle"))
     performance_trend_gate = _performance_trend_gate(
@@ -1044,24 +1015,18 @@ def _product_trace_replay_workflow_gate(
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if product_trace_replay_workflow_source is None:
         return None
     report_path = Path(product_trace_replay_workflow_source["path"])
-    report, report_error = _load_optional_json(
-        report_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    report, report_error = verification_context.load_json_object(report_path)
     manifest_path = _product_trace_replay_workflow_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
         artifact_name="product_trace_replay_workflow_manifest",
-        fingerprint_cache=fingerprint_cache,
+        verification_context=verification_context,
     )
     workflow_selector_path = _product_trace_replay_workflow_child_path(
         report,
@@ -1228,24 +1193,18 @@ def _selector_replay_gate(
     selector_replay_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if selector_replay_report_path is None:
         return None
     report_path = Path(selector_replay_report_path)
-    report, report_error = _load_optional_json(
-        report_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    report, report_error = verification_context.load_json_object(report_path)
     manifest_path = _selector_replay_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
         artifact_name="selector_replay_manifest",
-        fingerprint_cache=fingerprint_cache,
+        verification_context=verification_context,
     )
     recommended = _selector_replay_recommended_row(report)
     gate = _selector_replay_report_gate(
@@ -1358,24 +1317,18 @@ def _product_runtime_drift_gate(
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if product_runtime_drift_report_path is None:
         return None
     report_path = Path(product_runtime_drift_report_path)
-    report, report_error = _load_optional_json(
-        report_path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    report, report_error = verification_context.load_json_object(report_path)
     manifest_path = _product_runtime_drift_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
         artifact_name="product_runtime_drift_manifest",
-        fingerprint_cache=fingerprint_cache,
+        verification_context=verification_context,
     )
     gate = _product_runtime_drift_report_gate(
         report=report,
@@ -1848,8 +1801,7 @@ def _performance_runtime_recommendation(
     report: Mapping[str, Any],
     *,
     report_path: Path,
-    json_cache: MutableMapping[str, dict[str, Any]],
-    json_cache_stats: MutableMapping[str, int],
+    verification_context: ArtifactVerificationContext,
 ) -> tuple[dict[str, Any], str | None]:
     runtime = _mapping(report.get("runtime_recommendation"))
     if runtime:
@@ -1862,11 +1814,7 @@ def _performance_runtime_recommendation(
     if raw_path is None:
         return {}, None
     path = _resolve_path(raw_path, base_path=report_path)
-    payload, _ = _load_optional_json(
-        path,
-        json_cache=json_cache,
-        json_cache_stats=json_cache_stats,
-    )
+    payload, _ = verification_context.load_json_object(path)
     return payload, str(path)
 
 
@@ -1874,13 +1822,13 @@ def _verify_performance_manifest(
     manifest_path: Path | None,
     *,
     recursive: bool,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
     return _verify_artifact_manifest(
         manifest_path,
         recursive=recursive,
         artifact_name="performance_baseline_manifest",
-        fingerprint_cache=fingerprint_cache,
+        verification_context=verification_context,
     )
 
 
@@ -1889,7 +1837,7 @@ def _verify_artifact_manifest(
     *,
     recursive: bool,
     artifact_name: str,
-    fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
     if manifest_path is None:
         return {
@@ -1906,10 +1854,9 @@ def _verify_artifact_manifest(
             "nested": [],
         }
     try:
-        return load_and_verify_artifact_manifest(
+        return verification_context.load_and_verify_artifact_manifest(
             manifest_path,
             recursive=recursive,
-            fingerprint_cache=fingerprint_cache,
         ).to_dict()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {

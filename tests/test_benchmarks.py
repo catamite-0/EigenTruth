@@ -4841,6 +4841,8 @@ def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
         inside_trigger_budget_policy="quality_balanced",
     )
 
+    json_cache: dict[str, dict[str, Any]] = {}
+    json_cache_stats: dict[str, int] = {}
     payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -4850,10 +4852,30 @@ def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         performance_baseline_key="performance_baseline:qwen-performance:0.6",
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
     )
+    first_cache_summary = payload["summary"]["artifact_json_cache"]
+    second = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    second_cache_summary = second["summary"]["artifact_json_cache"]
 
     candidate = payload["release_candidate"]
     assert payload["decision"]["status"] == "promote"
+    assert second["decision"]["status"] == "promote"
+    assert first_cache_summary["entries"] >= 4
+    assert second_cache_summary["hits"] > first_cache_summary["hits"]
+    assert any("performance/artifact-manifest.json" in key for key in json_cache)
     assert payload["decision"]["recommended_performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
