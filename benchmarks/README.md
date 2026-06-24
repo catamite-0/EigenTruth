@@ -2623,6 +2623,38 @@ fast-path verifier savings. Add
 `--compact-json` when the report and manifest are consumed by automation and
 diff readability is less important than artifact size.
 
+Use `run_product_feedback_report.py` after collecting manual review, user
+feedback, or online outcome labels for saved `ProductTrace` payloads. Feedback
+records are JSONL `ProductFeedbackRecord` objects with `request_id`, `outcome`,
+and optional `trace_fingerprint`, `claim_id`, `feedback_source`,
+`corrected_text`, `evidence_refs`, and `metadata`. The report joins feedback by
+trace fingerprint when available, otherwise by unique request id, then measures
+control-loop failure modes such as accepted-but-wrong,
+retrieved-but-still-unsupported, and abstain-false-positive. Optional gates can
+fail closed when the
+observed feedback rate violates a product threshold:
+
+```bash
+python benchmarks/run_product_feedback_report.py \
+  --trace artifacts/demo-request-a.json \
+  --trace artifacts/demo-request-b.json \
+  --feedback-jsonl artifacts/product-feedback.jsonl \
+  --json artifacts/product-feedback-report.json \
+  --artifact-manifest artifacts/product-feedback-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name product-feedback-audit \
+  --version 0.1 \
+  --min-matched-feedback-count 20 \
+  --max-accepted-but-wrong-rate 0.05 \
+  --max-retrieved-failure-rate 0.10 \
+  --max-abstain-false-positive-rate 0.20 \
+  --fail-on-blocked
+```
+
+This feedback report does not rerun models, verifiers, or retrieval. It is the
+post-hoc product quality layer that turns captured traces and outcome labels
+into a small set of actionable control-policy metrics.
+
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,

@@ -20,6 +20,15 @@ from eigentruth.control.actions import (
     TimeoutActionExecutor,
 )
 from eigentruth.control.controller import ControlPolicyConfig, RiskController
+from eigentruth.control.feedback import (
+    FeedbackOutcome,
+    ProductFeedbackRecord,
+    ProductFeedbackStore,
+    iter_feedback_jsonl,
+    load_feedback_jsonl,
+    product_trace_fingerprint,
+    write_feedback_jsonl,
+)
 from eigentruth.control.loop import (
     EvidenceBundle,
     VerificationLoopResult,
@@ -71,6 +80,7 @@ __all__ = [
     "DefaultCorrectionPolicy",
     "DryRunActionExecutor",
     "EvidenceBundle",
+    "FeedbackOutcome",
     "InMemoryActionExecutionLedger",
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
@@ -82,6 +92,8 @@ __all__ = [
     "ProductTrace",
     "LoadedProductPromotionContract",
     "ProductPromotionContract",
+    "ProductFeedbackRecord",
+    "ProductFeedbackStore",
     "ProductRuntimeEvidenceBundle",
     "ProductRuntimeBudgetPolicy",
     "PreGenerationRiskAssessment",
@@ -101,12 +113,16 @@ __all__ = [
     "evaluate_product_runtime_budget",
     "first_existing_product_promotion_contract_path",
     "get_runtime_profile",
+    "iter_feedback_jsonl",
+    "load_feedback_jsonl",
     "load_product_promotion_contract",
     "load_product_runtime_evidence_bundle",
     "product_promotion_contract_metadata",
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
+    "product_trace_fingerprint",
     "run_verification_loop",
     "select_pre_generation_profile",
     "select_runtime_profile",
+    "write_feedback_jsonl",
 ]

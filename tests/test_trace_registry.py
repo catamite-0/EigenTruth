@@ -13,6 +13,9 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    FeedbackOutcome,
+    ProductFeedbackRecord,
+    ProductFeedbackStore,
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
     ProductTrace,
@@ -28,6 +31,8 @@ from eigentruth.control import (
     product_promotion_contract_metadata,
     product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
+    product_trace_fingerprint,
+    write_feedback_jsonl,
 )
 from eigentruth.registry import (
     ArtifactRegistry,
@@ -98,6 +103,51 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert payload["action_results"][0]["status"] == "dry_run"
     assert payload["action_results"][0]["output"]["would_execute"] == "retriever"
     json.dumps(payload)
+
+
+def test_product_feedback_record_jsonl_roundtrip_and_trace_fingerprint(tmp_path):
+    trace = ProductTrace(
+        request_id="req-feedback",
+        diagnostics={"maha_last": 0.1},
+        risk_decision={
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.9,
+            "reason": "low risk",
+        },
+    )
+    fingerprint = product_trace_fingerprint(trace)
+    record = ProductFeedbackRecord(
+        request_id="req-feedback",
+        trace_fingerprint=fingerprint,
+        claim_id="claim-1",
+        outcome=FeedbackOutcome.INCORRECT,
+        feedback_source="human_review",
+        corrected_text="Corrected answer.",
+        evidence_refs=("doc:1",),
+        metadata={"reviewer": "unit"},
+        created_at="2026-06-24T00:00:00+00:00",
+    )
+    path = tmp_path / "feedback.jsonl"
+
+    write_feedback_jsonl(path, (record,))
+    store = ProductFeedbackStore(path)
+    store.append({
+        "request_id": "req-2",
+        "outcome": "correct",
+        "feedback_source": "automated_eval",
+    })
+    loaded = store.read_all()
+
+    assert len(loaded) == 2
+    assert loaded[0].to_dict()["trace_fingerprint"] == fingerprint
+    assert loaded[0].outcome is FeedbackOutcome.INCORRECT
+    assert loaded[0].evidence_refs == ("doc:1",)
+    assert loaded[1].outcome is FeedbackOutcome.CORRECT
+    assert product_trace_fingerprint(trace.to_dict()) == fingerprint
+
+    with pytest.raises(ValueError, match="outcome"):
+        ProductFeedbackRecord(request_id="req", outcome="maybe")
 
 
 def test_product_trace_bounded_payload_summarizes_large_fields():

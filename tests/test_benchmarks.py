@@ -13314,6 +13314,102 @@ def test_run_product_runtime_baseline_recommends_selective_staged_verification(t
     assert recommendation["evidence"]["slowest_phase"] == "initial_verification"
 
 
+def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_feedback_report")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.control import ProductFeedbackRecord, write_feedback_jsonl
+
+    trace_paths = []
+    for request_id, action in (
+        ("req-accept", "accept"),
+        ("req-retrieve", "retrieve"),
+        ("req-abstain", "abstain"),
+    ):
+        path = tmp_path / f"{request_id}.json"
+        path.write_text(
+            json.dumps({
+                "request_id": request_id,
+                "risk_decision": {
+                    "action": action,
+                    "risk_level": "low" if action == "accept" else "high",
+                    "confidence": 0.9,
+                    "reason": "unit",
+                },
+                "actions": [{"action": action, "reason": "unit", "payload": {}}],
+                "metadata": {"scenario": request_id},
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(path)
+
+    feedback_path = tmp_path / "feedback.jsonl"
+    write_feedback_jsonl(
+        feedback_path,
+        (
+            ProductFeedbackRecord(request_id="req-accept", outcome="incorrect"),
+            ProductFeedbackRecord(request_id="req-retrieve", outcome="unsupported"),
+            ProductFeedbackRecord(request_id="req-abstain", outcome="correct"),
+            ProductFeedbackRecord(request_id="missing", outcome="incorrect"),
+        ),
+    )
+    report_path = tmp_path / "feedback-report.json"
+    manifest_path = tmp_path / "feedback-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    report = module.build_product_feedback_report(
+        module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=report_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="feedback-report",
+            version="0.1",
+            min_matched_feedback_count=3,
+            max_accepted_but_wrong_rate=1.0,
+            max_retrieved_failure_rate=1.0,
+            max_abstain_false_positive_rate=1.0,
+            metadata={"suite": "unit"},
+        )
+    )
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:feedback-report:0.1")
+
+    assert report["status"] == "passed"
+    assert report["summary"]["trace_matched_feedback_count"] == 3
+    assert report["summary"]["unmatched_feedback_count"] == 1
+    assert report["summary"]["accepted_but_wrong_count"] == 1
+    assert report["summary"]["retrieved_failure_count"] == 1
+    assert report["summary"]["retrieved_but_still_unsupported_count"] == 1
+    assert report["summary"]["abstain_false_positive_count"] == 1
+    assert saved["artifact_manifest_summary"]["artifact_count"] == 5
+    assert record.metadata["workflow"] == "product_feedback_report"
+    assert record.metadata["accepted_but_wrong_rate"] == pytest.approx(1.0)
+    assert record.metadata["suite"] == "unit"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+    blocked = module.build_product_feedback_report(
+        module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=tmp_path / "blocked-feedback-report.json",
+            max_accepted_but_wrong_rate=0.5,
+        )
+    )
+
+    assert blocked["status"] == "blocked"
+    assert blocked["quality_gate"]["failures"][0]["metric"] == "accepted_but_wrong_rate"
+
+    with pytest.raises(ValueError, match="not bool"):
+        module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=tmp_path / "invalid-feedback-report.json",
+            max_retrieved_failure_rate=True,
+        )
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
