@@ -208,6 +208,96 @@ def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
     assert loaded.to_mapping()["inside_sampling"] == {"mode": "triggered"}
 
 
+def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    labels = [0, 0, 0, 0, 0, 0, 1, 1, 1]
+    scores_path = tmp_path / "scores.manifest.json"
+    registry_path = tmp_path / "registry.json"
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "maha_last": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 4.0, 4.5, 5.0],
+            "truth_proj": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 3.0, 3.5, 4.0],
+        },
+        "sweep_scores": {
+            "-1": {
+                "maha_last": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 4.0, 4.5, 5.0],
+                "truth_proj": [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 3.0, 3.5, 4.0],
+            },
+            "-2": {
+                "maha_last": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 2.0, 2.5, 3.0],
+                "truth_proj": [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 5.0, 5.5, 6.0],
+            },
+        },
+        "statements": [{"text": f"statement {index}"} for index in range(len(labels))],
+    })
+    write_score_dump_jsonl(dump, scores_path)
+
+    payload = module.run_calibrated_observability_workflow(
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            scores_path=scores_path,
+            registry_path=registry_path,
+            name="unit-calibrated-observability",
+            version="0.1",
+            signals=("maha_last", "truth_proj"),
+            repeats=1,
+            artifact_alpha=0.20,
+            python_executable=sys.executable,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:unit-calibrated-observability:0.1")
+
+    assert payload["status"] == "complete"
+    assert payload["execution"]["score_dump_reused"] is True
+    assert payload["conformal_manifest_verification"]["passed"] is True
+    assert payload["conformal"]["best"]["score_name"] in {"maha_last", "truth_proj"}
+    assert "truthfulqa_report" not in manifest["artifacts"]
+    assert manifest["artifacts"]["score_dump_records"]["exists"] is True
+    assert manifest["artifacts"]["conformal_artifact_manifest"]["exists"] is True
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"], recursive=True
+    ).passed is True
+    assert record.metadata["workflow"] == "run_calibrated_observability_workflow"
+    assert record.metadata["score_dump_reused"] is True
+    assert record.metadata["best_score_name"] in {"maha_last", "truth_proj"}
+
+
+def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+
+    payload = module.run_calibrated_observability_workflow(
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            scores_path=tmp_path / "workflow" / "scores.manifest.json",
+            model="tiny-local",
+            layer=-2,
+            sweep_layers=(-2, -3),
+            signals=("maha_last", "truth_proj"),
+            dry_run=True,
+            python_executable=sys.executable,
+        )
+    )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+    conformal_command = payload["execution"]["conformal_command"]
+
+    assert payload["status"] == "needs_evidence"
+    assert "--dump-scores-format" in truthfulqa_command
+    assert "jsonl" in truthfulqa_command
+    assert "--sweep-layers" in truthfulqa_command
+    assert "--artifact-manifest" in conformal_command
+    assert manifest["metadata"]["runner"] == "run_calibrated_observability_workflow"
+    assert manifest["metadata"]["dry_run"] is True
+    assert manifest["summary"]["missing_count"] > 0
+
+
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
     module = importlib.import_module("benchmarks.backfill_truthfulqa_statements")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")

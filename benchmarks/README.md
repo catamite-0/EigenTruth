@@ -450,6 +450,33 @@ calibration artifacts for later verification or registry promotion.
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
 
+## `run_calibrated_observability_workflow.py`
+
+Runs the 0.2 calibrated-observability closure in one command. It can either
+reuse an existing score dump or call `eval_truthfulqa.py` to create one as a
+JSONL manifest, then runs `eval_conformal.py` with sweep, best-calibration, and
+artifact-manifest outputs. The top-level workflow report records both commands,
+the conformal verdict, nested manifest verification, and optional registry
+metadata:
+
+```bash
+python benchmarks/run_calibrated_observability_workflow.py \
+  --output-dir artifacts/gpt2-calibrated-observability \
+  --model gpt2 \
+  --layer -8 \
+  --scores artifacts/gpt2-calibrated-observability/scores.manifest.json \
+  --dump-scores-format jsonl \
+  --registry artifacts/local-release-registry.json \
+  --name gpt2-calibrated-observability \
+  --version 0.1
+```
+
+For fast calibration iteration after the model run has already produced a score
+dump, pass the existing `--scores` path without `--refresh-scores`; the workflow
+will skip `eval_truthfulqa.py`, rerun only conformal calibration, and keep the
+top-level manifest focused on the reused score dump plus generated calibration
+artifacts.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

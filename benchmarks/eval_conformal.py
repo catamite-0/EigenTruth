@@ -30,12 +30,21 @@ from pathlib import Path
 
 import torch
 
-from benchmarks.config_utils import planned_artifact_manifest_summary
-from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
-from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
-from eigentruth.eval.metrics import selective_classification_report
-from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata
-from eigentruth.registry import build_artifact_manifest
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
+from eigentruth.calibration import (  # noqa: E402
+    DEFAULT_SCORE_DIRECTIONS,
+    ConformalCalibrator,
+    LayerScoreSweepCalibrator,
+)
+from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate  # noqa: E402
+from eigentruth.eval.metrics import selective_classification_report  # noqa: E402
+from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata  # noqa: E402
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
