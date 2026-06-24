@@ -59,6 +59,9 @@ class EigenTruthWrapper(nn.Module):
         hse_warning_threshold: HSE 预警阈值 / HSE warning threshold.
         curvature: 庞加莱球曲率 / Poincaré ball curvature.
         hse_window_size: HSE 滑动窗口大小 / HSE sliding window size.
+        covariance_mode: TruthManifold covariance approximation mode:
+            "full" (default), "diag", or "low_rank".
+        covariance_low_rank: Rank used when ``covariance_mode="low_rank"``.
         custom_layer_path: 自定义层路径 / Custom layer attribute path.
     """
 
@@ -71,6 +74,8 @@ class EigenTruthWrapper(nn.Module):
         hse_warning_threshold: float = 5.0,
         curvature: float = 1.0,
         hse_window_size: int = 20,
+        covariance_mode: str = "full",
+        covariance_low_rank: int = 16,
         custom_layer_path: Optional[str] = None,
     ) -> None:
         super().__init__()
@@ -82,10 +87,15 @@ class EigenTruthWrapper(nn.Module):
         self.hse_warning_threshold = hse_warning_threshold
         self.curvature = curvature
         self.hse_window_size = hse_window_size
+        self.covariance_mode = covariance_mode
+        self.covariance_low_rank = covariance_low_rank
         self.custom_layer_path = custom_layer_path
 
         # 内部状态 / Internal state
-        self.manifold = TruthManifold()
+        self.manifold = TruthManifold(
+            covariance_mode=self.covariance_mode,
+            covariance_low_rank=self.covariance_low_rank,
+        )
         self.probe: Optional[TruthProbe] = None
         self._is_warmed_up: bool = False
 
@@ -122,7 +132,10 @@ class EigenTruthWrapper(nn.Module):
             self.probe.remove()
             self.probe = None
         self._is_warmed_up = False
-        self.manifold = TruthManifold()
+        self.manifold = TruthManifold(
+            covariance_mode=self.covariance_mode,
+            covariance_low_rank=self.covariance_low_rank,
+        )
         device = self._get_device()
 
         def _collect_states(dataset: List[str]) -> List[Tensor]:

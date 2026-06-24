@@ -27,7 +27,6 @@ from torch import Tensor
 from eigentruth.core.math_engine import (
     TruthManifold,
     hyperbolic_semantic_entropy,
-    mahalanobis_distance,
     poincare_map,
 )
 
@@ -166,9 +165,7 @@ class TruthProbe:
             self._ensure_manifold_device(h_vec.device)
 
             # 批量计算马氏距离 [B]
-            dist = mahalanobis_distance(
-                h_vec, self.manifold.mean, self.manifold.cov_inv
-            )
+            dist = self.manifold.mahalanobis_distance(h_vec)
             # 保存最大距离用于预警诊断
             self.last_distance = dist.max().item()
 

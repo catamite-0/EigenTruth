@@ -19,6 +19,7 @@ from eigentruth.core.inside import (
     spectral_effective_rank,
 )
 from eigentruth.core.math_engine import (
+    COVARIANCE_MODES,
     TruthManifold,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
@@ -34,6 +35,7 @@ __all__ = [
     "TruthProbe",
     "TruthManifold",
     "TruthSubspace",
+    "COVARIANCE_MODES",
     "cluster_assignment_entropy",
     "embedding_semantic_entropy",
     "internal_eigenscore",

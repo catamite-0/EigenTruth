@@ -64,9 +64,10 @@ from eigentruth.core import (
     lexical_semantic_entropy,
 )
 from eigentruth.core.math_engine import (
+    COVARIANCE_MODES,
     TruthManifold,
     hyperbolic_semantic_entropy,
-    mahalanobis_distance,
+    mahalanobis_distance,  # noqa: F401 - legacy benchmark module alias.
     poincare_map,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
@@ -838,7 +839,7 @@ def _score_reps_batch(
         states = torch.stack([
             reps["last"][layer].to(manifold.mean.device) for _, reps in valid
         ])
-        maha_values = mahalanobis_distance(states, manifold.mean, manifold.cov_inv).detach().cpu().tolist()
+        maha_values = manifold.mahalanobis_distance(states).detach().cpu().tolist()
         if manifold.contrastive_direction is not None:
             proj_values = (-(states @ manifold.contrastive_direction.to(states.device))).detach().cpu().tolist()
         else:
@@ -1096,6 +1097,8 @@ def _layer_stats_cache_metadata(
         "layers": [int(layer) for layer in layers],
         "max_length": int(args.max_length),
         "subspace_rank": int(args.subspace_rank),
+        "covariance_mode": str(getattr(args, "covariance_mode", "full")),
+        "covariance_low_rank": int(getattr(args, "covariance_low_rank", 16)),
         "length_bucketed_batches": bool(args.length_bucketed_batches),
         "n_true": len(true_texts),
         "n_false": len(false_texts),
@@ -1187,18 +1190,25 @@ def _manifold_state(manifold: TruthManifold) -> dict:
     return {
         "mean": _tensor_to_cpu(manifold.mean),
         "_M2": _tensor_to_cpu(manifold._M2),  # noqa: SLF001 - benchmark cache mirrors core serialization.
+        "_M2_diag": _tensor_to_cpu(manifold._M2_diag),  # noqa: SLF001 - benchmark cache mirrors core serialization.
         "n": int(manifold.n),
         "hidden_dim": int(manifold.hidden_dim),
         "ridge_lambda": float(manifold.ridge_lambda),
+        "covariance_mode": manifold.covariance_mode,
+        "covariance_low_rank": int(manifold.covariance_low_rank),
         "false_mean": _tensor_to_cpu(manifold.false_mean),
         "contrastive_direction": _tensor_to_cpu(manifold.contrastive_direction),
     }
 
 
 def _manifold_from_state(state: Mapping, device: torch.device) -> TruthManifold:
-    manifold = TruthManifold()
+    manifold = TruthManifold(
+        covariance_mode=state.get("covariance_mode", "full"),
+        covariance_low_rank=int(state.get("covariance_low_rank", 16)),
+    )
     manifold.mean = state["mean"]
     manifold._M2 = state.get("_M2")  # noqa: SLF001 - benchmark cache mirrors core serialization.
+    manifold._M2_diag = state.get("_M2_diag")  # noqa: SLF001 - benchmark cache mirrors core serialization.
     manifold.n = int(state["n"])
     manifold.hidden_dim = int(state["hidden_dim"])
     manifold.ridge_lambda = float(state.get("ridge_lambda", 0.1))
@@ -1430,7 +1440,12 @@ def _validate_cache_only_metadata(
     }
     _validate_cache_metadata(
         stats_metadata,
-        {**base_expected, "subspace_rank": int(args.subspace_rank)},
+        {
+            **base_expected,
+            "subspace_rank": int(args.subspace_rank),
+            "covariance_mode": str(getattr(args, "covariance_mode", "full")),
+            "covariance_low_rank": int(getattr(args, "covariance_low_rank", 16)),
+        },
         cache_name="layer stats cache",
     )
     _validate_cache_metadata(
@@ -2984,6 +2999,8 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
                       checkpoint_metadata: Mapping | None = None, resume_checkpoint: bool = True,
                       checkpoint_every: int = 50,
                       hidden_state_capture: str = "outputs",
+                      covariance_mode: str = "full",
+                      covariance_low_rank: int = 16,
                       true_encodings: Sequence[Optional[StatementEncoding]] | None = None,
                       false_encodings: Sequence[Optional[StatementEncoding]] | None = None,
                       batch_fallback_state: BatchSizeFallbackState | None = None) -> tuple[dict, dict]:
@@ -3009,7 +3026,13 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
         print(f"   loaded warmup checkpoint: {checkpoint_path_obj} "
               f"(true={true_done}/{len(true_texts)}, false={false_done}/{len(false_texts)})")
     else:
-        manifolds = {layer: TruthManifold() for layer in layers}
+        manifolds = {
+            layer: TruthManifold(
+                covariance_mode=covariance_mode,
+                covariance_low_rank=covariance_low_rank,
+            )
+            for layer in layers
+        }
         true_state_lists = {layer: [] for layer in layers}
         false_state_lists = {layer: [] for layer in layers}
         false_sums: dict = {layer: None for layer in layers}
@@ -3352,6 +3375,8 @@ def run(args) -> dict:
                 resume_checkpoint=not args.refresh_layer_stats_cache,
                 checkpoint_every=args.warmup_checkpoint_every,
                 hidden_state_capture=args.hidden_state_capture,
+                covariance_mode=getattr(args, "covariance_mode", "full"),
+                covariance_low_rank=getattr(args, "covariance_low_rank", 16),
                 true_encodings=true_encodings,
                 false_encodings=false_encodings,
                 batch_fallback_state=batch_fallback_state,
@@ -3370,6 +3395,7 @@ def run(args) -> dict:
         print("[X] Manifold not ready (need >=2 statements). Aborting.")
         sys.exit(1)
     print(f"   manifold: n={primary.n}, hidden_dim={primary.hidden_dim}, "
+          f"covariance={primary.covariance_mode}, "
           f"contrastive_direction={'yes' if primary.contrastive_direction is not None else 'no'}  "
           f"subspace={'yes' if args.layer in subspaces else 'no'}\n")
 
@@ -3778,6 +3804,8 @@ def run(args) -> dict:
                    "progress_every": args.progress_every,
                    "warmup_checkpoint": args.warmup_checkpoint,
                    "warmup_checkpoint_every": args.warmup_checkpoint_every,
+                   "covariance_mode": getattr(args, "covariance_mode", "full"),
+                   "covariance_low_rank": getattr(args, "covariance_low_rank", 16),
                    "dump_scores_format": getattr(args, "dump_scores_format", "json"),
                    "sweep_layers": layers if (args.sweep or args.sweep_layers) else None},
         "auroc": results,
@@ -3939,6 +3967,10 @@ def main():
                         "forced-answer scoring; requires --hidden-state-capture outputs")
     p.add_argument("--subspace-rank", type=int, default=2,
                    help="rank for TruthSubspace residual scoring")
+    p.add_argument("--covariance-mode", default="full", choices=COVARIANCE_MODES,
+                   help="TruthManifold covariance approximation for maha_last: full, diag, or low_rank")
+    p.add_argument("--covariance-low-rank", type=int, default=16,
+                   help="rank used when --covariance-mode low_rank")
     p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
                    help="regularization alpha for EigenScore-style log-det scores")
     p.add_argument("--inside-samples", type=int, default=0,
@@ -4033,6 +4065,8 @@ def main():
         p.error("--batch-size must be >=1")
     if args.max_batch_tokens < 0:
         p.error("--max-batch-tokens must be >=0")
+    if args.covariance_low_rank < 1:
+        p.error("--covariance-low-rank must be >=1")
     if args.inside_batch_size < 1:
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:

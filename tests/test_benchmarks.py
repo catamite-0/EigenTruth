@@ -482,6 +482,32 @@ def test_calibrated_observability_explicit_capture_overrides_limited_sweep_defau
     assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "outputs"
 
 
+def test_calibrated_observability_passes_covariance_mode_to_truthfulqa(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--covariance-mode",
+            "diag",
+            "--covariance-low-rank",
+            "4",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+
+    assert payload["config"]["covariance_mode"] == "diag"
+    assert payload["config"]["covariance_low_rank"] == 4
+    assert truthfulqa_command[truthfulqa_command.index("--covariance-mode") + 1] == "diag"
+    assert truthfulqa_command[truthfulqa_command.index("--covariance-low-rank") + 1] == "4"
+
+
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
     module = importlib.import_module("benchmarks.backfill_truthfulqa_statements")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
@@ -14642,6 +14668,44 @@ def test_eval_truthfulqa_layer_stats_cache_roundtrip(tmp_path):
     assert torch.allclose(loaded_manifolds[-1].contrastive_direction, manifold.contrastive_direction)
     assert loaded_subspaces[-1].rank == 1
     assert loaded_subspaces[-1].is_ready()
+
+
+def test_eval_truthfulqa_layer_stats_cache_preserves_diag_covariance_mode(tmp_path):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    manifold = module.TruthManifold(covariance_mode="diag")
+    manifold.update(torch.tensor([1.0, 0.0]))
+    manifold.update(torch.tensor([0.0, 1.0]))
+    args = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        subspace_rank=1,
+        covariance_mode="diag",
+        covariance_low_rank=4,
+        length_bucketed_batches=False,
+    )
+    metadata = module._layer_stats_cache_metadata(
+        args,
+        layers=[-1],
+        n_layers=2,
+        true_texts=["true a", "true b"],
+        false_texts=[],
+    )
+
+    cache_path = tmp_path / "layer-stats-diag.pt"
+    module.save_layer_stats_cache(cache_path, {-1: manifold}, {}, metadata=metadata)
+    loaded_manifolds, _, loaded_metadata = module.load_layer_stats_cache(
+        cache_path,
+        expected_metadata=metadata,
+        device=torch.device("cpu"),
+    )
+
+    loaded = loaded_manifolds[-1]
+    assert loaded_metadata["covariance_mode"] == "diag"
+    assert loaded.covariance_mode == "diag"
+    assert loaded._M2 is None  # noqa: SLF001 - diag cache should not grow dense scatter.
+    assert torch.isfinite(loaded.mahalanobis_distance(torch.tensor([0.5, 0.5]))).all()
 
 
 def test_eval_truthfulqa_warmup_checkpoint_can_resume_completed_state(tmp_path):

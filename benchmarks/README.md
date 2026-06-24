@@ -129,10 +129,18 @@ decoder-layer hidden states via forward hooks instead of requesting the full
 `output_hidden_states` tuple. This can reduce peak memory on targeted layer-band
 runs, but it intentionally rejects embedding and final post-norm hidden-state
 indexes because block hooks are not semantically identical for those positions.
+Use `--covariance-mode diag` when local memory or warmup time is the bottleneck
+for `maha_last`: it keeps only diagonal Welford scatter statistics and scores via
+an optimized diagonal precision path instead of materializing a dense covariance
+inverse. The default remains `full` for backward-compatible scores. The
+experimental `--covariance-mode low_rank --covariance-low-rank K` path scores
+with a ridge plus top-K covariance approximation; use it as a profiling
+candidate and recalibrate thresholds because `maha_last` scale changes by mode.
 Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
 bundle or create one when missing. The cache is validated against model, dtype,
-layer list, max length, subspace rank, warmup mode, and warmup text fingerprint;
-use `--refresh-layer-stats-cache` to rebuild it intentionally.
+layer list, max length, subspace rank, covariance mode/rank, warmup mode, and
+warmup text fingerprint; use `--refresh-layer-stats-cache` to rebuild it
+intentionally.
 Use `--warmup-checkpoint path.pt` when building layer stats for long runs. The
 checkpoint stores partial warmup manifold state plus factual/false hidden states
 and resumes automatically when the same validated config is rerun; pair it with

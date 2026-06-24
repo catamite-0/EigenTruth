@@ -107,6 +107,8 @@ class CalibratedObservabilityWorkflowConfig:
     batch_size: int = 1
     max_batch_tokens: int = 0
     hidden_state_capture: str = "outputs"
+    covariance_mode: str = "full"
+    covariance_low_rank: int = 16
     progress_every: int = 0
     length_bucketed_batches: bool = True
     offline: bool = True
@@ -136,6 +138,8 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "signals", tuple(str(signal) for signal in self.signals if str(signal)))
         object.__setattr__(self, "batch_size", int(self.batch_size))
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
+        object.__setattr__(self, "covariance_mode", str(self.covariance_mode))
+        object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
         object.__setattr__(self, "max_length", int(self.max_length))
         object.__setattr__(self, "progress_every", int(self.progress_every))
         object.__setattr__(self, "repeats", int(self.repeats))
@@ -151,6 +155,10 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("best_by must be one of: auroc, detection.")
         if self.direction not in {None, "higher", "lower"}:
             raise ValueError("direction must be one of: higher, lower.")
+        if self.covariance_mode not in {"full", "diag", "low_rank"}:
+            raise ValueError("covariance_mode must be one of: full, diag, low_rank.")
+        if self.covariance_low_rank < 1:
+            raise ValueError("covariance_low_rank must be >=1.")
         if self.batch_size < 1:
             raise ValueError("batch_size must be >=1.")
         if self.max_batch_tokens < 0:
@@ -311,6 +319,10 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         str(config.max_length),
         "--hidden-state-capture",
         config.hidden_state_capture,
+        "--covariance-mode",
+        config.covariance_mode,
+        "--covariance-low-rank",
+        str(config.covariance_low_rank),
         "--progress-every",
         str(config.progress_every),
         "--json",
@@ -524,6 +536,8 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         "batch_size": config.batch_size,
         "max_batch_tokens": config.max_batch_tokens,
         "hidden_state_capture": config.hidden_state_capture,
+        "covariance_mode": config.covariance_mode,
+        "covariance_low_rank": config.covariance_low_rank,
         "progress_every": config.progress_every,
         "length_bucketed_batches": config.length_bucketed_batches,
         "offline": config.offline,
@@ -736,6 +750,8 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
             preset_defaults,
             sweep_layers=sweep_layers,
         ),
+        covariance_mode=_arg_or_preset(args, preset_defaults, "covariance_mode", "full"),
+        covariance_low_rank=_arg_or_preset(args, preset_defaults, "covariance_low_rank", 16),
         progress_every=_arg_or_preset(args, preset_defaults, "progress_every", 0),
         length_bucketed_batches=_arg_or_preset(args, preset_defaults, "length_bucketed_batches", True),
         offline=_arg_or_preset(args, preset_defaults, "offline", True),
@@ -796,6 +812,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--max-batch-tokens", type=int, default=None)
     parser.add_argument("--hidden-state-capture", default=None, choices=("outputs", "hooks"))
+    parser.add_argument("--covariance-mode", default=None, choices=("full", "diag", "low_rank"))
+    parser.add_argument("--covariance-low-rank", type=int, default=None)
     parser.add_argument("--progress-every", type=int, default=None)
     length_group = parser.add_mutually_exclusive_group()
     length_group.add_argument(

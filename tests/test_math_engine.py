@@ -9,6 +9,7 @@ import math
 import torch
 
 from eigentruth.core.math_engine import (
+    COVARIANCE_MODES,
     TruthManifold,
     _poincare_distance,
     hyperbolic_semantic_entropy,
@@ -135,6 +136,18 @@ class TestMahalanobisDistance:
         dist = mahalanobis_distance(h, mean, cov_inv)
         expected = 2.0 * math.sqrt(d)
         assert torch.isclose(dist, torch.tensor(expected), atol=1e-3)
+
+    def test_accepts_diagonal_precision_vector(self):
+        """对角精度向量等价于显式对角矩阵。"""
+        d = 8
+        mean = torch.zeros(d)
+        h = torch.arange(1, d + 1, dtype=torch.float32)
+        precision_diag = torch.linspace(0.5, 2.0, d)
+
+        vector_dist = mahalanobis_distance(h, mean, precision_diag)
+        dense_dist = mahalanobis_distance(h, mean, torch.diag(precision_diag))
+
+        assert torch.isclose(vector_dist, dense_dist, atol=1e-6)
 
     def test_non_negative(self):
         """距离始终 >= 0。"""
@@ -297,6 +310,9 @@ class TestPoincareDistance:
 class TestTruthManifold:
     """真值流形增量构建测试。"""
 
+    def test_covariance_modes_are_public(self):
+        assert COVARIANCE_MODES == ("full", "diag", "low_rank")
+
     def test_first_update_initializes(self):
         """首次更新初始化 mean 和 cov_inv。"""
         m = TruthManifold()
@@ -416,6 +432,56 @@ class TestTruthManifold:
         assert m2.contrastive_direction is not None
         assert torch.allclose(m2.false_mean, m.false_mean)
         assert torch.allclose(m2.contrastive_direction, m.contrastive_direction)
+
+    def test_diag_covariance_mode_avoids_full_scatter_and_matches_manual_distance(self):
+        """diag 模式只保存对角散布，距离与手工对角精度一致。"""
+        torch.manual_seed(101)
+        d = 10
+        m = TruthManifold(covariance_mode="diag")
+        samples = torch.randn(12, d)
+        for sample in samples:
+            m.update(sample)
+
+        assert m._M2 is None  # noqa: SLF001 - verifies memory-saving mode.
+        assert m._M2_diag is not None  # noqa: SLF001
+        probe = torch.randn(d)
+        cov_diag = m._M2_diag / (m.n - 1)  # noqa: SLF001
+        tau = cov_diag.mean().clamp(min=1e-6)
+        precision_diag = torch.reciprocal((cov_diag + m.ridge_lambda * tau).clamp(min=1e-12))
+        expected = mahalanobis_distance(probe, m.mean, precision_diag)
+
+        assert torch.isclose(m.mahalanobis_distance(probe), expected, atol=1e-6)
+        assert m.cov_inv.shape == (d, d)  # legacy dense property remains available.
+
+    def test_low_rank_covariance_mode_is_finite_and_roundtrips(self, tmp_path):
+        """low_rank 模式产生有限距离，并保留序列化配置。"""
+        torch.manual_seed(202)
+        d = 12
+        m = TruthManifold(covariance_mode="low_rank", covariance_low_rank=3)
+        for _ in range(10):
+            m.update(torch.randn(d))
+
+        probe = torch.randn(d)
+        dist = m.mahalanobis_distance(probe)
+        assert torch.isfinite(dist).all()
+
+        path = tmp_path / "low_rank_manifold.pt"
+        m.save(path)
+        loaded = TruthManifold.load(path)
+
+        assert loaded.covariance_mode == "low_rank"
+        assert loaded.covariance_low_rank == 3
+        assert torch.isclose(
+            loaded.mahalanobis_distance(probe),
+            dist,
+            atol=1e-5,
+        )
+
+    def test_invalid_covariance_mode_rejected(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="covariance_mode"):
+            TruthManifold(covariance_mode="bad")
 
 
 # ===================================================================
