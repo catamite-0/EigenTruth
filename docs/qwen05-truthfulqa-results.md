@@ -778,7 +778,8 @@ evidence, and retrieval-inclusive promoted adapter-family matrix, then adds
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a required
 retrieval-structured-QA audit gate. Version 1.5 additionally requires promoted
 selector replay and a promoted product-runtime-drift report with 9 compared
-drift metrics and 0 blocked metrics. The final manifest fingerprints the
+drift metrics and 0 blocked metrics; the product handoff is exported as
+`artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json`. The final manifest fingerprints the
 release-candidate report, readiness manifest, product route manifest,
 performance manifest, selector replay manifest, product-runtime-drift manifest,
 adapter-family matrix report, and required retrieval audit manifest. Required

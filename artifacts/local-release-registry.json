@@ -2742,6 +2742,26 @@
       "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate-verification",
       "path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_manifest_verification.json",
       "version": "1.5"
+    },
+    {
+      "artifact_type": "product_promotion_contract",
+      "metadata": {
+        "artifact_manifest": "artifacts/smollm2_product_promotion_contract_v1_5/artifact-manifest.json",
+        "compact_json": true,
+        "model_id": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "product_runtime_drift_status": "promote",
+        "recommended_route": "structured_qa",
+        "recommended_selector_replay_candidate": "default",
+        "release": "smollm2-v1.5",
+        "source": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json",
+        "source_record": "benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5",
+        "source_status": "promote",
+        "source_workflow": "release_candidate_comparison",
+        "workflow": "export_product_promotion_contract"
+      },
+      "name": "smollm2-product-promotion-contract",
+      "path": "artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json",
+      "version": "1.5"
     }
   ],
   "schema_version": 1

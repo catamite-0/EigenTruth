@@ -469,8 +469,8 @@ def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_cont
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()
     assert contract_path is not None
-    assert "strict_structured_retrieval_audit" in contract_path.name
-    assert "v1_5" in contract_path.name
+    assert "smollm2_product_promotion_contract_v1_5" in str(contract_path)
+    assert contract_path.name == "product-promotion-contract.json"
 
     payload = demo.run(
         SimpleNamespace(

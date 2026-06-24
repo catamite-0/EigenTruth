@@ -259,6 +259,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_product_promotion_contract(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a deployable ProductPromotionContract artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_promotion_contract",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def add(self, record: RegistryRecord) -> "ArtifactRegistry":
         """Add or replace a record with the same registry key."""
         records = [existing for existing in self.records if existing.key() != record.key()]

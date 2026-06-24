@@ -1273,6 +1273,25 @@ manifests before the release candidate is registered. When `--runtime-profile`
 is used, the selected profile and the defaults it filled are written into the
 release report, manifest metadata, and registry record.
 
+Use `export_product_promotion_contract.py` after a release candidate promotes to
+write the smaller product handoff artifact consumed by demos and control-plane
+jobs. It converts either a release-candidate comparison or registry-workflow JSON
+into a `ProductPromotionContract`, writes a manifest, and can register a
+`product_promotion_contract:*:*` record:
+
+```bash
+python benchmarks/export_product_promotion_contract.py \
+  --source artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
+  --output artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
+  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_5/artifact-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-product-promotion-contract \
+  --version 1.5 \
+  --metadata release=smollm2-v1.5 \
+  --metadata source_record=benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5 \
+  --compact-json
+```
+
 Current local smoke release candidate:
 
 ```bash

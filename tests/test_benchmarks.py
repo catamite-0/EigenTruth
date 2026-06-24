@@ -5437,6 +5437,75 @@ def test_run_release_candidate_registry_workflow_cli_blocks_without_registration
     assert ArtifactRegistry.load_json(release_registry_path).records == ()
 
 
+def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.export_product_promotion_contract")
+    registry_module = importlib.import_module("eigentruth.registry")
+    source = tmp_path / "release-candidate.json"
+    contract_path = tmp_path / "product-promotion-contract.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    source.write_text(
+        json.dumps({
+            "workflow": "release_candidate_comparison",
+            "config": {
+                "max_mean_attempted_route_count": 1.1,
+                "max_retrieval_use_rate": 0.0,
+                "runtime_profile": "balanced",
+            },
+            "decision": {
+                "status": "promote",
+                "recommended_route": "structured_qa",
+                "recommended_selector_replay_candidate": "default",
+                "product_runtime_drift_status": "promote",
+            },
+            "release_candidate": {
+                "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+                "runtime": {"layer": -12, "batch_size": 8},
+                "verifier_route": {"route": "structured_qa"},
+                "selector_replay": {
+                    "recommended": {"candidate": "default", "status": "promote"},
+                },
+                "product_runtime_drift": {
+                    "summary": {
+                        "gate_enabled": True,
+                        "compared_metric_count": 9,
+                        "blocked_metric_count": 0,
+                    },
+                },
+                "manifests": {},
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.export_product_promotion_contract(
+        source_path=source,
+        output_path=contract_path,
+        artifact_manifest_path=manifest_path,
+        registry_path=registry_path,
+        name="smollm2-product-promotion-contract",
+        version="1.5",
+        metadata={"release": "smollm2-v1.5"},
+        compact_json=True,
+    )
+    contract = json.loads(contract_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_promotion_contract:smollm2-product-promotion-contract:1.5")
+
+    assert payload["status"] == "exported"
+    assert contract["workflow"] == "product_promotion_contract"
+    assert contract["runtime_budget_policy"]["max_mean_attempted_route_count"] == 1.1
+    assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
+    assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert manifest["summary"]["artifact_count"] == 2
+    assert record.artifact_type == "product_promotion_contract"
+    assert record.metadata["source_status"] == "promote"
+    assert record.metadata["recommended_route"] == "structured_qa"
+    assert record.metadata["release"] == "smollm2-v1.5"
+    assert "\n  " not in contract_path.read_text(encoding="utf-8")
+
+
 def _write_inside_sampling_profile(
     output_dir,
     *,
