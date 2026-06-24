@@ -1,6 +1,9 @@
 """Product trace and artifact registry tests."""
 
 import json
+import os
+
+import pytest
 
 import eigentruth.registry.provenance as registry_provenance
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
@@ -437,6 +440,26 @@ def test_artifact_verification_context_caches_manifest_json_and_fingerprints(tmp
     json.dumps(context.cache_summary())
 
 
+def test_artifact_json_cache_invalidates_same_size_same_mtime_content_change(tmp_path):
+    path = tmp_path / "payload.json"
+    path.write_text('{"value":"aaaa"}\n', encoding="utf-8")
+    stat = path.stat()
+    context = ArtifactVerificationContext()
+
+    first, first_error = context.load_json_object(path)
+    path.write_text('{"value":"bbbb"}\n', encoding="utf-8")
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    second, second_error = context.load_json_object(path)
+
+    assert first_error is None
+    assert second_error is None
+    assert first == {"value": "aaaa"}
+    assert second == {"value": "bbbb"}
+    assert context.json_cache_summary()["hits"] == 0
+    assert context.json_cache_summary()["misses"] == 2
+    assert context.json_cache_summary()["entries"] == 2
+
+
 def test_artifact_manifest_parallel_fingerprinting_matches_serial_and_reuses_cache(tmp_path):
     first_path = tmp_path / "first.json"
     second_path = tmp_path / "second.json"
@@ -474,6 +497,9 @@ def test_artifact_manifest_parallel_fingerprinting_matches_serial_and_reuses_cac
     assert fingerprint_summary["hits"] == 8
     assert fingerprint_summary["misses"] == 4
     assert fingerprint_summary["entries"] == 4
+
+    with pytest.raises(ValueError, match="max_workers"):
+        build_artifact_manifest(artifacts, root=tmp_path, max_workers=True)  # type: ignore[arg-type]
 
 
 def test_product_trace_action_execution_summary_counts_results():

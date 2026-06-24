@@ -525,6 +525,8 @@ def _fingerprint_artifacts(
 
 
 def _normalize_max_workers(max_workers: int) -> int:
+    if isinstance(max_workers, bool):
+        raise ValueError("max_workers must be an integer, not bool.")
     workers = int(max_workers)
     if workers < 1:
         raise ValueError("max_workers must be at least 1.")
@@ -576,10 +578,17 @@ def json_cache_key(path: str | Path) -> str | None:
     except OSError:
         return None
     try:
+        sample_digest = _file_cache_sample_digest(candidate, size_bytes=stat.st_size)
+    except OSError:
+        return None
+    try:
         resolved = candidate.resolve(strict=False)
     except OSError:
         resolved = candidate.absolute()
-    return f"{resolved}:{stat.st_mtime_ns}:{stat.st_size}:{getattr(stat, 'st_ino', 0)}"
+    return (
+        f"{resolved}:{stat.st_size}:{stat.st_mtime_ns}:"
+        f"{getattr(stat, 'st_ctime_ns', 0)}:{getattr(stat, 'st_ino', 0)}:{sample_digest}"
+    )
 
 
 def new_json_cache_stats() -> dict[str, int]:
