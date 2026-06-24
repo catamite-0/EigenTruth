@@ -3,6 +3,7 @@
 纯函数测试，CPU 可运行，无需模型或网络。
 """
 
+import hashlib
 import json
 import math
 
@@ -617,6 +618,43 @@ class TestScoreDump:
                 "n_false": 3,
             })
 
+    def test_jsonl_selected_view_primes_records_fingerprint_cache(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        dump = ScoreDump.from_mapping({
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        manifest = write_score_dump_jsonl(dump, manifest_path)
+        records_path = manifest.records_file(manifest_path)
+        expected_records_sha = hashlib.sha256(records_path.read_bytes()).hexdigest()
+        cache = {}
+
+        load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        sha_calls = []
+
+        def fake_sha256_file(path):
+            sha_calls.append(path)
+            return f"sha-for-{path.name}"
+
+        monkeypatch.setattr(score_dump_module, "_sha256_file", fake_sha256_file)
+
+        metadata = score_dump_file_metadata(manifest_path, cache=cache)
+        summary = score_dump_cache_summary(cache)
+
+        assert sha_calls == [manifest_path]
+        assert metadata["sha256"] == "sha-for-scores.manifest.json"
+        assert metadata["records"]["sha256"] == expected_records_sha
+        assert summary["fingerprint"]["hits"] == 1
+        assert summary["fingerprint"]["misses"] == 1
+        assert summary["fingerprint"]["writes"] == 2
+
     def test_jsonl_selected_view_cache_reuses_record_scans(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
             "config": {"model": "unit-model", "layer": -1},
@@ -687,7 +725,8 @@ class TestScoreDump:
         assert summary["jsonl_view"]["writes"] == 3
         assert summary["jsonl_summary"]["hits"] == 1
         assert summary["jsonl_summary"]["writes"] == 3
-        assert summary["fingerprint"]["misses"] == 2
+        assert summary["fingerprint"]["hits"] == 1
+        assert summary["fingerprint"]["misses"] == 1
         assert summary["fingerprint"]["writes"] == 2
         assert summary["cache_entries"] >= 5
         assert first_columns.scores == {"maha_last": (0.1, 0.9)}

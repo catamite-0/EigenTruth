@@ -454,7 +454,9 @@ counters for custom post-processing scripts. Score-dump metadata
 fingerprints both the manifest and the records file. New JSONL manifests include
 label counts so summary-only metadata can avoid reading the records sidecar; older
 manifests still use a cached label-only record scan instead of materializing
-score columns.
+score columns. Selected JSONL scans also prime the run-local records fingerprint
+cache, so later metadata keeps full SHA-256 provenance without a second records
+pass.
 When `--artifact-manifest` is provided, the conformal report gains
 `artifact_manifest_summary` and `paths.artifact_manifest`; the manifest
 fingerprints the input score dump plus generated conformal, sweep, and

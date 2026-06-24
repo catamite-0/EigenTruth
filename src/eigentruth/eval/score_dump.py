@@ -504,6 +504,7 @@ def load_score_dump_columns(
             manifest,
             score_names=requested,
             allow_empty=allow_empty,
+            cache=cache,
         )
         _score_dump_view_cache_set(cache, cache_key, columns)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, columns.summary)
@@ -549,6 +550,7 @@ def load_score_dump_statement_scores(
             score_names=requested,
             allow_empty=allow_empty,
             require_statements=require_statements,
+            cache=cache,
         )
         _score_dump_view_cache_set(cache, cache_key, statement_scores)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, statement_scores.summary)
@@ -597,6 +599,7 @@ def load_score_dump_layer_scores(
             manifest,
             signals=selected,
             allow_empty=allow_empty,
+            cache=cache,
         )
         _score_dump_view_cache_set(cache, cache_key, layer_scores)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, layer_scores.summary)
@@ -1075,6 +1078,7 @@ def _load_score_dump_jsonl_columns(
     *,
     score_names: Sequence[str],
     allow_empty: bool,
+    cache: MutableMapping[str, Any] | None,
 ) -> ScoreDumpColumns:
     missing = [name for name in score_names if name not in manifest.score_names]
     if missing:
@@ -1087,6 +1091,7 @@ def _load_score_dump_jsonl_columns(
         manifest=manifest,
         score_names=score_names,
         sweep_score_names={},
+        cache=cache,
     ):
         labels.append(label)
         for name in score_names:
@@ -1111,6 +1116,7 @@ def _load_score_dump_jsonl_statement_scores(
     score_names: Sequence[str],
     allow_empty: bool,
     require_statements: bool,
+    cache: MutableMapping[str, Any] | None,
 ) -> ScoreDumpStatementScores:
     missing = [name for name in score_names if name not in manifest.score_names]
     if missing:
@@ -1126,6 +1132,7 @@ def _load_score_dump_jsonl_statement_scores(
         manifest=manifest,
         score_names=score_names,
         require_statements=require_statements,
+        cache=cache,
     ):
         labels.append(label)
         for name in score_names:
@@ -1158,6 +1165,7 @@ def _load_score_dump_jsonl_layer_scores(
     *,
     signals: set[str] | None,
     allow_empty: bool,
+    cache: MutableMapping[str, Any] | None,
 ) -> ScoreDumpLayerScores:
     primary_names = tuple(
         name for name in manifest.score_names
@@ -1182,6 +1190,7 @@ def _load_score_dump_jsonl_layer_scores(
         manifest=manifest,
         score_names=primary_names,
         sweep_score_names=sweep_names,
+        cache=cache,
     ):
         labels.append(label)
         for name in primary_names:
@@ -1533,6 +1542,7 @@ def _iter_score_dump_jsonl_selected_records(
     manifest: ScoreDumpJsonlManifest,
     score_names: Sequence[str],
     sweep_score_names: Mapping[str, Sequence[str]],
+    cache: MutableMapping[str, Any] | None,
 ) -> Iterator[tuple[int, dict[str, float], dict[str, dict[str, float]]]]:
     records_file = manifest.records_file(manifest_path)
     selected_score_names = tuple(str(name) for name in score_names)
@@ -1542,8 +1552,10 @@ def _iter_score_dump_jsonl_selected_records(
         if names
     }
     count = 0
-    with records_file.open(encoding="utf-8") as stream:
+    stream_fingerprint = _start_stream_fingerprint_cache_write(records_file, cache)
+    with records_file.open("rb") as stream:
         for line_number, line in enumerate(stream, start=1):
+            _update_stream_fingerprint(stream_fingerprint, line)
             if not line.strip():
                 continue
             try:
@@ -1570,6 +1582,7 @@ def _iter_score_dump_jsonl_selected_records(
             f"score dump JSONL record count does not match manifest "
             f"({count} records vs {manifest.n_total} expected)."
         )
+    _finish_stream_fingerprint_cache_write(records_file, cache, stream_fingerprint)
 
 
 def _iter_score_dump_jsonl_selected_statement_records(
@@ -1578,13 +1591,16 @@ def _iter_score_dump_jsonl_selected_statement_records(
     manifest: ScoreDumpJsonlManifest,
     score_names: Sequence[str],
     require_statements: bool,
+    cache: MutableMapping[str, Any] | None,
 ) -> Iterator[tuple[int, dict[str, float], Mapping[str, Any] | None]]:
     records_file = manifest.records_file(manifest_path)
     selected_score_names = tuple(str(name) for name in score_names)
     count = 0
     require_statement = require_statements or manifest.has_statements
-    with records_file.open(encoding="utf-8") as stream:
+    stream_fingerprint = _start_stream_fingerprint_cache_write(records_file, cache)
+    with records_file.open("rb") as stream:
         for line_number, line in enumerate(stream, start=1):
+            _update_stream_fingerprint(stream_fingerprint, line)
             if not line.strip():
                 continue
             try:
@@ -1611,6 +1627,7 @@ def _iter_score_dump_jsonl_selected_statement_records(
             f"score dump JSONL record count does not match manifest "
             f"({count} records vs {manifest.n_total} expected)."
         )
+    _finish_stream_fingerprint_cache_write(records_file, cache, stream_fingerprint)
 
 
 def _coerce_name_tuple(value: Any, *, name: str) -> tuple[str, ...]:
@@ -1945,7 +1962,7 @@ def _cached_file_fingerprint(
     stat = path.stat()
     if cache is None:
         return {"sha256": _sha256_file(path), "size_bytes": stat.st_size}
-    cache_key = f"{path.resolve(strict=False)}:{stat.st_size}:{stat.st_mtime_ns}"
+    cache_key = _file_fingerprint_cache_key(path, stat)
     cached = cache.get(cache_key)
     if cached is not None:
         _score_dump_cache_event(cache, "fingerprint", "hits")
@@ -1955,6 +1972,51 @@ def _cached_file_fingerprint(
     cache[cache_key] = dict(fingerprint)
     _score_dump_cache_event(cache, "fingerprint", "writes")
     return fingerprint
+
+
+def _file_fingerprint_cache_key(path: Path, stat: Any) -> str:
+    return f"{path.resolve(strict=False)}:{stat.st_size}:{stat.st_mtime_ns}"
+
+
+def _start_stream_fingerprint_cache_write(
+    path: Path,
+    cache: MutableMapping[str, Any] | None,
+) -> tuple[Any, str, int, int] | None:
+    if cache is None:
+        return None
+    stat = path.stat()
+    cache_key = _file_fingerprint_cache_key(path, stat)
+    if cache_key in cache:
+        return None
+    return hashlib.sha256(), cache_key, stat.st_size, stat.st_mtime_ns
+
+
+def _update_stream_fingerprint(
+    stream_fingerprint: tuple[Any, str, int, int] | None,
+    data: bytes,
+) -> None:
+    if stream_fingerprint is not None:
+        stream_fingerprint[0].update(data)
+
+
+def _finish_stream_fingerprint_cache_write(
+    path: Path,
+    cache: MutableMapping[str, Any] | None,
+    stream_fingerprint: tuple[Any, str, int, int] | None,
+) -> None:
+    if cache is None or stream_fingerprint is None:
+        return
+    digest, cache_key, size_bytes, mtime_ns = stream_fingerprint
+    try:
+        stat = path.stat()
+    except OSError:
+        return
+    if stat.st_size != size_bytes or stat.st_mtime_ns != mtime_ns:
+        return
+    if cache_key in cache:
+        return
+    cache[cache_key] = {"sha256": digest.hexdigest(), "size_bytes": size_bytes}
+    _score_dump_cache_event(cache, "fingerprint", "writes")
 
 
 def _sha256_file(path: Path) -> str:
