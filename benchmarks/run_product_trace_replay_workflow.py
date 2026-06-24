@@ -25,6 +25,7 @@ from benchmarks.build_product_trace_corpus import (  # noqa: E402
     ProductTraceCorpusConfig,
     build_product_trace_corpus,
 )
+from benchmarks.compare_product_runtime_baselines import compare_product_runtime_baselines  # noqa: E402
 from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
@@ -59,6 +60,23 @@ class ProductTraceReplayWorkflowConfig:
     runtime_policy_path: str | Path | None = None
     promotion_contract_path: str | Path | None = None
     runtime_recommended_policy_path: str | Path | None = None
+    runtime_drift_baseline_path: str | Path | None = None
+    runtime_drift_baseline_key: str | None = None
+    runtime_drift_baseline_name: str | None = None
+    runtime_drift_baseline_version: str | None = None
+    runtime_drift_budget_policy_path: str | Path | None = None
+    runtime_drift_budget_policy_key: str | None = None
+    runtime_drift_report_path: str | Path | None = None
+    runtime_drift_artifact_manifest_path: str | Path | None = None
+    max_runtime_drift_total_seconds_mean_ratio: float | None = None
+    max_runtime_drift_total_seconds_p95_ratio: float | None = None
+    max_runtime_drift_mean_route_duration_ratio: float | None = None
+    max_runtime_drift_p95_route_duration_ratio: float | None = None
+    max_runtime_drift_mean_attempted_route_count_delta: float | None = None
+    max_runtime_drift_retrieval_use_rate_delta: float | None = None
+    max_runtime_drift_cache_hit_rate_drop: float | None = None
+    max_runtime_drift_verification_skip_rate_drop: float | None = None
+    min_runtime_drift_current_trace_count: int | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -95,6 +113,33 @@ class ProductTraceReplayWorkflowConfig:
             raise ValueError("selector candidate names must be unique.")
         if self.runtime_policy_path is not None and self.promotion_contract_path is not None:
             raise ValueError("runtime_policy_path and promotion_contract_path are mutually exclusive.")
+        drift_baseline_selected = any(
+            value is not None
+            for value in (
+                self.runtime_drift_baseline_path,
+                self.runtime_drift_baseline_key,
+                self.runtime_drift_baseline_name,
+                self.runtime_drift_baseline_version,
+            )
+        )
+        drift_gate_selected = any(
+            value is not None
+            for value in (
+                self.runtime_drift_budget_policy_path,
+                self.runtime_drift_budget_policy_key,
+                self.max_runtime_drift_total_seconds_mean_ratio,
+                self.max_runtime_drift_total_seconds_p95_ratio,
+                self.max_runtime_drift_mean_route_duration_ratio,
+                self.max_runtime_drift_p95_route_duration_ratio,
+                self.max_runtime_drift_mean_attempted_route_count_delta,
+                self.max_runtime_drift_retrieval_use_rate_delta,
+                self.max_runtime_drift_cache_hit_rate_drop,
+                self.max_runtime_drift_verification_skip_rate_drop,
+                self.min_runtime_drift_current_trace_count,
+            )
+        )
+        if drift_gate_selected and not drift_baseline_selected:
+            raise ValueError("runtime drift gates require a runtime_drift_baseline path or registry record.")
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
         limit = None if self.limit is None else int(self.limit)
@@ -116,6 +161,15 @@ class ProductTraceReplayWorkflowConfig:
                 "runtime_recommended_policy_path",
                 Path(self.runtime_recommended_policy_path),
             )
+        for field_name in (
+            "runtime_drift_baseline_path",
+            "runtime_drift_budget_policy_path",
+            "runtime_drift_report_path",
+            "runtime_drift_artifact_manifest_path",
+        ):
+            value = getattr(self, field_name)
+            if value is not None:
+                object.__setattr__(self, field_name, Path(value))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.verification_report_path is not None:
@@ -207,6 +261,20 @@ class ProductTraceReplayWorkflowConfig:
             return Path(self.verification_report_path)
         return Path(self.output_dir) / "manifest-verification.json"
 
+    @property
+    def resolved_runtime_drift_report_path(self) -> Path:
+        """Return the child product runtime drift report path."""
+        if self.runtime_drift_report_path is not None:
+            return Path(self.runtime_drift_report_path)
+        return Path(self.output_dir) / "runtime-drift" / "product-runtime-drift.json"
+
+    @property
+    def resolved_runtime_drift_artifact_manifest_path(self) -> Path:
+        """Return the child product runtime drift artifact manifest path."""
+        if self.runtime_drift_artifact_manifest_path is not None:
+            return Path(self.runtime_drift_artifact_manifest_path)
+        return Path(self.output_dir) / "runtime-drift" / "artifact-manifest.json"
+
 
 def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     """Run corpus build, runtime baseline, and selector replay in one workflow."""
@@ -235,14 +303,24 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
             ),
         )
-        status = _workflow_status(corpus, runtime_baseline, selector_replay)
+        runtime_drift = _timed_phase(
+            "runtime_drift",
+            phase_timings,
+            lambda: _run_runtime_drift_gate(config, runtime_baseline),
+        )
+        status = _workflow_status(corpus, runtime_baseline, selector_replay, runtime_drift)
         report = {
             "schema_version": 1,
             "workflow": "product_trace_replay_workflow",
             "status": status,
             "decision": {
                 "status": status,
-                "blocking_reasons": _blocking_reasons(corpus, runtime_baseline, selector_replay),
+                "blocking_reasons": _blocking_reasons(
+                    corpus,
+                    runtime_baseline,
+                    selector_replay,
+                    runtime_drift,
+                ),
                 "recommended_selector_candidate": _nested(
                     selector_replay,
                     "decision",
@@ -262,6 +340,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             "corpus": _corpus_summary(corpus),
             "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
             "selector_replay": _selector_replay_summary(selector_replay),
+            "runtime_drift": _runtime_drift_summary(runtime_drift),
             "cache_summary": _workflow_cache_summary(corpus, runtime_baseline, selector_replay),
             "optimization": _workflow_optimization_summary(runtime_baseline),
             "timing": _workflow_timing(phase_timings, started_at=workflow_started),
@@ -278,6 +357,8 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
                 "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
                 "runtime_recommended_policy": _nested(runtime_baseline, "paths", "recommended_policy"),
+                "runtime_drift_report": _nested(runtime_drift, "paths", "report"),
+                "runtime_drift_manifest": _nested(runtime_drift, "paths", "artifact_manifest"),
                 "selector_replay_report": _nested(selector_replay, "paths", "report"),
                 "selector_replay_manifest": _nested(selector_replay, "paths", "artifact_manifest"),
                 "manifest_verification": (
@@ -303,6 +384,31 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                     if config.runtime_recommended_policy_path is None
                     else str(config.runtime_recommended_policy_path)
                 ),
+                "runtime_drift_baseline": (
+                    None
+                    if config.runtime_drift_baseline_path is None
+                    else str(config.runtime_drift_baseline_path)
+                ),
+                "runtime_drift_baseline_key": config.runtime_drift_baseline_key,
+                "runtime_drift_baseline_name": config.runtime_drift_baseline_name,
+                "runtime_drift_baseline_version": config.runtime_drift_baseline_version,
+                "runtime_drift_budget_policy": (
+                    None
+                    if config.runtime_drift_budget_policy_path is None
+                    else str(config.runtime_drift_budget_policy_path)
+                ),
+                "runtime_drift_budget_policy_key": config.runtime_drift_budget_policy_key,
+                "runtime_drift_report": (
+                    None
+                    if not _runtime_drift_configured(config)
+                    else str(config.resolved_runtime_drift_report_path)
+                ),
+                "runtime_drift_artifact_manifest": (
+                    None
+                    if not _runtime_drift_configured(config)
+                    else str(config.resolved_runtime_drift_artifact_manifest_path)
+                ),
+                "runtime_drift_gates": _runtime_drift_gate_config(config),
                 "redact_text": config.redact_text,
                 "require_runtime_trace": config.require_runtime_trace,
                 "strict": config.strict,
@@ -710,6 +816,63 @@ def _run_selector_replay(
     )
 
 
+def _run_runtime_drift_gate(
+    config: ProductTraceReplayWorkflowConfig,
+    runtime_baseline: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not _runtime_drift_configured(config):
+        return {
+            "schema_version": 1,
+            "workflow": "product_runtime_drift_comparison",
+            "status": "not_configured",
+            "decision": {
+                "status": "not_configured",
+                "blocking_reasons": (),
+            },
+            "summary": {
+                "gate_enabled": False,
+                "drift_gate_enabled": False,
+                "runtime_budget_policy_gate_enabled": False,
+                "blocked_metric_count": 0,
+            },
+            "paths": {
+                "report": None,
+                "artifact_manifest": None,
+            },
+        }
+    current_path = _nested(runtime_baseline, "paths", "report")
+    if current_path is None:
+        return _skipped_child_report(
+            "product_runtime_drift_comparison",
+            reason="runtime baseline report is unavailable",
+        )
+    child_name = None
+    child_version = None
+    if config.registry_path is not None and config.name and config.version:
+        child_name = f"{config.name}-runtime-drift"
+        child_version = str(config.version)
+    return compare_product_runtime_baselines(
+        current_path=Path(str(current_path)),
+        baseline_path=config.runtime_drift_baseline_path,
+        registry_path=config.registry_path,
+        baseline_key=config.runtime_drift_baseline_key,
+        baseline_name=config.runtime_drift_baseline_name,
+        baseline_version=config.runtime_drift_baseline_version,
+        runtime_budget_policy_path=config.runtime_drift_budget_policy_path,
+        runtime_budget_policy_key=config.runtime_drift_budget_policy_key,
+        report_path=config.resolved_runtime_drift_report_path,
+        artifact_manifest_path=config.resolved_runtime_drift_artifact_manifest_path,
+        name=child_name,
+        version=child_version,
+        metadata={
+            "source": "run_product_trace_replay_workflow",
+            **dict(config.metadata),
+        },
+        compact_json=config.compact_json,
+        **_runtime_drift_gate_config(config),
+    )
+
+
 def _skipped_child_report(workflow: str, *, reason: str) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -726,11 +889,13 @@ def _workflow_status(
     corpus: Mapping[str, Any],
     runtime_baseline: Mapping[str, Any],
     selector_replay: Mapping[str, Any],
+    runtime_drift: Mapping[str, Any],
 ) -> str:
     child_statuses = (
         corpus.get("status"),
         runtime_baseline.get("status"),
         selector_replay.get("status"),
+        runtime_drift.get("status"),
     )
     if "blocked" in child_statuses:
         return "blocked"
@@ -745,12 +910,14 @@ def _blocking_reasons(
     corpus: Mapping[str, Any],
     runtime_baseline: Mapping[str, Any],
     selector_replay: Mapping[str, Any],
+    runtime_drift: Mapping[str, Any],
 ) -> tuple[str, ...]:
     reasons = []
     for child_name, child in (
         ("corpus", corpus),
         ("runtime_baseline", runtime_baseline),
         ("selector_replay", selector_replay),
+        ("runtime_drift", runtime_drift),
     ):
         if child.get("status") != "blocked":
             continue
@@ -760,6 +927,43 @@ def _blocking_reasons(
             continue
         reasons.extend(f"{child_name}: {reason}" for reason in child_reasons)
     return tuple(str(reason) for reason in reasons)
+
+
+def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
+    return any(
+        value is not None
+        for value in (
+            config.runtime_drift_baseline_path,
+            config.runtime_drift_baseline_key,
+            config.runtime_drift_baseline_name,
+            config.runtime_drift_baseline_version,
+            config.runtime_drift_budget_policy_path,
+            config.runtime_drift_budget_policy_key,
+            config.max_runtime_drift_total_seconds_mean_ratio,
+            config.max_runtime_drift_total_seconds_p95_ratio,
+            config.max_runtime_drift_mean_route_duration_ratio,
+            config.max_runtime_drift_p95_route_duration_ratio,
+            config.max_runtime_drift_mean_attempted_route_count_delta,
+            config.max_runtime_drift_retrieval_use_rate_delta,
+            config.max_runtime_drift_cache_hit_rate_drop,
+            config.max_runtime_drift_verification_skip_rate_drop,
+            config.min_runtime_drift_current_trace_count,
+        )
+    )
+
+
+def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
+    return {
+        "max_total_seconds_mean_ratio": config.max_runtime_drift_total_seconds_mean_ratio,
+        "max_total_seconds_p95_ratio": config.max_runtime_drift_total_seconds_p95_ratio,
+        "max_mean_route_duration_ratio": config.max_runtime_drift_mean_route_duration_ratio,
+        "max_p95_route_duration_ratio": config.max_runtime_drift_p95_route_duration_ratio,
+        "max_mean_attempted_route_count_delta": config.max_runtime_drift_mean_attempted_route_count_delta,
+        "max_retrieval_use_rate_delta": config.max_runtime_drift_retrieval_use_rate_delta,
+        "max_cache_hit_rate_drop": config.max_runtime_drift_cache_hit_rate_drop,
+        "max_verification_skip_rate_drop": config.max_runtime_drift_verification_skip_rate_drop,
+        "min_current_trace_count": config.min_runtime_drift_current_trace_count,
+    }
 
 
 def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
@@ -817,6 +1021,28 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "recommended_policy_threshold_count": recommended_policy.get("threshold_count"),
         "optimization_status": optimization.get("status"),
         "optimization_recommendation_count": len(recommendations),
+    }
+
+
+def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(runtime_drift.get("summary"))
+    budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
+    return {
+        "status": runtime_drift.get("status"),
+        "gate_enabled": summary.get("gate_enabled"),
+        "drift_gate_enabled": summary.get("drift_gate_enabled"),
+        "runtime_budget_policy_gate_enabled": summary.get("runtime_budget_policy_gate_enabled"),
+        "runtime_budget_policy_passed": summary.get("runtime_budget_policy_passed"),
+        "runtime_budget_policy_failed_count": summary.get("runtime_budget_policy_failed_count"),
+        "compared_metric_count": summary.get("compared_metric_count"),
+        "blocked_metric_count": summary.get("blocked_metric_count"),
+        "observed_metric_count": summary.get("observed_metric_count"),
+        "baseline_path": _nested(runtime_drift, "baseline", "path"),
+        "current_path": _nested(runtime_drift, "current", "path"),
+        "report_path": _nested(runtime_drift, "paths", "report"),
+        "artifact_manifest_path": _nested(runtime_drift, "paths", "artifact_manifest"),
+        "runtime_budget_policy_path": _nested(runtime_drift, "paths", "runtime_budget_policy"),
+        "runtime_budget_policy_check_count": budget_gate.get("check_count"),
     }
 
 
@@ -957,6 +1183,8 @@ def _artifact_paths(
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "runtime_trace_records_cache": _nested(report, "paths", "runtime_trace_records_cache"),
         "runtime_recommended_policy": _nested(report, "paths", "runtime_recommended_policy"),
+        "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
+        "runtime_drift_manifest": _nested(report, "paths", "runtime_drift_manifest"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),
         "selector_replay_manifest": _nested(report, "paths", "selector_replay_manifest"),
         "selector_trace_inputs": _nested(report, "paths", "selector_trace_inputs"),
@@ -1002,6 +1230,13 @@ def _write_artifact_manifest(
                 "timing",
                 "phases",
                 "selector_replay",
+                "seconds",
+            ),
+            "workflow_runtime_drift_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "runtime_drift",
                 "seconds",
             ),
             "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
@@ -1063,6 +1298,31 @@ def _write_artifact_manifest(
                 "decision",
                 "recommended_selector_candidate",
             ),
+            "runtime_drift_status": _nested(report, "runtime_drift", "status"),
+            "runtime_drift_gate_enabled": _nested(report, "runtime_drift", "gate_enabled"),
+            "runtime_drift_drift_gate_enabled": _nested(report, "runtime_drift", "drift_gate_enabled"),
+            "runtime_drift_budget_policy_gate_enabled": _nested(
+                report,
+                "runtime_drift",
+                "runtime_budget_policy_gate_enabled",
+            ),
+            "runtime_drift_budget_policy_passed": _nested(
+                report,
+                "runtime_drift",
+                "runtime_budget_policy_passed",
+            ),
+            "runtime_drift_compared_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "compared_metric_count",
+            ),
+            "runtime_drift_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "blocked_metric_count",
+            ),
+            "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
+            "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
             **dict(config.metadata),
         },
@@ -1110,6 +1370,13 @@ def _record_registry(
                 "timing",
                 "phases",
                 "selector_replay",
+                "seconds",
+            ),
+            "workflow_runtime_drift_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "runtime_drift",
                 "seconds",
             ),
             "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
@@ -1176,6 +1443,31 @@ def _record_registry(
                 "decision",
                 "recommended_selector_policy_path",
             ),
+            "runtime_drift_status": _nested(report, "runtime_drift", "status"),
+            "runtime_drift_gate_enabled": _nested(report, "runtime_drift", "gate_enabled"),
+            "runtime_drift_drift_gate_enabled": _nested(report, "runtime_drift", "drift_gate_enabled"),
+            "runtime_drift_budget_policy_gate_enabled": _nested(
+                report,
+                "runtime_drift",
+                "runtime_budget_policy_gate_enabled",
+            ),
+            "runtime_drift_budget_policy_passed": _nested(
+                report,
+                "runtime_drift",
+                "runtime_budget_policy_passed",
+            ),
+            "runtime_drift_compared_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "compared_metric_count",
+            ),
+            "runtime_drift_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "blocked_metric_count",
+            ),
+            "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
+            "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "manifest_verified": verification_payload.get("passed"),
             "manifest_verification_report": verification_report,
             "manifest_verification_checked": verification_payload.get("checked"),
@@ -1444,6 +1736,35 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
             if args.save_runtime_recommended_policy
             else None
         ),
+        runtime_drift_baseline_path=(
+            Path(args.runtime_drift_baseline) if args.runtime_drift_baseline else None
+        ),
+        runtime_drift_baseline_key=args.runtime_drift_baseline_key,
+        runtime_drift_baseline_name=args.runtime_drift_baseline_name,
+        runtime_drift_baseline_version=args.runtime_drift_baseline_version,
+        runtime_drift_budget_policy_path=(
+            Path(args.runtime_drift_budget_policy) if args.runtime_drift_budget_policy else None
+        ),
+        runtime_drift_budget_policy_key=args.runtime_drift_budget_policy_key,
+        runtime_drift_report_path=(
+            Path(args.runtime_drift_report) if args.runtime_drift_report else None
+        ),
+        runtime_drift_artifact_manifest_path=(
+            Path(args.runtime_drift_artifact_manifest)
+            if args.runtime_drift_artifact_manifest
+            else None
+        ),
+        max_runtime_drift_total_seconds_mean_ratio=args.max_runtime_drift_total_seconds_mean_ratio,
+        max_runtime_drift_total_seconds_p95_ratio=args.max_runtime_drift_total_seconds_p95_ratio,
+        max_runtime_drift_mean_route_duration_ratio=args.max_runtime_drift_mean_route_duration_ratio,
+        max_runtime_drift_p95_route_duration_ratio=args.max_runtime_drift_p95_route_duration_ratio,
+        max_runtime_drift_mean_attempted_route_count_delta=(
+            args.max_runtime_drift_mean_attempted_route_count_delta
+        ),
+        max_runtime_drift_retrieval_use_rate_delta=args.max_runtime_drift_retrieval_use_rate_delta,
+        max_runtime_drift_cache_hit_rate_drop=args.max_runtime_drift_cache_hit_rate_drop,
+        max_runtime_drift_verification_skip_rate_drop=args.max_runtime_drift_verification_skip_rate_drop,
+        min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -1497,6 +1818,31 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--promotion-contract", default=None, help="ProductPromotionContract/release report JSON path")
     parser.add_argument("--save-runtime-recommended-policy", default=None,
                         help="write the runtime baseline optimization candidate ProductRuntimeBudgetPolicy JSON")
+    parser.add_argument("--runtime-drift-baseline", default=None,
+                        help="prior product runtime baseline report JSON for workflow drift gate")
+    parser.add_argument("--runtime-drift-baseline-key", default=None,
+                        help="product_runtime_baseline registry key for workflow drift gate")
+    parser.add_argument("--runtime-drift-baseline-name", default=None,
+                        help="product runtime baseline registry record name for workflow drift gate")
+    parser.add_argument("--runtime-drift-baseline-version", default=None,
+                        help="product runtime baseline registry record version for workflow drift gate")
+    parser.add_argument("--runtime-drift-budget-policy", default=None,
+                        help="ProductRuntimeBudgetPolicy JSON for aggregate workflow drift gate")
+    parser.add_argument("--runtime-drift-budget-policy-key", default=None,
+                        help="product_runtime_budget_policy registry key for aggregate workflow drift gate")
+    parser.add_argument("--runtime-drift-report", default=None,
+                        help="optional child product runtime drift report path")
+    parser.add_argument("--runtime-drift-artifact-manifest", default=None,
+                        help="optional child product runtime drift artifact manifest path")
+    parser.add_argument("--max-runtime-drift-total-seconds-mean-ratio", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-total-seconds-p95-ratio", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-mean-route-duration-ratio", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-p95-route-duration-ratio", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-mean-attempted-route-count-delta", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-retrieval-use-rate-delta", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-cache-hit-rate-drop", type=float, default=None)
+    parser.add_argument("--max-runtime-drift-verification-skip-rate-drop", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)

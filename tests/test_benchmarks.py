@@ -12265,6 +12265,114 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert verification_record.metadata["passed"] is True
 
 
+def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    registry_module = importlib.import_module("eigentruth.registry")
+    output_dir = tmp_path / "workflow"
+    registry_path = tmp_path / "registry.json"
+    prior_baseline_path = tmp_path / "prior-product-runtime-baseline.json"
+    drift_policy_path = tmp_path / "runtime-drift-policy.json"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    trace_payloads = (
+        {
+            "request_id": "latency-low-supported",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private low-risk fact.", "metadata": {}}],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        },
+        {
+            "request_id": "balanced-medium-retrieve",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.7,
+                "reason": "unsupported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
+        },
+    )
+    trace_paths = []
+    for index, payload in enumerate(trace_payloads):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(json.dumps(payload), encoding="utf-8")
+        trace_paths.append(trace_path)
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=trace_paths,
+            report_path=prior_baseline_path,
+        )
+    )
+    drift_policy_path.write_text(
+        json.dumps({
+            "max_total_seconds": 0.5,
+            "metadata": {"source": "unit-test-runtime-drift"},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(
+                tuning_module.RuntimeProfileSelectorCandidate(
+                    name="default",
+                    policy={},
+                ),
+            ),
+            runtime_drift_baseline_path=prior_baseline_path,
+            runtime_drift_budget_policy_path=drift_policy_path,
+            max_runtime_drift_total_seconds_p95_ratio=1.2,
+            min_runtime_drift_current_trace_count=2,
+            registry_path=registry_path,
+            name="trace-replay-with-drift",
+            version="0.1",
+            require_runtime_trace=True,
+        )
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:trace-replay-with-drift:0.1")
+    drift_record = registry.get("product_runtime_drift_report:trace-replay-with-drift-runtime-drift:0.1")
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    drift_report = json.loads(Path(payload["paths"]["runtime_drift_report"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "observed"
+    assert payload["runtime_drift"]["status"] == "promote"
+    assert payload["runtime_drift"]["gate_enabled"] is True
+    assert payload["runtime_drift"]["drift_gate_enabled"] is True
+    assert payload["runtime_drift"]["runtime_budget_policy_gate_enabled"] is True
+    assert payload["runtime_drift"]["runtime_budget_policy_passed"] is True
+    assert payload["runtime_drift"]["blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["runtime_budget_policy_path"] == str(drift_policy_path)
+    assert payload["paths"]["runtime_drift_manifest"] is not None
+    assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
+    assert payload["config"]["runtime_drift_budget_policy"] == str(drift_policy_path)
+    assert payload["config"]["runtime_drift_gates"]["max_total_seconds_p95_ratio"] == pytest.approx(1.2)
+    assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
+        "source": "unit-test-runtime-drift"
+    }
+    assert "runtime_drift_report" in manifest["artifacts"]
+    assert "runtime_drift_manifest" in manifest["artifacts"]
+    assert manifest["metadata"]["runtime_drift_status"] == "promote"
+    assert manifest["metadata"]["runtime_drift_budget_policy_passed"] is True
+    assert record.metadata["runtime_drift_status"] == "promote"
+    assert record.metadata["runtime_drift_budget_policy_passed"] is True
+    assert drift_record.path == payload["paths"]["runtime_drift_report"]
+    assert drift_record.metadata["workflow"] == "compare_product_runtime_baselines"
+    assert drift_record.metadata["runtime_budget_policy_passed"] is True
+
+
 def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     output_dir = tmp_path / "workflow"

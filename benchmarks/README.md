@@ -2490,7 +2490,9 @@ recursive top-level manifest over all child reports, records phase timing/cache
 summaries for local performance tuning, lifts the runtime baseline
 `optimization` status/recommendations/policy hints into the top-level workflow
 report and registry metadata, can save the runtime baseline's recommended
-`ProductRuntimeBudgetPolicy` artifact for later gates, and registers one
+`ProductRuntimeBudgetPolicy` artifact for later gates, can run the current
+runtime baseline through a product-runtime drift/policy gate against a prior
+baseline, and registers one
 workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
@@ -2500,6 +2502,9 @@ to the workflow report. Add `--fingerprint-cache` when repeating local checks,
 `--runtime-trace-records-cache-json` when sweeping runtime budget gates,
 `--save-runtime-recommended-policy` when the workflow should materialize the
 observed baseline's candidate budget thresholds, and
+`--runtime-drift-baseline` plus optional `--runtime-drift-budget-policy` when
+the workflow should immediately validate the current runtime baseline against
+the previous promoted baseline/policy gate. Add
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
@@ -2521,6 +2526,10 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json \
   --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
   --save-runtime-recommended-policy artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/recommended-policy.json \
+  --runtime-drift-baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
+  --runtime-drift-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
+  --max-runtime-drift-total-seconds-p95-ratio 1.6 \
+  --min-runtime-drift-current-trace-count 12 \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked
 ```
