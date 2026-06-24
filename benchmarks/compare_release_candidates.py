@@ -483,6 +483,8 @@ def _release_candidate(
             "best_quality_signal": readiness_row.get("best_quality_signal"),
             "quality_signals": readiness_row.get("quality_signals"),
             "truth_proj_auroc": readiness_row.get("truth_proj_auroc"),
+            "covariance_tradeoff": readiness_row.get("covariance_tradeoff"),
+            "covariance_tradeoff_gate": readiness_row.get("covariance_tradeoff_gate"),
         },
         "runtime_cost": {
             "uncached_forward_cost_seconds": readiness_row.get("uncached_forward_cost_seconds"),

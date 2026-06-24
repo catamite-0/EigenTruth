@@ -461,6 +461,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     runtime = dict(candidate.get("runtime") or {})
     quality = dict(candidate.get("quality") or {})
     best_quality = dict(quality.get("best_quality_signal") or {})
+    readiness_covariance_gate = dict(quality.get("covariance_tradeoff_gate") or {})
     runtime_cost = dict(candidate.get("runtime_cost") or {})
     performance_evidence_bundle = dict(candidate.get("performance_evidence_bundle") or {})
     performance_evidence_recommendation = dict(
@@ -471,6 +472,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     performance_score_dump_cache_totals = dict(performance_score_dump_cache.get("totals") or {})
     performance_jsonl_view_cache = dict(performance_score_dump_cache_totals.get("jsonl_view") or {})
     performance_gate = dict(comparison.get("performance_baseline_gate") or {})
+    performance_covariance_gate = dict(performance_gate.get("covariance_tradeoff_gate") or {})
+    if not performance_covariance_gate:
+        performance_covariance_gate = dict(
+            dict(performance_gate.get("gate") or {}).get("covariance_tradeoff") or {}
+        )
     performance_trend_gate = dict(performance_gate.get("performance_trend_gate") or {})
     performance_trend_metrics = dict(performance_trend_gate.get("metrics") or {})
     performance_uncached_trend = dict(performance_trend_metrics.get("uncached_total_seconds") or {})
@@ -519,6 +525,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_layer": runtime.get("layer"),
         "recommended_batch_size": runtime.get("batch_size"),
         "recommended_hidden_state_capture": runtime.get("hidden_state_capture"),
+        "recommended_covariance_mode": runtime.get("covariance_mode"),
+        "recommended_covariance_low_rank": runtime.get("covariance_low_rank"),
         "recommended_max_batch_tokens": runtime.get("max_batch_tokens"),
         "recommended_prefix_kv_cache": runtime.get("prefix_kv_cache"),
         "recommended_max_workers": runtime.get("max_workers"),
@@ -559,6 +567,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline": (
             performance_cache_hit_rate_trend.get("observed_drop")
+        ),
+        "max_covariance_maha_last_auroc_drop": config.get("max_covariance_maha_last_auroc_drop"),
+        "readiness_covariance_tradeoff_gate_passed": readiness_covariance_gate.get("passed"),
+        "readiness_covariance_tradeoff_status": readiness_covariance_gate.get("status"),
+        "readiness_covariance_selected_mode": readiness_covariance_gate.get("selected_covariance_mode"),
+        "readiness_covariance_selected_low_rank": (
+            readiness_covariance_gate.get("selected_covariance_low_rank")
+        ),
+        "readiness_covariance_maha_last_delta_vs_baseline": (
+            readiness_covariance_gate.get("selected_maha_last_delta_vs_baseline")
+        ),
+        "performance_covariance_tradeoff_gate_passed": performance_covariance_gate.get("passed"),
+        "performance_covariance_tradeoff_status": performance_covariance_gate.get("status"),
+        "performance_covariance_selected_mode": performance_covariance_gate.get(
+            "selected_covariance_mode"
+        ),
+        "performance_covariance_selected_low_rank": (
+            performance_covariance_gate.get("selected_covariance_low_rank")
+        ),
+        "performance_covariance_maha_last_delta_vs_baseline": (
+            performance_covariance_gate.get("selected_maha_last_delta_vs_baseline")
         ),
         "recommended_uncached_forward_cost_seconds": runtime_cost.get("uncached_forward_cost_seconds"),
         "recommended_uncached_forward_cost_source": runtime_cost.get("uncached_forward_cost_source"),

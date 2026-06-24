@@ -6546,6 +6546,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         inside_generation_ratio=0.45,
         inside_trigger_sample_ratio=0.3,
         inside_trigger_generation_ratio=0.35,
+        covariance_mode="low_rank",
+        covariance_low_rank=8,
+        covariance_baseline_maha_last_auroc=0.72,
+        covariance_selected_maha_last_auroc=0.70,
     )
     route_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -6604,10 +6608,33 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         name="qwen-performance",
         version="0.6",
         layer=-12,
+        covariance_mode="low_rank",
+        covariance_low_rank=8,
         best_quality_signal_name="truth_proj",
         best_quality_auroc=0.72,
         inside_trigger_budget_id="top_0p4",
         inside_trigger_budget_policy="cost_first",
+        covariance_tradeoff={
+            "status": "quality_preserved",
+            "baseline_cell": "full-cell",
+            "selected_cell": "low-rank-cell",
+            "candidates": [
+                {
+                    "cell_id": "full-cell",
+                    "covariance_mode": "full",
+                    "covariance_low_rank": 8,
+                    "maha_last_auroc": 0.72,
+                    "maha_last_delta_vs_baseline": 0.0,
+                },
+                {
+                    "cell_id": "low-rank-cell",
+                    "covariance_mode": "low_rank",
+                    "covariance_low_rank": 8,
+                    "maha_last_auroc": 0.70,
+                    "maha_last_delta_vs_baseline": -0.02,
+                },
+            ],
+        },
     )
     selector_replay_report = _write_selector_replay_report(
         tmp_path / "selector-replay",
@@ -6671,6 +6698,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             inside_trigger_budget_policy="cost_first",
             min_best_quality_auroc=0.70,
             max_uncached_forward_seconds=20.0,
+            max_covariance_maha_last_auroc_drop=0.05,
             max_inside_sample_count_ratio=0.6,
             max_inside_generation_seconds_ratio=0.8,
             min_selected=4,
@@ -6743,6 +6771,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline"] == (
         pytest.approx(0.3)
     )
+    assert manifest["metadata"]["recommended_covariance_mode"] == "low_rank"
+    assert manifest["metadata"]["recommended_covariance_low_rank"] == 8
+    assert manifest["metadata"]["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
+    assert manifest["metadata"]["readiness_covariance_tradeoff_gate_passed"] is True
+    assert manifest["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
+    assert manifest["metadata"]["readiness_covariance_selected_low_rank"] == 8
+    assert manifest["metadata"]["readiness_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
+    assert manifest["metadata"]["performance_covariance_tradeoff_gate_passed"] is True
+    assert manifest["metadata"]["performance_covariance_selected_mode"] == "low_rank"
+    assert manifest["metadata"]["performance_covariance_selected_low_rank"] == 8
+    assert manifest["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
     assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
@@ -6808,6 +6847,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["config"]["max_performance_uncached_total_seconds_ratio"] == pytest.approx(1.3)
     assert payload["config"]["max_performance_score_dump_cache_jsonl_view_hit_rate_drop"] == pytest.approx(0.4)
+    assert payload["config"]["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
     assert payload["config"]["selector_replay_report"] is None
     assert payload["config"]["product_runtime_drift_report"] is None
     assert payload["config"]["product_trace_replay_workflow"] is None
@@ -6827,6 +6867,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"]["max_inside_sample_count_ratio"] == pytest.approx(0.6)
     assert payload["release_candidate_comparison"]["config"]["max_inside_generation_seconds_ratio"] == pytest.approx(
         0.8
+    )
+    assert payload["release_candidate_comparison"]["config"]["max_covariance_maha_last_auroc_drop"] == pytest.approx(
+        0.05
     )
     assert payload["release_candidate_comparison"]["config"]["require_performance_score_dump_cache"] is True
     assert payload["release_candidate_comparison"]["config"][
@@ -6874,6 +6917,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata[
         "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline"
     ] == pytest.approx(0.3)
+    assert record.metadata["recommended_covariance_mode"] == "low_rank"
+    assert record.metadata["recommended_covariance_low_rank"] == 8
+    assert record.metadata["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
+    assert record.metadata["readiness_covariance_tradeoff_gate_passed"] is True
+    assert record.metadata["readiness_covariance_selected_mode"] == "low_rank"
+    assert record.metadata["readiness_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
+    assert record.metadata["performance_covariance_tradeoff_gate_passed"] is True
+    assert record.metadata["performance_covariance_selected_mode"] == "low_rank"
+    assert record.metadata["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
@@ -6996,6 +7048,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "max_mean_attempted_route_count": 1.1,
                 "max_retrieval_use_rate": 0.0,
                 "runtime_profile": "balanced",
+                "max_covariance_maha_last_auroc_drop": 0.05,
             },
             "decision": {
                 "status": "promote",
@@ -7006,6 +7059,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
             "release_candidate": {
                 "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
                 "runtime": {"layer": -12, "batch_size": 8},
+                "quality": {
+                    "covariance_tradeoff_gate": {
+                        "passed": True,
+                        "status": "quality_preserved",
+                        "selected_covariance_mode": "low_rank",
+                        "selected_maha_last_delta_vs_baseline": -0.01,
+                    },
+                },
                 "verifier_route": {"route": "structured_qa"},
                 "selector_replay": {
                     "recommended": {"candidate": "default", "status": "promote"},
@@ -7031,6 +7092,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "product_trace_replay_workflow_manifest": (
                         "artifacts/trace-replay-workflow/artifact-manifest.json"
                     ),
+                },
+            },
+            "performance_baseline_gate": {
+                "covariance_tradeoff_gate": {
+                    "passed": True,
+                    "status": "quality_preserved",
+                    "selected_covariance_mode": "low_rank",
+                    "selected_maha_last_delta_vs_baseline": -0.02,
                 },
             },
         }),
@@ -7063,6 +7132,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
+    assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
+    assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
     assert manifest["summary"]["artifact_count"] == 2
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
@@ -7074,6 +7146,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"
     )
+    assert record.metadata["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
+    assert record.metadata["readiness_covariance_tradeoff_gate_passed"] is True
+    assert record.metadata["performance_covariance_tradeoff_gate_passed"] is True
+    assert record.metadata["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
     assert record.metadata["release"] == "smollm2-v1.5"
     assert "\n  " not in contract_path.read_text(encoding="utf-8")
 
@@ -7499,6 +7575,8 @@ def _write_performance_baseline_record(
     layer,
     batch_size=1,
     hidden_state_capture="outputs",
+    covariance_mode=None,
+    covariance_low_rank=4,
     max_batch_tokens=0,
     prefix_kv_cache=False,
     max_workers=1,
@@ -7529,6 +7607,11 @@ def _write_performance_baseline_record(
         "layer": layer,
         "batch_size": batch_size,
         "hidden_state_capture": hidden_state_capture,
+        **(
+            {}
+            if covariance_mode is None
+            else {"covariance_mode": covariance_mode, "covariance_low_rank": covariance_low_rank}
+        ),
         "max_batch_tokens": max_batch_tokens,
         "prefix_kv_cache": prefix_kv_cache,
         "max_workers": max_workers,

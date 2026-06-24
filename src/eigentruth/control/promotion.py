@@ -127,6 +127,11 @@ class ProductPromotionContract:
         performance_jsonl_view_cache = _mapping(performance_score_dump_cache_totals.get("jsonl_view"))
         performance_gate = _mapping(comparison.get("performance_baseline_gate"))
         performance_trend_gate = _mapping(performance_gate.get("performance_trend_gate"))
+        performance_covariance_gate = _mapping(performance_gate.get("covariance_tradeoff_gate"))
+        if not performance_covariance_gate:
+            performance_covariance_gate = _mapping(
+                _mapping(performance_gate.get("gate")).get("covariance_tradeoff")
+            )
         performance_trend_metrics = _mapping(performance_trend_gate.get("metrics"))
         performance_uncached_trend = _mapping(
             performance_trend_metrics.get("uncached_total_seconds")
@@ -140,6 +145,8 @@ class ProductPromotionContract:
         performance_cache_hit_rate_trend = _mapping(
             performance_trend_metrics.get("score_dump_cache_jsonl_view_hit_rate")
         )
+        quality = _mapping(candidate.get("quality"))
+        readiness_covariance_gate = _mapping(quality.get("covariance_tradeoff_gate"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -240,6 +247,39 @@ class ProductPromotionContract:
                 ),
                 "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline": (
                     performance_cache_hit_rate_trend.get("observed_drop")
+                ),
+                "max_covariance_maha_last_auroc_drop": (
+                    config.get("max_covariance_maha_last_auroc_drop")
+                ),
+                "readiness_covariance_tradeoff_gate_passed": (
+                    readiness_covariance_gate.get("passed")
+                ),
+                "readiness_covariance_tradeoff_status": (
+                    readiness_covariance_gate.get("status")
+                ),
+                "readiness_covariance_selected_mode": (
+                    readiness_covariance_gate.get("selected_covariance_mode")
+                ),
+                "readiness_covariance_selected_low_rank": (
+                    readiness_covariance_gate.get("selected_covariance_low_rank")
+                ),
+                "readiness_covariance_maha_last_delta_vs_baseline": (
+                    readiness_covariance_gate.get("selected_maha_last_delta_vs_baseline")
+                ),
+                "performance_covariance_tradeoff_gate_passed": (
+                    performance_covariance_gate.get("passed")
+                ),
+                "performance_covariance_tradeoff_status": (
+                    performance_covariance_gate.get("status")
+                ),
+                "performance_covariance_selected_mode": (
+                    performance_covariance_gate.get("selected_covariance_mode")
+                ),
+                "performance_covariance_selected_low_rank": (
+                    performance_covariance_gate.get("selected_covariance_low_rank")
+                ),
+                "performance_covariance_maha_last_delta_vs_baseline": (
+                    performance_covariance_gate.get("selected_maha_last_delta_vs_baseline")
                 ),
                 "recommended_route": decision.get("recommended_route"),
                 "selector_replay_status": decision.get("selector_replay_status"),

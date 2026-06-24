@@ -76,6 +76,33 @@ def export_product_promotion_contract(
                     "recommended_selector_replay_candidate"
                 ),
                 "product_runtime_drift_status": contract.metadata.get("product_runtime_drift_status"),
+                "max_covariance_maha_last_auroc_drop": contract.metadata.get(
+                    "max_covariance_maha_last_auroc_drop"
+                ),
+                "readiness_covariance_tradeoff_gate_passed": contract.metadata.get(
+                    "readiness_covariance_tradeoff_gate_passed"
+                ),
+                "readiness_covariance_tradeoff_status": contract.metadata.get(
+                    "readiness_covariance_tradeoff_status"
+                ),
+                "readiness_covariance_selected_mode": contract.metadata.get(
+                    "readiness_covariance_selected_mode"
+                ),
+                "readiness_covariance_maha_last_delta_vs_baseline": contract.metadata.get(
+                    "readiness_covariance_maha_last_delta_vs_baseline"
+                ),
+                "performance_covariance_tradeoff_gate_passed": contract.metadata.get(
+                    "performance_covariance_tradeoff_gate_passed"
+                ),
+                "performance_covariance_tradeoff_status": contract.metadata.get(
+                    "performance_covariance_tradeoff_status"
+                ),
+                "performance_covariance_selected_mode": contract.metadata.get(
+                    "performance_covariance_selected_mode"
+                ),
+                "performance_covariance_maha_last_delta_vs_baseline": contract.metadata.get(
+                    "performance_covariance_maha_last_delta_vs_baseline"
+                ),
                 "product_trace_replay_workflow_report": trace_replay_workflow.get("report_path"),
                 "product_trace_replay_workflow_manifest": trace_replay_workflow.get(
                     "manifest_path"

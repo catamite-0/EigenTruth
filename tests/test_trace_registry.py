@@ -901,6 +901,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "require_performance_score_dump_cache": True,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
+            "max_covariance_maha_last_auroc_drop": 0.05,
         },
         "decision": {
             "status": "promote",
@@ -922,7 +923,21 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         },
         "release_candidate": {
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
-            "runtime": {"layer": -12, "batch_size": 2},
+            "runtime": {
+                "layer": -12,
+                "batch_size": 2,
+                "covariance_mode": "low_rank",
+                "covariance_low_rank": 8,
+            },
+            "quality": {
+                "covariance_tradeoff_gate": {
+                    "passed": True,
+                    "status": "quality_preserved",
+                    "selected_covariance_mode": "low_rank",
+                    "selected_covariance_low_rank": 8,
+                    "selected_maha_last_delta_vs_baseline": -0.01,
+                },
+            },
             "performance_baseline_record": "performance_baseline:runtime:0.9",
             "performance_evidence_bundle": {
                 "status": "promote",
@@ -1047,6 +1062,13 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             },
         },
         "performance_baseline_gate": {
+            "covariance_tradeoff_gate": {
+                "passed": True,
+                "status": "quality_preserved",
+                "selected_covariance_mode": "low_rank",
+                "selected_covariance_low_rank": 8,
+                "selected_maha_last_delta_vs_baseline": -0.02,
+            },
             "performance_trend_gate": {
                 "passed": True,
                 "reference_record_key": "performance_baseline:runtime-reference:0.8",
@@ -1097,6 +1119,17 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata[
         "performance_score_dump_cache_jsonl_view_hit_rate_drop_from_drift_baseline"
     ] == 0.3
+    assert contract.metadata["max_covariance_maha_last_auroc_drop"] == 0.05
+    assert contract.metadata["readiness_covariance_tradeoff_gate_passed"] is True
+    assert contract.metadata["readiness_covariance_tradeoff_status"] == "quality_preserved"
+    assert contract.metadata["readiness_covariance_selected_mode"] == "low_rank"
+    assert contract.metadata["readiness_covariance_selected_low_rank"] == 8
+    assert contract.metadata["readiness_covariance_maha_last_delta_vs_baseline"] == -0.01
+    assert contract.metadata["performance_covariance_tradeoff_gate_passed"] is True
+    assert contract.metadata["performance_covariance_tradeoff_status"] == "quality_preserved"
+    assert contract.metadata["performance_covariance_selected_mode"] == "low_rank"
+    assert contract.metadata["performance_covariance_selected_low_rank"] == 8
+    assert contract.metadata["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
