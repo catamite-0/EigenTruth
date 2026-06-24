@@ -24,7 +24,9 @@ from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noq
 from eigentruth.registry import (  # noqa: E402
     ArtifactVerificationContext,
     load_fingerprint_cache,
+    load_json_cache,
     save_fingerprint_cache,
+    save_json_cache,
 )
 
 
@@ -62,6 +64,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     verification_report_path: Path | None = None
     workflow_report_path: Path | None = None
     fingerprint_cache_path: Path | None = None
+    json_cache_path: Path | None = None
     manifest_fingerprint_workers: int = 1
     recursive: bool = True
     allow_unverified: bool = False
@@ -154,6 +157,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "workflow_report_path", Path(self.workflow_report_path))
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
+        if self.json_cache_path is not None:
+            object.__setattr__(self, "json_cache_path", Path(self.json_cache_path))
         manifest_fingerprint_workers = strict_positive_int(
             self.manifest_fingerprint_workers,
             name="manifest_fingerprint_workers",
@@ -212,6 +217,7 @@ def run_release_candidate_registry_workflow(
     phase_timings: dict[str, dict[str, Any]] = {}
     verification_context = ArtifactVerificationContext(
         fingerprint_cache=load_fingerprint_cache(config.fingerprint_cache_path),
+        json_cache=load_json_cache(config.json_cache_path),
     )
     fingerprint_cache = verification_context.fingerprint_cache
     json_cache = verification_context.json_cache
@@ -320,7 +326,7 @@ def run_release_candidate_registry_workflow(
             name=config.name,
             version=config.version,
             verification_report_path=config.verification_path,
-            recursive=True,
+            recursive=config.recursive,
             allow_failures=config.allow_promotion_failures,
             metadata=_promotion_metadata(config, comparison),
             verification_context=verification_context,
@@ -408,7 +414,11 @@ def run_release_candidate_registry_workflow(
             "fingerprint_cache": (
                 None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
             ),
+            "artifact_json_cache": (
+                None if config.json_cache_path is None else str(config.json_cache_path)
+            ),
             "manifest_fingerprint_workers": config.manifest_fingerprint_workers,
+            "recursive": config.recursive,
             "allow_non_promote": config.allow_non_promote,
             "allow_promotion_failures": config.allow_promotion_failures,
             "runtime_profile": config.runtime_profile,
@@ -448,6 +458,7 @@ def run_release_candidate_registry_workflow(
     payload["timing"] = _workflow_timing(phase_timings, started_at=workflow_started)
     _write_json_payload(config.report_path, payload)
     save_fingerprint_cache(config.fingerprint_cache_path, verification_context.fingerprint_cache or {})
+    save_json_cache(config.json_cache_path, verification_context.json_cache or {})
     return payload
 
 
@@ -862,6 +873,9 @@ def _promotion_metadata(
         "manifest_fingerprint_cache": (
             None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
         ),
+        "artifact_json_cache_path": (
+            None if config.json_cache_path is None else str(config.json_cache_path)
+        ),
     }
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
@@ -969,6 +983,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         verification_report_path=None if args.verification_report is None else Path(args.verification_report),
         workflow_report_path=None if args.json is None else Path(args.json),
         fingerprint_cache_path=None if args.fingerprint_cache is None else Path(args.fingerprint_cache),
+        json_cache_path=None if args.artifact_json_cache is None else Path(args.artifact_json_cache),
         manifest_fingerprint_workers=args.manifest_fingerprint_workers,
         recursive=not args.no_recursive,
         allow_unverified=bool(args.allow_unverified),
@@ -1080,6 +1095,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--verification-report", default=None)
     parser.add_argument("--fingerprint-cache", default=None,
                         help="optional JSON cache for recursive manifest fingerprint reads")
+    parser.add_argument("--artifact-json-cache", default=None,
+                        help="optional path-signature JSON artifact cache for release report/manifests")
     parser.add_argument(
         "--manifest-fingerprint-workers",
         type=lambda value: _parse_positive_int(value, flag="--manifest-fingerprint-workers"),

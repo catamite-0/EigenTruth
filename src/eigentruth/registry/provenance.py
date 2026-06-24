@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -567,7 +568,7 @@ def load_json_object(
             json_cache[cache_key] = {"payload": {}, "error": error}
         return {}, error
     if cache_key is not None:
-        json_cache[cache_key] = {"payload": dict(payload), "error": None}
+        json_cache[cache_key] = {"payload": copy.deepcopy(payload), "error": None}
     return payload, None
 
 
@@ -710,6 +711,31 @@ def load_fingerprint_cache(path: str | Path | None) -> dict[str, dict[str, Any]]
     return cache
 
 
+def load_json_cache(path: str | Path | None) -> dict[str, dict[str, Any]]:
+    """Load a persisted JSON artifact cache, returning an empty cache when absent."""
+    if path is None:
+        return {}
+    cache_path = Path(path)
+    if not cache_path.exists():
+        return {}
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError("JSON artifact cache must be a JSON object.")
+    cache: dict[str, dict[str, Any]] = {}
+    for key, value in payload.items():
+        if not isinstance(value, Mapping):
+            raise ValueError(f"JSON artifact cache entry must be an object: {key!r}")
+        cached_payload = value.get("payload", {})
+        if not isinstance(cached_payload, Mapping):
+            raise ValueError(f"JSON artifact cache payload must be an object: {key!r}")
+        cached_error = value.get("error")
+        cache[str(key)] = {
+            "payload": copy.deepcopy(dict(cached_payload)),
+            "error": None if cached_error is None else str(cached_error),
+        }
+    return cache
+
+
 def save_fingerprint_cache(
     path: str | Path | None,
     cache: Mapping[str, Mapping[str, Any]],
@@ -722,6 +748,31 @@ def save_fingerprint_cache(
     cache_path = Path(path)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {str(key): dict(value) for key, value in sorted(cache.items())}
+    if compact:
+        text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    else:
+        text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    cache_path.write_text(text, encoding="utf-8")
+
+
+def save_json_cache(
+    path: str | Path | None,
+    cache: Mapping[str, Mapping[str, Any]],
+    *,
+    compact: bool = False,
+) -> None:
+    """Persist a JSON artifact cache."""
+    if path is None:
+        return
+    cache_path = Path(path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {}
+    for key, value in sorted(cache.items()):
+        cached_payload = value.get("payload", {})
+        payload[str(key)] = {
+            "payload": copy.deepcopy(dict(cached_payload)) if isinstance(cached_payload, Mapping) else {},
+            "error": value.get("error"),
+        }
     if compact:
         text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
     else:
@@ -785,7 +836,7 @@ def _fingerprint_from_cache(path: str, cached: Mapping[str, Any]) -> ArtifactFin
 
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
-        return dict(value)
+        return copy.deepcopy(dict(value))
     return {}
 
 

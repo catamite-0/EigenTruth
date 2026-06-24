@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -36,7 +37,9 @@ from eigentruth.registry import (
     fingerprint_path,
     load_and_verify_artifact_manifest,
     load_fingerprint_cache,
+    load_json_cache,
     save_fingerprint_cache,
+    save_json_cache,
 )
 from eigentruth.verify import (
     InMemoryVerifier,
@@ -423,6 +426,63 @@ def test_persisted_fingerprint_cache_reuses_unchanged_file(tmp_path, monkeypatch
     assert verification.passed is True
     assert call_count == 0
     assert load_fingerprint_cache(tmp_path / "missing-cache.json") == {}
+
+
+def test_persisted_json_cache_reuses_unchanged_object(tmp_path, monkeypatch):
+    data_path = tmp_path / "payload.json"
+    cache_path = tmp_path / "json-cache.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    context = ArtifactVerificationContext()
+
+    payload, error = context.load_json_object(data_path)
+    save_json_cache(cache_path, context.json_cache or {})
+    loaded_cache = load_json_cache(cache_path)
+    warm_context = ArtifactVerificationContext(json_cache=loaded_cache)
+    original_read_text = Path.read_text
+
+    def blocked_read_text(path, *args, **kwargs):
+        if path == data_path:
+            raise AssertionError("warm JSON cache should avoid reading the unchanged artifact")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", blocked_read_text)
+    warm_payload, warm_error = warm_context.load_json_object(data_path)
+
+    assert payload == {"score": 1}
+    assert error is None
+    assert warm_payload == {"score": 1}
+    assert warm_error is None
+    assert warm_context.json_cache_summary() == {
+        "requests": 1,
+        "hits": 1,
+        "misses": 0,
+        "errors": 0,
+        "entries": 1,
+        "hit_rate": 1.0,
+    }
+    assert load_json_cache(tmp_path / "missing-json-cache.json") == {}
+
+
+def test_json_cache_returns_isolated_nested_payload_copies(tmp_path):
+    data_path = tmp_path / "nested.json"
+    data_path.write_text(
+        json.dumps({"nested": {"items": [1], "value": {"score": 2}}}) + "\n",
+        encoding="utf-8",
+    )
+    context = ArtifactVerificationContext()
+
+    first_payload, first_error = context.load_json_object(data_path)
+    first_payload["nested"]["items"].append(99)
+    first_payload["nested"]["value"]["score"] = 7
+    second_payload, second_error = context.load_json_object(data_path)
+    assert second_payload == {"nested": {"items": [1], "value": {"score": 2}}}
+    second_payload["nested"]["items"].append(42)
+    third_payload, third_error = context.load_json_object(data_path)
+
+    assert first_error is None
+    assert second_error is None
+    assert third_error is None
+    assert third_payload == {"nested": {"items": [1], "value": {"score": 2}}}
 
 
 def test_artifact_verification_context_caches_manifest_json_and_fingerprints(tmp_path):

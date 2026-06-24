@@ -6696,6 +6696,48 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         )
 
 
+def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    captured: dict[str, object] = {}
+
+    def fake_compare_release_candidates(**_kwargs):
+        return {
+            "schema_version": 1,
+            "workflow": "fake_release_candidate_comparison",
+            "config": {},
+            "decision": {"status": "promote"},
+            "release_candidate": {"manifests": {}},
+        }
+
+    def fake_promote_artifact_manifest(**kwargs):
+        captured.update(kwargs)
+        return {
+            "verification": {"passed": True},
+            "records": {"benchmark_manifest": "benchmark_manifest:unit-release:0.1"},
+        }
+
+    monkeypatch.setattr(module, "compare_release_candidates", fake_compare_release_candidates)
+    monkeypatch.setattr(module, "promote_artifact_manifest", fake_promote_artifact_manifest)
+
+    payload = module.run_release_candidate_registry_workflow(
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            workflow_report_path=tmp_path / "workflow.json",
+            release_report_path=tmp_path / "comparison.json",
+            artifact_manifest_path=tmp_path / "manifest.json",
+            verification_report_path=tmp_path / "verification.json",
+            recursive=False,
+        )
+    )
+
+    assert captured["recursive"] is False
+    assert payload["config"]["recursive"] is False
+    assert payload["decision"]["status"] == "promote"
+
+
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     provenance_module = importlib.import_module("eigentruth.registry.provenance")
@@ -6859,6 +6901,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     monkeypatch.setattr(provenance_module, "_sha256_file", counted_sha256_file)
 
     fingerprint_cache_path = tmp_path / "fingerprints.json"
+    json_cache_path = tmp_path / "artifact-json-cache.json"
     workflow_config = module.ReleaseCandidateRegistryWorkflowConfig(
         readiness_registry_path=baseline_registry_path,
         release_registry_path=release_registry_path,
@@ -6869,6 +6912,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         artifact_manifest_path=tmp_path / "release-manifest.json",
         verification_report_path=tmp_path / "release-verification.json",
         fingerprint_cache_path=fingerprint_cache_path,
+        json_cache_path=json_cache_path,
         performance_baseline_key="performance_baseline:qwen-performance:0.6",
         require_performance_score_dump_cache=True,
         min_performance_score_dump_cache_jsonl_view_hit_rate=0.5,
@@ -7049,6 +7093,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_require_non_oracle_evidence"] is True
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["config"]["artifact_json_cache"] == str(json_cache_path)
     assert payload["config"]["require_performance_score_dump_cache"] is True
     assert payload["config"]["min_performance_score_dump_cache_jsonl_view_hit_rate"] == pytest.approx(0.5)
     assert payload["config"]["performance_drift_baseline_key"] == (
@@ -7187,6 +7232,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_inside_trigger_budget_id"] == "top_0p4"
     assert record.metadata["recommended_inside_trigger_budget_policy"] == "cost_first"
     assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
+    assert record.metadata["artifact_json_cache_path"] == str(json_cache_path)
     assert record.metadata["scope"] == "unit"
     compare_json_cache = payload["release_candidate_comparison"]["summary"]["artifact_json_cache"]
     workflow_json_cache = payload["artifact_cache"]["artifact_json_cache"]
@@ -7210,6 +7256,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert fingerprint_cache_path.exists()
     fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
     assert len(fingerprint_cache) > 0
+    assert json_cache_path.exists()
+    json_cache = json.loads(json_cache_path.read_text(encoding="utf-8"))
+    assert len(json_cache) > 0
     structured_route_report_key = str((tmp_path / "structured-route-comparison.json").resolve())
     retrieval_route_report_key = str((tmp_path / "retrieval-route-comparison.json").resolve())
     assert fingerprint_calls_by_path[structured_route_report_key] == 1
@@ -7220,12 +7269,16 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
 
     assert second_payload["decision"]["status"] == "promote"
     assert second_payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    assert second_payload["config"]["artifact_json_cache"] == str(json_cache_path)
     assert second_payload["timing"]["total_seconds"] >= 0.0
     assert second_payload["timing"]["phases"]["promotion"]["seconds"] >= 0.0
     second_fingerprint_cache = second_payload["artifact_cache"]["artifact_fingerprint_cache"]
     assert second_fingerprint_cache["hits"] > 0
     assert second_fingerprint_cache["misses"] >= 0
     assert second_fingerprint_cache["hit_rate"] > 0.0
+    second_json_cache = second_payload["artifact_cache"]["artifact_json_cache"]
+    assert second_json_cache["hits"] > 0
+    assert second_json_cache["hit_rate"] > 0.0
     assert fingerprint_calls_by_path[structured_route_report_key] == (
         fingerprint_calls_after_first[structured_route_report_key]
     )
