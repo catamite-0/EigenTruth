@@ -2772,6 +2772,28 @@ manifest metadata, and registry metadata. Add `--reuse-existing-traces` for
 repeat runs that should skip calibrated-control demo execution and reuse the
 existing trace JSON files before rebuilding or reading the cached baselines.
 
+After the profile sweep and quality/release gates are available, use
+`run_release_efficiency_report.py` as the final product-control efficiency
+handoff. It does not rerun traces or models; it reads the profile sweep report,
+optionally attaches release/readiness/performance quality reports, then ranks
+profiles by an explicit runtime/verifier/cache efficiency heuristic:
+
+```bash
+python benchmarks/run_release_efficiency_report.py \
+  --profile-sweep artifacts/product-runtime-profile-sweep/product-runtime-profile-sweep.json \
+  --quality-report artifacts/release-candidate-comparison.json \
+  --json artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
+  --registry artifacts/local-release-registry.json \
+  --name smollm2-release-efficiency \
+  --version 0.1 \
+  --fail-on-blocked
+```
+
+The report surfaces generated vs reused trace counts, trace-record cache
+hits/writes, verifier skip/selective-skip rates, route fanout, retrieval use,
+and per-profile efficiency scores. A blocked profile sweep or blocked quality
+report fails closed; without quality reports the status remains observational.
+
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in
 `artifacts/local-release-registry.json`. It uses the strict structured-retrieval

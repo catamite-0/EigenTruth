@@ -13933,6 +13933,173 @@ def test_run_product_runtime_profile_sweep_reuses_traces_and_record_cache(tmp_pa
     assert "balanced_trace_record_cache" in manifest["artifacts"]
 
 
+def test_run_release_efficiency_report_summarizes_profile_sweep_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_efficiency_report")
+    registry_module = importlib.import_module("eigentruth.registry")
+    profile_sweep_path = tmp_path / "profile-sweep.json"
+    quality_report_path = tmp_path / "quality-report.json"
+    output_path = tmp_path / "release-efficiency.json"
+    registry_path = tmp_path / "registry.json"
+
+    profile_sweep_path.write_text(
+        json.dumps({
+            "workflow": "product_runtime_profile_sweep",
+            "status": "promote",
+            "decision": {"recommended_profile": "latency"},
+            "profiles": [
+                {
+                    "profile": "latency",
+                    "status": "promote",
+                    "baseline_status": "promote",
+                    "trace_count": 2,
+                    "baseline_path": "latency-baseline.json",
+                    "metrics": {
+                        "total_seconds_mean": 0.10,
+                        "mean_attempted_route_count": 1,
+                        "cache_hit_rate_mean": 0.2,
+                        "verification_skip_rate_mean": 0.0,
+                        "verification_selective_claim_skip_rate": 0.0,
+                        "verified_claim_count_mean": 1,
+                    },
+                    "trace_sources": {"generated_count": 2, "reused_count": 0},
+                    "trace_record_cache": {
+                        "enabled": True,
+                        "cache_hit": False,
+                        "cache_written": True,
+                        "path": "latency-cache.json",
+                    },
+                },
+                {
+                    "profile": "balanced",
+                    "status": "promote",
+                    "baseline_status": "promote",
+                    "trace_count": 2,
+                    "baseline_path": "balanced-baseline.json",
+                    "metrics": {
+                        "total_seconds_mean": 0.12,
+                        "mean_attempted_route_count": 1,
+                        "cache_hit_rate_mean": 0.5,
+                        "verification_skip_rate_mean": 0.5,
+                        "verification_selective_claim_skip_rate": 0.5,
+                        "verified_claim_count_mean": 1,
+                        "verifier_saved_claim_count_mean": 2,
+                    },
+                    "trace_sources": {"generated_count": 0, "reused_count": 2},
+                    "trace_record_cache": {
+                        "enabled": True,
+                        "cache_hit": True,
+                        "cache_written": False,
+                        "path": "balanced-cache.json",
+                    },
+                },
+                {
+                    "profile": "audit",
+                    "status": "blocked",
+                    "baseline_status": "blocked",
+                    "trace_count": 2,
+                    "baseline_path": "audit-baseline.json",
+                    "metrics": {
+                        "total_seconds_mean": 1.0,
+                        "mean_attempted_route_count": 2,
+                        "cache_hit_rate_mean": 0.9,
+                        "verification_skip_rate_mean": 0.9,
+                        "verification_selective_claim_skip_rate": 0.5,
+                        "verified_claim_count_mean": 4,
+                    },
+                    "trace_sources": {"generated_count": 2, "reused_count": 0},
+                    "trace_record_cache": {
+                        "enabled": True,
+                        "cache_hit": False,
+                        "cache_written": True,
+                        "path": "audit-cache.json",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    quality_report_path.write_text(
+        json.dumps({
+            "workflow": "release_candidate_comparison",
+            "status": "promote",
+            "decision": {"status": "promote"},
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_release_efficiency_report(
+        module.ReleaseEfficiencyReportConfig(
+            profile_sweep_path=profile_sweep_path,
+            report_path=output_path,
+            quality_report_paths=(quality_report_path,),
+            registry_path=registry_path,
+            name="release-efficiency",
+            version="0.1",
+            metadata={"suite": "unit"},
+            compact_json=True,
+        )
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "report:release-efficiency:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_profile"] == "balanced"
+    assert payload["leaderboard"][0]["profile"] == "balanced"
+    assert payload["summary"]["generated_trace_count"] == 4
+    assert payload["summary"]["reused_trace_count"] == 2
+    assert payload["summary"]["trace_record_cache_hit_profile_count"] == 1
+    assert payload["quality"]["passed"] is True
+    assert saved["artifact_manifest_summary"] == manifest["summary"]
+    assert manifest["metadata"]["runner"] == "run_release_efficiency_report"
+    assert manifest["metadata"]["recommended_profile"] == "balanced"
+    assert "\n  " not in output_path.read_text(encoding="utf-8")
+    assert registry_module.load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"]
+    ).passed is True
+    assert record.metadata["workflow"] == "release_efficiency_report"
+    assert record.metadata["recommended_profile"] == "balanced"
+    assert record.metadata["trace_record_cache_hit_profile_count"] == 1
+    assert record.metadata["suite"] == "unit"
+
+
+def test_run_release_efficiency_report_blocks_failed_quality(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_efficiency_report")
+    profile_sweep_path = tmp_path / "profile-sweep.json"
+    quality_report_path = tmp_path / "quality-report.json"
+
+    profile_sweep_path.write_text(
+        json.dumps({
+            "workflow": "product_runtime_profile_sweep",
+            "status": "promote",
+            "profiles": [{
+                "profile": "latency",
+                "status": "promote",
+                "metrics": {"total_seconds_mean": 0.1},
+            }],
+        }),
+        encoding="utf-8",
+    )
+    quality_report_path.write_text(
+        json.dumps({"workflow": "release_candidate_comparison", "status": "blocked"}),
+        encoding="utf-8",
+    )
+
+    payload = module.build_release_efficiency_report(
+        module.ReleaseEfficiencyReportConfig(
+            profile_sweep_path=profile_sweep_path,
+            report_path=tmp_path / "release-efficiency.json",
+            quality_report_paths=(quality_report_path,),
+        )
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["decision"]["blocking_reasons"] == ("one or more quality reports are blocked",)
+    assert payload["quality"]["blocked_count"] == 1
+
+
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
 
