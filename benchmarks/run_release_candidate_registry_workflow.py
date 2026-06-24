@@ -61,6 +61,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_best_quality_auroc: float | None = None
     max_uncached_forward_seconds: float | None = None
     max_cache_only_seconds: float | None = None
+    max_covariance_maha_last_auroc_drop: float | None = None
     max_inside_sample_count_ratio: float | None = None
     max_inside_generation_seconds_ratio: float | None = None
     min_selected: int | None = None
@@ -227,6 +228,7 @@ def run_release_candidate_registry_workflow(
         min_best_quality_auroc=config.min_best_quality_auroc,
         max_uncached_forward_seconds=config.max_uncached_forward_seconds,
         max_cache_only_seconds=config.max_cache_only_seconds,
+        max_covariance_maha_last_auroc_drop=config.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=config.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=config.max_inside_generation_seconds_ratio,
         min_selected=config.min_selected,
@@ -360,6 +362,7 @@ def run_release_candidate_registry_workflow(
             "allow_promotion_failures": config.allow_promotion_failures,
             "runtime_profile": config.runtime_profile,
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
+            "max_covariance_maha_last_auroc_drop": config.max_covariance_maha_last_auroc_drop,
             "required_route_min_selected": config.required_route_min_selected,
             "required_route_min_decision_accuracy": config.required_route_min_decision_accuracy,
             "required_route_max_false_supported_rate": config.required_route_max_false_supported_rate,
@@ -798,6 +801,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         min_selected=args.min_selected,
@@ -923,6 +927,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-covariance-maha-last-auroc-drop",
+    ), default=None,
+                        help="max allowed selected covariance maha_last AUROC drop versus the full-covariance "
+                             "baseline; readiness/performance candidates without covariance tradeoff data fail "
+                             "closed when set")
     parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-inside-sample-count-ratio",

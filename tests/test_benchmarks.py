@@ -4693,6 +4693,55 @@ def test_compare_readiness_baselines_applies_performance_gate(tmp_path):
     assert "uncached forward cost seconds above 20.0" in blocked["gate"]["blocking_reasons"]
 
 
+def test_compare_readiness_baselines_blocks_covariance_quality_drop(tmp_path):
+    module = importlib.import_module("benchmarks.compare_readiness_baselines")
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "diag",
+        registry_path=registry_path,
+        name="diag-fast",
+        version="0.5",
+        model="diag-model",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.10,
+        covariance_mode="diag",
+        covariance_baseline_maha_last_auroc=0.70,
+        covariance_selected_maha_last_auroc=0.60,
+        covariance_baseline_cache_only_seconds=0.14,
+    )
+
+    blocked = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        max_covariance_maha_last_auroc_drop=0.05,
+    )
+    promoted = module.compare_readiness_baselines(
+        registry_path=registry_path,
+        max_covariance_maha_last_auroc_drop=0.15,
+    )
+    missing = module.covariance_tradeoff_gate(
+        {"recommendation": {}},
+        max_covariance_maha_last_auroc_drop=0.05,
+    )
+
+    row = blocked["leaderboard"][0]
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["config"]["max_covariance_maha_last_auroc_drop"] == pytest.approx(0.05)
+    assert row["covariance_mode"] == "diag"
+    assert row["covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.10)
+    assert row["gate"]["covariance_tradeoff"]["passed"] is False
+    assert any(
+        "selected covariance maha_last AUROC drop" in reason
+        for reason in row["gate"]["blocking_reasons"]
+    )
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["leaderboard"][0]["gate"]["covariance_tradeoff"]["passed"] is True
+    assert missing["passed"] is False
+    assert "covariance tradeoff data is missing" in missing["blocking_reasons"]
+
+
 def test_compare_readiness_baselines_applies_inside_sampling_cost_gate(tmp_path):
     module = importlib.import_module("benchmarks.compare_readiness_baselines")
 
@@ -5032,6 +5081,101 @@ def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
     assert candidate["performance_evidence_bundle"]["status"] == "promote"
     assert candidate["performance_evidence_bundle"]["cost"]["cache_only_total_ratio"] == pytest.approx(0.02)
     assert candidate["manifests"]["performance_manifest"].endswith("artifact-manifest.json")
+
+
+def test_compare_release_candidates_blocks_performance_covariance_quality_drop(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
+        covariance_mode="diag",
+        covariance_baseline_maha_last_auroc=0.70,
+        covariance_selected_maha_last_auroc=0.69,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="quality_balanced",
+        covariance_tradeoff={
+            "status": "speed_quality_tradeoff",
+            "baseline_cell": "full-cell",
+            "selected_cell": "diag-cell",
+            "candidates": [
+                {
+                    "cell_id": "full-cell",
+                    "covariance_mode": "full",
+                    "covariance_low_rank": 4,
+                    "maha_last_auroc": 0.72,
+                    "maha_last_delta_vs_baseline": 0.0,
+                },
+                {
+                    "cell_id": "diag-cell",
+                    "covariance_mode": "diag",
+                    "covariance_low_rank": 4,
+                    "maha_last_auroc": 0.60,
+                    "maha_last_delta_vs_baseline": -0.12,
+                },
+            ],
+        },
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        max_covariance_maha_last_auroc_drop=0.05,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["readiness_baseline_comparison"]["decision"]["status"] == "promote"
+    performance_gate = payload["performance_baseline_gate"]["gate"]
+    assert performance_gate["covariance_tradeoff"]["passed"] is False
+    assert performance_gate["covariance_tradeoff"][
+        "selected_maha_last_delta_vs_baseline"
+    ] == pytest.approx(-0.12)
+    assert any(
+        "selected covariance maha_last AUROC drop" in reason
+        for reason in payload["decision"]["blocking_reasons"][0]["reasons"]
+    )
 
 
 def test_compare_release_candidates_can_require_selector_replay_report(tmp_path):
@@ -7162,6 +7306,11 @@ def _write_readiness_baseline_manifest(
     inside_trigger_cost_first_sample_ratio=None,
     inside_trigger_cost_first_generation_ratio=None,
     inside_trigger_cost_first_total_generated_samples=4,
+    covariance_mode=None,
+    covariance_low_rank=4,
+    covariance_baseline_maha_last_auroc=None,
+    covariance_selected_maha_last_auroc=None,
+    covariance_baseline_cache_only_seconds=None,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -7194,9 +7343,65 @@ def _write_readiness_baseline_manifest(
             cost_first_generation_seconds_ratio=inside_trigger_cost_first_generation_ratio,
             cost_first_total_generated_samples=inside_trigger_cost_first_total_generated_samples,
         )
-    cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
+    base_cell_id = f"layer_m{abs(layer)}_batch_1_capture_outputs"
+    selected_covariance_mode = None if covariance_mode is None else str(covariance_mode)
+    cell_id = (
+        base_cell_id
+        if selected_covariance_mode is None
+        else f"{base_cell_id}_cov_{selected_covariance_mode}"
+    )
+    selected_quality_signals = dict(quality_signals)
+    if covariance_selected_maha_last_auroc is not None:
+        selected_quality_signals["maha_last"] = covariance_selected_maha_last_auroc
+
+    def matrix_cell(cell_id, *, mode=None, maha_last=None, cell_cache_only_seconds=cache_only_seconds):
+        cell_quality = dict(quality_signals)
+        if maha_last is not None:
+            cell_quality["maha_last"] = maha_last
+        payload = {
+            "id": cell_id,
+            "layer": layer,
+            "batch_size": 1,
+            "hidden_state_capture": "outputs",
+            "summary": {
+                "quality_signals": cell_quality,
+                "truth_proj_auroc": quality_signals.get("truth_proj"),
+                "totals": {
+                    "uncached": {"total_seconds": uncached_forward_seconds},
+                    "cache_only": {"total_seconds": cell_cache_only_seconds},
+                },
+            },
+        }
+        if mode is not None:
+            payload["covariance_mode"] = mode
+            payload["covariance_low_rank"] = covariance_low_rank
+        else:
+            payload["triplet"] = {"results": {"cache_only": str(result_path)}}
+        return payload
+
+    matrix_cells = [
+        matrix_cell(
+            cell_id,
+            mode=selected_covariance_mode,
+            maha_last=covariance_selected_maha_last_auroc,
+        )
+    ]
+    if covariance_baseline_maha_last_auroc is not None:
+        matrix_cells.insert(
+            0,
+            matrix_cell(
+                f"{base_cell_id}_cov_full",
+                mode="full",
+                maha_last=covariance_baseline_maha_last_auroc,
+                cell_cache_only_seconds=(
+                    cache_only_seconds * 1.2
+                    if covariance_baseline_cache_only_seconds is None
+                    else covariance_baseline_cache_only_seconds
+                ),
+            ),
+        )
     result_path.write_text(
-        json.dumps({"auroc": dict(quality_signals)}),
+        json.dumps({"auroc": selected_quality_signals}),
         encoding="utf-8",
     )
     matrix_path.write_text(
@@ -7215,6 +7420,14 @@ def _write_readiness_baseline_manifest(
                     "layer": layer,
                     "batch_size": 1,
                     "hidden_state_capture": "outputs",
+                    **(
+                        {}
+                        if selected_covariance_mode is None
+                        else {
+                            "covariance_mode": selected_covariance_mode,
+                            "covariance_low_rank": covariance_low_rank,
+                        }
+                    ),
                     "max_batch_tokens": 0,
                     "prefix_kv_cache": False,
                     "uncached_total_seconds": uncached_forward_seconds,
@@ -7227,23 +7440,7 @@ def _write_readiness_baseline_manifest(
                     "truth_proj_auroc": quality_signals.get("truth_proj"),
                 },
             },
-            "cells": [
-                {
-                    "id": cell_id,
-                    "layer": layer,
-                    "batch_size": 1,
-                    "hidden_state_capture": "outputs",
-                    "summary": {
-                        "quality_signals": dict(quality_signals),
-                        "truth_proj_auroc": quality_signals.get("truth_proj"),
-                        "totals": {
-                            "uncached": {"total_seconds": uncached_forward_seconds},
-                            "cache_only": {"total_seconds": cache_only_seconds},
-                        },
-                    },
-                    "triplet": {"results": {"cache_only": str(result_path)}},
-                }
-            ],
+            "cells": matrix_cells,
         }),
         encoding="utf-8",
     )
@@ -7315,6 +7512,7 @@ def _write_performance_baseline_record(
     cached_total_seconds=5.0,
     cache_only_total_seconds=0.2,
     score_dump_cache_jsonl_view_hit_rate=0.6,
+    covariance_tradeoff=None,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -7349,6 +7547,8 @@ def _write_performance_baseline_record(
             "selection_policy": inside_trigger_budget_policy,
         },
     }
+    if covariance_tradeoff is not None:
+        recommendation["covariance_tradeoff"] = covariance_tradeoff
     runtime_payload = {
         "schema_version": 1,
         "status": "promote",

@@ -39,6 +39,7 @@ def compare_readiness_baselines(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_covariance_maha_last_auroc_drop: float | None = None,
     max_inside_sample_count_ratio: float | None = None,
     max_inside_generation_seconds_ratio: float | None = None,
     notes: Sequence[str] = (),
@@ -47,6 +48,10 @@ def compare_readiness_baselines(
     json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered readiness baselines."""
+    max_covariance_maha_last_auroc_drop = _validate_optional_non_negative_float(
+        max_covariance_maha_last_auroc_drop,
+        name="max_covariance_maha_last_auroc_drop",
+    )
     verification_context = ArtifactVerificationContext(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
@@ -69,6 +74,7 @@ def compare_readiness_baselines(
             min_best_quality_auroc=min_best_quality_auroc,
             max_uncached_forward_seconds=max_uncached_forward_seconds,
             max_cache_only_seconds=max_cache_only_seconds,
+            max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
             max_inside_sample_count_ratio=max_inside_sample_count_ratio,
             max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
             fingerprint_cache=cache,
@@ -92,6 +98,7 @@ def compare_readiness_baselines(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_covariance_maha_last_auroc_drop": max_covariance_maha_last_auroc_drop,
             "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
             "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
         },
@@ -145,6 +152,7 @@ def _readiness_row(
     min_best_quality_auroc: float | None,
     max_uncached_forward_seconds: float | None,
     max_cache_only_seconds: float | None,
+    max_covariance_maha_last_auroc_drop: float | None,
     max_inside_sample_count_ratio: float | None,
     max_inside_generation_seconds_ratio: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
@@ -178,6 +186,11 @@ def _readiness_row(
     quality_signals = _quality_signals(recommendation, manifest_metadata)
     uncached_cost = _uncached_forward_cost(recommendation)
     cache_only_seconds = _float_or_none(recommendation.get("cache_only_total_seconds"))
+    covariance_tradeoff = _mapping(recommendation.get("covariance_tradeoff"))
+    covariance_gate = covariance_tradeoff_gate(
+        runtime_recommendation,
+        max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
+    )
     inside_sampling = _inside_sampling_summary(recommendation, manifest_metadata)
     gate = _gate(
         verification=verification,
@@ -193,6 +206,7 @@ def _readiness_row(
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        covariance_tradeoff_gate=covariance_gate,
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
     )
@@ -237,6 +251,20 @@ def _readiness_row(
         "uncached_forward_cost_seconds": uncached_cost["seconds"],
         "uncached_forward_cost_source": uncached_cost["source"],
         "cache_only_total_seconds": cache_only_seconds,
+        "covariance_mode": recommendation.get(
+            "covariance_mode",
+            manifest_metadata.get("recommended_covariance_mode"),
+        ),
+        "covariance_low_rank": recommendation.get(
+            "covariance_low_rank",
+            manifest_metadata.get("recommended_covariance_low_rank"),
+        ),
+        "covariance_tradeoff": None if not covariance_tradeoff else covariance_tradeoff,
+        "covariance_tradeoff_status": covariance_tradeoff.get("status"),
+        "covariance_maha_last_delta_vs_baseline": covariance_gate.get(
+            "selected_maha_last_delta_vs_baseline"
+        ),
+        "covariance_tradeoff_gate": covariance_gate,
         "inside_sampling": inside_sampling["payload"],
         "inside_sampling_recommended_run": inside_sampling["recommended_run"],
         "inside_sampling_total_generated_samples": inside_sampling["total_generated_samples"],
@@ -434,6 +462,65 @@ def _manifest_load_failure(manifest_path: Path, error: str) -> dict[str, Any]:
     }
 
 
+def covariance_tradeoff_gate(
+    runtime_recommendation: Mapping[str, Any],
+    *,
+    max_covariance_maha_last_auroc_drop: float | None,
+) -> dict[str, Any]:
+    """Return a fail-closed gate for selected covariance-mode quality drop."""
+    threshold = _validate_optional_non_negative_float(
+        max_covariance_maha_last_auroc_drop,
+        name="max_covariance_maha_last_auroc_drop",
+    )
+    enabled = threshold is not None
+    recommendation = _mapping(runtime_recommendation.get("recommendation"))
+    tradeoff = _mapping(recommendation.get("covariance_tradeoff"))
+    selected_cell = tradeoff.get("selected_cell")
+    selected = _selected_covariance_tradeoff_candidate(tradeoff)
+    delta = None if selected is None else _float_or_none(selected.get("maha_last_delta_vs_baseline"))
+    failures = []
+
+    if enabled:
+        if not tradeoff:
+            failures.append("covariance tradeoff data is missing")
+        elif selected is None:
+            failures.append("selected covariance candidate is missing from tradeoff candidates")
+        elif delta is None:
+            failures.append("selected covariance maha_last AUROC delta is missing")
+        elif delta < -float(threshold):
+            failures.append(
+                "selected covariance maha_last AUROC drop "
+                f"{abs(delta):.6g} exceeds {float(threshold):.6g}"
+            )
+
+    return {
+        "enabled": enabled,
+        "max_covariance_maha_last_auroc_drop": threshold,
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "status": tradeoff.get("status"),
+        "baseline_cell": tradeoff.get("baseline_cell"),
+        "selected_cell": selected_cell,
+        "selected_covariance_mode": None if selected is None else selected.get("covariance_mode"),
+        "selected_covariance_low_rank": None if selected is None else selected.get("covariance_low_rank"),
+        "selected_maha_last_auroc": (
+            None if selected is None else _float_or_none(selected.get("maha_last_auroc"))
+        ),
+        "selected_maha_last_delta_vs_baseline": delta,
+    }
+
+
+def _selected_covariance_tradeoff_candidate(
+    tradeoff: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    selected_cell = tradeoff.get("selected_cell")
+    for item in tradeoff.get("candidates", ()):
+        candidate = _mapping(item)
+        if candidate.get("cell_id") == selected_cell:
+            return candidate
+    return None
+
+
 def _gate(
     *,
     verification: Mapping[str, Any],
@@ -444,6 +531,7 @@ def _gate(
     best_quality: Mapping[str, Any] | None,
     uncached_forward_seconds: float | None,
     cache_only_seconds: float | None,
+    covariance_tradeoff_gate: Mapping[str, Any],
     inside_sample_count_ratio: float | None,
     inside_generation_seconds_ratio: float | None,
     min_best_quality_auroc: float | None,
@@ -477,6 +565,7 @@ def _gate(
         cache_only_seconds is None or cache_only_seconds > max_cache_only_seconds
     ):
         failures.append(f"cache-only total seconds above {max_cache_only_seconds}")
+    failures.extend(covariance_tradeoff_gate.get("blocking_reasons", ()))
     if max_inside_sample_count_ratio is not None and (
         inside_sample_count_ratio is None or inside_sample_count_ratio > max_inside_sample_count_ratio
     ):
@@ -491,6 +580,7 @@ def _gate(
     return {
         "passed": not failures,
         "blocking_reasons": failures,
+        "covariance_tradeoff": dict(covariance_tradeoff_gate),
     }
 
 
@@ -748,6 +838,15 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _validate_optional_non_negative_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = _float_or_none(value)
+    if numeric is None or numeric < 0:
+        raise ValueError(f"{name} must be a non-negative finite number.")
+    return numeric
+
+
 def _normalize_inside_trigger_budget_policy(policy: str | None) -> str | None:
     if policy is None:
         return None
@@ -776,6 +875,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         notes=args.note,
@@ -826,6 +926,12 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-covariance-maha-last-auroc-drop",
+    ), default=None,
+                        help="max allowed selected covariance maha_last AUROC drop versus the full-covariance "
+                             "baseline; candidates without covariance tradeoff data fail closed when set")
     parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-inside-sample-count-ratio",

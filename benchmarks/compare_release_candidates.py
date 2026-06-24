@@ -14,7 +14,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.compare_readiness_baselines import compare_readiness_baselines  # noqa: E402
+from benchmarks.compare_readiness_baselines import (  # noqa: E402
+    compare_readiness_baselines,
+    covariance_tradeoff_gate,
+)
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
@@ -54,6 +57,7 @@ def compare_release_candidates(
     min_best_quality_auroc: float | None = None,
     max_uncached_forward_seconds: float | None = None,
     max_cache_only_seconds: float | None = None,
+    max_covariance_maha_last_auroc_drop: float | None = None,
     max_inside_sample_count_ratio: float | None = None,
     max_inside_generation_seconds_ratio: float | None = None,
     min_selected: int | None = None,
@@ -140,6 +144,10 @@ def compare_release_candidates(
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop,
         name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
     )
+    max_covariance_maha_last_auroc_drop = _validate_optional_non_negative_float(
+        max_covariance_maha_last_auroc_drop,
+        name="max_covariance_maha_last_auroc_drop",
+    )
     verification_context = ArtifactVerificationContext(
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
@@ -210,6 +218,7 @@ def compare_release_candidates(
         min_best_quality_auroc=min_best_quality_auroc,
         max_uncached_forward_seconds=max_uncached_forward_seconds,
         max_cache_only_seconds=max_cache_only_seconds,
+        max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=max_inside_generation_seconds_ratio,
         notes=("release candidate readiness comparison",),
@@ -289,6 +298,7 @@ def compare_release_candidates(
         max_score_dump_cache_jsonl_view_hit_rate_drop=(
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop
         ),
+        max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
         verification_context=verification_context,
     )
     selector_replay = _selector_replay_gate(
@@ -388,6 +398,7 @@ def compare_release_candidates(
             "min_best_quality_auroc": min_best_quality_auroc,
             "max_uncached_forward_seconds": max_uncached_forward_seconds,
             "max_cache_only_seconds": max_cache_only_seconds,
+            "max_covariance_maha_last_auroc_drop": max_covariance_maha_last_auroc_drop,
             "max_inside_sample_count_ratio": max_inside_sample_count_ratio,
             "max_inside_generation_seconds_ratio": max_inside_generation_seconds_ratio,
             "min_selected": min_selected,
@@ -457,6 +468,8 @@ def _release_candidate(
             "layer": readiness_row.get("layer"),
             "batch_size": readiness_row.get("batch_size"),
             "hidden_state_capture": readiness_row.get("hidden_state_capture"),
+            "covariance_mode": readiness_row.get("covariance_mode"),
+            "covariance_low_rank": readiness_row.get("covariance_low_rank"),
             "max_batch_tokens": readiness_row.get("max_batch_tokens"),
             "prefix_kv_cache": readiness_row.get("prefix_kv_cache"),
             "max_workers": readiness_row.get("max_workers"),
@@ -872,6 +885,7 @@ def _performance_baseline_gate(
     max_cached_total_seconds_ratio: float | None,
     max_cache_only_total_seconds_ratio: float | None,
     max_score_dump_cache_jsonl_view_hit_rate_drop: float | None,
+    max_covariance_maha_last_auroc_drop: float | None,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if performance_baseline_key is None:
@@ -951,6 +965,7 @@ def _performance_baseline_gate(
         require_score_dump_cache=require_score_dump_cache,
         min_score_dump_cache_jsonl_view_hit_rate=min_score_dump_cache_jsonl_view_hit_rate,
         performance_trend_gate=performance_trend_gate,
+        max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
     best_quality = _mapping(recommendation.get("best_quality_signal"))
@@ -985,11 +1000,14 @@ def _performance_baseline_gate(
         "performance_score_dump_cache_jsonl_view_hit_rate": performance_jsonl_view_cache.get("hit_rate"),
         "performance_score_dump_cache_gate": gate.get("score_dump_cache"),
         "performance_trend_gate": gate.get("performance_trend"),
+        "covariance_tradeoff_gate": gate.get("covariance_tradeoff"),
         "runtime": {
             "cell_id": recommendation.get("cell_id"),
             "layer": recommendation.get("layer"),
             "batch_size": recommendation.get("batch_size"),
             "hidden_state_capture": recommendation.get("hidden_state_capture"),
+            "covariance_mode": recommendation.get("covariance_mode"),
+            "covariance_low_rank": recommendation.get("covariance_low_rank"),
             "max_batch_tokens": recommendation.get("max_batch_tokens"),
             "prefix_kv_cache": recommendation.get("prefix_kv_cache"),
             "max_workers": recommendation.get("max_workers"),
@@ -1445,6 +1463,7 @@ def _performance_gate(
     require_score_dump_cache: bool,
     min_score_dump_cache_jsonl_view_hit_rate: float | None,
     performance_trend_gate: Mapping[str, Any] | None,
+    max_covariance_maha_last_auroc_drop: float | None,
 ) -> dict[str, Any]:
     failures = []
     performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
@@ -1452,6 +1471,10 @@ def _performance_gate(
         performance_score_dump_cache,
         required=require_score_dump_cache,
         min_jsonl_view_hit_rate=min_score_dump_cache_jsonl_view_hit_rate,
+    )
+    covariance_gate = covariance_tradeoff_gate(
+        runtime_recommendation,
+        max_covariance_maha_last_auroc_drop=max_covariance_maha_last_auroc_drop,
     )
     if report_error is not None:
         failures.append(f"performance baseline report could not be loaded: {report_error}")
@@ -1470,6 +1493,7 @@ def _performance_gate(
             f"{performance_evidence_bundle.get('release_ready')!r}, expected True"
         )
     failures.extend(score_dump_cache_gate["blocking_reasons"])
+    failures.extend(covariance_gate["blocking_reasons"])
     if performance_trend_gate is not None:
         failures.extend(performance_trend_gate.get("blocking_reasons", ()))
     if candidate is None:
@@ -1478,6 +1502,7 @@ def _performance_gate(
             "passed": False,
             "blocking_reasons": failures,
             "score_dump_cache": score_dump_cache_gate,
+            "covariance_tradeoff": covariance_gate,
             "performance_trend": (
                 None if performance_trend_gate is None else dict(performance_trend_gate)
             ),
@@ -1491,6 +1516,8 @@ def _performance_gate(
         "layer",
         "batch_size",
         "hidden_state_capture",
+        "covariance_mode",
+        "covariance_low_rank",
         "max_batch_tokens",
         "prefix_kv_cache",
         "max_workers",
@@ -1517,6 +1544,7 @@ def _performance_gate(
         "passed": not failures,
         "blocking_reasons": failures,
         "score_dump_cache": score_dump_cache_gate,
+        "covariance_tradeoff": covariance_gate,
         "performance_trend": None if performance_trend_gate is None else dict(performance_trend_gate),
     }
 
@@ -2130,6 +2158,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_best_quality_auroc=args.min_best_quality_auroc,
         max_uncached_forward_seconds=args.max_uncached_forward_seconds,
         max_cache_only_seconds=args.max_cache_only_seconds,
+        max_covariance_maha_last_auroc_drop=args.max_covariance_maha_last_auroc_drop,
         max_inside_sample_count_ratio=args.max_inside_sample_count_ratio,
         max_inside_generation_seconds_ratio=args.max_inside_generation_seconds_ratio,
         min_selected=args.min_selected,
@@ -2251,6 +2280,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--max-cache-only-seconds",
     ), default=None)
+    parser.add_argument("--max-covariance-maha-last-auroc-drop", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--max-covariance-maha-last-auroc-drop",
+    ), default=None,
+                        help="max allowed selected covariance maha_last AUROC drop versus the full-covariance "
+                             "baseline; readiness/performance candidates without covariance tradeoff data fail "
+                             "closed when set")
     parser.add_argument("--max-inside-sample-count-ratio", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-inside-sample-count-ratio",

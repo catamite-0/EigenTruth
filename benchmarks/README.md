@@ -1193,6 +1193,7 @@ python benchmarks/compare_readiness_baselines.py \
   --registry artifacts/registry.json \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
+  --max-covariance-maha-last-auroc-drop 0.05 \
   --max-inside-sample-count-ratio 0.60 \
   --max-inside-generation-seconds-ratio 0.80 \
   --json artifacts/readiness-baseline-comparison.json \
@@ -1205,6 +1206,9 @@ older records, reloads saved INSIDE sampling profile artifacts when present,
 applies optional quality/performance/sampling-cost gates, and recommends the
 passing baseline with the best quality signal, breaking ties by lower
 forced-answer forward cost, lower cache-only time, and lower sampling ratios.
+If `--max-covariance-maha-last-auroc-drop` is set, the selected covariance mode
+must include `covariance_tradeoff` evidence and keep selected `maha_last` AUROC
+within the configured drop versus the full-covariance baseline.
 If `--max-inside-sample-count-ratio` or
 `--max-inside-generation-seconds-ratio` is set, candidates without readable
 sampling evidence fail closed. For legacy matrix reports that predate
@@ -1239,6 +1243,7 @@ python benchmarks/compare_release_candidates.py \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
+  --max-covariance-maha-last-auroc-drop 0.05 \
   --min-selected 100 \
   --min-decision-accuracy 0.95 \
   --max-false-supported-rate 0.02 \
@@ -1347,6 +1352,10 @@ Readiness-side INSIDE sampling gates are delegated to
 `compare_readiness_baselines.py`, so the final release also blocks when the
 selected runtime lacks sampling profile evidence or exceeds the configured
 sample-count/generation-time ratios.
+The same `--max-covariance-maha-last-auroc-drop` gate applies to the selected
+readiness runtime and to a supplied performance baseline's runtime
+recommendation, so a faster covariance mode cannot silently replace
+full-covariance `maha_last` quality evidence.
 Use `--runtime-profile latency`, `balanced`, or `audit` to fill unset
 runtime/cost defaults. `latency` selects the cost-first trigger budget and
 tighter sampling/route-cost gates, `balanced` selects the quality-balanced
@@ -1370,6 +1379,8 @@ when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
 label-free local retrieval claims.
+It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
+readiness and performance-baseline covariance tradeoff gates.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1381,6 +1392,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
+  --max-covariance-maha-last-auroc-drop 0.05 \
   --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
