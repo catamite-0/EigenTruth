@@ -237,24 +237,46 @@ class TestScoreDump:
             "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
             "statements": [{"text": "true"}, {"text": "false"}],
             "inside_sampling": {"mode": "off"},
+            "batch_indexes": [0, 1],
+            "inside_sample_texts": [["true sample"], ["false sample"]],
         })
         manifest_path = tmp_path / "scores.manifest.json"
 
-        manifest = write_score_dump_jsonl(dump, manifest_path)
+        manifest = write_score_dump_jsonl(
+            dump,
+            manifest_path,
+            record_extra_names=("batch_indexes", "inside_sample_texts"),
+        )
         records = tuple(iter_score_dump_jsonl_records(manifest_path))
         loaded = load_score_dump(manifest_path, required_scores=("maha_last",))
         metadata = score_dump_file_metadata(manifest_path)
 
         assert manifest.records_path == "scores.manifest.records.jsonl"
+        assert manifest.extras == {"inside_sampling": {"mode": "off"}}
         assert records[0].label == 0
         assert records[0].scores["maha_last"] == pytest.approx(0.1)
+        assert records[0].extras["batch_indexes"] == 0
+        assert records[0].extras["inside_sample_texts"] == ["true sample"]
         assert records[1].sweep_scores["-2"]["truth_proj"] == pytest.approx(0.8)
         assert loaded.summary() == dump.summary()
         assert loaded.to_mapping()["inside_sampling"] == {"mode": "off"}
+        assert loaded.to_mapping()["batch_indexes"] == [0, 1]
+        assert loaded.to_mapping()["inside_sample_texts"] == [["true sample"], ["false sample"]]
         assert loaded.statements == dump.statements
         assert metadata["source_format"] == "eigentruth.score_dump.jsonl"
         assert metadata["records"]["path"].endswith("scores.manifest.records.jsonl")
         assert metadata["records"]["sha256"]
+
+    def test_jsonl_writer_rejects_bad_record_extra_length(self, tmp_path):
+        dump = ScoreDump.from_mapping({
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+            "batch_indexes": [0],
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+
+        with pytest.raises(ValueError, match="record extra 'batch_indexes' length"):
+            write_score_dump_jsonl(dump, manifest_path, record_extra_names=("batch_indexes",))
 
     def test_jsonl_manifest_validates_record_count_and_schema(self, tmp_path):
         manifest_path = tmp_path / "scores.manifest.json"

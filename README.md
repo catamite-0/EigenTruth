@@ -110,8 +110,9 @@ For a runnable model-loading demo, see [`examples/qwen_truth_demo.py`](examples/
 
 ```bash
 python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
-  --dump-scores benchmarks/scores.json
-python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
+  --dump-scores benchmarks/scores.manifest.json \
+  --dump-scores-format jsonl
+python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json \
@@ -121,6 +122,9 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 `--artifact-manifest` fingerprints the score dump, conformal report, sweep report,
 and saved calibration artifacts so local registry/release workflows can verify the
 calibration chain without rerunning the model.
+Use `--dump-scores-format jsonl` for larger sweeps; it writes a compact manifest
+plus records sidecar that downstream calibration and verifier tools can stream by
+selected columns.
 
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size`
 to trade memory for benchmark throughput. Add `--inside-adaptive-sampling` to
@@ -292,7 +296,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
 | `directional_conformal_threshold` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions. |
-| `ScoreDump` / `load_score_dump` / `load_score_dump_columns` / `load_score_dump_statement_scores` / `load_score_dump_layer_scores` / `score_dump_file_metadata` | Validate per-statement score dumps once, expose compact run summaries, and attach SHA-256 provenance to post-hoc calibration or ensemble reports without rerunning models; callers can share an optional metadata cache to avoid repeated file hashing inside one run. `ScoreDumpJsonlManifest` / `ScoreDumpRecord` / `iter_score_dump_jsonl_records` add an optional manifest-backed JSONL format for large dumps, selected-column loaders stream primary, statement-bearing, or layer/score views from that format, and metadata fingerprints both the manifest and records file. |
+| `ScoreDump` / `load_score_dump` / `load_score_dump_columns` / `load_score_dump_statement_scores` / `load_score_dump_layer_scores` / `score_dump_file_metadata` | Validate per-statement score dumps once, expose compact run summaries, and attach SHA-256 provenance to post-hoc calibration or ensemble reports without rerunning models; callers can share an optional metadata cache to avoid repeated file hashing inside one run. `ScoreDumpJsonlManifest` / `ScoreDumpRecord` / `iter_score_dump_jsonl_records` add an optional manifest-backed JSONL format for large dumps, selected-column loaders stream primary, statement-bearing, or layer/score views from that format, and metadata fingerprints both the manifest and records file. `eval_truthfulqa.py --dump-scores-format jsonl` writes this format directly and stores per-record extras such as INSIDE sample counts in the records sidecar. |
 | `LayerScoreSweepCalibrator` | Builds layer/score sweep reports and reusable calibration artifacts from score dumps, including direct `ScoreDump` inputs via `calibrate_from_score_dump()` and selected JSONL layer-score loading via `calibrate_from_file()`. |
 | `ArtifactRegistry` / `build_artifact_manifest` / `fingerprint_path` / `verify_artifact_manifest` | Records and verifies local artifact metadata with dependency-free file/directory SHA-256 provenance for reproducible benchmark chains. |
 | `RuntimeProfile` / `RuntimeProfileSelectorPolicy` / `select_runtime_profile` | Defines shared `latency`, `balanced`, and `audit` defaults, plus a configurable cheap diagnostic/claim-metadata selector for product control-plane staging. |
@@ -363,7 +367,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
 | `directional_conformal_threshold` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率。 |
-| `ScoreDump` / `load_score_dump` / `load_score_dump_columns` / `load_score_dump_statement_scores` / `load_score_dump_layer_scores` / `score_dump_file_metadata` | 对逐陈述 score dump 做统一校验，暴露紧凑 run summary，并给后处理校准或 ensemble report 附带 SHA-256 provenance，不重跑模型；调用方可共享可选 metadata cache，避免单次运行内重复 hash 文件。`ScoreDumpJsonlManifest` / `ScoreDumpRecord` / `iter_score_dump_jsonl_records` 提供可选的 manifest-backed JSONL 大文件格式，selected-column loader 可从该格式流式读取选中的 primary、带 statement 的 primary 或 layer/score 视图，metadata 会同时 fingerprint manifest 和 records 文件。 |
+| `ScoreDump` / `load_score_dump` / `load_score_dump_columns` / `load_score_dump_statement_scores` / `load_score_dump_layer_scores` / `score_dump_file_metadata` | 对逐陈述 score dump 做统一校验，暴露紧凑 run summary，并给后处理校准或 ensemble report 附带 SHA-256 provenance，不重跑模型；调用方可共享可选 metadata cache，避免单次运行内重复 hash 文件。`ScoreDumpJsonlManifest` / `ScoreDumpRecord` / `iter_score_dump_jsonl_records` 提供可选的 manifest-backed JSONL 大文件格式，selected-column loader 可从该格式流式读取选中的 primary、带 statement 的 primary 或 layer/score 视图，metadata 会同时 fingerprint manifest 和 records 文件。`eval_truthfulqa.py --dump-scores-format jsonl` 可直接写出该格式，并把 INSIDE sample counts 等逐记录字段放进 records sidecar。 |
 | `LayerScoreSweepCalibrator` | 从分数 dump 构建层/分数 sweep report 与可复用校准 artifact，支持通过 `calibrate_from_score_dump()` 直接消费 `ScoreDump`，也支持 `calibrate_from_file()` 对 JSONL manifest 做 selected layer-score 读取。 |
 | `RuntimeProfile` / `RuntimeProfileSelectorPolicy` / `select_runtime_profile` | 定义 release gate 和产品控制面共用的 `latency`、`balanced`、`audit` 默认档位，并提供基于诊断和 claim metadata 的可配置低成本自动选择器。 |
 | `ProductPromotionContract` / `ProductRuntimeEvidenceBundle` | 将已 promoted release-candidate report 转成产品 runtime、verifier route、selector-replay、runtime-drift evidence 和 budget policy contract；`load_product_promotion_contract()` 加载 compact contract，`load_product_runtime_evidence_bundle()` 延迟附加可选 manifest verification 与 registry provenance。 |

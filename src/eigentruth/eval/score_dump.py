@@ -513,8 +513,13 @@ def write_score_dump_jsonl(
     manifest_path: str | Path,
     *,
     records_path: str | Path | None = None,
+    record_extra_names: Sequence[str] = (),
 ) -> ScoreDumpJsonlManifest:
-    """Write an in-memory score dump as JSONL records plus a manifest."""
+    """Write an in-memory score dump as JSONL records plus a manifest.
+
+    ``record_extra_names`` moves length-matched dump extras into each JSONL row
+    instead of keeping large per-record arrays in the manifest.
+    """
     manifest_file = Path(manifest_path)
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
     if records_path is None:
@@ -526,7 +531,28 @@ def write_score_dump_jsonl(
     records_file.parent.mkdir(parents=True, exist_ok=True)
 
     relative_records_path = _manifest_records_path(manifest_file, records_file)
-    manifest = ScoreDumpJsonlManifest.from_score_dump(dump, records_path=relative_records_path)
+    record_extra_columns = _record_extra_columns(
+        dump.extras,
+        record_extra_names=record_extra_names,
+        n_total=dump.n_total,
+    )
+    manifest_extras = {
+        name: value
+        for name, value in dump.extras.items()
+        if name not in record_extra_columns
+    }
+    manifest = ScoreDumpJsonlManifest(
+        records_path=relative_records_path,
+        config=dict(dump.config),
+        score_names=tuple(dump.scores),
+        sweep_score_names={
+            str(layer): tuple(layer_scores)
+            for layer, layer_scores in dump.sweep_scores.items()
+        },
+        n_total=dump.n_total,
+        has_statements=bool(dump.statements),
+        extras=manifest_extras,
+    )
     with records_file.open("w", encoding="utf-8") as stream:
         for index, label in enumerate(dump.labels):
             record = ScoreDumpRecord(
@@ -537,6 +563,7 @@ def write_score_dump_jsonl(
                     for layer, layer_scores in dump.sweep_scores.items()
                 },
                 statement=dump.statements[index] if dump.statements else None,
+                extras={name: values[index] for name, values in record_extra_columns.items()},
             )
             stream.write(json.dumps(record.to_mapping(), sort_keys=True) + "\n")
     manifest.save_json(manifest_file)
@@ -646,6 +673,7 @@ def _load_score_dump_jsonl_manifest(
         for layer, score_names in manifest.sweep_score_names.items()
     }
     statements: list[Mapping[str, Any]] = []
+    record_extras: dict[str, list[Any]] = {}
     saw_statement = False
     missing_statement = False
 
@@ -666,11 +694,18 @@ def _load_score_dump_jsonl_manifest(
         else:
             saw_statement = True
             statements.append(record.statement)
+        index = len(labels) - 1
+        for values in record_extras.values():
+            values.append(None)
+        for name, value in record.extras.items():
+            values = record_extras.setdefault(name, [None] * (index + 1))
+            values[index] = value
 
     if saw_statement and missing_statement:
         raise ValueError("score dump JSONL records must either all include statements or none do.")
 
     payload: dict[str, Any] = dict(manifest.extras)
+    payload.update(record_extras)
     payload.update({
         "config": dict(manifest.config),
         "labels": labels,
@@ -1219,6 +1254,30 @@ def _required_mapping(value: Any, name: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError(f"score dump JSONL record {name} must be an object.")
     return value
+
+
+def _record_extra_columns(
+    extras: Mapping[str, Any],
+    *,
+    record_extra_names: Sequence[str],
+    n_total: int,
+) -> dict[str, tuple[Any, ...]]:
+    columns: dict[str, tuple[Any, ...]] = {}
+    for raw_name in record_extra_names:
+        name = str(raw_name)
+        if name not in extras:
+            raise ValueError(f"record extra {name!r} is missing from score dump extras.")
+        values = extras[name]
+        if not isinstance(values, Sequence) or isinstance(values, (str, bytes, bytearray)):
+            raise ValueError(f"record extra {name!r} must be a list with one value per record.")
+        column = tuple(values)
+        if len(column) != n_total:
+            raise ValueError(
+                f"record extra {name!r} length does not match labels "
+                f"({len(column)} values vs {n_total} labels)."
+            )
+        columns[name] = column
+    return columns
 
 
 def _manifest_records_path(manifest_file: Path, records_file: Path) -> str:

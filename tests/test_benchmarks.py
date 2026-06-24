@@ -177,6 +177,37 @@ def test_eval_conformal_writes_artifact_manifest_for_outputs(tmp_path):
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
 
 
+def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    score_dump_module = importlib.import_module("eigentruth.eval.score_dump")
+    manifest_path = tmp_path / "truthfulqa-scores.manifest.json"
+    dump = {
+        "config": {"model": "tiny", "layer": -1},
+        "labels": [0, 1],
+        "scores": {
+            "maha_last": [0.1, 0.9],
+            "truth_proj": [0.2, 0.8],
+        },
+        "statements": [{"text": "true"}, {"text": "false"}],
+        "batch_indexes": [0, 0],
+        "inside_sampled": [True, False],
+        "inside_sample_counts": [2, 0],
+        "inside_sample_texts": [["true sample a", "true sample b"], []],
+        "inside_sampling": {"mode": "triggered"},
+    }
+
+    module._write_score_dump(manifest_path, dump, "jsonl")
+    records = tuple(score_dump_module.iter_score_dump_jsonl_records(manifest_path))
+    loaded = score_dump_module.load_score_dump(manifest_path, required_scores=("truth_proj",))
+
+    assert manifest_path.exists()
+    assert (tmp_path / "truthfulqa-scores.manifest.records.jsonl").exists()
+    assert records[0].extras["inside_sample_counts"] == 2
+    assert records[1].extras["inside_sampled"] is False
+    assert loaded.to_mapping()["inside_sample_texts"] == [["true sample a", "true sample b"], []]
+    assert loaded.to_mapping()["inside_sampling"] == {"mode": "triggered"}
+
+
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
     module = importlib.import_module("benchmarks.backfill_truthfulqa_statements")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")

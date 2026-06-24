@@ -206,11 +206,12 @@ text in the score dump as `inside_sample_texts`. This is useful for building
 
 ```bash
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
-  --inside-samples 3 --dump-scores artifacts/tiny_scores_with_samples.json \
+  --inside-samples 3 --dump-scores artifacts/tiny_scores_with_samples.manifest.json \
+  --dump-scores-format jsonl \
   --dump-inside-samples
 
 python benchmarks/build_selfcheck_fixture.py \
-  --scores artifacts/tiny_scores_with_samples.json \
+  --scores artifacts/tiny_scores_with_samples.manifest.json \
   --output artifacts/tiny_selfcheck_claims.json
 ```
 
@@ -390,6 +391,12 @@ split 50/50 into calibration/test over 20 seeded repeats:
 ```bash
 python benchmarks/eval_truthfulqa.py --model gpt2 --dump-scores benchmarks/scores.json ...
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj
+
+# For larger sweeps, write a streaming score dump manifest plus JSONL records sidecar:
+python benchmarks/eval_truthfulqa.py --model gpt2 --sweep \
+  --dump-scores benchmarks/scores.manifest.json \
+  --dump-scores-format jsonl
+python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json --signal truth_proj
 
 # Override the score direction for lower-is-more-anomalous signals:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal support_score \

@@ -71,6 +71,7 @@ from eigentruth.core.math_engine import (
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
+from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.verify import Claim, SelfConsistencyVerifier
 
@@ -89,6 +90,16 @@ INSIDE_EMBEDDING_ENTROPY_SIGNAL = "inside_embedding_entropy"
 INSIDE_SIGNALS = (INSIDE_SIGNAL, INSIDE_SEMANTIC_ENTROPY_SIGNAL, INSIDE_EMBEDDING_ENTROPY_SIGNAL)
 REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
+SCORE_DUMP_FORMATS = ("json", "jsonl")
+SCORE_DUMP_RECORD_EXTRA_NAMES = (
+    "batch_indexes",
+    "inside_sampled",
+    "inside_sample_counts",
+    "inside_adaptive_rounds",
+    "inside_stopped_early",
+    "inside_stop_reasons",
+    "inside_sample_texts",
+)
 PROFILE_GROUPS = {
     "startup": ("load_data", "load_model"),
     "tokenization": (
@@ -303,6 +314,23 @@ def _selective_reports(
             **selective_classification_report(signal_scores, labels_t, threshold, direction=direction),
         }
     return reports
+
+
+def _write_score_dump(path: str | Path, dump: Mapping[str, object], dump_format: str) -> None:
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if dump_format == "json":
+        output_path.write_text(json.dumps(dump), encoding="utf-8")
+        return
+    if dump_format == "jsonl":
+        score_dump = ScoreDump.from_mapping(dump)
+        write_score_dump_jsonl(
+            score_dump,
+            output_path,
+            record_extra_names=tuple(name for name in SCORE_DUMP_RECORD_EXTRA_NAMES if name in dump),
+        )
+        return
+    raise ValueError(f"unsupported score dump format: {dump_format!r}")
 
 
 def _inside_enabled(args) -> bool:
@@ -3749,6 +3777,7 @@ def run(args) -> dict:
                    "progress_every": args.progress_every,
                    "warmup_checkpoint": args.warmup_checkpoint,
                    "warmup_checkpoint_every": args.warmup_checkpoint_every,
+                   "dump_scores_format": getattr(args, "dump_scores_format", "json"),
                    "sweep_layers": layers if (args.sweep or args.sweep_layers) else None},
         "auroc": results,
         "selective": selective,
@@ -3867,9 +3896,10 @@ def run(args) -> dict:
                 dump["inside_sample_texts"] = inside_sample_texts
         if _sweep_output_enabled(args):
             dump["sweep_scores"] = {str(layer): sweep_scores[layer] for layer in layers}
-        with open(args.dump_scores, "w", encoding="utf-8") as f:
-            json.dump(dump, f)
-        print(f"Dumped raw per-statement scores to {args.dump_scores}")
+        dump_format = getattr(args, "dump_scores_format", "json")
+        _write_score_dump(args.dump_scores, dump, dump_format)
+        noun = "manifest" if dump_format == "jsonl" else "scores"
+        print(f"Dumped raw per-statement {noun} to {args.dump_scores}")
     print("\nJSON:", json.dumps(payload["auroc"]))
     return payload
 
@@ -3991,6 +4021,8 @@ def main():
     p.add_argument("--dump-scores", default=None,
                    help="optional path to dump raw per-statement scores+labels "
                         "(enables post-hoc analyses, e.g. conformal calibration)")
+    p.add_argument("--dump-scores-format", default="json", choices=SCORE_DUMP_FORMATS,
+                   help="format for --dump-scores: json writes one file, jsonl writes a manifest plus records sidecar")
     p.add_argument("--dump-inside-samples", action="store_true",
                    help="when used with --dump-scores and --inside-samples, include sampled continuation text "
                         "for downstream self-consistency verifier fixtures")
