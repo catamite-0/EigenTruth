@@ -43,8 +43,12 @@ def promote_artifact_manifest(
     cache = fingerprint_cache if fingerprint_cache is not None else load_fingerprint_cache(fingerprint_cache_path)
     context = verification_context or ArtifactVerificationContext(fingerprint_cache=cache)
     try:
-        verification = context.load_and_verify_artifact_manifest(
-            manifest_path,
+        manifest, manifest_error = context.load_json_object(manifest_path)
+        if manifest_error is not None:
+            raise ValueError(f"artifact manifest could not be loaded: {manifest_path}: {manifest_error}")
+        verification = context.verify_artifact_manifest(
+            manifest,
+            manifest_path=manifest_path,
             recursive=recursive,
             max_workers=manifest_fingerprint_workers,
         )
@@ -59,9 +63,6 @@ def promote_artifact_manifest(
         )
         raise ValueError("artifact manifest verification failed; use --allow-failures to register anyway")
 
-    manifest, manifest_error = context.load_json_object(manifest_path)
-    if manifest_error is not None:
-        raise ValueError(f"artifact manifest could not be loaded: {manifest_path}: {manifest_error}")
     manifest_metadata = dict(manifest.get("metadata", {})) if isinstance(manifest.get("metadata", {}), Mapping) else {}
     registry_metadata = {
         "verified": verification.passed,

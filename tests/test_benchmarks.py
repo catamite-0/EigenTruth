@@ -9412,7 +9412,9 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
     assert manifest_record.metadata["verified"] is True
     assert manifest_record.metadata["machine"] == "local"
     assert manifest_record.metadata["manifest_metadata"] == {"runner": "unit"}
-    assert manifest_record.metadata["artifact_json_cache"]["hits"] == 1
+    assert manifest_record.metadata["artifact_json_cache"]["requests"] == 1
+    assert manifest_record.metadata["artifact_json_cache"]["hits"] == 0
+    assert manifest_record.metadata["artifact_json_cache"]["misses"] == 1
     assert manifest_record.metadata["artifact_json_cache"]["entries"] == 1
     assert manifest_record.metadata["artifact_fingerprint_cache_entries"] > 0
     assert manifest_record.metadata["manifest_fingerprint_workers"] == 2
