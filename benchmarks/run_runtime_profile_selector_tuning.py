@@ -15,7 +15,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool, strict_positive_int  # noqa: E402
 from benchmarks.run_product_runtime_profile_sweep import (  # noqa: E402
     DEFAULT_SCENARIOS,
     ProductRuntimeProfileSweepConfig,
@@ -92,9 +92,7 @@ class RuntimeProfileSelectorTuningConfig:
         profiles = tuple(str(profile).strip().lower().replace("-", "_") for profile in self.profiles)
         if "auto" not in profiles:
             raise ValueError("selector tuning profiles must include auto.")
-        repeats = int(self.repeats)
-        if repeats <= 0:
-            raise ValueError("repeats must be positive.")
+        repeats = strict_positive_int(self.repeats, name="repeats")
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
         object.__setattr__(self, "output_dir", output_dir)
@@ -117,7 +115,7 @@ class RuntimeProfileSelectorTuningConfig:
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
-        object.__setattr__(self, "compact_json", bool(self.compact_json))
+        object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
     @property
     def resolved_report_path(self) -> Path:

@@ -13552,6 +13552,12 @@ def test_run_product_runtime_profile_sweep_compares_profiles_and_registers(tmp_p
 def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
 
+    string_bool_config = module.ProductRuntimeProfileSweepConfig(
+        output_dir=tmp_path / "profile-sweep-string-bool",
+        compact_json="false",  # type: ignore[arg-type]
+    )
+    assert string_bool_config.compact_json is False
+
     with pytest.raises(ValueError, match="max_workers"):
         module.ProductRuntimeProfileSweepConfig(
             output_dir=tmp_path / "profile-sweep",
@@ -13566,6 +13572,11 @@ def test_run_product_runtime_profile_sweep_rejects_invalid_workers(tmp_path):
         module.ProductRuntimeProfileSweepConfig(
             output_dir=tmp_path / "profile-sweep-bool-repeats",
             repeats=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="compact_json"):
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep-bad-compact-json",
+            compact_json="maybe",  # type: ignore[arg-type]
         )
 
 
@@ -13775,6 +13786,27 @@ def test_run_runtime_profile_selector_tuning_recommends_passing_policy(tmp_path)
     assert record.metadata["status"] == "promote"
     assert record.metadata["recommended_candidate"] == "default"
     assert record.metadata["candidate_count"] == 2
+
+
+def test_runtime_profile_selector_tuning_config_parses_bool_strings(tmp_path):
+    module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+
+    config = module.RuntimeProfileSelectorTuningConfig(
+        output_dir=tmp_path / "selector-tuning",
+        compact_json="false",  # type: ignore[arg-type]
+    )
+    assert config.compact_json is False
+
+    with pytest.raises(ValueError, match="compact_json"):
+        module.RuntimeProfileSelectorTuningConfig(
+            output_dir=tmp_path / "bad-compact-json",
+            compact_json="maybe",  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="repeats"):
+        module.RuntimeProfileSelectorTuningConfig(
+            output_dir=tmp_path / "bad-repeats",
+            repeats=True,  # type: ignore[arg-type]
+        )
 
 
 def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tmp_path):

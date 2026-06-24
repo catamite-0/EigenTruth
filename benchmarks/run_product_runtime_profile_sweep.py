@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.config_utils import planned_artifact_manifest_summary, strict_positive_int  # noqa: E402
+from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool, strict_positive_int  # noqa: E402
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
     build_product_runtime_baseline,
@@ -126,7 +126,7 @@ class ProductRuntimeProfileSweepConfig:
         object.__setattr__(self, "scenarios", scenarios)
         object.__setattr__(self, "repeats", repeats)
         object.__setattr__(self, "max_workers", max_workers)
-        object.__setattr__(self, "compact_json", bool(self.compact_json))
+        object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
         if self.artifact_path is not None:
             object.__setattr__(self, "artifact_path", Path(self.artifact_path))
         if self.promotion_contract_path is not None:
