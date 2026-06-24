@@ -412,6 +412,15 @@ class ProductTrace:
         result_count = _initial_verification_result_count(initial_event)
         if result_count is None:
             result_count = len(self.verification_results)
+        verified_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("verified_claim_ids", ())))
+        skipped_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("skipped_claim_ids", ())))
+        verification_scope = str(
+            initial_event.get("verification_scope")
+            or stage_event.get("verification_scope")
+            or ""
+        ).strip().lower()
+        if not verification_scope:
+            verification_scope = "none" if _optional_bool(stage_event.get("run_verifier")) is False else "all"
         run_verifier = _optional_bool(stage_event.get("run_verifier"))
         skipped = _optional_bool(initial_event.get("skipped"))
         if skipped is None and skipped_event:
@@ -420,12 +429,17 @@ class ProductTrace:
             skipped = not run_verifier
         if skipped is None:
             skipped = False
-        saved_claim_count = claim_count if skipped is True and claim_count is not None else 0
-        verified_claim_count = (
-            result_count
-            if result_count is not None
-            else (0 if skipped is True else claim_count)
-        )
+        verified_claim_count = len(verified_claim_ids) if verified_claim_ids else result_count
+        if verified_claim_count is None:
+            verified_claim_count = 0 if skipped is True else claim_count
+        if skipped is True and claim_count is not None:
+            saved_claim_count = claim_count
+        elif skipped_claim_ids:
+            saved_claim_count = len(skipped_claim_ids)
+        elif verification_scope == "triggered" and claim_count is not None and verified_claim_count is not None:
+            saved_claim_count = max(claim_count - verified_claim_count, 0)
+        else:
+            saved_claim_count = 0
         triggered_claim_ids = tuple(str(item) for item in _as_sequence(stage_event.get("triggered_claim_ids", ())))
         triggered_features = _string_sequence_mapping(stage_event.get("triggered_features"))
         triggered_metadata = _string_sequence_mapping(stage_event.get("triggered_metadata"))
@@ -438,11 +452,15 @@ class ProductTrace:
             "enabled": enabled,
             "run_verifier": run_verifier,
             "skipped": bool(skipped),
+            "verification_scope": verification_scope,
             "reason": stage_event.get("reason", skipped_event.get("reason")),
             "claim_count": claim_count,
             "verification_result_count": result_count,
             "verified_claim_count": verified_claim_count,
             "saved_claim_count": saved_claim_count,
+            "verified_claim_ids": verified_claim_ids,
+            "skipped_claim_ids": skipped_claim_ids,
+            "skipped_claim_count": len(skipped_claim_ids),
             "skip_rate": _safe_div(saved_claim_count, claim_count or 0),
             "triggered_claim_count": len(triggered_claim_ids),
             "triggered_claim_ids": triggered_claim_ids,

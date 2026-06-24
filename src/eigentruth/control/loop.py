@@ -172,14 +172,23 @@ def run_verification_loop(
     loop_started_at = _start_runtime_phase(profile_runtime)
     diagnostic_decision: RiskDecision | None = None
     stage_decision: VerificationStageDecision | None = None
+    initial_verification_claims: tuple[Claim, ...] = tuple(claims)
+    initial_verified_claim_ids: tuple[str, ...] = _claim_ids(claims)
+    initial_skipped_claim_ids: tuple[str, ...] = ()
+    initial_verification_scope = "all"
     if stage_policy is None:
         phase_started_at = _start_runtime_phase(profile_runtime)
-        initial_results = tuple(verifier.verify_many(claims, context=base_context))
+        initial_results = tuple(verifier.verify_many(initial_verification_claims, context=base_context))
         _record_runtime_phase(
             runtime_phases,
             "initial_verification",
             phase_started_at,
-            metadata={"n_claims": len(claims), "skipped": False},
+            metadata={
+                "n_claims": len(initial_verification_claims),
+                "total_claims": len(claims),
+                "skipped": False,
+                "verification_scope": initial_verification_scope,
+            },
         )
         phase_started_at = _start_runtime_phase(profile_runtime)
         initial_decision = controller.decide(diagnostics, verification_results=initial_results)
@@ -208,16 +217,29 @@ def run_verification_loop(
             runtime_phases,
             "verification_stage_decision",
             phase_started_at,
-            metadata={"run_verifier": stage_decision.run_verifier},
+            metadata={
+                "run_verifier": stage_decision.run_verifier,
+                "verification_scope": stage_decision.verification_scope,
+            },
         )
         if stage_decision.run_verifier:
+            initial_verification_claims = _select_stage_claims(claims, stage_decision)
+            initial_verified_claim_ids = _claim_ids(initial_verification_claims)
+            initial_skipped_claim_ids = tuple(stage_decision.skipped_claim_ids)
+            initial_verification_scope = str(stage_decision.verification_scope)
             phase_started_at = _start_runtime_phase(profile_runtime)
-            initial_results = tuple(verifier.verify_many(claims, context=base_context))
+            initial_results = tuple(verifier.verify_many(initial_verification_claims, context=base_context))
             _record_runtime_phase(
                 runtime_phases,
                 "initial_verification",
                 phase_started_at,
-                metadata={"n_claims": len(claims), "skipped": False},
+                metadata={
+                    "n_claims": len(initial_verification_claims),
+                    "total_claims": len(claims),
+                    "skipped": False,
+                    "verification_scope": initial_verification_scope,
+                    "skipped_claim_count": len(initial_skipped_claim_ids),
+                },
             )
             phase_started_at = _start_runtime_phase(profile_runtime)
             initial_decision = controller.decide(diagnostics, verification_results=initial_results)
@@ -228,6 +250,10 @@ def run_verification_loop(
                 metadata={"verification_results": len(initial_results)},
             )
         else:
+            initial_verification_claims = ()
+            initial_verified_claim_ids = ()
+            initial_skipped_claim_ids = tuple(stage_decision.skipped_claim_ids) or _claim_ids(claims)
+            initial_verification_scope = "none"
             initial_results = ()
             initial_decision = diagnostic_decision
 
@@ -235,7 +261,7 @@ def run_verification_loop(
     policy = correction_policy or DefaultCorrectionPolicy()
     action_requests = policy.plan(
         initial_decision,
-        claims=claims,
+        claims=initial_verification_claims,
         verification_results=initial_results,
         context=base_context,
     )
@@ -265,10 +291,11 @@ def run_verification_loop(
     )
 
     if retrieval_evidence.has_evidence():
+        final_verification_claims = initial_verification_claims or tuple(claims)
         phase_started_at = _start_runtime_phase(profile_runtime)
         final_results = _verify_with_retrieved_evidence(
             verifier,
-            claims,
+            final_verification_claims,
             base_context=base_context,
             evidence_bundle=retrieval_evidence,
         )
@@ -276,7 +303,12 @@ def run_verification_loop(
             runtime_phases,
             "final_verification",
             phase_started_at,
-            metadata={"n_claims": len(claims), "used_retrieval_evidence": True},
+            metadata={
+                "n_claims": len(final_verification_claims),
+                "total_claims": len(claims),
+                "used_retrieval_evidence": True,
+                "verification_scope": initial_verification_scope,
+            },
         )
         phase_started_at = _start_runtime_phase(profile_runtime)
         final_decision = controller.decide(diagnostics, verification_results=final_results)
@@ -312,7 +344,10 @@ def run_verification_loop(
                 (
                     TraceEvent(
                         "initial_verification_skipped",
-                        {"reason": stage_decision.reason},
+                        {
+                            "reason": stage_decision.reason,
+                            "skipped_claim_ids": initial_skipped_claim_ids,
+                        },
                     ),
                 )
                 if stage_decision is not None and not stage_decision.run_verifier
@@ -322,6 +357,10 @@ def run_verification_loop(
                 "initial_verification",
                 {
                     "n_claims": len(claims),
+                    "verification_result_count": len(initial_results),
+                    "verified_claim_ids": initial_verified_claim_ids,
+                    "skipped_claim_ids": initial_skipped_claim_ids,
+                    "verification_scope": initial_verification_scope,
                     "skipped": stage_decision is not None and not stage_decision.run_verifier,
                     "results": tuple(_verification_result_to_dict(result) for result in initial_results),
                 },
@@ -413,6 +452,40 @@ def _verify_with_retrieved_evidence(
         )
         results.append(verifier.verify(claim, context=claim_context))
     return tuple(results)
+
+
+def _select_stage_claims(
+    claims: Sequence[Claim],
+    stage_decision: VerificationStageDecision,
+) -> tuple[Claim, ...]:
+    """Return the claim subset selected by a staged-verification decision."""
+    if stage_decision.verification_scope == "all":
+        return tuple(claims)
+    selected_ids = set(stage_decision.verify_claim_ids)
+    return tuple(
+        _claim_with_id(claim, _claim_id_for_index(claim, index))
+        for index, claim in enumerate(claims)
+        if _claim_id_for_index(claim, index) in selected_ids
+    )
+
+
+def _claim_ids(claims: Sequence[Claim]) -> tuple[str, ...]:
+    return tuple(_claim_id_for_index(claim, index) for index, claim in enumerate(claims))
+
+
+def _claim_id_for_index(claim: Claim, index: int) -> str:
+    return claim.claim_id or f"c{index + 1}"
+
+
+def _claim_with_id(claim: Claim, claim_id: str) -> Claim:
+    if claim.claim_id == claim_id:
+        return claim
+    return Claim(
+        text=claim.text,
+        claim_id=claim_id,
+        span=claim.span,
+        metadata=claim.metadata,
+    )
 
 
 def _action_result_to_dict(result: ActionResult | Mapping[str, Any]) -> dict[str, Any]:

@@ -134,6 +134,7 @@ def test_runtime_profiles_apply_only_missing_defaults():
     assert RUNTIME_PROFILE_NAMES == ("latency", "balanced", "audit")
     assert RUNTIME_PROFILES["balanced"].defaults["inside_trigger_budget_policy"] == "quality_balanced"
     assert RUNTIME_PROFILES["latency"].control_defaults["staged_verification"] is True
+    assert RUNTIME_PROFILES["latency"].control_defaults["stage_verify_triggered_claims_only"] is True
     assert RUNTIME_PROFILES["audit"].control_defaults["staged_verification"] is False
 
     merged, applied = profile.apply_defaults({

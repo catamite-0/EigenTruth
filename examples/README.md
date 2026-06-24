@@ -178,7 +178,10 @@ to infer the sibling artifact manifest and can optionally attach manifest
 verification plus local registry provenance with `--verify-promotion-contract-manifest`
 and `--promotion-contract-registry`. Staged-verification runs also emit
 `verification_stage_summary`, so low-risk fast-path savings can be gated with
-`--min-verification-skip-rate` and `--max-verified-claim-count`.
+`--min-verification-skip-rate` and `--max-verified-claim-count`. The latency
+runtime profile verifies only claims that triggered configured claim metadata or
+feature flags, and records skipped claim ids in the trace instead of treating
+them as supported.
 
 The demo can also route unsupported claims to the dependency-free in-memory
 retrieval executor, feed retrieval hits back into the groundedness verifier, and

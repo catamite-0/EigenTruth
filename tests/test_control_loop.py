@@ -247,6 +247,47 @@ def test_staged_verification_loop_runs_verifier_for_sensitive_claim_metadata():
     )
 
 
+def test_staged_verification_loop_can_verify_only_triggered_claims():
+    claims = (
+        Claim("Paris is a city.", claim_id="c1"),
+        Claim("AlphaCorp has 10 offices.", claim_id="c2", metadata={"features": {"has_number": True}}),
+        Claim("Berlin is a city.", claim_id="c3"),
+    )
+    verifier = _CountingVerifier(status=VerificationStatus.INSUFFICIENT_EVIDENCE)
+
+    result = run_verification_loop(
+        request_id="req-stage-triggered-only",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(
+            verify_claim_feature_flags=("has_number",),
+            verify_triggered_claims_only=True,
+        ),
+    )
+
+    assert verifier.verify_many_calls == 1
+    assert verifier.verify_calls == 1
+    assert verifier.claim_ids == ("c2",)
+    assert result.verification_stage_decision is not None
+    assert result.verification_stage_decision.verification_scope == "triggered"
+    assert result.verification_stage_decision.verify_claim_ids == ("c2",)
+    assert result.verification_stage_decision.skipped_claim_ids == ("c1", "c3")
+    assert len(result.initial_verification_results) == 1
+    assert result.action_requests[0].action is ControlAction.RETRIEVE
+    assert result.action_requests[0].payload["retrieval_targets"][0]["claim_id"] == "c2"
+    assert len(result.action_requests[0].payload["retrieval_targets"]) == 1
+
+    summary = result.trace.verification_stage_summary()
+    assert summary["verification_scope"] == "triggered"
+    assert summary["verified_claim_count"] == 1
+    assert summary["saved_claim_count"] == 2
+    assert summary["skip_rate"] == 2 / 3
+    assert summary["verified_claim_ids"] == ("c2",)
+    assert summary["skipped_claim_ids"] == ("c1", "c3")
+
+
 def test_staged_verification_policy_parses_string_feature_and_metadata_flags():
     controller = RiskController(_artifact())
     low_decision = controller.decide({"maha_last": 1.0})
@@ -344,10 +385,12 @@ class _CountingVerifier:
         self.status = status
         self.verify_calls = 0
         self.verify_many_calls = 0
+        self.claim_ids = ()
 
     def verify(self, claim, context=None):
-        del claim, context
+        del context
         self.verify_calls += 1
+        self.claim_ids = (*self.claim_ids, claim.claim_id)
         return VerificationResult(
             status=self.status,
             confidence=0.9,

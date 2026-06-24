@@ -16,11 +16,29 @@ class VerificationStageDecision:
 
     run_verifier: bool
     reason: str
+    verification_scope: str | None = None
+    verify_claim_ids: Sequence[str] = ()
+    skipped_claim_ids: Sequence[str] = ()
     triggered_claim_ids: Sequence[str] = ()
     triggered_features: Mapping[str, Sequence[str]] = field(default_factory=dict)
     triggered_metadata: Mapping[str, Sequence[str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.verification_scope is None:
+            scope = "all" if self.run_verifier else "none"
+        else:
+            scope = str(self.verification_scope).strip().lower()
+        if scope not in {"all", "triggered", "none"}:
+            raise ValueError("verification_scope must be one of: all, triggered, none")
+        if self.run_verifier and scope == "none":
+            raise ValueError("verification_scope cannot be 'none' when run_verifier is true")
+        object.__setattr__(self, "verification_scope", scope)
+        object.__setattr__(self, "verify_claim_ids", tuple(str(item) for item in self.verify_claim_ids))
+        object.__setattr__(
+            self,
+            "skipped_claim_ids",
+            tuple(str(item) for item in self.skipped_claim_ids),
+        )
         object.__setattr__(self, "triggered_claim_ids", tuple(str(item) for item in self.triggered_claim_ids))
         object.__setattr__(
             self,
@@ -44,6 +62,9 @@ class VerificationStageDecision:
         return {
             "run_verifier": self.run_verifier,
             "reason": self.reason,
+            "verification_scope": self.verification_scope,
+            "verify_claim_ids": tuple(self.verify_claim_ids),
+            "skipped_claim_ids": tuple(self.skipped_claim_ids),
             "triggered_claim_ids": tuple(self.triggered_claim_ids),
             "triggered_features": {
                 claim_id: tuple(features)
@@ -79,6 +100,7 @@ class StagedVerificationPolicy:
         "is_time_sensitive",
     )
     verify_claim_metadata_keys: Sequence[str] = ("requires_verification",)
+    verify_triggered_claims_only: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -101,6 +123,14 @@ class StagedVerificationPolicy:
             "verify_claim_metadata_keys",
             tuple(str(key) for key in self.verify_claim_metadata_keys),
         )
+        object.__setattr__(
+            self,
+            "verify_triggered_claims_only",
+            _coerce_bool(
+                self.verify_triggered_claims_only,
+                field_name="verify_triggered_claims_only",
+            ),
+        )
 
     def decide(
         self,
@@ -115,23 +145,29 @@ class StagedVerificationPolicy:
             return VerificationStageDecision(
                 run_verifier=False,
                 reason="no claims to verify",
+                verification_scope="none",
             )
+        claim_ids = tuple(_claim_id(claim, index) for index, claim in enumerate(claims))
         if diagnostic_decision.risk_level in self.verify_risk_levels:
             return VerificationStageDecision(
                 run_verifier=True,
                 reason=f"diagnostic risk level is {diagnostic_decision.risk_level.value}",
+                verification_scope="all",
+                verify_claim_ids=claim_ids,
             )
         if diagnostic_decision.action in self.verify_actions:
             return VerificationStageDecision(
                 run_verifier=True,
                 reason=f"diagnostic action is {diagnostic_decision.action.value}",
+                verification_scope="all",
+                verify_claim_ids=claim_ids,
             )
 
         feature_hits: dict[str, tuple[str, ...]] = {}
         metadata_hits: dict[str, tuple[str, ...]] = {}
         triggered_claim_ids = []
         for index, claim in enumerate(claims):
-            claim_id = claim.claim_id or f"c{index + 1}"
+            claim_id = _claim_id(claim, index)
             metadata = claim.metadata if isinstance(claim.metadata, Mapping) else {}
             features = metadata.get("features", {})
             if not isinstance(features, Mapping):
@@ -148,9 +184,24 @@ class StagedVerificationPolicy:
                 triggered_claim_ids.append(claim_id)
 
         if triggered_claim_ids:
+            triggered_claim_id_set = set(triggered_claim_ids)
+            skipped_claim_ids = tuple(
+                claim_id for claim_id in claim_ids if claim_id not in triggered_claim_id_set
+            )
             return VerificationStageDecision(
                 run_verifier=True,
                 reason="claim metadata requires verification",
+                verification_scope="triggered" if self.verify_triggered_claims_only else "all",
+                verify_claim_ids=(
+                    tuple(triggered_claim_ids)
+                    if self.verify_triggered_claims_only
+                    else claim_ids
+                ),
+                skipped_claim_ids=(
+                    skipped_claim_ids
+                    if self.verify_triggered_claims_only
+                    else ()
+                ),
                 triggered_claim_ids=tuple(triggered_claim_ids),
                 triggered_features=feature_hits,
                 triggered_metadata=metadata_hits,
@@ -158,6 +209,8 @@ class StagedVerificationPolicy:
         return VerificationStageDecision(
             run_verifier=False,
             reason="diagnostics and claim metadata did not require verification",
+            verification_scope="none",
+            skipped_claim_ids=claim_ids,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -167,7 +220,13 @@ class StagedVerificationPolicy:
             "verify_actions": tuple(action.value for action in self.verify_actions),
             "verify_claim_feature_flags": tuple(self.verify_claim_feature_flags),
             "verify_claim_metadata_keys": tuple(self.verify_claim_metadata_keys),
+            "verify_triggered_claims_only": self.verify_triggered_claims_only,
         }
+
+
+def _claim_id(claim: Claim, index: int) -> str:
+    return claim.claim_id or f"c{index + 1}"
+
 
 def _coerce_risk_level(value: RiskLevel | str) -> RiskLevel:
     if isinstance(value, RiskLevel):
@@ -179,3 +238,15 @@ def _coerce_control_action(value: ControlAction | str) -> ControlAction:
     if isinstance(value, ControlAction):
         return value
     return ControlAction(str(value))
+
+
+def _coerce_bool(value: Any, *, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{field_name} must be a boolean")

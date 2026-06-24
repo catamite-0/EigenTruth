@@ -647,6 +647,40 @@ def test_product_trace_verification_stage_summary_counts_saved_claims():
     assert stage_only["skipped"] is True
     assert stage_only["saved_claim_count"] == 1
 
+    partial = ProductTrace(
+        claims=claims,
+        verification_results=(
+            VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9),
+        ),
+        events=(
+            TraceEvent(
+                "verification_stage_decision",
+                {
+                    "run_verifier": True,
+                    "verification_scope": "triggered",
+                    "triggered_claim_ids": ("c2",),
+                },
+            ),
+            TraceEvent(
+                "initial_verification",
+                {
+                    "n_claims": len(claims),
+                    "verification_scope": "triggered",
+                    "verified_claim_ids": ("c2",),
+                    "skipped_claim_ids": ("c1",),
+                    "results": (
+                        {"status": "supported", "confidence": 0.9, "evidence": ()},
+                    ),
+                },
+            ),
+        ),
+    ).verification_stage_summary()
+    assert partial["skipped"] is False
+    assert partial["verification_scope"] == "triggered"
+    assert partial["verified_claim_count"] == 1
+    assert partial["saved_claim_count"] == 1
+    assert partial["skip_rate"] == 0.5
+
 
 def test_product_runtime_budget_evaluates_trace_phase_limits():
     trace = ProductTrace(

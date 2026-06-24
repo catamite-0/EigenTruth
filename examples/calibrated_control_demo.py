@@ -380,6 +380,10 @@ def stage_policy_from_runtime_profile(
             "stage_verify_claim_metadata_keys",
             default_policy.verify_claim_metadata_keys,
         ),
+        verify_triggered_claims_only=control_defaults.get(
+            "stage_verify_triggered_claims_only",
+            default_policy.verify_triggered_claims_only,
+        ),
     )
 
 

@@ -24,6 +24,7 @@ _CONTROL_DEFAULT_KEYS = frozenset({
     "stage_verify_actions",
     "stage_verify_claim_feature_flags",
     "stage_verify_claim_metadata_keys",
+    "stage_verify_triggered_claims_only",
 })
 _DEFAULT_SENSITIVE_CLAIM_FEATURE_FLAGS = (
     "has_number",
@@ -458,6 +459,7 @@ RUNTIME_PROFILES: Mapping[str, RuntimeProfile] = MappingProxyType({
             "stage_verify_actions": ("abstain", "clarify"),
             "stage_verify_claim_feature_flags": ("has_number", "has_citation", "is_time_sensitive"),
             "stage_verify_claim_metadata_keys": ("requires_verification",),
+            "stage_verify_triggered_claims_only": True,
         },
     ),
     "balanced": RuntimeProfile(
