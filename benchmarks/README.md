@@ -2484,13 +2484,17 @@ provided candidate policies using the corpus runtime-pair index, writes a
 recursive top-level manifest over all child reports, records phase timing/cache
 summaries for local performance tuning, lifts the runtime baseline
 `optimization` status/recommendations/policy hints into the top-level workflow
-report and registry metadata, and registers one workflow report.
+report and registry metadata, can save the runtime baseline's recommended
+`ProductRuntimeBudgetPolicy` artifact for later gates, and registers one
+workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
 `--corpus-source-cache-json` when only some raw trace files change,
 `--corpus-cache-json` when the entire standardized corpus can be reused,
-`--runtime-trace-records-cache-json` when sweeping runtime budget gates, and
+`--runtime-trace-records-cache-json` when sweeping runtime budget gates,
+`--save-runtime-recommended-policy` when the workflow should materialize the
+observed baseline's candidate budget thresholds, and
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
@@ -2511,6 +2515,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json \
   --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json \
   --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
+  --save-runtime-recommended-policy artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/recommended-policy.json \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked
 ```

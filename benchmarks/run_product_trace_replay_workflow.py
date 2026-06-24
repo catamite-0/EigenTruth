@@ -58,6 +58,7 @@ class ProductTraceReplayWorkflowConfig:
     replay_policy_path: str | Path | None = None
     runtime_policy_path: str | Path | None = None
     promotion_contract_path: str | Path | None = None
+    runtime_recommended_policy_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -109,6 +110,12 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "runtime_policy_path", Path(self.runtime_policy_path))
         if self.promotion_contract_path is not None:
             object.__setattr__(self, "promotion_contract_path", Path(self.promotion_contract_path))
+        if self.runtime_recommended_policy_path is not None:
+            object.__setattr__(
+                self,
+                "runtime_recommended_policy_path",
+                Path(self.runtime_recommended_policy_path),
+            )
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.verification_report_path is not None:
@@ -246,6 +253,11 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                     "decision",
                     "recommended_policy_path",
                 ),
+                "recommended_runtime_policy_path": _nested(
+                    runtime_baseline,
+                    "paths",
+                    "recommended_policy",
+                ),
             },
             "corpus": _corpus_summary(corpus),
             "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
@@ -265,6 +277,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "corpus_source_cache": _nested(corpus, "paths", "source_cache"),
                 "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
                 "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
+                "runtime_recommended_policy": _nested(runtime_baseline, "paths", "recommended_policy"),
                 "selector_replay_report": _nested(selector_replay, "paths", "report"),
                 "selector_replay_manifest": _nested(selector_replay, "paths", "artifact_manifest"),
                 "manifest_verification": (
@@ -284,6 +297,11 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "runtime_policy": None if config.runtime_policy_path is None else str(config.runtime_policy_path),
                 "promotion_contract": (
                     None if config.promotion_contract_path is None else str(config.promotion_contract_path)
+                ),
+                "runtime_recommended_policy": (
+                    None
+                    if config.runtime_recommended_policy_path is None
+                    else str(config.runtime_recommended_policy_path)
                 ),
                 "redact_text": config.redact_text,
                 "require_runtime_trace": config.require_runtime_trace,
@@ -652,6 +670,7 @@ def _run_runtime_baseline(
             promotion_contract_path=config.promotion_contract_path,
             trace_records_cache_path=config.runtime_trace_records_cache_path,
             refresh_trace_records_cache=config.refresh_runtime_trace_records_cache,
+            recommended_policy_path=config.runtime_recommended_policy_path,
             artifact_manifest_path=output_dir / "artifact-manifest.json",
             compact_json=config.compact_json,
             metadata={
@@ -776,6 +795,7 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
     summary = _mapping(runtime_baseline.get("summary"))
     total_seconds = _mapping(summary.get("total_seconds"))
     trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
+    recommended_policy = _mapping(_nested(runtime_baseline, "config", "recommended_policy"))
     optimization = _mapping(runtime_baseline.get("optimization"))
     recommendations = tuple(_mapping(item) for item in _sequence(optimization.get("recommendations")))
     return {
@@ -791,6 +811,10 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "trace_records_cache_hit": trace_record_cache.get("cache_hit"),
         "trace_records_cache_written": trace_record_cache.get("cache_written"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
+        "recommended_policy_path": _nested(runtime_baseline, "paths", "recommended_policy"),
+        "recommended_policy_written": recommended_policy.get("written"),
+        "recommended_policy_enabled": recommended_policy.get("policy_enabled"),
+        "recommended_policy_threshold_count": recommended_policy.get("threshold_count"),
         "optimization_status": optimization.get("status"),
         "optimization_recommendation_count": len(recommendations),
     }
@@ -932,6 +956,7 @@ def _artifact_paths(
         "runtime_baseline_report": _nested(report, "paths", "runtime_baseline_report"),
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "runtime_trace_records_cache": _nested(report, "paths", "runtime_trace_records_cache"),
+        "runtime_recommended_policy": _nested(report, "paths", "runtime_recommended_policy"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),
         "selector_replay_manifest": _nested(report, "paths", "selector_replay_manifest"),
         "selector_trace_inputs": _nested(report, "paths", "selector_trace_inputs"),
@@ -1012,6 +1037,26 @@ def _write_artifact_manifest(
                 "optimization",
                 "summary",
                 "slowest_route",
+            ),
+            "recommended_runtime_policy_path": _nested(
+                report,
+                "decision",
+                "recommended_runtime_policy_path",
+            ),
+            "recommended_runtime_policy_written": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_written",
+            ),
+            "recommended_runtime_policy_enabled": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_enabled",
+            ),
+            "recommended_runtime_policy_threshold_count": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_threshold_count",
             ),
             "recommended_selector_candidate": _nested(
                 report,
@@ -1101,6 +1146,26 @@ def _record_registry(
                 "summary",
                 "slowest_route",
             ),
+            "recommended_runtime_policy_path": _nested(
+                report,
+                "decision",
+                "recommended_runtime_policy_path",
+            ),
+            "recommended_runtime_policy_written": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_written",
+            ),
+            "recommended_runtime_policy_enabled": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_enabled",
+            ),
+            "recommended_runtime_policy_threshold_count": _nested(
+                report,
+                "runtime_baseline",
+                "recommended_policy_threshold_count",
+            ),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -1158,6 +1223,29 @@ def _record_registry(
             **dict(config.metadata),
         },
     )
+    runtime_policy_path = _nested(report, "paths", "runtime_recommended_policy")
+    if runtime_policy_path is not None:
+        registry.record_product_runtime_budget_policy(
+            name=f"{config.name}-runtime-recommended-policy",
+            path=str(runtime_policy_path),
+            version=str(config.version),
+            metadata={
+                "workflow": "run_product_trace_replay_workflow",
+                "source_workflow_record": f"report:{config.name}:{config.version}",
+                "source_workflow_report": str(config.resolved_report_path),
+                "source_runtime_baseline_report": _nested(report, "paths", "runtime_baseline_report"),
+                "artifact_manifest": str(config.resolved_artifact_manifest_path),
+                "policy_enabled": _nested(report, "runtime_baseline", "recommended_policy_enabled"),
+                "threshold_count": _nested(
+                    report,
+                    "runtime_baseline",
+                    "recommended_policy_threshold_count",
+                ),
+                "optimization_status": _nested(report, "optimization", "status"),
+                "compact_json": config.compact_json,
+                **dict(config.metadata),
+            },
+        )
     if verification_report is not None:
         registry.record_manifest_verification(
             name=f"{config.name}-verification",
@@ -1351,6 +1439,11 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         replay_policy_path=Path(args.replay_policy) if args.replay_policy else None,
         runtime_policy_path=Path(args.runtime_policy) if args.runtime_policy else None,
         promotion_contract_path=Path(args.promotion_contract) if args.promotion_contract else None,
+        runtime_recommended_policy_path=(
+            Path(args.save_runtime_recommended_policy)
+            if args.save_runtime_recommended_policy
+            else None
+        ),
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -1402,6 +1495,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--replay-policy", default=None, help="RuntimeProfileSelectorReplayPolicy JSON path")
     parser.add_argument("--runtime-policy", default=None, help="ProductRuntimeBudgetPolicy JSON path")
     parser.add_argument("--promotion-contract", default=None, help="ProductPromotionContract/release report JSON path")
+    parser.add_argument("--save-runtime-recommended-policy", default=None,
+                        help="write the runtime baseline optimization candidate ProductRuntimeBudgetPolicy JSON")
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
