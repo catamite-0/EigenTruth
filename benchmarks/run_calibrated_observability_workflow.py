@@ -242,6 +242,11 @@ def run_calibrated_observability_workflow(
         dry_run=config.dry_run,
         conformal_manifest_verification=conformal_manifest_verification,
     )
+    artifacts = _artifact_paths(config, score_dump_reused=score_dump_reused)
+    artifact_manifest_summary = planned_artifact_manifest_summary(
+        artifacts,
+        assume_file_paths=(config.resolved_report_path,),
+    )
     report: dict[str, Any] = {
         "schema_version": 1,
         "workflow": "calibrated_observability_workflow",
@@ -254,14 +259,15 @@ def run_calibrated_observability_workflow(
         },
         "conformal": _conformal_summary(conformal_payload),
         "conformal_manifest_verification": conformal_manifest_verification,
+        "artifact_manifest_summary": artifact_manifest_summary,
     }
     if config.registry_path is not None:
         report["registry_record"] = f"report:{config.name}:{config.version}"
-
-    artifacts = _artifact_paths(config, score_dump_reused=score_dump_reused)
-    report["artifact_manifest_summary"] = planned_artifact_manifest_summary(
-        artifacts,
-        assume_file_paths=(config.resolved_report_path,),
+    report["evidence_bundle"] = _evidence_bundle_summary(
+        config,
+        report=report,
+        conformal_payload=conformal_payload,
+        artifact_manifest_summary=artifact_manifest_summary,
     )
     config.resolved_report_path.parent.mkdir(parents=True, exist_ok=True)
     config.resolved_report_path.write_text(
@@ -270,6 +276,12 @@ def run_calibrated_observability_workflow(
     )
     manifest = _write_artifact_manifest(config, report, artifacts)
     report["artifact_manifest_summary"] = manifest["summary"]
+    report["evidence_bundle"] = _evidence_bundle_summary(
+        config,
+        report=report,
+        conformal_payload=conformal_payload,
+        artifact_manifest_summary=manifest["summary"],
+    )
     _record_registry(config, report)
     return report
 
@@ -379,6 +391,102 @@ def _conformal_summary(payload: Mapping[str, Any] | None) -> dict[str, Any] | No
         "direction": dict(payload.get("config") or {}).get("direction"),
         "best": dict(best) if isinstance(best, Mapping) else None,
     }
+
+
+def _evidence_bundle_summary(
+    config: CalibratedObservabilityWorkflowConfig,
+    *,
+    report: Mapping[str, Any],
+    conformal_payload: Mapping[str, Any] | None,
+    artifact_manifest_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    status = str(report.get("status"))
+    conformal = dict(report.get("conformal") or {})
+    verdict = conformal.get("verdict")
+    manifest_verification = report.get("conformal_manifest_verification")
+    manifest_passed = (
+        bool(manifest_verification.get("passed"))
+        if isinstance(manifest_verification, Mapping)
+        else None
+    )
+    missing_count = int(artifact_manifest_summary.get("missing_count", 0))
+    release_ready = (
+        status == "complete"
+        and verdict == "ACCEPT"
+        and manifest_passed is True
+        and missing_count == 0
+    )
+    score_dump_metadata = _conformal_score_dump_metadata(conformal_payload)
+    score_dump_summary = dict(score_dump_metadata.get("summary") or {})
+    best = dict(conformal.get("best") or {})
+    registry_record = report.get("registry_record")
+    return {
+        "schema_version": 1,
+        "status": status,
+        "release_ready": release_ready,
+        "runtime": {
+            "runtime_preset": config.runtime_preset,
+            "model": config.model,
+            "dtype": config.dtype,
+            "layer": config.layer,
+            "offline": config.offline,
+            "max_batch_tokens": config.max_batch_tokens,
+            "auto_batch_size": config.auto_batch_size,
+        },
+        "score_dump": {
+            "path": str(config.resolved_scores_path),
+            "reused": dict(report.get("execution") or {}).get("score_dump_reused"),
+            "source_format": score_dump_metadata.get("source_format"),
+            "sha256": score_dump_metadata.get("sha256"),
+            "records_sha256": _nested(score_dump_metadata, "records", "sha256"),
+            "n_total": score_dump_summary.get("n_total"),
+            "n_true": score_dump_summary.get("n_true"),
+            "n_false": score_dump_summary.get("n_false"),
+            "score_names": tuple(score_dump_summary.get("score_names", ())),
+            "sweep_layers": tuple(score_dump_summary.get("sweep_layers", ())),
+            "all_signal_names": tuple(score_dump_summary.get("all_signal_names", ())),
+        },
+        "calibration": {
+            "conformal_verdict": verdict,
+            "primary_signal": conformal.get("signal"),
+            "direction": conformal.get("direction"),
+            "best_by": config.best_by,
+            "artifact_alpha": config.artifact_alpha,
+            "best_layer": best.get("layer"),
+            "best_score_name": best.get("score_name"),
+            "best_direction": best.get("direction"),
+            "best_threshold": best.get("threshold"),
+            "best_auroc": best.get("auroc"),
+            "best_false_alarm": best.get("false_alarm"),
+            "best_detection": best.get("detection"),
+        },
+        "artifacts": {
+            "summary": dict(artifact_manifest_summary),
+            "artifact_manifest": str(config.artifact_manifest_path),
+            "conformal_artifact_manifest": str(config.conformal_artifact_manifest_path),
+            "best_calibration": str(config.best_calibration_path),
+            "conformal_manifest_passed": manifest_passed,
+            "conformal_manifest_checked": (
+                manifest_verification.get("checked")
+                if isinstance(manifest_verification, Mapping)
+                else None
+            ),
+        },
+        "registry": {
+            "record": registry_record,
+            "path": None if config.registry_path is None else str(config.registry_path),
+        },
+    }
+
+
+def _conformal_score_dump_metadata(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    if payload is None:
+        return {}
+    config = payload.get("config")
+    if not isinstance(config, Mapping):
+        return {}
+    metadata = config.get("score_dump")
+    return dict(metadata) if isinstance(metadata, Mapping) else {}
 
 
 def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, str]:
@@ -510,6 +618,8 @@ def _record_registry(
             "score_dump_reused": dict(report.get("execution") or {}).get("score_dump_reused"),
             "best_score_name": _nested(report, "conformal", "best", "score_name"),
             "best_layer": _nested(report, "conformal", "best", "layer"),
+            "evidence_bundle_status": _nested(report, "evidence_bundle", "status"),
+            "evidence_bundle_release_ready": _nested(report, "evidence_bundle", "release_ready"),
         },
     )
     registry.save_json()

@@ -259,6 +259,13 @@ def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp
     assert payload["execution"]["score_dump_reused"] is True
     assert payload["conformal_manifest_verification"]["passed"] is True
     assert payload["conformal"]["best"]["score_name"] in {"maha_last", "truth_proj"}
+    assert payload["evidence_bundle"]["status"] == "complete"
+    assert payload["evidence_bundle"]["score_dump"]["reused"] is True
+    assert payload["evidence_bundle"]["score_dump"]["n_total"] == len(labels)
+    assert payload["evidence_bundle"]["score_dump"]["records_sha256"]
+    assert payload["evidence_bundle"]["calibration"]["best_score_name"] in {"maha_last", "truth_proj"}
+    assert payload["evidence_bundle"]["artifacts"]["conformal_manifest_passed"] is True
+    assert payload["evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
     assert "truthfulqa_report" not in manifest["artifacts"]
     assert manifest["artifacts"]["score_dump_records"]["exists"] is True
     assert manifest["artifacts"]["conformal_artifact_manifest"]["exists"] is True
@@ -268,6 +275,10 @@ def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp
     assert record.metadata["workflow"] == "run_calibrated_observability_workflow"
     assert record.metadata["score_dump_reused"] is True
     assert record.metadata["best_score_name"] in {"maha_last", "truth_proj"}
+    assert record.metadata["evidence_bundle_status"] == "complete"
+    assert record.metadata["evidence_bundle_release_ready"] == (
+        payload["evidence_bundle"]["release_ready"]
+    )
 
 
 def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
@@ -290,6 +301,10 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     conformal_command = payload["execution"]["conformal_command"]
 
     assert payload["status"] == "needs_evidence"
+    assert payload["evidence_bundle"]["status"] == "needs_evidence"
+    assert payload["evidence_bundle"]["release_ready"] is False
+    assert payload["evidence_bundle"]["artifacts"]["summary"]["missing_count"] > 0
+    assert payload["evidence_bundle"]["calibration"]["best_score_name"] is None
     assert "--dump-scores-format" in truthfulqa_command
     assert "jsonl" in truthfulqa_command
     assert "--sweep-layers" in truthfulqa_command
@@ -326,6 +341,8 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert payload["config"]["max_batch_tokens"] == 384
     assert payload["config"]["sweep_layers"] == [-1, -2, -4]
     assert payload["config"]["signals"] == ["maha_last", "truth_proj", "subspace_resid"]
+    assert payload["evidence_bundle"]["runtime"]["runtime_preset"] == "quick"
+    assert payload["evidence_bundle"]["status"] == "needs_evidence"
     assert "--limit" in truthfulqa_command
     assert "12" in truthfulqa_command
     assert "--sweep-layers" in truthfulqa_command

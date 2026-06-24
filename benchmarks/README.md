@@ -458,7 +458,9 @@ reuse an existing score dump or call `eval_truthfulqa.py` to create one as a
 JSONL manifest, then runs `eval_conformal.py` with sweep, best-calibration, and
 artifact-manifest outputs. The top-level workflow report records both commands,
 the conformal verdict, nested manifest verification, and optional registry
-metadata:
+metadata. It also includes an `evidence_bundle` summary with the score-dump
+provenance, best sweep calibration, manifest verification status, runtime
+preset, and registry record:
 
 ```bash
 python benchmarks/run_calibrated_observability_workflow.py \
