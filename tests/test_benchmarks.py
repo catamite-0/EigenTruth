@@ -9707,6 +9707,68 @@ def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp
     assert trace_metric["reason"] == "n_traces: 1 below gate 2"
 
 
+def test_compare_product_runtime_baselines_registers_file_baseline_report(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        registry_path=registry_path,
+        report_path=drift_report,
+        name="runtime-drift",
+        version="0.1",
+        max_total_seconds_mean_ratio=1.0,
+        min_current_trace_count=1,
+    )
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift:0.1")
+
+    assert payload["status"] == "promote"
+    assert payload["baseline"]["source"] == "file"
+    assert record.path == str(drift_report)
+    assert record.metadata["status"] == "promote"
+
+
 def _write_product_runtime_trace(
     path: Path,
     *,

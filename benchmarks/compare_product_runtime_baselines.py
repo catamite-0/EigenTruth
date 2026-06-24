@@ -313,7 +313,7 @@ def _resolve_baseline_source(
     baseline_version: str | None,
 ) -> dict[str, Any]:
     if baseline_path is not None:
-        if registry_path is not None or baseline_key or baseline_name or baseline_version:
+        if baseline_key or baseline_name or baseline_version:
             raise ValueError("baseline_path is mutually exclusive with registry baseline selection.")
         return {"source": "file", "path": Path(baseline_path)}
     if registry_path is None:

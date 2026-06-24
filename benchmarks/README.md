@@ -1537,7 +1537,7 @@ comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
 The current strict structured-retrieval-audit SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.4`.
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5`.
 It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA product
 route, and registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
@@ -1547,14 +1547,18 @@ promoted. It also requires
 `benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
 retrieval-structured-QA audit route with its own quality and runtime budget.
 The final manifest fingerprints the release-candidate report plus readiness,
-route, performance, adapter-family, and required retrieval-audit manifests; the
+route, performance, selector replay, product-runtime-drift, adapter-family, and
+required retrieval-audit manifests; the
 release comparison verifies that the performance baseline recommendation matches
 the selected runtime: layer `-12`, batch size `8`, `outputs` hidden-state
 capture, no prefix-KV cache, worker count `1`, `truth_proj` AUROC `0.682`, and
 the quality-balanced `top_0p4` triggered `adaptive_selfcheck` budget. The
 selected product route gates `retrieval_use_rate` at `0.0` and
 `mean_attempted_route_count` at `1.1`; retrieval is required as audit capability
-evidence, not as the default low-latency route.
+evidence, not as the default low-latency route. Version 1.5 adds promoted
+selector replay from `artifacts/smollm2_product_trace_replay_workflow` and a
+promoted runtime-drift report at
+`artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json`.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -1563,11 +1567,13 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-registry artifacts/local-readiness-registry.json \
   --release-registry artifacts/local-release-registry.json \
   --name smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate \
-  --version 1.4 \
+  --version 1.5 \
   --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8 \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
+  --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
+  --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1593,10 +1599,10 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --required-route-max-retrieval-use-rate 1.0 \
   --required-route-max-runtime-total-seconds 8.0 \
   --required-route-max-retrieval-hit-count 450 \
-  --json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
-  --release-report-json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_comparison.json \
-  --artifact-manifest artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest.json \
-  --verification-report artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_manifest_verification.json \
+  --json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
+  --release-report-json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_comparison.json \
+  --artifact-manifest artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_manifest.json \
+  --verification-report artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_manifest_verification.json \
   --metadata release=strict_structured_retrieval_audit \
   --metadata adapter_family_retrieval_structured_qa=required \
   --fail-on-blocked
@@ -2241,7 +2247,7 @@ skip savings, and optionally apply a `ProductRuntimeBudgetPolicy` or promoted
 python benchmarks/run_product_runtime_baseline.py \
   --trace artifacts/demo-request-a.json \
   --trace artifacts/demo-request-b.json \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --json artifacts/product-runtime-baseline.json \
   --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
   --registry artifacts/local-release-registry.json \
@@ -2260,22 +2266,28 @@ diff readability is less important than artifact size.
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
-retrieval-use, cache-hit-rate, verifier-skip-rate, and trace-count drift:
+retrieval-use, cache-hit-rate, verifier-skip-rate, and trace-count drift. When a
+file baseline is used, `--registry` can still be supplied to register only the
+new drift report:
 
 ```bash
 python benchmarks/compare_product_runtime_baselines.py \
   --registry artifacts/local-release-registry.json \
-  --baseline-key product_runtime_baseline:smollm2-product-runtime-baseline:0.1 \
-  --current artifacts/product-runtime-baseline-current.json \
-  --json artifacts/product-runtime-drift.json \
+  --baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
+  --current artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json \
+  --json artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_5/artifact-manifest.json \
   --name smollm2-product-runtime-drift \
   --version 0.1 \
-  --max-total-seconds-mean-ratio 1.25 \
-  --max-mean-route-duration-ratio 1.25 \
-  --max-mean-attempted-route-count-delta 0.25 \
-  --max-retrieval-use-rate-delta 0.05 \
-  --max-cache-hit-rate-drop 0.10 \
-  --min-current-trace-count 50 \
+  --max-total-seconds-mean-ratio 1.3 \
+  --max-total-seconds-p95-ratio 1.6 \
+  --max-mean-route-duration-ratio 1.2 \
+  --max-p95-route-duration-ratio 1.2 \
+  --max-mean-attempted-route-count-delta 0.0 \
+  --max-retrieval-use-rate-delta 0.0 \
+  --max-cache-hit-rate-drop 0.0 \
+  --max-verification-skip-rate-drop 0.0 \
+  --min-current-trace-count 12 \
   --fail-on-drift
 ```
 
@@ -2346,7 +2358,7 @@ path:
 ```bash
 python benchmarks/run_product_runtime_profile_sweep.py \
   --output-dir artifacts/product-runtime-profile-sweep \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --runtime-profile-selector-policy artifacts/product-runtime-profile-sweep/runtime-profile-selector-policy.json \
   --slo-policy artifacts/product-runtime-profile-sweep/runtime-profile-slo-policy.json \
   --registry artifacts/local-release-registry.json \
@@ -2377,7 +2389,7 @@ schema.
 Current registered SmolLM2 product runtime profile sweep:
 `report:smollm2-product-runtime-profile-sweep:0.1` in
 `artifacts/local-release-registry.json`. It uses the strict structured-retrieval
-audit 1.4 promotion contract, verifies the artifact manifest, promotes all three
+audit promotion contract, verifies the artifact manifest, promotes all three
 static profiles plus `auto` under `max_mean_attempted_route_count=1.1`,
 `max_retrieval_use_rate=0.0`, and `max_p99_route_duration_seconds=0.01`, then
 adds the profile SLO policy at
@@ -2401,7 +2413,7 @@ selector:
 ```bash
 python benchmarks/run_runtime_profile_selector_tuning.py \
   --output-dir artifacts/runtime-profile-selector-tuning \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_4_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --slo-policy artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-runtime-profile-selector-tuning \

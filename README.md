@@ -128,7 +128,7 @@ leaving `inside_generation` at 1.001 of fixed, while `truth_proj` top-25%
 triggering samples 39/154 statements and cuts fixed `inside_generation` to
 0.253 of full-sample fixed. The current registered SmolLM2 strict
 structured-retrieval-audit release
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.4`
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5`
 selects the top-40% quality-balanced budget from a single largest-budget run,
 uses 218 generated samples with sample-count ratio 0.472 and
 `inside_generation` ratio 0.503 against the full-sample fixed reference,
@@ -142,9 +142,13 @@ retrieval structured-QA audit baseline. That audit route promotes with selected
 1.000, runtime about 1.05s, and 410 retrieval hits under a 450-hit budget. The
 selected product route remains strict low-latency `structured_qa` with
 `max_retrieval_use_rate=0.0` and `max_mean_attempted_route_count=1.1`.
+Version 1.5 also requires promoted selector replay over 12 redacted product
+traces and a promoted runtime-drift report comparing the trace replay baseline
+against the promoted `auto` profile baseline; all 9 drift metrics pass with zero
+blocked metrics.
 The current registered product runtime profile sweep
 `report:smollm2-product-runtime-profile-sweep:0.1` verifies that `latency`,
-`balanced`, `audit`, and request-level `auto` selection all pass the 1.4 product
+`balanced`, `audit`, and request-level `auto` selection all pass the strict product
 runtime budget on deterministic control-plane traces. It also applies
 `artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json`
 as a sweep-level SLO gate for p95 trace latency, attempted route count,
