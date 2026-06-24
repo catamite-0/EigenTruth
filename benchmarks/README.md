@@ -2739,7 +2739,8 @@ request-time `auto` selector before each trace is emitted. `--policy` still
 applies the `ProductRuntimeBudgetPolicy` to each trace in each per-mode
 baseline; `--slo-policy` applies aggregate gates such as
 `max_total_seconds_p95`, `max_mean_attempted_route_count`,
-`min_verification_skip_rate_mean`, `max_verified_claim_count_mean`,
+`max_route_budget_exhaustion_rate`, `min_verification_skip_rate_mean`,
+`max_verified_claim_count_mean`,
 `min_verification_partial_skip_trace_count`,
 `min_verification_selective_claim_skip_rate`, and
 `min_auto_selected_profile_counts` to the profile row. This is the

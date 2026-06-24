@@ -173,6 +173,7 @@ class ProductRuntimeProfileSLOPolicy:
     max_measured_phases_mean: float | None = None
     max_mean_route_duration_seconds: float | None = None
     max_mean_attempted_route_count: float | None = None
+    max_route_budget_exhaustion_rate: float | None = None
     max_retrieval_use_rate: float | None = None
     max_retrieval_hit_count: float | None = None
     min_cache_hit_rate_mean: float | None = None
@@ -213,6 +214,14 @@ class ProductRuntimeProfileSLOPolicy:
             _optional_non_negative_float(
                 self.max_mean_attempted_route_count,
                 name="max_mean_attempted_route_count",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_route_budget_exhaustion_rate",
+            _optional_rate_float(
+                self.max_route_budget_exhaustion_rate,
+                name="max_route_budget_exhaustion_rate",
             ),
         )
         object.__setattr__(
@@ -288,6 +297,7 @@ class ProductRuntimeProfileSLOPolicy:
             max_measured_phases_mean=payload.get("max_measured_phases_mean"),
             max_mean_route_duration_seconds=payload.get("max_mean_route_duration_seconds"),
             max_mean_attempted_route_count=payload.get("max_mean_attempted_route_count"),
+            max_route_budget_exhaustion_rate=payload.get("max_route_budget_exhaustion_rate"),
             max_retrieval_use_rate=payload.get("max_retrieval_use_rate"),
             max_retrieval_hit_count=payload.get("max_retrieval_hit_count"),
             min_cache_hit_rate_mean=payload.get("min_cache_hit_rate_mean"),
@@ -311,6 +321,7 @@ class ProductRuntimeProfileSLOPolicy:
             or self.max_measured_phases_mean is not None
             or self.max_mean_route_duration_seconds is not None
             or self.max_mean_attempted_route_count is not None
+            or self.max_route_budget_exhaustion_rate is not None
             or self.max_retrieval_use_rate is not None
             or self.max_retrieval_hit_count is not None
             or self.min_cache_hit_rate_mean is not None
@@ -330,6 +341,7 @@ class ProductRuntimeProfileSLOPolicy:
             "max_measured_phases_mean": self.max_measured_phases_mean,
             "max_mean_route_duration_seconds": self.max_mean_route_duration_seconds,
             "max_mean_attempted_route_count": self.max_mean_attempted_route_count,
+            "max_route_budget_exhaustion_rate": self.max_route_budget_exhaustion_rate,
             "max_retrieval_use_rate": self.max_retrieval_use_rate,
             "max_retrieval_hit_count": self.max_retrieval_hit_count,
             "min_cache_hit_rate_mean": self.min_cache_hit_rate_mean,
@@ -596,6 +608,9 @@ def _profile_record(
             "measured_phases_mean": _nested(summary, "measured_phases", "mean"),
             "mean_route_duration_seconds": routes.get("mean_duration_seconds"),
             "mean_attempted_route_count": routes.get("mean_attempted_route_count"),
+            "route_budget_exhaustion_rate": routes.get("route_budget_exhaustion_rate"),
+            "route_budget_exhausted_count": routes.get("route_budget_exhausted_count"),
+            "unattempted_route_count": routes.get("unattempted_route_count"),
             "retrieval_use_rate": routes.get("retrieval_use_rate"),
             "retrieval_hit_count": routes.get("retrieval_hit_count"),
             "cache_hit_rate_mean": _nested(summary, "cache_hit_rate", "mean"),
@@ -682,6 +697,7 @@ def _evaluate_profile_slo(
         ("measured_phases_mean", policy.max_measured_phases_mean),
         ("mean_route_duration_seconds", policy.max_mean_route_duration_seconds),
         ("mean_attempted_route_count", policy.max_mean_attempted_route_count),
+        ("route_budget_exhaustion_rate", policy.max_route_budget_exhaustion_rate),
         ("retrieval_use_rate", policy.max_retrieval_use_rate),
         ("retrieval_hit_count", policy.max_retrieval_hit_count),
         ("verified_claim_count_mean", policy.max_verified_claim_count_mean),
@@ -810,6 +826,7 @@ def _leaderboard(profiles: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
             "total_seconds_p95": _float_or_none(metrics.get("total_seconds_p95")),
             "measured_phases_mean": _float_or_none(metrics.get("measured_phases_mean")),
             "mean_attempted_route_count": _float_or_none(metrics.get("mean_attempted_route_count")),
+            "route_budget_exhaustion_rate": _float_or_none(metrics.get("route_budget_exhaustion_rate")),
             "retrieval_use_rate": _float_or_none(metrics.get("retrieval_use_rate")),
             "cache_hit_rate_mean": _float_or_none(metrics.get("cache_hit_rate_mean")),
             "verification_skip_rate_mean": _float_or_none(metrics.get("verification_skip_rate_mean")),

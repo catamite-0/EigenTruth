@@ -13920,6 +13920,70 @@ def test_run_product_runtime_profile_sweep_gates_selective_verification_slo(tmp_
     }
 
 
+def test_run_product_runtime_profile_sweep_gates_route_budget_exhaustion(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
+
+    def fake_demo_run(args):
+        payload = {
+            "request_id": args.request_id,
+            "runtime_trace": {
+                "total_seconds": 0.01,
+                "phases": [{"name": "initial_verification", "seconds": 0.01}],
+            },
+            "risk_decision": {"action": "accept", "risk_level": "low"},
+            "verification_results": [
+                {
+                    "status": "insufficient_evidence",
+                    "metadata": {
+                        "selected_route": "calculator",
+                        "matched_routes": ("calculator", "fallback"),
+                        "attempted_route_count": 1,
+                        "route_budget_limit": 1,
+                        "route_budget_exhausted": True,
+                        "unattempted_routes": ("fallback",),
+                        "selected_route_was_fallthrough": True,
+                    },
+                }
+            ],
+            "metadata": {
+                "runtime_profile": args.runtime_profile,
+                "staged_verification_enabled": False,
+            },
+        }
+        Path(args.output).write_text(json.dumps(payload), encoding="utf-8")
+        return payload
+
+    monkeypatch.setattr(module.demo, "run", fake_demo_run)
+
+    payload = module.run_product_runtime_profile_sweep(
+        module.ProductRuntimeProfileSweepConfig(
+            output_dir=tmp_path / "profile-sweep",
+            profiles=("latency",),
+            scenarios=(
+                module.ProductRuntimeScenario(
+                    name="budget_exhausted",
+                    text="2 + 2 = 4.",
+                    diagnostics_mode="low",
+                ),
+            ),
+            slo_policy={"max_route_budget_exhaustion_rate": 0.0},
+        )
+    )
+
+    profile = payload["profiles"][0]
+
+    assert payload["status"] == "blocked"
+    assert payload["slo"]["failure_counts_by_metric"] == {"route_budget_exhaustion_rate": 1}
+    assert profile["status"] == "blocked"
+    assert profile["metrics"]["route_budget_exhaustion_rate"] == 1.0
+    assert profile["metrics"]["route_budget_exhausted_count"] == 1
+    assert profile["metrics"]["unattempted_route_count"] == 1
+    assert profile["slo"]["failures"][0]["metric"] == "route_budget_exhaustion_rate"
+    assert payload["decision"]["blocking_reasons"] == (
+        "latency.route_budget_exhaustion_rate: SLO max 0.0 failed",
+    )
+
+
 def test_run_product_runtime_profile_sweep_blocks_when_slo_policy_fails(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_profile_sweep")
 
