@@ -55,7 +55,10 @@ RUNTIME_PRESET_DEFAULTS: Mapping[str, Mapping[str, Any]] = {
         "limit": 12,
         "manifold_questions": 6,
         "max_length": 48,
+        "batch_size": 4,
         "max_batch_tokens": 384,
+        "hidden_state_capture": "hooks",
+        "auto_batch_size": True,
         "sweep_layers": (-1, -2, -4),
         "signals": ("maha_last", "truth_proj", "subspace_resid"),
         "repeats": 3,
@@ -64,13 +67,16 @@ RUNTIME_PRESET_DEFAULTS: Mapping[str, Mapping[str, Any]] = {
     },
     "calibrate": {
         "dump_scores_format": "jsonl",
+        "batch_size": 4,
         "max_batch_tokens": 768,
+        "auto_batch_size": True,
         "signals": DEFAULT_SWEEP_SIGNALS,
         "repeats": 20,
         "offline": True,
     },
     "full": {
         "max_length": 128,
+        "batch_size": 4,
         "max_batch_tokens": 1024,
         "auto_batch_size": True,
         "signals": DEFAULT_SWEEP_SIGNALS,
@@ -676,6 +682,22 @@ def _arg_or_preset(args: argparse.Namespace, defaults: Mapping[str, Any], name: 
     return defaults.get(name, fallback)
 
 
+def _hidden_state_capture_from_args(
+    args: argparse.Namespace,
+    defaults: Mapping[str, Any],
+    *,
+    sweep_layers: Sequence[int],
+) -> str:
+    if args.hidden_state_capture is not None:
+        return str(args.hidden_state_capture)
+    default_capture = defaults.get("hidden_state_capture")
+    if default_capture is not None:
+        return str(default_capture)
+    if sweep_layers:
+        return "hooks"
+    return "outputs"
+
+
 def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkflowConfig:
     preset_defaults = _runtime_preset_defaults(args.runtime_preset)
     sweep = bool(_arg_or_preset(args, preset_defaults, "sweep", True))
@@ -709,7 +731,11 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
         max_length=_arg_or_preset(args, preset_defaults, "max_length", 64),
         batch_size=_arg_or_preset(args, preset_defaults, "batch_size", 1),
         max_batch_tokens=_arg_or_preset(args, preset_defaults, "max_batch_tokens", 0),
-        hidden_state_capture=_arg_or_preset(args, preset_defaults, "hidden_state_capture", "outputs"),
+        hidden_state_capture=_hidden_state_capture_from_args(
+            args,
+            preset_defaults,
+            sweep_layers=sweep_layers,
+        ),
         progress_every=_arg_or_preset(args, preset_defaults, "progress_every", 0),
         length_bucketed_batches=_arg_or_preset(args, preset_defaults, "length_bucketed_batches", True),
         offline=_arg_or_preset(args, preset_defaults, "offline", True),

@@ -413,13 +413,19 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert payload["config"]["limit"] == 12
     assert payload["config"]["manifold_questions"] == 6
     assert payload["config"]["max_length"] == 48
+    assert payload["config"]["batch_size"] == 4
     assert payload["config"]["max_batch_tokens"] == 384
+    assert payload["config"]["hidden_state_capture"] == "hooks"
+    assert payload["config"]["auto_batch_size"] is True
     assert payload["config"]["sweep_layers"] == [-1, -2, -4]
     assert payload["config"]["signals"] == ["maha_last", "truth_proj", "subspace_resid"]
     assert payload["evidence_bundle"]["runtime"]["runtime_preset"] == "quick"
     assert payload["evidence_bundle"]["status"] == "needs_evidence"
     assert "--limit" in truthfulqa_command
     assert "12" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--batch-size") + 1] == "4"
+    assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "hooks"
+    assert "--auto-batch-size" in truthfulqa_command
     assert "--sweep-layers" in truthfulqa_command
     assert "-1,-2,-4" in truthfulqa_command
     assert "--signals" in conformal_command
@@ -427,6 +433,53 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert "--repeats" in conformal_command
     assert "3" in conformal_command
     assert manifest["metadata"]["runtime_preset"] == "quick"
+
+
+def test_calibrated_observability_limited_sweep_defaults_to_hooks(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--sweep-layers=-2,-3",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+
+    assert payload["config"]["runtime_preset"] == "custom"
+    assert payload["config"]["sweep_layers"] == [-2, -3]
+    assert payload["config"]["hidden_state_capture"] == "hooks"
+    assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "hooks"
+
+
+def test_calibrated_observability_explicit_capture_overrides_limited_sweep_default(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--sweep-layers=-2,-3",
+            "--hidden-state-capture",
+            "outputs",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+
+    assert payload["config"]["sweep_layers"] == [-2, -3]
+    assert payload["config"]["hidden_state_capture"] == "outputs"
+    assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "outputs"
 
 
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
