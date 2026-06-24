@@ -3,6 +3,7 @@
 import importlib
 import json
 import os
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -296,6 +297,44 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     assert manifest["metadata"]["runner"] == "run_calibrated_observability_workflow"
     assert manifest["metadata"]["dry_run"] is True
     assert manifest["summary"]["missing_count"] > 0
+
+
+def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--runtime-preset",
+            "quick",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+    conformal_command = payload["execution"]["conformal_command"]
+
+    assert payload["config"]["runtime_preset"] == "quick"
+    assert payload["config"]["limit"] == 12
+    assert payload["config"]["manifold_questions"] == 6
+    assert payload["config"]["max_length"] == 48
+    assert payload["config"]["max_batch_tokens"] == 384
+    assert payload["config"]["sweep_layers"] == [-1, -2, -4]
+    assert payload["config"]["signals"] == ["maha_last", "truth_proj", "subspace_resid"]
+    assert "--limit" in truthfulqa_command
+    assert "12" in truthfulqa_command
+    assert "--sweep-layers" in truthfulqa_command
+    assert "-1,-2,-4" in truthfulqa_command
+    assert "--signals" in conformal_command
+    assert "maha_last,truth_proj,subspace_resid" in conformal_command
+    assert "--repeats" in conformal_command
+    assert "3" in conformal_command
+    assert manifest["metadata"]["runtime_preset"] == "quick"
 
 
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():

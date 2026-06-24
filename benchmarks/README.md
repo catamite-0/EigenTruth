@@ -462,6 +462,7 @@ metadata:
 ```bash
 python benchmarks/run_calibrated_observability_workflow.py \
   --output-dir artifacts/gpt2-calibrated-observability \
+  --runtime-preset calibrate \
   --model gpt2 \
   --layer -8 \
   --scores artifacts/gpt2-calibrated-observability/scores.manifest.json \
@@ -476,6 +477,11 @@ dump, pass the existing `--scores` path without `--refresh-scores`; the workflow
 will skip `eval_truthfulqa.py`, rerun only conformal calibration, and keep the
 top-level manifest focused on the reused score dump plus generated calibration
 artifacts.
+
+Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
+iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
+with longer contexts and auto batch-size fallback. Any explicit CLI parameter
+overrides the preset default.
 
 ## `eval_verifier_ensemble.py`
 

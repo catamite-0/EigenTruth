@@ -49,6 +49,37 @@ DEFAULT_SWEEP_SIGNALS = (
     "inside_embedding_entropy",
 )
 
+RUNTIME_PRESETS = ("custom", "quick", "calibrate", "full")
+RUNTIME_PRESET_DEFAULTS: Mapping[str, Mapping[str, Any]] = {
+    "custom": {},
+    "quick": {
+        "limit": 12,
+        "manifold_questions": 6,
+        "max_length": 48,
+        "max_batch_tokens": 384,
+        "sweep_layers": (-1, -2, -4),
+        "signals": ("maha_last", "truth_proj", "subspace_resid"),
+        "repeats": 3,
+        "artifact_alpha": 0.20,
+        "offline": True,
+    },
+    "calibrate": {
+        "dump_scores_format": "jsonl",
+        "max_batch_tokens": 768,
+        "signals": DEFAULT_SWEEP_SIGNALS,
+        "repeats": 20,
+        "offline": True,
+    },
+    "full": {
+        "max_length": 128,
+        "max_batch_tokens": 1024,
+        "auto_batch_size": True,
+        "signals": DEFAULT_SWEEP_SIGNALS,
+        "repeats": 30,
+        "offline": False,
+    },
+}
+
 
 @dataclass(frozen=True)
 class CalibratedObservabilityWorkflowConfig:
@@ -87,6 +118,7 @@ class CalibratedObservabilityWorkflowConfig:
     python_executable: str = sys.executable
     clean: bool = False
     dry_run: bool = False
+    runtime_preset: str = "custom"
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -104,6 +136,8 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "repeats", int(self.repeats))
         object.__setattr__(self, "seed", int(self.seed))
         object.__setattr__(self, "artifact_alpha", float(self.artifact_alpha))
+        if self.runtime_preset not in RUNTIME_PRESETS:
+            raise ValueError(f"runtime_preset must be one of: {', '.join(RUNTIME_PRESETS)}.")
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
         if self.dump_scores_format not in {"json", "jsonl"}:
@@ -363,6 +397,7 @@ def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, s
 
 def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, Any]:
     return {
+        "runtime_preset": config.runtime_preset,
         "model": config.model,
         "dtype": config.dtype,
         "layer": config.layer,
@@ -438,6 +473,7 @@ def _write_artifact_manifest(
             "model": config.model,
             "dtype": config.dtype,
             "layer": config.layer,
+            "runtime_preset": config.runtime_preset,
             "offline": config.offline,
             "dry_run": config.dry_run,
             "score_dump_reused": dict(report.get("execution") or {}).get("score_dump_reused"),
@@ -507,38 +543,66 @@ def _parse_str_tuple(value: str | None) -> tuple[str, ...]:
     return tuple(part.strip() for part in value.split(",") if part.strip())
 
 
+def _runtime_preset_defaults(runtime_preset: str) -> dict[str, Any]:
+    if runtime_preset not in RUNTIME_PRESETS:
+        raise ValueError(f"runtime_preset must be one of: {', '.join(RUNTIME_PRESETS)}.")
+    return dict(RUNTIME_PRESET_DEFAULTS[runtime_preset])
+
+
+def _arg_or_preset(args: argparse.Namespace, defaults: Mapping[str, Any], name: str, fallback: Any) -> Any:
+    value = getattr(args, name)
+    if value is not None:
+        return value
+    return defaults.get(name, fallback)
+
+
 def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkflowConfig:
+    preset_defaults = _runtime_preset_defaults(args.runtime_preset)
+    sweep = bool(_arg_or_preset(args, preset_defaults, "sweep", True))
+    sweep_layers = (
+        _parse_int_tuple(args.sweep_layers)
+        if args.sweep_layers is not None
+        else tuple(preset_defaults.get("sweep_layers", ()))
+    )
+    if not sweep:
+        sweep_layers = ()
+    signals = (
+        _parse_str_tuple(args.signals)
+        if args.signals is not None
+        else tuple(preset_defaults.get("signals", DEFAULT_SWEEP_SIGNALS))
+    )
     return CalibratedObservabilityWorkflowConfig(
         output_dir=Path(args.output_dir),
+        runtime_preset=args.runtime_preset,
         scores_path=Path(args.scores) if args.scores else None,
         report_path=Path(args.json) if args.json else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
         version=args.version,
-        model=args.model,
-        dtype=args.dtype,
-        layer=args.layer,
-        sweep=not args.no_sweep,
-        sweep_layers=_parse_int_tuple(args.sweep_layers),
-        limit=args.limit,
-        manifold_questions=args.manifold_questions,
-        max_length=args.max_length,
-        batch_size=args.batch_size,
-        max_batch_tokens=args.max_batch_tokens,
-        hidden_state_capture=args.hidden_state_capture,
-        progress_every=args.progress_every,
-        length_bucketed_batches=not args.no_length_bucketed_batches,
-        offline=not args.real_truthfulqa,
-        auto_batch_size=args.auto_batch_size,
-        dump_scores_format=args.dump_scores_format,
+        model=_arg_or_preset(args, preset_defaults, "model", "sshleifer/tiny-gpt2"),
+        dtype=_arg_or_preset(args, preset_defaults, "dtype", "float32"),
+        layer=_arg_or_preset(args, preset_defaults, "layer", -1),
+        sweep=sweep,
+        sweep_layers=sweep_layers,
+        limit=_arg_or_preset(args, preset_defaults, "limit", None),
+        manifold_questions=_arg_or_preset(args, preset_defaults, "manifold_questions", None),
+        max_length=_arg_or_preset(args, preset_defaults, "max_length", 64),
+        batch_size=_arg_or_preset(args, preset_defaults, "batch_size", 1),
+        max_batch_tokens=_arg_or_preset(args, preset_defaults, "max_batch_tokens", 0),
+        hidden_state_capture=_arg_or_preset(args, preset_defaults, "hidden_state_capture", "outputs"),
+        progress_every=_arg_or_preset(args, preset_defaults, "progress_every", 0),
+        length_bucketed_batches=_arg_or_preset(args, preset_defaults, "length_bucketed_batches", True),
+        offline=_arg_or_preset(args, preset_defaults, "offline", True),
+        auto_batch_size=_arg_or_preset(args, preset_defaults, "auto_batch_size", False),
+        dump_scores_format=_arg_or_preset(args, preset_defaults, "dump_scores_format", "jsonl"),
         refresh_scores=args.refresh_scores,
-        signals=_parse_str_tuple(args.signals) or DEFAULT_SWEEP_SIGNALS,
-        signal=args.signal,
-        direction=args.direction,
-        repeats=args.repeats,
-        seed=args.seed,
-        artifact_alpha=args.artifact_alpha,
-        best_by=args.best_by,
+        signals=signals,
+        signal=_arg_or_preset(args, preset_defaults, "signal", "maha_last"),
+        direction=_arg_or_preset(args, preset_defaults, "direction", None),
+        repeats=_arg_or_preset(args, preset_defaults, "repeats", 20),
+        seed=_arg_or_preset(args, preset_defaults, "seed", 0),
+        artifact_alpha=_arg_or_preset(args, preset_defaults, "artifact_alpha", 0.10),
+        best_by=_arg_or_preset(args, preset_defaults, "best_by", "auroc"),
         python_executable=args.python,
         clean=args.clean,
         dry_run=args.dry_run,
@@ -559,39 +623,67 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 def main(argv: Sequence[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Run calibrated-observability score dump and conformal closure")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument(
+        "--runtime-preset",
+        default="custom",
+        choices=RUNTIME_PRESETS,
+        help=(
+            "cost/control preset: custom preserves explicit defaults, quick bounds local smoke cost, "
+            "calibrate favors score-dump reuse, full enables real TruthfulQA-oriented defaults"
+        ),
+    )
     parser.add_argument("--scores", default=None, help="reuse or write this score dump path")
     parser.add_argument("--json", default=None, help="optional workflow report path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--name", default=None, help="registry report name")
     parser.add_argument("--version", default=None, help="registry report version")
-    parser.add_argument("--model", default="sshleifer/tiny-gpt2")
-    parser.add_argument("--dtype", default="float32")
-    parser.add_argument("--layer", type=int, default=-1)
-    parser.add_argument("--no-sweep", action="store_true", help="do not pass --sweep to eval_truthfulqa.py")
+    parser.add_argument("--model", default=None)
+    parser.add_argument("--dtype", default=None)
+    parser.add_argument("--layer", type=int, default=None)
+    sweep_group = parser.add_mutually_exclusive_group()
+    sweep_group.add_argument("--sweep", dest="sweep", action="store_true", default=None)
+    sweep_group.add_argument("--no-sweep", dest="sweep", action="store_false", help="do not pass --sweep")
     parser.add_argument("--sweep-layers", default=None, help="comma-list passed to eval_truthfulqa.py --sweep-layers")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
-    parser.add_argument("--max-length", type=int, default=64)
-    parser.add_argument("--batch-size", type=int, default=1)
-    parser.add_argument("--max-batch-tokens", type=int, default=0)
-    parser.add_argument("--hidden-state-capture", default="outputs", choices=("outputs", "hooks"))
-    parser.add_argument("--progress-every", type=int, default=0)
-    parser.add_argument("--no-length-bucketed-batches", action="store_true")
-    parser.add_argument(
-        "--real-truthfulqa",
+    parser.add_argument("--max-length", type=int, default=None)
+    parser.add_argument("--batch-size", type=int, default=None)
+    parser.add_argument("--max-batch-tokens", type=int, default=None)
+    parser.add_argument("--hidden-state-capture", default=None, choices=("outputs", "hooks"))
+    parser.add_argument("--progress-every", type=int, default=None)
+    length_group = parser.add_mutually_exclusive_group()
+    length_group.add_argument(
+        "--length-bucketed-batches",
+        dest="length_bucketed_batches",
         action="store_true",
+        default=None,
+    )
+    length_group.add_argument(
+        "--no-length-bucketed-batches",
+        dest="length_bucketed_batches",
+        action="store_false",
+    )
+    offline_group = parser.add_mutually_exclusive_group()
+    offline_group.add_argument("--offline", dest="offline", action="store_true", default=None)
+    offline_group.add_argument(
+        "--real-truthfulqa",
+        dest="offline",
+        action="store_false",
+        default=None,
         help="download/use real TruthfulQA instead of offline",
     )
-    parser.add_argument("--auto-batch-size", action="store_true")
-    parser.add_argument("--dump-scores-format", default="jsonl", choices=("json", "jsonl"))
+    auto_batch_group = parser.add_mutually_exclusive_group()
+    auto_batch_group.add_argument("--auto-batch-size", dest="auto_batch_size", action="store_true", default=None)
+    auto_batch_group.add_argument("--no-auto-batch-size", dest="auto_batch_size", action="store_false")
+    parser.add_argument("--dump-scores-format", default=None, choices=("json", "jsonl"))
     parser.add_argument("--refresh-scores", action="store_true", help="rerun eval_truthfulqa even if --scores exists")
-    parser.add_argument("--signal", default="maha_last", help="primary conformal signal")
-    parser.add_argument("--signals", default=",".join(DEFAULT_SWEEP_SIGNALS), help="comma-list for sweep calibration")
+    parser.add_argument("--signal", default=None, help="primary conformal signal")
+    parser.add_argument("--signals", default=None, help="comma-list for sweep calibration")
     parser.add_argument("--direction", default=None, choices=("higher", "lower"))
-    parser.add_argument("--repeats", type=int, default=20)
-    parser.add_argument("--seed", type=int, default=0)
-    parser.add_argument("--artifact-alpha", type=float, default=0.10)
-    parser.add_argument("--best-by", choices=("auroc", "detection"), default="auroc")
+    parser.add_argument("--repeats", type=int, default=None)
+    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--artifact-alpha", type=float, default=None)
+    parser.add_argument("--best-by", choices=("auroc", "detection"), default=None)
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
