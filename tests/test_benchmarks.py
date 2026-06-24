@@ -5595,6 +5595,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
+    assert manifest["metadata"]["performance_evidence_bundle_status"] == "promote"
+    assert manifest["metadata"]["performance_evidence_bundle_release_ready"] is True
+    assert manifest["metadata"]["performance_cache_tuning_status"] == "ok"
+    assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
+    assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
+    assert manifest["metadata"]["performance_cache_only_total_ratio"] == pytest.approx(0.02)
     assert manifest["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert manifest["metadata"]["recommended_product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
@@ -5661,6 +5667,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_performance_baseline_record"] == (
         "performance_baseline:qwen-performance:0.6"
     )
+    assert record.metadata["performance_evidence_bundle_status"] == "promote"
+    assert record.metadata["performance_evidence_bundle_release_ready"] is True
+    assert record.metadata["performance_cache_tuning_status"] == "ok"
+    assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
+    assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
+    assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"

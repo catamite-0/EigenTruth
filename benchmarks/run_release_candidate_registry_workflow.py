@@ -371,6 +371,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     quality = dict(candidate.get("quality") or {})
     best_quality = dict(quality.get("best_quality_signal") or {})
     runtime_cost = dict(candidate.get("runtime_cost") or {})
+    performance_evidence_bundle = dict(candidate.get("performance_evidence_bundle") or {})
+    performance_evidence_recommendation = dict(
+        performance_evidence_bundle.get("recommendation") or {}
+    )
+    performance_evidence_cost = dict(performance_evidence_bundle.get("cost") or {})
     verifier_route = dict(candidate.get("verifier_route") or {})
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
@@ -413,6 +418,20 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_best_quality_signal": best_quality.get("name"),
         "recommended_best_quality_auroc": best_quality.get("auroc"),
         "recommended_quality_signals": quality.get("quality_signals"),
+        "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
+        "performance_evidence_bundle_release_ready": performance_evidence_bundle.get(
+            "release_ready"
+        ),
+        "performance_cache_tuning_status": performance_evidence_recommendation.get(
+            "cache_tuning_status"
+        ),
+        "performance_uncached_total_seconds": performance_evidence_cost.get(
+            "uncached_total_seconds"
+        ),
+        "performance_cached_total_ratio": performance_evidence_cost.get("cached_total_ratio"),
+        "performance_cache_only_total_ratio": performance_evidence_cost.get(
+            "cache_only_total_ratio"
+        ),
         "recommended_uncached_forward_cost_seconds": runtime_cost.get("uncached_forward_cost_seconds"),
         "recommended_uncached_forward_cost_source": runtime_cost.get("uncached_forward_cost_source"),
         "recommended_cache_only_total_seconds": runtime_cost.get("cache_only_total_seconds"),
