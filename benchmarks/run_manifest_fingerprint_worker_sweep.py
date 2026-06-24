@@ -84,7 +84,7 @@ def build_manifest_fingerprint_worker_sweep(
             samples.append(_run_sample(config, worker_count, repeat_index, seed_cache=seed_cache))
     summaries = [_worker_summary(worker_count, samples) for worker_count in config.worker_counts]
     leaderboard = _leaderboard(summaries)
-    decision = _decision(summaries, leaderboard)
+    decision = _decision(summaries, leaderboard, allow_failures=config.allow_failures)
     status = (
         "blocked"
         if decision["recommended_worker_count"] is None or decision["blocking_reasons"]
@@ -225,6 +225,8 @@ def _leaderboard(summaries: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]
 def _decision(
     summaries: Sequence[Mapping[str, Any]],
     leaderboard: Sequence[Mapping[str, Any]],
+    *,
+    allow_failures: bool,
 ) -> dict[str, Any]:
     recommended = next(
         (
@@ -236,6 +238,11 @@ def _decision(
     )
     baseline_mean = _baseline_mean(summaries)
     recommended_mean = None if recommended is None else _finite_float(recommended.get("mean_seconds"))
+    worker_failure_reasons = tuple(
+        f"worker_count={summary.get('worker_count')} did not pass all verification samples"
+        for summary in summaries
+        if (_finite_int(summary.get("passed_count")) or 0) < (_finite_int(summary.get("sample_count")) or 0)
+    )
     return {
         "recommended_worker_count": None if recommended is None else recommended.get("worker_count"),
         "recommended_mean_seconds": recommended_mean,
@@ -246,11 +253,8 @@ def _decision(
             if baseline_mean in (None, 0.0) or recommended_mean in (None, 0.0)
             else baseline_mean / recommended_mean
         ),
-        "blocking_reasons": tuple(
-            f"worker_count={summary.get('worker_count')} did not pass all verification samples"
-            for summary in summaries
-            if (_finite_int(summary.get("passed_count")) or 0) < (_finite_int(summary.get("sample_count")) or 0)
-        ),
+        "worker_failure_reasons": worker_failure_reasons,
+        "blocking_reasons": () if allow_failures else worker_failure_reasons,
     }
 
 
@@ -277,6 +281,7 @@ def _record_registry(config: ManifestFingerprintWorkerSweepConfig, payload: Mapp
             "manifest_count": len(tuple(config.manifest_paths)),
             "repeats": config.repeats,
             "recursive": config.recursive,
+            "allow_failures": config.allow_failures,
             **dict(config.metadata),
         },
     )

@@ -7155,6 +7155,58 @@ def test_manifest_fingerprint_worker_sweep_recommends_worker_and_registers(tmp_p
     assert record.metadata["suite"] == "unit"
 
 
+def test_manifest_fingerprint_worker_sweep_allows_failed_worker_when_configured(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_manifest_fingerprint_worker_sweep")
+    manifest_path = tmp_path / "artifact-manifest.json"
+    output_path = tmp_path / "manifest-worker-sweep.json"
+    manifest_path.write_text('{"schema_version": 1, "artifacts": {}}\n', encoding="utf-8")
+
+    class FakeVerification:
+        passed = True
+
+        def to_dict(self):
+            return {
+                "manifest_path": str(manifest_path),
+                "passed": True,
+                "checked": 0,
+                "failures": [],
+                "nested": [],
+            }
+
+    def fake_load_and_verify(self, path, *, root=None, recursive=False, max_workers=1):
+        if max_workers == 2:
+            raise ValueError("synthetic worker failure")
+        return FakeVerification()
+
+    monkeypatch.setattr(
+        module.ArtifactVerificationContext,
+        "load_and_verify_artifact_manifest",
+        fake_load_and_verify,
+    )
+
+    payload = module.build_manifest_fingerprint_worker_sweep(
+        module.ManifestFingerprintWorkerSweepConfig(
+            manifest_paths=(manifest_path,),
+            output_path=output_path,
+            worker_counts=(1, 2),
+            allow_failures=True,
+            compact_json=True,
+        )
+    )
+
+    assert payload["status"] == "observed"
+    assert payload["decision"]["recommended_worker_count"] == 1
+    assert payload["decision"]["blocking_reasons"] == ()
+    assert payload["decision"]["worker_failure_reasons"] == (
+        "worker_count=2 did not pass all verification samples",
+    )
+    assert payload["leaderboard"][0]["worker_count"] == 1
+    assert payload["leaderboard"][0]["passed"] is True
+    assert payload["leaderboard"][1]["worker_count"] == 2
+    assert payload["leaderboard"][1]["passed"] is False
+    assert payload["samples"][1]["errors"][0]["error"] == "synthetic worker failure"
+
+
 def _write_release_gate_overhead_source_report(
     path,
     *,

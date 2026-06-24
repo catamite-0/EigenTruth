@@ -1452,6 +1452,9 @@ python benchmarks/run_manifest_fingerprint_worker_sweep.py \
 The sweep starts each sample from the same optional seed fingerprint cache,
 records per-worker verification timing/cache summaries, and recommends the
 fastest worker count whose verification samples all pass.
+Use `--allow-failures` only for exploratory sweeps where failed worker counts
+should be reported as rejected candidates instead of blocking a passing
+recommendation.
 
 To quantify local release-gate overhead after collecting one cold and one warm
 registry-workflow run, aggregate their timing/cache summaries without rerunning
