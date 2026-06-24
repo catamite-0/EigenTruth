@@ -618,6 +618,36 @@ class TestScoreDump:
                 "n_false": 3,
             })
 
+    def test_jsonl_selected_record_helpers_do_not_scan_unused_wide_mappings(self):
+        from eigentruth.eval import score_dump as score_dump_module
+
+        class ExactOnlyMapping(dict):
+            def items(self):
+                raise AssertionError("unused mapping entries should not be scanned")
+
+        selected_scores = score_dump_module._selected_record_scores(
+            ExactOnlyMapping({
+                "maha_last": 0.9,
+                "unused_score": "not-a-float",
+            }),
+            score_names=("maha_last",),
+        )
+        selected_sweep_scores = score_dump_module._selected_record_sweep_scores(
+            ExactOnlyMapping({
+                "-1": ExactOnlyMapping({
+                    "truth_proj": 0.8,
+                    "unused_sweep_score": "not-a-float",
+                }),
+                "-2": ExactOnlyMapping({
+                    "unused_layer_score": "not-a-float",
+                }),
+            }),
+            sweep_score_names={"-1": ("truth_proj",)},
+        )
+
+        assert selected_scores == {"maha_last": 0.9}
+        assert selected_sweep_scores == {"-1": {"truth_proj": 0.8}}
+
     def test_jsonl_selected_view_primes_records_fingerprint_cache(
         self,
         tmp_path,

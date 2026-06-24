@@ -1750,14 +1750,18 @@ def _selected_record_scores(
 ) -> dict[str, float]:
     if not score_names:
         return {}
-    raw_scores = {
-        str(name): raw_value
-        for name, raw_value in _required_mapping(value, "scores").items()
-    }
-    missing = sorted(set(score_names) - set(raw_scores))
+    raw_scores = _required_mapping(value, "scores")
+    selected: dict[str, float] = {}
+    missing: list[str] = []
+    for name in score_names:
+        found, raw_value = _mapping_get_str_key(raw_scores, str(name))
+        if not found:
+            missing.append(str(name))
+            continue
+        selected[str(name)] = float(raw_value)
     if missing:
-        raise ValueError(f"score dump JSONL record is missing score(s): {missing}.")
-    return {name: float(raw_scores[name]) for name in score_names}
+        raise ValueError(f"score dump JSONL record is missing score(s): {sorted(missing)}.")
+    return selected
 
 
 def _selected_record_sweep_scores(
@@ -1767,34 +1771,51 @@ def _selected_record_sweep_scores(
 ) -> dict[str, dict[str, float]]:
     if not sweep_score_names:
         return {}
-    raw_sweep_scores = {
-        str(layer): layer_scores
-        for layer, layer_scores in _required_mapping(value, "sweep_scores").items()
-    }
-    missing_layers = sorted(set(sweep_score_names) - set(raw_sweep_scores))
+    raw_sweep_scores = _required_mapping(value, "sweep_scores")
+    layer_values: dict[str, Any] = {}
+    missing_layers: list[str] = []
+    for layer in sweep_score_names:
+        layer_key = str(layer)
+        found, raw_layer_scores = _mapping_get_str_key(raw_sweep_scores, layer_key)
+        if not found:
+            missing_layers.append(layer_key)
+            continue
+        layer_values[layer_key] = raw_layer_scores
     if missing_layers:
-        raise ValueError(f"score dump JSONL record is missing sweep layer(s): {missing_layers}.")
+        raise ValueError(f"score dump JSONL record is missing sweep layer(s): {sorted(missing_layers)}.")
 
     selected: dict[str, dict[str, float]] = {}
     for layer, expected_names in sweep_score_names.items():
-        raw_layer_scores = {
-            str(name): raw_value
-            for name, raw_value in _required_mapping(
-                raw_sweep_scores[str(layer)],
-                f"sweep_scores[{str(layer)!r}]",
-            ).items()
-        }
-        missing_scores = sorted(set(expected_names) - set(raw_layer_scores))
+        layer_key = str(layer)
+        raw_layer_scores = _required_mapping(
+            layer_values[layer_key],
+            f"sweep_scores[{layer_key!r}]",
+        )
+        selected_layer: dict[str, float] = {}
+        missing_scores: list[str] = []
+        for name in expected_names:
+            score_name = str(name)
+            found, raw_value = _mapping_get_str_key(raw_layer_scores, score_name)
+            if not found:
+                missing_scores.append(score_name)
+                continue
+            selected_layer[score_name] = float(raw_value)
         if missing_scores:
             raise ValueError(
-                f"score dump JSONL record is missing sweep score(s) for layer {str(layer)!r}: "
-                f"{missing_scores}."
+                f"score dump JSONL record is missing sweep score(s) for layer {layer_key!r}: "
+                f"{sorted(missing_scores)}."
             )
-        selected[str(layer)] = {
-            name: float(raw_layer_scores[name])
-            for name in expected_names
-        }
+        selected[layer_key] = selected_layer
     return selected
+
+
+def _mapping_get_str_key(value: Mapping[str, Any], key: str) -> tuple[bool, Any]:
+    if key in value:
+        return True, value[key]
+    for raw_key, raw_value in value.items():
+        if str(raw_key) == key:
+            return True, raw_value
+    return False, None
 
 
 def _selected_record_statement(
