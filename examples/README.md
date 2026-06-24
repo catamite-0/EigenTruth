@@ -24,7 +24,11 @@ It accepts `--runtime-profile latency|balanced|audit` so the same release
 profiles used by benchmark gates can also drive product-loop staging:
 `latency` skips low-risk, non-sensitive verifier calls, `balanced` verifies
 medium/high/unknown diagnostic risk and sensitive claims, and `audit` runs full
-initial verification.
+initial verification. It also accepts `--pre-generation-profile auto` to record
+a dependency-free prompt/metadata risk assessment before the post-generation
+diagnostic selector runs; when no explicit runtime profile is supplied, that
+pre-generation assessment can choose the initial `latency`, `balanced`, or
+`audit` profile for the trace.
 
 ### `sqlite_state_control_demo.py`
 
@@ -98,6 +102,11 @@ python examples/calibrated_control_demo.py \
   --runtime-profile auto \
   --runtime-profile-selector-policy artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-selector-policy.json \
   --diagnostics '{"truth_proj": 0.0}'
+python examples/calibrated_control_demo.py \
+  --pre-generation-profile auto \
+  --pre-generation-metadata '{"requires_current_facts": true}' \
+  --text "The latest BTC price today is 100 dollars." \
+  --diagnostics '{"truth_proj": 0.0}'
 ```
 
 The balanced profile enables staged verification but still verifies diagnostic
@@ -107,7 +116,13 @@ claim metadata checks before choosing a profile: low-risk non-sensitive claims
 use `latency`, medium diagnostic risk uses `balanced`, and high/unknown risk or
 number/citation/time-sensitive/calculation claims use `audit`. Pass
 `--runtime-profile-selector-policy` to make those routing thresholds and
-sensitive claim metadata keys explicit in the trace.
+sensitive claim metadata keys explicit in the trace. The
+`--pre-generation-profile auto` path runs earlier, before diagnostics or claim
+verification, using prompt features and optional `--pre-generation-metadata`;
+its assessment is recorded in `metadata.pre_generation_risk_assessment`, and
+`metadata.runtime_profile_source` shows whether the effective runtime profile
+came from pre-generation routing, post-diagnostic auto routing, or an explicit
+profile.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence

@@ -344,6 +344,46 @@ def test_calibrated_control_demo_auto_profile_uses_selector_policy(tmp_path):
     )
 
 
+def test_calibrated_control_demo_pre_generation_profile_records_and_applies():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    artifact = demo.default_artifact()
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics=json.dumps(demo.low_diagnostics_for_artifact(artifact)),
+            text="The latest BTC price today is 100 dollars.",
+            facts=None,
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            runtime_profile_selector_policy=None,
+            pre_generation_profile="auto",
+            pre_generation_risk_policy=None,
+            pre_generation_metadata='{"requires_current_facts": "yes"}',
+            staged_verification=None,
+            runtime_trace=True,
+            request_id="pre-generation-auto",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assessment = payload["metadata"]["pre_generation_risk_assessment"]
+
+    assert payload["metadata"]["runtime_profile"] == "audit"
+    assert payload["metadata"]["runtime_profile_source"] == "pre_generation"
+    assert payload["metadata"]["pre_generation_profile_requested"] == "auto"
+    assert assessment["selected_profile"] == "audit"
+    assert assessment["risk_level"] == "high"
+    assert "is_time_sensitive" in assessment["triggered_features"]
+    assert assessment["triggered_metadata"] == ("requires_current_facts",)
+    assert payload["metadata"]["staged_verification_enabled"] is False
+
+
 def test_calibrated_control_demo_can_record_runtime_budget_result():
     demo = importlib.import_module("examples.calibrated_control_demo")
 

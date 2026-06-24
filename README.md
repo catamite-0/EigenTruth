@@ -232,7 +232,10 @@ execute retrieve actions, feed retrieved evidence back into verification, and
 emit a final decision trace; pass `StagedVerificationPolicy` when low-risk,
 non-sensitive claims should skip expensive verifier routes while diagnostic risk
 or claim metadata such as numbers, citations, or time-sensitive language still
-triggers verification.
+triggers verification. Running `examples/calibrated_control_demo.py` with
+`--pre-generation-profile auto` records the earlier prompt/metadata risk
+assessment in trace metadata and, when no explicit runtime profile is supplied,
+uses it to choose the first `latency`, `balanced`, or `audit` runtime profile.
 
 For structured state or database-like adapters, generate deterministic state
 fixtures and refresh the verifier-route artifact without rerunning model forward

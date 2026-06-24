@@ -29,6 +29,8 @@ from eigentruth.control import (
     RUNTIME_PROFILE_NAMES,
     ActionExecutorRegistry,
     ControlAction,
+    PreGenerationRiskAssessment,
+    PreGenerationRiskPolicy,
     ProductPromotionContract,
     ProductRuntimeBudgetPolicy,
     RiskController,
@@ -42,6 +44,7 @@ from eigentruth.control import (
     load_product_runtime_evidence_bundle,
     product_promotion_contract_metadata,
     run_verification_loop,
+    select_pre_generation_profile,
     select_runtime_profile,
 )
 from eigentruth.registry import ArtifactRegistry
@@ -409,6 +412,60 @@ def load_runtime_profile_selector_policy(path: str | None) -> RuntimeProfileSele
     return RuntimeProfileSelectorPolicy.from_mapping(payload)
 
 
+def load_pre_generation_risk_policy(path: str | None) -> PreGenerationRiskPolicy | None:
+    """Load an optional pre-generation risk policy from JSON."""
+    if path is None:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"pre-generation risk policy must be a JSON object: {path}")
+    return PreGenerationRiskPolicy.from_mapping(payload)
+
+
+def resolve_pre_generation_assessment(
+    args: argparse.Namespace,
+) -> tuple[PreGenerationRiskAssessment | None, PreGenerationRiskPolicy | None, dict[str, Any]]:
+    """Return an optional pre-generation routing assessment from CLI-like args."""
+    requested = getattr(args, "pre_generation_profile", "off")
+    metadata = (
+        {}
+        if getattr(args, "pre_generation_metadata", None) is None
+        else parse_json_mapping(args.pre_generation_metadata, name="--pre-generation-metadata")
+    )
+    policy = load_pre_generation_risk_policy(getattr(args, "pre_generation_risk_policy", None))
+    if requested in (None, "off"):
+        return None, policy, metadata
+    if requested != "auto":
+        raise ValueError("pre_generation_profile must be 'off' or 'auto'.")
+    return (
+        select_pre_generation_profile(
+            getattr(args, "text", ""),
+            metadata=metadata,
+            risk_policy=policy,
+        ),
+        policy,
+        metadata,
+    )
+
+
+def pre_generation_profile_metadata(
+    assessment: PreGenerationRiskAssessment | None,
+    *,
+    policy: PreGenerationRiskPolicy | None,
+    requested: str | None,
+    metadata: dict[str, Any],
+    runtime_profile_source: str | None,
+) -> dict[str, Any]:
+    """Return trace metadata for pre-generation runtime-profile routing."""
+    return {
+        "pre_generation_profile_requested": requested,
+        "pre_generation_risk_assessment": None if assessment is None else assessment.to_dict(),
+        "pre_generation_risk_policy": None if policy is None else policy.to_dict(),
+        "pre_generation_metadata": dict(metadata),
+        "runtime_profile_source": runtime_profile_source,
+    }
+
+
 def build_verifier(
     facts: dict[str, Any] | None,
     evidence: list[Any] | None,
@@ -510,11 +567,24 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
 
     claims = extract_claims(args.text)
     controller = RiskController(artifact)
+    pre_generation_assessment, pre_generation_policy, pre_generation_metadata = (
+        resolve_pre_generation_assessment(args)
+    )
     selector_policy = load_runtime_profile_selector_policy(
         getattr(args, "runtime_profile_selector_policy", None)
     )
+    requested_runtime_profile = getattr(args, "runtime_profile", None)
+    effective_runtime_profile = requested_runtime_profile
+    runtime_profile_source = None
+    if effective_runtime_profile is None and pre_generation_assessment is not None:
+        effective_runtime_profile = pre_generation_assessment.selected_profile
+        runtime_profile_source = "pre_generation"
+    elif effective_runtime_profile == "auto":
+        runtime_profile_source = "post_diagnostic_auto"
+    elif effective_runtime_profile is not None:
+        runtime_profile_source = "explicit"
     runtime_profile, runtime_profile_selection = resolve_runtime_profile(
-        args.runtime_profile,
+        effective_runtime_profile,
         controller=controller,
         diagnostics=resolved_diagnostics,
         claims=claims,
@@ -574,7 +644,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 runtime_profile,
                 selection=runtime_profile_selection,
                 selector_policy=selector_policy,
-                requested=args.runtime_profile,
+                requested=requested_runtime_profile,
+            ),
+            **pre_generation_profile_metadata(
+                pre_generation_assessment,
+                policy=pre_generation_policy,
+                requested=getattr(args, "pre_generation_profile", "off"),
+                metadata=pre_generation_metadata,
+                runtime_profile_source=runtime_profile_source,
             ),
             "staged_verification_enabled": stage_policy is not None,
             "verifier_type": type(verifier).__name__,
@@ -646,7 +723,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     runtime_profile,
                     selection=runtime_profile_selection,
                     selector_policy=selector_policy,
-                    requested=args.runtime_profile,
+                    requested=requested_runtime_profile,
+                ),
+                **pre_generation_profile_metadata(
+                    pre_generation_assessment,
+                    policy=pre_generation_policy,
+                    requested=getattr(args, "pre_generation_profile", "off"),
+                    metadata=pre_generation_metadata,
+                    runtime_profile_source=runtime_profile_source,
                 ),
                 "staged_verification_enabled": stage_policy is not None,
                 "action_execution_summary": trace.action_execution_summary(),
@@ -685,6 +769,12 @@ def main() -> None:
                         help="optional control-plane profile: latency, balanced, audit, or auto")
     parser.add_argument("--runtime-profile-selector-policy", default=None,
                         help="optional RuntimeProfileSelectorPolicy JSON path for --runtime-profile auto")
+    parser.add_argument("--pre-generation-profile", default="off", choices=("off", "auto"),
+                        help="optionally choose a runtime profile before generation from prompt metadata")
+    parser.add_argument("--pre-generation-risk-policy", default=None,
+                        help="optional PreGenerationRiskPolicy JSON path for --pre-generation-profile auto")
+    parser.add_argument("--pre-generation-metadata", default=None,
+                        help="optional JSON object of caller risk flags for pre-generation routing")
     parser.add_argument("--staged-verification", dest="staged_verification", action="store_true",
                         default=None,
                         help="force staged verification even without a runtime profile")
