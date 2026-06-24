@@ -7041,6 +7041,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
 
     assert second_payload["decision"]["status"] == "promote"
     assert second_payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
+    second_fingerprint_cache = second_payload["artifact_cache"]["artifact_fingerprint_cache"]
+    assert second_fingerprint_cache["hits"] > 0
+    assert second_fingerprint_cache["misses"] >= 0
+    assert second_fingerprint_cache["hit_rate"] > 0.0
     assert fingerprint_calls_by_path[structured_route_report_key] == (
         fingerprint_calls_after_first[structured_route_report_key]
     )

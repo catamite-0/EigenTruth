@@ -421,7 +421,12 @@ def test_artifact_verification_context_caches_manifest_json_and_fingerprints(tmp
         "entries": 1,
         "hit_rate": 0.5,
     }
-    assert context.cache_summary()["artifact_fingerprint_cache"]["entries"] >= 1
+    fingerprint_summary = context.cache_summary()["artifact_fingerprint_cache"]
+    assert fingerprint_summary["requests"] == 3
+    assert fingerprint_summary["hits"] == 2
+    assert fingerprint_summary["misses"] == 1
+    assert fingerprint_summary["entries"] >= 1
+    assert fingerprint_summary["hit_rate"] == 2 / 3
 
     data_path.write_text('{"score": 200}\n', encoding="utf-8")
     drifted = context.load_and_verify_artifact_manifest(manifest_path)
