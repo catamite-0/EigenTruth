@@ -113,6 +113,70 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert sweep_report_path.exists()
 
 
+def test_eval_conformal_writes_artifact_manifest_for_outputs(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    registry_module = importlib.import_module("eigentruth.registry")
+    scores_path = tmp_path / "scores.json"
+    report_path = tmp_path / "conformal-report.json"
+    calibration_path = tmp_path / "calibration.json"
+    sweep_path = tmp_path / "sweep-report.json"
+    best_path = tmp_path / "best-calibration.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": -1},
+            "labels": [0, 0, 0, 0, 0, 0, 1, 1, 1],
+            "scores": {"support": [10, 11, 12, 13, 14, 15, 0, 1, 2]},
+            "sweep_scores": {
+                "-1": {"support": [10, 11, 12, 13, 14, 15, 0, 1, 2]},
+                "-2": {"support": [8, 9, 10, 11, 12, 13, 0, 1, 2]},
+            },
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="support",
+        signals="support",
+        repeats=1,
+        seed=0,
+        json=str(report_path),
+        save_calibration=str(calibration_path),
+        save_sweep_report=str(sweep_path),
+        save_best_calibration=str(best_path),
+        best_by="auroc",
+        artifact_alpha=0.20,
+        direction="lower",
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at="2026-06-24T00:00:00+00:00",
+        commit_sha=None,
+        artifact_manifest=str(manifest_path),
+    )
+
+    payload = module.run(args)
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["paths"]["artifact_manifest"] == str(manifest_path)
+    assert saved["paths"]["artifact_manifest"] == str(manifest_path)
+    assert saved["artifact_manifest_summary"] == manifest["summary"]
+    assert manifest["metadata"]["runner"] == "eval_conformal"
+    assert manifest["metadata"]["signal"] == "support"
+    assert manifest["metadata"]["direction"] == "lower"
+    assert manifest["metadata"]["has_sweep_report"] is True
+    assert set(manifest["artifacts"]) == {
+        "best_calibration_artifact",
+        "calibration_artifact",
+        "conformal_report",
+        "input_scores",
+        "sweep_report",
+    }
+    assert all(record["exists"] for record in manifest["artifacts"].values())
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
     module = importlib.import_module("benchmarks.backfill_truthfulqa_statements")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")

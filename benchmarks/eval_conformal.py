@@ -26,13 +26,16 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 import torch
 
+from benchmarks.config_utils import planned_artifact_manifest_summary
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import selective_classification_report
 from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata
+from eigentruth.registry import build_artifact_manifest
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -53,6 +56,55 @@ def _all_dump_signals(summary: dict) -> tuple[str, ...]:
 
 def _direction_for(signal: str, override: str | None = None) -> str:
     return override or DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+
+
+def _artifact_paths(args) -> dict[str, str | Path | None]:
+    return {
+        "input_scores": args.scores,
+        "conformal_report": args.json,
+        "calibration_artifact": args.save_calibration,
+        "sweep_report": args.save_sweep_report,
+        "best_calibration_artifact": args.save_best_calibration,
+    }
+
+
+def _add_planned_manifest_fields(args, payload: dict) -> None:
+    artifact_manifest = getattr(args, "artifact_manifest", None)
+    if artifact_manifest is None:
+        return
+    output_paths = tuple(
+        path
+        for name, path in _artifact_paths(args).items()
+        if name != "input_scores" and path is not None
+    )
+    payload.setdefault("paths", {})["artifact_manifest"] = str(artifact_manifest)
+    payload["artifact_manifest_summary"] = planned_artifact_manifest_summary(
+        _artifact_paths(args),
+        assume_file_paths=output_paths,
+    )
+
+
+def _write_artifact_manifest(args, payload: dict) -> dict | None:
+    artifact_manifest = getattr(args, "artifact_manifest", None)
+    if artifact_manifest is None:
+        return None
+    manifest_path = Path(artifact_manifest)
+    manifest = build_artifact_manifest(
+        _artifact_paths(args),
+        root=manifest_path.parent,
+        metadata={
+            "runner": "eval_conformal",
+            "verdict": payload.get("verdict"),
+            "signal": args.signal,
+            "direction": payload.get("config", {}).get("direction"),
+            "has_sweep_report": "sweep_report" in payload,
+        },
+    )
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    payload.setdefault("paths", {})["artifact_manifest"] = str(manifest_path)
+    print(f"\nWrote artifact manifest to {manifest_path}")
+    return manifest
 
 
 def run(args) -> dict:
@@ -176,10 +228,14 @@ def run(args) -> dict:
             artifact.save_json(args.save_best_calibration)
             print(f"\nWrote best calibration artifact to {args.save_best_calibration}")
 
+    _add_planned_manifest_fields(args, payload)
     if args.json:
         with open(args.json, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2)
         print(f"\nWrote {args.json}")
+    manifest = _write_artifact_manifest(args, payload)
+    if manifest is not None:
+        payload["artifact_manifest_summary"] = manifest["summary"]
     return payload
 
 
@@ -200,6 +256,8 @@ def main():
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,
                    help="optional path to write the best CalibrationArtifact from the sweep report")
+    p.add_argument("--artifact-manifest", default=None,
+                   help="optional path to write an artifact manifest for inputs and generated outputs")
     p.add_argument("--best-by", choices=("auroc", "detection"), default="auroc",
                    help="metric used to choose the best layer/score calibration artifact")
     p.add_argument("--artifact-alpha", type=float, default=0.10,

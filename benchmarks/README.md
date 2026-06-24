@@ -403,8 +403,10 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal tru
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy \
   --artifact-alpha 0.2 \
+  --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
-  --save-best-calibration artifacts/gpt2-best-calibration.json
+  --save-best-calibration artifacts/gpt2-best-calibration.json \
+  --artifact-manifest artifacts/gpt2-conformal-manifest.json
 ```
 
 **E1 result (gpt2, layer −8):** empirical false-alarm rate tracks the nominal α within
@@ -433,6 +435,10 @@ the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
 where possible, so large JSONL inputs materialize only the requested primary,
 statement-bearing, or layer/score columns plus labels. Score-dump metadata
 fingerprints both the manifest and the records file.
+When `--artifact-manifest` is provided, the conformal report gains
+`artifact_manifest_summary` and `paths.artifact_manifest`; the manifest
+fingerprints the input score dump plus generated conformal, sweep, and
+calibration artifacts for later verification or registry promotion.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.

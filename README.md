@@ -112,9 +112,15 @@ For a runnable model-loading demo, see [`examples/qwen_truth_demo.py`](examples/
 python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
   --dump-scores benchmarks/scores.json
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
+  --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
-  --save-best-calibration artifacts/gpt2-best-calibration.json
+  --save-best-calibration artifacts/gpt2-best-calibration.json \
+  --artifact-manifest artifacts/gpt2-conformal-manifest.json
 ```
+
+`--artifact-manifest` fingerprints the score dump, conformal report, sweep report,
+and saved calibration artifacts so local registry/release workflows can verify the
+calibration chain without rerunning the model.
 
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size`
 to trade memory for benchmark throughput. Add `--inside-adaptive-sampling` to
