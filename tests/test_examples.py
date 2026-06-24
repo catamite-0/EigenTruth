@@ -550,6 +550,64 @@ def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
 
 
+def test_calibrated_control_demo_applies_promotion_contract_control_defaults(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract
+
+    contract_path = tmp_path / "promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        control_defaults={"max_verifier_route_attempts": 1},
+        source_status="promote",
+    ).save_json(contract_path)
+
+    base_args = dict(
+        artifact=None,
+        diagnostics='{"truth_proj": 0.0}',
+        text="Paris is the capital of France.",
+        facts='{"Paris is the capital of France": "supported"}',
+        evidence=None,
+        refutations=None,
+        retrieval_evidence=None,
+        enable_calculator=False,
+        calculator_context=None,
+        runtime_profile="balanced",
+        staged_verification=None,
+        runtime_trace=True,
+        promotion_contract=str(contract_path),
+        output=None,
+        registry=None,
+    )
+
+    contract_default_payload = demo.run(SimpleNamespace(
+        **base_args,
+        max_verifier_route_attempts=None,
+        request_id="contract-control-default",
+    ))
+    explicit_payload = demo.run(SimpleNamespace(
+        **base_args,
+        max_verifier_route_attempts=4,
+        request_id="explicit-control-default",
+    ))
+
+    assert contract_default_payload["metadata"]["runtime_profile"] == "balanced"
+    assert contract_default_payload["metadata"]["runtime_profile_control_defaults"][
+        "max_verifier_route_attempts"
+    ] == 2
+    assert contract_default_payload["metadata"]["promotion_contract_control_defaults"] == {
+        "max_verifier_route_attempts": 1
+    }
+    assert contract_default_payload["metadata"]["effective_control_defaults"][
+        "max_verifier_route_attempts"
+    ] == 1
+    assert contract_default_payload["metadata"]["max_verifier_route_attempts"] == 1
+    assert contract_default_payload["metadata"]["verifier_type"] == "RoutedVerifier"
+    assert explicit_payload["metadata"]["effective_control_defaults"]["max_verifier_route_attempts"] == 1
+    assert explicit_payload["metadata"]["max_verifier_route_attempts"] == 4
+
+
 def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()

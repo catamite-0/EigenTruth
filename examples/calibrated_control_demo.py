@@ -10,9 +10,9 @@ is true. When the repository's SmolLM2 l80 calibration artifact is present, it i
 used by default; otherwise the script falls back to the Qwen l80 artifact and
 then toy thresholds. When the SmolLM2 structured-retrieval-audit release
 candidate is present, its product promotion contract supplies the default
-verifier route plus adapter-family and required-audit metadata; pass it
-explicitly with `--promotion-contract` to also enforce its runtime budget
-policy.
+verifier route, calibrated control defaults, adapter-family metadata, and
+required-audit metadata; pass it explicitly with `--promotion-contract` to also
+enforce its runtime budget policy.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import argparse
 import json
 import math
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from eigentruth.adapters import CachedRetriever, CalculatorVerifier, InMemoryRetriever, RetrievalActionExecutor
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
@@ -366,9 +366,14 @@ def stage_policy_from_runtime_profile(
     profile: RuntimeProfile | None,
     *,
     staged_verification: bool | None = None,
+    control_defaults: Mapping[str, Any] | None = None,
 ) -> StagedVerificationPolicy | None:
     """Build a staged verification policy from profile control defaults."""
-    control_defaults = {} if profile is None else dict(profile.control_defaults)
+    control_defaults = (
+        control_defaults_from_runtime_profile(profile)
+        if control_defaults is None
+        else dict(control_defaults)
+    )
     staged_enabled = (
         bool(control_defaults.get("staged_verification", False))
         if staged_verification is None
@@ -405,13 +410,52 @@ def verifier_route_attempts_from_runtime_profile(
     profile: RuntimeProfile | None,
     *,
     max_verifier_route_attempts: int | None = None,
+    control_defaults: Mapping[str, Any] | None = None,
 ) -> int | None:
     """Resolve the route-fanout cap from explicit args or profile defaults."""
     if max_verifier_route_attempts is not None:
-        return max_verifier_route_attempts
-    control_defaults = {} if profile is None else dict(profile.control_defaults)
+        return _positive_int(max_verifier_route_attempts, name="max_verifier_route_attempts")
+    control_defaults = (
+        control_defaults_from_runtime_profile(profile)
+        if control_defaults is None
+        else dict(control_defaults)
+    )
     value = control_defaults.get("max_verifier_route_attempts")
-    return None if value is None else int(value)
+    return None if value is None else _positive_int(value, name="max_verifier_route_attempts")
+
+
+def control_defaults_from_runtime_profile(
+    profile: RuntimeProfile | None,
+    *,
+    promotion_contract: ProductPromotionContract | None = None,
+) -> dict[str, Any]:
+    """Return effective control defaults for the run.
+
+    Runtime profiles provide local defaults. Promotion contracts can override
+    those defaults when a release handoff artifact carries calibrated runtime
+    recommendations. Explicit CLI/API parameters are applied by callers after
+    this merge.
+    """
+    control_defaults = {} if profile is None else dict(profile.control_defaults)
+    if promotion_contract is not None:
+        control_defaults.update({
+            str(key): value
+            for key, value in promotion_contract.control_defaults.items()
+            if value is not None
+        })
+    return control_defaults
+
+
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer.")
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a positive integer.") from exc
+    if parsed <= 0 or str(value).strip() not in {str(parsed), f"{parsed}.0"}:
+        raise ValueError(f"{name} must be a positive integer.")
+    return parsed
 
 
 def resolve_runtime_profile(
@@ -640,13 +684,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         claims=claims,
         selector_policy=selector_policy,
     )
+    runtime_control_defaults = control_defaults_from_runtime_profile(
+        runtime_profile,
+        promotion_contract=promotion_contract,
+    )
     stage_policy = stage_policy_from_runtime_profile(
         runtime_profile,
         staged_verification=args.staged_verification,
+        control_defaults=runtime_control_defaults,
     )
     max_verifier_route_attempts = verifier_route_attempts_from_runtime_profile(
         runtime_profile,
         max_verifier_route_attempts=getattr(args, "max_verifier_route_attempts", None),
+        control_defaults=runtime_control_defaults,
     )
     verifier_route_name = (
         None
@@ -709,6 +759,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 runtime_profile_source=runtime_profile_source,
             ),
             "staged_verification_enabled": stage_policy is not None,
+            "effective_control_defaults": runtime_control_defaults,
             "max_verifier_route_attempts": max_verifier_route_attempts,
             "verifier_type": type(verifier).__name__,
             "calculator_enabled": args.enable_calculator,
@@ -789,6 +840,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     runtime_profile_source=runtime_profile_source,
                 ),
                 "staged_verification_enabled": stage_policy is not None,
+                "effective_control_defaults": runtime_control_defaults,
                 "max_verifier_route_attempts": max_verifier_route_attempts,
                 "action_execution_summary": trace.action_execution_summary(),
                 "runtime_summary": trace.runtime_summary(),
@@ -875,7 +927,8 @@ def main() -> None:
     parser.add_argument("--max-route-budget-exhaustion-rate", type=float, default=None,
                         help="optional ProductTrace budget for capped verifier route exhaustion rate")
     parser.add_argument("--max-verifier-route-attempts", type=int, default=None,
-                        help="cap matching verifier routes attempted per claim; runtime profiles fill this when unset")
+                        help=("cap matching verifier routes attempted per claim; promotion contracts and "
+                              "runtime profiles fill this when unset"))
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None,
                         help="optional ProductTrace route-cost budget for retrieval use rate")
     parser.add_argument("--max-retrieval-hit-count", type=float, default=None,

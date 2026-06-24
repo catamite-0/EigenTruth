@@ -169,16 +169,19 @@ python examples/calibrated_control_demo.py \
 ```
 
 When the SmolLM2 strict structured-retrieval-audit release candidate is present,
-the demo loads its promotion contract by default as route, adapter-family, and
-required-audit metadata. The current default is the compact v1.5 product
-promotion contract artifact, which also carries
-selector replay and product-runtime-drift evidence. Passing the same file
-explicitly with `--promotion-contract` also enforces its runtime budget, including the
+the demo loads its promotion contract by default as route, calibrated control
+defaults, adapter-family, and required-audit metadata. The current default is
+the compact v1.5 product promotion contract artifact, which also carries
+selector replay and product-runtime-drift evidence. Contract control defaults
+such as `max_verifier_route_attempts` fill unset demo controls, while explicit
+CLI options still take precedence. Passing the same file explicitly with
+`--promotion-contract` also enforces its runtime budget, including the
 low-latency product-route gates `max_retrieval_use_rate=0.0` and
-`max_mean_attempted_route_count=1.1`. The demo uses `ProductRuntimeEvidenceBundle`
-to infer the sibling artifact manifest and can optionally attach manifest
-verification plus local registry provenance with `--verify-promotion-contract-manifest`
-and `--promotion-contract-registry`. Staged-verification runs also emit
+`max_mean_attempted_route_count=1.1`. The demo uses
+`ProductRuntimeEvidenceBundle` to infer the sibling artifact manifest and can
+optionally attach manifest verification plus local registry provenance with
+`--verify-promotion-contract-manifest` and `--promotion-contract-registry`.
+Staged-verification runs also emit
 `verification_stage_summary`, so low-risk fast-path savings can be gated with
 `--min-verification-skip-rate` and `--max-verified-claim-count`. The latency
 runtime profile verifies only claims that triggered configured claim metadata or
