@@ -242,6 +242,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_product_runtime_drift_report(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a ProductTrace runtime baseline drift report."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_runtime_drift_report",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def add(self, record: RegistryRecord) -> "ArtifactRegistry":
         """Add or replace a record with the same registry key."""
         records = [existing for existing in self.records if existing.key() != record.key()]

@@ -2248,6 +2248,28 @@ fast-path verifier savings. Add
 `--compact-json` when the report and manifest are consumed by automation and
 diff readability is less important than artifact size.
 
+Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
+built. It compares that current baseline against a file path or a registered
+`product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
+retrieval-use, cache-hit-rate, verifier-skip-rate, and trace-count drift:
+
+```bash
+python benchmarks/compare_product_runtime_baselines.py \
+  --registry artifacts/local-release-registry.json \
+  --baseline-key product_runtime_baseline:smollm2-product-runtime-baseline:0.1 \
+  --current artifacts/product-runtime-baseline-current.json \
+  --json artifacts/product-runtime-drift.json \
+  --name smollm2-product-runtime-drift \
+  --version 0.1 \
+  --max-total-seconds-mean-ratio 1.25 \
+  --max-mean-route-duration-ratio 1.25 \
+  --max-mean-attempted-route-count-delta 0.25 \
+  --max-retrieval-use-rate-delta 0.05 \
+  --max-cache-hit-rate-drop 0.10 \
+  --min-current-trace-count 50 \
+  --fail-on-drift
+```
+
 Use `build_product_trace_corpus.py` before replaying real product traffic. It
 loads ProductTrace JSON files or JSONL streams, validates the control fields,
 optionally requires runtime traces, redacts text-like fields by default, adds a

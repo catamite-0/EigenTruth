@@ -7,6 +7,7 @@ import sys
 import threading
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any, Mapping
 
 import pytest
 import torch
@@ -9316,6 +9317,193 @@ def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     assert payload["budget"]["failed_count"] == 1
     assert payload["budget"]["failure_counts_by_metric"] == {"total_seconds": 1}
     assert payload["decision"]["blocking_reasons"] == ("total_seconds: failed 1 trace(s)",)
+
+
+def test_compare_product_runtime_baselines_promotes_within_gates(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=4,
+        cache_misses=1,
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.11,
+        route_seconds=0.021,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=5,
+        cache_misses=1,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        max_total_seconds_mean_ratio=1.2,
+        max_mean_route_duration_ratio=1.2,
+        max_mean_attempted_route_count_delta=0.1,
+        max_retrieval_use_rate_delta=0.1,
+        max_cache_hit_rate_drop=0.1,
+        min_current_trace_count=1,
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["summary"]["gate_enabled"] is True
+    assert payload["summary"]["blocked_metric_count"] == 0
+    total_metric = _metric_by_name(payload, "total_seconds.mean")
+    assert total_metric["ratio_to_baseline"] == pytest.approx(1.1)
+    assert total_metric["status"] == "pass"
+    assert payload["baseline"]["source"] == "file"
+
+
+def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=4,
+        cache_misses=1,
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.30,
+        route_seconds=0.08,
+        attempted_route_count=2,
+        used_retrieval=True,
+        cache_hits=1,
+        cache_misses=4,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+            registry_path=registry_path,
+            name="runtime-baseline",
+            version="0.1",
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        registry_path=registry_path,
+        baseline_key="product_runtime_baseline:runtime-baseline:0.1",
+        current_path=current_report,
+        report_path=drift_report,
+        name="runtime-drift",
+        version="0.1",
+        max_total_seconds_mean_ratio=2.0,
+        max_mean_route_duration_ratio=3.0,
+        max_mean_attempted_route_count_delta=0.5,
+        max_retrieval_use_rate_delta=0.25,
+        max_cache_hit_rate_drop=0.5,
+        min_current_trace_count=1,
+        compact_json=True,
+    )
+    saved_text = drift_report.read_text(encoding="utf-8")
+    saved = json.loads(saved_text)
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift:0.1")
+
+    assert payload["status"] == "blocked"
+    assert payload["summary"]["blocked_metric_count"] == 5
+    assert _metric_by_name(payload, "total_seconds.mean")["status"] == "blocked"
+    assert _metric_by_name(payload, "route.mean_duration_seconds.mean")["status"] == "blocked"
+    assert _metric_by_name(payload, "retrieval_use_rate.mean")["status"] == "blocked"
+    assert saved["artifact_manifest_summary"] == manifest["summary"]
+    assert manifest["metadata"]["runner"] == "compare_product_runtime_baselines"
+    assert record.artifact_type == "product_runtime_drift_report"
+    assert record.metadata["status"] == "blocked"
+    assert record.metadata["compact_json"] is True
+    assert "\n  " not in saved_text
+
+
+def _write_product_runtime_trace(
+    path: Path,
+    *,
+    request_id: str,
+    total_seconds: float,
+    route_seconds: float,
+    attempted_route_count: int,
+    used_retrieval: bool,
+    cache_hits: int,
+    cache_misses: int,
+) -> None:
+    path.write_text(
+        json.dumps({
+            "request_id": request_id,
+            "runtime_trace": {
+                "total_seconds": total_seconds,
+                "phases": [
+                    {"name": "diagnostic_risk_decision", "seconds": 0.01},
+                    {"name": "initial_verification", "seconds": route_seconds},
+                ],
+            },
+            "verification_results": [
+                {
+                    "status": "supported",
+                    "metadata": {
+                        "selected_route": "structured_qa",
+                        "total_duration_seconds": route_seconds,
+                        "selected_route_duration_seconds": route_seconds,
+                        "attempted_route_count": attempted_route_count,
+                        "used_retrieval": used_retrieval,
+                        "retrieval_hit_count": 1 if used_retrieval else 0,
+                    },
+                }
+            ],
+            "metadata": {"cache": {"verifier": {"hits": cache_hits, "misses": cache_misses}}},
+        }),
+        encoding="utf-8",
+    )
+
+
+def _metric_by_name(payload: Mapping[str, Any], name: str) -> dict[str, Any]:
+    for metric in payload["metrics"]:
+        if metric["metric"] == name:
+            return metric
+    raise AssertionError(f"missing metric {name!r}")
 
 
 def test_run_product_runtime_baseline_aggregates_verification_stage_savings(tmp_path):
