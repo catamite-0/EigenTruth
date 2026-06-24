@@ -2389,7 +2389,8 @@ sidecar while keeping the main report focused on summary, budget, optimization,
 manifest, and registry metadata. Add `--save-recommended-policy` to write
 `optimization.policy_hints.candidate_runtime_budget_policy` as a reusable
 `ProductRuntimeBudgetPolicy` JSON that can be passed back through `--policy` in
-later baseline, replay, or profile-sweep gates. Add
+later baseline, replay, profile-sweep, or
+`compare_product_runtime_baselines.py --runtime-budget-policy` gates. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
 resolved policy payload:
@@ -2421,6 +2422,9 @@ Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
 retrieval-use, cache-hit-rate, verifier-skip-rate, and trace-count drift. When a
+saved `ProductRuntimeBudgetPolicy` is supplied with `--runtime-budget-policy` or
+`--runtime-budget-policy-key`, the current baseline summary is also checked
+against the reusable budget using p95/aggregate metrics. When a
 file baseline is used, `--registry` can still be supplied to register only the
 new drift report:
 
@@ -2429,6 +2433,7 @@ python benchmarks/compare_product_runtime_baselines.py \
   --registry artifacts/local-release-registry.json \
   --baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
   --current artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json \
+  --runtime-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
   --json artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json \
   --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_5/artifact-manifest.json \
   --name smollm2-product-runtime-drift \

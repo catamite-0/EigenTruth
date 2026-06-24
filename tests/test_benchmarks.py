@@ -11177,6 +11177,117 @@ def test_compare_product_runtime_baselines_registers_file_baseline_report(tmp_pa
     assert record.metadata["status"] == "promote"
 
 
+def test_compare_product_runtime_baselines_applies_runtime_budget_policy_gate(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    policy_path = tmp_path / "recommended-runtime-policy.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.04,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=4,
+        cache_misses=1,
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.30,
+        route_seconds=0.22,
+        attempted_route_count=2,
+        used_retrieval=True,
+        cache_hits=1,
+        cache_misses=4,
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+    policy_path.write_text(
+        json.dumps({
+            "max_total_seconds": 0.20,
+            "max_phase_p95_seconds": {"initial_verification": 0.10},
+            "max_mean_attempted_route_count": 1.5,
+            "max_retrieval_use_rate": 0.5,
+            "min_cache_hit_rate": 0.5,
+            "metadata": {"source": "unit-test"},
+        }),
+        encoding="utf-8",
+    )
+
+    path_payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        runtime_budget_policy_path=policy_path,
+    )
+    registry_module.ArtifactRegistry.load_json(registry_path).record_product_runtime_budget_policy(
+        name="recommended-runtime-policy",
+        path=policy_path,
+        version="0.1",
+        metadata={"policy_enabled": True},
+    ).save_json()
+    registry_payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        registry_path=registry_path,
+        runtime_budget_policy_key="product_runtime_budget_policy:recommended-runtime-policy:0.1",
+        report_path=drift_report,
+        name="runtime-drift",
+        version="0.1",
+    )
+    manifest = json.loads(Path(registry_payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_drift_report:runtime-drift:0.1"
+    )
+
+    assert path_payload["status"] == "blocked"
+    assert path_payload["summary"]["drift_gate_enabled"] is False
+    assert path_payload["summary"]["runtime_budget_policy_gate_enabled"] is True
+    assert path_payload["runtime_budget_policy_gate"]["policy_metadata"] == {"source": "unit-test"}
+    failure_metrics = {
+        failure["metric"]
+        for failure in registry_payload["runtime_budget_policy_gate"]["failures"]
+    }
+    assert registry_payload["status"] == "blocked"
+    assert registry_payload["summary"]["runtime_budget_policy_failed_count"] == 5
+    assert {
+        "total_seconds.p95",
+        "phase_seconds.initial_verification.p95",
+        "route.mean_attempted_route_count",
+        "route.retrieval_use_rate",
+        "cache_hit_rate.mean",
+    } == failure_metrics
+    assert "runtime_budget_policy: total_seconds.p95 0.3 exceeded gate 0.2" in (
+        registry_payload["decision"]["blocking_reasons"]
+    )
+    assert manifest["artifacts"]["runtime_budget_policy"]["exists"] is True
+    assert manifest["metadata"]["runtime_budget_policy_key"] == (
+        "product_runtime_budget_policy:recommended-runtime-policy:0.1"
+    )
+    assert manifest["metadata"]["runtime_budget_policy_passed"] is False
+    assert record.metadata["runtime_budget_policy_key"] == (
+        "product_runtime_budget_policy:recommended-runtime-policy:0.1"
+    )
+    assert record.metadata["runtime_budget_policy_passed"] is False
+
+
 def _write_product_runtime_trace(
     path: Path,
     *,
