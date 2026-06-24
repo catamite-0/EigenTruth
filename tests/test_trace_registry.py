@@ -27,6 +27,7 @@ from eigentruth.control import (
 )
 from eigentruth.registry import (
     ArtifactRegistry,
+    ArtifactVerificationContext,
     RegistryRecord,
     build_artifact_manifest,
     fingerprint_path,
@@ -395,6 +396,40 @@ def test_persisted_fingerprint_cache_reuses_unchanged_file(tmp_path, monkeypatch
     assert verification.passed is True
     assert call_count == 0
     assert load_fingerprint_cache(tmp_path / "missing-cache.json") == {}
+
+
+def test_artifact_verification_context_caches_manifest_json_and_fingerprints(tmp_path):
+    data_path = tmp_path / "result.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    context = ArtifactVerificationContext()
+    manifest_path.write_text(
+        json.dumps(context.build_artifact_manifest({"result": data_path}, root=tmp_path)),
+        encoding="utf-8",
+    )
+
+    first = context.load_and_verify_artifact_manifest(manifest_path)
+    second = context.load_and_verify_artifact_manifest(manifest_path)
+
+    assert first.passed is True
+    assert second.passed is True
+    assert context.json_cache_summary() == {
+        "requests": 2,
+        "hits": 1,
+        "misses": 1,
+        "errors": 0,
+        "entries": 1,
+        "hit_rate": 0.5,
+    }
+    assert context.cache_summary()["artifact_fingerprint_cache"]["entries"] >= 1
+
+    data_path.write_text('{"score": 200}\n', encoding="utf-8")
+    drifted = context.load_and_verify_artifact_manifest(manifest_path)
+
+    assert drifted.passed is False
+    assert {failure.field for failure in drifted.failures} >= {"sha256"}
+    assert context.json_cache_summary()["hits"] == 2
+    json.dumps(context.cache_summary())
 
 
 def test_product_trace_action_execution_summary_counts_results():

@@ -19,11 +19,13 @@ from benchmarks.compare_readiness_baselines import compare_readiness_baselines  
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
-from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    ArtifactVerificationContext,
+    load_and_verify_artifact_manifest,
+)
 
-_json_cache_summary = _artifact_json_cache.json_cache_summary
 _load_optional_json = _artifact_json_cache.load_optional_json
-_new_json_cache_stats = _artifact_json_cache.new_json_cache_stats
 
 
 def compare_release_candidates(
@@ -142,9 +144,14 @@ def compare_release_candidates(
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop,
         name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
     )
-    cache = fingerprint_cache if fingerprint_cache is not None else {}
-    payload_cache = json_cache if json_cache is not None else {}
-    payload_cache_stats = json_cache_stats if json_cache_stats is not None else _new_json_cache_stats()
+    verification_context = ArtifactVerificationContext(
+        fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    cache = verification_context.fingerprint_cache
+    payload_cache = verification_context.json_cache
+    payload_cache_stats = verification_context.json_cache_stats
     route_registry_path = readiness_registry_path if route_registry_path is None else route_registry_path
     performance_registry_path = (
         readiness_registry_path if performance_registry_path is None else performance_registry_path
@@ -337,7 +344,7 @@ def compare_release_candidates(
         "schema_version": 1,
         "workflow": "release_candidate_comparison",
         "summary": {
-            "artifact_json_cache": _json_cache_summary(payload_cache, payload_cache_stats),
+            "artifact_json_cache": verification_context.json_cache_summary(),
         },
         "config": {
             "readiness_registry": str(readiness_registry_path),

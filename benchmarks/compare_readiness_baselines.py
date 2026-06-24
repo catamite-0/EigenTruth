@@ -19,11 +19,14 @@ from benchmarks.recommend_runtime_config import (  # noqa: E402
     INSIDE_TRIGGER_BUDGET_POLICIES,
     build_runtime_recommendation,
 )
-from eigentruth.registry import ArtifactRegistry, RegistryRecord, load_and_verify_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    ArtifactVerificationContext,
+    RegistryRecord,
+    verify_artifact_manifest,
+)
 
-_json_cache_summary = _artifact_json_cache.json_cache_summary
 _load_optional_json = _artifact_json_cache.load_optional_json
-_new_json_cache_stats = _artifact_json_cache.new_json_cache_stats
 
 
 def compare_readiness_baselines(
@@ -44,9 +47,14 @@ def compare_readiness_baselines(
     json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed comparison of registered readiness baselines."""
-    cache = fingerprint_cache if fingerprint_cache is not None else {}
-    payload_cache = json_cache if json_cache is not None else {}
-    payload_cache_stats = json_cache_stats if json_cache_stats is not None else _new_json_cache_stats()
+    verification_context = ArtifactVerificationContext(
+        fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    cache = verification_context.fingerprint_cache
+    payload_cache = verification_context.json_cache
+    payload_cache_stats = verification_context.json_cache_stats
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
@@ -91,7 +99,7 @@ def compare_readiness_baselines(
             "record_count": len(rows),
             "passing_count": sum(1 for row in rows if row["gate"]["passed"]),
             "recommended_record": None if recommendation is None else recommendation["record_key"],
-            "artifact_json_cache": _json_cache_summary(payload_cache, payload_cache_stats),
+            "artifact_json_cache": verification_context.json_cache_summary(),
         },
         "decision": decision,
         "leaderboard": leaderboard,
@@ -151,6 +159,8 @@ def _readiness_row(
     )
     verification = _verify_manifest(
         manifest_path,
+        manifest=manifest,
+        manifest_error=manifest_error,
         recursive=recursive,
         fingerprint_cache=fingerprint_cache,
     )
@@ -388,31 +398,40 @@ def _manifest_metadata(record: RegistryRecord, manifest: Mapping[str, Any]) -> d
 def _verify_manifest(
     manifest_path: Path,
     *,
+    manifest: Mapping[str, Any],
+    manifest_error: str | None,
     recursive: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any]:
+    if manifest_error is not None:
+        return _manifest_load_failure(manifest_path, manifest_error)
     try:
-        return load_and_verify_artifact_manifest(
-            manifest_path,
+        return verify_artifact_manifest(
+            manifest,
+            manifest_path=manifest_path,
             recursive=recursive,
             fingerprint_cache=fingerprint_cache,
         ).to_dict()
     except (OSError, ValueError, json.JSONDecodeError) as exc:
-        return {
-            "manifest_path": str(manifest_path),
-            "passed": False,
-            "checked": 0,
-            "failures": [
-                {
-                    "name": "manifest",
-                    "path": str(manifest_path),
-                    "field": "load",
-                    "expected": "readable artifact manifest",
-                    "actual": str(exc),
-                }
-            ],
-            "nested": [],
-        }
+        return _manifest_load_failure(manifest_path, str(exc))
+
+
+def _manifest_load_failure(manifest_path: Path, error: str) -> dict[str, Any]:
+    return {
+        "manifest_path": str(manifest_path),
+        "passed": False,
+        "checked": 0,
+        "failures": [
+            {
+                "name": "manifest",
+                "path": str(manifest_path),
+                "field": "load",
+                "expected": "readable artifact manifest",
+                "actual": error,
+            }
+        ],
+        "nested": [],
+    }
 
 
 def _gate(

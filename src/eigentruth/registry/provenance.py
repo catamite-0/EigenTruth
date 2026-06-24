@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 _FingerprintCache = MutableMapping[str, dict[str, Any]]
+_JsonCache = MutableMapping[str, dict[str, Any]]
+_JsonCacheStats = MutableMapping[str, int]
 _FILE_CACHE_SAMPLE_BYTES = 4096
 
 
@@ -79,6 +81,104 @@ class ArtifactManifestVerification:
             "checked": self.checked,
             "failures": [failure.to_dict() for failure in self.failures],
             "nested": [result.to_dict() for result in self.nested],
+        }
+
+
+@dataclass
+class ArtifactVerificationContext:
+    """Shared local caches for artifact JSON and manifest verification."""
+
+    fingerprint_cache: _FingerprintCache | None = None
+    json_cache: _JsonCache | None = None
+    json_cache_stats: _JsonCacheStats | None = None
+
+    def __post_init__(self) -> None:
+        if self.fingerprint_cache is None:
+            self.fingerprint_cache = {}
+        if self.json_cache is None:
+            self.json_cache = {}
+        if self.json_cache_stats is None:
+            self.json_cache_stats = new_json_cache_stats()
+
+    def fingerprint_path(
+        self,
+        path: str | Path,
+        *,
+        root: str | Path | None = None,
+    ) -> ArtifactFingerprint:
+        """Fingerprint one path using this context's fingerprint cache."""
+        return fingerprint_path(path, root=root, fingerprint_cache=self.fingerprint_cache)
+
+    def build_artifact_manifest(
+        self,
+        artifacts: Mapping[str, str | Path | None],
+        *,
+        root: str | Path | None = None,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Build an artifact manifest using this context's fingerprint cache."""
+        return build_artifact_manifest(
+            artifacts,
+            root=root,
+            metadata=metadata,
+            fingerprint_cache=self.fingerprint_cache,
+        )
+
+    def verify_artifact_manifest(
+        self,
+        manifest: Mapping[str, Any],
+        *,
+        root: str | Path | None = None,
+        manifest_path: str | Path | None = None,
+        recursive: bool = False,
+    ) -> ArtifactManifestVerification:
+        """Verify a manifest using this context's fingerprint cache."""
+        return verify_artifact_manifest(
+            manifest,
+            root=root,
+            manifest_path=manifest_path,
+            recursive=recursive,
+            fingerprint_cache=self.fingerprint_cache,
+        )
+
+    def load_and_verify_artifact_manifest(
+        self,
+        manifest_path: str | Path,
+        *,
+        root: str | Path | None = None,
+        recursive: bool = False,
+    ) -> ArtifactManifestVerification:
+        """Load a manifest through this context's JSON cache and verify it."""
+        path = Path(manifest_path)
+        manifest, error = self.load_json_object(path)
+        if error is not None:
+            raise ValueError(f"artifact manifest could not be loaded: {path}: {error}")
+        return self.verify_artifact_manifest(
+            manifest,
+            root=root,
+            manifest_path=path,
+            recursive=recursive,
+        )
+
+    def load_json_object(self, path: str | Path) -> tuple[dict[str, Any], str | None]:
+        """Load a JSON object using this context's path-signature cache."""
+        return load_json_object(
+            Path(path),
+            json_cache=self.json_cache,
+            json_cache_stats=self.json_cache_stats,
+        )
+
+    def json_cache_summary(self) -> dict[str, Any]:
+        """Return JSON cache counters for reports."""
+        return json_cache_summary(self.json_cache or {}, self.json_cache_stats or {})
+
+    def cache_summary(self) -> dict[str, Any]:
+        """Return a combined cache summary for reports."""
+        return {
+            "artifact_json_cache": self.json_cache_summary(),
+            "artifact_fingerprint_cache": {
+                "entries": len(self.fingerprint_cache or {}),
+            },
         }
 
 
@@ -234,6 +334,91 @@ def load_and_verify_artifact_manifest(
     )
 
 
+def load_json_object(
+    path: str | Path,
+    *,
+    json_cache: _JsonCache | None = None,
+    json_cache_stats: _JsonCacheStats | None = None,
+) -> tuple[dict[str, Any], str | None]:
+    """Load a JSON object, optionally using a path-signature cache."""
+    increment_json_cache_stat(json_cache_stats, "requests")
+    cache_key = None if json_cache is None else json_cache_key(Path(path))
+    if cache_key is not None:
+        cached = json_cache.get(cache_key)
+        if cached is not None:
+            error = cached.get("error")
+            increment_json_cache_stat(json_cache_stats, "hits")
+            if error is not None:
+                increment_json_cache_stat(json_cache_stats, "errors")
+            return _mapping(cached.get("payload")), error
+    increment_json_cache_stat(json_cache_stats, "misses")
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        error = str(exc)
+        increment_json_cache_stat(json_cache_stats, "errors")
+        if cache_key is not None:
+            json_cache[cache_key] = {"payload": {}, "error": error}
+        return {}, error
+    if not isinstance(payload, dict):
+        error = f"{path} did not contain a JSON object"
+        increment_json_cache_stat(json_cache_stats, "errors")
+        if cache_key is not None:
+            json_cache[cache_key] = {"payload": {}, "error": error}
+        return {}, error
+    if cache_key is not None:
+        json_cache[cache_key] = {"payload": dict(payload), "error": None}
+    return payload, None
+
+
+def json_cache_key(path: str | Path) -> str | None:
+    """Return a cache key for the current path signature, or None if absent."""
+    candidate = Path(path)
+    try:
+        stat = candidate.stat()
+    except OSError:
+        return None
+    try:
+        resolved = candidate.resolve(strict=False)
+    except OSError:
+        resolved = candidate.absolute()
+    return f"{resolved}:{stat.st_mtime_ns}:{stat.st_size}:{getattr(stat, 'st_ino', 0)}"
+
+
+def new_json_cache_stats() -> dict[str, int]:
+    """Return initialized JSON cache counters."""
+    return {
+        "requests": 0,
+        "hits": 0,
+        "misses": 0,
+        "errors": 0,
+    }
+
+
+def increment_json_cache_stat(stats: _JsonCacheStats | None, key: str) -> None:
+    """Increment one JSON cache counter if stats are being tracked."""
+    if stats is None:
+        return
+    stats[key] = int(stats.get(key, 0)) + 1
+
+
+def json_cache_summary(
+    json_cache: Mapping[str, Any],
+    stats: Mapping[str, int],
+) -> dict[str, Any]:
+    """Return JSON cache counters with a hit-rate convenience field."""
+    requests = int(stats.get("requests", 0))
+    hits = int(stats.get("hits", 0))
+    return {
+        "requests": requests,
+        "hits": hits,
+        "misses": int(stats.get("misses", 0)),
+        "errors": int(stats.get("errors", 0)),
+        "entries": len(json_cache),
+        "hit_rate": 0.0 if requests <= 0 else float(hits) / float(requests),
+    }
+
+
 def load_fingerprint_cache(path: str | Path | None) -> dict[str, dict[str, Any]]:
     """Load a JSON fingerprint cache, returning an empty cache when absent."""
     if path is None:
@@ -323,6 +508,12 @@ def _fingerprint_from_cache(path: str, cached: Mapping[str, Any]) -> ArtifactFin
         size_bytes=cached.get("size_bytes"),
         file_count=cached.get("file_count"),
     )
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
 
 
 def _store_fingerprint_cache(
