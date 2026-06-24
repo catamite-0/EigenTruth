@@ -35,8 +35,7 @@ from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E
 from eigentruth.eval.score_dump import JSONL_FORMAT, ScoreDumpJsonlManifest  # noqa: E402
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
-    build_artifact_manifest,
-    load_and_verify_artifact_manifest,
+    ArtifactVerificationContext,
 )
 
 DEFAULT_SWEEP_SIGNALS = (
@@ -211,6 +210,7 @@ def run_calibrated_observability_workflow(
 ) -> dict[str, Any]:
     """Run or plan the calibrated-observability workflow."""
     started_at = time.perf_counter()
+    verification_context = ArtifactVerificationContext()
     if config.clean and config.output_dir.exists():
         shutil.rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -233,7 +233,7 @@ def run_calibrated_observability_workflow(
             raise FileNotFoundError(f"score dump does not exist: {config.resolved_scores_path}")
         _run_command(conformal_command)
         conformal_payload = _load_json(config.conformal_report_path)
-        conformal_manifest_verification = load_and_verify_artifact_manifest(
+        conformal_manifest_verification = verification_context.load_and_verify_artifact_manifest(
             config.conformal_artifact_manifest_path,
             recursive=True,
         ).to_dict()
@@ -274,7 +274,7 @@ def run_calibrated_observability_workflow(
         json.dumps(report, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    manifest = _write_artifact_manifest(config, report, artifacts)
+    manifest = _write_artifact_manifest(config, report, artifacts, verification_context=verification_context)
     report["artifact_manifest_summary"] = manifest["summary"]
     report["evidence_bundle"] = _evidence_bundle_summary(
         config,
@@ -282,6 +282,7 @@ def run_calibrated_observability_workflow(
         conformal_payload=conformal_payload,
         artifact_manifest_summary=manifest["summary"],
     )
+    report["artifact_cache"] = verification_context.cache_summary()
     _record_registry(config, report)
     return report
 
@@ -570,8 +571,10 @@ def _write_artifact_manifest(
     config: CalibratedObservabilityWorkflowConfig,
     report: Mapping[str, Any],
     artifacts: Mapping[str, str | Path | None],
+    *,
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
-    manifest = build_artifact_manifest(
+    manifest = verification_context.build_artifact_manifest(
         artifacts,
         root=config.output_dir,
         metadata={
@@ -620,6 +623,13 @@ def _record_registry(
             "best_layer": _nested(report, "conformal", "best", "layer"),
             "evidence_bundle_status": _nested(report, "evidence_bundle", "status"),
             "evidence_bundle_release_ready": _nested(report, "evidence_bundle", "release_ready"),
+            "artifact_json_cache": _nested(report, "artifact_cache", "artifact_json_cache"),
+            "artifact_fingerprint_cache_entries": _nested(
+                report,
+                "artifact_cache",
+                "artifact_fingerprint_cache",
+                "entries",
+            ),
         },
     )
     registry.save_json()

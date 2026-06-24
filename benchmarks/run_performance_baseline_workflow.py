@@ -53,8 +53,7 @@ from benchmarks.run_inside_trigger_budget_sweep import (  # noqa: E402
 )
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
-    build_artifact_manifest,
-    load_and_verify_artifact_manifest,
+    ArtifactVerificationContext,
 )
 
 
@@ -212,6 +211,7 @@ class PerformanceBaselineWorkflowConfig:
 def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:
     """Run or reuse performance evidence and write a baseline workflow report."""
     started_at = time.perf_counter()
+    verification_context = ArtifactVerificationContext()
     if config.clean and config.output_dir.exists():
         shutil.rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -320,6 +320,7 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         trigger_sweep_report_path=trigger_sweep_report_path,
         report=report,
         runtime_config=runtime_config,
+        verification_context=verification_context,
     )
     report["artifact_manifest_summary"] = manifest["summary"]
     report["performance_evidence_bundle"] = _performance_evidence_bundle_summary(
@@ -331,7 +332,11 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         score_dump_cache_evidence=score_dump_cache_evidence,
     )
     if config.verify_manifest:
-        report["manifest_verification"] = _write_manifest_verification(config)
+        report["manifest_verification"] = _write_manifest_verification(
+            config,
+            verification_context=verification_context,
+        )
+    report["artifact_cache"] = verification_context.cache_summary()
     _record_registry(config, report)
     return report
 
@@ -578,6 +583,7 @@ def _write_artifact_manifest(
     trigger_sweep_report_path: Path | None,
     report: Mapping[str, Any],
     runtime_config: Mapping[str, Any],
+    verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any]:
     artifacts = _artifact_paths(
         config,
@@ -590,7 +596,7 @@ def _write_artifact_manifest(
         trigger_sweep_report=trigger_sweep_report,
         trigger_sweep_report_path=trigger_sweep_report_path,
     )
-    manifest = build_artifact_manifest(
+    manifest = verification_context.build_artifact_manifest(
         artifacts,
         root=config.output_dir,
         metadata={
@@ -811,6 +817,13 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "manifest_verification_report": verification_report,
             "manifest_verification_checked": verification_payload.get("checked"),
             "manifest_verification_failure_count": _failure_count(verification_payload),
+            "artifact_json_cache": _nested(report, "artifact_cache", "artifact_json_cache"),
+            "artifact_fingerprint_cache_entries": _nested(
+                report,
+                "artifact_cache",
+                "artifact_fingerprint_cache",
+                "entries",
+            ),
         },
     )
     if verification_report is not None:
@@ -828,8 +841,15 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
     registry.save_json()
 
 
-def _write_manifest_verification(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:
-    verification = load_and_verify_artifact_manifest(config.artifact_manifest_path, recursive=True)
+def _write_manifest_verification(
+    config: PerformanceBaselineWorkflowConfig,
+    *,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any]:
+    verification = verification_context.load_and_verify_artifact_manifest(
+        config.artifact_manifest_path,
+        recursive=True,
+    )
     payload = verification.to_dict()
     path = config.resolved_verification_report_path
     path.parent.mkdir(parents=True, exist_ok=True)

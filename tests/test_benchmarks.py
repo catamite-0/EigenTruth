@@ -276,6 +276,8 @@ def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp
     assert payload["evidence_bundle"]["calibration"]["best_score_name"] in {"maha_last", "truth_proj"}
     assert payload["evidence_bundle"]["artifacts"]["conformal_manifest_passed"] is True
     assert payload["evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
+    assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
+    assert payload["artifact_cache"]["artifact_fingerprint_cache"]["entries"] > 0
     assert "truthfulqa_report" not in manifest["artifacts"]
     assert manifest["artifacts"]["score_dump_records"]["exists"] is True
     assert manifest["artifacts"]["conformal_artifact_manifest"]["exists"] is True
@@ -289,6 +291,8 @@ def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp
     assert record.metadata["evidence_bundle_release_ready"] == (
         payload["evidence_bundle"]["release_ready"]
     )
+    assert record.metadata["artifact_json_cache"]["entries"] >= 1
+    assert record.metadata["artifact_fingerprint_cache_entries"] > 0
 
 
 def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
@@ -11012,9 +11016,10 @@ def test_runtime_config_recommendation_cli_writes_output(tmp_path):
     assert saved["benchmark_flags"]["eval_truthfulqa"][-1] == "--prefix-kv-cache"
 
 
-def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path):
+def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_performance_baseline_workflow")
     registry_module = importlib.import_module("eigentruth.registry")
+    provenance_module = importlib.import_module("eigentruth.registry.provenance")
     result_path = tmp_path / "cache-only-result.json"
     matrix_manifest_path = tmp_path / "matrix-artifact-manifest.json"
     matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
@@ -11091,6 +11096,15 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         }),
         encoding="utf-8",
     )
+    original_sha256_file = provenance_module._sha256_file
+    fingerprint_calls_by_path: dict[str, int] = {}
+
+    def counted_sha256_file(path):
+        key = str(path.resolve())
+        fingerprint_calls_by_path[key] = fingerprint_calls_by_path.get(key, 0) + 1
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(provenance_module, "_sha256_file", counted_sha256_file)
 
     payload = module.run_performance_baseline_workflow(
         module.PerformanceBaselineWorkflowConfig(
@@ -11152,6 +11166,8 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
     assert payload["manifest_verification"]["verification"]["passed"] is True
+    assert payload["artifact_cache"]["artifact_json_cache"]["entries"] >= 1
+    assert payload["artifact_cache"]["artifact_fingerprint_cache"]["entries"] > 0
     assert verification_report["passed"] is True
     assert saved["performance_evidence_bundle"]["status"] == "promote"
     assert saved["paths"]["manifest_verification"] == str(verification_report_path)
@@ -11175,9 +11191,13 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert record.metadata["manifest_verification_report"] == str(verification_report_path)
     assert record.metadata["manifest_verification_checked"] == verification_report["checked"]
     assert record.metadata["manifest_verification_failure_count"] == 0
+    assert record.metadata["artifact_json_cache"]["entries"] >= 1
+    assert record.metadata["artifact_fingerprint_cache_entries"] > 0
     assert verification_record.path == str(verification_report_path)
     assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
     assert verification_record.metadata["passed"] is True
+    assert fingerprint_calls_by_path[str(matrix_report_path.resolve())] == 1
+    assert fingerprint_calls_by_path[str(Path(payload["paths"]["runtime_recommendation"]).resolve())] == 1
 
 
 def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):
