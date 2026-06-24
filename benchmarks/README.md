@@ -443,9 +443,10 @@ score schema, scoring-config hash, content hashes, and a canonical cache key. Th
 lets later calibration, ensemble, and route-refresh steps confirm they are reusing
 the intended dump without parsing model artifacts again. Post-processing reports
 share a run-local score-dump cache, so duplicate score paths do not require
-re-hashing the same file or re-scanning the same selected JSONL view. Reports
-include a top-level `score_dump_cache` summary with fingerprint, JSONL summary,
-and selected-view hits/misses/writes. For larger score artifacts, `load_score_dump()` also
+re-hashing the same file, re-parsing the same JSONL manifest, or re-scanning the
+same selected JSONL view. Reports include a top-level `score_dump_cache` summary
+with fingerprint, JSONL manifest, JSONL summary, and selected-view
+hits/misses/writes. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
 the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,

@@ -487,9 +487,8 @@ def load_score_dump_columns(
     requested = tuple(str(name) for name in score_names)
     if not requested:
         raise ValueError("at least one score name is required.")
-    payload = json.loads(score_path.read_text(encoding="utf-8"))
-    if _is_jsonl_manifest_payload(payload):
-        manifest = ScoreDumpJsonlManifest.from_mapping(payload)
+    payload, manifest = _load_json_or_cached_jsonl_manifest(score_path, cache)
+    if manifest is not None:
         cache_key = _jsonl_view_cache_key(
             score_path,
             manifest,
@@ -509,6 +508,7 @@ def load_score_dump_columns(
         _score_dump_view_cache_set(cache, cache_key, columns)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, columns.summary)
         return columns
+    assert payload is not None
     dump = ScoreDump.from_mapping(payload, allow_empty=allow_empty)
     dump.require_scores(requested)
     return ScoreDumpColumns(
@@ -532,9 +532,8 @@ def load_score_dump_statement_scores(
     requested = tuple(str(name) for name in score_names)
     if not requested:
         raise ValueError("at least one score name is required.")
-    payload = json.loads(score_path.read_text(encoding="utf-8"))
-    if _is_jsonl_manifest_payload(payload):
-        manifest = ScoreDumpJsonlManifest.from_mapping(payload)
+    payload, manifest = _load_json_or_cached_jsonl_manifest(score_path, cache)
+    if manifest is not None:
         cache_key = _jsonl_view_cache_key(
             score_path,
             manifest,
@@ -555,6 +554,7 @@ def load_score_dump_statement_scores(
         _score_dump_view_cache_set(cache, cache_key, statement_scores)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, statement_scores.summary)
         return statement_scores
+    assert payload is not None
     dump = ScoreDump.from_mapping(
         payload,
         allow_empty=allow_empty,
@@ -582,9 +582,8 @@ def load_score_dump_layer_scores(
     selected = None if signals is None else {str(signal) for signal in signals}
     if selected is not None and not selected:
         raise ValueError("signals must contain at least one signal name when provided.")
-    payload = json.loads(score_path.read_text(encoding="utf-8"))
-    if _is_jsonl_manifest_payload(payload):
-        manifest = ScoreDumpJsonlManifest.from_mapping(payload)
+    payload, manifest = _load_json_or_cached_jsonl_manifest(score_path, cache)
+    if manifest is not None:
         cache_key = _jsonl_view_cache_key(
             score_path,
             manifest,
@@ -604,6 +603,7 @@ def load_score_dump_layer_scores(
         _score_dump_view_cache_set(cache, cache_key, layer_scores)
         _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, layer_scores.summary)
         return layer_scores
+    assert payload is not None
     dump = ScoreDump.from_mapping(payload, allow_empty=allow_empty)
     return _score_dump_layer_scores_from_score_dump(dump, signals=selected)
 
@@ -701,7 +701,7 @@ def score_dump_identity(
         if score_path.is_file()
         else {"sha256": None, "size_bytes": None}
     )
-    manifest = _metadata_jsonl_manifest(score_path)
+    manifest = _metadata_jsonl_manifest(score_path, cache=cache)
     if manifest is not None:
         records_file = manifest.records_file(score_path)
         records_fingerprint = (
@@ -742,7 +742,7 @@ def score_dump_file_metadata(
         "kind": "file" if score_path.is_file() else ("missing" if not score_path.exists() else "other"),
         **fingerprint,
     }
-    manifest = _metadata_jsonl_manifest(score_path)
+    manifest = _metadata_jsonl_manifest(score_path, cache=cache)
     if manifest is not None:
         records_file = manifest.records_file(score_path)
         records_fingerprint = (
@@ -793,6 +793,7 @@ def score_dump_cache_summary(cache: Mapping[str, Any] | None) -> dict[str, Any]:
             "enabled": False,
             "cache_entries": 0,
             "fingerprint": _cache_counter_payload({}),
+            "jsonl_manifest": _cache_counter_payload({}),
             "jsonl_summary": _cache_counter_payload({}),
             "jsonl_view": _cache_counter_payload({}),
         }
@@ -803,6 +804,7 @@ def score_dump_cache_summary(cache: Mapping[str, Any] | None) -> dict[str, Any]:
         "enabled": True,
         "cache_entries": sum(1 for key in cache if key != _SCORE_DUMP_CACHE_STATS_KEY),
         "fingerprint": _cache_counter_payload(_mapping(stats.get("fingerprint"))),
+        "jsonl_manifest": _cache_counter_payload(_mapping(stats.get("jsonl_manifest"))),
         "jsonl_summary": _cache_counter_payload(_mapping(stats.get("jsonl_summary"))),
         "jsonl_view": _cache_counter_payload(_mapping(stats.get("jsonl_view"))),
     }
@@ -988,13 +990,35 @@ def _load_score_dump_path(
     )
 
 
+def _load_json_or_cached_jsonl_manifest(
+    path: Path,
+    cache: MutableMapping[str, Any] | None,
+) -> tuple[Any | None, ScoreDumpJsonlManifest | None]:
+    cached_manifest = _score_dump_jsonl_manifest_cache_get(cache, path)
+    if cached_manifest is not None:
+        return None, cached_manifest
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not _is_jsonl_manifest_payload(payload):
+        return payload, None
+    manifest = ScoreDumpJsonlManifest.from_mapping(payload)
+    _score_dump_jsonl_manifest_cache_set(cache, path, manifest)
+    return None, manifest
+
+
 def _is_jsonl_manifest_payload(payload: Any) -> bool:
     return isinstance(payload, Mapping) and payload.get("format") == JSONL_FORMAT
 
 
-def _metadata_jsonl_manifest(path: Path) -> ScoreDumpJsonlManifest | None:
+def _metadata_jsonl_manifest(
+    path: Path,
+    *,
+    cache: MutableMapping[str, Any] | None = None,
+) -> ScoreDumpJsonlManifest | None:
     if not path.is_file():
         return None
+    cached_manifest = _score_dump_jsonl_manifest_cache_get(cache, path)
+    if cached_manifest is not None:
+        return cached_manifest
     try:
         with path.open("r", encoding="utf-8") as stream:
             head = stream.read(64 * 1024)
@@ -1003,7 +1027,9 @@ def _metadata_jsonl_manifest(path: Path) -> ScoreDumpJsonlManifest | None:
         payload = json.loads(path.read_text(encoding="utf-8"))
         if not _is_jsonl_manifest_payload(payload):
             return None
-        return ScoreDumpJsonlManifest.from_mapping(payload)
+        manifest = ScoreDumpJsonlManifest.from_mapping(payload)
+        _score_dump_jsonl_manifest_cache_set(cache, path, manifest)
+        return manifest
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return None
 
@@ -1379,6 +1405,39 @@ def _jsonl_manifest_has_label_counts(manifest: ScoreDumpJsonlManifest) -> bool:
         and manifest.n_true is not None
         and manifest.n_false is not None
     )
+
+
+def _score_dump_jsonl_manifest_cache_get(
+    cache: MutableMapping[str, Any] | None,
+    manifest_path: Path,
+) -> ScoreDumpJsonlManifest | None:
+    if cache is None:
+        return None
+    cached = cache.get(_jsonl_manifest_cache_key(manifest_path))
+    if isinstance(cached, ScoreDumpJsonlManifest):
+        _score_dump_cache_event(cache, "jsonl_manifest", "hits")
+        return cached
+    return None
+
+
+def _score_dump_jsonl_manifest_cache_set(
+    cache: MutableMapping[str, Any] | None,
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+) -> None:
+    if cache is None:
+        return
+    cache[_jsonl_manifest_cache_key(manifest_path)] = manifest
+    _score_dump_cache_event(cache, "jsonl_manifest", "misses")
+    _score_dump_cache_event(cache, "jsonl_manifest", "writes")
+
+
+def _jsonl_manifest_cache_key(manifest_path: Path) -> str:
+    payload = {
+        "manifest_path": str(manifest_path.resolve(strict=False)),
+        "manifest_signature": _file_cache_signature(manifest_path),
+    }
+    return "score-dump-jsonl-manifest-v1:" + json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def _score_dump_jsonl_summary_cache_set(

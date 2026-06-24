@@ -741,6 +741,55 @@ class TestScoreDump:
         assert len(selected_calls) == 2
         assert len(statement_calls) == 1
 
+    def test_jsonl_manifest_cache_reuses_manifest_parse_across_views(self, tmp_path, monkeypatch):
+        dump = ScoreDump.from_mapping({
+            "config": {"model": "unit-model", "layer": -1},
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "truth_proj": [0.2, 0.8],
+            },
+            "sweep_scores": {
+                "-2": {"truth_proj": [0.3, 0.7]},
+            },
+            "statements": [
+                {"text": "Supported claim."},
+                {"text": "Refuted claim."},
+            ],
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(dump, manifest_path)
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        manifest_parse_calls = []
+        original_from_mapping = score_dump_module.ScoreDumpJsonlManifest.from_mapping
+
+        def counting_from_mapping(cls, payload):
+            manifest_parse_calls.append(payload)
+            return original_from_mapping(payload)
+
+        monkeypatch.setattr(
+            score_dump_module.ScoreDumpJsonlManifest,
+            "from_mapping",
+            classmethod(counting_from_mapping),
+        )
+        cache = {}
+
+        load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        load_score_dump_columns(manifest_path, ("maha_last",), cache=cache)
+        load_score_dump_layer_scores(manifest_path, signals=("truth_proj",), cache=cache)
+        load_score_dump_statement_scores(manifest_path, ("truth_proj",), cache=cache)
+        score_dump_file_metadata(manifest_path, cache=cache)
+        identity = score_dump_identity(manifest_path, cache=cache)
+        summary = score_dump_cache_summary(cache)
+
+        assert len(manifest_parse_calls) == 1
+        assert identity.source_format == "eigentruth.score_dump.jsonl"
+        assert summary["jsonl_manifest"]["hits"] >= 4
+        assert summary["jsonl_manifest"]["misses"] == 1
+        assert summary["jsonl_manifest"]["writes"] == 1
+
     def test_jsonl_selected_view_cache_invalidates_changed_records(self, tmp_path, monkeypatch):
         manifest_path = tmp_path / "scores.manifest.json"
         write_score_dump_jsonl(
@@ -789,6 +838,7 @@ class TestScoreDump:
             "enabled": False,
             "cache_entries": 0,
             "fingerprint": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
+            "jsonl_manifest": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
             "jsonl_summary": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
             "jsonl_view": {"hits": 0, "misses": 0, "writes": 0, "attempts": 0, "hit_rate": None},
         }
