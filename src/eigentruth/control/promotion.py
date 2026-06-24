@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Iterable, Mapping
 
 from eigentruth.control.runtime_budget import ProductRuntimeBudgetPolicy
 
@@ -210,6 +210,86 @@ class ProductPromotionContract:
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class LoadedProductPromotionContract:
+    """Promotion contract plus the source used to load it."""
+
+    contract: ProductPromotionContract
+    source: str
+    path: Path | None = None
+
+    def runtime_metadata(self, *, budget_enabled: bool) -> dict[str, Any]:
+        """Return ProductTrace metadata for this contract."""
+        return product_promotion_contract_metadata(
+            self.contract,
+            source=self.source,
+            budget_enabled=budget_enabled,
+        )
+
+
+def first_existing_product_promotion_contract_path(
+    paths: Iterable[str | Path],
+) -> Path | None:
+    """Return the first existing promotion contract path from an ordered candidate list."""
+    for path in paths:
+        candidate = Path(path)
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def load_product_promotion_contract(
+    path: str | Path | None = None,
+    *,
+    default_paths: Iterable[str | Path] = (),
+    require_promoted: bool = True,
+) -> LoadedProductPromotionContract | None:
+    """Load an explicit contract or the first existing default contract.
+
+    Explicit paths are loaded directly and keep normal file errors. When no
+    explicit path is supplied and none of the defaults exist, return ``None``.
+    """
+    resolved_path = (
+        Path(path)
+        if path is not None
+        else first_existing_product_promotion_contract_path(default_paths)
+    )
+    if resolved_path is None:
+        return None
+    return LoadedProductPromotionContract(
+        contract=ProductPromotionContract.from_json(
+            resolved_path,
+            require_promoted=require_promoted,
+        ),
+        source=str(resolved_path),
+        path=resolved_path,
+    )
+
+
+def product_promotion_contract_metadata(
+    contract: ProductPromotionContract | None,
+    *,
+    source: str | None,
+    budget_enabled: bool,
+) -> dict[str, Any]:
+    """Return ProductTrace metadata for a promotion contract."""
+    if contract is None:
+        return {
+            "promotion_contract_source": None,
+            "promotion_contract_budget_enabled": False,
+        }
+    return {
+        "promotion_contract_source": source,
+        "promotion_contract_budget_enabled": budget_enabled,
+        "promotion_contract_model_id": contract.model_id,
+        "promotion_contract_source_workflow": contract.source_workflow,
+        "promotion_contract_source_status": contract.source_status,
+        "promotion_contract_runtime": dict(contract.runtime),
+        "promotion_contract_verifier_route": dict(contract.verifier_route),
+        "promotion_contract_metadata": dict(contract.metadata),
+    }
 
 
 def product_runtime_budget_policy_from_release_candidate(

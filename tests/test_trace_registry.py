@@ -17,6 +17,9 @@ from eigentruth.control import (
     RuntimeTrace,
     TraceEvent,
     evaluate_product_runtime_budget,
+    first_existing_product_promotion_contract_path,
+    load_product_promotion_contract,
+    product_promotion_contract_metadata,
     product_runtime_budget_policy_from_release_candidate,
     product_runtime_metrics,
 )
@@ -830,6 +833,42 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     }
     assert roundtrip == contract
     json.dumps(contract.to_dict())
+
+
+def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path):
+    missing_path = tmp_path / "missing.json"
+    contract_path = tmp_path / "product-promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -2},
+        verifier_route={"route": "structured_qa"},
+        runtime_budget_policy=ProductRuntimeBudgetPolicy(max_mean_attempted_route_count=1.1),
+        source_workflow="release_candidate_comparison",
+        source_status="promote",
+        metadata={"selector_replay_status": "promote"},
+    ).save_json(contract_path)
+
+    assert first_existing_product_promotion_contract_path((missing_path, contract_path)) == contract_path
+    assert load_product_promotion_contract(default_paths=(missing_path,)) is None
+
+    loaded = load_product_promotion_contract(default_paths=(missing_path, contract_path))
+    assert loaded is not None
+    assert loaded.path == contract_path
+    assert loaded.source == str(contract_path)
+    assert loaded.contract.model_id == "demo-model"
+    assert loaded.contract.runtime_budget_policy.max_mean_attempted_route_count == 1.1
+
+    metadata = loaded.runtime_metadata(budget_enabled=True)
+    assert metadata["promotion_contract_source"] == str(contract_path)
+    assert metadata["promotion_contract_budget_enabled"] is True
+    assert metadata["promotion_contract_model_id"] == "demo-model"
+    assert metadata["promotion_contract_runtime"] == {"layer": -2}
+    assert metadata["promotion_contract_verifier_route"] == {"route": "structured_qa"}
+    assert metadata["promotion_contract_metadata"] == {"selector_replay_status": "promote"}
+    assert product_promotion_contract_metadata(None, source=None, budget_enabled=True) == {
+        "promotion_contract_source": None,
+        "promotion_contract_budget_enabled": False,
+    }
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):

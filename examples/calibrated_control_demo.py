@@ -37,7 +37,10 @@ from eigentruth.control import (
     RuntimeProfileSelectorPolicy,
     StagedVerificationPolicy,
     evaluate_product_runtime_budget,
+    first_existing_product_promotion_contract_path,
     get_runtime_profile,
+    load_product_promotion_contract,
+    product_promotion_contract_metadata,
     run_verification_loop,
     select_runtime_profile,
 )
@@ -120,10 +123,7 @@ def default_artifact_path() -> Path | None:
 
 def default_promotion_contract_path() -> Path | None:
     """Return the preferred product promotion contract when available."""
-    for path in DEFAULT_PROMOTION_CONTRACT_PATHS:
-        if path.exists():
-            return path
-    return None
+    return first_existing_product_promotion_contract_path(DEFAULT_PROMOTION_CONTRACT_PATHS)
 
 
 def default_artifact() -> CalibrationArtifact:
@@ -463,44 +463,25 @@ def _normalized_route_name(value: str | None) -> str | None:
     return normalized or None
 
 
-def _promotion_contract_path(raw_path: str | None) -> Path | None:
-    if raw_path is not None:
-        return Path(raw_path)
-    return default_promotion_contract_path()
-
-
-def _promotion_contract_metadata(
-    contract: ProductPromotionContract | None,
-    *,
-    source: str | None,
-    budget_enabled: bool,
-) -> dict[str, Any]:
-    if contract is None:
-        return {
-            "promotion_contract_source": None,
-            "promotion_contract_budget_enabled": False,
-        }
-    return {
-        "promotion_contract_source": source,
-        "promotion_contract_budget_enabled": budget_enabled,
-        "promotion_contract_model_id": contract.model_id,
-        "promotion_contract_source_workflow": contract.source_workflow,
-        "promotion_contract_source_status": contract.source_status,
-        "promotion_contract_runtime": dict(contract.runtime),
-        "promotion_contract_verifier_route": dict(contract.verifier_route),
-        "promotion_contract_metadata": dict(contract.metadata),
-    }
-
-
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the calibrated-control demo and return the JSON-ready trace."""
     artifact = load_artifact(args.artifact)
     explicit_promotion_contract = getattr(args, "promotion_contract", None) is not None
-    promotion_contract_path = _promotion_contract_path(getattr(args, "promotion_contract", None))
-    promotion_contract = (
-        None
-        if promotion_contract_path is None
-        else ProductPromotionContract.from_json(promotion_contract_path)
+    loaded_promotion_contract = load_product_promotion_contract(
+        getattr(args, "promotion_contract", None),
+        default_paths=DEFAULT_PROMOTION_CONTRACT_PATHS,
+    )
+    promotion_contract = None if loaded_promotion_contract is None else loaded_promotion_contract.contract
+    promotion_contract_metadata = (
+        product_promotion_contract_metadata(
+            None,
+            source=None,
+            budget_enabled=False,
+        )
+        if loaded_promotion_contract is None
+        else loaded_promotion_contract.runtime_metadata(
+            budget_enabled=explicit_promotion_contract,
+        )
     )
     setattr(args, "_promotion_contract", promotion_contract)
     diagnostics = (
@@ -584,11 +565,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_target_layer": artifact.target_layer,
             "artifact_scores": artifact.score_names(),
             "source": "examples/calibrated_control_demo.py",
-            **_promotion_contract_metadata(
-                promotion_contract,
-                source=None if promotion_contract_path is None else str(promotion_contract_path),
-                budget_enabled=explicit_promotion_contract,
-            ),
+            **promotion_contract_metadata,
             **runtime_profile_metadata(
                 runtime_profile,
                 selection=runtime_profile_selection,
@@ -640,11 +617,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             metadata={
                 "source": "examples/calibrated_control_demo.py",
                 "loop_version": "0.4",
-                **_promotion_contract_metadata(
-                    promotion_contract,
-                    source=None if promotion_contract_path is None else str(promotion_contract_path),
-                    budget_enabled=explicit_promotion_contract,
-                ),
+                **promotion_contract_metadata,
                 **runtime_profile_metadata(
                     runtime_profile,
                     selection=runtime_profile_selection,

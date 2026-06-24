@@ -28,7 +28,11 @@ from eigentruth.control.loop import (
 )
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.control.promotion import (
+    LoadedProductPromotionContract,
     ProductPromotionContract,
+    first_existing_product_promotion_contract_path,
+    load_product_promotion_contract,
+    product_promotion_contract_metadata,
     product_runtime_budget_policy_from_release_candidate,
 )
 from eigentruth.control.runtime_budget import (
@@ -71,6 +75,7 @@ __all__ = [
     "StagedVerificationPolicy",
     "TimeoutActionExecutor",
     "ProductTrace",
+    "LoadedProductPromotionContract",
     "ProductPromotionContract",
     "ProductRuntimeBudgetPolicy",
     "RuntimePhaseTiming",
@@ -86,7 +91,10 @@ __all__ = [
     "VerificationLoopResult",
     "evidence_bundle_from_action_results",
     "evaluate_product_runtime_budget",
+    "first_existing_product_promotion_contract_path",
     "get_runtime_profile",
+    "load_product_promotion_contract",
+    "product_promotion_contract_metadata",
     "product_runtime_budget_policy_from_release_candidate",
     "product_runtime_metrics",
     "run_verification_loop",
