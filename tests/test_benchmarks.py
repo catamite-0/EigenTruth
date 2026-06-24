@@ -8995,6 +8995,23 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
+def test_performance_baseline_smoke_cli_defaults_to_tempdir(monkeypatch):
+    module = importlib.import_module("benchmarks.performance_baseline_smoke")
+    output_dirs = []
+
+    def fake_build(output_dir):
+        output_dirs.append(Path(output_dir))
+        return {"status": "promote", "registry_record": "performance_baseline:unit:0.1"}
+
+    monkeypatch.setattr(module, "build_performance_baseline_smoke", fake_build)
+
+    module.main([])
+
+    assert len(output_dirs) == 1
+    assert output_dirs[0].name.startswith("eigentruth-performance-baseline-smoke-")
+    assert not output_dirs[0].exists()
+
+
 def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
     module = importlib.import_module("benchmarks.verify_artifact_manifest")
     from eigentruth.registry import build_artifact_manifest
@@ -11118,6 +11135,7 @@ def test_run_cache_worker_sweep_builds_dry_run_report(tmp_path):
 
 def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_worker_sweep")
+    registry_module = importlib.import_module("eigentruth.registry")
     seen_shared_cache_dirs = []
 
     def fake_run_matrix(config, *, clean, dry_run):
@@ -11125,7 +11143,10 @@ def test_run_cache_worker_sweep_recommends_fastest_promoted_worker(tmp_path, mon
         seen_shared_cache_dirs.append(config.shared_cache_dir)
         config.output_dir.mkdir(parents=True, exist_ok=True)
         config.report_path.write_text("{}", encoding="utf-8")
-        config.artifact_manifest.write_text("{}", encoding="utf-8")
+        config.artifact_manifest.write_text(
+            json.dumps(registry_module.build_artifact_manifest({}, root=config.output_dir)),
+            encoding="utf-8",
+        )
         wall_clock = 10.0 if config.max_workers == 1 else 6.0
         return {
             "dry_run": False,
@@ -12247,7 +12268,10 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
         }),
         encoding="utf-8",
     )
-    matrix_manifest_path.write_text("{}", encoding="utf-8")
+    matrix_manifest_path.write_text(
+        json.dumps(provenance_module.build_artifact_manifest({}, root=tmp_path)),
+        encoding="utf-8",
+    )
     fusion_artifact_path.write_text(
         json.dumps({"artifact_type": "rank_score_fusion", "method": "max_rank"}),
         encoding="utf-8",

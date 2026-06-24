@@ -280,6 +280,30 @@ def test_artifact_manifest_verification_detects_drift_and_nested_drift(tmp_path)
     assert recursive.nested[0].failures[0].name == "result"
 
 
+def test_artifact_manifest_verification_rejects_schema_and_summary_drift(tmp_path):
+    data_path = tmp_path / "result.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    manifest = build_artifact_manifest({"result": data_path}, root=tmp_path)
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    tampered = dict(manifest)
+    tampered["schema_version"] = 999
+    tampered["digest_algorithm"] = "md5"
+    tampered["summary"] = dict(manifest["summary"])
+    tampered["summary"]["artifact_count"] = 100
+    manifest_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    verification = load_and_verify_artifact_manifest(manifest_path)
+
+    assert verification.passed is False
+    assert {(failure.name, failure.field) for failure in verification.failures} == {
+        ("manifest", "schema_version"),
+        ("manifest", "digest_algorithm"),
+        ("manifest", "summary.artifact_count"),
+    }
+    assert verification.checked == 1
+
+
 def test_artifact_manifest_verification_resolves_sibling_artifacts(tmp_path):
     run_dir = tmp_path / "run"
     shared_dir = tmp_path / "shared"
@@ -738,6 +762,25 @@ def test_product_runtime_budget_fails_closed_when_trace_is_missing():
     assert report["passed"] is False
     assert report["failures"][0]["metric"] == "runtime_trace"
     assert report["failures"][0]["reason"] == "missing"
+
+
+def test_product_runtime_budget_policy_direct_constructor_parses_bool_strings():
+    trace = ProductTrace(runtime_trace=None)
+    policy = ProductRuntimeBudgetPolicy(
+        max_total_seconds=1.0,
+        require_runtime_trace="false",  # type: ignore[arg-type]
+    )
+
+    report = evaluate_product_runtime_budget(trace, policy)
+
+    assert policy.require_runtime_trace is False
+    assert report["passed"] is False
+    assert [failure["metric"] for failure in report["failures"]] == ["total_seconds"]
+    with pytest.raises(ValueError, match="require_runtime_trace"):
+        ProductRuntimeBudgetPolicy(
+            max_total_seconds=1.0,
+            require_runtime_trace="maybe",  # type: ignore[arg-type]
+        )
 
 
 def test_product_trace_verification_route_summary_counts_runtime_routes():

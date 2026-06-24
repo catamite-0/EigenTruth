@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,6 +18,7 @@ from benchmarks.run_performance_baseline_workflow import (  # noqa: E402
     PerformanceBaselineWorkflowConfig,
     run_performance_baseline_workflow,
 )
+from eigentruth.registry import build_artifact_manifest  # noqa: E402
 
 
 def build_performance_baseline_smoke(output_dir: Path) -> dict[str, Any]:
@@ -36,7 +39,10 @@ def build_performance_baseline_smoke(output_dir: Path) -> dict[str, Any]:
         }),
         encoding="utf-8",
     )
-    matrix_manifest_path.write_text("{}\n", encoding="utf-8")
+    matrix_manifest_path.write_text(
+        json.dumps(build_artifact_manifest({}, root=source_dir), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     matrix_report_path.write_text(
         json.dumps({
             "artifact_manifest": str(matrix_manifest_path),
@@ -81,9 +87,24 @@ def build_performance_baseline_smoke(output_dir: Path) -> dict[str, Any]:
     )
 
 
-def main() -> None:
-    output_dir = REPO_ROOT / "artifacts" / "performance_baseline_smoke"
-    report = build_performance_baseline_smoke(output_dir)
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Run the no-model performance baseline smoke check")
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="optional output directory; defaults to a temporary directory",
+    )
+    args = parser.parse_args(argv)
+    if args.output_dir is not None:
+        report = build_performance_baseline_smoke(Path(args.output_dir))
+        _print_report(report)
+        return
+    with tempfile.TemporaryDirectory(prefix="eigentruth-performance-baseline-smoke-") as tmpdir:
+        report = build_performance_baseline_smoke(Path(tmpdir))
+        _print_report(report)
+
+
+def _print_report(report: Mapping[str, Any]) -> None:
     print(
         "performance_baseline_smoke_ok "
         f"status={report['status']} "

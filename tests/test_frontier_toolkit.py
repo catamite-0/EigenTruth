@@ -553,6 +553,32 @@ def test_self_consistency_verifier_uses_context_samples():
     assert result.metadata["sample_decisions"][1]["source"] == "sample-2"
 
 
+def test_self_consistency_verifier_parses_config_without_bool_numeric_casts():
+    verifier = SelfConsistencyVerifier(
+        min_samples="2",  # type: ignore[arg-type]
+        max_samples="3",  # type: ignore[arg-type]
+        min_overlap="0.55",  # type: ignore[arg-type]
+        support_threshold="0.60",  # type: ignore[arg-type]
+        refute_threshold="0.50",  # type: ignore[arg-type]
+        early_stop="false",  # type: ignore[arg-type]
+    )
+
+    assert verifier.min_samples == 2
+    assert verifier.max_samples == 3
+    assert verifier.min_overlap == pytest.approx(0.55)
+    assert verifier.support_threshold == pytest.approx(0.60)
+    assert verifier.refute_threshold == pytest.approx(0.50)
+    assert verifier.early_stop is False
+    with pytest.raises(ValueError, match="min_samples"):
+        SelfConsistencyVerifier(min_samples=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="min_overlap"):
+        SelfConsistencyVerifier(min_overlap=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="support_threshold"):
+        SelfConsistencyVerifier(support_threshold=float("nan"))
+    with pytest.raises(ValueError, match="early_stop"):
+        SelfConsistencyVerifier(early_stop="maybe")  # type: ignore[arg-type]
+
+
 def test_self_consistency_verifier_early_stops_when_threshold_result_is_fixed():
     verifier = SelfConsistencyVerifier(
         samples=(
@@ -829,6 +855,38 @@ def test_calculator_verifier_handles_non_applicable_and_unsafe_expressions():
     assert unsafe.metadata["decision_rule"] == "calculation_error"
     assert divided_by_zero.status is VerificationStatus.ERROR
     assert divided_by_zero.explanation == "division by zero"
+
+
+def test_calculator_verifier_rejects_non_finite_tolerance_and_expected_values():
+    verifier = CalculatorVerifier()
+
+    infinite_tolerance = verifier.verify(
+        Claim(
+            "Bad calculation.",
+            metadata={
+                "calculation": {
+                    "expression": "2 + 2",
+                    "expected": 5,
+                    "tolerance": "inf",
+                },
+            },
+        )
+    )
+    infinite_expected = verifier.verify(
+        Claim(
+            "Bad calculation.",
+            metadata={"calculation": {"expression": "2 + 2", "expected": "nan"}},
+        )
+    )
+
+    assert infinite_tolerance.status is VerificationStatus.ERROR
+    assert infinite_tolerance.metadata["decision_rule"] == "invalid_calculation_config"
+    assert infinite_expected.status is VerificationStatus.ERROR
+    assert infinite_expected.metadata["decision_rule"] == "invalid_calculation_config"
+    with pytest.raises(ValueError, match="default_tolerance"):
+        CalculatorVerifier(default_tolerance=float("inf"))
+    with pytest.raises(ValueError, match="max_abs_value"):
+        CalculatorVerifier(max_abs_value=float("nan"))
 
 
 def test_structured_state_verifier_supports_and_refutes_business_rules():

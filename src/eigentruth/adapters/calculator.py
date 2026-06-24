@@ -36,6 +36,15 @@ class CalculationResult:
     actual: float
     tolerance: float
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "expected", _required_finite_float(self.expected, name="expected"))
+        object.__setattr__(self, "actual", _required_finite_float(self.actual, name="actual"))
+        object.__setattr__(
+            self,
+            "tolerance",
+            _required_non_negative_finite_float(self.tolerance, name="tolerance"),
+        )
+
     @property
     def matches(self) -> bool:
         """Return whether actual and expected are within tolerance."""
@@ -61,16 +70,39 @@ class CalculatorVerifier:
     max_exponent: float = 10.0
 
     def __post_init__(self) -> None:
-        if self.default_tolerance < 0.0:
-            raise ValueError("default_tolerance must be non-negative.")
-        if self.max_abs_value <= 0.0:
-            raise ValueError("max_abs_value must be positive.")
-        if self.max_exponent < 0.0:
-            raise ValueError("max_exponent must be non-negative.")
+        object.__setattr__(
+            self,
+            "default_tolerance",
+            _required_non_negative_finite_float(
+                self.default_tolerance,
+                name="default_tolerance",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_abs_value",
+            _required_positive_finite_float(self.max_abs_value, name="max_abs_value"),
+        )
+        object.__setattr__(
+            self,
+            "max_exponent",
+            _required_non_negative_finite_float(self.max_exponent, name="max_exponent"),
+        )
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one arithmetic claim."""
-        parsed = _claim_calculation(claim, context, default_tolerance=self.default_tolerance)
+        try:
+            parsed = _claim_calculation(claim, context, default_tolerance=self.default_tolerance)
+        except ValueError as exc:
+            return VerificationResult(
+                status=VerificationStatus.ERROR,
+                confidence=0.4,
+                explanation=str(exc),
+                metadata={
+                    "verifier": "calculator",
+                    "decision_rule": "invalid_calculation_config",
+                },
+            )
         if parsed is None:
             return VerificationResult(
                 status=VerificationStatus.NOT_APPLICABLE,
@@ -152,7 +184,7 @@ def _claim_calculation(
         return None
     return (
         match.group("expression").strip(),
-        float(match.group("expected")),
+        _required_finite_float(match.group("expected"), name="expected"),
         default_tolerance,
     )
 
@@ -180,11 +212,8 @@ def _calculation_from_mapping(
     raw_expected = data.get("expected", data.get("result", data.get("answer")))
     if expression is None or raw_expected is None:
         return None
-    try:
-        expected = float(raw_expected)
-    except (TypeError, ValueError):
-        return None
-    tolerance = _float_or_default(data.get("tolerance"), default_tolerance)
+    expected = _required_finite_float(raw_expected, name="expected")
+    tolerance = _tolerance_or_default(data.get("tolerance"), default_tolerance)
     return expression, expected, tolerance
 
 
@@ -237,11 +266,33 @@ def _optional_text(value: Any) -> str | None:
     return text or None
 
 
-def _float_or_default(value: Any, default: float) -> float:
-    if value is None:
-        return default
+def _required_finite_float(value: Any, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number.")
     try:
         parsed = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number.") from exc
+    if not math.isfinite(parsed):
+        raise ValueError(f"{name} must be a finite number.")
+    return parsed
+
+
+def _required_non_negative_finite_float(value: Any, *, name: str) -> float:
+    parsed = _required_finite_float(value, name=name)
+    if parsed < 0.0:
+        raise ValueError(f"{name} must be non-negative.")
+    return parsed
+
+
+def _required_positive_finite_float(value: Any, *, name: str) -> float:
+    parsed = _required_finite_float(value, name=name)
+    if parsed <= 0.0:
+        raise ValueError(f"{name} must be positive.")
+    return parsed
+
+
+def _tolerance_or_default(value: Any, default: float) -> float:
+    if value is None:
         return default
-    return max(0.0, parsed)
+    return _required_non_negative_finite_float(value, name="tolerance")

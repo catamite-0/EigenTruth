@@ -140,7 +140,11 @@ class ProductRuntimeBudgetPolicy:
         object.__setattr__(self, "min_named_cache_hit_rate", min_named_cache_hit_rate)
         object.__setattr__(self, "min_verification_skip_rate", min_verification_skip_rate)
         object.__setattr__(self, "max_verified_claim_count", max_verified_claim_count)
-        object.__setattr__(self, "require_runtime_trace", bool(self.require_runtime_trace))
+        object.__setattr__(
+            self,
+            "require_runtime_trace",
+            _bool_value(self.require_runtime_trace),
+        )
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "ProductRuntimeBudgetPolicy":

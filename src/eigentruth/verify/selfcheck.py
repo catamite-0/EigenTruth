@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import dataclass
 from typing import Any, Mapping, NamedTuple, Sequence
@@ -65,19 +66,19 @@ class SelfConsistencyVerifier:
     context_keys: Sequence[str] = ("selfcheck_samples", "sampled_responses", "samples")
 
     def __post_init__(self) -> None:
-        if self.min_samples < 1:
-            raise ValueError("min_samples must be >= 1.")
-        if not (0.0 <= self.min_overlap <= 1.0):
-            raise ValueError("min_overlap must be in [0, 1].")
-        if not (0.0 <= self.support_threshold <= 1.0):
-            raise ValueError("support_threshold must be in [0, 1].")
-        if not (0.0 <= self.refute_threshold <= 1.0):
-            raise ValueError("refute_threshold must be in [0, 1].")
-        if not isinstance(self.early_stop, bool):
-            raise ValueError("early_stop must be a bool.")
+        min_samples = _positive_int(self.min_samples, name="min_samples")
+        min_overlap = _unit_float(self.min_overlap, name="min_overlap")
+        support_threshold = _unit_float(self.support_threshold, name="support_threshold")
+        refute_threshold = _unit_float(self.refute_threshold, name="refute_threshold")
+        early_stop = _strict_bool(self.early_stop, name="early_stop")
+        object.__setattr__(self, "min_samples", min_samples)
+        object.__setattr__(self, "min_overlap", min_overlap)
+        object.__setattr__(self, "support_threshold", support_threshold)
+        object.__setattr__(self, "refute_threshold", refute_threshold)
+        object.__setattr__(self, "early_stop", early_stop)
         if self.max_samples is not None:
-            max_samples = int(self.max_samples)
-            if max_samples < self.min_samples:
+            max_samples = _positive_int(self.max_samples, name="max_samples")
+            if max_samples < min_samples:
                 raise ValueError("max_samples must be >= min_samples when set.")
             object.__setattr__(self, "max_samples", max_samples)
         object.__setattr__(self, "samples", tuple(_coerce_sample(item) for item in self.samples))
@@ -324,6 +325,48 @@ def _coerce_samples(value: Any) -> tuple[_Sample, ...]:
     if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
         return tuple(_coerce_sample(item) for item in value)
     raise ValueError("selfcheck samples must be strings, mappings, or sequences of those values.")
+
+
+def _positive_int(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a positive integer, not bool.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        signless = stripped[1:] if stripped[:1] in {"+", "-"} else stripped
+        if not signless or not signless.isdecimal():
+            raise ValueError(f"{name} must be a positive integer.")
+        parsed = int(stripped)
+    else:
+        raise ValueError(f"{name} must be a positive integer.")
+    if parsed < 1:
+        raise ValueError(f"{name} must be a positive integer.")
+    return parsed
+
+
+def _unit_float(value: Any, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number in [0, 1], not bool.")
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number in [0, 1].") from exc
+    if not math.isfinite(parsed) or not (0.0 <= parsed <= 1.0):
+        raise ValueError(f"{name} must be a finite number in [0, 1].")
+    return parsed
+
+
+def _strict_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean or boolean string.")
 
 
 def _coerce_sample(value: str | Mapping[str, Any]) -> _Sample:

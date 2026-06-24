@@ -386,6 +386,7 @@ def verify_artifact_manifest(
     artifacts = manifest.get("artifacts", {})
     if not isinstance(artifacts, Mapping):
         raise ValueError("artifact manifest must contain an 'artifacts' mapping.")
+    failures.extend(_manifest_schema_failures(manifest, artifacts, manifest_path=manifest_path))
     fingerprint_items: list[tuple[str, Path]] = []
     expected_records: dict[str, Mapping[str, Any]] = {}
     expected_paths: dict[str, str] = {}
@@ -850,6 +851,67 @@ def _compare_manifest_record(
                 )
             )
     return tuple(failures)
+
+
+def _manifest_schema_failures(
+    manifest: Mapping[str, Any],
+    artifacts: Mapping[str, Any],
+    *,
+    manifest_path: str | Path | None,
+) -> tuple[ArtifactManifestMismatch, ...]:
+    path = "" if manifest_path is None else str(manifest_path)
+    failures: list[ArtifactManifestMismatch] = []
+    for field_name, expected_value in (
+        ("schema_version", 1),
+        ("digest_algorithm", "sha256"),
+    ):
+        actual_value = manifest.get(field_name)
+        if actual_value != expected_value:
+            failures.append(
+                ArtifactManifestMismatch(
+                    name="manifest",
+                    path=path,
+                    field=field_name,
+                    expected=expected_value,
+                    actual=actual_value,
+                )
+            )
+    summary = manifest.get("summary")
+    if not isinstance(summary, Mapping):
+        failures.append(
+            ArtifactManifestMismatch(
+                name="manifest",
+                path=path,
+                field="summary",
+                expected="mapping",
+                actual=type(summary).__name__,
+            )
+        )
+        return tuple(failures)
+    expected_summary = _artifact_manifest_summary(artifacts)
+    for field_name, expected_value in expected_summary.items():
+        actual_value = summary.get(field_name)
+        if actual_value != expected_value:
+            failures.append(
+                ArtifactManifestMismatch(
+                    name="manifest",
+                    path=path,
+                    field=f"summary.{field_name}",
+                    expected=expected_value,
+                    actual=actual_value,
+                )
+            )
+    return tuple(failures)
+
+
+def _artifact_manifest_summary(artifacts: Mapping[str, Any]) -> dict[str, int]:
+    records = tuple(record for record in artifacts.values() if isinstance(record, Mapping))
+    return {
+        "artifact_count": len(artifacts),
+        "missing_count": sum(1 for record in records if record.get("exists") is False),
+        "directory_count": sum(1 for record in records if record.get("kind") == "directory"),
+        "file_count": sum(1 for record in records if record.get("kind") == "file"),
+    }
 
 
 def _is_nested_manifest(name: str, path: str) -> bool:
