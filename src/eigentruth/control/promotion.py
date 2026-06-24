@@ -105,6 +105,11 @@ class ProductPromotionContract:
         product_runtime_drift_summary = _mapping(product_runtime_drift.get("summary"))
         product_runtime_drift_baseline = _mapping(product_runtime_drift.get("baseline"))
         product_runtime_drift_current = _mapping(product_runtime_drift.get("current"))
+        performance_evidence_bundle = _mapping(candidate.get("performance_evidence_bundle"))
+        performance_evidence_recommendation = _mapping(
+            performance_evidence_bundle.get("recommendation")
+        )
+        performance_evidence_cost = _mapping(performance_evidence_bundle.get("cost"))
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
@@ -127,6 +132,22 @@ class ProductPromotionContract:
                     "recommended_product_runtime_drift_report"
                 ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
+                "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
+                "performance_evidence_bundle_release_ready": (
+                    performance_evidence_bundle.get("release_ready")
+                ),
+                "performance_cache_tuning_status": (
+                    performance_evidence_recommendation.get("cache_tuning_status")
+                ),
+                "performance_uncached_total_seconds": (
+                    performance_evidence_cost.get("uncached_total_seconds")
+                ),
+                "performance_cached_total_ratio": performance_evidence_cost.get(
+                    "cached_total_ratio"
+                ),
+                "performance_cache_only_total_ratio": performance_evidence_cost.get(
+                    "cache_only_total_ratio"
+                ),
                 "recommended_route": decision.get("recommended_route"),
                 "selector_replay_status": decision.get("selector_replay_status"),
                 "selector_replay_report": selector_replay.get("report_path"),

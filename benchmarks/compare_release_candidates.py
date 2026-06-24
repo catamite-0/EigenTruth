@@ -692,12 +692,14 @@ def _performance_baseline_gate(
         report,
         report_path=report_path,
     )
+    performance_evidence_bundle = _mapping(report.get("performance_evidence_bundle"))
     gate = _performance_gate(
         verification=verification,
         allow_unverified=allow_unverified,
         report_error=report_error,
         manifest_path=manifest_path,
         runtime_recommendation=runtime_recommendation,
+        performance_evidence_bundle=performance_evidence_bundle,
         candidate=candidate,
     )
     recommendation = _mapping(runtime_recommendation.get("recommendation"))
@@ -713,6 +715,11 @@ def _performance_baseline_gate(
         "verification": verification,
         "runtime_recommendation_source": runtime_source,
         "runtime_recommendation_status": runtime_recommendation.get("status"),
+        "performance_evidence_bundle": (
+            None if not performance_evidence_bundle else performance_evidence_bundle
+        ),
+        "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
+        "performance_evidence_bundle_release_ready": performance_evidence_bundle.get("release_ready"),
         "runtime": {
             "cell_id": recommendation.get("cell_id"),
             "layer": recommendation.get("layer"),
@@ -984,6 +991,7 @@ def _performance_gate(
     report_error: str | None,
     manifest_path: Path | None,
     runtime_recommendation: Mapping[str, Any],
+    performance_evidence_bundle: Mapping[str, Any],
     candidate: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
     failures = []
@@ -997,6 +1005,11 @@ def _performance_gate(
         failures.append(
             f"performance runtime_recommendation_status is {runtime_recommendation.get('status')!r}, "
             "expected 'promote'"
+        )
+    if performance_evidence_bundle and performance_evidence_bundle.get("release_ready") is not True:
+        failures.append(
+            "performance evidence bundle release_ready is "
+            f"{performance_evidence_bundle.get('release_ready')!r}, expected True"
         )
     if candidate is None:
         failures.append("release candidate is unavailable for performance baseline comparison")
@@ -1186,6 +1199,9 @@ def _candidate_with_gates(
     manifests = dict(payload.get("manifests") or {})
     if performance is not None:
         payload["performance_baseline_record"] = performance.get("record_key")
+        performance_evidence_bundle = _mapping(performance.get("performance_evidence_bundle"))
+        if performance_evidence_bundle:
+            payload["performance_evidence_bundle"] = performance_evidence_bundle
         manifests["performance_manifest"] = performance.get("manifest_path")
     if adapter_family is not None:
         payload["adapter_family_matrix"] = {

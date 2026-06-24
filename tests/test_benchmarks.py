@@ -4442,7 +4442,13 @@ def test_compare_release_candidates_can_require_performance_baseline(tmp_path):
         "performance_baseline:qwen-performance:0.6"
     )
     assert payload["performance_baseline_gate"]["gate"]["passed"] is True
+    assert payload["performance_baseline_gate"]["performance_evidence_bundle_release_ready"] is True
+    assert payload["performance_baseline_gate"]["performance_evidence_bundle"]["recommendation"][
+        "cache_tuning_status"
+    ] == "ok"
     assert candidate["performance_baseline_record"] == "performance_baseline:qwen-performance:0.6"
+    assert candidate["performance_evidence_bundle"]["status"] == "promote"
+    assert candidate["performance_evidence_bundle"]["cost"]["cache_only_total_ratio"] == pytest.approx(0.02)
     assert candidate["manifests"]["performance_manifest"].endswith("artifact-manifest.json")
 
 
@@ -4875,6 +4881,73 @@ def test_compare_release_candidates_blocks_mismatched_performance_baseline(tmp_p
     assert payload["decision"]["blocking_reasons"][0]["gate"] == "performance_baseline"
     assert any(
         "runtime batch_size mismatch" in reason
+        for reason in payload["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
+def test_compare_release_candidates_blocks_unready_performance_evidence_bundle(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+        inside_trigger_sample_ratio=0.3,
+        inside_trigger_generation_ratio=0.35,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    _write_performance_baseline_record(
+        tmp_path / "performance",
+        registry_path=registry_path,
+        name="qwen-performance",
+        version="0.6",
+        layer=-12,
+        best_quality_signal_name="truth_proj",
+        best_quality_auroc=0.72,
+        inside_trigger_budget_id="top_0p4",
+        inside_trigger_budget_policy="quality_balanced",
+        performance_evidence_release_ready=False,
+    )
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        performance_baseline_key="performance_baseline:qwen-performance:0.6",
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["release_candidate"] is None
+    assert payload["performance_baseline_gate"]["performance_evidence_bundle_release_ready"] is False
+    assert any(
+        "performance evidence bundle release_ready" in reason
         for reason in payload["decision"]["blocking_reasons"][0]["reasons"]
     )
 
@@ -6123,6 +6196,7 @@ def _write_performance_baseline_record(
     inside_trigger_budget_id="top_0p4",
     inside_trigger_budget_policy="quality_balanced",
     store_relative_paths=False,
+    performance_evidence_release_ready=True,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -6188,6 +6262,47 @@ def _write_performance_baseline_record(
         },
         "registry_record": f"performance_baseline:{name}:{version}",
     }
+    report_payload["performance_evidence_bundle"] = {
+        "schema_version": 1,
+        "status": "promote",
+        "release_ready": performance_evidence_release_ready,
+        "recommendation": {
+            "status": "promote",
+            "cell_id": cell_id,
+            "layer": layer,
+            "batch_size": batch_size,
+            "hidden_state_capture": hidden_state_capture,
+            "max_batch_tokens": max_batch_tokens,
+            "prefix_kv_cache": prefix_kv_cache,
+            "max_workers": max_workers,
+            "best_quality_signal": best_quality_signal_name,
+            "best_quality_auroc": best_quality_auroc,
+            "cache_tuning_status": "ok",
+            "inside_sampling_run": "adaptive_selfcheck",
+            "inside_trigger_budget_id": inside_trigger_budget_id,
+        },
+        "cost": {
+            "uncached_total_seconds": 10.0,
+            "cached_total_seconds": 5.0,
+            "cache_only_total_seconds": 0.2,
+            "cached_total_ratio": 0.5,
+            "cache_only_total_ratio": 0.02,
+        },
+        "evidence": {
+            "matrix_status": "promote",
+            "worker_sweep_status": None,
+            "inside_trigger_budget_sweep_status": "promote",
+        },
+        "artifacts": {
+            "summary": {"artifact_count": 2, "missing_count": 0, "directory_count": 0, "file_count": 2},
+            "artifact_manifest": stored(manifest_path),
+            "runtime_recommendation": stored(runtime_path),
+        },
+        "registry": {
+            "record": f"performance_baseline:{name}:{version}",
+            "path": stored(registry_path),
+        },
+    }
     report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest_path.write_text(
         json.dumps(
@@ -6220,6 +6335,8 @@ def _write_performance_baseline_record(
             "workflow": "run_performance_baseline_workflow",
             "status": "promote",
             "runtime_recommendation_status": "promote",
+            "performance_evidence_bundle_status": "promote",
+            "performance_evidence_bundle_release_ready": performance_evidence_release_ready,
             "artifact_manifest": stored(manifest_path),
             "runtime_recommendation": stored(runtime_path),
             "recommended_layer": layer,

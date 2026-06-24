@@ -777,6 +777,20 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "model": "Qwen/Qwen2.5-0.5B-Instruct",
             "runtime": {"layer": -12, "batch_size": 2},
             "performance_baseline_record": "performance_baseline:runtime:0.9",
+            "performance_evidence_bundle": {
+                "status": "promote",
+                "release_ready": True,
+                "recommendation": {
+                    "cache_tuning_status": "ok",
+                    "best_quality_signal": "truth_proj",
+                    "best_quality_auroc": 0.91,
+                },
+                "cost": {
+                    "uncached_total_seconds": 10.0,
+                    "cached_total_ratio": 0.50,
+                    "cache_only_total_ratio": 0.02,
+                },
+            },
             "selector_replay": {
                 "report_path": "artifacts/selector/runtime-profile-selector-replay.json",
                 "manifest_path": "artifacts/selector/artifact-manifest.json",
@@ -858,6 +872,12 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["runtime_profile"] == "balanced"
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
+    assert contract.metadata["performance_evidence_bundle_status"] == "promote"
+    assert contract.metadata["performance_evidence_bundle_release_ready"] is True
+    assert contract.metadata["performance_cache_tuning_status"] == "ok"
+    assert contract.metadata["performance_uncached_total_seconds"] == 10.0
+    assert contract.metadata["performance_cached_total_ratio"] == 0.50
+    assert contract.metadata["performance_cache_only_total_ratio"] == 0.02
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
     assert contract.metadata["recommended_product_runtime_drift_report"] == (

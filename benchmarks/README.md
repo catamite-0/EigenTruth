@@ -1241,8 +1241,12 @@ final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
 and fails closed when layer, batch size, capture mode, token budget, prefix cache,
 worker count, trigger budget, trigger policy, or best quality signal differ from
-the readiness-selected runtime. Omit `--performance-registry` when the
-performance record lives in the readiness registry.
+the readiness-selected runtime. Newer performance baseline workflow reports also
+carry `performance_evidence_bundle`; when present, the release gate requires
+`release_ready=true` and copies its recommendation cost/readiness summary into
+the release candidate and downstream promotion contract metadata. Omit
+`--performance-registry` when the performance record lives in the readiness
+registry.
 Add `--selector-replay-report` when the final candidate must also include a
 promoted runtime-profile selector replay over saved `ProductTrace` payloads.
 The gate verifies the replay artifact manifest, requires `status=promote`, and
