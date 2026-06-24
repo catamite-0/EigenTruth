@@ -914,6 +914,10 @@ def test_product_trace_verification_route_cost_summary_matches_benchmark_fields(
                     "selected_route_duration_seconds": 0.03,
                     "used_retrieval": True,
                     "retrieval_hit_count": 3,
+                    "route_budget_limit": 2,
+                    "route_budget_exhausted": True,
+                    "unattempted_routes": ("fallback",),
+                    "selected_route_was_fallthrough": True,
                 },
             ),
             VerificationResult(status=VerificationStatus.NOT_APPLICABLE, confidence=1.0),
@@ -932,7 +936,14 @@ def test_product_trace_verification_route_cost_summary_matches_benchmark_fields(
     assert summary["retrieval_use_rate"] == 2 / 3
     assert summary["retrieval_hit_count"] == 5
     assert summary["mean_retrieval_hits"] == 5 / 3
+    assert summary["route_budget_limit_observations"] == 1
+    assert summary["route_budget_exhausted_count"] == 1
+    assert summary["route_budget_exhaustion_rate"] == 1.0
+    assert summary["selected_fallthrough_budget_stop_count"] == 1
+    assert summary["unattempted_route_count"] == 1
+    assert summary["mean_unattempted_route_count"] == 1 / 3
     assert summary["by_route"]["retrieval_groundedness"]["mean_attempted_route_count"] == 2.0
+    assert summary["by_route"]["retrieval_groundedness"]["route_budget_exhaustion_rate"] == 1.0
     json.dumps(summary)
 
 
@@ -1015,6 +1026,9 @@ def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
                     "total_duration_seconds": 0.05,
                     "used_retrieval": True,
                     "retrieval_hit_count": 2,
+                    "route_budget_limit": 1,
+                    "route_budget_exhausted": True,
+                    "unattempted_routes": ("fallback",),
                 },
             ),
         ),
@@ -1027,6 +1041,7 @@ def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
             max_mean_route_duration_seconds=0.02,
             max_route_duration_seconds=0.04,
             max_mean_attempted_route_count=1.2,
+            max_route_budget_exhaustion_rate=0.0,
             max_retrieval_use_rate=0.25,
             max_retrieval_hit_count=1,
         ),
@@ -1037,12 +1052,16 @@ def test_product_runtime_budget_checks_route_cost_without_runtime_trace():
     assert round(report["metrics"]["mean_route_duration_seconds"], 6) == 0.03
     assert report["metrics"]["max_route_duration_seconds"] == 0.05
     assert report["metrics"]["mean_attempted_route_count"] == 1.5
+    assert report["metrics"]["route_budget_exhaustion_rate"] == 1.0
+    assert report["metrics"]["route_budget_exhausted_count"] == 1.0
+    assert report["metrics"]["unattempted_route_count"] == 1.0
     assert report["metrics"]["retrieval_use_rate"] == 0.5
     assert report["metrics"]["retrieval_hit_count"] == 2.0
     assert [failure["metric"] for failure in report["failures"]] == [
         "mean_route_duration_seconds",
         "max_route_duration_seconds",
         "mean_attempted_route_count",
+        "route_budget_exhaustion_rate",
         "retrieval_use_rate",
         "retrieval_hit_count",
     ]
@@ -1059,6 +1078,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "max_p99_duration_seconds": 0.20,
             "max_max_duration_seconds": 0.25,
             "max_mean_attempted_route_count": 1.5,
+            "max_route_budget_exhaustion_rate": 0.0,
             "max_retrieval_use_rate": 0.5,
             "max_retrieval_hit_count": 4,
             "min_claims_cache_hit_rate": 0.8,
@@ -1384,6 +1404,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.runtime_budget_policy.max_p99_route_duration_seconds == 0.20
     assert contract.runtime_budget_policy.max_route_duration_seconds == 0.25
     assert contract.runtime_budget_policy.max_mean_attempted_route_count == 1.5
+    assert contract.runtime_budget_policy.max_route_budget_exhaustion_rate == 0.0
     assert contract.runtime_budget_policy.max_retrieval_use_rate == 0.5
     assert contract.runtime_budget_policy.max_retrieval_hit_count == 4.0
     assert contract.runtime_budget_policy.min_named_cache_hit_rate == {

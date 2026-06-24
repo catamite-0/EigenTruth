@@ -550,6 +550,18 @@ def _runtime_budget_policy_checks(
             policy_field="max_mean_attempted_route_count",
         ),
         _policy_max_check(
+            "route.route_budget_exhaustion_rate",
+            _first_nested_float(
+                summary,
+                (
+                    ("routes", "overall", "route_budget_exhaustion_rate"),
+                    ("route_budget_exhaustion_rate", "mean"),
+                ),
+            ),
+            policy.max_route_budget_exhaustion_rate,
+            policy_field="max_route_budget_exhaustion_rate",
+        ),
+        _policy_max_check(
             "route.retrieval_use_rate",
             _first_nested_float(
                 summary,

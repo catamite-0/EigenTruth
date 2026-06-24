@@ -8,7 +8,7 @@ import sys
 import threading
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 import pytest
 import torch
@@ -12693,6 +12693,10 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
                             "total_duration_seconds": route_seconds,
                             "selected_route_duration_seconds": route_seconds,
                             "attempted_route_count": 2,
+                            "route_budget_limit": 1,
+                            "route_budget_exhausted": True,
+                            "unattempted_routes": ("fallback",),
+                            "selected_route_was_fallthrough": True,
                             "used_retrieval": True,
                             "retrieval_hit_count": 2,
                         },
@@ -12737,10 +12741,15 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert {
         "improve_cache_keys",
         "reduce_verifier_route_fanout",
+        "review_verifier_route_budget_exhaustion",
         "gate_retrieval_to_unsupported_claims",
         "enable_staged_verification",
         "replay_runtime_profile_selector",
     }.issubset(recommendation_ids)
+    assert payload["summary"]["routes"]["overall"]["route_budget_exhaustion_rate"] == 1.0
+    assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
+        "max_route_budget_exhaustion_rate"
+    ] == 1.0
     assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
         "max_phase_p95_seconds"
     ]["initial_verification"] > 0.0
@@ -13164,6 +13173,9 @@ def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
         used_retrieval=True,
         cache_hits=1,
         cache_misses=4,
+        route_budget_limit=1,
+        route_budget_exhausted=True,
+        unattempted_routes=("fallback",),
     )
     baseline_module.build_product_runtime_baseline(
         baseline_module.ProductRuntimeBaselineConfig(
@@ -13377,6 +13389,7 @@ def test_compare_product_runtime_baselines_applies_runtime_budget_policy_gate(tm
             "max_total_seconds": 0.20,
             "max_phase_p95_seconds": {"initial_verification": 0.10},
             "max_mean_attempted_route_count": 1.5,
+            "max_route_budget_exhaustion_rate": 0.0,
             "max_retrieval_use_rate": 0.5,
             "min_cache_hit_rate": 0.5,
             "metadata": {"source": "unit-test"},
@@ -13418,11 +13431,12 @@ def test_compare_product_runtime_baselines_applies_runtime_budget_policy_gate(tm
         for failure in registry_payload["runtime_budget_policy_gate"]["failures"]
     }
     assert registry_payload["status"] == "blocked"
-    assert registry_payload["summary"]["runtime_budget_policy_failed_count"] == 5
+    assert registry_payload["summary"]["runtime_budget_policy_failed_count"] == 6
     assert {
         "total_seconds.p95",
         "phase_seconds.initial_verification.p95",
         "route.mean_attempted_route_count",
+        "route.route_budget_exhaustion_rate",
         "route.retrieval_use_rate",
         "cache_hit_rate.mean",
     } == failure_metrics
@@ -13516,6 +13530,9 @@ def _write_product_runtime_trace(
     used_retrieval: bool,
     cache_hits: int,
     cache_misses: int,
+    route_budget_limit: int | None = None,
+    route_budget_exhausted: bool = False,
+    unattempted_routes: Sequence[str] = (),
 ) -> None:
     path.write_text(
         json.dumps({
@@ -13535,6 +13552,10 @@ def _write_product_runtime_trace(
                         "total_duration_seconds": route_seconds,
                         "selected_route_duration_seconds": route_seconds,
                         "attempted_route_count": attempted_route_count,
+                        "route_budget_limit": route_budget_limit,
+                        "route_budget_exhausted": route_budget_exhausted,
+                        "unattempted_routes": tuple(unattempted_routes),
+                        "selected_route_was_fallthrough": route_budget_exhausted,
                         "used_retrieval": used_retrieval,
                         "retrieval_hit_count": 1 if used_retrieval else 0,
                     },

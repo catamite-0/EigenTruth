@@ -26,6 +26,7 @@ class ProductRuntimeBudgetPolicy:
     max_p99_route_duration_seconds: float | None = None
     max_route_duration_seconds: float | None = None
     max_mean_attempted_route_count: float | None = None
+    max_route_budget_exhaustion_rate: float | None = None
     max_retrieval_use_rate: float | None = None
     max_retrieval_hit_count: float | None = None
     min_cache_hit_rate: float | None = None
@@ -76,6 +77,10 @@ class ProductRuntimeBudgetPolicy:
         max_mean_attempted_route_count = _optional_non_negative_float(
             self.max_mean_attempted_route_count,
             name="max_mean_attempted_route_count",
+        )
+        max_route_budget_exhaustion_rate = _optional_rate_float(
+            self.max_route_budget_exhaustion_rate,
+            name="max_route_budget_exhaustion_rate",
         )
         max_retrieval_use_rate = _optional_rate_float(
             self.max_retrieval_use_rate,
@@ -139,6 +144,11 @@ class ProductRuntimeBudgetPolicy:
             "max_mean_attempted_route_count",
             max_mean_attempted_route_count,
         )
+        object.__setattr__(
+            self,
+            "max_route_budget_exhaustion_rate",
+            max_route_budget_exhaustion_rate,
+        )
         object.__setattr__(self, "max_retrieval_use_rate", max_retrieval_use_rate)
         object.__setattr__(self, "max_retrieval_hit_count", max_retrieval_hit_count)
         object.__setattr__(self, "min_cache_hit_rate", min_cache_hit_rate)
@@ -165,6 +175,7 @@ class ProductRuntimeBudgetPolicy:
             max_p99_route_duration_seconds=payload.get("max_p99_route_duration_seconds"),
             max_route_duration_seconds=payload.get("max_route_duration_seconds"),
             max_mean_attempted_route_count=payload.get("max_mean_attempted_route_count"),
+            max_route_budget_exhaustion_rate=payload.get("max_route_budget_exhaustion_rate"),
             max_retrieval_use_rate=payload.get("max_retrieval_use_rate"),
             max_retrieval_hit_count=payload.get("max_retrieval_hit_count"),
             min_cache_hit_rate=payload.get("min_cache_hit_rate"),
@@ -187,6 +198,7 @@ class ProductRuntimeBudgetPolicy:
             or self.max_p99_route_duration_seconds is not None
             or self.max_route_duration_seconds is not None
             or self.max_mean_attempted_route_count is not None
+            or self.max_route_budget_exhaustion_rate is not None
             or self.max_retrieval_use_rate is not None
             or self.max_retrieval_hit_count is not None
             or self.min_cache_hit_rate is not None
@@ -208,6 +220,7 @@ class ProductRuntimeBudgetPolicy:
             "max_p99_route_duration_seconds": self.max_p99_route_duration_seconds,
             "max_route_duration_seconds": self.max_route_duration_seconds,
             "max_mean_attempted_route_count": self.max_mean_attempted_route_count,
+            "max_route_budget_exhaustion_rate": self.max_route_budget_exhaustion_rate,
             "max_retrieval_use_rate": self.max_retrieval_use_rate,
             "max_retrieval_hit_count": self.max_retrieval_hit_count,
             "min_cache_hit_rate": self.min_cache_hit_rate,
@@ -312,6 +325,7 @@ def evaluate_product_runtime_budget(
         ("p99_route_duration_seconds", resolved.max_p99_route_duration_seconds),
         ("max_route_duration_seconds", resolved.max_route_duration_seconds),
         ("mean_attempted_route_count", resolved.max_mean_attempted_route_count),
+        ("route_budget_exhaustion_rate", resolved.max_route_budget_exhaustion_rate),
         ("retrieval_use_rate", resolved.max_retrieval_use_rate),
         ("retrieval_hit_count", resolved.max_retrieval_hit_count),
         ("verified_claim_count", resolved.max_verified_claim_count),
@@ -393,6 +407,9 @@ def evaluate_product_runtime_budget(
             "p99_route_duration_seconds": metrics.get("p99_route_duration_seconds"),
             "max_route_duration_seconds": metrics.get("max_route_duration_seconds"),
             "mean_attempted_route_count": metrics.get("mean_attempted_route_count"),
+            "route_budget_exhaustion_rate": metrics.get("route_budget_exhaustion_rate"),
+            "route_budget_exhausted_count": metrics.get("route_budget_exhausted_count"),
+            "unattempted_route_count": metrics.get("unattempted_route_count"),
             "retrieval_use_rate": metrics.get("retrieval_use_rate"),
             "retrieval_hit_count": metrics.get("retrieval_hit_count"),
             "mean_retrieval_hits": metrics.get("mean_retrieval_hits"),
@@ -546,6 +563,9 @@ def _route_cost_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, An
         "p99_route_duration_seconds": _finite_float(summary.get("p99_duration_seconds")),
         "max_route_duration_seconds": _finite_float(summary.get("max_duration_seconds")),
         "mean_attempted_route_count": _finite_float(summary.get("mean_attempted_route_count")),
+        "route_budget_exhaustion_rate": _finite_float(summary.get("route_budget_exhaustion_rate")),
+        "route_budget_exhausted_count": _finite_float(summary.get("route_budget_exhausted_count")),
+        "unattempted_route_count": _finite_float(summary.get("unattempted_route_count")),
         "retrieval_use_rate": _finite_float(summary.get("retrieval_use_rate")),
         "retrieval_hit_count": _finite_float(summary.get("retrieval_hit_count")),
         "mean_retrieval_hits": _finite_float(summary.get("mean_retrieval_hits")),

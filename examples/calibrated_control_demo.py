@@ -206,6 +206,7 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     max_p99_route_duration_seconds = getattr(args, "max_p99_route_duration_seconds", None)
     max_route_duration_seconds = getattr(args, "max_route_duration_seconds", None)
     max_mean_attempted_route_count = getattr(args, "max_mean_attempted_route_count", None)
+    max_route_budget_exhaustion_rate = getattr(args, "max_route_budget_exhaustion_rate", None)
     max_retrieval_use_rate = getattr(args, "max_retrieval_use_rate", None)
     max_retrieval_hit_count = getattr(args, "max_retrieval_hit_count", None)
     min_cache_hit_rate = getattr(args, "min_cache_hit_rate", None)
@@ -224,6 +225,7 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
         and max_p99_route_duration_seconds is None
         and max_route_duration_seconds is None
         and max_mean_attempted_route_count is None
+        and max_route_budget_exhaustion_rate is None
         and max_retrieval_use_rate is None
         and max_retrieval_hit_count is None
         and min_cache_hit_rate is None
@@ -283,6 +285,11 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
             base_policy.max_mean_attempted_route_count
             if max_mean_attempted_route_count is None
             else max_mean_attempted_route_count
+        ),
+        max_route_budget_exhaustion_rate=(
+            base_policy.max_route_budget_exhaustion_rate
+            if max_route_budget_exhaustion_rate is None
+            else max_route_budget_exhaustion_rate
         ),
         max_retrieval_use_rate=(
             base_policy.max_retrieval_use_rate
@@ -865,6 +872,8 @@ def main() -> None:
                         help="optional ProductTrace route-cost budget for max route seconds")
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=None,
                         help="optional ProductTrace route-cost budget for mean attempted routes per claim")
+    parser.add_argument("--max-route-budget-exhaustion-rate", type=float, default=None,
+                        help="optional ProductTrace budget for capped verifier route exhaustion rate")
     parser.add_argument("--max-verifier-route-attempts", type=int, default=None,
                         help="cap matching verifier routes attempted per claim; runtime profiles fill this when unset")
     parser.add_argument("--max-retrieval-use-rate", type=float, default=None,

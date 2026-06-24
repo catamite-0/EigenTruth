@@ -886,6 +886,9 @@ def _route_cost_record(result: Mapping[str, Any]) -> dict[str, Any]:
     selected_route = metadata.get("selected_route")
     route = "unrouted" if selected_route is None else str(selected_route)
     retrieval_hit_count = _retrieval_hit_count(metadata)
+    route_budget_limit = _non_negative_int(metadata.get("route_budget_limit"))
+    route_budget_exhausted = _truthy_flag(metadata.get("route_budget_exhausted"))
+    unattempted_route_count = len(_as_sequence(metadata.get("unattempted_routes", ())))
     return {
         "route": route,
         "routed": selected_route is not None,
@@ -896,6 +899,12 @@ def _route_cost_record(result: Mapping[str, Any]) -> dict[str, Any]:
         "attempted_route_count": _attempted_route_count(metadata),
         "used_retrieval": _truthy_flag(metadata.get("used_retrieval")) or retrieval_hit_count > 0,
         "retrieval_hit_count": retrieval_hit_count,
+        "route_budget_limit": route_budget_limit,
+        "route_budget_exhausted": route_budget_exhausted,
+        "unattempted_route_count": unattempted_route_count,
+        "selected_route_was_fallthrough": _truthy_flag(
+            metadata.get("selected_route_was_fallthrough")
+        ),
     }
 
 
@@ -921,6 +930,26 @@ def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     ]
     used_retrieval_count = sum(1 for record in records if bool(record.get("used_retrieval")))
     retrieval_hit_count = sum(_non_negative_int(record.get("retrieval_hit_count")) or 0 for record in records)
+    route_budget_limit_count = sum(
+        1
+        for record in records
+        if _non_negative_int(record.get("route_budget_limit")) is not None
+    )
+    route_budget_exhausted_count = sum(
+        1
+        for record in records
+        if bool(record.get("route_budget_exhausted"))
+    )
+    selected_fallthrough_budget_stop_count = sum(
+        1
+        for record in records
+        if bool(record.get("route_budget_exhausted"))
+        and bool(record.get("selected_route_was_fallthrough"))
+    )
+    total_unattempted_route_count = sum(
+        _non_negative_int(record.get("unattempted_route_count")) or 0
+        for record in records
+    )
     total_duration = float(sum(total_durations)) if total_durations else None
     total_selected_route_duration = (
         float(sum(selected_route_durations))
@@ -960,6 +989,18 @@ def _route_cost_stats(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "retrieval_use_rate": _safe_div(used_retrieval_count, selected),
         "retrieval_hit_count": retrieval_hit_count,
         "mean_retrieval_hits": _safe_div(retrieval_hit_count, selected),
+        "route_budget_limit_observations": route_budget_limit_count,
+        "route_budget_exhausted_count": route_budget_exhausted_count,
+        "route_budget_exhaustion_rate": _safe_div(
+            route_budget_exhausted_count,
+            route_budget_limit_count,
+        ),
+        "selected_fallthrough_budget_stop_count": selected_fallthrough_budget_stop_count,
+        "unattempted_route_count": total_unattempted_route_count,
+        "mean_unattempted_route_count": _safe_div(
+            total_unattempted_route_count,
+            selected,
+        ),
     }
 
 
@@ -986,6 +1027,12 @@ def _zero_route_cost_stats(selected: int) -> dict[str, Any]:
         "retrieval_use_rate": 0.0,
         "retrieval_hit_count": 0,
         "mean_retrieval_hits": 0.0,
+        "route_budget_limit_observations": 0,
+        "route_budget_exhausted_count": 0,
+        "route_budget_exhaustion_rate": 0.0,
+        "selected_fallthrough_budget_stop_count": 0,
+        "unattempted_route_count": 0,
+        "mean_unattempted_route_count": 0.0,
     }
 
 

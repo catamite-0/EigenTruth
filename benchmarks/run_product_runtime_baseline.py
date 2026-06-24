@@ -417,6 +417,9 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "p99_route_duration_seconds": metrics.get("p99_route_duration_seconds"),
         "max_route_duration_seconds": metrics.get("max_route_duration_seconds"),
         "mean_attempted_route_count": metrics.get("mean_attempted_route_count"),
+        "route_budget_exhaustion_rate": metrics.get("route_budget_exhaustion_rate"),
+        "route_budget_exhausted_count": metrics.get("route_budget_exhausted_count"),
+        "unattempted_route_count": metrics.get("unattempted_route_count"),
         "retrieval_use_rate": metrics.get("retrieval_use_rate"),
         "retrieval_hit_count": metrics.get("retrieval_hit_count"),
         "mean_retrieval_hits": metrics.get("mean_retrieval_hits"),
@@ -453,6 +456,15 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         ),
         "mean_attempted_route_count": _numeric_summary(
             item.get("mean_attempted_route_count") for item in metrics
+        ),
+        "route_budget_exhaustion_rate": _numeric_summary(
+            item.get("route_budget_exhaustion_rate") for item in metrics
+        ),
+        "route_budget_exhausted_count": _numeric_summary(
+            item.get("route_budget_exhausted_count") for item in metrics
+        ),
+        "unattempted_route_count": _numeric_summary(
+            item.get("unattempted_route_count") for item in metrics
         ),
         "retrieval_use_rate": _numeric_summary(item.get("retrieval_use_rate") for item in metrics),
         "retrieval_hit_count": _numeric_summary(item.get("retrieval_hit_count") for item in metrics),
@@ -513,6 +525,12 @@ def _optimization_report(
             ),
             "cache_hit_rate_mean": _nested(summary, "cache_hit_rate", "mean"),
             "retrieval_use_rate": _nested(summary, "routes", "overall", "retrieval_use_rate"),
+            "route_budget_exhaustion_rate": _nested(
+                summary,
+                "routes",
+                "overall",
+                "route_budget_exhaustion_rate",
+            ),
             "verification_claim_skip_rate": _nested(
                 summary,
                 "verification_stage",
@@ -615,6 +633,7 @@ def _optimization_recommendations(
     recommendations: list[dict[str, Any]] = []
     overall_routes = _mapping(_nested(summary, "routes", "overall"))
     mean_attempted = _finite_float(overall_routes.get("mean_attempted_route_count"))
+    route_budget_exhaustion_rate = _finite_float(overall_routes.get("route_budget_exhaustion_rate"))
     retrieval_use_rate = _finite_float(overall_routes.get("retrieval_use_rate"))
     cache_hit_rate = _finite_float(_nested(summary, "cache_hit_rate", "mean"))
     verification_stage = _mapping(summary.get("verification_stage"))
@@ -688,6 +707,23 @@ def _optimization_recommendations(
             suggested_action=(
                 "Prefer routed verifier adapters by claim metadata and stop after decisive support "
                 "or refutation instead of trying broad fallback chains."
+            ),
+        ))
+
+    if route_budget_exhaustion_rate is not None and route_budget_exhaustion_rate > 0.0:
+        recommendations.append(_recommendation(
+            "review_verifier_route_budget_exhaustion",
+            priority="medium",
+            area="verifier_routes",
+            title="Review capped verifier routes before tightening latency budgets.",
+            reason="Some routed verification decisions stopped because the route fanout cap was exhausted.",
+            evidence={
+                "route_budget_exhaustion_rate": route_budget_exhaustion_rate,
+                "target": 0.0,
+            },
+            suggested_action=(
+                "Inspect unattempted routes and move decisive cheap routes earlier before reducing "
+                "max_verifier_route_attempts further."
             ),
         ))
 
@@ -822,6 +858,9 @@ def _optimization_policy_hints(
     total_seconds_p95 = _finite_float(_nested(summary, "total_seconds", "p95"))
     cache_hit_rate = _finite_float(_nested(summary, "cache_hit_rate", "mean"))
     mean_attempted = _finite_float(_nested(summary, "routes", "overall", "mean_attempted_route_count"))
+    route_budget_exhaustion_rate = _finite_float(
+        _nested(summary, "routes", "overall", "route_budget_exhaustion_rate")
+    )
     retrieval_use_rate = _finite_float(_nested(summary, "routes", "overall", "retrieval_use_rate"))
     phase_p95_budget = {
         str(phase["phase"]): _with_headroom(phase.get("p95_seconds"))
@@ -834,6 +873,11 @@ def _optimization_policy_hints(
             "max_total_seconds": _with_headroom(total_seconds_p95),
             "max_phase_p95_seconds": phase_p95_budget,
             "max_mean_attempted_route_count": _with_headroom(mean_attempted),
+            "max_route_budget_exhaustion_rate": (
+                None
+                if route_budget_exhaustion_rate is None
+                else min(1.0, _with_headroom(route_budget_exhaustion_rate) or 0.0)
+            ),
             "max_retrieval_use_rate": (
                 None
                 if retrieval_use_rate is None
@@ -1027,11 +1071,18 @@ def _aggregate_route_summaries(summaries: Sequence[Mapping[str, Any]]) -> dict[s
     duration_observations = _sum_int(summaries, "duration_observations")
     selected_duration_observations = _sum_int(summaries, "selected_route_duration_observations")
     attempted_observations = _sum_int(summaries, "attempted_route_count_observations")
+    route_budget_observations = _sum_int(summaries, "route_budget_limit_observations")
     total_duration = _sum_float(summaries, "total_duration_seconds")
     total_selected_duration = _sum_float(summaries, "total_selected_route_duration_seconds")
     total_attempted = _sum_float(summaries, "total_attempted_route_count")
     used_retrieval_count = _sum_int(summaries, "used_retrieval_count")
     retrieval_hit_count = _sum_int(summaries, "retrieval_hit_count")
+    route_budget_exhausted_count = _sum_int(summaries, "route_budget_exhausted_count")
+    selected_fallthrough_budget_stop_count = _sum_int(
+        summaries,
+        "selected_fallthrough_budget_stop_count",
+    )
+    unattempted_route_count = _sum_int(summaries, "unattempted_route_count")
     return {
         "source_trace_count": len(summaries),
         "total": total,
@@ -1059,6 +1110,15 @@ def _aggregate_route_summaries(summaries: Sequence[Mapping[str, Any]]) -> dict[s
         "attempted_route_count_observations": attempted_observations,
         "total_attempted_route_count": total_attempted,
         "mean_attempted_route_count": _safe_div(total_attempted, attempted_observations),
+        "route_budget_limit_observations": route_budget_observations,
+        "route_budget_exhausted_count": route_budget_exhausted_count,
+        "route_budget_exhaustion_rate": _safe_div(
+            route_budget_exhausted_count,
+            route_budget_observations,
+        ),
+        "selected_fallthrough_budget_stop_count": selected_fallthrough_budget_stop_count,
+        "unattempted_route_count": unattempted_route_count,
+        "mean_unattempted_route_count": _safe_div(unattempted_route_count, total),
         "used_retrieval_count": used_retrieval_count,
         "retrieval_use_rate": _safe_div(used_retrieval_count, total),
         "retrieval_hit_count": retrieval_hit_count,
@@ -1175,6 +1235,7 @@ def _policy_threshold_count(policy_payload: Mapping[str, Any]) -> int:
         "max_p99_route_duration_seconds",
         "max_route_duration_seconds",
         "max_mean_attempted_route_count",
+        "max_route_budget_exhaustion_rate",
         "max_retrieval_use_rate",
         "max_retrieval_hit_count",
         "min_cache_hit_rate",

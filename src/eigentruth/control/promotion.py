@@ -618,6 +618,7 @@ def product_runtime_budget_policy_from_release_candidate(
         max_p99_route_duration_seconds=config.get("max_p99_duration_seconds"),
         max_route_duration_seconds=config.get("max_max_duration_seconds"),
         max_mean_attempted_route_count=config.get("max_mean_attempted_route_count"),
+        max_route_budget_exhaustion_rate=config.get("max_route_budget_exhaustion_rate"),
         max_retrieval_use_rate=config.get("max_retrieval_use_rate"),
         max_retrieval_hit_count=config.get("max_retrieval_hit_count"),
         min_cache_hit_rate=config.get("min_cache_hit_rate"),

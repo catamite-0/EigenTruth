@@ -136,7 +136,8 @@ corpus, and runtime-baseline artifacts because those tools reject bounded
 telemetry inputs. Optional runtime budget flags evaluate those timings
 fail-closed and write the result into trace metadata. The demo also summarizes
 verifier route cost metadata, can wrap verifier/retriever calls in request-local
-caches, and can gate on route attempts, retrieval use, and cache hit rates:
+caches, and can gate on route attempts, route-budget exhaustion, retrieval use,
+and cache hit rates:
 
 ```bash
 python examples/calibrated_control_demo.py --runtime-profile balanced
@@ -150,6 +151,7 @@ python examples/calibrated_control_demo.py \
   --max-runtime-phase-p99-seconds '{"initial_verification": 0.8}'
 python examples/calibrated_control_demo.py \
   --max-mean-attempted-route-count 1.5 \
+  --max-route-budget-exhaustion-rate 0.0 \
   --max-retrieval-use-rate 0.5
 python examples/calibrated_control_demo.py \
   --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json
