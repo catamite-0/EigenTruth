@@ -133,8 +133,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "9b172751821fc1421a8ef5f3b2f643c81ab53190706dafabb1007133e2f49ca6",
-      "size_bytes": 6808
+      "sha256": "89fe9142d0324a7b785a5db54a7222db93777fbfa7340d95c189f53fbbefaa88",
+      "size_bytes": 7371
     },
     "replay_policy": {
       "exists": true,
@@ -149,16 +149,24 @@
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/artifact-manifest.json",
-      "sha256": "fde7c07e5581b95a1497975d6163b67d1d5accacf639fc1ce93254c60ba4e6cb",
-      "size_bytes": 4396
+      "sha256": "d7b8aa8c5142fedb398fc1be843ecb7afa62193e6f266a42f53a01acdff4bb07",
+      "size_bytes": 4924
     },
     "runtime_baseline_report": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "runtime-baseline/product-runtime-baseline.json",
-      "sha256": "bfdb26d8c548d468578105f8efe2a580d3c8143e2415c015a0f6988d08da5127",
-      "size_bytes": 81589
+      "sha256": "00af9fc758ffbcad9a515c7cd4e32e546f848d94121b68a719d2b256924af93f",
+      "size_bytes": 82074
+    },
+    "runtime_trace_records_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-baseline/trace-record-cache.json",
+      "sha256": "c7925fbb4de6d831e1a840805ed0bd63fed8e60b760764ef2b1a75572f30057a",
+      "size_bytes": 67134
     },
     "selector_replay_manifest": {
       "exists": true,
@@ -197,9 +205,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 23,
+    "artifact_count": 24,
     "directory_count": 1,
-    "file_count": 22,
+    "file_count": 23,
     "missing_count": 0
   }
 }

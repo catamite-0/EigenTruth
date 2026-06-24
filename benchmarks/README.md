@@ -2381,7 +2381,10 @@ for this workflow; bounded telemetry from `--bounded-trace` is intentionally
 rejected because it can truncate replay-relevant evidence and action outputs.
 For large trace sets, add `--trace-records-jsonl` to stream per-trace metric and
 budget records into a JSONL sidecar while keeping the main report focused on
-summary, budget, manifest, and registry metadata:
+summary, budget, manifest, and registry metadata. Add
+`--trace-records-cache-json` when repeatedly sweeping runtime budget policies
+over unchanged traces; the cache is keyed by source trace fingerprints and the
+resolved policy payload:
 
 ```bash
 python benchmarks/run_product_runtime_baseline.py \
@@ -2390,6 +2393,7 @@ python benchmarks/run_product_runtime_baseline.py \
   --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
   --json artifacts/product-runtime-baseline.json \
   --trace-records-jsonl artifacts/product-runtime-baseline-trace-records.jsonl \
+  --trace-records-cache-json artifacts/product-runtime-baseline-trace-record-cache.json \
   --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-baseline \
@@ -2469,7 +2473,8 @@ recursive top-level manifest over all child reports, and registers one workflow
 report. Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks
-over the same trace corpus, and `--selector-trace-inputs-json` when replaying
+over the same trace corpus, `--runtime-trace-records-cache-json` when sweeping
+runtime budget gates, and `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
 ```bash
@@ -2486,6 +2491,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --require-runtime-trace \
   --verify-manifest \
   --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow/fingerprints.json \
+  --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked
 ```

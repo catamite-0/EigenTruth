@@ -6,6 +6,20 @@
     "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
     "size_bytes": 475128
   },
+  "directory:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces:4b7cec94770532e5bb4d2d247dd2a0cd1062c9c393e726a97498ccf323c3c66d": {
+    "exists": true,
+    "file_count": 12,
+    "kind": "directory",
+    "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
+    "size_bytes": 475128
+  },
+  "directory:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces:9ba84bd7dfa71fc992dc5310a5a6bdb1bde51e101a63e9b4e0b2e8e64041749f": {
+    "exists": true,
+    "file_count": 12,
+    "kind": "directory",
+    "sha256": "104c00423b777d089d6a912331b0bdc0fa24c54ef1876f5b0c9013199f57692c",
+    "size_bytes": 475128
+  },
   "directory:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces:af3cd79df2d026d53f07d2968030beb89123259d9fb9732d75a2655196a196f5": {
     "exists": true,
     "file_count": 12,
@@ -27,7 +41,21 @@
     "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
     "size_bytes": 39309
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/audit/calculator_refuted-r0.json:39309:1782237480110800274:1782237480110800274:14cc7d78b5fadf13511fc0252cc3912830a76ca7c6a283ec0c8bec26b5364615": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "d02087adf9c783935ee18b84ff5c2e002e3514cc1b94fc8ea331650f97df694a",
+    "size_bytes": 39309
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json:40431:1782237480099800275:1782237480099800275": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "68476bb48460b31e3403e4e85fa63ddecba54eb5f36955a08bf52b9e1f54c011",
+    "size_bytes": 40431
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/audit/diagnostic_refuted-r0.json:40431:1782237480099800275:1782237480099800275:0d25533c400d1ec1b04072552f6f603e64b28a64f7e30c40075d96ab84b62bab": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -41,7 +69,21 @@
     "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
     "size_bytes": 36783
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/audit/low_risk_supported-r0.json:36783:1782237480089800275:1782237480089800275:64d2f765fb817ea422cd7d1f96c4ea4cc1c6838a62ff2df33834034dc93ae055": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "a48587ddd9e3f0bfa2092a170c9ecded1dbbefaa511e13fa264b1ba30dfd912e",
+    "size_bytes": 36783
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json:40576:1782237480161800269:1782237480161800269": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "a7140605552033833a1b25b99d655831aae3ec656c425b6ab0040e3eaa4865cf",
+    "size_bytes": 40576
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/auto/calculator_refuted-r0.json:40576:1782237480161800269:1782237480161800269:14f4bbae76f44315ac1f7bfdfdad43d79a581141a46b2169561ba3c0bc5db81e": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -55,7 +97,21 @@
     "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
     "size_bytes": 46218
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/auto/diagnostic_refuted-r0.json:46218:1782237480152800270:1782237480152800270:428342f66a567d3f71172fbc6bd6e7ca9e7e184055462b25f2a2465a526cd593": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "3ea2e419a99dc7278415f2b4db6971d67be6aaa0aff3f1ee4002fca024352610",
+    "size_bytes": 46218
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json:34166:1782237480142800271:1782237480142800271": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "12afd26f4a8c78f8c1b2a9b7b366f976d2971f3f7f6a843823a9a14a6a4ea211",
+    "size_bytes": 34166
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/auto/low_risk_supported-r0.json:34166:1782237480142800271:1782237480142800271:1241a03405558a4d3b3df23c89a52666e8f3cbf2324cfee85ca0c4a2116442e6": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -69,7 +125,21 @@
     "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
     "size_bytes": 44357
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/calculator_refuted-r0.json:44357:1782237480048800279:1782237480048800279:d37ab0ab7eda3161fa73d6705e25f6f8347d5af612e511822fc681c83183f023": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "58ea3ab78c9d4fb864f9c25fa937bd38b911d2860d494ca401c861fe7c7ee5f6",
+    "size_bytes": 44357
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json:45152:1782237480038800280:1782237480038800280": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "79a57e1f5281c51a0d01667d10c1a9fca58bab22805b4c333d6df5568961d246",
+    "size_bytes": 45152
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/diagnostic_refuted-r0.json:45152:1782237480038800280:1782237480038800280:75f36d40e91df23323979ebdd6a72330555097cc1d8c156550fc922004745e8f": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -83,7 +153,21 @@
     "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
     "size_bytes": 33267
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/balanced/low_risk_supported-r0.json:33267:1782237480028800281:1782237480028800281:fdea0a5d274f16d9676ac88306506b3d0fbb6df6eaddc1d96bf7e92104fa4638": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "db7f5bd3a37850b4a7c2ae89132f7bb541ea00d845535915b8877fb343e22409",
+    "size_bytes": 33267
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json:44087:1782237479996800283:1782237479996800283": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "718da025fc751970704ed1417c6772bd40743cb22be1a897a239601739d68ccd",
+    "size_bytes": 44087
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/latency/calculator_refuted-r0.json:44087:1782237479996800283:1782237479996800283:044d60164ed0aa8dc995aa14339815a1e919d1e227d20bafdc26a4feda78d8e3": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -97,7 +181,21 @@
     "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
     "size_bytes": 33438
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/latency/diagnostic_refuted-r0.json:33438:1782237479986800284:1782237479986800284:97e36bd848490e19b41af7b29581018337e7c4e805b72a7690c2b4fd35fe958a": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "8415896967d4ce1af54d23bfd7c532f2b749978335d14bcbae052ab986684b2d",
+    "size_bytes": 33438
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json:33046:1782237479979800285:1782237479979800285": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "4be668a2f5610227f6debc4a5dd61e3c5b276c7458d5b2795a8c61168df4e169",
+    "size_bytes": 33046
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_runtime_profile_sweep/traces/latency/low_risk_supported-r0.json:33046:1782237479979800285:1782237479979800285:0091854e75b92ec901870839c51f8887fafa052cd81720050da3d7cc4965d68d": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -125,6 +223,20 @@
     "sha256": "7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28",
     "size_bytes": 5301
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json:5301:1782299229305944615:1782299229305944615:7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28",
+    "size_bytes": 5301
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/artifact-manifest.json:5301:1782299241776153957:1782299241776153957:7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "7876c1fa21f6fb36aa10a82efc376789815074aa7ed9e59d9d4e4c86f93fbe28",
+    "size_bytes": 5301
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json:10240:1782297624057139876:1782297624057139876": {
     "exists": true,
     "file_count": 1,
@@ -140,6 +252,20 @@
     "size_bytes": 10240
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json:10240:1782298309313194614:1782298309313194614": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
+    "size_bytes": 10240
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json:10240:1782299229286944295:1782299229286944295:4afc7a8d4831df41106d6cb7f63d0a368d065032676375cca4c0c2f181fae9df": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5d6c1c80c02c2db96c7f825f74fbd5a7d467c12c429274dff81ee88eee87fc8e",
+    "size_bytes": 10240
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json:10240:1782299241756153623:1782299241756153623:4afc7a8d4831df41106d6cb7f63d0a368d065032676375cca4c0c2f181fae9df": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -167,6 +293,20 @@
     "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
     "size_bytes": 3709
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json:3709:1782299229282944228:1782299229282944228:45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+    "size_bytes": 3709
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json:3709:1782299241752153556:1782299241752153556:45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "45e6f28028a70032c3c00e0281cb9c91cb9f43b8d7327ff6baabdfbcb8003497",
+    "size_bytes": 3709
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json:40976:1782297623990139989:1782297623990139989": {
     "exists": true,
     "file_count": 1,
@@ -182,6 +322,20 @@
     "size_bytes": 40976
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json:40976:1782298309246191603:1782298309246191603": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5434c4f569ab23e68461299246d5b5de585572075493b14f2d3529c4266d677a",
+    "size_bytes": 40976
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json:40976:1782299229219943166:1782299229219943166:927b5e76962f2c868ee0582213170ba95c8ba62396d48b6cebbb42fa5a58c37e": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5434c4f569ab23e68461299246d5b5de585572075493b14f2d3529c4266d677a",
+    "size_bytes": 40976
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json:40976:1782299241689152502:1782299241689152502:927b5e76962f2c868ee0582213170ba95c8ba62396d48b6cebbb42fa5a58c37e": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -209,6 +363,20 @@
     "sha256": "312889f2055ff20fd62d89994c4d04916ed940764a937c75680586607474d872",
     "size_bytes": 39710
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json:39710:1782299229196942778:1782299229196942778:cb95b0e436ca2cb31e157b6e390a1a7197290c009545a6b22a030380814b0932": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "312889f2055ff20fd62d89994c4d04916ed940764a937c75680586607474d872",
+    "size_bytes": 39710
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json:39710:1782299241666152118:1782299241666152118:cb95b0e436ca2cb31e157b6e390a1a7197290c009545a6b22a030380814b0932": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "312889f2055ff20fd62d89994c4d04916ed940764a937c75680586607474d872",
+    "size_bytes": 39710
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json:40831:1782297623975140014:1782297623975140014": {
     "exists": true,
     "file_count": 1,
@@ -224,6 +392,20 @@
     "size_bytes": 40831
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json:40831:1782298309231190929:1782298309231190929": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5a4f51120174e0593bbc4920f5e966e19f25327edd8753ba1b6d4f08ae83b965",
+    "size_bytes": 40831
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json:40831:1782299229204942913:1782299229204942913:c1829e8c33e5895a9702eabb01ffa99f402cfab537da96ffb8f19c7b35bd8886": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "5a4f51120174e0593bbc4920f5e966e19f25327edd8753ba1b6d4f08ae83b965",
+    "size_bytes": 40831
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json:40831:1782299241674152252:1782299241674152252:c1829e8c33e5895a9702eabb01ffa99f402cfab537da96ffb8f19c7b35bd8886": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -251,6 +433,20 @@
     "sha256": "a1295c4841bfcd3fe29112c1170235d14745596ee0cfb7a34658c70681a88880",
     "size_bytes": 37097
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-low_risk_supported-r0.json:37097:1782299229211943031:1782299229211943031:4ecc3c9afb2a2f0d399501d6742356c204d740a92b1aa8500ab4ad7bcde75dd9": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "a1295c4841bfcd3fe29112c1170235d14745596ee0cfb7a34658c70681a88880",
+    "size_bytes": 37097
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-low_risk_supported-r0.json:37097:1782299241681152369:1782299241681152369:4ecc3c9afb2a2f0d399501d6742356c204d740a92b1aa8500ab4ad7bcde75dd9": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "a1295c4841bfcd3fe29112c1170235d14745596ee0cfb7a34658c70681a88880",
+    "size_bytes": 37097
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json:44761:1782297624015139947:1782297624015139947": {
     "exists": true,
     "file_count": 1,
@@ -266,6 +462,20 @@
     "size_bytes": 44761
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json:44761:1782298309271192727:1782298309271192727": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "36c70785234fad65ba32767c8d50147c78adf2e752bb73a026acb76f61b4003f",
+    "size_bytes": 44761
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json:44761:1782299229244943587:1782299229244943587:aedfc0bc525afc0e40025719244db8048cf067f37ab6dca9f42b204c4ec2f78f": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "36c70785234fad65ba32767c8d50147c78adf2e752bb73a026acb76f61b4003f",
+    "size_bytes": 44761
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json:44761:1782299241714152921:1782299241714152921:aedfc0bc525afc0e40025719244db8048cf067f37ab6dca9f42b204c4ec2f78f": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -293,6 +503,20 @@
     "sha256": "ea797a0f4648de3b03139d95eed7b79cdecbbf536acda1f551eea89882949279",
     "size_bytes": 45555
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json:45555:1782299229253943739:1782299229253943739:6588f7c473b0617728be9a7bfea76f4158ebf459bbdb92a7da1fd9bad83940a9": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "ea797a0f4648de3b03139d95eed7b79cdecbbf536acda1f551eea89882949279",
+    "size_bytes": 45555
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json:45555:1782299241723153071:1782299241723153071:6588f7c473b0617728be9a7bfea76f4158ebf459bbdb92a7da1fd9bad83940a9": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "ea797a0f4648de3b03139d95eed7b79cdecbbf536acda1f551eea89882949279",
+    "size_bytes": 45555
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json:46617:1782297624000139972:1782297624000139972": {
     "exists": true,
     "file_count": 1,
@@ -308,6 +532,20 @@
     "size_bytes": 46617
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json:46617:1782298309255192008:1782298309255192008": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "d4b2386082bc8ee0df08194259b2fb8795442cdf4dadb9eb23d37ce7a3f1d9df",
+    "size_bytes": 46617
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json:46617:1782299229228943317:1782299229228943317:50933bad6c4099afc1ca13bb32bc242578d3c36b5f3467570df6c6071392144b": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "d4b2386082bc8ee0df08194259b2fb8795442cdf4dadb9eb23d37ce7a3f1d9df",
+    "size_bytes": 46617
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json:46617:1782299241698152653:1782299241698152653:50933bad6c4099afc1ca13bb32bc242578d3c36b5f3467570df6c6071392144b": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -335,6 +573,20 @@
     "sha256": "983b5fdcff25d7bc7004aca5798b55d2733a7b2122d62c9ea8f3f936302985c3",
     "size_bytes": 33558
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-low_risk_supported-r0.json:33558:1782299229259943840:1782299229259943840:80e5ea3b68ff9ad976ab56135fb0c09f63b15b1ad620d0fc2b58a73766535d26": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "983b5fdcff25d7bc7004aca5798b55d2733a7b2122d62c9ea8f3f936302985c3",
+    "size_bytes": 33558
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-low_risk_supported-r0.json:33558:1782299241730153188:1782299241730153188:80e5ea3b68ff9ad976ab56135fb0c09f63b15b1ad620d0fc2b58a73766535d26": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "983b5fdcff25d7bc7004aca5798b55d2733a7b2122d62c9ea8f3f936302985c3",
+    "size_bytes": 33558
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json:44490:1782297624039139907:1782297624039139907": {
     "exists": true,
     "file_count": 1,
@@ -350,6 +602,20 @@
     "size_bytes": 44490
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json:44490:1782298309295193805:1782298309295193805": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "1dddad44d2a551457ba60ab840f9eae14115f06d02d5bf6cfb5561ccbf5f793f",
+    "size_bytes": 44490
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json:44490:1782299229268943992:1782299229268943992:e5ad6af5462ac82b864b1b017ab68dc59becd3c6c5e30f9464d128cebb2103b4": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "1dddad44d2a551457ba60ab840f9eae14115f06d02d5bf6cfb5561ccbf5f793f",
+    "size_bytes": 44490
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json:44490:1782299241738153322:1782299241738153322:e5ad6af5462ac82b864b1b017ab68dc59becd3c6c5e30f9464d128cebb2103b4": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -377,6 +643,20 @@
     "sha256": "c73a82ae967cd8c1dba25b0d7e402598d864992abb85123507ecf8c7da7b2241",
     "size_bytes": 33744
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-diagnostic_refuted-r0.json:33744:1782299229275944110:1782299229275944110:411dc7987687da8ec6a74ce4827ed97c6f9aee90101749d0bb76ad241b7bdd13": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "c73a82ae967cd8c1dba25b0d7e402598d864992abb85123507ecf8c7da7b2241",
+    "size_bytes": 33744
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-diagnostic_refuted-r0.json:33744:1782299241745153439:1782299241745153439:411dc7987687da8ec6a74ce4827ed97c6f9aee90101749d0bb76ad241b7bdd13": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "c73a82ae967cd8c1dba25b0d7e402598d864992abb85123507ecf8c7da7b2241",
+    "size_bytes": 33744
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json:33336:1782297624053139883:1782297624053139883": {
     "exists": true,
     "file_count": 1,
@@ -392,6 +672,20 @@
     "size_bytes": 33336
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json:33336:1782298309309194434:1782298309309194434": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "ee9cacbe6ff66f6ef73f18e99e4c9f8b1ded055d830cada15d0d0c2584c0d464",
+    "size_bytes": 33336
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json:33336:1782299229281944211:1782299229281944211:da516650f5d160b7dbe56853a82b286900d76a6497cbd7c846cef8b4cb80f3b4": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "ee9cacbe6ff66f6ef73f18e99e4c9f8b1ded055d830cada15d0d0c2584c0d464",
+    "size_bytes": 33336
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json:33336:1782299241752153556:1782299241752153556:da516650f5d160b7dbe56853a82b286900d76a6497cbd7c846cef8b4cb80f3b4": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -419,6 +713,20 @@
     "sha256": "71c2213de42aa79b394173aa0c8a75b4b010484183dd29c008583122802d3ca8",
     "size_bytes": 34453
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0.json:34453:1782299229235943435:1782299229235943435:05f5904439f70e3f63a2d5856e596fe2da6425a199b3b899ac9e3232eb6339da": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "71c2213de42aa79b394173aa0c8a75b4b010484183dd29c008583122802d3ca8",
+    "size_bytes": 34453
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0.json:34453:1782299241705152770:1782299241705152770:05f5904439f70e3f63a2d5856e596fe2da6425a199b3b899ac9e3232eb6339da": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "71c2213de42aa79b394173aa0c8a75b4b010484183dd29c008583122802d3ca8",
+    "size_bytes": 34453
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json:6301:1782297624168139690:1782297624168139690": {
     "exists": true,
     "file_count": 1,
@@ -439,6 +747,20 @@
     "kind": "file",
     "sha256": "9b172751821fc1421a8ef5f3b2f643c81ab53190706dafabb1007133e2f49ca6",
     "size_bytes": 6808
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json:7363:1782299229396946149:1782299229396946149:cc0c8d0885189901523ff99d0598f6b9d23702159f2b29e85dcdc51d0e898024": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "cc0c8d0885189901523ff99d0598f6b9d23702159f2b29e85dcdc51d0e898024",
+    "size_bytes": 7363
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json:7371:1782299241848155162:1782299241848155162:89fe9142d0324a7b785a5db54a7222db93777fbfa7340d95c189f53fbbefaa88": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "89fe9142d0324a7b785a5db54a7222db93777fbfa7340d95c189f53fbbefaa88",
+    "size_bytes": 7371
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json:4396:1782297624110139787:1782297624110139787": {
     "exists": true,
@@ -461,6 +783,20 @@
     "sha256": "fde7c07e5581b95a1497975d6163b67d1d5accacf639fc1ce93254c60ba4e6cb",
     "size_bytes": 4396
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json:4916:1782299229354945441:1782299229354945441:a51c89f948823cb631f1530bc17ff7feefe78544eb60558ee55b0078f151c8f9": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "a51c89f948823cb631f1530bc17ff7feefe78544eb60558ee55b0078f151c8f9",
+    "size_bytes": 4916
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json:4924:1782299241806154459:1782299241806154459:d7b8aa8c5142fedb398fc1be843ecb7afa62193e6f266a42f53a01acdff4bb07": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "d7b8aa8c5142fedb398fc1be843ecb7afa62193e6f266a42f53a01acdff4bb07",
+    "size_bytes": 4924
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json:81589:1782297624100139804:1782297624100139804": {
     "exists": true,
     "file_count": 1,
@@ -482,6 +818,27 @@
     "sha256": "bfdb26d8c548d468578105f8efe2a580d3c8143e2415c015a0f6988d08da5127",
     "size_bytes": 81589
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json:82066:1782299229342945239:1782299229342945239:20bbc475fe58c17155bc1d8a84b09b7f109be1b9dc223662f1ec0bcc6f14f0d1": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "45bc940dcc0720550aacc573e12b3c9d4f4d6f50169c594e8eee7522bf8fab6d",
+    "size_bytes": 82066
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json:82074:1782299241794154258:1782299241794154258:f3c38ed76807ea25bc9fb6ded8b0c0d2897ecaca3fa15613a33b32fa75bc3180": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "00af9fc758ffbcad9a515c7cd4e32e546f848d94121b68a719d2b256924af93f",
+    "size_bytes": 82074
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json:67134:1782299229331945053:1782299229331945053:ac5cd89ef6338eafc1e49755afa872f559637ba877e3cd2d02ff76401f05cc37": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "c7925fbb4de6d831e1a840805ed0bd63fed8e60b760764ef2b1a75572f30057a",
+    "size_bytes": 67134
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json:6535:1782297624163139698:1782297624163139698": {
     "exists": true,
     "file_count": 1,
@@ -497,6 +854,20 @@
     "size_bytes": 7004
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json:7011:1782298309399198479:1782298309399198479": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "6cea16e1cf41daa079d7c504c78aedf77307fb99662ffc361180bf76f2941b19",
+    "size_bytes": 7011
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json:7011:1782299229390946048:1782299229390946048:6cea16e1cf41daa079d7c504c78aedf77307fb99662ffc361180bf76f2941b19": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "6cea16e1cf41daa079d7c504c78aedf77307fb99662ffc361180bf76f2941b19",
+    "size_bytes": 7011
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json:7011:1782299241842155061:1782299241842155061:6cea16e1cf41daa079d7c504c78aedf77307fb99662ffc361180bf76f2941b19": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -524,6 +895,20 @@
     "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
     "size_bytes": 599
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/audit_biased.json:599:1782299229365945626:1782299229365945626:edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
+    "size_bytes": 599
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/audit_biased.json:599:1782299241817154643:1782299241817154643:edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "edb1aaa6ca11a4edd7ee80dcc3468e66c6a6610178316978da1cfaaf5afd8a7c",
+    "size_bytes": 599
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json:583:1782297624111139786:1782297624111139786": {
     "exists": true,
     "file_count": 1,
@@ -539,6 +924,20 @@
     "size_bytes": 583
   },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json:583:1782298309373197311:1782298309373197311": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5",
+    "size_bytes": 583
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json:583:1782299229362945576:1782299229362945576:eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5",
+    "size_bytes": 583
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json:583:1782299241814154593:1782299241814154593:eeec317a7de790e8f190d2d083634e812fb6679e2e5e64543038eea38a612cc5": {
     "exists": true,
     "file_count": 1,
     "kind": "file",
@@ -566,6 +965,20 @@
     "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
     "size_bytes": 542
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/latency_biased.json:542:1782299229364945609:1782299229364945609:fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
+    "size_bytes": 542
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/latency_biased.json:542:1782299241816154626:1782299241816154626:fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "fe11a19c513505c53cadb9e72b3076f1f3972d8ee36163054b32b9d07ca8c4c6",
+    "size_bytes": 542
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json:105723:1782297624151139718:1782297624151139718": {
     "exists": true,
     "file_count": 1,
@@ -587,6 +1000,20 @@
     "sha256": "17ef4c98da64ddbca28cf5b1fb4bf0a88046eb20d9e0ee165c10a2ab3fbb4eeb",
     "size_bytes": 106180
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json:106180:1782299229376945812:1782299229376945812:05b369a11368c006e14f7c25e383c9de055da2342b051597e2d10b2e12b7e2c5": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "17ef4c98da64ddbca28cf5b1fb4bf0a88046eb20d9e0ee165c10a2ab3fbb4eeb",
+    "size_bytes": 106180
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json:106180:1782299241828154827:1782299241828154827:05b369a11368c006e14f7c25e383c9de055da2342b051597e2d10b2e12b7e2c5": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "17ef4c98da64ddbca28cf5b1fb4bf0a88046eb20d9e0ee165c10a2ab3fbb4eeb",
+    "size_bytes": 106180
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json:27445:1782298273905560821:1782298273905560821": {
     "exists": true,
     "file_count": 1,
@@ -594,7 +1021,21 @@
     "sha256": "80300ffbe7d9f15f4a0f6eab4828c0803023357b74cf546d0d31bcbe49c594fe",
     "size_bytes": 27445
   },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json:27445:1782298273905560821:1782298273905560821:8959d96c76b721dd97b97c208fc1f3021336cb578efe404f9859b01e1363b5cc": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "80300ffbe7d9f15f4a0f6eab4828c0803023357b74cf546d0d31bcbe49c594fe",
+    "size_bytes": 27445
+  },
   "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json:344:1782240029969909969:1782240029969909969": {
+    "exists": true,
+    "file_count": 1,
+    "kind": "file",
+    "sha256": "8aeb547d01d8b66c1c7c29851de9a8c7dfc1c63d4c6cce0228bdfcb201f36bdd",
+    "size_bytes": 344
+  },
+  "file:/home/z/projects/active/EigenTruth/artifacts/smollm2_runtime_profile_selector_replay/runtime-profile-selector-replay-policy.json:344:1782240029969909969:1782240029969909969:8aeb547d01d8b66c1c7c29851de9a8c7dfc1c63d4c6cce0228bdfcb201f36bdd": {
     "exists": true,
     "file_count": 1,
     "kind": "file",

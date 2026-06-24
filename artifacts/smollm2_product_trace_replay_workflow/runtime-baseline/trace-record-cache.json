@@ -1,640 +1,13 @@
 {
-  "artifact_manifest_summary": {
-    "artifact_count": 14,
-    "directory_count": 0,
-    "file_count": 14,
-    "missing_count": 0
-  },
-  "budget": {
-    "enabled": false,
-    "failed_count": null,
-    "failure_counts_by_metric": {},
-    "passed": null,
-    "passed_count": null,
-    "policy": null
-  },
-  "config": {
-    "compact_json": false,
-    "metadata": {
-      "source": "run_product_trace_replay_workflow"
-    },
-    "policy_source": null,
-    "trace_count": 12,
-    "trace_record_cache": {
-      "cache_hit": true,
-      "cache_written": false,
-      "enabled": true,
-      "invalidation_reason": null,
-      "path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json",
-      "refresh": false,
-      "source": "trace_record_cache",
-      "source_count": 12,
-      "trace_count": 12
-    },
-    "trace_records_sidecar": false
-  },
-  "decision": {
-    "blocking_reasons": [],
-    "status": "observed"
-  },
   "paths": {
-    "artifact_manifest": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/artifact-manifest.json",
-    "policy": null,
-    "promotion_contract": null,
     "report": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
-    "trace_records_cache": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json",
-    "trace_records_jsonl": null,
-    "traces": [
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-low_risk_supported-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-low_risk_supported-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-diagnostic_refuted-r0.json",
-      "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json"
-    ]
+    "trace_records_cache": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json"
   },
-  "schema_version": 1,
-  "status": "observed",
-  "summary": {
-    "accounted_seconds": {
-      "count": 12,
-      "max": 0.0009155898587778211,
-      "mean": 0.00047906109830364585,
-      "min": 0.00020198686979711056,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0005033540073782206,
-      "p95": 0.0007499679108150301,
-      "p99": 0.0008824654691852632
-    },
-    "cache_hit_rate": {
-      "count": 8,
-      "max": 0.0,
-      "mean": 0.0,
-      "min": 0.0,
-      "missing_or_nonfinite": 4,
-      "p50": 0.0,
-      "p95": 0.0,
-      "p99": 0.0
-    },
-    "max_route_duration_seconds": {
-      "count": 12,
-      "max": 0.00010104698594659567,
-      "mean": 4.0654490779464446e-05,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 2.4589011445641518e-05,
-      "p95": 9.793725330382585e-05,
-      "p99": 0.00010042503941804171
-    },
-    "mean_attempted_route_count": {
-      "count": 12,
-      "max": 1.0,
-      "mean": 0.6666666666666666,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 1.0,
-      "p95": 1.0,
-      "p99": 1.0
-    },
-    "mean_route_duration_seconds": {
-      "count": 12,
-      "max": 0.00010104698594659567,
-      "mean": 3.9919454138725996e-05,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 2.1450017811730504e-05,
-      "p95": 9.793725330382585e-05,
-      "p99": 0.00010042503941804171
-    },
-    "measured_phases": {
-      "count": 12,
-      "max": 7.0,
-      "mean": 5.666666666666667,
-      "min": 5.0,
-      "missing_or_nonfinite": 0,
-      "p50": 5.0,
-      "p95": 7.0,
-      "p99": 7.0
-    },
-    "n_traces": 12,
-    "p95_route_duration_seconds": {
-      "count": 12,
-      "max": 0.00010104698594659567,
-      "mean": 4.0580987115390595e-05,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 2.4275112082250416e-05,
-      "p95": 9.793725330382585e-05,
-      "p99": 0.00010042503941804171
-    },
-    "p99_route_duration_seconds": {
-      "count": 12,
-      "max": 0.00010104698594659567,
-      "mean": 4.063979004664968e-05,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 2.4526231572963295e-05,
-      "p95": 9.793725330382585e-05,
-      "p99": 0.00010042503941804171
-    },
-    "phases": {
-      "action_execution": {
-        "p95_seconds": {
-          "count": 12,
-          "max": 2.8979964554309845e-05,
-          "mean": 1.8474684717754524e-05,
-          "min": 1.5151104889810085e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 1.7137499526143074e-05,
-          "p95": 2.541710273362696e-05,
-          "p99": 2.8267392190173274e-05
-        },
-        "p99_seconds": {
-          "count": 12,
-          "max": 2.8979964554309845e-05,
-          "mean": 1.8474684717754524e-05,
-          "min": 1.5151104889810085e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 1.7137499526143074e-05,
-          "p95": 2.541710273362696e-05,
-          "p99": 2.8267392190173274e-05
-        },
-        "phase_count": 12,
-        "seconds": {
-          "count": 12,
-          "max": 2.8979964554309845e-05,
-          "mean": 1.8474684717754524e-05,
-          "min": 1.5151104889810085e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 1.7137499526143074e-05,
-          "p95": 2.541710273362696e-05,
-          "p99": 2.8267392190173274e-05
-        },
-        "trace_observations": 12
-      },
-      "action_planning": {
-        "p95_seconds": {
-          "count": 12,
-          "max": 0.0003020280273631215,
-          "mean": 0.00010121225689848264,
-          "min": 6.284296978265047e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.30040080472827e-05,
-          "p95": 0.0001954506617039441,
-          "p99": 0.00028071255423128616
-        },
-        "p99_seconds": {
-          "count": 12,
-          "max": 0.0003020280273631215,
-          "mean": 0.00010121225689848264,
-          "min": 6.284296978265047e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.30040080472827e-05,
-          "p95": 0.0001954506617039441,
-          "p99": 0.00028071255423128616
-        },
-        "phase_count": 12,
-        "seconds": {
-          "count": 12,
-          "max": 0.0003020280273631215,
-          "mean": 0.00010121225689848264,
-          "min": 6.284296978265047e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.30040080472827e-05,
-          "p95": 0.0001954506617039441,
-          "p99": 0.00028071255423128616
-        },
-        "trace_observations": 12
-      },
-      "diagnostic_risk_decision": {
-        "p95_seconds": {
-          "count": 8,
-          "max": 3.9014965295791626e-05,
-          "mean": 3.076410212088376e-05,
-          "min": 2.1800980903208256e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 3.11589683406055e-05,
-          "p95": 3.8718176074326036e-05,
-          "p99": 3.895560745149851e-05
-        },
-        "p99_seconds": {
-          "count": 8,
-          "max": 3.9014965295791626e-05,
-          "mean": 3.076410212088376e-05,
-          "min": 2.1800980903208256e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 3.11589683406055e-05,
-          "p95": 3.8718176074326036e-05,
-          "p99": 3.895560745149851e-05
-        },
-        "phase_count": 8,
-        "seconds": {
-          "count": 8,
-          "max": 3.9014965295791626e-05,
-          "mean": 3.076410212088376e-05,
-          "min": 2.1800980903208256e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 3.11589683406055e-05,
-          "p95": 3.8718176074326036e-05,
-          "p99": 3.895560745149851e-05
-        },
-        "trace_observations": 8
-      },
-      "initial_risk_decision": {
-        "p95_seconds": {
-          "count": 8,
-          "max": 9.175797458738089e-05,
-          "mean": 6.290084274951369e-05,
-          "min": 4.818697925657034e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 5.935900844633579e-05,
-          "p95": 8.54110694490373e-05,
-          "p99": 9.048859355971217e-05
-        },
-        "p99_seconds": {
-          "count": 8,
-          "max": 9.175797458738089e-05,
-          "mean": 6.290084274951369e-05,
-          "min": 4.818697925657034e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 5.935900844633579e-05,
-          "p95": 8.54110694490373e-05,
-          "p99": 9.048859355971217e-05
-        },
-        "phase_count": 8,
-        "seconds": {
-          "count": 8,
-          "max": 9.175797458738089e-05,
-          "mean": 6.290084274951369e-05,
-          "min": 4.818697925657034e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 5.935900844633579e-05,
-          "p95": 8.54110694490373e-05,
-          "p99": 9.048859355971217e-05
-        },
-        "trace_observations": 8
-      },
-      "initial_verification": {
-        "p95_seconds": {
-          "count": 8,
-          "max": 0.0006231099832803011,
-          "mean": 0.000289694158709608,
-          "min": 0.0002157590351998806,
-          "missing_or_nonfinite": 0,
-          "p50": 0.00024014251539483666,
-          "p95": 0.0005069695238489656,
-          "p99": 0.0005998818913940339
-        },
-        "p99_seconds": {
-          "count": 8,
-          "max": 0.0006231099832803011,
-          "mean": 0.000289694158709608,
-          "min": 0.0002157590351998806,
-          "missing_or_nonfinite": 0,
-          "p50": 0.00024014251539483666,
-          "p95": 0.0005069695238489656,
-          "p99": 0.0005998818913940339
-        },
-        "phase_count": 8,
-        "seconds": {
-          "count": 8,
-          "max": 0.0006231099832803011,
-          "mean": 0.000289694158709608,
-          "min": 0.0002157590351998806,
-          "missing_or_nonfinite": 0,
-          "p50": 0.00024014251539483666,
-          "p95": 0.0005069695238489656,
-          "p99": 0.0005998818913940339
-        },
-        "trace_observations": 8
-      },
-      "retrieval_evidence_collection": {
-        "p95_seconds": {
-          "count": 12,
-          "max": 0.00013644702266901731,
-          "mean": 8.557483670301735e-05,
-          "min": 5.22310147061944e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.69699870236218e-05,
-          "p95": 0.00012068348005414007,
-          "p99": 0.0001332943141460419
-        },
-        "p99_seconds": {
-          "count": 12,
-          "max": 0.00013644702266901731,
-          "mean": 8.557483670301735e-05,
-          "min": 5.22310147061944e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.69699870236218e-05,
-          "p95": 0.00012068348005414007,
-          "p99": 0.0001332943141460419
-        },
-        "phase_count": 12,
-        "seconds": {
-          "count": 12,
-          "max": 0.00013644702266901731,
-          "mean": 8.557483670301735e-05,
-          "min": 5.22310147061944e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 8.69699870236218e-05,
-          "p95": 0.00012068348005414007,
-          "p99": 0.0001332943141460419
-        },
-        "trace_observations": 12
-      },
-      "verification_stage_decision": {
-        "p95_seconds": {
-          "count": 8,
-          "max": 3.954209387302399e-05,
-          "mean": 2.733987639658153e-05,
-          "min": 1.2999982573091984e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 2.9708491638302803e-05,
-          "p95": 3.7690909812226886e-05,
-          "p99": 3.917185706086457e-05
-        },
-        "p99_seconds": {
-          "count": 8,
-          "max": 3.954209387302399e-05,
-          "mean": 2.733987639658153e-05,
-          "min": 1.2999982573091984e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 2.9708491638302803e-05,
-          "p95": 3.7690909812226886e-05,
-          "p99": 3.917185706086457e-05
-        },
-        "phase_count": 8,
-        "seconds": {
-          "count": 8,
-          "max": 3.954209387302399e-05,
-          "mean": 2.733987639658153e-05,
-          "min": 1.2999982573091984e-05,
-          "missing_or_nonfinite": 0,
-          "p50": 2.9708491638302803e-05,
-          "p95": 3.7690909812226886e-05,
-          "p99": 3.917185706086457e-05
-        },
-        "trace_observations": 8
-      }
-    },
-    "retrieval_hit_count": {
-      "count": 12,
-      "max": 0.0,
-      "mean": 0.0,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0,
-      "p95": 0.0,
-      "p99": 0.0
-    },
-    "retrieval_use_rate": {
-      "count": 12,
-      "max": 0.0,
-      "mean": 0.0,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0,
-      "p95": 0.0,
-      "p99": 0.0
-    },
-    "routes": {
-      "by_route": {
-        "calculator": {
-          "attempted_route_count_observations": 4,
-          "duration_observations": 4,
-          "max_duration_seconds": 0.00010104698594659567,
-          "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 9.390324703417718e-05,
-          "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 9.390324703417718e-05,
-          "per_trace_mean_duration_seconds": {
-            "count": 4,
-            "max": 0.00010104698594659567,
-            "mean": 9.390324703417718e-05,
-            "min": 8.870009332895279e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 9.293295443058014e-05,
-            "p95": 0.00010019887704402208,
-            "p99": 0.00010087736416608095
-          },
-          "per_trace_p95_duration_seconds": {
-            "count": 4,
-            "max": 0.00010104698594659567,
-            "mean": 9.390324703417718e-05,
-            "min": 8.870009332895279e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 9.293295443058014e-05,
-            "p95": 0.00010019887704402208,
-            "p99": 0.00010087736416608095
-          },
-          "per_trace_p99_duration_seconds": {
-            "count": 4,
-            "max": 0.00010104698594659567,
-            "mean": 9.390324703417718e-05,
-            "min": 8.870009332895279e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 9.293295443058014e-05,
-            "p95": 0.00010019887704402208,
-            "p99": 0.00010087736416608095
-          },
-          "retrieval_hit_count": 0,
-          "retrieval_use_rate": 0.0,
-          "routed_total": 4,
-          "selected_route_duration_observations": 4,
-          "source_trace_count": 4,
-          "total": 4,
-          "total_attempted_route_count": 4.0,
-          "total_duration_seconds": 0.00037561298813670874,
-          "total_selected_route_duration_seconds": 0.00037561298813670874,
-          "unrouted_total": 0,
-          "used_retrieval_count": 0
-        },
-        "structured_qa": {
-          "attempted_route_count_observations": 7,
-          "duration_observations": 7,
-          "max_duration_seconds": 4.2267958633601665e-05,
-          "mean_attempted_route_count": 1.0,
-          "mean_duration_seconds": 2.3510423488914967e-05,
-          "mean_retrieval_hits": 0.0,
-          "mean_selected_route_duration_seconds": 2.3510423488914967e-05,
-          "per_trace_mean_duration_seconds": {
-            "count": 4,
-            "max": 4.2267958633601665e-05,
-            "mean": 2.5855115382000804e-05,
-            "min": 1.8252467270940542e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 2.1450017811730504e-05,
-            "p95": 3.930719103664159e-05,
-            "p99": 4.1675805114209645e-05
-          },
-          "per_trace_p95_duration_seconds": {
-            "count": 4,
-            "max": 4.2267958633601665e-05,
-            "mean": 2.7839714311994614e-05,
-            "min": 2.054067444987595e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 2.4275112082250416e-05,
-            "p95": 3.9858997915871434e-05,
-            "p99": 4.178616649005562e-05
-          },
-          "per_trace_p99_duration_seconds": {
-            "count": 4,
-            "max": 4.2267958633601665e-05,
-            "mean": 2.8016123105771837e-05,
-            "min": 2.0744070643559097e-05,
-            "missing_or_nonfinite": 0,
-            "p50": 2.4526231572963295e-05,
-            "p95": 3.990804741624742e-05,
-            "p99": 4.179597639013082e-05
-          },
-          "retrieval_hit_count": 0,
-          "retrieval_use_rate": 0.0,
-          "routed_total": 7,
-          "selected_route_duration_observations": 7,
-          "source_trace_count": 4,
-          "total": 7,
-          "total_attempted_route_count": 7.0,
-          "total_duration_seconds": 0.00016457296442240477,
-          "total_selected_route_duration_seconds": 0.00016457296442240477,
-          "unrouted_total": 0,
-          "used_retrieval_count": 0
-        }
-      },
-      "overall": {
-        "attempted_route_count_observations": 11,
-        "duration_observations": 11,
-        "max_duration_seconds": 0.00010104698594659567,
-        "mean_attempted_route_count": 1.0,
-        "mean_duration_seconds": 4.910781386901032e-05,
-        "mean_retrieval_hits": 0.0,
-        "mean_selected_route_duration_seconds": 4.910781386901032e-05,
-        "per_trace_mean_duration_seconds": {
-          "count": 12,
-          "max": 0.00010104698594659567,
-          "mean": 3.9919454138725996e-05,
-          "min": 0.0,
-          "missing_or_nonfinite": 0,
-          "p50": 2.1450017811730504e-05,
-          "p95": 9.793725330382585e-05,
-          "p99": 0.00010042503941804171
-        },
-        "per_trace_p95_duration_seconds": {
-          "count": 12,
-          "max": 0.00010104698594659567,
-          "mean": 4.0580987115390595e-05,
-          "min": 0.0,
-          "missing_or_nonfinite": 0,
-          "p50": 2.4275112082250416e-05,
-          "p95": 9.793725330382585e-05,
-          "p99": 0.00010042503941804171
-        },
-        "per_trace_p99_duration_seconds": {
-          "count": 12,
-          "max": 0.00010104698594659567,
-          "mean": 4.063979004664968e-05,
-          "min": 0.0,
-          "missing_or_nonfinite": 0,
-          "p50": 2.4526231572963295e-05,
-          "p95": 9.793725330382585e-05,
-          "p99": 0.00010042503941804171
-        },
-        "retrieval_hit_count": 0,
-        "retrieval_use_rate": 0.0,
-        "routed_total": 11,
-        "selected_route_duration_observations": 11,
-        "source_trace_count": 12,
-        "total": 11,
-        "total_attempted_route_count": 11.0,
-        "total_duration_seconds": 0.0005401859525591135,
-        "total_selected_route_duration_seconds": 0.0005401859525591135,
-        "unrouted_total": 0,
-        "used_retrieval_count": 0
-      }
-    },
-    "runtime_trace_count": 12,
-    "total_seconds": {
-      "count": 12,
-      "max": 0.0009586700471118093,
-      "mean": 0.0005166391589834044,
-      "min": 0.00023229792714118958,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0005396615015342832,
-      "p95": 0.0008027158793993293,
-      "p99": 0.0009274792135693134
-    },
-    "verification_skip_rate": {
-      "count": 12,
-      "max": 1.0,
-      "mean": 0.3333333333333333,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0,
-      "p95": 1.0,
-      "p99": 1.0
-    },
-    "verification_stage": {
-      "claim_count": 16.0,
-      "claim_skip_rate": 0.3125,
-      "enabled_trace_count": 8,
-      "per_trace_skip_rate": {
-        "count": 12,
-        "max": 1.0,
-        "mean": 0.3333333333333333,
-        "min": 0.0,
-        "missing_or_nonfinite": 0,
-        "p50": 0.0,
-        "p95": 1.0,
-        "p99": 1.0
-      },
-      "reason_counts": {
-        "claim metadata requires verification": 2,
-        "diagnostic risk level is medium": 2,
-        "diagnostics and claim metadata did not require verification": 4
-      },
-      "run_verifier_trace_count": 4,
-      "saved_claim_count": 5.0,
-      "skip_decision_rate": 0.3333333333333333,
-      "skipped_trace_count": 4,
-      "source_trace_count": 12,
-      "triggered_feature_counts": {
-        "has_number": 2
-      },
-      "triggered_metadata_counts": {},
-      "verified_claim_count": 11.0
-    },
-    "verified_claim_count": {
-      "count": 12,
-      "max": 2.0,
-      "mean": 0.9166666666666666,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 1.0,
-      "p95": 2.0,
-      "p99": 2.0
-    },
-    "verifier_saved_claim_count": {
-      "count": 12,
-      "max": 2.0,
-      "mean": 0.4166666666666667,
-      "min": 0.0,
-      "missing_or_nonfinite": 0,
-      "p50": 0.0,
-      "p95": 1.4499999999999993,
-      "p99": 1.8900000000000006
-    }
+  "policy": {
+    "payload": null,
+    "signature": null
   },
-  "trace_records": {
-    "count": 12,
-    "path": null,
-    "storage": "inline"
-  },
-  "traces": [
+  "records": [
     {
       "budget": null,
       "metrics": {
@@ -2100,5 +1473,144 @@
       "request_id": "latency-low_risk_supported-r0"
     }
   ],
-  "workflow": "product_runtime_baseline"
+  "schema_version": 1,
+  "sources": [
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json",
+        "sha256": "312889f2055ff20fd62d89994c4d04916ed940764a937c75680586607474d872",
+        "size_bytes": 39710
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json",
+        "sha256": "5a4f51120174e0593bbc4920f5e966e19f25327edd8753ba1b6d4f08ae83b965",
+        "size_bytes": 40831
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-low_risk_supported-r0.json",
+        "sha256": "a1295c4841bfcd3fe29112c1170235d14745596ee0cfb7a34658c70681a88880",
+        "size_bytes": 37097
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json",
+        "sha256": "5434c4f569ab23e68461299246d5b5de585572075493b14f2d3529c4266d677a",
+        "size_bytes": 40976
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/audit-calculator_refuted-r0-2.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json",
+        "sha256": "d4b2386082bc8ee0df08194259b2fb8795442cdf4dadb9eb23d37ce7a3f1d9df",
+        "size_bytes": 46617
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0.json",
+        "sha256": "71c2213de42aa79b394173aa0c8a75b4b010484183dd29c008583122802d3ca8",
+        "size_bytes": 34453
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json",
+        "sha256": "36c70785234fad65ba32767c8d50147c78adf2e752bb73a026acb76f61b4003f",
+        "size_bytes": 44761
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json",
+        "sha256": "ea797a0f4648de3b03139d95eed7b79cdecbbf536acda1f551eea89882949279",
+        "size_bytes": 45555
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-diagnostic_refuted-r0-2.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-low_risk_supported-r0.json",
+        "sha256": "983b5fdcff25d7bc7004aca5798b55d2733a7b2122d62c9ea8f3f936302985c3",
+        "size_bytes": 33558
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/balanced-low_risk_supported-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json",
+        "sha256": "1dddad44d2a551457ba60ab840f9eae14115f06d02d5bf6cfb5561ccbf5f793f",
+        "size_bytes": 44490
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-calculator_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-diagnostic_refuted-r0.json",
+        "sha256": "c73a82ae967cd8c1dba25b0d7e402598d864992abb85123507ecf8c7da7b2241",
+        "size_bytes": 33744
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-diagnostic_refuted-r0.json"
+    },
+    {
+      "fingerprint": {
+        "exists": true,
+        "file_count": 1,
+        "kind": "file",
+        "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json",
+        "sha256": "ee9cacbe6ff66f6ef73f18e99e4c9f8b1ded055d830cada15d0d0c2584c0d464",
+        "size_bytes": 33336
+      },
+      "path": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces/latency-low_risk_supported-r0-2.json"
+    }
+  ],
+  "summary": {
+    "source_count": 12,
+    "trace_count": 12
+  },
+  "workflow": "product_runtime_baseline_trace_records"
 }

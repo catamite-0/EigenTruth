@@ -5,8 +5,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-runtime-baseline.json",
-      "sha256": "bfdb26d8c548d468578105f8efe2a580d3c8143e2415c015a0f6988d08da5127",
-      "size_bytes": 81589
+      "sha256": "00af9fc758ffbcad9a515c7cd4e32e546f848d94121b68a719d2b256924af93f",
+      "size_bytes": 82074
+    },
+    "product_runtime_trace_record_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trace-record-cache.json",
+      "sha256": "c7925fbb4de6d831e1a840805ed0bd63fed8e60b760764ef2b1a75572f30057a",
+      "size_bytes": 67134
     },
     "trace_0000_audit-calculator_refuted-r0": {
       "exists": true,
@@ -114,13 +122,17 @@
     "source": "run_product_trace_replay_workflow",
     "status": "observed",
     "trace_count": 12,
+    "trace_records_cache_hit": true,
+    "trace_records_cache_path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json",
+    "trace_records_cache_source": "trace_record_cache",
+    "trace_records_cache_written": false,
     "trace_records_storage": "inline"
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 13,
+    "artifact_count": 14,
     "directory_count": 0,
-    "file_count": 13,
+    "file_count": 14,
     "missing_count": 0
   }
 }

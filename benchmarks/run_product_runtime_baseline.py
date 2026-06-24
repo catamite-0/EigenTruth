@@ -31,7 +31,7 @@ from eigentruth.control import (  # noqa: E402
     evaluate_product_runtime_budget,
     product_runtime_metrics,
 )
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, build_artifact_manifest, fingerprint_path  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -44,6 +44,8 @@ class ProductRuntimeBaselineConfig:
     policy_path: str | Path | None = None
     promotion_contract_path: str | Path | None = None
     trace_records_path: str | Path | None = None
+    trace_records_cache_path: str | Path | None = None
+    refresh_trace_records_cache: bool = False
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -69,12 +71,22 @@ class ProductRuntimeBaselineConfig:
             object.__setattr__(self, "promotion_contract_path", Path(self.promotion_contract_path))
         if self.trace_records_path is not None:
             object.__setattr__(self, "trace_records_path", Path(self.trace_records_path))
+        if self.trace_records_cache_path is not None:
+            object.__setattr__(self, "trace_records_cache_path", Path(self.trace_records_cache_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
+        object.__setattr__(
+            self,
+            "refresh_trace_records_cache",
+            strict_bool(
+                self.refresh_trace_records_cache,
+                name="refresh_trace_records_cache",
+            ),
+        )
 
     @property
     def resolved_artifact_manifest_path(self) -> Path:
@@ -87,7 +99,7 @@ class ProductRuntimeBaselineConfig:
 def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict[str, Any]:
     """Aggregate ProductTrace runtime metrics and optional budget results."""
     policy, policy_source = _load_policy(config)
-    records, summary_records = _build_trace_records(config, policy=policy)
+    records, summary_records, trace_record_cache = _build_trace_records(config, policy=policy)
     trace_record_count = len(summary_records)
     budget_summary = _budget_summary(summary_records, policy=policy)
     status = _status_from_budget(budget_summary)
@@ -111,6 +123,9 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "report": str(config.report_path),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "trace_records_jsonl": None if config.trace_records_path is None else str(config.trace_records_path),
+            "trace_records_cache": (
+                None if config.trace_records_cache_path is None else str(config.trace_records_cache_path)
+            ),
             "policy": None if config.policy_path is None else str(config.policy_path),
             "promotion_contract": (
                 None if config.promotion_contract_path is None else str(config.promotion_contract_path)
@@ -121,6 +136,7 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "trace_count": trace_record_count,
             "policy_source": policy_source,
             "trace_records_sidecar": config.trace_records_path is not None,
+            "trace_record_cache": trace_record_cache,
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
@@ -134,20 +150,63 @@ def _build_trace_records(
     config: ProductRuntimeBaselineConfig,
     *,
     policy: ProductRuntimeBudgetPolicy | None,
+) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...], dict[str, Any]]:
+    cache_path = config.trace_records_cache_path
+    invalidation_reason = None
+    if cache_path is not None and cache_path.exists() and not config.refresh_trace_records_cache:
+        cached = _load_trace_records_cache(cache_path, trace_paths=config.trace_paths, policy=policy)
+        if cached is not None:
+            cached_records, payload = cached
+            records, summary_records = _emit_trace_records(config, cached_records)
+            return records, summary_records, {
+                "enabled": True,
+                "source": "trace_record_cache",
+                "path": str(cache_path),
+                "cache_hit": True,
+                "cache_written": False,
+                "trace_count": len(cached_records),
+                "source_count": len(_sequence(payload.get("sources"))),
+                "refresh": False,
+                "invalidation_reason": None,
+            }
+        invalidation_reason = "fingerprint_policy_or_schema_mismatch"
+
+    scanned_records = tuple(
+        _trace_record(path, _load_trace(path), policy=policy)
+        for path in config.trace_paths
+    )
+    if cache_path is not None:
+        payload = _trace_records_cache_payload(config, scanned_records, policy=policy)
+        _write_report(cache_path, payload, compact=config.compact_json)
+    records, summary_records = _emit_trace_records(config, scanned_records)
+    return records, summary_records, {
+        "enabled": cache_path is not None,
+        "source": "trace_scan",
+        "path": None if cache_path is None else str(cache_path),
+        "cache_hit": False,
+        "cache_written": cache_path is not None,
+        "trace_count": len(scanned_records),
+        "source_count": len(config.trace_paths),
+        "refresh": config.refresh_trace_records_cache,
+        "invalidation_reason": invalidation_reason,
+    }
+
+
+def _emit_trace_records(
+    config: ProductRuntimeBaselineConfig,
+    records: Sequence[Mapping[str, Any]],
 ) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
     inline_records: list[dict[str, Any]] = []
     summary_records: list[dict[str, Any]] = []
     if config.trace_records_path is None:
-        for path in config.trace_paths:
-            record = _trace_record(path, _load_trace(path), policy=policy)
-            inline_records.append(record)
+        for record in records:
+            inline_records.append(dict(record))
         return tuple(inline_records), tuple(inline_records)
 
     output_path = Path(config.trace_records_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as stream:
-        for path in config.trace_paths:
-            record = _trace_record(path, _load_trace(path), policy=policy)
+        for record in records:
             stream.write(_jsonl_text(record))
             summary_records.append({
                 "metrics": record["metrics"],
@@ -183,6 +242,121 @@ def _trace_record(
         "metrics": _compact_metrics(metrics),
         "budget": budget,
     }
+
+
+def _load_trace_records_cache(
+    path: str | Path,
+    *,
+    trace_paths: Sequence[Path],
+    policy: ProductRuntimeBudgetPolicy | None,
+) -> tuple[tuple[dict[str, Any], ...], Mapping[str, Any]] | None:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    if payload.get("workflow") != "product_runtime_baseline_trace_records":
+        return None
+    if _mapping(payload.get("policy")).get("signature") != _policy_signature(policy):
+        return None
+    sources = _sequence(payload.get("sources"))
+    records = _sequence(payload.get("records"))
+    if len(sources) != len(trace_paths) or len(records) != len(trace_paths):
+        return None
+    for trace_path, source in zip(trace_paths, sources, strict=True):
+        if not isinstance(source, Mapping):
+            return None
+        if str(source.get("path")) != str(trace_path):
+            return None
+        expected = _mapping(source.get("fingerprint"))
+        if not expected:
+            return None
+        actual = fingerprint_path(trace_path).to_dict()
+        if not _fingerprint_matches(expected, actual):
+            return None
+    try:
+        parsed_records = tuple(_trace_record_from_cache(record) for record in records)
+    except (TypeError, ValueError):
+        return None
+    if tuple(str(record.get("path")) for record in parsed_records) != tuple(str(path) for path in trace_paths):
+        return None
+    return parsed_records, payload
+
+
+def _trace_records_cache_payload(
+    config: ProductRuntimeBaselineConfig,
+    records: Sequence[Mapping[str, Any]],
+    *,
+    policy: ProductRuntimeBudgetPolicy | None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "workflow": "product_runtime_baseline_trace_records",
+        "paths": {
+            "trace_records_cache": (
+                None if config.trace_records_cache_path is None else str(config.trace_records_cache_path)
+            ),
+            "report": str(config.report_path),
+        },
+        "summary": {
+            "trace_count": len(records),
+            "source_count": len(config.trace_paths),
+        },
+        "policy": {
+            "signature": _policy_signature(policy),
+            "payload": None if policy is None else policy.to_dict(),
+        },
+        "sources": [
+            {
+                "path": str(path),
+                "fingerprint": fingerprint_path(path).to_dict(),
+            }
+            for path in config.trace_paths
+        ],
+        "records": [_trace_record_to_cache(record) for record in records],
+    }
+
+
+def _trace_record_to_cache(record: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "path": str(record.get("path")),
+        "request_id": record.get("request_id"),
+        "metrics": dict(_mapping(record.get("metrics"))),
+        "budget": None if record.get("budget") is None else dict(_mapping(record.get("budget"))),
+    }
+
+
+def _trace_record_from_cache(record: Any) -> dict[str, Any]:
+    if not isinstance(record, Mapping):
+        raise TypeError("trace record cache entries must be objects.")
+    if record.get("path") is None:
+        raise ValueError("trace record cache entries require path.")
+    metrics = record.get("metrics")
+    if not isinstance(metrics, Mapping):
+        raise ValueError("trace record cache entries require metrics.")
+    budget = record.get("budget")
+    if budget is not None and not isinstance(budget, Mapping):
+        raise ValueError("trace record cache budget must be an object or null.")
+    return {
+        "path": str(record.get("path")),
+        "request_id": record.get("request_id"),
+        "metrics": dict(metrics),
+        "budget": None if budget is None else dict(budget),
+    }
+
+
+def _policy_signature(policy: ProductRuntimeBudgetPolicy | None) -> str | None:
+    if policy is None:
+        return None
+    return json.dumps(policy.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+def _fingerprint_matches(expected: Mapping[str, Any], actual: Mapping[str, Any]) -> bool:
+    return all(
+        expected.get(field_name) == actual.get(field_name)
+        for field_name in ("exists", "kind", "sha256", "size_bytes", "file_count")
+    )
 
 
 def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
@@ -484,6 +658,10 @@ def _write_artifact_manifest(
             "status": report.get("status"),
             "trace_count": len(config.trace_paths),
             "trace_records_storage": _mapping(report.get("trace_records")).get("storage"),
+            "trace_records_cache_path": _nested(report, "paths", "trace_records_cache"),
+            "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
+            "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
+            "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
@@ -498,6 +676,7 @@ def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Pat
     artifacts: dict[str, str | Path | None] = {
         "product_runtime_baseline_report": config.report_path,
         "product_runtime_trace_records": config.trace_records_path,
+        "product_runtime_trace_record_cache": config.trace_records_cache_path,
         "policy": config.policy_path,
         "promotion_contract": config.promotion_contract_path,
     }
@@ -521,6 +700,10 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "trace_count": len(config.trace_paths),
             "trace_records_storage": _mapping(report.get("trace_records")).get("storage"),
             "trace_records_path": _mapping(report.get("trace_records")).get("path"),
+            "trace_records_cache_path": _nested(report, "paths", "trace_records_cache"),
+            "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
+            "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
+            "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
@@ -654,6 +837,15 @@ def _mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
+
+
 def _sequence(value: Any) -> tuple[Any, ...]:
     if value is None:
         return ()
@@ -690,6 +882,10 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeBaselineConfig:
         policy_path=Path(args.policy) if args.policy else None,
         promotion_contract_path=Path(args.promotion_contract) if args.promotion_contract else None,
         trace_records_path=Path(args.trace_records_jsonl) if args.trace_records_jsonl else None,
+        trace_records_cache_path=(
+            Path(args.trace_records_cache_json) if args.trace_records_cache_json else None
+        ),
+        refresh_trace_records_cache=bool(args.refresh_trace_records_cache),
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -716,6 +912,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--promotion-contract", default=None, help="ProductPromotionContract/release report JSON path")
     parser.add_argument("--trace-records-jsonl", default=None,
                         help="write per-trace records to JSONL sidecar instead of embedding them in the report")
+    parser.add_argument("--trace-records-cache-json", default=None,
+                        help="optional cache path for compact per-trace runtime metric/budget records")
+    parser.add_argument("--refresh-trace-records-cache", action="store_true",
+                        help="rebuild --trace-records-cache-json even when a valid cache exists")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--name", default=None, help="registry product runtime baseline name")

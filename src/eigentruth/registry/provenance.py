@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 _FingerprintCache = MutableMapping[str, dict[str, Any]]
+_FILE_CACHE_SAMPLE_BYTES = 4096
 
 
 @dataclass(frozen=True)
@@ -102,7 +103,7 @@ def fingerprint_path(
         cache_key = _fingerprint_cache_key(
             artifact_path,
             kind="file",
-            signature=f"{stat.st_size}:{stat.st_mtime_ns}:{stat.st_ctime_ns}",
+            signature=_file_cache_signature(artifact_path, stat=stat),
         )
         if fingerprint_cache is not None and cache_key in fingerprint_cache:
             return _fingerprint_from_cache(display_path, fingerprint_cache[cache_key])
@@ -291,6 +292,25 @@ def _directory_cache_signature(path: Path) -> str:
         digest.update(b"\0")
         digest.update(str(stat.st_ctime_ns).encode("ascii"))
         digest.update(b"\0")
+        digest.update(_file_cache_sample_digest(child, size_bytes=stat.st_size).encode("ascii"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _file_cache_signature(path: Path, *, stat: os.stat_result) -> str:
+    sample_digest = _file_cache_sample_digest(path, size_bytes=stat.st_size)
+    return f"{stat.st_size}:{stat.st_mtime_ns}:{stat.st_ctime_ns}:{sample_digest}"
+
+
+def _file_cache_sample_digest(path: Path, *, size_bytes: int) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        if size_bytes <= _FILE_CACHE_SAMPLE_BYTES * 2:
+            digest.update(stream.read())
+        else:
+            digest.update(stream.read(_FILE_CACHE_SAMPLE_BYTES))
+            stream.seek(max(size_bytes - _FILE_CACHE_SAMPLE_BYTES, 0))
+            digest.update(stream.read(_FILE_CACHE_SAMPLE_BYTES))
     return digest.hexdigest()
 
 

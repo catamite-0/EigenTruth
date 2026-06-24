@@ -68,6 +68,8 @@ class ProductTraceReplayWorkflowConfig:
     verification_report_path: str | Path | None = None
     allow_manifest_verification_failures: bool = False
     fingerprint_cache_path: str | Path | None = None
+    runtime_trace_records_cache_path: str | Path | None = None
+    refresh_runtime_trace_records_cache: bool = False
     selector_trace_inputs_path: str | Path | None = None
     refresh_selector_trace_inputs: bool = False
 
@@ -105,6 +107,12 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
         if self.fingerprint_cache_path is not None:
             object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
+        if self.runtime_trace_records_cache_path is not None:
+            object.__setattr__(
+                self,
+                "runtime_trace_records_cache_path",
+                Path(self.runtime_trace_records_cache_path),
+            )
         if self.selector_trace_inputs_path is not None:
             object.__setattr__(self, "selector_trace_inputs_path", Path(self.selector_trace_inputs_path))
         if self.registry_path is not None:
@@ -126,6 +134,14 @@ class ProductTraceReplayWorkflowConfig:
             strict_bool(
                 self.allow_manifest_verification_failures,
                 name="allow_manifest_verification_failures",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "refresh_runtime_trace_records_cache",
+            strict_bool(
+                self.refresh_runtime_trace_records_cache,
+                name="refresh_runtime_trace_records_cache",
             ),
         )
         object.__setattr__(
@@ -210,6 +226,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "manifest_fingerprint_cache": (
                     None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
                 ),
+                "runtime_trace_records_cache": _nested(runtime_baseline, "paths", "trace_records_cache"),
                 "selector_trace_inputs": _nested(selector_replay, "paths", "trace_inputs"),
             },
             "config": {
@@ -229,6 +246,12 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "fingerprint_cache": (
                     None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
                 ),
+                "runtime_trace_records_cache": (
+                    None
+                    if config.runtime_trace_records_cache_path is None
+                    else str(config.runtime_trace_records_cache_path)
+                ),
+                "refresh_runtime_trace_records_cache": config.refresh_runtime_trace_records_cache,
                 "selector_trace_inputs": (
                     None if config.selector_trace_inputs_path is None else str(config.selector_trace_inputs_path)
                 ),
@@ -280,6 +303,8 @@ def _run_runtime_baseline(
             report_path=output_dir / "product-runtime-baseline.json",
             policy_path=config.runtime_policy_path,
             promotion_contract_path=config.promotion_contract_path,
+            trace_records_cache_path=config.runtime_trace_records_cache_path,
+            refresh_trace_records_cache=config.refresh_runtime_trace_records_cache,
             artifact_manifest_path=output_dir / "artifact-manifest.json",
             compact_json=config.compact_json,
             metadata={
@@ -390,6 +415,7 @@ def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
 def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(runtime_baseline.get("summary"))
     total_seconds = _mapping(summary.get("total_seconds"))
+    trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
     return {
         "status": runtime_baseline.get("status"),
         "budget_enabled": _nested(runtime_baseline, "budget", "enabled"),
@@ -399,6 +425,10 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "total_seconds_mean": total_seconds.get("mean"),
         "total_seconds_p95": total_seconds.get("p95"),
         "total_seconds_max": total_seconds.get("max"),
+        "trace_records_cache_source": trace_record_cache.get("source"),
+        "trace_records_cache_hit": trace_record_cache.get("cache_hit"),
+        "trace_records_cache_written": trace_record_cache.get("cache_written"),
+        "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
     }
 
 
@@ -465,6 +495,7 @@ def _artifact_paths(
         "corpus_runtime_pair_index": _nested(report, "paths", "corpus_runtime_pair_index"),
         "runtime_baseline_report": _nested(report, "paths", "runtime_baseline_report"),
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
+        "runtime_trace_records_cache": _nested(report, "paths", "runtime_trace_records_cache"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),
         "selector_replay_manifest": _nested(report, "paths", "selector_replay_manifest"),
         "selector_trace_inputs": _nested(report, "paths", "selector_trace_inputs"),
@@ -551,6 +582,22 @@ def _record_registry(
             ),
             "manifest_fingerprint_cache_entries": (
                 None if fingerprint_cache is None else len(fingerprint_cache)
+            ),
+            "runtime_trace_records_cache_path": _nested(report, "paths", "runtime_trace_records_cache"),
+            "runtime_trace_records_cache_source": _nested(
+                report,
+                "runtime_baseline",
+                "trace_records_cache_source",
+            ),
+            "runtime_trace_records_cache_hit": _nested(
+                report,
+                "runtime_baseline",
+                "trace_records_cache_hit",
+            ),
+            "runtime_trace_records_cache_written": _nested(
+                report,
+                "runtime_baseline",
+                "trace_records_cache_written",
             ),
             "selector_trace_inputs_path": _nested(report, "paths", "selector_trace_inputs"),
             "selector_trace_inputs_source": _nested(report, "selector_replay", "trace_inputs_source"),
@@ -742,6 +789,10 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         verification_report_path=Path(args.verification_report) if args.verification_report else None,
         allow_manifest_verification_failures=bool(args.allow_manifest_verification_failures),
         fingerprint_cache_path=Path(args.fingerprint_cache) if args.fingerprint_cache else None,
+        runtime_trace_records_cache_path=(
+            Path(args.runtime_trace_records_cache_json) if args.runtime_trace_records_cache_json else None
+        ),
+        refresh_runtime_trace_records_cache=bool(args.refresh_runtime_trace_records_cache),
         selector_trace_inputs_path=(
             Path(args.selector_trace_inputs_json) if args.selector_trace_inputs_json else None
         ),
@@ -787,6 +838,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="write and register manifest verification even when it fails")
     parser.add_argument("--fingerprint-cache", default=None,
                         help="optional JSON cache for manifest fingerprint reads")
+    parser.add_argument("--runtime-trace-records-cache-json", default=None,
+                        help="optional runtime baseline trace-record cache path")
+    parser.add_argument("--refresh-runtime-trace-records-cache", action="store_true",
+                        help="rebuild --runtime-trace-records-cache-json even when a valid cache exists")
     parser.add_argument("--selector-trace-inputs-json", default=None,
                         help="optional selector replay input cache path")
     parser.add_argument("--refresh-selector-trace-inputs", action="store_true",
