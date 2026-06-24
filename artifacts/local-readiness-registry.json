@@ -1084,6 +1084,70 @@
       "name": "smollm2-l8-read-cache-worker-sweep-performance-baseline-verification",
       "path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/manifest-verification.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "performance_baseline",
+      "metadata": {
+        "artifact_fingerprint_cache_entries": 37,
+        "artifact_json_cache": {
+          "entries": 6,
+          "errors": 0,
+          "hit_rate": 0.4,
+          "hits": 4,
+          "misses": 6,
+          "requests": 10
+        },
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/artifact-manifest.json",
+        "manifest_verification_checked": 7,
+        "manifest_verification_failure_count": 0,
+        "manifest_verification_report": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/manifest-verification.json",
+        "manifest_verified": true,
+        "performance_cache_tuning_status": "ok",
+        "performance_evidence_bundle_release_ready": true,
+        "performance_evidence_bundle_status": "promote",
+        "recommended_batch_size": 4,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+        "recommended_layer": -12,
+        "recommended_max_workers": 2,
+        "recommended_score_fusion": {
+          "alpha": 0.1,
+          "artifact": {},
+          "auroc": 0.6789917647058823,
+          "conformal_gate_passed": true,
+          "coverage": 0.91024,
+          "detection": 0.19640522875816996,
+          "false_alarm": 0.08975999999999999,
+          "method": "mean_rank",
+          "report": "artifacts/truthfulqa_score_ensemble_report.json",
+          "run_name": "smollm2-l80",
+          "signal_name": "score_fusion_mean_rank",
+          "status": "promote"
+        },
+        "recommended_score_fusion_auroc": 0.6789917647058823,
+        "recommended_score_fusion_conformal_gate_passed": true,
+        "recommended_score_fusion_signal": "score_fusion_mean_rank",
+        "recommended_score_fusion_status": "promote",
+        "runtime_recommendation": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/runtime-recommendation.json",
+        "runtime_recommendation_status": "promote",
+        "status": "promote",
+        "workflow": "run_performance_baseline_workflow"
+      },
+      "name": "smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline",
+      "path": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/performance-baseline-workflow.json",
+      "version": "0.2"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline",
+        "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline-verification",
+      "path": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/manifest-verification.json",
+      "version": "0.2"
     }
   ],
   "schema_version": 1

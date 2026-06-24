@@ -2813,6 +2813,17 @@ because the worker sweep recommends the same runtime cell and quality evidence.
 On this local CPU run, worker count 2 reduces matrix wall-clock from `184.467s`
 to `141.385s` (`23.4%` lower) while keeping read-cache size `2`, cache-only
 replay `0.192s`, and `truth_proj` AUROC `0.830`.
+The score-fusion handoff baseline at
+`artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_performance_baseline/`
+reuses the same worker-sweep matrix and
+`artifacts/truthfulqa_score_ensemble_report.json`, registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2`,
+and records
+`manifest_verification:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline-verification:0.2`.
+It keeps `truth_proj` as the best quality signal while adding promoted
+`score_fusion_mean_rank` evidence (`AUROC=0.679`, false alarm `0.090`,
+detection `0.196`, `alpha=0.1`) to the runtime recommendation and performance
+evidence bundle.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,

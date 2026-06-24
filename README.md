@@ -204,10 +204,11 @@ the recommended runtime then records the selected cell's read-cache size and
 does not emit contradictory read-cache-size heuristic advice after a sweep has
 already compared the candidate capacities.
 The current small CPU SmolLM2 l8 evidence registers
-`performance_baseline:smollm2-l8-read-cache-worker-sweep-performance-baseline:0.1`;
-it keeps the read-cache sweep winner at size 2 and selects `max_workers=2`,
-lowering matrix wall-clock from 184.467s to 141.385s on this machine while
-preserving `truth_proj` AUROC 0.830.
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-score-fusion-performance-baseline:0.2`;
+it keeps the read-cache sweep winner at size 2, selects `max_workers=2`,
+lowers matrix wall-clock from 184.467s to 141.385s on this machine, preserves
+`truth_proj` AUROC 0.830, and carries a conformal-gated
+`score_fusion_mean_rank` auxiliary signal from the l80 score-ensemble report.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice

@@ -1,0 +1,131 @@
+{
+  "artifacts": {
+    "matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "sha256": "5b84916b2f697886a9c1479411cd390c2f404df0acc5ccc05b0b7833de9f17bb",
+      "size_bytes": 2301
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "sha256": "6fd00d9ab64ee9a1437959196e7a1c4588d4099b82fdace3e6a4608e6c62a2b9",
+      "size_bytes": 53040
+    },
+    "performance_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "performance-baseline-workflow.json",
+      "sha256": "270897f6a73ac3770799dbee439c8467e3814c42d08bb2cb41838f02ac8414b2",
+      "size_bytes": 13515
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "a408982c4f1368be96dd9a9946dbfcffb72388549d9d10451678aac1b781b7ad",
+      "size_bytes": 5360
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_score_ensemble_report.json",
+      "sha256": "0d654b2ccc0e91f6c9a806d6a036d1fd4085549a4a2b9bd03fa549351e7d7d88",
+      "size_bytes": 15177
+    },
+    "worker_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+      "sha256": "734057ca7d0a8379123777e5d61b1d74f63b5a6004166a5c8fd9975a0662dc10",
+      "size_bytes": 1559
+    },
+    "worker_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json",
+      "sha256": "83b05c348b1373769ca4db325f7f0fba99fdd40c9089f508f033a4130c0461eb",
+      "size_bytes": 3386
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_enabled": false,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_enabled": false,
+    "layers": [
+      -12
+    ],
+    "matrix_report_reused": true,
+    "max_batch_token_budgets": [
+      512
+    ],
+    "max_batch_tokens": 512,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "recommended_batch_size": 4,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "recommended_layer": -12,
+    "recommended_max_workers": 2,
+    "recommended_score_fusion": {
+      "alpha": 0.1,
+      "artifact": {},
+      "auroc": 0.6789917647058823,
+      "conformal_gate_passed": true,
+      "coverage": 0.91024,
+      "detection": 0.19640522875816996,
+      "false_alarm": 0.08975999999999999,
+      "method": "mean_rank",
+      "report": "artifacts/truthfulqa_score_ensemble_report.json",
+      "run_name": "smollm2-l80",
+      "signal_name": "score_fusion_mean_rank",
+      "status": "promote"
+    },
+    "recommended_score_fusion_auroc": 0.6789917647058823,
+    "recommended_score_fusion_conformal_gate_passed": true,
+    "recommended_score_fusion_signal": "score_fusion_mean_rank",
+    "recommended_score_fusion_status": "promote",
+    "runner": "run_performance_baseline_workflow",
+    "runtime_recommendation_status": "promote",
+    "score_ensemble_report": "artifacts/truthfulqa_score_ensemble_report.json",
+    "score_ensemble_report_enabled": true,
+    "status": "promote",
+    "worker_sweep_enabled": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}
