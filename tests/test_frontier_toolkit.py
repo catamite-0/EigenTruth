@@ -322,6 +322,21 @@ def test_pre_generation_risk_policy_roundtrip_and_bool_metadata():
     assert citation.selected_profile == "balanced"
     assert citation.risk_level == "medium"
     assert policy.to_dict()["high_risk_metadata_keys"] == ("needs_audit",)
+    direct_assessment = PreGenerationRiskAssessment(
+        selected_profile="latency",
+        risk_level="low",
+        reason="direct",
+        prompt_features={"has_number": "false", "has_citation": "yes"},
+        metadata_flags={"needs_audit": "false", "ambiguous": "maybe"},
+    )
+    assert direct_assessment.prompt_features == {
+        "has_number": False,
+        "has_citation": True,
+    }
+    assert direct_assessment.metadata_flags == {
+        "needs_audit": False,
+        "ambiguous": True,
+    }
     with pytest.raises(ValueError, match="runtime profile selection"):
         PreGenerationRiskPolicy(low_risk_profile="fast")
 

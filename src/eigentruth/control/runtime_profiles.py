@@ -9,7 +9,7 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.verify.features import enabled_feature_names as _enabled_claim_feature_names
-from eigentruth.verify.features import metadata_path_enabled
+from eigentruth.verify.features import metadata_path_enabled, normalized_feature_flags
 
 _DEFAULT_KEYS = frozenset({
     "inside_trigger_budget_policy",
@@ -420,12 +420,12 @@ class PreGenerationRiskAssessment:
         object.__setattr__(
             self,
             "prompt_features",
-            {str(key): bool(value) for key, value in self.prompt_features.items()},
+            normalized_feature_flags(self.prompt_features),
         )
         object.__setattr__(
             self,
             "metadata_flags",
-            {str(key): bool(value) for key, value in self.metadata_flags.items()},
+            normalized_feature_flags(self.metadata_flags),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -690,11 +690,7 @@ def _metadata_flags(metadata: Mapping[str, Any], *, keys: Sequence[str]) -> dict
 
 
 def _enabled_feature_names(flags: Mapping[str, Any], feature_names: Sequence[str]) -> tuple[str, ...]:
-    return tuple(
-        str(name)
-        for name in feature_names
-        if flags.get(str(name)) is True
-    )
+    return _enabled_claim_feature_names(flags, feature_names)
 
 
 def _decision_fields(decision: RiskDecision | Mapping[str, Any]) -> tuple[RiskLevel, ControlAction]:
