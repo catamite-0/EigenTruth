@@ -342,6 +342,8 @@ class ScoreDumpJsonlManifest:
     score_names: tuple[str, ...] = ()
     sweep_score_names: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
     n_total: int | None = None
+    n_true: int | None = None
+    n_false: int | None = None
     has_statements: bool = False
     extras: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
@@ -357,10 +359,25 @@ class ScoreDumpJsonlManifest:
         records_path = payload.get("records_path")
         if not isinstance(records_path, str) or not records_path:
             raise ValueError("score dump JSONL manifest records_path must be a non-empty string.")
-        n_total = payload.get("n_total")
-        parsed_n_total = None if n_total is None else int(n_total)
-        if parsed_n_total is not None and parsed_n_total < 0:
-            raise ValueError("score dump JSONL manifest n_total must be non-negative.")
+        parsed_n_total = _coerce_optional_non_negative_int(
+            payload.get("n_total"),
+            name="n_total",
+        )
+        parsed_n_true = _coerce_optional_non_negative_int(
+            payload.get("n_true"),
+            name="n_true",
+        )
+        parsed_n_false = _coerce_optional_non_negative_int(
+            payload.get("n_false"),
+            name="n_false",
+        )
+        if (
+            parsed_n_total is not None
+            and parsed_n_true is not None
+            and parsed_n_false is not None
+            and parsed_n_true + parsed_n_false != parsed_n_total
+        ):
+            raise ValueError("score dump JSONL manifest n_true + n_false must equal n_total.")
         extras_payload = payload.get("extras", {})
         extras = dict(_required_mapping(extras_payload, "extras")) if extras_payload is not None else {}
         return cls(
@@ -369,6 +386,8 @@ class ScoreDumpJsonlManifest:
             score_names=_coerce_name_tuple(payload.get("score_names", ()), name="score_names"),
             sweep_score_names=_coerce_manifest_sweep_score_names(payload.get("sweep_scores", {})),
             n_total=parsed_n_total,
+            n_true=parsed_n_true,
+            n_false=parsed_n_false,
             has_statements=bool(payload.get("has_statements", False)),
             extras=extras,
             schema_version=int(payload.get("schema_version", 1)),
@@ -397,6 +416,8 @@ class ScoreDumpJsonlManifest:
                 for layer, layer_scores in dump.sweep_scores.items()
             },
             n_total=dump.n_total,
+            n_true=dump.n_true,
+            n_false=dump.n_false,
             has_statements=bool(dump.statements),
             extras=dict(dump.extras),
         )
@@ -421,6 +442,8 @@ class ScoreDumpJsonlManifest:
                 for layer, score_names in self.sweep_score_names.items()
             },
             "n_total": self.n_total,
+            "n_true": self.n_true,
+            "n_false": self.n_false,
             "has_statements": self.has_statements,
         }
         if self.extras:
@@ -640,6 +663,8 @@ def write_score_dump_jsonl(
             for layer, layer_scores in dump.sweep_scores.items()
         },
         n_total=dump.n_total,
+        n_true=dump.n_true,
+        n_false=dump.n_false,
         has_statements=bool(dump.statements),
         extras=manifest_extras,
     )
@@ -1269,8 +1294,18 @@ def _score_dump_layer_scores_from_score_dump(
 def _jsonl_manifest_summary(
     manifest: ScoreDumpJsonlManifest,
     *,
-    labels: Sequence[int],
+    labels: Sequence[int] | None = None,
 ) -> dict[str, Any]:
+    if labels is None:
+        if not _jsonl_manifest_has_label_counts(manifest):
+            raise ValueError("score dump JSONL manifest summary requires labels when label counts are absent.")
+        n_total = int(manifest.n_total or 0)
+        n_true = int(manifest.n_true or 0)
+        n_false = int(manifest.n_false or 0)
+    else:
+        n_total = len(labels)
+        n_true = sum(1 for label in labels if label == 0)
+        n_false = sum(1 for label in labels if label == 1)
     sweep_layers = tuple(sorted((str(layer) for layer in manifest.sweep_score_names), key=_layer_sort_key))
     sweep_score_names = tuple(sorted({
         name
@@ -1279,9 +1314,9 @@ def _jsonl_manifest_summary(
     }))
     score_names = tuple(manifest.score_names)
     return {
-        "n_total": len(labels),
-        "n_true": sum(1 for label in labels if label == 0),
-        "n_false": sum(1 for label in labels if label == 1),
+        "n_total": n_total,
+        "n_true": n_true,
+        "n_false": n_false,
         "score_count": len(score_names),
         "score_names": score_names,
         "sweep_layer_count": len(manifest.sweep_score_names),
@@ -1290,7 +1325,7 @@ def _jsonl_manifest_summary(
         "sweep_score_names": sweep_score_names,
         "all_signal_names": tuple(sorted(set(score_names).union(sweep_score_names))),
         "has_statements": bool(manifest.has_statements),
-        "statement_count": len(labels) if manifest.has_statements else 0,
+        "statement_count": n_total if manifest.has_statements else 0,
         "model": manifest.config.get("model"),
         "layer": manifest.config.get("layer"),
     }
@@ -1302,6 +1337,8 @@ def _cached_jsonl_manifest_summary(
     cache: MutableMapping[str, Any] | None,
 ) -> dict[str, Any]:
     if cache is None:
+        if _jsonl_manifest_has_label_counts(manifest):
+            return _jsonl_manifest_summary(manifest)
         return _jsonl_manifest_summary(
             manifest,
             labels=_load_score_dump_jsonl_labels(manifest_path, manifest),
@@ -1312,6 +1349,11 @@ def _cached_jsonl_manifest_summary(
     if cached is not None:
         _score_dump_cache_event(cache, "jsonl_summary", "hits")
         return dict(cached)
+    if _jsonl_manifest_has_label_counts(manifest):
+        summary = _jsonl_manifest_summary(manifest)
+        cache[cache_key] = dict(summary)
+        _score_dump_cache_event(cache, "jsonl_summary", "writes")
+        return summary
     _score_dump_cache_event(cache, "jsonl_summary", "misses")
     summary = _jsonl_manifest_summary(
         manifest,
@@ -1320,6 +1362,14 @@ def _cached_jsonl_manifest_summary(
     cache[cache_key] = dict(summary)
     _score_dump_cache_event(cache, "jsonl_summary", "writes")
     return summary
+
+
+def _jsonl_manifest_has_label_counts(manifest: ScoreDumpJsonlManifest) -> bool:
+    return (
+        manifest.n_total is not None
+        and manifest.n_true is not None
+        and manifest.n_false is not None
+    )
 
 
 def _score_dump_jsonl_summary_cache_set(
@@ -1595,6 +1645,26 @@ def _coerce_record_label(value: Any) -> int:
     if label not in {0, 1}:
         raise ValueError("score dump JSONL record label must be binary values in {0, 1}.")
     return label
+
+
+def _coerce_optional_non_negative_int(value: Any, *, name: str) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        raise ValueError(f"score dump JSONL manifest {name} must be an integer.")
+    if isinstance(value, int):
+        parsed = value
+    elif isinstance(value, str):
+        stripped = value.strip()
+        digits = stripped.lstrip("+-")
+        if not digits or not digits.isdecimal():
+            raise ValueError(f"score dump JSONL manifest {name} must be an integer.")
+        parsed = int(stripped)
+    else:
+        raise ValueError(f"score dump JSONL manifest {name} must be an integer.")
+    if parsed < 0:
+        raise ValueError(f"score dump JSONL manifest {name} must be non-negative.")
+    return parsed
 
 
 def _selected_record_scores(

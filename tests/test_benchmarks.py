@@ -206,9 +206,13 @@ def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
     module._write_score_dump(manifest_path, dump, "jsonl")
     records = tuple(score_dump_module.iter_score_dump_jsonl_records(manifest_path))
     loaded = score_dump_module.load_score_dump(manifest_path, required_scores=("truth_proj",))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 
     assert manifest_path.exists()
     assert (tmp_path / "truthfulqa-scores.manifest.records.jsonl").exists()
+    assert manifest["n_total"] == 2
+    assert manifest["n_true"] == 1
+    assert manifest["n_false"] == 1
     assert records[0].extras["inside_sample_counts"] == 2
     assert records[1].extras["inside_sampled"] is False
     assert loaded.to_mapping()["inside_sample_texts"] == [["true sample a", "true sample b"], []]

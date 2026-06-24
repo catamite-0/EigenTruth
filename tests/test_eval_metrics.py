@@ -18,6 +18,7 @@ from eigentruth.eval.metrics import (
 from eigentruth.eval.score_dump import (
     ScoreDump,
     ScoreDumpIdentity,
+    ScoreDumpJsonlManifest,
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
@@ -535,6 +536,86 @@ class TestScoreDump:
         assert first["summary"]["n_true"] == 1
         assert second["summary"]["n_false"] == 1
         assert len(calls) == 1
+
+    def test_score_dump_file_metadata_uses_manifest_label_counts_without_record_scan(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+                "n_true": 1,
+                "n_false": 1,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            "\n".join([
+                json.dumps({"label": 0, "scores": {"maha_last": 0.1}}),
+                json.dumps({"label": 1, "scores": {"maha_last": 0.9}}),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        def fail_loader(*args, **kwargs):
+            raise AssertionError("manifest label counts should avoid a records label scan")
+
+        monkeypatch.setattr(score_dump_module, "_load_score_dump_jsonl_labels", fail_loader)
+
+        metadata = score_dump_file_metadata(manifest_path, cache={})
+
+        assert metadata["summary"]["n_total"] == 2
+        assert metadata["summary"]["n_true"] == 1
+        assert metadata["summary"]["n_false"] == 1
+
+    def test_score_dump_jsonl_manifest_rejects_inconsistent_label_counts(self):
+        with pytest.raises(ValueError, match="n_true \\+ n_false"):
+            ScoreDumpJsonlManifest.from_mapping({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": "scores.records.jsonl",
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+                "n_true": 2,
+                "n_false": 1,
+            })
+
+    def test_score_dump_jsonl_manifest_rejects_non_integer_label_counts(self):
+        with pytest.raises(ValueError, match="n_true must be an integer"):
+            ScoreDumpJsonlManifest.from_mapping({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": "scores.records.jsonl",
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+                "n_true": 1.2,
+                "n_false": 1,
+            })
+
+    def test_score_dump_jsonl_manifest_rejects_negative_label_counts(self):
+        with pytest.raises(ValueError, match="n_true must be non-negative"):
+            ScoreDumpJsonlManifest.from_mapping({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": "scores.records.jsonl",
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+                "n_true": "-1",
+                "n_false": 3,
+            })
 
     def test_jsonl_selected_view_cache_reuses_record_scans(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
