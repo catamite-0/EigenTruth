@@ -45,7 +45,7 @@ from eigentruth.control import (
     VerificationStageDecision,
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
-from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import load_score_dump_statement_scores, score_dump_file_metadata
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
@@ -103,7 +103,7 @@ def _parse_csv(value: str | None) -> tuple[str, ...]:
 
 
 def _load_scores(path: Path, signal: str) -> dict[str, Any]:
-    dump = load_score_dump(path, required_scores=(signal,))
+    dump = load_score_dump_statement_scores(path, (signal,))
     labels = torch.tensor(dump.labels, dtype=torch.int64)
     scores = torch.tensor(dump.scores[signal], dtype=torch.float64)
     return {
@@ -111,7 +111,8 @@ def _load_scores(path: Path, signal: str) -> dict[str, Any]:
         "labels": labels,
         "scores": scores,
         "statements": tuple(dump.statements),
-        "score_dump": dump,
+        "score_dump_summary": dict(dump.summary),
+        "score_dump_source_format": dump.source_format,
     }
 
 
@@ -1994,11 +1995,11 @@ def build_verifier_ensemble_report(
         runs.append({
             "name": name,
             "scores_path": str(path),
-            "score_dump": score_dump_file_metadata(
-                path,
-                dump["score_dump"],
-                cache=score_dump_metadata_cache,
-            ),
+            "score_dump": {
+                **score_dump_file_metadata(path, cache=score_dump_metadata_cache),
+                "summary": dump["score_dump_summary"],
+                "source_format": dump["score_dump_source_format"],
+            },
             "config": dump["config"],
             "signal": signal,
             "direction": resolved_direction,

@@ -419,10 +419,11 @@ re-hashing the same file. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
 the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
-`eval_calibration_transfer.py`, and `LayerScoreSweepCalibrator.calibrate_from_file()`
-use selected JSONL score views where possible, so large JSONL inputs materialize
-only the requested primary or layer/score columns plus labels. Score-dump
-metadata fingerprints both the manifest and the records file.
+`eval_verifier_ensemble.py`, `eval_calibration_transfer.py`, and
+`LayerScoreSweepCalibrator.calibrate_from_file()` use selected JSONL score views
+where possible, so large JSONL inputs materialize only the requested primary,
+statement-bearing, or layer/score columns plus labels. Score-dump metadata
+fingerprints both the manifest and the records file.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
@@ -446,9 +447,11 @@ python benchmarks/eval_verifier_ensemble.py \
 
 Add `--compact-json` for large automated runs when the report is consumed by
 tools and does not need human-readable indentation.
-Each run validates inputs through `eigentruth.eval.ScoreDump` and records a
-`score_dump` summary plus SHA-256 fingerprint, so verifier-cache and route
-promotion evidence can be tied back to the exact score artifact.
+Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
+views and records a `score_dump` summary plus SHA-256 fingerprint, so
+verifier-cache and route promotion evidence can be tied back to the exact score
+artifact. JSONL score dumps are read through `load_score_dump_statement_scores()`,
+materializing only labels, the selected signal, and statements.
 
 Add `--staged-verification` to benchmark the cost-aware control plane path. The
 script first calibrates a cheap internal diagnostic gate with `--staged-alpha`,

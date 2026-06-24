@@ -10467,6 +10467,49 @@ def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(
     assert result["verified"]["detection"] == pytest.approx(1.0)
 
 
+def test_eval_verifier_ensemble_reads_jsonl_statement_scores(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    labels = [0, 0, 0, 0, 1, 1]
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "truth_proj": [0.0, 1.0, 2.0, 3.0, 8.0, 9.0],
+            "unused": [99.0] * len(labels),
+        },
+        "sweep_scores": {
+            "-2": {"unused": [100.0] * len(labels)},
+        },
+        "statements": [
+            {"text": f"Statement {idx}."}
+            for idx in range(len(labels))
+        ],
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(dump, scores_path)
+
+    def fail_from_mapping(*args, **kwargs):
+        raise AssertionError("verifier ensemble should use selected statement-score loading")
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+    payload = module.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+    )
+
+    run = payload["runs"][0]
+    assert run["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
+    assert run["score_dump"]["records"]["sha256"]
+    assert run["score_dump"]["summary"]["score_count"] == 2
+    assert run["score_dump"]["summary"]["statement_count"] == len(labels)
+    assert run["verification_status_counts"]["insufficient_evidence"] == len(labels)
+
+
 def test_eval_truthfulqa_selective_reports_accept_score_directions():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
 

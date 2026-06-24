@@ -177,6 +177,29 @@ class ScoreDumpColumns:
 
 
 @dataclass(frozen=True)
+class ScoreDumpStatementScores:
+    """Selected primary score columns plus optional statement metadata."""
+
+    labels: tuple[int, ...]
+    scores: Mapping[str, tuple[float, ...]]
+    statements: tuple[Mapping[str, Any], ...] = ()
+    config: Mapping[str, Any] = field(default_factory=dict)
+    summary: Mapping[str, Any] = field(default_factory=dict)
+    source_format: str = "json"
+
+    @property
+    def n_total(self) -> int:
+        """Return the number of records in the selected statement view."""
+        return len(self.labels)
+
+    def require_scores(self, names: Sequence[str]) -> None:
+        """Raise if required score columns are missing from this view."""
+        missing = [name for name in names if name not in self.scores]
+        if missing:
+            raise ValueError(f"score dump is missing requested score(s): {missing}.")
+
+
+@dataclass(frozen=True)
 class ScoreDumpLayerScores:
     """Selected score columns grouped by layer."""
 
@@ -407,6 +430,41 @@ def load_score_dump_columns(
     return ScoreDumpColumns(
         labels=dump.labels,
         scores={name: dump.scores[name] for name in requested},
+        config=dict(dump.config),
+        summary=dump.summary(),
+    )
+
+
+def load_score_dump_statement_scores(
+    path: str | Path,
+    score_names: Sequence[str],
+    *,
+    allow_empty: bool = False,
+    require_statements: bool = False,
+) -> ScoreDumpStatementScores:
+    """Load selected primary scores plus statement metadata when present."""
+    requested = tuple(str(name) for name in score_names)
+    if not requested:
+        raise ValueError("at least one score name is required.")
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if _is_jsonl_manifest_payload(payload):
+        return _load_score_dump_jsonl_statement_scores(
+            Path(path),
+            ScoreDumpJsonlManifest.from_mapping(payload),
+            score_names=requested,
+            allow_empty=allow_empty,
+            require_statements=require_statements,
+        )
+    dump = ScoreDump.from_mapping(
+        payload,
+        allow_empty=allow_empty,
+        require_statements=require_statements,
+    )
+    dump.require_scores(requested)
+    return ScoreDumpStatementScores(
+        labels=dump.labels,
+        scores={name: dump.scores[name] for name in requested},
+        statements=dump.statements,
         config=dict(dump.config),
         summary=dump.summary(),
     )
@@ -664,6 +722,54 @@ def _load_score_dump_jsonl_columns(
     )
 
 
+def _load_score_dump_jsonl_statement_scores(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    score_names: Sequence[str],
+    allow_empty: bool,
+    require_statements: bool,
+) -> ScoreDumpStatementScores:
+    missing = [name for name in score_names if name not in manifest.score_names]
+    if missing:
+        raise ValueError(f"score dump is missing requested score(s): {missing}.")
+
+    labels: list[int] = []
+    scores = {name: [] for name in score_names}
+    statements: list[Mapping[str, Any]] = []
+    saw_statement = False
+    missing_statement = False
+    for label, record_scores, statement in _iter_score_dump_jsonl_selected_statement_records(
+        manifest_path=manifest_path,
+        manifest=manifest,
+        score_names=score_names,
+        require_statements=require_statements,
+    ):
+        labels.append(label)
+        for name in score_names:
+            scores[name].append(record_scores[name])
+        if statement is None:
+            missing_statement = True
+        else:
+            saw_statement = True
+            statements.append(statement)
+
+    if saw_statement and missing_statement:
+        raise ValueError("score dump JSONL records must either all include statements or none do.")
+    if not labels and not allow_empty:
+        raise ValueError("score dump labels must be non-empty.")
+
+    label_tuple = tuple(labels)
+    return ScoreDumpStatementScores(
+        labels=label_tuple,
+        scores={name: tuple(values) for name, values in scores.items()},
+        statements=tuple(statements) if saw_statement else (),
+        config=dict(manifest.config),
+        summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
+        source_format=JSONL_FORMAT,
+    )
+
+
 def _load_score_dump_jsonl_layer_scores(
     manifest_path: Path,
     manifest: ScoreDumpJsonlManifest,
@@ -884,6 +990,47 @@ def _iter_score_dump_jsonl_selected_records(
         )
 
 
+def _iter_score_dump_jsonl_selected_statement_records(
+    *,
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    score_names: Sequence[str],
+    require_statements: bool,
+) -> Iterator[tuple[int, dict[str, float], Mapping[str, Any] | None]]:
+    records_file = manifest.records_file(manifest_path)
+    selected_score_names = tuple(str(name) for name in score_names)
+    count = 0
+    require_statement = require_statements or manifest.has_statements
+    with records_file.open(encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError("record must be a JSON object.")
+                label = _coerce_record_label(payload.get("label"))
+                scores = _selected_record_scores(
+                    payload.get("scores"),
+                    score_names=selected_score_names,
+                )
+                statement = _selected_record_statement(
+                    payload.get("statement"),
+                    require_statement=require_statement,
+                )
+            except Exception as exc:
+                raise ValueError(
+                    f"invalid score dump JSONL record at {records_file}:{line_number}: {exc}"
+                ) from exc
+            count += 1
+            yield label, scores, statement
+    if manifest.n_total is not None and count != manifest.n_total:
+        raise ValueError(
+            f"score dump JSONL record count does not match manifest "
+            f"({count} records vs {manifest.n_total} expected)."
+        )
+
+
 def _coerce_name_tuple(value: Any, *, name: str) -> tuple[str, ...]:
     if value in (None, ()):
         return ()
@@ -970,6 +1117,18 @@ def _selected_record_sweep_scores(
             for name in expected_names
         }
     return selected
+
+
+def _selected_record_statement(
+    value: Any,
+    *,
+    require_statement: bool,
+) -> Mapping[str, Any] | None:
+    if value is None:
+        if require_statement:
+            raise ValueError("score dump JSONL record statement is required.")
+        return None
+    return dict(_required_mapping(value, "statement"))
 
 
 def _coerce_record_scores(

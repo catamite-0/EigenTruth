@@ -21,6 +21,7 @@ from eigentruth.eval.score_dump import (
     load_score_dump,
     load_score_dump_columns,
     load_score_dump_layer_scores,
+    load_score_dump_statement_scores,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -377,3 +378,45 @@ class TestScoreDump:
         assert layer_dump.score_sources == {-2: {"truth_proj": "sweep_scores"}}
         assert layer_dump.summary["all_signal_names"] == ("maha_last", "truth_proj", "unused")
         assert layer_dump.source_format == "eigentruth.score_dump.jsonl"
+
+    def test_load_score_dump_statement_scores_reads_selected_jsonl_fields(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "score_names": ["truth_proj", "unused"],
+                "sweep_scores": {"-2": ["unused"]},
+                "n_total": 2,
+                "has_statements": True,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            "\n".join([
+                json.dumps({
+                    "label": 0,
+                    "scores": {"truth_proj": 0.1, "unused": "bad"},
+                    "sweep_scores": {"-2": {"unused": "bad"}},
+                    "statement": {"text": "Supported claim."},
+                }),
+                json.dumps({
+                    "label": 1,
+                    "scores": {"truth_proj": 0.9, "unused": "bad"},
+                    "sweep_scores": {"-2": {"unused": "bad"}},
+                    "statement": {"text": "Refuted claim."},
+                }),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+        columns = load_score_dump_statement_scores(manifest_path, ("truth_proj",))
+
+        assert columns.labels == (0, 1)
+        assert columns.scores == {"truth_proj": (0.1, 0.9)}
+        assert columns.statements == ({"text": "Supported claim."}, {"text": "Refuted claim."})
+        assert columns.summary["statement_count"] == 2
+        with pytest.raises(ValueError):
+            load_score_dump(manifest_path)
