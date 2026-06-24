@@ -14,7 +14,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Mapping, MutableMapping, Sequence, TypeVar
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Sequence, TypeVar
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -251,6 +251,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
             "selector_replay": _selector_replay_summary(selector_replay),
             "cache_summary": _workflow_cache_summary(corpus, runtime_baseline, selector_replay),
+            "optimization": _workflow_optimization_summary(runtime_baseline),
             "timing": _workflow_timing(phase_timings, started_at=workflow_started),
             "paths": {
                 "report": str(config.resolved_report_path),
@@ -775,6 +776,8 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
     summary = _mapping(runtime_baseline.get("summary"))
     total_seconds = _mapping(summary.get("total_seconds"))
     trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
+    optimization = _mapping(runtime_baseline.get("optimization"))
+    recommendations = tuple(_mapping(item) for item in _sequence(optimization.get("recommendations")))
     return {
         "status": runtime_baseline.get("status"),
         "budget_enabled": _nested(runtime_baseline, "budget", "enabled"),
@@ -788,6 +791,78 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "trace_records_cache_hit": trace_record_cache.get("cache_hit"),
         "trace_records_cache_written": trace_record_cache.get("cache_written"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
+        "optimization_status": optimization.get("status"),
+        "optimization_recommendation_count": len(recommendations),
+    }
+
+
+def _workflow_optimization_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, Any]:
+    optimization = _mapping(runtime_baseline.get("optimization"))
+    if not optimization:
+        return {
+            "status": "missing",
+            "recommendation_count": 0,
+            "priority_counts": {},
+            "area_counts": {},
+            "top_recommendations": (),
+            "phase_hotspots": (),
+            "route_hotspots": (),
+            "policy_hints": {},
+        }
+    recommendations = tuple(_mapping(item) for item in _sequence(optimization.get("recommendations")))
+    phase_hotspots = tuple(
+        _compact_hotspot(item, name_field="phase")
+        for item in _sequence(_nested(optimization, "hotspots", "phases"))[:3]
+        if isinstance(item, Mapping)
+    )
+    route_hotspots = tuple(
+        _compact_hotspot(item, name_field="route")
+        for item in _sequence(_nested(optimization, "hotspots", "routes"))[:3]
+        if isinstance(item, Mapping)
+    )
+    return {
+        "status": optimization.get("status"),
+        "summary": dict(_mapping(optimization.get("summary"))),
+        "recommendation_count": len(recommendations),
+        "priority_counts": _counts(item.get("priority") for item in recommendations),
+        "area_counts": _counts(item.get("area") for item in recommendations),
+        "top_recommendations": tuple(
+            _compact_recommendation(item)
+            for item in recommendations[:5]
+        ),
+        "phase_hotspots": phase_hotspots,
+        "route_hotspots": route_hotspots,
+        "policy_hints": dict(_mapping(optimization.get("policy_hints"))),
+    }
+
+
+def _compact_recommendation(recommendation: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "id": recommendation.get("id"),
+        "priority": recommendation.get("priority"),
+        "area": recommendation.get("area"),
+        "title": recommendation.get("title"),
+        "evidence": dict(_mapping(recommendation.get("evidence"))),
+    }
+
+
+def _compact_hotspot(hotspot: Mapping[str, Any], *, name_field: str) -> dict[str, Any]:
+    keep_fields = (
+        name_field,
+        "total_observed_seconds",
+        "total_duration_seconds",
+        "mean_seconds",
+        "mean_duration_seconds",
+        "p95_seconds",
+        "max_seconds",
+        "max_duration_seconds",
+        "retrieval_use_rate",
+        "mean_attempted_route_count",
+    )
+    return {
+        field_name: hotspot.get(field_name)
+        for field_name in keep_fields
+        if field_name in hotspot
     }
 
 
@@ -907,6 +982,37 @@ def _write_artifact_manifest(
             "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
             "workflow_cache_hit_count": _nested(report, "cache_summary", "hit_count"),
             "workflow_cache_hit_rate": _nested(report, "cache_summary", "hit_rate"),
+            "optimization_status": _nested(report, "optimization", "status"),
+            "optimization_recommendation_count": _nested(
+                report,
+                "optimization",
+                "recommendation_count",
+            ),
+            "optimization_high_priority_count": _nested(
+                report,
+                "optimization",
+                "priority_counts",
+                "high",
+            ),
+            "optimization_top_recommendation": _nested(
+                report,
+                "optimization",
+                "top_recommendations",
+                0,
+                "id",
+            ),
+            "optimization_slowest_phase": _nested(
+                report,
+                "optimization",
+                "summary",
+                "slowest_phase",
+            ),
+            "optimization_slowest_route": _nested(
+                report,
+                "optimization",
+                "summary",
+                "slowest_route",
+            ),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -964,6 +1070,37 @@ def _record_registry(
             "workflow_cache_enabled_count": _nested(report, "cache_summary", "enabled_count"),
             "workflow_cache_hit_count": _nested(report, "cache_summary", "hit_count"),
             "workflow_cache_hit_rate": _nested(report, "cache_summary", "hit_rate"),
+            "optimization_status": _nested(report, "optimization", "status"),
+            "optimization_recommendation_count": _nested(
+                report,
+                "optimization",
+                "recommendation_count",
+            ),
+            "optimization_high_priority_count": _nested(
+                report,
+                "optimization",
+                "priority_counts",
+                "high",
+            ),
+            "optimization_top_recommendation": _nested(
+                report,
+                "optimization",
+                "top_recommendations",
+                0,
+                "id",
+            ),
+            "optimization_slowest_phase": _nested(
+                report,
+                "optimization",
+                "summary",
+                "slowest_phase",
+            ),
+            "optimization_slowest_route": _nested(
+                report,
+                "optimization",
+                "summary",
+                "slowest_route",
+            ),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -1149,13 +1286,32 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     return (value,)
 
 
-def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+def _nested(payload: Mapping[str, Any], *keys: str | int) -> Any:
     current: Any = payload
     for key in keys:
+        if isinstance(key, int):
+            if not isinstance(current, Sequence) or isinstance(current, (str, bytes, bytearray)):
+                return None
+            if key < 0 or key >= len(current):
+                return None
+            current = current[key]
+            continue
         if not isinstance(current, Mapping):
             return None
         current = current.get(key)
     return current
+
+
+def _counts(values: Iterable[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        if value is None:
+            continue
+        key = str(value).strip()
+        if not key:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _safe_artifact_name(value: str) -> str:

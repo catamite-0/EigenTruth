@@ -11984,8 +11984,22 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["corpus"]["runtime_pair_index_record_count"] == 3
     assert payload["runtime_baseline"]["status"] == "observed"
     assert payload["runtime_baseline"]["n_traces"] == 3
+    assert payload["runtime_baseline"]["optimization_status"] == "has_recommendations"
+    assert payload["runtime_baseline"]["optimization_recommendation_count"] >= 2
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
+    assert payload["optimization"]["status"] == "has_recommendations"
+    assert payload["optimization"]["recommendation_count"] >= 2
+    assert payload["optimization"]["priority_counts"]["medium"] >= 2
+    assert {
+        "instrument_cache_hit_rates",
+        "enable_staged_verification",
+    }.issubset(
+        item["id"] for item in payload["optimization"]["top_recommendations"]
+    )
+    assert payload["optimization"]["policy_hints"]["candidate_runtime_budget_policy"][
+        "max_total_seconds"
+    ] is not None
     assert payload["timing"]["total_seconds"] >= 0.0
     assert payload["timing"]["phase_total_seconds"] >= 0.0
     assert payload["timing"]["phases"]["corpus"]["seconds"] >= 0.0
@@ -12038,6 +12052,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert "corpus_source_cache" in manifest["artifacts"]
     assert "runtime_trace_records_cache" in manifest["artifacts"]
     assert "selector_trace_inputs" in manifest["artifacts"]
+    assert manifest["metadata"]["optimization_status"] == "has_recommendations"
+    assert manifest["metadata"]["optimization_top_recommendation"] == "instrument_cache_hit_rates"
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"],
         recursive=True,
@@ -12050,6 +12066,10 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["workflow_cache_enabled_count"] == 4
     assert record.metadata["workflow_cache_hit_count"] == 0
     assert record.metadata["workflow_cache_hit_rate"] == pytest.approx(0.0)
+    assert record.metadata["optimization_status"] == "has_recommendations"
+    assert record.metadata["optimization_recommendation_count"] >= 2
+    assert record.metadata["optimization_high_priority_count"] is None
+    assert record.metadata["optimization_top_recommendation"] == "instrument_cache_hit_rates"
     assert record.metadata["manifest_verified"] is True
     assert record.metadata["manifest_verification_report"] == str(verification_report_path)
     assert record.metadata["manifest_verification_failure_count"] == 0

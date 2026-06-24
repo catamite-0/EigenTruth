@@ -2478,7 +2478,9 @@ one reproducible command. It builds the redacted corpus, runs the product
 runtime baseline over the standardized traces, runs selector replay with the
 provided candidate policies using the corpus runtime-pair index, writes a
 recursive top-level manifest over all child reports, records phase timing/cache
-summaries for local performance tuning, and registers one workflow report.
+summaries for local performance tuning, lifts the runtime baseline
+`optimization` status/recommendations/policy hints into the top-level workflow
+report and registry metadata, and registers one workflow report.
 Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
 to the workflow report. Add `--fingerprint-cache` when repeating local checks,
