@@ -177,6 +177,23 @@ class ScoreDumpColumns:
 
 
 @dataclass(frozen=True)
+class ScoreDumpLayerScores:
+    """Selected score columns grouped by layer."""
+
+    labels: tuple[int, ...]
+    layer_scores: Mapping[int, Mapping[str, tuple[float, ...]]]
+    score_sources: Mapping[int, Mapping[str, str]] = field(default_factory=dict)
+    config: Mapping[str, Any] = field(default_factory=dict)
+    summary: Mapping[str, Any] = field(default_factory=dict)
+    source_format: str = "json"
+
+    @property
+    def n_total(self) -> int:
+        """Return the number of records in the selected layer view."""
+        return len(self.labels)
+
+
+@dataclass(frozen=True)
 class ScoreDumpRecord:
     """One streaming row from a JSONL score dump."""
 
@@ -395,6 +412,28 @@ def load_score_dump_columns(
     )
 
 
+def load_score_dump_layer_scores(
+    path: str | Path,
+    *,
+    signals: Sequence[str] | None = None,
+    allow_empty: bool = False,
+) -> ScoreDumpLayerScores:
+    """Load score columns grouped by layer, filtering JSONL inputs by signal name."""
+    selected = None if signals is None else {str(signal) for signal in signals}
+    if selected is not None and not selected:
+        raise ValueError("signals must contain at least one signal name when provided.")
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if _is_jsonl_manifest_payload(payload):
+        return _load_score_dump_jsonl_layer_scores(
+            Path(path),
+            ScoreDumpJsonlManifest.from_mapping(payload),
+            signals=selected,
+            allow_empty=allow_empty,
+        )
+    dump = ScoreDump.from_mapping(payload, allow_empty=allow_empty)
+    return _score_dump_layer_scores_from_score_dump(dump, signals=selected)
+
+
 def iter_score_dump_jsonl_records(
     manifest_path: str | Path,
     *,
@@ -464,6 +503,27 @@ def score_dump_file_metadata(
         "kind": "file" if score_path.is_file() else ("missing" if not score_path.exists() else "other"),
         **fingerprint,
     }
+    manifest = _metadata_jsonl_manifest(score_path)
+    if manifest is not None:
+        records_file = manifest.records_file(score_path)
+        records_fingerprint = (
+            _cached_file_fingerprint(records_file, cache)
+            if records_file.is_file()
+            else {"sha256": None, "size_bytes": None}
+        )
+        metadata.update({
+            "source_format": JSONL_FORMAT,
+            "records": {
+                "path": str(records_file),
+                "exists": records_file.exists(),
+                "kind": (
+                    "file"
+                    if records_file.is_file()
+                    else ("missing" if not records_file.exists() else "other")
+                ),
+                **records_fingerprint,
+            },
+        })
     if dump is not None:
         metadata["summary"] = dump.summary()
     return metadata
@@ -495,6 +555,22 @@ def _load_score_dump_path(
 
 def _is_jsonl_manifest_payload(payload: Any) -> bool:
     return isinstance(payload, Mapping) and payload.get("format") == JSONL_FORMAT
+
+
+def _metadata_jsonl_manifest(path: Path) -> ScoreDumpJsonlManifest | None:
+    if not path.is_file():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as stream:
+            head = stream.read(64 * 1024)
+        if JSONL_FORMAT not in head:
+            return None
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not _is_jsonl_manifest_payload(payload):
+            return None
+        return ScoreDumpJsonlManifest.from_mapping(payload)
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return None
 
 
 def _load_score_dump_jsonl_manifest(
@@ -566,15 +642,15 @@ def _load_score_dump_jsonl_columns(
 
     labels: list[int] = []
     scores = {name: [] for name in score_names}
-    for record in _iter_score_dump_jsonl_records(
+    for label, record_scores, _ in _iter_score_dump_jsonl_selected_records(
         manifest_path=manifest_path,
         manifest=manifest,
-        allow_missing_scores=False,
-        require_statements=False,
+        score_names=score_names,
+        sweep_score_names={},
     ):
-        labels.append(record.label)
+        labels.append(label)
         for name in score_names:
-            scores[name].append(record.scores[name])
+            scores[name].append(record_scores[name])
 
     if not labels and not allow_empty:
         raise ValueError("score dump labels must be non-empty.")
@@ -585,6 +661,116 @@ def _load_score_dump_jsonl_columns(
         config=dict(manifest.config),
         summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
         source_format=JSONL_FORMAT,
+    )
+
+
+def _load_score_dump_jsonl_layer_scores(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    signals: set[str] | None,
+    allow_empty: bool,
+) -> ScoreDumpLayerScores:
+    primary_names = tuple(
+        name for name in manifest.score_names
+        if signals is None or name in signals
+    )
+    sweep_names = {
+        str(layer): tuple(name for name in score_names if signals is None or name in signals)
+        for layer, score_names in manifest.sweep_score_names.items()
+    }
+    sweep_names = {layer: names for layer, names in sweep_names.items() if names}
+    if signals is not None and not primary_names and not sweep_names:
+        raise ValueError("no matching score signals were found in the score dump.")
+
+    labels: list[int] = []
+    primary_scores = {name: [] for name in primary_names}
+    sweep_scores = {
+        str(layer): {name: [] for name in score_names}
+        for layer, score_names in sweep_names.items()
+    }
+    for label, record_scores, record_sweep_scores in _iter_score_dump_jsonl_selected_records(
+        manifest_path=manifest_path,
+        manifest=manifest,
+        score_names=primary_names,
+        sweep_score_names=sweep_names,
+    ):
+        labels.append(label)
+        for name in primary_names:
+            primary_scores[name].append(record_scores[name])
+        for layer, layer_score_names in sweep_names.items():
+            for name in layer_score_names:
+                sweep_scores[str(layer)][name].append(record_sweep_scores[str(layer)][name])
+
+    if not labels and not allow_empty:
+        raise ValueError("score dump labels must be non-empty.")
+
+    primary_layer = int(manifest.config.get("layer", 0))
+    layer_scores: dict[int, dict[str, tuple[float, ...]]] = {}
+    score_sources: dict[int, dict[str, str]] = {}
+    if primary_scores:
+        layer_scores[primary_layer] = {name: tuple(values) for name, values in primary_scores.items()}
+        score_sources[primary_layer] = {name: "scores" for name in primary_scores}
+    for layer_key, layer_score_values in sweep_scores.items():
+        layer = int(layer_key)
+        layer_scores.setdefault(layer, {}).update({
+            name: tuple(values)
+            for name, values in layer_score_values.items()
+        })
+        score_sources.setdefault(layer, {}).update({
+            name: "sweep_scores"
+            for name in layer_score_values
+        })
+
+    label_tuple = tuple(labels)
+    return ScoreDumpLayerScores(
+        labels=label_tuple,
+        layer_scores=layer_scores,
+        score_sources=score_sources,
+        config=dict(manifest.config),
+        summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
+        source_format=JSONL_FORMAT,
+    )
+
+
+def _score_dump_layer_scores_from_score_dump(
+    dump: ScoreDump,
+    *,
+    signals: set[str] | None,
+) -> ScoreDumpLayerScores:
+    primary_layer = int(dump.config.get("layer", 0))
+    layer_scores: dict[int, dict[str, tuple[float, ...]]] = {}
+    score_sources: dict[int, dict[str, str]] = {}
+    selected_primary = {
+        name: values
+        for name, values in dump.scores.items()
+        if signals is None or name in signals
+    }
+    if selected_primary:
+        layer_scores[primary_layer] = dict(selected_primary)
+        score_sources[primary_layer] = {name: "scores" for name in selected_primary}
+    for layer_key, raw_layer_scores in dump.sweep_scores.items():
+        layer = int(layer_key)
+        selected_scores = {
+            name: values
+            for name, values in raw_layer_scores.items()
+            if signals is None or name in signals
+        }
+        if not selected_scores:
+            continue
+        layer_scores.setdefault(layer, {}).update(selected_scores)
+        score_sources.setdefault(layer, {}).update({
+            name: "sweep_scores"
+            for name in selected_scores
+        })
+    if signals is not None and not layer_scores:
+        raise ValueError("no matching score signals were found in the score dump.")
+    return ScoreDumpLayerScores(
+        labels=dump.labels,
+        layer_scores=layer_scores,
+        score_sources=score_sources,
+        config=dict(dump.config),
+        summary=dump.summary(),
     )
 
 
@@ -653,6 +839,51 @@ def _iter_score_dump_jsonl_records(
         )
 
 
+def _iter_score_dump_jsonl_selected_records(
+    *,
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    score_names: Sequence[str],
+    sweep_score_names: Mapping[str, Sequence[str]],
+) -> Iterator[tuple[int, dict[str, float], dict[str, dict[str, float]]]]:
+    records_file = manifest.records_file(manifest_path)
+    selected_score_names = tuple(str(name) for name in score_names)
+    selected_sweep_score_names = {
+        str(layer): tuple(str(name) for name in names)
+        for layer, names in sweep_score_names.items()
+        if names
+    }
+    count = 0
+    with records_file.open(encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError("record must be a JSON object.")
+                label = _coerce_record_label(payload.get("label"))
+                scores = _selected_record_scores(
+                    payload.get("scores"),
+                    score_names=selected_score_names,
+                )
+                sweep_scores = _selected_record_sweep_scores(
+                    payload.get("sweep_scores", {}),
+                    sweep_score_names=selected_sweep_score_names,
+                )
+            except Exception as exc:
+                raise ValueError(
+                    f"invalid score dump JSONL record at {records_file}:{line_number}: {exc}"
+                ) from exc
+            count += 1
+            yield label, scores, sweep_scores
+    if manifest.n_total is not None and count != manifest.n_total:
+        raise ValueError(
+            f"score dump JSONL record count does not match manifest "
+            f"({count} records vs {manifest.n_total} expected)."
+        )
+
+
 def _coerce_name_tuple(value: Any, *, name: str) -> tuple[str, ...]:
     if value in (None, ()):
         return ()
@@ -675,6 +906,70 @@ def _coerce_manifest_sweep_score_names(value: Any) -> dict[str, tuple[str, ...]]
         str(layer): _coerce_name_tuple(score_names, name=f"sweep_scores[{layer!r}]")
         for layer, score_names in value.items()
     }
+
+
+def _coerce_record_label(value: Any) -> int:
+    try:
+        label = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("score dump JSONL record label must be an integer.") from exc
+    if label not in {0, 1}:
+        raise ValueError("score dump JSONL record label must be binary values in {0, 1}.")
+    return label
+
+
+def _selected_record_scores(
+    value: Any,
+    *,
+    score_names: Sequence[str],
+) -> dict[str, float]:
+    if not score_names:
+        return {}
+    raw_scores = {
+        str(name): raw_value
+        for name, raw_value in _required_mapping(value, "scores").items()
+    }
+    missing = sorted(set(score_names) - set(raw_scores))
+    if missing:
+        raise ValueError(f"score dump JSONL record is missing score(s): {missing}.")
+    return {name: float(raw_scores[name]) for name in score_names}
+
+
+def _selected_record_sweep_scores(
+    value: Any,
+    *,
+    sweep_score_names: Mapping[str, Sequence[str]],
+) -> dict[str, dict[str, float]]:
+    if not sweep_score_names:
+        return {}
+    raw_sweep_scores = {
+        str(layer): layer_scores
+        for layer, layer_scores in _required_mapping(value, "sweep_scores").items()
+    }
+    missing_layers = sorted(set(sweep_score_names) - set(raw_sweep_scores))
+    if missing_layers:
+        raise ValueError(f"score dump JSONL record is missing sweep layer(s): {missing_layers}.")
+
+    selected: dict[str, dict[str, float]] = {}
+    for layer, expected_names in sweep_score_names.items():
+        raw_layer_scores = {
+            str(name): raw_value
+            for name, raw_value in _required_mapping(
+                raw_sweep_scores[str(layer)],
+                f"sweep_scores[{str(layer)!r}]",
+            ).items()
+        }
+        missing_scores = sorted(set(expected_names) - set(raw_layer_scores))
+        if missing_scores:
+            raise ValueError(
+                f"score dump JSONL record is missing sweep score(s) for layer {str(layer)!r}: "
+                f"{missing_scores}."
+            )
+        selected[str(layer)] = {
+            name: float(raw_layer_scores[name])
+            for name in expected_names
+        }
+    return selected
 
 
 def _coerce_record_scores(

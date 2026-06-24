@@ -3,7 +3,7 @@
 import json
 
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
-from eigentruth.eval.score_dump import ScoreDump
+from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
 
 
 def _score_dump():
@@ -89,6 +89,29 @@ def test_layer_score_sweep_from_file_uses_validated_score_dump(tmp_path):
         assert "length does not match labels" in str(exc)
     else:
         raise AssertionError("invalid score dump should be rejected")
+
+
+def test_layer_score_sweep_from_jsonl_file_reads_selected_signals(tmp_path, monkeypatch):
+    dump = ScoreDump.from_mapping(_score_dump())
+    manifest_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(dump, manifest_path)
+
+    def fail_from_mapping(*args, **kwargs):
+        raise AssertionError("JSONL sweep calibration should use layer-score loading")
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_file(
+        manifest_path,
+        signals=("subspace_resid",),
+    )
+
+    assert report.scores_path == str(manifest_path)
+    assert report.best_score().score_name == "subspace_resid"
+    assert all(
+        score.score_name == "subspace_resid"
+        for layer in report.layers
+        for score in layer.scores
+    )
 
 
 def test_layer_score_sweep_from_score_dump_public_api():

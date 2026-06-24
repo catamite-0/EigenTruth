@@ -418,8 +418,11 @@ share a run-local metadata cache, so duplicate score paths do not require
 re-hashing the same file. For larger score artifacts, `load_score_dump()` also
 accepts an `eigentruth.score_dump.jsonl` manifest that points at JSONL records;
 `iter_score_dump_jsonl_records()` can validate those records without materializing
-the whole dump. `eval_score_ensemble.py` uses `load_score_dump_columns()`, so
-JSONL inputs materialize only the selected primary score columns plus labels.
+the whole dump. `eval_conformal.py`, `eval_score_ensemble.py`,
+`eval_calibration_transfer.py`, and `LayerScoreSweepCalibrator.calibrate_from_file()`
+use selected JSONL score views where possible, so large JSONL inputs materialize
+only the requested primary or layer/score columns plus labels. Score-dump
+metadata fingerprints both the manifest and the records file.
 
 Caveat: the guarantee is conditional on exchangeability — under distribution shift
 (different domain than the calibration set) coverage can degrade; recalibrate per domain.
@@ -1983,7 +1986,8 @@ the primary `scores` payload is used only when its configured layer matches the
 artifact. The report includes self-application and cross-application false alarm,
 detection, coverage, selective accuracy, and a pass/fail flag for
 `false_alarm <= conformal_alpha + tolerance`. The top-level `score_dumps` field
-records the validated dump summary and SHA-256 for every target input.
+records the validated dump summary and SHA-256 for every target input; JSONL
+targets include both manifest and records-file fingerprints.
 
 Current Qwen l80 / SmolLM2 l80 result: self-application controls false alarms for
 both artifacts, but cross-application controls 0/2. Qwen's l80 threshold applied

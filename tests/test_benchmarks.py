@@ -57,6 +57,61 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     assert report["detection"] == pytest.approx(1.0)
 
 
+def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "tiny", "layer": -1},
+        "labels": [0, 0, 0, 0, 1, 1],
+        "scores": {
+            "truth_proj": [0.0, 1.0, 2.0, 3.0, 8.0, 9.0],
+            "unused": [99.0] * 6,
+        },
+        "sweep_scores": {
+            "-2": {
+                "truth_proj": [0.0, 1.0, 2.0, 3.0, 9.0, 10.0],
+                "unused": [100.0] * 6,
+            },
+        },
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    sweep_report_path = tmp_path / "sweep-report.json"
+    write_score_dump_jsonl(dump, scores_path)
+
+    def fail_from_mapping(*args, **kwargs):
+        raise AssertionError("eval_conformal should use selected JSONL loading")
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="truth_proj",
+        signals="truth_proj",
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_sweep_report=str(sweep_report_path),
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.20,
+        direction=None,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at="2026-06-24T00:00:00+00:00",
+        commit_sha=None,
+    )
+
+    payload = module.run(args)
+
+    assert payload["config"]["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
+    assert payload["config"]["score_dump"]["records"]["sha256"]
+    assert payload["config"]["score_dump"]["summary"]["score_count"] == 2
+    assert payload["sweep_report"]["best"]["score_name"] == "truth_proj"
+    assert sweep_report_path.exists()
+
+
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():
     module = importlib.import_module("benchmarks.backfill_truthfulqa_statements")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
@@ -10192,6 +10247,60 @@ def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path, mo
     assert transfer_result["selective_report"]["false_alarm"] == pytest.approx(1.0)
     assert transfer_result["false_alarm_excess"] == pytest.approx(0.9)
     assert payload["notes"] == ["unit-test"]
+
+
+def test_eval_calibration_transfer_reads_jsonl_layer_scores(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_calibration_transfer")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    artifact_path = tmp_path / "artifact.json"
+    artifact_path.write_text(
+        json.dumps({
+            "model_id": "source-model",
+            "target_layer": -2,
+            "scores": [
+                {
+                    "name": "truth_proj",
+                    "threshold": 5.0,
+                    "conformal_alpha": 0.1,
+                    "direction": "higher",
+                },
+            ],
+            "eigentruth_version": "0.1.0",
+        }),
+        encoding="utf-8",
+    )
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "target-model", "layer": -4},
+        "labels": [0, 0, 0, 0, 1, 1],
+        "scores": {
+            "truth_proj": [0.0, 0.0, 0.0, 0.0, 9.0, 10.0],
+            "unused": [99.0] * 6,
+        },
+        "sweep_scores": {
+            "-2": {
+                "truth_proj": [0.0, 1.0, 2.0, 3.0, 8.0, 9.0],
+                "unused": [100.0] * 6,
+            },
+        },
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(dump, scores_path)
+
+    def fail_from_mapping(*args, **kwargs):
+        raise AssertionError("calibration transfer should use selected JSONL layer loading")
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+    payload = module.build_calibration_transfer_report(
+        [("source", artifact_path)],
+        [("target", scores_path)],
+    )
+
+    result = payload["results"][0]
+    assert payload["score_dumps"]["target"]["source_format"] == "eigentruth.score_dump.jsonl"
+    assert payload["score_dumps"]["target"]["records"]["sha256"]
+    assert result["score_source"] == "sweep_scores"
+    assert result["selective_report"]["detection"] == pytest.approx(1.0)
 
 
 def test_eval_score_ensemble_compares_single_and_combined_signals(tmp_path):

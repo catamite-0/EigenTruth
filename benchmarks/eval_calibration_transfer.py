@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.eval.metrics import selective_classification_report
-from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import ScoreDumpLayerScores, load_score_dump_layer_scores, score_dump_file_metadata
 
 DEFAULT_TOLERANCE = 0.03
 
@@ -30,39 +30,27 @@ def _parse_named_path(value: str, *, option: str) -> tuple[str, Path]:
     return name, Path(path)
 
 
-def _labels(dump: ScoreDump) -> list[int]:
+def _labels(dump: ScoreDumpLayerScores) -> list[int]:
     return list(dump.labels)
 
 
 def _score_values_for_artifact_score(
-    dump: ScoreDump,
+    dump: ScoreDumpLayerScores,
     artifact: CalibrationArtifact,
     score: CalibrationScore,
 ) -> tuple[list[float], dict[str, Any]]:
-    layer_key = str(artifact.target_layer)
-    layer_scores = dump.sweep_scores.get(layer_key)
+    layer_scores = dump.layer_scores.get(artifact.target_layer)
     if layer_scores is not None and score.name in layer_scores:
+        source = dump.score_sources.get(artifact.target_layer, {}).get(score.name, "scores")
         return [float(value) for value in layer_scores[score.name]], {
-            "score_source": "sweep_scores",
+            "score_source": source,
             "layer": artifact.target_layer,
         }
 
-    primary_layer = dump.config.get("layer")
-    primary_scores = dump.scores
-    if (
-        score.name in primary_scores
-        and primary_layer is not None
-        and int(primary_layer) == artifact.target_layer
-    ):
-        return [float(value) for value in primary_scores[score.name]], {
-            "score_source": "scores",
-            "layer": artifact.target_layer,
-        }
-
-    available_layers = sorted(int(layer) for layer in dump.sweep_scores)
+    available_layers = sorted(dump.layer_scores)
     raise ValueError(
         f"score dump does not contain score {score.name!r} at artifact target layer "
-        f"{artifact.target_layer}; available sweep layers: {available_layers}"
+        f"{artifact.target_layer}; available layers: {available_layers}"
     )
 
 
@@ -73,7 +61,7 @@ def _evaluate_score(
     artifact: CalibrationArtifact,
     target_name: str,
     target_path: Path,
-    dump: ScoreDump,
+    dump: ScoreDumpLayerScores,
     score: CalibrationScore,
     tolerance: float,
 ) -> dict[str, Any]:
@@ -183,17 +171,23 @@ def build_calibration_transfer_report(
         (name, path, CalibrationArtifact.load_json(path))
         for name, path in artifacts
     ]
+    required_signals = tuple(sorted({
+        score.name
+        for _, _, artifact in loaded_artifacts
+        for score in artifact.scores
+    }))
     loaded_dumps = []
     score_dump_metadata = {}
     score_dump_metadata_cache = {}
     for name, path in score_dumps:
-        score_dump = load_score_dump(path)
+        score_dump = load_score_dump_layer_scores(path, signals=required_signals)
         loaded_dumps.append((name, path, score_dump))
-        score_dump_metadata[name] = score_dump_file_metadata(
-            path,
-            score_dump,
-            cache=score_dump_metadata_cache,
-        )
+        metadata = score_dump_file_metadata(path, cache=score_dump_metadata_cache)
+        metadata.update({
+            "summary": dict(score_dump.summary),
+            "source_format": score_dump.source_format,
+        })
+        score_dump_metadata[name] = metadata
 
     results = []
     for artifact_name, artifact_path, artifact in loaded_artifacts:

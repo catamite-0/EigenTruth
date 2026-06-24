@@ -32,7 +32,7 @@ import torch
 from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, ConformalCalibrator, LayerScoreSweepCalibrator
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import selective_classification_report
-from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import load_score_dump_columns, score_dump_file_metadata
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -47,11 +47,8 @@ def _parse_signals(value: str | None) -> tuple[str, ...] | None:
     return signals
 
 
-def _all_dump_signals(dump: dict) -> tuple[str, ...]:
-    names = set(dump.get("scores", {}))
-    for layer_scores in dump.get("sweep_scores", {}).values():
-        names.update(layer_scores)
-    return tuple(sorted(names))
+def _all_dump_signals(summary: dict) -> tuple[str, ...]:
+    return tuple(summary.get("all_signal_names", ()))
 
 
 def _direction_for(signal: str, override: str | None = None) -> str:
@@ -64,9 +61,8 @@ def run(args) -> dict:
     except Exception:
         pass
 
-    score_dump = load_score_dump(args.scores, required_scores=(args.signal,))
+    score_dump = load_score_dump_columns(args.scores, (args.signal,))
     score_dump_metadata_cache = {}
-    dump = score_dump.to_mapping()
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
     dump_config = score_dump.config
@@ -121,12 +117,13 @@ def run(args) -> dict:
           if all_pass else
           f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
 
+    score_dump_metadata = score_dump_file_metadata(args.scores, cache=score_dump_metadata_cache)
+    score_dump_metadata.update({
+        "summary": dict(score_dump.summary),
+        "source_format": score_dump.source_format,
+    })
     payload = {"config": {"scores": args.scores, "signal": args.signal,
-                          "score_dump": score_dump_file_metadata(
-                              args.scores,
-                              score_dump,
-                              cache=score_dump_metadata_cache,
-                          ),
+                          "score_dump": score_dump_metadata,
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false},
                "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
@@ -151,20 +148,19 @@ def run(args) -> dict:
         print(f"\nWrote calibration artifact to {args.save_calibration}")
 
     if args.save_sweep_report or args.save_best_calibration:
-        selected_signals = _parse_signals(args.signals) or _all_dump_signals(dump)
+        selected_signals = _parse_signals(args.signals) or _all_dump_signals(dict(score_dump.summary))
         direction_override = None if args.direction is None else {
             signal: args.direction for signal in selected_signals
         }
         report = LayerScoreSweepCalibrator(
             alpha=args.artifact_alpha,
             best_by=args.best_by,
-        ).calibrate_from_dump(
-            dump,
+        ).calibrate_from_file(
+            args.scores,
             signals=selected_signals,
             directions=direction_override,
             model_id=args.model_id or dump_config.get("model", "unknown"),
             model_revision=args.model_revision,
-            scores_path=args.scores,
             created_at=args.created_at,
             commit_sha=args.commit_sha,
             metadata={"source": "eval_conformal.py", "config": dump_config},

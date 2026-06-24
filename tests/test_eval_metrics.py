@@ -20,6 +20,7 @@ from eigentruth.eval.score_dump import (
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
+    load_score_dump_layer_scores,
     score_dump_file_metadata,
     write_score_dump_jsonl,
 )
@@ -241,6 +242,7 @@ class TestScoreDump:
         manifest = write_score_dump_jsonl(dump, manifest_path)
         records = tuple(iter_score_dump_jsonl_records(manifest_path))
         loaded = load_score_dump(manifest_path, required_scores=("maha_last",))
+        metadata = score_dump_file_metadata(manifest_path)
 
         assert manifest.records_path == "scores.manifest.records.jsonl"
         assert records[0].label == 0
@@ -249,6 +251,9 @@ class TestScoreDump:
         assert loaded.summary() == dump.summary()
         assert loaded.to_mapping()["inside_sampling"] == {"mode": "off"}
         assert loaded.statements == dump.statements
+        assert metadata["source_format"] == "eigentruth.score_dump.jsonl"
+        assert metadata["records"]["path"].endswith("scores.manifest.records.jsonl")
+        assert metadata["records"]["sha256"]
 
     def test_jsonl_manifest_validates_record_count_and_schema(self, tmp_path):
         manifest_path = tmp_path / "scores.manifest.json"
@@ -314,3 +319,61 @@ class TestScoreDump:
         assert columns.scores == {"maha_last": (0.1, 0.9)}
         assert columns.summary["score_names"] == ("maha_last", "unused")
         assert columns.source_format == "eigentruth.score_dump.jsonl"
+
+    def test_load_score_dump_columns_ignores_unselected_jsonl_scores(self, tmp_path):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "score_names": ["maha_last", "unused"],
+                "sweep_scores": {},
+                "n_total": 2,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            "\n".join([
+                json.dumps({"label": 0, "scores": {"maha_last": 0.1, "unused": "bad"}}),
+                json.dumps({"label": 1, "scores": {"maha_last": 0.9, "unused": "bad"}}),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+        columns = load_score_dump_columns(manifest_path, ("maha_last",))
+
+        assert columns.scores == {"maha_last": (0.1, 0.9)}
+        with pytest.raises(ValueError):
+            load_score_dump(manifest_path)
+
+    def test_load_score_dump_layer_scores_reads_selected_jsonl_sweep_scores(self, tmp_path, monkeypatch):
+        dump = ScoreDump.from_mapping({
+            "config": {"model": "unit-model", "layer": -1},
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "unused": [99.0, 100.0],
+            },
+            "sweep_scores": {
+                "-2": {
+                    "truth_proj": [0.2, 0.8],
+                    "unused": [11.0, 12.0],
+                },
+            },
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(dump, manifest_path)
+
+        def fail_from_mapping(*args, **kwargs):
+            raise AssertionError("JSONL layer-score loading should not materialize ScoreDump")
+
+        monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+        layer_dump = load_score_dump_layer_scores(manifest_path, signals=("truth_proj",))
+
+        assert layer_dump.labels == (0, 1)
+        assert layer_dump.layer_scores == {-2: {"truth_proj": (0.2, 0.8)}}
+        assert layer_dump.score_sources == {-2: {"truth_proj": "sweep_scores"}}
+        assert layer_dump.summary["all_signal_names"] == ("maha_last", "truth_proj", "unused")
+        assert layer_dump.source_format == "eigentruth.score_dump.jsonl"
