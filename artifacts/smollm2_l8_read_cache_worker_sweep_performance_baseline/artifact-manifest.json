@@ -21,8 +21,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "performance-baseline-workflow.json",
-      "sha256": "9a06549d00fe6fddf5e97dc63a1713f1ee213f7f7411f60e47702511c51ee285",
-      "size_bytes": 11656
+      "sha256": "244df44514fbcb30989635d97b0bb52336ea65abecaceb7773b4fa39b9c4abfd",
+      "size_bytes": 11781
     },
     "runtime_recommendation": {
       "exists": true,

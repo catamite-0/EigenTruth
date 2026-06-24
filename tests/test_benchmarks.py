@@ -10289,6 +10289,7 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     matrix_manifest_path = tmp_path / "matrix-artifact-manifest.json"
     matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
     workflow_report_path = tmp_path / "workflow.json"
+    verification_report_path = tmp_path / "manifest-verification.json"
     registry_path = tmp_path / "registry.json"
     result_path.write_text(
         json.dumps({
@@ -10369,12 +10370,16 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
             name="qwen05-local-performance",
             version="0.1",
             matrix_report_path=matrix_report_path,
+            verify_manifest=True,
+            verification_report_path=verification_report_path,
         )
     )
     saved = json.loads(workflow_report_path.read_text(encoding="utf-8"))
+    verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     registry = registry_module.ArtifactRegistry.load_json(registry_path)
     record = registry.get("performance_baseline:qwen05-local-performance:0.1")
+    verification_record = registry.get("manifest_verification:qwen05-local-performance-verification:0.1")
 
     assert payload["status"] == "promote"
     assert payload["decision"]["recommended_cell"] == "layer_m12_batch_2_capture_outputs"
@@ -10414,7 +10419,12 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     )
     assert payload["performance_evidence_bundle"]["score_dump_cache"]["sources"][0]["source"] == "matrix_report"
     assert payload["performance_evidence_bundle"]["artifacts"]["summary"]["missing_count"] == 0
+    assert payload["paths"]["manifest_verification"] == str(verification_report_path)
+    assert payload["manifest_verification"]["path"] == str(verification_report_path)
+    assert payload["manifest_verification"]["verification"]["passed"] is True
+    assert verification_report["passed"] is True
     assert saved["performance_evidence_bundle"]["status"] == "promote"
+    assert saved["paths"]["manifest_verification"] == str(verification_report_path)
     assert saved["registry_record"] == "performance_baseline:qwen05-local-performance:0.1"
     assert manifest["metadata"]["runner"] == "run_performance_baseline_workflow"
     assert manifest["metadata"]["matrix_report_reused"] is True
@@ -10431,6 +10441,13 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert record.metadata["recommended_best_quality_signal"] == "subspace_resid"
     assert record.metadata["performance_evidence_bundle_status"] == "promote"
     assert record.metadata["performance_evidence_bundle_release_ready"] is True
+    assert record.metadata["manifest_verified"] is True
+    assert record.metadata["manifest_verification_report"] == str(verification_report_path)
+    assert record.metadata["manifest_verification_checked"] == verification_report["checked"]
+    assert record.metadata["manifest_verification_failure_count"] == 0
+    assert verification_record.path == str(verification_report_path)
+    assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
+    assert verification_record.metadata["passed"] is True
 
 
 def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):

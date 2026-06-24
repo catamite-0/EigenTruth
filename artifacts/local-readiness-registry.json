@@ -1052,6 +1052,10 @@
       "artifact_type": "performance_baseline",
       "metadata": {
         "artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/artifact-manifest.json",
+        "manifest_verification_checked": 6,
+        "manifest_verification_failure_count": 0,
+        "manifest_verification_report": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/manifest-verification.json",
+        "manifest_verified": true,
         "performance_cache_tuning_status": "ok",
         "performance_evidence_bundle_release_ready": true,
         "performance_evidence_bundle_status": "promote",
@@ -1067,6 +1071,18 @@
       },
       "name": "smollm2-l8-read-cache-worker-sweep-performance-baseline",
       "path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/performance-baseline-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l8-read-cache-worker-sweep-performance-baseline",
+        "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l8-read-cache-worker-sweep-performance-baseline-verification",
+      "path": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/manifest-verification.json",
       "version": "0.1"
     }
   ],

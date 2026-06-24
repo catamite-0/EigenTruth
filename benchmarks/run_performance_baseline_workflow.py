@@ -51,7 +51,11 @@ from benchmarks.run_inside_trigger_budget_sweep import (  # noqa: E402
     TriggerBudgetSpec,
     run_inside_trigger_budget_sweep,
 )
-from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    build_artifact_manifest,
+    load_and_verify_artifact_manifest,
+)
 
 
 @dataclass(frozen=True)
@@ -124,6 +128,9 @@ class PerformanceBaselineWorkflowConfig:
     clean: bool = False
     dry_run: bool = False
     skip_existing: bool = False
+    verify_manifest: bool = False
+    verification_report_path: Path | None = None
+    allow_manifest_verification_failures: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -141,6 +148,7 @@ class PerformanceBaselineWorkflowConfig:
             "inside_sampling_report_path",
             "inside_trigger_budget_sweep_report_path",
             "inside_reference_report_path",
+            "verification_report_path",
         ):
             value = getattr(self, field_name)
             if value is not None:
@@ -194,6 +202,11 @@ class PerformanceBaselineWorkflowConfig:
     def artifact_manifest_path(self) -> Path:
         """Return the workflow artifact manifest path."""
         return self.output_dir / "artifact-manifest.json"
+
+    @property
+    def resolved_verification_report_path(self) -> Path:
+        """Return the workflow manifest verification report path."""
+        return self.verification_report_path or self.output_dir / "manifest-verification.json"
 
 
 def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:
@@ -263,6 +276,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
             "inside_trigger_budget_sweep_report": (
                 None if trigger_sweep_report_path is None else str(trigger_sweep_report_path)
             ),
+            "manifest_verification": (
+                str(config.resolved_verification_report_path) if config.verify_manifest else None
+            ),
         },
         "config": _config_payload(config, runtime_config=runtime_config),
         "execution": {
@@ -314,6 +330,8 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         artifact_manifest_summary=manifest["summary"],
         score_dump_cache_evidence=score_dump_cache_evidence,
     )
+    if config.verify_manifest:
+        report["manifest_verification"] = _write_manifest_verification(config)
     _record_registry(config, report)
     return report
 
@@ -753,6 +771,9 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
     if config.registry_path is None:
         return
     registry = ArtifactRegistry.load_json(config.registry_path)
+    manifest_verification = _mapping(report.get("manifest_verification"))
+    verification_payload = _mapping(manifest_verification.get("verification"))
+    verification_report = manifest_verification.get("path")
     registry.record_performance_baseline(
         name=str(config.name),
         path=config.resolved_report_path,
@@ -786,9 +807,47 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
                 "recommendation",
                 "cache_tuning_status",
             ),
+            "manifest_verified": verification_payload.get("passed"),
+            "manifest_verification_report": verification_report,
+            "manifest_verification_checked": verification_payload.get("checked"),
+            "manifest_verification_failure_count": _failure_count(verification_payload),
         },
     )
+    if verification_report is not None:
+        registry.record_manifest_verification(
+            name=f"{config.name}-verification",
+            path=str(verification_report),
+            version=str(config.version),
+            metadata={
+                "manifest_name": str(config.name),
+                "manifest_path": str(config.artifact_manifest_path),
+                "passed": verification_payload.get("passed"),
+                "recursive": True,
+            },
+        )
     registry.save_json()
+
+
+def _write_manifest_verification(config: PerformanceBaselineWorkflowConfig) -> dict[str, Any]:
+    verification = load_and_verify_artifact_manifest(config.artifact_manifest_path, recursive=True)
+    payload = verification.to_dict()
+    path = config.resolved_verification_report_path
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if not verification.passed and not config.allow_manifest_verification_failures:
+        raise ValueError("performance baseline artifact manifest verification failed")
+    return {"path": str(path), "verification": payload}
+
+
+def _failure_count(verification_payload: Mapping[str, Any]) -> int | None:
+    if not verification_payload:
+        return None
+    count = len(tuple(verification_payload.get("failures", ())))
+    for nested in verification_payload.get("nested", ()):
+        if isinstance(nested, Mapping):
+            nested_count = _failure_count(nested)
+            count += 0 if nested_count is None else nested_count
+    return count
 
 
 _SCORE_DUMP_CACHE_SECTIONS = ("fingerprint", "jsonl_summary", "jsonl_view")
@@ -1145,6 +1204,9 @@ def _config_from_args(args: argparse.Namespace) -> PerformanceBaselineWorkflowCo
         clean=args.clean,
         dry_run=args.dry_run,
         skip_existing=args.skip_existing,
+        verify_manifest=args.verify_manifest,
+        verification_report_path=Path(args.verification_report) if args.verification_report else None,
+        allow_manifest_verification_failures=args.allow_manifest_verification_failures,
     )
 
 
@@ -1233,6 +1295,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--clean", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--verify-manifest", action="store_true",
+                        help="recursively verify the written artifact manifest")
+    parser.add_argument("--verification-report", default=None,
+                        help="optional path for the manifest verification report")
+    parser.add_argument("--allow-manifest-verification-failures", action="store_true",
+                        help="write and register manifest verification even when it fails")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

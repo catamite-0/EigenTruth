@@ -79,13 +79,14 @@
     "inside_sampling_report_reused": false,
     "inside_trigger_budget_sweep_report_reused": false,
     "matrix_report_reused": true,
-    "wall_clock_seconds": 0.004299790016375482,
+    "wall_clock_seconds": 0.004322748980484903,
     "worker_sweep_report_reused": true
   },
   "paths": {
     "artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/artifact-manifest.json",
     "inside_sampling_report": null,
     "inside_trigger_budget_sweep_report": null,
+    "manifest_verification": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/manifest-verification.json",
     "matrix_report": "artifacts/smollm2_l8_read_cache_sweep_performance_baseline/cache_matrix/cache-profile-matrix-report.json",
     "report": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/performance-baseline-workflow.json",
     "runtime_recommendation": "artifacts/smollm2_l8_read_cache_worker_sweep_performance_baseline/runtime-recommendation.json",

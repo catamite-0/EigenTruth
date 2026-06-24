@@ -2352,7 +2352,11 @@ cost ratios / evidence status / artifact readiness / score-dump cache evidence,
 and an optional
 `performance_baseline:*:*` registry record. When it reuses an existing matrix
 report, the top-level config, performance evidence runtime block, and artifact
-manifest metadata inherit the matrix report's effective runtime settings:
+manifest metadata inherit the matrix report's effective runtime settings. Add
+`--verify-manifest` to recursively verify the written manifest, save a
+`manifest-verification.json` report, and register
+`manifest_verification:<name>-verification:<version>` alongside the performance
+baseline without making the verification report part of the manifest it verifies:
 
 ```bash
 python benchmarks/run_performance_baseline_workflow.py \
@@ -2364,6 +2368,7 @@ python benchmarks/run_performance_baseline_workflow.py \
   --worker-sweep-report /tmp/eigentruth-qwen05-worker-sweep/cache-worker-sweep-report.json \
   --inside-trigger-budget-sweep-report /tmp/eigentruth-qwen05-trigger/inside-trigger-budget-sweep.json \
   --inside-trigger-budget-policy quality_balanced \
+  --verify-manifest \
   --fail-on-blocked
 ```
 
@@ -2633,11 +2638,13 @@ read-cache sweep matrix as the quality/cost source and folds in
 `artifacts/smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json`.
 It registers
 `performance_baseline:smollm2-l8-read-cache-worker-sweep-performance-baseline:0.1`,
-selects `max_workers=2`, and records `worker_matrix_report_matches=true` because
-the worker sweep recommends the same runtime cell and quality evidence. On this
-local CPU run, worker count 2 reduces matrix wall-clock from `184.467s` to
-`141.385s` (`23.4%` lower) while keeping read-cache size `2`, cache-only replay
-`0.192s`, and `truth_proj` AUROC `0.830`.
+plus
+`manifest_verification:smollm2-l8-read-cache-worker-sweep-performance-baseline-verification:0.1`.
+It selects `max_workers=2` and records `worker_matrix_report_matches=true`
+because the worker sweep recommends the same runtime cell and quality evidence.
+On this local CPU run, worker count 2 reduces matrix wall-clock from `184.467s`
+to `141.385s` (`23.4%` lower) while keeping read-cache size `2`, cache-only
+replay `0.192s`, and `truth_proj` AUROC `0.830`.
 
 Use `compare_readiness_baselines.py` after registering multiple readiness
 manifests to choose among model/runtime candidates using verified manifests,
