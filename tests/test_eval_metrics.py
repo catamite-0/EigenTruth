@@ -421,6 +421,48 @@ class TestScoreDump:
         with pytest.raises(ValueError):
             load_score_dump(manifest_path)
 
+    def test_score_dump_file_metadata_cache_reuses_jsonl_summary_scan(self, tmp_path, monkeypatch):
+        manifest_path = tmp_path / "scores.manifest.json"
+        records_path = tmp_path / "scores.records.jsonl"
+        manifest_path.write_text(
+            json.dumps({
+                "schema_version": 1,
+                "format": "eigentruth.score_dump.jsonl",
+                "records_path": records_path.name,
+                "score_names": ["maha_last"],
+                "sweep_scores": {},
+                "n_total": 2,
+            }),
+            encoding="utf-8",
+        )
+        records_path.write_text(
+            "\n".join([
+                json.dumps({"label": 0, "scores": {"maha_last": 0.1}}),
+                json.dumps({"label": 1, "scores": {"maha_last": 0.9}}),
+            ]) + "\n",
+            encoding="utf-8",
+        )
+
+        from eigentruth.eval import score_dump as score_dump_module
+
+        calls = []
+        original_loader = score_dump_module._load_score_dump_jsonl_labels
+
+        def counting_loader(*args, **kwargs):
+            calls.append(args[0])
+            return original_loader(*args, **kwargs)
+
+        monkeypatch.setattr(score_dump_module, "_load_score_dump_jsonl_labels", counting_loader)
+        cache = {}
+
+        first = score_dump_file_metadata(manifest_path, cache=cache)
+        second = score_dump_file_metadata(manifest_path, cache=cache)
+
+        assert first["summary"] == second["summary"]
+        assert first["summary"]["n_true"] == 1
+        assert second["summary"]["n_false"] == 1
+        assert len(calls) == 1
+
     def test_load_score_dump_layer_scores_reads_selected_jsonl_sweep_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({
             "config": {"model": "unit-model", "layer": -1},

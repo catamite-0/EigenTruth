@@ -610,9 +610,10 @@ def score_dump_file_metadata(
             },
         })
         if dump is None and records_file.is_file():
-            metadata["summary"] = _jsonl_manifest_summary(
+            metadata["summary"] = _cached_jsonl_manifest_summary(
+                score_path,
                 manifest,
-                labels=_load_score_dump_jsonl_labels(score_path, manifest),
+                cache,
             )
     if dump is not None:
         metadata["summary"] = dump.summary()
@@ -977,6 +978,36 @@ def _jsonl_manifest_summary(
         "model": manifest.config.get("model"),
         "layer": manifest.config.get("layer"),
     }
+
+
+def _cached_jsonl_manifest_summary(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    cache: MutableMapping[str, Mapping[str, Any]] | None,
+) -> dict[str, Any]:
+    records_file = manifest.records_file(manifest_path)
+    if cache is None:
+        return _jsonl_manifest_summary(
+            manifest,
+            labels=_load_score_dump_jsonl_labels(manifest_path, manifest),
+        )
+
+    manifest_stat = manifest_path.stat()
+    records_stat = records_file.stat()
+    cache_key = (
+        "jsonl-summary:"
+        f"{manifest_path.resolve(strict=False)}:{manifest_stat.st_size}:{manifest_stat.st_mtime_ns}:"
+        f"{records_file.resolve(strict=False)}:{records_stat.st_size}:{records_stat.st_mtime_ns}"
+    )
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return dict(cached)
+    summary = _jsonl_manifest_summary(
+        manifest,
+        labels=_load_score_dump_jsonl_labels(manifest_path, manifest),
+    )
+    cache[cache_key] = dict(summary)
+    return summary
 
 
 def _iter_score_dump_jsonl_records(
