@@ -5857,6 +5857,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         drift_report=product_runtime_drift_report,
         status="promote",
     )
+    ArtifactRegistry.load_json(baseline_registry_path).record_report(
+        name="product-trace-replay-workflow",
+        path=product_trace_replay_workflow_report,
+        version="0.1",
+        metadata={"workflow": "run_product_trace_replay_workflow", "status": "promote"},
+    ).save_json()
     adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
     original_sha256_file = provenance_module._sha256_file
     fingerprint_calls_by_path: dict[str, int] = {}
@@ -5886,7 +5892,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
             max_performance_cached_total_seconds_ratio=1.5,
             max_performance_cache_only_total_seconds_ratio=1.5,
             max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
-            product_trace_replay_workflow_path=product_trace_replay_workflow_report,
+            product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
             route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
             required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
             adapter_family_matrix_path=adapter_family_matrix_path,
@@ -6029,7 +6035,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["max_performance_score_dump_cache_jsonl_view_hit_rate_drop"] == pytest.approx(0.4)
     assert payload["config"]["selector_replay_report"] is None
     assert payload["config"]["product_runtime_drift_report"] is None
-    assert payload["config"]["product_trace_replay_workflow"] == str(product_trace_replay_workflow_report)
+    assert payload["config"]["product_trace_replay_workflow"] is None
+    assert payload["config"]["product_trace_replay_workflow_key"] == (
+        "report:product-trace-replay-workflow:0.1"
+    )
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
     assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
@@ -6050,6 +6059,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     ] == pytest.approx(0.5)
     assert payload["release_candidate_comparison"]["config"]["product_trace_replay_workflow"] == str(
         product_trace_replay_workflow_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["product_trace_replay_workflow_key"] == (
+        "report:product-trace-replay-workflow:0.1"
     )
     assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
         selector_replay_report
@@ -6093,6 +6105,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
+    )
+    assert record.metadata["product_trace_replay_workflow_source"] == "registry"
+    assert record.metadata["product_trace_replay_workflow_record"] == (
+        "report:product-trace-replay-workflow:0.1"
     )
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == str(
         product_runtime_drift_report

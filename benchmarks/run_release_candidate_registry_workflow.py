@@ -39,6 +39,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
     product_trace_replay_workflow_path: Path | None = None
+    product_trace_replay_workflow_registry_path: Path | None = None
+    product_trace_replay_workflow_key: str | None = None
     adapter_family_matrix_path: Path | None = None
     required_adapter_routes: Sequence[str] = ()
     require_performance_score_dump_cache: bool = False
@@ -116,6 +118,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 "product_trace_replay_workflow_path",
                 Path(self.product_trace_replay_workflow_path),
             )
+        if self.product_trace_replay_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "product_trace_replay_workflow_registry_path",
+                Path(self.product_trace_replay_workflow_registry_path),
+            )
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
         if self.release_report_path is not None:
@@ -187,6 +195,8 @@ def run_release_candidate_registry_workflow(
         selector_replay_report_path=config.selector_replay_report_path,
         product_runtime_drift_report_path=config.product_runtime_drift_report_path,
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
+        product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
+        product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         required_adapter_routes=config.required_adapter_routes,
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
@@ -304,6 +314,12 @@ def run_release_candidate_registry_workflow(
                 if config.product_trace_replay_workflow_path is None
                 else str(config.product_trace_replay_workflow_path)
             ),
+            "product_trace_replay_workflow_registry": (
+                None
+                if config.product_trace_replay_workflow_registry_path is None
+                else str(config.product_trace_replay_workflow_registry_path)
+            ),
+            "product_trace_replay_workflow_key": config.product_trace_replay_workflow_key,
             "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
             "adapter_family_matrix": (
                 None
@@ -616,6 +632,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             "blocked_metric_count"
         ),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
+        "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
+        "product_trace_replay_workflow_registry": product_trace_replay_workflow.get("registry"),
+        "product_trace_replay_workflow_record": product_trace_replay_workflow.get("record_key"),
         "product_trace_replay_workflow_selector_replay_report": product_trace_replay_workflow.get(
             "selector_replay_report_path"
         ),
@@ -733,6 +752,12 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             if args.product_trace_replay_workflow is None
             else Path(args.product_trace_replay_workflow)
         ),
+        product_trace_replay_workflow_registry_path=(
+            None
+            if args.product_trace_replay_workflow_registry is None
+            else Path(args.product_trace_replay_workflow_registry)
+        ),
+        product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
@@ -842,6 +867,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "
                              "paths are provided")
+    parser.add_argument("--product-trace-replay-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --product-trace-replay-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--product-trace-replay-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a product trace replay workflow")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

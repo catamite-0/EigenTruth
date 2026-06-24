@@ -33,6 +33,8 @@ def compare_release_candidates(
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
     product_trace_replay_workflow_path: str | Path | None = None,
+    product_trace_replay_workflow_registry_path: str | Path | None = None,
+    product_trace_replay_workflow_key: str | None = None,
     adapter_family_matrix_path: str | Path | None = None,
     required_adapter_routes: Sequence[str] = (),
     require_performance_score_dump_cache: bool = False,
@@ -154,8 +156,18 @@ def compare_release_candidates(
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
-    product_trace_replay_workflow = _product_trace_replay_workflow_gate(
+    product_trace_replay_workflow_source = _resolve_product_trace_replay_workflow_source(
         product_trace_replay_workflow_path=product_trace_replay_workflow_path,
+        product_trace_replay_workflow_registry_path=(
+            product_trace_replay_workflow_registry_path
+            if product_trace_replay_workflow_key is not None
+            else None
+        ),
+        product_trace_replay_workflow_key=product_trace_replay_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    product_trace_replay_workflow = _product_trace_replay_workflow_gate(
+        product_trace_replay_workflow_source=product_trace_replay_workflow_source,
         selector_replay_report_path=selector_replay_report_path,
         product_runtime_drift_report_path=product_runtime_drift_report_path,
         recursive=recursive,
@@ -313,9 +325,15 @@ def compare_release_candidates(
             ),
             "product_trace_replay_workflow": (
                 None
-                if product_trace_replay_workflow_path is None
-                else str(product_trace_replay_workflow_path)
+                if product_trace_replay_workflow_source is None
+                else str(product_trace_replay_workflow_source["path"])
             ),
+            "product_trace_replay_workflow_registry": (
+                None
+                if product_trace_replay_workflow_source is None
+                else product_trace_replay_workflow_source.get("registry")
+            ),
+            "product_trace_replay_workflow_key": product_trace_replay_workflow_key,
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "required_adapter_routes": list(required_adapter_routes),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
@@ -956,16 +974,16 @@ def _performance_baseline_gate(
 
 def _product_trace_replay_workflow_gate(
     *,
-    product_trace_replay_workflow_path: str | Path | None,
+    product_trace_replay_workflow_source: Mapping[str, Any] | None,
     selector_replay_report_path: str | Path | None,
     product_runtime_drift_report_path: str | Path | None,
     recursive: bool,
     allow_unverified: bool,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
 ) -> dict[str, Any] | None:
-    if product_trace_replay_workflow_path is None:
+    if product_trace_replay_workflow_source is None:
         return None
-    report_path = Path(product_trace_replay_workflow_path)
+    report_path = Path(product_trace_replay_workflow_source["path"])
     report, report_error = _load_optional_json(report_path)
     manifest_path = _product_trace_replay_workflow_manifest_path(report, report_path=report_path)
     verification = _verify_artifact_manifest(
@@ -1008,6 +1026,10 @@ def _product_trace_replay_workflow_gate(
         "status": "promote" if gate["passed"] else "blocked",
         "report_path": str(report_path),
         "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": product_trace_replay_workflow_source.get("source"),
+        "registry": product_trace_replay_workflow_source.get("registry"),
+        "record_key": product_trace_replay_workflow_source.get("record_key"),
+        "record": product_trace_replay_workflow_source.get("record"),
         "workflow": report.get("workflow"),
         "report_status": report.get("status"),
         "selector_replay_report_path": (
@@ -1028,6 +1050,45 @@ def _product_trace_replay_workflow_gate(
         ),
         "verification": verification,
         "gate": gate,
+    }
+
+
+def _resolve_product_trace_replay_workflow_source(
+    *,
+    product_trace_replay_workflow_path: str | Path | None,
+    product_trace_replay_workflow_registry_path: str | Path | None,
+    product_trace_replay_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if product_trace_replay_workflow_path is not None:
+        if product_trace_replay_workflow_key is not None:
+            raise ValueError(
+                "product_trace_replay_workflow_path is mutually exclusive with "
+                "product_trace_replay_workflow_key."
+            )
+        return {"source": "file", "path": Path(product_trace_replay_workflow_path)}
+    if product_trace_replay_workflow_key is None:
+        if product_trace_replay_workflow_registry_path is not None:
+            raise ValueError(
+                "product_trace_replay_workflow_registry_path requires "
+                "product_trace_replay_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if product_trace_replay_workflow_registry_path is None
+        else product_trace_replay_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(product_trace_replay_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
     }
 
 
@@ -1823,6 +1884,9 @@ def _candidate_with_gates(
         payload["product_trace_replay_workflow"] = {
             "report_path": product_trace_replay_workflow.get("report_path"),
             "manifest_path": product_trace_replay_workflow.get("manifest_path"),
+            "source": product_trace_replay_workflow.get("source"),
+            "registry": product_trace_replay_workflow.get("registry"),
+            "record_key": product_trace_replay_workflow.get("record_key"),
             "report_status": product_trace_replay_workflow.get("report_status"),
             "selector_replay_report_path": product_trace_replay_workflow.get(
                 "selector_replay_report_path"
@@ -1896,6 +1960,14 @@ def _load_optional_json(path: Path) -> tuple[dict[str, Any], str | None]:
     if not isinstance(payload, dict):
         return {}, f"{path} did not contain a JSON object"
     return payload, None
+
+
+def _resolve_registry_record_path(registry_path: Path, record: Any) -> Path:
+    path = Path(record.path)
+    if path.is_absolute():
+        return path
+    sibling = registry_path.parent / path
+    return sibling if sibling.exists() else path
 
 
 def _first_present(*values: Any) -> Any:
@@ -2004,6 +2076,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selector_replay_report_path=args.selector_replay_report,
         product_runtime_drift_report_path=args.product_runtime_drift_report,
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
+        product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
+        product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
         adapter_family_matrix_path=args.adapter_family_matrix,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
@@ -2113,6 +2187,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "
                              "paths are provided")
+    parser.add_argument("--product-trace-replay-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --product-trace-replay-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--product-trace-replay-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a product trace replay workflow")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
     parser.add_argument("--required-adapter-route", action="append", default=[],

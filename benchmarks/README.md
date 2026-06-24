@@ -1217,7 +1217,7 @@ python benchmarks/compare_release_candidates.py \
   --performance-registry artifacts/registry.json \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --performance-drift-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.8 \
-  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json \
+  --product-trace-replay-workflow-key report:smollm2-product-trace-replay-workflow:0.1 \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -1292,12 +1292,16 @@ carries the recommended selector plus observed selected-vs-original runtime
 delta metrics into the release candidate. This makes request-time auto-profile
 changes part of the same fail-closed release evidence instead of a separate
 benchmark note.
-Add `--product-trace-replay-workflow` when selector replay and product-runtime
-drift were produced by `run_product_trace_replay_workflow.py`. The release gate
-verifies the workflow manifest, requires the workflow itself to promote, and
-uses its child selector-replay and runtime-drift report paths unless explicit
+Add `--product-trace-replay-workflow-key report:<name>:<version>` when selector
+replay and product-runtime drift were produced and registered by
+`run_product_trace_replay_workflow.py`; use `--product-trace-replay-workflow`
+for an unregistered local JSON file. The release gate verifies the workflow
+manifest, requires the workflow itself to promote, and uses its child
+selector-replay and runtime-drift report paths unless explicit
 `--selector-replay-report` or `--product-runtime-drift-report` values are also
-provided. This is the safer default for release promotion because the release
+provided. The key form defaults to `--readiness-registry`; pass
+`--product-trace-replay-workflow-registry` only when the workflow record lives
+elsewhere. This is the safer default for release promotion because the release
 candidate consumes the same raw-trace handoff artifact that generated the child
 reports.
 Add `--product-runtime-drift-report` when the final candidate must also prove
@@ -1336,8 +1340,9 @@ without rerunning model or INSIDE generation work.
 
 To write, verify, and register that release candidate as its own manifest, use
 `run_release_candidate_registry_workflow.py`. It accepts the same
-`--required-route-baseline-key`, `--product-trace-replay-workflow`,
-`--selector-replay-report`, and `--product-runtime-drift-report` options and
+`--required-route-baseline-key`, `--product-trace-replay-workflow-key`,
+`--product-trace-replay-workflow`, `--selector-replay-report`, and
+`--product-runtime-drift-report` options and
 includes those route/workflow/selector/drift manifests in the final release-candidate manifest
 when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`.
@@ -1352,7 +1357,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --version 0.7 \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
-  --product-trace-replay-workflow artifacts/product-trace-replay-workflow/product-trace-replay-workflow.json \
+  --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -1699,7 +1704,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
-  --product-trace-replay-workflow artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json \
+  --product-trace-replay-workflow-key report:smollm2-product-trace-replay-workflow:0.1 \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
