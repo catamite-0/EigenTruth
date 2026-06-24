@@ -32,6 +32,11 @@ INSIDE_QUALITY_METRIC_PRIORITY = (
     "inside_embedding_entropy",
     "inside_eigenscore",
 )
+CACHE_TUNING_THRESHOLDS = {
+    "low_shard_cache_hit_rate": 0.50,
+    "high_cross_shard_read_rate": 0.25,
+    "low_records_per_read": 2.0,
+}
 
 
 def build_runtime_recommendation(
@@ -160,6 +165,8 @@ def _recommendation(
         matrix_report_path=matrix_report_path,
     )
     totals = _runtime_totals(matrix_recommended)
+    matrix_config = _mapping(matrix_report.get("config"))
+    eval_reps_shard_read_cache_size = _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size"))
     recommendation = {
         "cell_id": matrix_recommended.get("id") or matrix_decision.get("recommended_cell"),
         "layer": matrix_recommended.get("layer"),
@@ -177,6 +184,11 @@ def _recommendation(
         "quality_signals": quality["signals"],
         "best_quality_signal": quality["best"],
     }
+    if eval_reps_shard_read_cache_size is not None:
+        recommendation["eval_reps_shard_read_cache_size"] = eval_reps_shard_read_cache_size
+    cache_tuning = _cache_tuning_recommendation(matrix_recommended, matrix_report)
+    if cache_tuning["status"] != "no_data":
+        recommendation["cache_tuning"] = cache_tuning
     inside_sampling = _mapping(inside_sampling_decision.get("recommended"))
     trigger_sampling = _mapping(inside_trigger_budget_sweep_decision.get("inside_sampling"))
     if trigger_sampling:
@@ -212,6 +224,113 @@ def _runtime_totals(matrix_recommended: Mapping[str, Any]) -> dict[str, Any]:
             uncached.get("forced_answer_forward_seconds"),
         ),
     }
+
+
+def _cache_tuning_recommendation(
+    matrix_recommended: Mapping[str, Any],
+    matrix_report: Mapping[str, Any],
+) -> dict[str, Any]:
+    source_run, metrics = _recommended_cache_efficiency(matrix_recommended)
+    if not metrics:
+        return {
+            "status": "no_data",
+            "source_run": None,
+            "metrics": {},
+            "thresholds": dict(CACHE_TUNING_THRESHOLDS),
+            "recommendations": [],
+        }
+
+    matrix_config = _mapping(matrix_report.get("config"))
+    shard_hit_rate = _float_or_none(metrics.get("eval_reps_reader.shard_cache_hit_rate"))
+    cross_shard_rate = _float_or_none(metrics.get("eval_reps_reader.cross_shard_read_rate"))
+    records_per_read = _float_or_none(metrics.get("eval_reps_reader.records_per_read"))
+    shard_count = _int_or_none(metrics.get("eval_reps_reader.shard_count"))
+    shard_capacity = _int_or_none(metrics.get("eval_reps_reader.shard_cache_capacity"))
+    read_cache_size = (
+        _int_or_none(matrix_config.get("eval_reps_shard_read_cache_size"))
+        or shard_capacity
+        or 2
+    )
+    shard_size = _int_or_none(matrix_config.get("eval_reps_cache_shard_size"))
+    batch_size = _int_or_none(matrix_recommended.get("batch_size"))
+    max_batch_tokens = _int_or_none(matrix_recommended.get("max_batch_tokens"))
+
+    recommendations: list[dict[str, Any]] = []
+    if (
+        shard_hit_rate is not None
+        and shard_hit_rate < CACHE_TUNING_THRESHOLDS["low_shard_cache_hit_rate"]
+        and shard_count is not None
+        and shard_count > read_cache_size
+    ):
+        suggested = min(shard_count, max(read_cache_size + 1, read_cache_size * 2))
+        recommendations.append({
+            "action": "increase_eval_reps_shard_read_cache_size",
+            "reason": "eval-reps shard cache hit rate is low while more shards exist than the read cache holds",
+            "current": read_cache_size,
+            "suggested": suggested,
+            "suggested_flags": {
+                "eval_truthfulqa": ["--eval-reps-shard-read-cache-size", str(suggested)],
+                "run_cache_profile_matrix": ["--eval-reps-shard-read-cache-size", str(suggested)],
+            },
+        })
+
+    if (
+        cross_shard_rate is not None
+        and cross_shard_rate > CACHE_TUNING_THRESHOLDS["high_cross_shard_read_rate"]
+    ):
+        suggested_shard_size = None if shard_size is None else max(shard_size + 1, shard_size * 2)
+        recommendations.append({
+            "action": "reduce_cross_shard_reads",
+            "reason": "many eval-reps read requests span multiple shards",
+            "current_eval_reps_cache_shard_size": shard_size,
+            "suggested_eval_reps_cache_shard_size": suggested_shard_size,
+            "suggested_flags": (
+                {}
+                if suggested_shard_size is None
+                else {
+                    "run_cache_profile_matrix": [
+                        "--eval-reps-cache-shard-size",
+                        str(suggested_shard_size),
+                    ]
+                }
+            ),
+        })
+
+    if (
+        records_per_read is not None
+        and 0.0 < records_per_read < CACHE_TUNING_THRESHOLDS["low_records_per_read"]
+    ):
+        recommendations.append({
+            "action": "increase_records_per_cache_read",
+            "reason": "cache reader is serving very small ranges, which increases Python and shard IO overhead",
+            "current_records_per_read": records_per_read,
+            "current_batch_size": batch_size,
+            "current_max_batch_tokens": max_batch_tokens,
+            "suggested_next_step": (
+                "increase --batch-size or --max-batch-tokens if memory allows, then rerun the cache profile matrix"
+            ),
+        })
+
+    return {
+        "status": "review" if recommendations else "ok",
+        "source_run": source_run,
+        "metrics": metrics,
+        "thresholds": dict(CACHE_TUNING_THRESHOLDS),
+        "recommendations": recommendations,
+    }
+
+
+def _recommended_cache_efficiency(matrix_recommended: Mapping[str, Any]) -> tuple[str | None, dict[str, float]]:
+    for run_name in ("cache_only", "cached"):
+        top_level = _finite_float_mapping(_mapping(matrix_recommended.get(f"{run_name}_cache_efficiency")))
+        if top_level:
+            return run_name, top_level
+        totals = _mapping(_mapping(matrix_recommended.get("summary")).get("totals"))
+        run_total = _mapping(totals.get(run_name))
+        nested = _finite_float_mapping(_mapping(run_total.get("cache_efficiency")))
+        if nested:
+            return run_name, nested
+    return None, {}
 
 
 def _first_present(*values: Any) -> Any:
@@ -1007,6 +1126,7 @@ def _benchmark_flags(
     max_batch_tokens = int(recommendation.get("max_batch_tokens") or 0)
     max_workers = recommendation.get("max_workers")
     prefix_kv_cache = bool(recommendation.get("prefix_kv_cache", False))
+    eval_reps_shard_read_cache_size = _int_or_none(recommendation.get("eval_reps_shard_read_cache_size"))
     length_bucketed = bool(_mapping(matrix_report.get("config")).get("length_bucketed_batches", False))
 
     eval_flags = ["--layer", layer, "--batch-size", batch_size, "--hidden-state-capture", capture]
@@ -1023,6 +1143,8 @@ def _benchmark_flags(
         matrix_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])
     if prefix_kv_cache:
         matrix_flags.append("--prefix-kv-cache")
+    if eval_reps_shard_read_cache_size is not None and eval_reps_shard_read_cache_size != 2:
+        matrix_flags.extend(["--eval-reps-shard-read-cache-size", str(eval_reps_shard_read_cache_size)])
     if isinstance(max_workers, int) and max_workers >= 1:
         matrix_flags.extend(["--max-workers", str(max_workers)])
 

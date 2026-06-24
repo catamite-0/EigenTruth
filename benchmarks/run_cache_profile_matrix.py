@@ -49,6 +49,7 @@ class CacheProfileMatrixConfig:
     prefix_kv_cache: bool = False
     prefix_kv_cache_modes: Sequence[bool] | None = None
     eval_reps_cache_shard_size: int = 4
+    eval_reps_shard_read_cache_size: int = 2
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -95,6 +96,8 @@ class CacheProfileMatrixConfig:
             raise ValueError("matrix_mode='rescore' requires shared_cache_dir.")
         if matrix_mode == "rescore" and len(token_budgets) > 1:
             raise ValueError("max_batch_token_budgets comparisons require matrix_mode='triplet'.")
+        if int(self.eval_reps_shard_read_cache_size) < 1:
+            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
         if int(self.max_workers) < 1:
             raise ValueError("max_workers must be >=1.")
         object.__setattr__(self, "layers", layers)
@@ -104,6 +107,8 @@ class CacheProfileMatrixConfig:
         object.__setattr__(self, "max_batch_tokens", token_budgets[0])
         object.__setattr__(self, "prefix_kv_cache_modes", prefix_modes)
         object.__setattr__(self, "prefix_kv_cache", any(prefix_modes))
+        object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
+        object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
         object.__setattr__(self, "matrix_mode", matrix_mode)
         object.__setattr__(self, "max_workers", int(self.max_workers))
 
@@ -172,6 +177,7 @@ def triplet_config_for_cell(
         hidden_state_capture=str(cell["hidden_state_capture"]),
         prefix_kv_cache=bool(cell.get("prefix_kv_cache", config.prefix_kv_cache)),
         eval_reps_cache_shard_size=config.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=config.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=config.cached_max_total_ratio,
         cache_only_max_total_ratio=config.cache_only_max_total_ratio,
         python_executable=config.python_executable,
@@ -221,6 +227,7 @@ def run_matrix(
             "prefix_kv_cache": config.prefix_kv_cache,
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+            "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
             "offline": config.offline,
             "length_bucketed_batches": config.length_bucketed_batches,
             "shared_cache_dir": None if config.shared_cache_dir is None else str(config.shared_cache_dir),
@@ -400,6 +407,8 @@ def _write_artifact_manifest(config: CacheProfileMatrixConfig, report: Mapping[s
             "max_batch_token_budgets": tuple(int(value) for value in (config.max_batch_token_budgets or ())),
             "prefix_kv_cache": config.prefix_kv_cache,
             "prefix_kv_cache_modes": tuple(bool(value) for value in (config.prefix_kv_cache_modes or ())),
+            "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+            "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
             "offline": config.offline,
             "matrix_mode": config.matrix_mode,
             "max_workers": config.max_workers,
@@ -678,6 +687,8 @@ def _leaderboard(
         cache_only = dict(totals.get("cache_only", {}))
         cached = dict(totals.get("cached", {}))
         uncached = dict(totals.get("uncached", {}))
+        cache_only_efficiency = cache_only.get("cache_efficiency")
+        cached_efficiency = cached.get("cache_efficiency")
         cache_only_total = cache_only.get("total_seconds")
         uncached_total = uncached.get("total_seconds")
         row = {
@@ -699,6 +710,10 @@ def _leaderboard(
             "gate_passed": _gate_passed(summary.get("regression_gate")),
             "recommendation_metric": sort_metric,
         }
+        if isinstance(cache_only_efficiency, Mapping):
+            row["cache_only_cache_efficiency"] = dict(cache_only_efficiency)
+        if isinstance(cached_efficiency, Mapping):
+            row["cached_cache_efficiency"] = dict(cached_efficiency)
         sort_value = _float_or_none(row.get(sort_metric))
         if sort_value is None:
             continue
@@ -968,6 +983,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileMatrixConfig:
         prefix_kv_cache=args.prefix_kv_cache,
         prefix_kv_cache_modes=_parse_prefix_kv_cache_modes(args.prefix_kv_cache_modes),
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -1024,6 +1040,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="comma-list of prefix cache modes to compare, e.g. off,on; overrides "
                              "--prefix-kv-cache when set")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
+    parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
+                        help="number of eval-reps cache shards cached by cached/cache-only reader runs")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10)
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35)
     parser.add_argument("--progress-every", type=int, default=0)

@@ -45,6 +45,7 @@ class CacheProfileTripletConfig:
     hidden_state_capture: str = "outputs"
     prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
+    eval_reps_shard_read_cache_size: int = 2
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -77,6 +78,8 @@ class CacheProfileTripletConfig:
             raise ValueError("max_length must be >=1.")
         if int(self.eval_reps_cache_shard_size) < 1:
             raise ValueError("eval_reps_cache_shard_size must be >=1.")
+        if int(self.eval_reps_shard_read_cache_size) < 1:
+            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
         if float(self.cached_max_total_ratio) < 0:
             raise ValueError("cached_max_total_ratio must be non-negative.")
         if float(self.cache_only_max_total_ratio) < 0:
@@ -88,6 +91,8 @@ class CacheProfileTripletConfig:
         run_names = _normalize_run_names(self.run_names)
         object.__setattr__(self, "dtype", str(self.dtype))
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
+        object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
+        object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "uncached_cache_mode", str(self.uncached_cache_mode))
         object.__setattr__(self, "run_names", run_names)
@@ -156,6 +161,11 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
     if config.prefix_kv_cache and name != "cache_only":
         base.append("--prefix-kv-cache")
 
+    eval_reps_read_cache_flags = [
+        "--eval-reps-shard-read-cache-size",
+        str(config.eval_reps_shard_read_cache_size),
+    ]
+
     if name == "uncached" and config.uncached_cache_mode == "refresh":
         return [
             *base,
@@ -190,6 +200,7 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
             str(config.layer_stats_cache),
             "--eval-reps-cache",
             str(config.eval_reps_cache),
+            *eval_reps_read_cache_flags,
         ]
     if name == "cache_only":
         return [
@@ -199,6 +210,7 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
             str(config.layer_stats_cache),
             "--eval-reps-cache",
             str(config.eval_reps_cache),
+            *eval_reps_read_cache_flags,
         ]
     raise ValueError(f"unknown triplet run name: {name}")
 
@@ -323,6 +335,8 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
             "max_batch_tokens": config.max_batch_tokens,
             "hidden_state_capture": config.hidden_state_capture,
             "prefix_kv_cache": config.prefix_kv_cache,
+            "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+            "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
             "offline": config.offline,
             "run_names": tuple(config.run_names),
             "uncached_cache_mode": config.uncached_cache_mode,
@@ -351,6 +365,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         hidden_state_capture=args.hidden_state_capture,
         prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -401,6 +416,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--prefix-kv-cache", action="store_true",
                         help="pass --prefix-kv-cache to non-cache-only eval_truthfulqa.py runs")
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
+    parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
+                        help="number of eval-reps cache shards cached by cached/cache-only reader runs")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10,
                         help="max cached/uncached total-time ratio for the comparison gate")
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35,

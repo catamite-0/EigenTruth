@@ -162,7 +162,9 @@ behavior on constrained machines. JSON output includes
 requests, cross-shard reads, shard loads, and shard cache hits, and profile
 summary includes `cache_efficiency.eval_reps_reader` hit-rate/read-shape metrics.
 These fields help diagnose cache-only IO regressions after changing batch size
-or token budget.
+or token budget. `run_cache_profile_triplet.py` and `run_cache_profile_matrix.py`
+also accept `--eval-reps-shard-read-cache-size` so cached/cache-only profile runs
+can reproduce the same read-side LRU capacity.
 Use `--cache-only` with both cache paths to skip model loading and forced-answer
 forward entirely. Cache-only mode is CPU-only, refuses refresh flags, and does
 not run sampled INSIDE. New eval reps caches also store eval statement metadata,
@@ -2171,7 +2173,9 @@ python benchmarks/recommend_runtime_config.py \
 The recommendation records the selected layer, batch size, hidden-state capture
 mode, padded-token budget, prefix-KV mode, worker count, all finite AUROC
 quality signals from the promoted cell, optional promoted INSIDE sampling
-settings, and the best quality signal. With `--inside-sampling-report`, the
+settings, the best quality signal, and cache-tuning advice when the promoted
+cell's eval-reps cache efficiency shows low shard-cache hit rate, high
+cross-shard read rate, or tiny cache read ranges. With `--inside-sampling-report`, the
 recommended sampling run must pass its sample-efficiency gate and expose a
 readable per-run result JSON; otherwise the runtime recommendation fails closed.
 With `--inside-trigger-budget-sweep-report`, the recommendation uses

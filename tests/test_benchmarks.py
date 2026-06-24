@@ -6609,6 +6609,7 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
         max_batch_tokens=128,
         max_length=32,
         eval_reps_cache_shard_size=3,
+        eval_reps_shard_read_cache_size=5,
         python_executable="/python",
     )
 
@@ -6621,6 +6622,7 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
     assert manifest["metadata"]["runner"] == "run_cache_profile_triplet"
     assert manifest["metadata"]["max_batch_tokens"] == 128
+    assert manifest["metadata"]["eval_reps_shard_read_cache_size"] == 5
     assert manifest["artifacts"]["command_log"]["exists"] is True
     assert manifest["artifacts"]["caches.eval_reps_cache"]["exists"] is False
     assert payload["artifact_manifest_summary"]["missing_count"] == 3
@@ -6636,7 +6638,9 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert commands["uncached"][commands["uncached"].index("--eval-reps-cache-shard-size") + 1] == "3"
     assert "--cache-only" not in commands["cached"]
     assert "--refresh-eval-reps-cache" not in commands["cached"]
+    assert commands["cached"][commands["cached"].index("--eval-reps-shard-read-cache-size") + 1] == "5"
     assert "--cache-only" in commands["cache_only"]
+    assert commands["cache_only"][commands["cache_only"].index("--eval-reps-shard-read-cache-size") + 1] == "5"
     assert "--statement-encoding-cache" not in commands["cache_only"]
 
 
@@ -7511,6 +7515,7 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
         batch_sizes=(2,),
         hidden_state_captures=("outputs", "hooks"),
         max_batch_tokens=96,
+        eval_reps_shard_read_cache_size=3,
         python_executable="/python",
     )
 
@@ -7535,13 +7540,16 @@ def test_run_cache_profile_matrix_builds_dry_run_cells(tmp_path):
     assert "--layer -2" in first["summary"]["commands"]["uncached"]
     assert "--max-batch-tokens 96" in first["summary"]["commands"]["uncached"]
     assert "--hidden-state-capture outputs" in first["summary"]["commands"]["uncached"]
+    assert "--eval-reps-shard-read-cache-size 3" in first["summary"]["commands"]["cached"]
     assert report["config"]["max_batch_tokens"] == 96
+    assert report["config"]["eval_reps_shard_read_cache_size"] == 3
     assert report["config"]["max_workers"] == 1
     assert report["execution"]["wall_clock_seconds"] >= 0.0
     assert report["execution"]["cell_count"] == 4
     assert report["execution"]["max_workers"] == 1
     assert report["execution"]["shared_cache_refresh_barrier"] is False
     assert manifest["metadata"]["max_batch_tokens"] == 96
+    assert manifest["metadata"]["eval_reps_shard_read_cache_size"] == 3
     assert manifest["metadata"]["wall_clock_seconds"] >= 0.0
     assert report["matrix_decision"]["status"] == "dry_run"
     assert report["matrix_decision"]["recommended_cell"] is None
@@ -8065,6 +8073,9 @@ def test_run_cache_profile_matrix_summarizes_reports(tmp_path, monkeypatch):
     ]
     assert saved["leaderboard"][0]["id"] == "layer_m1_batch_2_capture_outputs"
     assert saved["leaderboard"][0]["gate_passed"] is True
+    assert saved["leaderboard"][0]["cache_only_cache_efficiency"][
+        "eval_reps_reader.shard_cache_hit_rate"
+    ] == pytest.approx(0.75)
     assert saved["matrix_decision"]["status"] == "promote"
     assert saved["matrix_decision"]["recommended_cell"] == "layer_m1_batch_2_capture_outputs"
     assert saved["cells"][0]["summary"]["truth_proj_auroc"] == pytest.approx(0.82)
@@ -8225,6 +8236,8 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "config": {
             "max_workers": 1,
             "length_bucketed_batches": True,
+            "eval_reps_cache_shard_size": 4,
+            "eval_reps_shard_read_cache_size": 1,
         },
         "leaderboard_sort_metric": "uncached_forced_answer_forward_seconds",
         "execution": {"wall_clock_seconds": 30.0},
@@ -8268,6 +8281,17 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
                         "subspace_resid": 0.93,
                     },
                     "truth_proj_auroc": 0.88,
+                    "totals": {
+                        "cache_only": {
+                            "cache_efficiency": {
+                                "eval_reps_reader.shard_cache_hit_rate": 0.20,
+                                "eval_reps_reader.cross_shard_read_rate": 0.50,
+                                "eval_reps_reader.records_per_read": 1.50,
+                                "eval_reps_reader.shard_count": 4,
+                                "eval_reps_reader.shard_cache_capacity": 1,
+                            }
+                        }
+                    },
                 },
                 "triplet": {"results": {"cache_only": str(result_path)}},
             }
@@ -8298,6 +8322,7 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
     assert report["recommendation"]["batch_size"] == 2
     assert report["recommendation"]["max_batch_tokens"] == 96
     assert report["recommendation"]["max_workers"] == 2
+    assert report["recommendation"]["eval_reps_shard_read_cache_size"] == 1
     assert report["recommendation"]["quality_signals"] == {
         "nll_answer": pytest.approx(0.72),
         "subspace_resid": pytest.approx(0.93),
@@ -8307,6 +8332,24 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "name": "subspace_resid",
         "auroc": pytest.approx(0.93),
     }
+    cache_tuning = report["recommendation"]["cache_tuning"]
+    assert cache_tuning["status"] == "review"
+    assert cache_tuning["source_run"] == "cache_only"
+    assert cache_tuning["metrics"]["eval_reps_reader.shard_cache_hit_rate"] == pytest.approx(0.20)
+    assert {item["action"] for item in cache_tuning["recommendations"]} == {
+        "increase_eval_reps_shard_read_cache_size",
+        "reduce_cross_shard_reads",
+        "increase_records_per_cache_read",
+    }
+    read_cache_advice = next(
+        item for item in cache_tuning["recommendations"]
+        if item["action"] == "increase_eval_reps_shard_read_cache_size"
+    )
+    assert read_cache_advice["suggested"] == 2
+    assert read_cache_advice["suggested_flags"]["run_cache_profile_matrix"] == [
+        "--eval-reps-shard-read-cache-size",
+        "2",
+    ]
     assert report["evidence"]["prefix_kv_comparison"]["status"] == "prefix_kv_slower"
     assert report["evidence"]["quality_signal_source"] == str(result_path)
     assert report["evidence"]["quality_signal_count"] == 3
@@ -8331,6 +8374,8 @@ def test_runtime_config_recommendation_combines_matrix_and_worker_sweep(tmp_path
         "outputs",
         "--max-batch-tokens",
         "96",
+        "--eval-reps-shard-read-cache-size",
+        "1",
         "--max-workers",
         "2",
     ]
