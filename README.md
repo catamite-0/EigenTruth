@@ -194,7 +194,8 @@ errors. For repeated rescoring, pair `--eval-reps-cache` with
 `--eval-reps-cache-shard-size`; sharded cache readers reuse recently touched
 shards through a default 2-shard read-side LRU cache
 (`--eval-reps-shard-read-cache-size`) and report cache IO counters such as read requests,
-records read, shard loads, shard cache hits, and cross-shard reads in JSON output;
+records read, shard loads, shard cache hits, cross-shard reads, and shard
+manifest scans in JSON output;
 triplet, matrix, worker-sweep, and performance-baseline runners pass the setting
 through for cached/cache-only runs. Use
 `run_cache_profile_matrix.py --eval-reps-shard-read-cache-sizes 1,2,4` to

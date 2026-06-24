@@ -162,13 +162,15 @@ answer-span setup cost; use `--refresh-statement-encoding-cache` to rebuild it.
 Use `--eval-reps-cache-shard-size N` to write the eval reps cache as a directory
 containing a JSON manifest and `records-*.pt` shards. Existing sharded caches are
 loaded batch-by-batch, reuse recently touched shards through a default 2-shard
-read-side LRU cache, and remain compatible with `--cache-only`; old single-file
+read-side LRU cache, use a manifest index to seek directly to the first touched
+shard for range reads, and remain compatible with `--cache-only`; old single-file
 `.pt` caches remain the default and continue to load normally. Use
 `--eval-reps-shard-read-cache-size 1` to restore single-shard reader memory
 behavior on constrained machines. JSON output includes
 `cache_stats.eval_reps_reader` with read requests, records read, shard read
-requests, cross-shard reads, shard loads, and shard cache hits, and profile
-summary includes `cache_efficiency.eval_reps_reader` hit-rate/read-shape metrics.
+requests, cross-shard reads, shard loads, shard cache hits, and shard manifest
+scans, and profile summary includes `cache_efficiency.eval_reps_reader`
+hit-rate/read-shape/manifest-scan metrics.
 These fields help diagnose cache-only IO regressions after changing batch size
 or token budget. `run_cache_profile_triplet.py`, `run_cache_profile_matrix.py`,
 `run_cache_worker_sweep.py`, and `run_performance_baseline_workflow.py` also

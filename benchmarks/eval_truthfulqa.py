@@ -43,6 +43,7 @@ EigenTruth benchmark — can hidden-state geometry separate true vs. false state
 from __future__ import annotations
 
 import argparse
+import bisect
 import hashlib
 import json
 import math
@@ -985,6 +986,7 @@ def _cache_efficiency_summary(cache_stats: Mapping[str, Mapping[str, object]] | 
     cross_shard_reads = read_int("cross_shard_reads")
     shard_loads = read_int("shard_loads")
     shard_cache_hits = read_int("shard_cache_hits")
+    shard_manifest_scans = read_int("shard_manifest_scans")
     shard_count = read_int("shard_count")
     shard_cache_capacity = read_int("shard_cache_capacity")
 
@@ -994,6 +996,7 @@ def _cache_efficiency_summary(cache_stats: Mapping[str, Mapping[str, object]] | 
         "cross_shard_read_rate": _profile_share(cross_shard_reads, read_requests),
         "shard_cache_hit_rate": _profile_share(shard_cache_hits, shard_read_requests),
         "shard_load_rate": _profile_share(shard_loads, shard_read_requests),
+        "shard_manifest_scans_per_read": _profile_share(shard_manifest_scans, read_requests),
         "shard_count": shard_count,
         "shard_cache_capacity": shard_cache_capacity,
     }
@@ -1536,12 +1539,14 @@ class EvalRepsCacheReader:
         self.record_count = int(expected_records)
         self._records: list[Optional[dict]] | None = None
         self._shards: list[dict] = []
+        self._shard_starts: list[int] = []
         self._shard_cache_size = int(shard_read_cache_size)
         if self._shard_cache_size < 1:
             raise ValueError("eval reps shard read cache size must be >=1.")
         self._shard_cache: OrderedDict[tuple[str, int], list[object]] = OrderedDict()
         self._shard_loads = 0
         self._shard_cache_hits = 0
+        self._shard_manifest_scans = 0
         self._read_requests = 0
         self._records_read = 0
         self._shard_read_requests = 0
@@ -1557,6 +1562,7 @@ class EvalRepsCacheReader:
             _validate_eval_reps_manifest(manifest, expected_records)
             self.record_count = int(manifest["record_count"])
             self._shards = [dict(shard) for shard in manifest.get("shards", [])]
+            self._shard_starts = [int(shard["start"]) for shard in self._shards]
         else:
             if self.path.is_dir():
                 raise ValueError(f"eval reps cache directory is missing manifest.json: {self.path}")
@@ -1590,19 +1596,21 @@ class EvalRepsCacheReader:
         end = start + count
         records: list[Optional[dict]] = []
         touched_shards = 0
-        for shard in self._shards:
+        shard_index = self._first_shard_index_for_range(start)
+        while shard_index < len(self._shards):
+            shard = self._shards[shard_index]
             shard_start = int(shard["start"])
             shard_count = int(shard["count"])
             shard_end = shard_start + shard_count
-            if shard_end <= start:
-                continue
             if shard_start >= end:
                 break
+            self._shard_manifest_scans += 1
             raw_records = self._load_shard_records(shard)
             local_start = max(start, shard_start) - shard_start
             local_end = min(end, shard_end) - shard_start
             records.extend(_reps_from_cache_state(record) for record in raw_records[local_start:local_end])
             touched_shards += 1
+            shard_index += 1
         self._shard_read_requests += touched_shards
         if touched_shards > 1:
             self._cross_shard_reads += 1
@@ -1626,7 +1634,13 @@ class EvalRepsCacheReader:
             "cross_shard_reads": int(self._cross_shard_reads),
             "shard_loads": int(self._shard_loads),
             "shard_cache_hits": int(self._shard_cache_hits),
+            "shard_manifest_scans": int(self._shard_manifest_scans),
         }
+
+    def _first_shard_index_for_range(self, start: int) -> int:
+        if not self._shard_starts:
+            return 0
+        return max(0, bisect.bisect_right(self._shard_starts, int(start)) - 1)
 
     def _load_shard_records(self, shard: Mapping[str, object]) -> list[object]:
         shard_path = str(shard["path"])

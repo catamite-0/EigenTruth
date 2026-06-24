@@ -15614,6 +15614,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
         "cross_shard_reads": 0,
         "shard_loads": 0,
         "shard_cache_hits": 0,
+        "shard_manifest_scans": 0,
     }
     assert torch.allclose(loaded[0]["last"][-1], reps["last"][-1])
     assert torch.allclose(loaded[0]["ans_hs"], reps["ans_hs"])
@@ -15710,11 +15711,55 @@ def test_eval_truthfulqa_eval_reps_sharded_cache_roundtrip_and_range(tmp_path, m
         "cross_shard_reads": 1,
         "shard_loads": 2,
         "shard_cache_hits": 3,
+        "shard_manifest_scans": 5,
     }
     assert loaded_metadata == metadata
     assert torch.allclose(loaded[0]["ans_hs"], reps_a["ans_hs"])
     assert loaded[1] is None
     assert loaded[2]["nll"] == pytest.approx(2.5)
+
+
+def test_eval_truthfulqa_eval_reps_sharded_cache_uses_indexed_range_lookup(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [module.Statement(f"q{idx}", f"a{idx}", idx % 2) for idx in range(12)]
+    args = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        eigenscore_alpha=1e-3,
+        length_bucketed_batches=False,
+    )
+    metadata = module._eval_reps_cache_metadata(
+        args,
+        layers=[-1],
+        n_layers=2,
+        eval_statements=statements,
+    )
+    cache_dir = tmp_path / "eval-reps-cache"
+    module.save_eval_reps_cache(cache_dir, [None] * len(statements), metadata=metadata, shard_size=1)
+    reader = module.EvalRepsCacheReader(
+        cache_dir,
+        expected_metadata=metadata,
+        expected_records=len(statements),
+    )
+    original_torch_load = module.torch.load
+    loaded_shards = []
+
+    def counting_torch_load(path, *args, **kwargs):
+        if str(path).endswith(".pt"):
+            loaded_shards.append(Path(path).name)
+        return original_torch_load(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.torch, "load", counting_torch_load)
+
+    assert reader.read_range(9, 1) == [None]
+
+    stats = reader.cache_stats()
+    assert loaded_shards == ["records-000009.pt"]
+    assert stats["shard_count"] == 12
+    assert stats["shard_read_requests"] == 1
+    assert stats["shard_manifest_scans"] == 1
 
 
 def test_eval_truthfulqa_eval_reps_cache_metadata_embeds_eval_statements(tmp_path):
@@ -16348,6 +16393,7 @@ def test_eval_truthfulqa_profile_summary_groups_and_throughput():
                 "cross_shard_reads": 1,
                 "shard_loads": 2,
                 "shard_cache_hits": 2,
+                "shard_manifest_scans": 4,
             }
         },
     )
@@ -16363,6 +16409,7 @@ def test_eval_truthfulqa_profile_summary_groups_and_throughput():
     assert summary["cache_efficiency"]["eval_reps_reader"]["records_per_read"] == pytest.approx(10.0)
     assert summary["cache_efficiency"]["eval_reps_reader"]["shard_cache_hit_rate"] == pytest.approx(0.5)
     assert summary["cache_efficiency"]["eval_reps_reader"]["cross_shard_read_rate"] == pytest.approx(1 / 3)
+    assert summary["cache_efficiency"]["eval_reps_reader"]["shard_manifest_scans_per_read"] == pytest.approx(4 / 3)
     assert summary["accounted_seconds"] == pytest.approx(10.5)
     assert summary["unaccounted_seconds"] == pytest.approx(1.5)
 
