@@ -1391,7 +1391,10 @@ Use `export_product_promotion_contract.py` after a release candidate promotes to
 write the smaller product handoff artifact consumed by demos and control-plane
 jobs. It converts either a release-candidate comparison or registry-workflow JSON
 into a `ProductPromotionContract`, writes a manifest, and can register a
-`product_promotion_contract:*:*` record:
+`product_promotion_contract:*:*` record. When the release candidate was gated by
+a product trace replay workflow, the compact contract and registry metadata keep
+the workflow report/manifest plus its selector-replay and runtime-drift child
+report paths for deployment-side provenance:
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \

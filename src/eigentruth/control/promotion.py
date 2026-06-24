@@ -28,6 +28,7 @@ class ProductPromotionContract:
     )
     source_workflow: str | None = None
     source_status: str | None = None
+    product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
 
@@ -40,6 +41,11 @@ class ProductPromotionContract:
         object.__setattr__(self, "runtime", dict(self.runtime))
         object.__setattr__(self, "verifier_route", dict(self.verifier_route))
         object.__setattr__(self, "runtime_budget_policy", policy)
+        object.__setattr__(
+            self,
+            "product_trace_replay_workflow",
+            dict(self.product_trace_replay_workflow),
+        )
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
 
@@ -61,6 +67,9 @@ class ProductPromotionContract:
                 verifier_route=_mapping(payload.get("verifier_route")),
                 runtime_budget_policy=ProductRuntimeBudgetPolicy.from_mapping(
                     _mapping(payload.get("runtime_budget_policy"))
+                ),
+                product_trace_replay_workflow=_mapping(
+                    payload.get("product_trace_replay_workflow")
                 ),
                 metadata=_mapping(payload.get("metadata")),
             )
@@ -99,6 +108,9 @@ class ProductPromotionContract:
         manifests = _mapping(candidate.get("manifests"))
         adapter_family = _mapping(candidate.get("adapter_family_matrix"))
         required_route_baselines = _mapping(candidate.get("required_route_baselines"))
+        product_trace_replay_workflow = _mapping(
+            candidate.get("product_trace_replay_workflow")
+        )
         selector_replay = _mapping(candidate.get("selector_replay"))
         selector_replay_recommended = _mapping(selector_replay.get("recommended"))
         product_runtime_drift = _mapping(candidate.get("product_runtime_drift"))
@@ -137,6 +149,10 @@ class ProductPromotionContract:
             runtime_budget_policy=product_runtime_budget_policy_from_release_candidate(
                 comparison
             ),
+            product_trace_replay_workflow=_product_trace_replay_workflow_metadata(
+                product_trace_replay_workflow,
+                manifests=manifests,
+            ),
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
                 "recommended_route_record": decision.get("recommended_route_record"),
@@ -148,6 +164,34 @@ class ProductPromotionContract:
                 ),
                 "recommended_product_runtime_drift_report": decision.get(
                     "recommended_product_runtime_drift_report"
+                ),
+                "product_trace_replay_workflow_status": decision.get(
+                    "product_trace_replay_workflow_status"
+                ),
+                "product_trace_replay_workflow_report": product_trace_replay_workflow.get(
+                    "report_path"
+                ),
+                "product_trace_replay_workflow_manifest": (
+                    product_trace_replay_workflow.get("manifest_path")
+                    or manifests.get("product_trace_replay_workflow_manifest")
+                ),
+                "product_trace_replay_workflow_source": product_trace_replay_workflow.get(
+                    "source"
+                ),
+                "product_trace_replay_workflow_registry": product_trace_replay_workflow.get(
+                    "registry"
+                ),
+                "product_trace_replay_workflow_record": product_trace_replay_workflow.get(
+                    "record_key"
+                ),
+                "product_trace_replay_workflow_report_status": (
+                    product_trace_replay_workflow.get("report_status")
+                ),
+                "product_trace_replay_workflow_selector_replay_report": (
+                    product_trace_replay_workflow.get("selector_replay_report_path")
+                ),
+                "product_trace_replay_workflow_runtime_drift_report": (
+                    product_trace_replay_workflow.get("product_runtime_drift_report_path")
                 ),
                 "performance_baseline_record": candidate.get("performance_baseline_record"),
                 "performance_evidence_bundle_status": performance_evidence_bundle.get("status"),
@@ -278,6 +322,7 @@ class ProductPromotionContract:
             "runtime": dict(self.runtime),
             "verifier_route": dict(self.verifier_route),
             "runtime_budget_policy": self.runtime_budget_policy.to_dict(),
+            "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "metadata": dict(self.metadata),
         }
 
@@ -509,6 +554,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_source_status": contract.source_status,
         "promotion_contract_runtime": dict(contract.runtime),
         "promotion_contract_verifier_route": dict(contract.verifier_route),
+        "promotion_contract_product_trace_replay_workflow": dict(
+            contract.product_trace_replay_workflow
+        ),
         "promotion_contract_metadata": dict(contract.metadata),
     }
 
@@ -569,6 +617,30 @@ def _release_candidate_comparison(payload: Mapping[str, Any]) -> dict[str, Any]:
             raise ValueError("registry workflow payload is missing release_candidate_comparison.")
         return dict(comparison)
     return dict(payload)
+
+
+def _product_trace_replay_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("product_trace_replay_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "report_status": workflow.get("report_status"),
+        "selector_replay_report_path": workflow.get("selector_replay_report_path"),
+        "product_runtime_drift_report_path": workflow.get(
+            "product_runtime_drift_report_path"
+        ),
+    }
 
 
 def _mapping(value: Any) -> dict[str, Any]:

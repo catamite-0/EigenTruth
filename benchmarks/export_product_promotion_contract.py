@@ -37,6 +37,7 @@ def export_product_promotion_contract(
 
     contract = ProductPromotionContract.from_json(source)
     payload = contract.to_dict()
+    trace_replay_workflow = dict(contract.product_trace_replay_workflow)
     export_metadata = dict(metadata or {})
     _write_json(output, payload, compact=compact_json)
 
@@ -75,6 +76,23 @@ def export_product_promotion_contract(
                     "recommended_selector_replay_candidate"
                 ),
                 "product_runtime_drift_status": contract.metadata.get("product_runtime_drift_status"),
+                "product_trace_replay_workflow_report": trace_replay_workflow.get("report_path"),
+                "product_trace_replay_workflow_manifest": trace_replay_workflow.get(
+                    "manifest_path"
+                ),
+                "product_trace_replay_workflow_source": trace_replay_workflow.get("source"),
+                "product_trace_replay_workflow_registry": trace_replay_workflow.get(
+                    "registry"
+                ),
+                "product_trace_replay_workflow_record": trace_replay_workflow.get(
+                    "record_key"
+                ),
+                "product_trace_replay_workflow_selector_replay_report": (
+                    trace_replay_workflow.get("selector_replay_report_path")
+                ),
+                "product_trace_replay_workflow_runtime_drift_report": (
+                    trace_replay_workflow.get("product_runtime_drift_report_path")
+                ),
                 "compact_json": compact_json,
                 **export_metadata,
             },
@@ -97,6 +115,7 @@ def export_product_promotion_contract(
             "source_status": contract.source_status,
             "runtime": dict(contract.runtime),
             "verifier_route": dict(contract.verifier_route),
+            "product_trace_replay_workflow": trace_replay_workflow,
             "metadata": dict(contract.metadata),
         },
         "artifact_manifest_summary": None if manifest is None else manifest.get("summary"),

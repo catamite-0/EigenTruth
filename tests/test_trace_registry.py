@@ -876,6 +876,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_product_runtime_drift_report": (
                 "artifacts/runtime-drift/product-runtime-drift.json"
             ),
+            "product_trace_replay_workflow_status": "promote",
             "selector_replay_status": "promote",
             "product_runtime_drift_status": "promote",
             "recommended_route": "structured_state",
@@ -929,6 +930,20 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                         },
                     },
                 },
+            },
+            "product_trace_replay_workflow": {
+                "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
+                "manifest_path": "artifacts/trace-replay-workflow/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:trace-replay-workflow:0.1",
+                "report_status": "promote",
+                "selector_replay_report_path": (
+                    "artifacts/selector/runtime-profile-selector-replay.json"
+                ),
+                "product_runtime_drift_report_path": (
+                    "artifacts/runtime-drift/product-runtime-drift.json"
+                ),
             },
             "selector_replay": {
                 "report_path": "artifacts/selector/runtime-profile-selector-replay.json",
@@ -988,6 +1003,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
                 "route_manifest": "artifacts/route/artifact-manifest.json",
                 "performance_manifest": "artifacts/performance/artifact-manifest.json",
+                "product_trace_replay_workflow_manifest": (
+                    "artifacts/trace-replay-workflow/artifact-manifest.json"
+                ),
                 "selector_replay_manifest": "artifacts/selector/artifact-manifest.json",
                 "product_runtime_drift_manifest": "artifacts/runtime-drift/artifact-manifest.json",
                 "adapter_family_matrix_report": "artifacts/adapter-family-matrix.json",
@@ -1047,6 +1065,33 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
+        "artifacts/runtime-drift/product-runtime-drift.json"
+    )
+    assert contract.product_trace_replay_workflow == {
+        "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
+        "manifest_path": "artifacts/trace-replay-workflow/artifact-manifest.json",
+        "source": "registry",
+        "registry": "artifacts/release-registry.json",
+        "record_key": "report:trace-replay-workflow:0.1",
+        "report_status": "promote",
+        "selector_replay_report_path": "artifacts/selector/runtime-profile-selector-replay.json",
+        "product_runtime_drift_report_path": "artifacts/runtime-drift/product-runtime-drift.json",
+    }
+    assert contract.metadata["product_trace_replay_workflow_status"] == "promote"
+    assert contract.metadata["product_trace_replay_workflow_report"] == (
+        "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
+    )
+    assert contract.metadata["product_trace_replay_workflow_manifest"] == (
+        "artifacts/trace-replay-workflow/artifact-manifest.json"
+    )
+    assert contract.metadata["product_trace_replay_workflow_source"] == "registry"
+    assert contract.metadata["product_trace_replay_workflow_record"] == (
+        "report:trace-replay-workflow:0.1"
+    )
+    assert contract.metadata["product_trace_replay_workflow_selector_replay_report"] == (
+        "artifacts/selector/runtime-profile-selector-replay.json"
+    )
+    assert contract.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
     assert contract.metadata["selector_replay_status"] == "promote"
@@ -1123,6 +1168,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         runtime_budget_policy=ProductRuntimeBudgetPolicy(max_mean_attempted_route_count=1.1),
         source_workflow="release_candidate_comparison",
         source_status="promote",
+        product_trace_replay_workflow={
+            "report_path": "trace-replay-workflow.json",
+            "record_key": "report:trace-replay-workflow:0.1",
+        },
         metadata={"selector_replay_status": "promote"},
     ).save_json(contract_path)
 
@@ -1142,6 +1191,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_model_id"] == "demo-model"
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {"route": "structured_qa"}
+    assert metadata["promotion_contract_product_trace_replay_workflow"] == {
+        "report_path": "trace-replay-workflow.json",
+        "record_key": "report:trace-replay-workflow:0.1",
+    }
     assert metadata["promotion_contract_metadata"] == {"selector_replay_status": "promote"}
     assert product_promotion_contract_metadata(None, source=None, budget_enabled=True) == {
         "promotion_contract_source": None,
@@ -1160,6 +1213,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         runtime_budget_policy=ProductRuntimeBudgetPolicy(max_retrieval_use_rate=0.0),
         source_workflow="release_candidate_comparison",
         source_status="promote",
+        product_trace_replay_workflow={
+            "report_path": "trace-replay-workflow.json",
+            "selector_replay_report_path": "selector-replay.json",
+            "product_runtime_drift_report_path": "runtime-drift.json",
+        },
         metadata={"product_runtime_drift_status": "promote"},
     ).save_json(contract_path)
     manifest = build_artifact_manifest(
@@ -1194,6 +1252,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     )
     assert metadata_without_verification["promotion_contract_registry_record"]["metadata"] == {
         "artifact_manifest": str(manifest_path)
+    }
+    assert metadata_without_verification["promotion_contract_product_trace_replay_workflow"] == {
+        "report_path": "trace-replay-workflow.json",
+        "selector_replay_report_path": "selector-replay.json",
+        "product_runtime_drift_report_path": "runtime-drift.json",
     }
 
     metadata_with_verification = bundle.runtime_metadata(

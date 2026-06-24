@@ -6236,7 +6236,21 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "blocked_metric_count": 0,
                     },
                 },
-                "manifests": {},
+                "product_trace_replay_workflow": {
+                    "report_path": "artifacts/trace-replay-workflow/product-trace-replay-workflow.json",
+                    "manifest_path": "artifacts/trace-replay-workflow/artifact-manifest.json",
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:trace-replay-workflow:0.1",
+                    "report_status": "promote",
+                    "selector_replay_report_path": "artifacts/selector/selector-replay.json",
+                    "product_runtime_drift_report_path": "artifacts/runtime-drift/runtime-drift.json",
+                },
+                "manifests": {
+                    "product_trace_replay_workflow_manifest": (
+                        "artifacts/trace-replay-workflow/artifact-manifest.json"
+                    ),
+                },
             },
         }),
         encoding="utf-8",
@@ -6260,12 +6274,25 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert payload["status"] == "exported"
     assert contract["workflow"] == "product_promotion_contract"
     assert contract["runtime_budget_policy"]["max_mean_attempted_route_count"] == 1.1
+    assert contract["product_trace_replay_workflow"]["record_key"] == (
+        "report:trace-replay-workflow:0.1"
+    )
+    assert payload["contract"]["product_trace_replay_workflow"]["report_path"] == (
+        "artifacts/trace-replay-workflow/product-trace-replay-workflow.json"
+    )
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["summary"]["artifact_count"] == 2
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
     assert record.metadata["recommended_route"] == "structured_qa"
+    assert record.metadata["product_trace_replay_workflow_source"] == "registry"
+    assert record.metadata["product_trace_replay_workflow_record"] == (
+        "report:trace-replay-workflow:0.1"
+    )
+    assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
+        "artifacts/runtime-drift/runtime-drift.json"
+    )
     assert record.metadata["release"] == "smollm2-v1.5"
     assert "\n  " not in contract_path.read_text(encoding="utf-8")
 
