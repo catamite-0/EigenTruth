@@ -13,7 +13,7 @@ import json
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, MutableMapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -38,6 +38,8 @@ from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
     build_artifact_manifest,
     load_and_verify_artifact_manifest,
+    load_fingerprint_cache,
+    save_fingerprint_cache,
 )
 
 
@@ -65,6 +67,7 @@ class ProductTraceReplayWorkflowConfig:
     verify_manifest: bool = False
     verification_report_path: str | Path | None = None
     allow_manifest_verification_failures: bool = False
+    fingerprint_cache_path: str | Path | None = None
 
     def __post_init__(self) -> None:
         trace_paths = tuple(Path(path) for path in self.trace_paths)
@@ -98,6 +101,8 @@ class ProductTraceReplayWorkflowConfig:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.verification_report_path is not None:
             object.__setattr__(self, "verification_report_path", Path(self.verification_report_path))
+        if self.fingerprint_cache_path is not None:
+            object.__setattr__(self, "fingerprint_cache_path", Path(self.fingerprint_cache_path))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         object.__setattr__(self, "metadata", dict(self.metadata))
@@ -142,75 +147,88 @@ class ProductTraceReplayWorkflowConfig:
 
 def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     """Run corpus build, runtime baseline, and selector replay in one workflow."""
-    config.output_dir.mkdir(parents=True, exist_ok=True)
-    corpus = _run_corpus(config)
-    corpus_trace_paths = tuple(Path(record["path"]) for record in _sequence(corpus.get("traces")))
-    runtime_baseline = _run_runtime_baseline(config, corpus_trace_paths)
-    selector_replay = _run_selector_replay(
-        config,
-        corpus_trace_paths,
-        runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
-    )
-    status = _workflow_status(corpus, runtime_baseline, selector_replay)
-    report = {
-        "schema_version": 1,
-        "workflow": "product_trace_replay_workflow",
-        "status": status,
-        "decision": {
+    fingerprint_cache = _load_fingerprint_cache(config)
+    try:
+        config.output_dir.mkdir(parents=True, exist_ok=True)
+        corpus = _run_corpus(config)
+        corpus_trace_paths = tuple(Path(record["path"]) for record in _sequence(corpus.get("traces")))
+        runtime_baseline = _run_runtime_baseline(config, corpus_trace_paths)
+        selector_replay = _run_selector_replay(
+            config,
+            corpus_trace_paths,
+            runtime_pair_index_path=_nested(corpus, "paths", "runtime_pair_index"),
+        )
+        status = _workflow_status(corpus, runtime_baseline, selector_replay)
+        report = {
+            "schema_version": 1,
+            "workflow": "product_trace_replay_workflow",
             "status": status,
-            "blocking_reasons": _blocking_reasons(corpus, runtime_baseline, selector_replay),
-            "recommended_selector_candidate": _nested(
-                selector_replay,
-                "decision",
-                "recommended_candidate",
-            ),
-            "recommended_selector_policy_path": _nested(
-                selector_replay,
-                "decision",
-                "recommended_policy_path",
-            ),
-        },
-        "corpus": _corpus_summary(corpus),
-        "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
-        "selector_replay": _selector_replay_summary(selector_replay),
-        "paths": {
-            "report": str(config.resolved_report_path),
-            "artifact_manifest": str(config.resolved_artifact_manifest_path),
-            "output_dir": str(config.output_dir),
-            "corpus_report": _nested(corpus, "paths", "report"),
-            "corpus_manifest": _nested(corpus, "paths", "artifact_manifest"),
-            "corpus_traces_dir": _nested(corpus, "paths", "traces_dir"),
-            "corpus_runtime_pair_index": _nested(corpus, "paths", "runtime_pair_index"),
-            "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
-            "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
-            "selector_replay_report": _nested(selector_replay, "paths", "report"),
-            "selector_replay_manifest": _nested(selector_replay, "paths", "artifact_manifest"),
-            "manifest_verification": (
-                str(config.resolved_verification_report_path) if config.verify_manifest else None
-            ),
-        },
-        "config": {
-            "candidate_names": tuple(candidate.name for candidate in config.candidates),
-            "trace_count": len(config.trace_paths),
-            "jsonl_count": len(config.jsonl_paths),
-            "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
-            "runtime_policy": None if config.runtime_policy_path is None else str(config.runtime_policy_path),
-            "promotion_contract": (
-                None if config.promotion_contract_path is None else str(config.promotion_contract_path)
-            ),
-            "redact_text": config.redact_text,
-            "require_runtime_trace": config.require_runtime_trace,
-            "strict": config.strict,
-            "limit": config.limit,
-            "compact_json": config.compact_json,
-            "metadata": dict(config.metadata),
-        },
-    }
-    _write_report_and_manifest(config, report)
-    if config.verify_manifest:
-        report["manifest_verification"] = _write_manifest_verification(config)
-    _record_registry(config, report)
-    return report
+            "decision": {
+                "status": status,
+                "blocking_reasons": _blocking_reasons(corpus, runtime_baseline, selector_replay),
+                "recommended_selector_candidate": _nested(
+                    selector_replay,
+                    "decision",
+                    "recommended_candidate",
+                ),
+                "recommended_selector_policy_path": _nested(
+                    selector_replay,
+                    "decision",
+                    "recommended_policy_path",
+                ),
+            },
+            "corpus": _corpus_summary(corpus),
+            "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
+            "selector_replay": _selector_replay_summary(selector_replay),
+            "paths": {
+                "report": str(config.resolved_report_path),
+                "artifact_manifest": str(config.resolved_artifact_manifest_path),
+                "output_dir": str(config.output_dir),
+                "corpus_report": _nested(corpus, "paths", "report"),
+                "corpus_manifest": _nested(corpus, "paths", "artifact_manifest"),
+                "corpus_traces_dir": _nested(corpus, "paths", "traces_dir"),
+                "corpus_runtime_pair_index": _nested(corpus, "paths", "runtime_pair_index"),
+                "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
+                "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
+                "selector_replay_report": _nested(selector_replay, "paths", "report"),
+                "selector_replay_manifest": _nested(selector_replay, "paths", "artifact_manifest"),
+                "manifest_verification": (
+                    str(config.resolved_verification_report_path) if config.verify_manifest else None
+                ),
+                "manifest_fingerprint_cache": (
+                    None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
+                ),
+            },
+            "config": {
+                "candidate_names": tuple(candidate.name for candidate in config.candidates),
+                "trace_count": len(config.trace_paths),
+                "jsonl_count": len(config.jsonl_paths),
+                "replay_policy": None if config.replay_policy_path is None else str(config.replay_policy_path),
+                "runtime_policy": None if config.runtime_policy_path is None else str(config.runtime_policy_path),
+                "promotion_contract": (
+                    None if config.promotion_contract_path is None else str(config.promotion_contract_path)
+                ),
+                "redact_text": config.redact_text,
+                "require_runtime_trace": config.require_runtime_trace,
+                "strict": config.strict,
+                "limit": config.limit,
+                "compact_json": config.compact_json,
+                "fingerprint_cache": (
+                    None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
+                ),
+                "metadata": dict(config.metadata),
+            },
+        }
+        _write_report_and_manifest(config, report, fingerprint_cache=fingerprint_cache)
+        if config.verify_manifest:
+            report["manifest_verification"] = _write_manifest_verification(
+                config,
+                fingerprint_cache=fingerprint_cache,
+            )
+        _record_registry(config, report, fingerprint_cache=fingerprint_cache)
+        return report
+    finally:
+        _save_fingerprint_cache(config, fingerprint_cache)
 
 
 def _run_corpus(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
@@ -394,6 +412,8 @@ def _recommended_leaderboard_row(report: Mapping[str, Any]) -> dict[str, Any]:
 def _write_report_and_manifest(
     config: ProductTraceReplayWorkflowConfig,
     report: dict[str, Any],
+    *,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     artifacts = _artifact_paths(config, report)
     report["artifact_manifest_summary"] = planned_artifact_manifest_summary(
@@ -401,7 +421,12 @@ def _write_report_and_manifest(
         assume_file_paths=(config.resolved_report_path,),
     )
     _write_json(config.resolved_report_path, report, compact=config.compact_json)
-    return _write_artifact_manifest(config, report, artifacts=artifacts)
+    return _write_artifact_manifest(
+        config,
+        report,
+        artifacts=artifacts,
+        fingerprint_cache=fingerprint_cache,
+    )
 
 
 def _artifact_paths(
@@ -434,6 +459,7 @@ def _write_artifact_manifest(
     report: Mapping[str, Any],
     *,
     artifacts: Mapping[str, str | Path | None] | None = None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     manifest = build_artifact_manifest(
         _artifact_paths(config, report) if artifacts is None else artifacts,
@@ -452,12 +478,18 @@ def _write_artifact_manifest(
             "compact_json": config.compact_json,
             **dict(config.metadata),
         },
+        fingerprint_cache=fingerprint_cache,
     )
     _write_json(config.resolved_artifact_manifest_path, manifest, compact=config.compact_json)
     return manifest
 
 
-def _record_registry(config: ProductTraceReplayWorkflowConfig, report: Mapping[str, Any]) -> None:
+def _record_registry(
+    config: ProductTraceReplayWorkflowConfig,
+    report: Mapping[str, Any],
+    *,
+    fingerprint_cache: Mapping[str, Mapping[str, Any]] | None = None,
+) -> None:
     if config.registry_path is None:
         return
     manifest_verification = _mapping(report.get("manifest_verification"))
@@ -489,6 +521,12 @@ def _record_registry(config: ProductTraceReplayWorkflowConfig, report: Mapping[s
             "manifest_verification_report": verification_report,
             "manifest_verification_checked": verification_payload.get("checked"),
             "manifest_verification_failure_count": _failure_count(verification_payload),
+            "manifest_fingerprint_cache": (
+                None if config.fingerprint_cache_path is None else str(config.fingerprint_cache_path)
+            ),
+            "manifest_fingerprint_cache_entries": (
+                None if fingerprint_cache is None else len(fingerprint_cache)
+            ),
             "compact_json": config.compact_json,
             **dict(config.metadata),
         },
@@ -508,10 +546,15 @@ def _record_registry(config: ProductTraceReplayWorkflowConfig, report: Mapping[s
     registry.save_json()
 
 
-def _write_manifest_verification(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
+def _write_manifest_verification(
+    config: ProductTraceReplayWorkflowConfig,
+    *,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     verification = load_and_verify_artifact_manifest(
         config.resolved_artifact_manifest_path,
         recursive=True,
+        fingerprint_cache=fingerprint_cache,
     )
     payload = verification.to_dict()
     path = config.resolved_verification_report_path
@@ -519,6 +562,21 @@ def _write_manifest_verification(config: ProductTraceReplayWorkflowConfig) -> di
     if not verification.passed and not config.allow_manifest_verification_failures:
         raise ValueError("product trace replay artifact manifest verification failed")
     return {"path": str(path), "verification": payload}
+
+
+def _load_fingerprint_cache(config: ProductTraceReplayWorkflowConfig) -> dict[str, dict[str, Any]]:
+    return load_fingerprint_cache(config.fingerprint_cache_path)
+
+
+def _save_fingerprint_cache(
+    config: ProductTraceReplayWorkflowConfig,
+    fingerprint_cache: Mapping[str, Mapping[str, Any]],
+) -> None:
+    save_fingerprint_cache(
+        config.fingerprint_cache_path,
+        fingerprint_cache,
+        compact=config.compact_json,
+    )
 
 
 def _failure_count(verification_payload: Mapping[str, Any]) -> int | None:
@@ -650,6 +708,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         verify_manifest=bool(args.verify_manifest),
         verification_report_path=Path(args.verification_report) if args.verification_report else None,
         allow_manifest_verification_failures=bool(args.allow_manifest_verification_failures),
+        fingerprint_cache_path=Path(args.fingerprint_cache) if args.fingerprint_cache else None,
     )
 
 
@@ -689,6 +748,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional path for the manifest verification report")
     parser.add_argument("--allow-manifest-verification-failures", action="store_true",
                         help="write and register manifest verification even when it fails")
+    parser.add_argument("--fingerprint-cache", default=None,
+                        help="optional JSON cache for manifest fingerprint reads")
     parser.add_argument("--fail-on-blocked", action="store_true")
     run(parser.parse_args(argv))
 

@@ -31,6 +31,8 @@ from eigentruth.registry import (
     build_artifact_manifest,
     fingerprint_path,
     load_and_verify_artifact_manifest,
+    load_fingerprint_cache,
+    save_fingerprint_cache,
 )
 from eigentruth.verify import (
     InMemoryVerifier,
@@ -357,6 +359,42 @@ def test_explicit_fingerprint_cache_invalidates_changed_file(tmp_path, monkeypat
     assert drifted.passed is False
     assert {failure.field for failure in drifted.failures} >= {"sha256"}
     assert call_count == 2
+
+
+def test_persisted_fingerprint_cache_reuses_unchanged_file(tmp_path, monkeypatch):
+    data_path = tmp_path / "result.json"
+    cache_path = tmp_path / "fingerprints.json"
+    data_path.write_text('{"score": 1}\n', encoding="utf-8")
+    fingerprint_cache = {}
+    manifest_path = tmp_path / "artifact-manifest.json"
+    manifest_path.write_text(
+        json.dumps(build_artifact_manifest(
+            {"result": data_path},
+            root=tmp_path,
+            fingerprint_cache=fingerprint_cache,
+        )),
+        encoding="utf-8",
+    )
+    save_fingerprint_cache(cache_path, fingerprint_cache)
+    loaded_cache = load_fingerprint_cache(cache_path)
+    original_sha256_file = registry_provenance._sha256_file
+    call_count = 0
+
+    def counted_sha256_file(path):
+        nonlocal call_count
+        call_count += 1
+        return original_sha256_file(path)
+
+    monkeypatch.setattr(registry_provenance, "_sha256_file", counted_sha256_file)
+
+    verification = load_and_verify_artifact_manifest(
+        manifest_path,
+        fingerprint_cache=loaded_cache,
+    )
+
+    assert verification.passed is True
+    assert call_count == 0
+    assert load_fingerprint_cache(tmp_path / "missing-cache.json") == {}
 
 
 def test_product_trace_action_execution_summary_counts_results():

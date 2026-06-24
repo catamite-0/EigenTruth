@@ -2468,7 +2468,8 @@ provided candidate policies using the corpus runtime-pair index, writes a
 recursive top-level manifest over all child reports, and registers one workflow
 report. Add `--verify-manifest` to write a separate recursive verification
 report and register `manifest_verification:<name>-verification:<version>` next
-to the workflow report:
+to the workflow report. Add `--fingerprint-cache` when repeating local checks
+over the same trace corpus:
 
 ```bash
 python benchmarks/run_product_trace_replay_workflow.py \
@@ -2483,6 +2484,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --version 0.1 \
   --require-runtime-trace \
   --verify-manifest \
+  --fingerprint-cache artifacts/smollm2_product_trace_replay_workflow/fingerprints.json \
   --fail-on-blocked
 ```
 
@@ -2719,12 +2721,15 @@ the saved fingerprints. Add `--recursive` for matrix reports so each cell's
 triplet manifest is verified as well. Recursive verification shares a
 run-local fingerprint cache, so repeated references to the same large score
 dump or cache artifact avoid duplicate content reads within that verification
-run:
+run. Add `--fingerprint-cache` to persist that cache across repeated local
+checks; entries are keyed by path and file/directory signatures, so changed
+artifacts naturally miss and get re-read:
 
 ```bash
 python benchmarks/verify_artifact_manifest.py \
   --manifest /tmp/eigentruth-qwen05-profile-rescore/artifact-manifest.json \
   --recursive \
+  --fingerprint-cache /tmp/eigentruth-qwen05-profile-rescore/fingerprints.json \
   --json /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
 ```
 
@@ -2737,6 +2742,7 @@ python benchmarks/promote_artifact_manifest.py \
   --registry artifacts/registry.json \
   --name qwen05-profile-rescore \
   --version 0.3 \
+  --fingerprint-cache /tmp/eigentruth-qwen05-profile-rescore/fingerprints.json \
   --verification-report /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
 ```
 

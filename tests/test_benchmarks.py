@@ -7419,19 +7419,24 @@ def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
 
     data_path.write_text('{"ok": false, "changed": true}\n', encoding="utf-8")
     report_path = tmp_path / "verification.json"
+    fingerprint_cache_path = tmp_path / "fingerprints.json"
     with pytest.raises(SystemExit) as exc_info:
         module.main([
             "--manifest",
             str(manifest_path),
             "--json",
             str(report_path),
+            "--fingerprint-cache",
+            str(fingerprint_cache_path),
         ])
 
     assert exc_info.value.code == 1
     report = json.loads(report_path.read_text(encoding="utf-8"))
+    fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
     assert report["passed"] is False
     assert report["failures"][0]["name"] == "result"
     assert {failure["field"] for failure in report["failures"]} >= {"sha256", "size_bytes"}
+    assert len(fingerprint_cache) > 0
 
 
 def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
@@ -7447,6 +7452,7 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
     )
     registry_path = tmp_path / "registry" / "registry.json"
     verification_path = tmp_path / "reports" / "verification.json"
+    fingerprint_cache_path = tmp_path / "reports" / "fingerprints.json"
 
     payload = module.promote_artifact_manifest(
         manifest_path=manifest_path,
@@ -7455,6 +7461,7 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
         version="0.3",
         verification_report_path=verification_path,
         metadata={"machine": "local"},
+        fingerprint_cache_path=fingerprint_cache_path,
     )
     registry = ArtifactRegistry.load_json(registry_path)
     manifest_record = registry.get("benchmark_manifest:unit-baseline:0.3")
@@ -7462,6 +7469,7 @@ def test_promote_artifact_manifest_registers_verified_manifest(tmp_path):
 
     assert payload["verification"]["passed"] is True
     assert verification_path.exists()
+    assert fingerprint_cache_path.exists()
     assert manifest_record.path == str(manifest_path)
     assert manifest_record.metadata["verified"] is True
     assert manifest_record.metadata["machine"] == "local"
@@ -11614,6 +11622,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     registry_path = tmp_path / "registry.json"
     replay_policy_path = tmp_path / "replay-policy.json"
     verification_report_path = tmp_path / "workflow" / "manifest-verification.json"
+    fingerprint_cache_path = tmp_path / "workflow" / "fingerprints.json"
     traces_dir = tmp_path / "input-traces"
     traces_dir.mkdir()
     replay_policy_path.write_text(
@@ -11701,6 +11710,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             compact_json=True,
             verify_manifest=True,
             verification_report_path=verification_report_path,
+            fingerprint_cache_path=fingerprint_cache_path,
         )
     )
     registry = registry_module.ArtifactRegistry.load_json(registry_path)
@@ -11709,6 +11719,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     corpus_trace = next((output_dir / "corpus" / "traces").glob("latency-*.json"))
     saved_trace = json.loads(corpus_trace.read_text(encoding="utf-8"))
     verification_report = json.loads(verification_report_path.read_text(encoding="utf-8"))
+    fingerprint_cache = json.loads(fingerprint_cache_path.read_text(encoding="utf-8"))
 
     assert payload["status"] == "promote"
     assert payload["corpus"]["status"] == "ready"
@@ -11720,9 +11731,12 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["selector_replay"]["recommended_candidate"] == "default"
     assert payload["paths"]["corpus_runtime_pair_index"] is not None
     assert payload["paths"]["manifest_verification"] == str(verification_report_path)
+    assert payload["paths"]["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
+    assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
     assert payload["manifest_verification"]["verification"]["passed"] is True
     assert verification_report["passed"] is True
+    assert len(fingerprint_cache) > 0
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
     selector_replay_report = json.loads(
         Path(payload["paths"]["selector_replay_report"]).read_text(encoding="utf-8")
@@ -11742,6 +11756,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["manifest_verified"] is True
     assert record.metadata["manifest_verification_report"] == str(verification_report_path)
     assert record.metadata["manifest_verification_failure_count"] == 0
+    assert record.metadata["manifest_fingerprint_cache"] == str(fingerprint_cache_path)
+    assert record.metadata["manifest_fingerprint_cache_entries"] == len(fingerprint_cache)
     assert verification_record.path == str(verification_report_path)
     assert verification_record.metadata["manifest_path"] == str(payload["paths"]["artifact_manifest"])
     assert verification_record.metadata["passed"] is True
@@ -11761,6 +11777,7 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         require_runtime_trace="false",
         strict="false",
         compact_json="false",
+        fingerprint_cache_path=tmp_path / "fingerprints.json",
     )
     replay_config = replay_module.RuntimeProfileSelectorReplayConfig(
         trace_paths=("trace.json",),
@@ -11778,6 +11795,7 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.require_runtime_trace is False
     assert workflow_config.strict is False
     assert workflow_config.compact_json is False
+    assert workflow_config.fingerprint_cache_path == tmp_path / "fingerprints.json"
     assert replay_config.compact_json is False
     assert baseline_config.compact_json is False
 

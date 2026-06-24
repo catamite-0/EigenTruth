@@ -12,6 +12,7 @@
       "audit_biased"
     ],
     "compact_json": false,
+    "fingerprint_cache": "artifacts/smollm2_product_trace_replay_workflow/fingerprints.json",
     "jsonl_count": 0,
     "limit": null,
     "metadata": {},
@@ -59,6 +60,7 @@
     "corpus_report": "artifacts/smollm2_product_trace_replay_workflow/corpus/product-trace-corpus.json",
     "corpus_runtime_pair_index": "artifacts/smollm2_product_trace_replay_workflow/corpus/runtime-pair-index.json",
     "corpus_traces_dir": "artifacts/smollm2_product_trace_replay_workflow/corpus/traces",
+    "manifest_fingerprint_cache": "artifacts/smollm2_product_trace_replay_workflow/fingerprints.json",
     "manifest_verification": "artifacts/smollm2_product_trace_replay_workflow/manifest-verification.json",
     "output_dir": "artifacts/smollm2_product_trace_replay_workflow",
     "report": "artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json",

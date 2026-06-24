@@ -9,6 +9,8 @@ from eigentruth.registry.provenance import (
     build_artifact_manifest,
     fingerprint_path,
     load_and_verify_artifact_manifest,
+    load_fingerprint_cache,
+    save_fingerprint_cache,
     verify_artifact_manifest,
 )
 from eigentruth.registry.records import ArtifactRegistry, RegistryRecord
@@ -21,6 +23,8 @@ __all__ = [
     "RegistryRecord",
     "build_artifact_manifest",
     "fingerprint_path",
+    "load_fingerprint_cache",
     "load_and_verify_artifact_manifest",
+    "save_fingerprint_cache",
     "verify_artifact_manifest",
 ]

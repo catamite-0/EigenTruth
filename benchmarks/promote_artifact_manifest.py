@@ -13,7 +13,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from eigentruth.registry import ArtifactRegistry, load_and_verify_artifact_manifest  # noqa: E402
+from eigentruth.registry import (  # noqa: E402
+    ArtifactRegistry,
+    load_and_verify_artifact_manifest,
+    load_fingerprint_cache,
+    save_fingerprint_cache,
+)
 
 
 def promote_artifact_manifest(
@@ -27,16 +32,21 @@ def promote_artifact_manifest(
     allow_failures: bool = False,
     metadata: Mapping[str, Any] | None = None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
+    fingerprint_cache_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Verify a manifest and record it in a local artifact registry."""
     manifest_path = Path(manifest_path)
     registry_path = Path(registry_path)
     verification_report_path = Path(verification_report_path or manifest_path.with_name("manifest-verification.json"))
-    verification = load_and_verify_artifact_manifest(
-        manifest_path,
-        recursive=recursive,
-        fingerprint_cache=fingerprint_cache,
-    )
+    cache = fingerprint_cache if fingerprint_cache is not None else load_fingerprint_cache(fingerprint_cache_path)
+    try:
+        verification = load_and_verify_artifact_manifest(
+            manifest_path,
+            recursive=recursive,
+            fingerprint_cache=cache,
+        )
+    finally:
+        save_fingerprint_cache(fingerprint_cache_path, cache)
     verification_payload = verification.to_dict()
     verification_report_path.parent.mkdir(parents=True, exist_ok=True)
     if not verification.passed and not allow_failures:
@@ -131,6 +141,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         recursive=not args.no_recursive,
         allow_failures=bool(args.allow_failures),
         metadata=_parse_metadata(args.metadata or ()),
+        fingerprint_cache_path=args.fingerprint_cache,
     )
     print(json.dumps(payload, indent=2, sort_keys=True))
     return payload
@@ -144,6 +155,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", required=True, help="registry artifact version")
     parser.add_argument("--verification-report", default=None, help="path for the verification report JSON")
     parser.add_argument("--metadata", action="append", default=[], help="extra registry metadata as key=value")
+    parser.add_argument("--fingerprint-cache", default=None, help="optional JSON cache for manifest fingerprint reads")
     parser.add_argument("--no-recursive", action="store_true", help="only verify the root manifest")
     parser.add_argument("--allow-failures", action="store_true", help="register even when verification fails")
     run(parser.parse_args(argv))

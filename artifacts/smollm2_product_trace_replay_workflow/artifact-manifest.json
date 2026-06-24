@@ -133,8 +133,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "product-trace-replay-workflow.json",
-      "sha256": "af57f09f84f2d8b5cc81a4cc90e084ec8e46042628d8bb47d53639da98853d32",
-      "size_bytes": 6104
+      "sha256": "ea27befacf7b5cc0d86310f45be848801f0013abb91e356d031f03d2fc4f153f",
+      "size_bytes": 6301
     },
     "replay_policy": {
       "exists": true,

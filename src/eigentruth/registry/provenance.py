@@ -233,6 +233,43 @@ def load_and_verify_artifact_manifest(
     )
 
 
+def load_fingerprint_cache(path: str | Path | None) -> dict[str, dict[str, Any]]:
+    """Load a JSON fingerprint cache, returning an empty cache when absent."""
+    if path is None:
+        return {}
+    cache_path = Path(path)
+    if not cache_path.exists():
+        return {}
+    payload = json.loads(cache_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError("fingerprint cache must be a JSON object.")
+    cache: dict[str, dict[str, Any]] = {}
+    for key, value in payload.items():
+        if not isinstance(value, Mapping):
+            raise ValueError(f"fingerprint cache entry must be an object: {key!r}")
+        cache[str(key)] = dict(value)
+    return cache
+
+
+def save_fingerprint_cache(
+    path: str | Path | None,
+    cache: Mapping[str, Mapping[str, Any]],
+    *,
+    compact: bool = False,
+) -> None:
+    """Persist a JSON fingerprint cache."""
+    if path is None:
+        return
+    cache_path = Path(path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {str(key): dict(value) for key, value in sorted(cache.items())}
+    if compact:
+        text = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    else:
+        text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    cache_path.write_text(text, encoding="utf-8")
+
+
 def _fingerprint_cache_key(path: Path, *, kind: str, signature: str = "") -> str:
     try:
         resolved = str(path.resolve())
