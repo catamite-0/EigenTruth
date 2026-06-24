@@ -10121,8 +10121,14 @@ def test_runtime_profile_selector_replay_uses_lightweight_trace_inputs(tmp_path)
     assert record["observed_selected_pair_count"] == 1
 
 
-def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path):
+def test_eval_calibration_transfer_builds_threshold_transfer_matrix(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_calibration_transfer")
+    from eigentruth.eval.score_dump import ScoreDump
+
+    def fail_to_mapping(self):
+        raise AssertionError("calibration transfer should consume ScoreDump directly")
+
+    monkeypatch.setattr(ScoreDump, "to_mapping", fail_to_mapping)
     artifact_path = tmp_path / "artifact.json"
     artifact_path.write_text(
         json.dumps({

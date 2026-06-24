@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.eval.metrics import selective_classification_report
-from eigentruth.eval.score_dump import load_score_dump, score_dump_file_metadata
+from eigentruth.eval.score_dump import ScoreDump, load_score_dump, score_dump_file_metadata
 
 DEFAULT_TOLERANCE = 0.03
 
@@ -30,36 +30,27 @@ def _parse_named_path(value: str, *, option: str) -> tuple[str, Path]:
     return name, Path(path)
 
 
-def _labels(dump: Mapping[str, Any]) -> list[int]:
-    labels = [int(label) for label in dump.get("labels", [])]
-    if not labels:
-        raise ValueError("score dump must contain non-empty labels.")
-    if any(label not in {0, 1} for label in labels):
-        raise ValueError("score dump labels must be binary values in {0, 1}.")
-    return labels
+def _labels(dump: ScoreDump) -> list[int]:
+    return list(dump.labels)
 
 
 def _score_values_for_artifact_score(
-    dump: Mapping[str, Any],
+    dump: ScoreDump,
     artifact: CalibrationArtifact,
     score: CalibrationScore,
 ) -> tuple[list[float], dict[str, Any]]:
     layer_key = str(artifact.target_layer)
-    sweep_scores = dump.get("sweep_scores", {})
-    if isinstance(sweep_scores, Mapping):
-        layer_scores = sweep_scores.get(layer_key)
-        if isinstance(layer_scores, Mapping) and score.name in layer_scores:
-            return [float(value) for value in layer_scores[score.name]], {
-                "score_source": "sweep_scores",
-                "layer": artifact.target_layer,
-            }
+    layer_scores = dump.sweep_scores.get(layer_key)
+    if layer_scores is not None and score.name in layer_scores:
+        return [float(value) for value in layer_scores[score.name]], {
+            "score_source": "sweep_scores",
+            "layer": artifact.target_layer,
+        }
 
-    config = dump.get("config", {})
-    primary_layer = config.get("layer")
-    primary_scores = dump.get("scores", {})
+    primary_layer = dump.config.get("layer")
+    primary_scores = dump.scores
     if (
-        isinstance(primary_scores, Mapping)
-        and score.name in primary_scores
+        score.name in primary_scores
         and primary_layer is not None
         and int(primary_layer) == artifact.target_layer
     ):
@@ -68,7 +59,7 @@ def _score_values_for_artifact_score(
             "layer": artifact.target_layer,
         }
 
-    available_layers = sorted(int(layer) for layer in sweep_scores) if isinstance(sweep_scores, Mapping) else []
+    available_layers = sorted(int(layer) for layer in dump.sweep_scores)
     raise ValueError(
         f"score dump does not contain score {score.name!r} at artifact target layer "
         f"{artifact.target_layer}; available sweep layers: {available_layers}"
@@ -82,7 +73,7 @@ def _evaluate_score(
     artifact: CalibrationArtifact,
     target_name: str,
     target_path: Path,
-    dump: Mapping[str, Any],
+    dump: ScoreDump,
     score: CalibrationScore,
     tolerance: float,
 ) -> dict[str, Any]:
@@ -107,14 +98,13 @@ def _evaluate_score(
         false_alarm_excess = float(false_alarm) - float(alpha)
         controlled = float(false_alarm) <= float(alpha) + float(tolerance)
 
-    target_config = dump.get("config", {})
     return {
         "source_artifact": artifact_name,
         "source_artifact_path": str(artifact_path),
         "source_model_id": artifact.model_id,
         "target_dump": target_name,
         "target_scores_path": str(target_path),
-        "target_model_id": target_config.get("model"),
+        "target_model_id": dump.config.get("model"),
         "score_name": score.name,
         "direction": score.direction,
         "threshold": score.threshold,
@@ -198,7 +188,7 @@ def build_calibration_transfer_report(
     score_dump_metadata_cache = {}
     for name, path in score_dumps:
         score_dump = load_score_dump(path)
-        loaded_dumps.append((name, path, score_dump.to_mapping()))
+        loaded_dumps.append((name, path, score_dump))
         score_dump_metadata[name] = score_dump_file_metadata(
             path,
             score_dump,
