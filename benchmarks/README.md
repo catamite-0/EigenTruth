@@ -2386,7 +2386,10 @@ intentionally rejected because it can truncate replay-relevant evidence and
 action outputs. For large trace sets, add `--trace-records-jsonl` to stream
 per-trace metric, budget, and runtime-profile context records into a JSONL
 sidecar while keeping the main report focused on summary, budget, optimization,
-manifest, and registry metadata. Add
+manifest, and registry metadata. Add `--save-recommended-policy` to write
+`optimization.policy_hints.candidate_runtime_budget_policy` as a reusable
+`ProductRuntimeBudgetPolicy` JSON that can be passed back through `--policy` in
+later baseline, replay, or profile-sweep gates. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
 resolved policy payload:
@@ -2399,6 +2402,7 @@ python benchmarks/run_product_runtime_baseline.py \
   --json artifacts/product-runtime-baseline.json \
   --trace-records-jsonl artifacts/product-runtime-baseline-trace-records.jsonl \
   --trace-records-cache-json artifacts/product-runtime-baseline-trace-record-cache.json \
+  --save-recommended-policy artifacts/product-runtime-baseline-recommended-policy.json \
   --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-runtime-baseline \

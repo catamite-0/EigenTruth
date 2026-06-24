@@ -259,6 +259,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_product_runtime_budget_policy(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a reusable ProductRuntimeBudgetPolicy artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="product_runtime_budget_policy",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_product_promotion_contract(
         self,
         *,

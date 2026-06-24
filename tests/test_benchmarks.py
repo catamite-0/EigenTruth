@@ -10610,8 +10610,13 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
 
 def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    control_module = importlib.import_module("eigentruth.control")
+    registry_module = importlib.import_module("eigentruth.registry")
     trace_a = tmp_path / "trace-a.json"
     trace_b = tmp_path / "trace-b.json"
+    report_path = tmp_path / "product-runtime-baseline.json"
+    registry_path = tmp_path / "registry.json"
+    recommended_policy_path = tmp_path / "recommended-runtime-policy.json"
     for path, request_id, total_seconds, route_seconds in (
         (trace_a, "req-a", 0.30, 0.22),
         (trace_b, "req-b", 0.40, 0.30),
@@ -10659,11 +10664,21 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     payload = module.build_product_runtime_baseline(
         module.ProductRuntimeBaselineConfig(
             trace_paths=(trace_a, trace_b),
-            report_path=tmp_path / "product-runtime-baseline.json",
+            report_path=report_path,
+            recommended_policy_path=recommended_policy_path,
+            registry_path=registry_path,
+            name="runtime-advice",
+            version="0.1",
         )
     )
     optimization = payload["optimization"]
     recommendation_ids = {item["id"] for item in optimization["recommendations"]}
+    saved_policy = json.loads(recommended_policy_path.read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    baseline_record = registry.get("product_runtime_baseline:runtime-advice:0.1")
+    policy_record = registry.get("product_runtime_budget_policy:runtime-advice-recommended-policy:0.1")
+    loaded_policy = control_module.ProductRuntimeBudgetPolicy.from_mapping(saved_policy)
 
     assert optimization["status"] == "needs_attention"
     assert optimization["hotspots"]["phases"][0]["phase"] == "initial_verification"
@@ -10681,6 +10696,21 @@ def test_run_product_runtime_baseline_reports_optimization_advice(tmp_path):
     assert optimization["policy_hints"]["candidate_runtime_budget_policy"][
         "max_phase_p95_seconds"
     ]["initial_verification"] > 0.0
+    assert payload["paths"]["recommended_policy"] == str(recommended_policy_path)
+    assert payload["config"]["recommended_policy"]["written"] is True
+    assert payload["config"]["recommended_policy"]["policy_enabled"] is True
+    assert payload["config"]["recommended_policy"]["threshold_count"] >= 4
+    assert loaded_policy.enabled() is True
+    assert saved_policy["metadata"]["optimization_status"] == "needs_attention"
+    assert saved_policy["max_phase_p95_seconds"]["initial_verification"] > 0.0
+    assert manifest["artifacts"]["recommended_runtime_budget_policy"]["exists"] is True
+    assert manifest["metadata"]["recommended_policy_written"] is True
+    assert manifest["metadata"]["recommended_policy_enabled"] is True
+    assert baseline_record.metadata["recommended_policy_path"] == str(recommended_policy_path)
+    assert baseline_record.metadata["recommended_policy_threshold_count"] >= 4
+    assert policy_record.path == str(recommended_policy_path)
+    assert policy_record.metadata["source_baseline_record"] == "product_runtime_baseline:runtime-advice:0.1"
+    assert policy_record.metadata["policy_enabled"] is True
 
 
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):

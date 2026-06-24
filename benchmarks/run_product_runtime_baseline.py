@@ -46,6 +46,7 @@ class ProductRuntimeBaselineConfig:
     trace_records_path: str | Path | None = None
     trace_records_cache_path: str | Path | None = None
     refresh_trace_records_cache: bool = False
+    recommended_policy_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -73,6 +74,8 @@ class ProductRuntimeBaselineConfig:
             object.__setattr__(self, "trace_records_path", Path(self.trace_records_path))
         if self.trace_records_cache_path is not None:
             object.__setattr__(self, "trace_records_cache_path", Path(self.trace_records_cache_path))
+        if self.recommended_policy_path is not None:
+            object.__setattr__(self, "recommended_policy_path", Path(self.recommended_policy_path))
         if self.artifact_manifest_path is not None:
             object.__setattr__(self, "artifact_manifest_path", Path(self.artifact_manifest_path))
         if self.registry_path is not None:
@@ -132,6 +135,9 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "trace_records_cache": (
                 None if config.trace_records_cache_path is None else str(config.trace_records_cache_path)
             ),
+            "recommended_policy": (
+                None if config.recommended_policy_path is None else str(config.recommended_policy_path)
+            ),
             "policy": None if config.policy_path is None else str(config.policy_path),
             "promotion_contract": (
                 None if config.promotion_contract_path is None else str(config.promotion_contract_path)
@@ -143,10 +149,15 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "policy_source": policy_source,
             "trace_records_sidecar": config.trace_records_path is not None,
             "trace_record_cache": trace_record_cache,
+            "recommended_policy": {
+                "enabled": config.recommended_policy_path is not None,
+                "path": None if config.recommended_policy_path is None else str(config.recommended_policy_path),
+            },
             "compact_json": config.compact_json,
             "metadata": dict(config.metadata),
         },
     }
+    _write_recommended_policy(config, report)
     _write_report_and_manifest(config, report)
     _record_registry(config, report)
     return report
@@ -1015,6 +1026,79 @@ def _blocking_reasons(budget: Mapping[str, Any]) -> tuple[str, ...]:
     )
 
 
+def _write_recommended_policy(
+    config: ProductRuntimeBaselineConfig,
+    report: dict[str, Any],
+) -> dict[str, Any] | None:
+    if config.recommended_policy_path is None:
+        return None
+    policy_payload = _recommended_policy_payload(config, report)
+    _write_report(config.recommended_policy_path, policy_payload, compact=config.compact_json)
+    policy_config = _mapping(_nested(report, "config", "recommended_policy"))
+    policy_config.update({
+        "enabled": True,
+        "written": True,
+        "path": str(config.recommended_policy_path),
+        "policy_enabled": ProductRuntimeBudgetPolicy.from_mapping(policy_payload).enabled(),
+        "threshold_count": _policy_threshold_count(policy_payload),
+        "source": _nested(report, "optimization", "policy_hints", "source"),
+    })
+    report["config"]["recommended_policy"] = policy_config
+    return policy_payload
+
+
+def _recommended_policy_payload(
+    config: ProductRuntimeBaselineConfig,
+    report: Mapping[str, Any],
+) -> dict[str, Any]:
+    candidate = _mapping(
+        _nested(
+            report,
+            "optimization",
+            "policy_hints",
+            "candidate_runtime_budget_policy",
+        )
+    )
+    policy_payload = ProductRuntimeBudgetPolicy.from_mapping(candidate).to_dict()
+    policy_payload["metadata"] = {
+        "source": "run_product_runtime_baseline.optimization.policy_hints",
+        "optimization_source": _nested(report, "optimization", "policy_hints", "source"),
+        "baseline_report": str(config.report_path),
+        "baseline_status": report.get("status"),
+        "optimization_status": _nested(report, "optimization", "status"),
+        "trace_count": _nested(report, "summary", "n_traces"),
+    }
+    return policy_payload
+
+
+def _policy_threshold_count(policy_payload: Mapping[str, Any]) -> int:
+    threshold_fields = (
+        "max_total_seconds",
+        "max_phase_seconds",
+        "max_phase_p95_seconds",
+        "max_phase_p99_seconds",
+        "max_mean_route_duration_seconds",
+        "max_p95_route_duration_seconds",
+        "max_p99_route_duration_seconds",
+        "max_route_duration_seconds",
+        "max_mean_attempted_route_count",
+        "max_retrieval_use_rate",
+        "max_retrieval_hit_count",
+        "min_cache_hit_rate",
+        "min_named_cache_hit_rate",
+        "min_verification_skip_rate",
+        "max_verified_claim_count",
+    )
+    count = 0
+    for field_name in threshold_fields:
+        value = policy_payload.get(field_name)
+        if isinstance(value, Mapping):
+            count += len(value)
+        elif value is not None:
+            count += 1
+    return count
+
+
 def _load_policy(config: ProductRuntimeBaselineConfig) -> tuple[ProductRuntimeBudgetPolicy | None, str | None]:
     if config.policy is not None:
         return (
@@ -1050,6 +1134,15 @@ def _write_artifact_manifest(
             "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
             "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
             "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
+            "recommended_policy_path": _nested(report, "paths", "recommended_policy"),
+            "recommended_policy_written": _nested(report, "config", "recommended_policy", "written"),
+            "recommended_policy_enabled": _nested(report, "config", "recommended_policy", "policy_enabled"),
+            "recommended_policy_threshold_count": _nested(
+                report,
+                "config",
+                "recommended_policy",
+                "threshold_count",
+            ),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "compact_json": config.compact_json,
@@ -1065,6 +1158,7 @@ def _artifact_paths(config: ProductRuntimeBaselineConfig) -> dict[str, str | Pat
         "product_runtime_baseline_report": config.report_path,
         "product_runtime_trace_records": config.trace_records_path,
         "product_runtime_trace_record_cache": config.trace_records_cache_path,
+        "recommended_runtime_budget_policy": config.recommended_policy_path,
         "policy": config.policy_path,
         "promotion_contract": config.promotion_contract_path,
     }
@@ -1092,6 +1186,15 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
             "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
             "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
+            "recommended_policy_path": _nested(report, "paths", "recommended_policy"),
+            "recommended_policy_written": _nested(report, "config", "recommended_policy", "written"),
+            "recommended_policy_enabled": _nested(report, "config", "recommended_policy", "policy_enabled"),
+            "recommended_policy_threshold_count": _nested(
+                report,
+                "config",
+                "recommended_policy",
+                "threshold_count",
+            ),
             "budget_enabled": _mapping(report.get("budget")).get("enabled"),
             "budget_passed": _mapping(report.get("budget")).get("passed"),
             "failed_count": _mapping(report.get("budget")).get("failed_count"),
@@ -1099,6 +1202,23 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             **dict(config.metadata),
         },
     )
+    if config.recommended_policy_path is not None:
+        registry.record_product_runtime_budget_policy(
+            name=f"{config.name}-recommended-policy",
+            path=config.recommended_policy_path,
+            version=str(config.version),
+            metadata={
+                "workflow": "run_product_runtime_baseline",
+                "source_baseline_record": f"product_runtime_baseline:{config.name}:{config.version}",
+                "source_baseline_report": str(config.report_path),
+                "artifact_manifest": str(config.resolved_artifact_manifest_path),
+                "policy_enabled": _nested(report, "config", "recommended_policy", "policy_enabled"),
+                "threshold_count": _nested(report, "config", "recommended_policy", "threshold_count"),
+                "optimization_status": _nested(report, "optimization", "status"),
+                "compact_json": config.compact_json,
+                **dict(config.metadata),
+            },
+        )
     registry.save_json()
 
 
@@ -1320,6 +1440,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeBaselineConfig:
             Path(args.trace_records_cache_json) if args.trace_records_cache_json else None
         ),
         refresh_trace_records_cache=bool(args.refresh_trace_records_cache),
+        recommended_policy_path=Path(args.save_recommended_policy) if args.save_recommended_policy else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -1350,6 +1471,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional cache path for compact per-trace runtime metric/budget records")
     parser.add_argument("--refresh-trace-records-cache", action="store_true",
                         help="rebuild --trace-records-cache-json even when a valid cache exists")
+    parser.add_argument("--save-recommended-policy", default=None,
+                        help="write the optimization candidate ProductRuntimeBudgetPolicy JSON")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")
     parser.add_argument("--registry", default=None, help="optional local ArtifactRegistry JSON path")
     parser.add_argument("--name", default=None, help="registry product runtime baseline name")
