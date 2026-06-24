@@ -2655,6 +2655,35 @@ This feedback report does not rerun models, verifiers, or retrieval. It is the
 post-hoc product quality layer that turns captured traces and outcome labels
 into a small set of actionable control-policy metrics.
 
+Use `recommend_control_policy_from_feedback.py` when those feedback metrics
+should produce an explicit candidate policy artifact. The runner consumes one or
+more `run_product_feedback_report.py` outputs, aggregates their matched feedback
+counts, and recommends a candidate `ControlPolicyConfig` plus optional runtime
+control defaults. Accepted-but-wrong feedback increases staged verification for
+sensitive claims, retrieval failures can move unsupported claims toward
+clarification/abstention, and abstain false positives can de-escalate compound
+unsupported decisions when safety feedback is not also elevated:
+
+```bash
+python benchmarks/recommend_control_policy_from_feedback.py \
+  --feedback-report artifacts/product-feedback-report.json \
+  --json artifacts/feedback-policy-recommendation.json \
+  --save-control-policy artifacts/candidate-control-policy.json \
+  --save-control-defaults artifacts/candidate-control-defaults.json \
+  --artifact-manifest artifacts/feedback-policy-manifest.json \
+  --registry artifacts/local-release-registry.json \
+  --name feedback-policy-recommendation \
+  --version 0.1 \
+  --min-matched-feedback-count 20 \
+  --max-accepted-but-wrong-rate 0.05 \
+  --max-retrieved-failure-rate 0.10 \
+  --max-abstain-false-positive-rate 0.20
+```
+
+This recommendation is intentionally deterministic and auditable. It does not
+replace A/B testing or domain review; it creates the policy artifact that can be
+passed into later replay, runtime-profile, or calibrated-control demo runs.
+
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,

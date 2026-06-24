@@ -13410,6 +13410,98 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
         )
 
 
+def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_control_policy_from_feedback")
+    registry_module = importlib.import_module("eigentruth.registry")
+    control_module = importlib.import_module("eigentruth.control")
+
+    feedback_report = tmp_path / "feedback-report.json"
+    feedback_report.write_text(
+        json.dumps({
+            "workflow": "product_feedback_report",
+            "status": "passed",
+            "summary": {
+                "trace_matched_feedback_count": 30,
+                "unmatched_feedback_count": 2,
+                "feedback_count": 32,
+                "claim_level_feedback_count": 3,
+                "accepted_feedback_count": 20,
+                "accepted_but_wrong_count": 4,
+                "retrieved_feedback_count": 5,
+                "retrieved_failure_count": 2,
+                "retrieved_but_still_unsupported_count": 2,
+                "abstain_feedback_count": 5,
+                "abstain_false_positive_count": 0,
+                "outcome_counts": {"incorrect": 4, "unsupported": 2, "correct": 24},
+                "decision_action_counts": {"accept": 20, "retrieve": 5, "abstain": 5},
+            },
+        }),
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "policy-recommendation.json"
+    policy_path = tmp_path / "candidate-control-policy.json"
+    defaults_path = tmp_path / "candidate-control-defaults.json"
+    manifest_path = tmp_path / "policy-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    report = module.build_feedback_policy_recommendation(
+        module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report,),
+            output_path=output_path,
+            save_control_policy_path=policy_path,
+            save_control_defaults_path=defaults_path,
+            artifact_manifest_path=manifest_path,
+            registry_path=registry_path,
+            name="feedback-policy",
+            version="0.1",
+            metadata={"suite": "unit"},
+            min_matched_feedback_count=10,
+            max_accepted_but_wrong_rate=0.05,
+            max_retrieved_failure_rate=0.10,
+            max_abstain_false_positive_rate=0.20,
+            rate_statistic="estimate",
+        )
+    )
+    saved_policy = json.loads(policy_path.read_text(encoding="utf-8"))
+    saved_defaults = json.loads(defaults_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:feedback-policy:0.1")
+
+    assert report["status"] == "recommend"
+    assert report["aggregate_feedback"]["trace_matched_feedback_count"] == 30
+    assert report["recommendation"]["rate_signals"]["accepted_but_wrong"]["triggered"] is True
+    assert report["recommendation"]["rate_signals"]["retrieved_failure"]["triggered"] is True
+    assert saved_policy["unsupported_action"] == "clarify"
+    assert saved_policy["compound_risk_action"] == "abstain"
+    assert saved_policy["compound_verification_escalates"] is True
+    assert control_module.ControlPolicyConfig.from_dict(saved_policy).unsupported_action.value == "clarify"
+    assert saved_defaults["staged_verification"] is True
+    assert saved_defaults["stage_verify_triggered_claims_only"] is True
+    assert "has_calculation" in saved_defaults["stage_verify_claim_feature_flags"]
+    assert saved_defaults["max_verifier_route_attempts"] == 2
+    assert record.metadata["workflow"] == "feedback_policy_recommendation"
+    assert record.metadata["saved_control_policy"] == str(policy_path)
+    assert record.metadata["suite"] == "unit"
+    assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
+
+    needs_evidence = module.build_feedback_policy_recommendation(
+        module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report,),
+            output_path=tmp_path / "needs-evidence.json",
+            min_matched_feedback_count=100,
+            rate_statistic="estimate",
+        )
+    )
+    assert needs_evidence["status"] == "needs_evidence"
+
+    with pytest.raises(ValueError, match="not bool"):
+        module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report,),
+            output_path=tmp_path / "invalid-policy-recommendation.json",
+            max_accepted_but_wrong_rate=False,
+        )
+
+
 def test_run_product_runtime_baseline_blocks_on_budget_failure(tmp_path):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     trace_path = tmp_path / "trace.json"
