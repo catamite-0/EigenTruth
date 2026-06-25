@@ -6183,6 +6183,55 @@ def test_run_adapter_family_matrix_can_include_retrieval_structured_qa_route(tmp
     assert Path(retrieval["verifier_report_path"]).exists()
 
 
+def test_run_adapter_family_matrix_can_include_triple_evidence_route(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_family_matrix")
+
+    payload = module.run_adapter_family_matrix(
+        module.AdapterFamilyMatrixConfig(
+            output_dir=tmp_path,
+            n_records=8,
+            alpha=0.2,
+            include_triple_evidence=True,
+            min_false_refuted_rate=0.0,
+            compact_json=True,
+        )
+    )
+    by_route = payload["route_comparison"]["by_route"]
+    families = {item["route"]: item for item in payload["families"]}
+    triple = families["triple_evidence"]
+    claims = json.loads(
+        (tmp_path / "triple_evidence" / "triple-claims.json").read_text(encoding="utf-8")
+    )
+
+    assert set(families) == {
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    }
+    assert payload["routes"] == (
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    )
+    assert payload["audit_routes"] == ("triple_evidence",)
+    assert payload["include_triple_evidence"] is True
+    assert payload["promotion_decision"]["status"] == "promote"
+    assert payload["route_comparison"]["quality_gate"]["passed"] is True
+    assert triple["status"] == "promote"
+    assert triple["selected"] == 8
+    assert triple["decision_accuracy"] == pytest.approx(1.0)
+    assert triple["false_supported_rate"] == pytest.approx(0.0)
+    assert triple["false_refuted_rate"] == pytest.approx(0.0)
+    assert triple["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert triple["retrieval_use_rate"] == pytest.approx(0.0)
+    assert by_route["triple_evidence"]["selected"] == 8
+    assert by_route["triple_evidence"]["false_supported_rate"] == pytest.approx(0.0)
+    assert claims["records"][0]["claim_metadata"]["features"]["has_number"] is True
+    assert Path(triple["verifier_report_path"]).exists()
+
+
 def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_path):
     module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
     report_path = tmp_path / "readiness.json"
@@ -11836,6 +11885,71 @@ def test_refresh_verifier_route_artifacts_promotes_state_transition_route(tmp_pa
     assert "\n  " not in verifier_report_text
     assert "\n  " not in route_report_text
     assert "\n  " not in promotion_report_text
+
+
+def test_refresh_verifier_route_artifacts_promotes_triple_evidence_route(tmp_path):
+    matrix = importlib.import_module("benchmarks.run_adapter_family_matrix")
+    module = importlib.import_module("benchmarks.refresh_verifier_route_artifacts")
+    scores_path = tmp_path / "triple_scores.json"
+    claims_path = tmp_path / "triple_claims.json"
+    verifier_report_path = tmp_path / "triple-verifier-report.json"
+    route_report_path = tmp_path / "triple-route-comparison.json"
+    promotion_report_path = tmp_path / "triple-promotion.json"
+
+    matrix._write_triple_evidence_fixture_inputs(  # noqa: SLF001
+        scores_path=scores_path,
+        claims_path=claims_path,
+        n_records=8,
+        signal="truth_proj",
+        compact=True,
+    )
+
+    payload = module.refresh_verifier_route_artifacts(
+        module.VerifierRouteArtifactRefreshConfig(
+            score_dumps=(("triple", scores_path),),
+            verifier_report_path=verifier_report_path,
+            claims_path=claims_path,
+            alphas=(0.2,),
+            repeats=1,
+            enable_triple_evidence=True,
+            promotion_report_path=promotion_report_path,
+            route_report_path=route_report_path,
+            promotion_gate_routes=("triple_evidence",),
+            promotion_gate_min_selected=8,
+            min_decision_accuracy=1.0,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.0,
+            max_mean_duration_seconds=1.0,
+            max_p99_duration_seconds=1.0,
+            max_max_duration_seconds=1.0,
+            max_mean_attempted_route_count=1.1,
+            max_retrieval_use_rate=0.0,
+            compact_json=True,
+        )
+    )
+    verifier_report = json.loads(verifier_report_path.read_text(encoding="utf-8"))
+    promotion_report = json.loads(promotion_report_path.read_text(encoding="utf-8"))
+    run = verifier_report["runs"][0]
+    route_quality = run["route_quality"]["triple_evidence"]
+    summary_run = payload["verifier_report_summary"]["runs"][0]
+    summary_route = summary_run["routes"]["triple_evidence"]
+
+    assert payload["verifier_report_summary"]["runs"][0]["cache_stats"]["triple_evidence_verifiers"]["requests"] == 8
+    assert summary_route["selected"] == 8
+    assert summary_route["decision_accuracy"] == pytest.approx(1.0)
+    assert summary_route["false_supported_rate"] == pytest.approx(0.0)
+    assert summary_route["false_refuted_rate"] == pytest.approx(0.0)
+    assert summary_route["mean_attempted_route_count"] == pytest.approx(1.0)
+    assert run["triple_evidence_verifier"]["enabled"] is True
+    assert run["route_summary"]["selected_counts"] == {"triple_evidence": 8}
+    assert run["cache_stats"]["triple_evidence_verifiers"]["requests"] == 8
+    assert run["cache_stats"]["groundedness_verifiers"]["requests"] == 0
+    assert route_quality["decision_accuracy"] == pytest.approx(1.0)
+    assert route_quality["false_supported_rate"] == pytest.approx(0.0)
+    assert route_quality["false_refuted_rate"] == pytest.approx(0.0)
+    assert payload["promotion"]["decision"]["status"] == "promote"
+    assert promotion_report["decision"]["recommended_route"] == "triple_evidence"
+    assert route_report_path.exists()
 
 
 def test_compare_profiles_builds_regression_gate_report(tmp_path):

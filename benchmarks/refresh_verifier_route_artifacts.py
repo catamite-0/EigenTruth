@@ -38,6 +38,8 @@ class VerifierRouteArtifactRefreshConfig:
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.2
     retrieval_limit: int = 5
+    enable_triple_evidence: bool = False
+    triple_min_slot_coverage: float = 1.0
     promotion_report_path: Path | None = None
     route_report_path: Path | None = None
     promotion_notes: Sequence[str] = ()
@@ -112,6 +114,8 @@ def refresh_verifier_route_artifacts(config: VerifierRouteArtifactRefreshConfig)
         verifier_min_overlap=config.verifier_min_overlap,
         retriever_min_overlap=config.retriever_min_overlap,
         retrieval_limit=config.retrieval_limit,
+        enable_triple_evidence=config.enable_triple_evidence,
+        triple_min_slot_coverage=config.triple_min_slot_coverage,
     )
     config.verifier_report_path.parent.mkdir(parents=True, exist_ok=True)
     config.verifier_report_path.write_text(
@@ -277,6 +281,8 @@ def _config_from_args(args: argparse.Namespace) -> VerifierRouteArtifactRefreshC
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
+        enable_triple_evidence=bool(args.enable_triple_evidence),
+        triple_min_slot_coverage=args.triple_min_slot_coverage,
         promotion_report_path=None if args.promotion_json is None else Path(args.promotion_json),
         route_report_path=None if args.route_report_json is None else Path(args.route_report_json),
         promotion_notes=args.note,
@@ -349,6 +355,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.2)
     parser.add_argument("--retrieval-limit", type=int, default=5)
+    parser.add_argument("--enable-triple-evidence", action="store_true",
+                        help="enable strict subject-predicate-object evidence audits")
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,
+                        help="minimum per-slot evidence coverage for triple-evidence audits")
     parser.add_argument("--promotion-json", default=None,
                         help="optional path to write adapter promotion workflow output")
     parser.add_argument("--route-report-json", default=None,

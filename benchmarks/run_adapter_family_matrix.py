@@ -30,6 +30,7 @@ from benchmarks.refresh_verifier_route_artifacts import (  # noqa: E402
 
 RETRIEVAL_GROUNDEDNESS_ROUTE = "retrieval_groundedness"
 RETRIEVAL_STRUCTURED_QA_ROUTE = "retrieval_structured_qa"
+TRIPLE_EVIDENCE_ROUTE = "triple_evidence"
 
 
 @dataclass(frozen=True)
@@ -52,9 +53,11 @@ class AdapterFamilyMatrixConfig:
     max_retrieval_use_rate: float = 0.0
     include_retrieval: bool = False
     include_retrieval_structured_qa: bool = False
+    include_triple_evidence: bool = False
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.6
     retrieval_limit: int = 1
+    triple_min_slot_coverage: float = 1.0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -66,6 +69,8 @@ class AdapterFamilyMatrixConfig:
             raise ValueError("alpha must be in (0, 1).")
         if int(self.retrieval_limit) <= 0:
             raise ValueError("retrieval_limit must be positive.")
+        if not (0.0 <= float(self.triple_min_slot_coverage) <= 1.0):
+            raise ValueError("triple_min_slot_coverage must be in [0, 1].")
 
 
 def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
@@ -82,6 +87,8 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
         families.append(_run_retrieval_groundedness(config))
     if config.include_retrieval_structured_qa:
         families.append(_run_retrieval_structured_qa(config))
+    if config.include_triple_evidence:
+        families.append(_run_triple_evidence(config))
     routes = tuple(str(item["route"]) for item in families)
     comparison_path = output_dir / "route-family-comparison.json"
     comparison = build_route_comparison_report(
@@ -114,10 +121,16 @@ def run_adapter_family_matrix(config: AdapterFamilyMatrixConfig) -> dict[str, An
         "routes": routes,
         "include_retrieval": bool(config.include_retrieval),
         "include_retrieval_structured_qa": bool(config.include_retrieval_structured_qa),
+        "include_triple_evidence": bool(config.include_triple_evidence),
         "retrieval_routes": tuple(
             item["route"]
             for item in families
             if str(item["route"]).startswith("retrieval_")
+        ),
+        "audit_routes": tuple(
+            item["route"]
+            for item in families
+            if str(item["route"]) == TRIPLE_EVIDENCE_ROUTE
         ),
         "families": families,
         "route_comparison_path": str(comparison_path),
@@ -258,6 +271,30 @@ def _run_retrieval_structured_qa(config: AdapterFamilyMatrixConfig) -> dict[str,
     )
 
 
+def _run_triple_evidence(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
+    route = TRIPLE_EVIDENCE_ROUTE
+    route_dir = config.output_dir / route
+    route_dir.mkdir(parents=True, exist_ok=True)
+    scores_path = route_dir / "scores.json"
+    claims_path = route_dir / "triple-claims.json"
+    _write_triple_evidence_fixture_inputs(
+        scores_path=scores_path,
+        claims_path=claims_path,
+        n_records=config.n_records,
+        signal=config.signal,
+        compact=config.compact_json,
+    )
+    return _refresh_route(
+        config,
+        route=route,
+        score_name="triple_evidence",
+        scores_path=scores_path,
+        claims_path=claims_path,
+        qa_corpus_path=None,
+        state_path=None,
+    )
+
+
 def _refresh_route(
     config: AdapterFamilyMatrixConfig,
     *,
@@ -285,6 +322,8 @@ def _refresh_route(
             verifier_min_overlap=config.verifier_min_overlap,
             retriever_min_overlap=config.retriever_min_overlap,
             retrieval_limit=config.retrieval_limit,
+            enable_triple_evidence=route == TRIPLE_EVIDENCE_ROUTE,
+            triple_min_slot_coverage=config.triple_min_slot_coverage,
             promotion_report_path=promotion_report_path,
             route_report_path=route_report_path,
             promotion_gate_routes=(route,),
@@ -474,6 +513,67 @@ def _write_retrieval_fixture_inputs(
     _write_json(claims_path, claims_payload, compact=compact)
 
 
+def _write_triple_evidence_fixture_inputs(
+    *,
+    scores_path: Path,
+    claims_path: Path,
+    n_records: int,
+    signal: str,
+    compact: bool,
+) -> None:
+    n_pairs = n_records // 2
+    labels = [0] * n_pairs + [1] * n_pairs
+    scores = [round(0.16 + 0.01 * idx, 6) for idx in range(n_pairs)] + [
+        round(0.78 + 0.01 * idx, 6) for idx in range(n_pairs)
+    ]
+    true_records = []
+    false_records = []
+    true_statements = []
+    false_statements = []
+    for idx in range(n_pairs):
+        claim_id = f"triple_true_{idx + 1}"
+        invoice_count = 10 + idx
+        text = f"Order T{idx + 1} has {invoice_count} approved invoices."
+        true_statements.append({"claim_id": claim_id, "text": text})
+        true_records.append({
+            "claim": text,
+            "claim_id": claim_id,
+            "claim_metadata": {"features": {"has_number": True}},
+            "initial_evidence": [text],
+        })
+    for idx in range(n_pairs):
+        claim_id = f"triple_false_{idx + 1}"
+        invoice_count = 20 + idx
+        text = f"Order F{idx + 1} has {invoice_count} approved invoices."
+        false_statements.append({"claim_id": claim_id, "text": text})
+        false_records.append({
+            "claim": text,
+            "claim_id": claim_id,
+            "claim_metadata": {"features": {"has_number": True}},
+            "initial_evidence": [f"Order F{idx + 1} has approved invoices."],
+        })
+    scores_payload = {
+        "schema_version": 1,
+        "config": {
+            "model": "synthetic-triple-evidence",
+            "layer": -1,
+            "fixture_type": "triple_evidence_route_family",
+            "signal": signal,
+            "n_records": n_records,
+        },
+        "labels": labels,
+        "scores": {signal: scores},
+        "statements": true_statements + false_statements,
+    }
+    claims_payload = {
+        "schema_version": 1,
+        "fixture_type": "triple_evidence_route_family",
+        "records": true_records + false_records,
+    }
+    _write_json(scores_path, scores_payload, compact=compact)
+    _write_json(claims_path, claims_payload, compact=compact)
+
+
 def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(_json_text(payload, compact=compact, sort_keys=True), encoding="utf-8")
@@ -503,9 +603,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterFamilyMatrixConfig:
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         include_retrieval=bool(args.include_retrieval),
         include_retrieval_structured_qa=bool(args.include_retrieval_structured_qa),
+        include_triple_evidence=bool(args.include_triple_evidence),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
+        triple_min_slot_coverage=args.triple_min_slot_coverage,
     )
 
 
@@ -539,9 +641,12 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="include a local retrieval-groundedness route fixture")
     parser.add_argument("--include-retrieval-structured-qa", action="store_true",
                         help="include a local retrieval structured-QA route fixture")
+    parser.add_argument("--include-triple-evidence", action="store_true",
+                        help="include a strict triple-evidence audit route fixture")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
     parser.add_argument("--retrieval-limit", type=int, default=1)
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0)
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified JSON artifacts for automation")
     parser.add_argument("--fail-on-blocked", action="store_true",

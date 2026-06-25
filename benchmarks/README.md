@@ -1357,6 +1357,8 @@ runs each through the same refresh/promotion gate:
   support/refutation checks.
 - `retrieval_structured_qa`: optional local retrieval evidence interpreted as
   structured question/answer facts before lexical fallback.
+- `triple_evidence`: optional strict subject-predicate-object evidence coverage
+  audits for sensitive factual claims.
 
 It then aggregates the generated verifier reports with
 `compare_verifier_routes.py` so quality, tail latency, attempted-route count,
@@ -1401,6 +1403,27 @@ python benchmarks/run_adapter_family_matrix.py \
   --include-retrieval-structured-qa \
   --max-mean-attempted-route-count 2.1 \
   --max-retrieval-use-rate 1.0 \
+  --compact-json \
+  --fail-on-blocked
+```
+
+The strict triple-evidence route audits whether local evidence covers the
+subject, predicate, and object slots for sensitive factual claims. Missing slot
+coverage returns insufficient evidence rather than a direct refutation, so use a
+false-supported gate and disable the false-refuted requirement for this audit
+family:
+
+```bash
+python benchmarks/run_adapter_family_matrix.py \
+  --output-dir artifacts/adapter_family_matrix_triple_evidence \
+  --json artifacts/adapter_family_matrix_triple_evidence/report.json \
+  --n-records 8 \
+  --alpha 0.2 \
+  --include-triple-evidence \
+  --min-false-refuted-rate 0.0 \
+  --max-false-supported-rate 0.0 \
+  --max-mean-attempted-route-count 1.1 \
+  --max-retrieval-use-rate 0.0 \
   --compact-json \
   --fail-on-blocked
 ```
