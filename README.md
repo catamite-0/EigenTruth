@@ -412,6 +412,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_intrinsic_dimension_layers.py` | Compares intrinsic-dimension peak layers with saved layer/score sweep AUROC rankings, reporting top-k hits, rank, AUROC regret, and layer gap for cheap layer-selection validation. |
 | `training_telemetry_sanity.py` | Runs a deterministic synthetic clean-vs-corrupt training telemetry sanity check, gating on distance-to-baseline growth and effective-rank collapse. |
 | `training_telemetry_tiny_finetune.py` | Runs a pure PyTorch tiny clean-vs-duplicate fine-tune comparison and checks whether representation-rank telemetry separates before eval-loss degradation. |
+| `model_collapse_early_warning.py` | Runs a deterministic pseudo-label self-training loop and checks whether representation diversity telemetry warns before visible quality loss. |
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache/staged-verification route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
@@ -509,6 +510,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_intrinsic_dimension_layers.py` | 将 intrinsic-dimension peak layer 与已保存 layer/score sweep AUROC 排名对齐，输出 top-k 命中、rank、AUROC regret 和层距离，用于低成本 layer-selection 验证。 |
 | `training_telemetry_sanity.py` | 执行确定性的 synthetic clean-vs-corrupt training telemetry sanity check，用 distance-to-baseline 增长和 effective-rank collapse 做 gate。 |
 | `training_telemetry_tiny_finetune.py` | 执行纯 PyTorch tiny clean-vs-duplicate fine-tune 对照，检查 representation-rank telemetry 是否早于 eval-loss 退化分离。 |
+| `model_collapse_early_warning.py` | 执行确定性的 pseudo-label self-training loop，检查表征多样性 telemetry 是否早于可见质量退化发出预警。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |

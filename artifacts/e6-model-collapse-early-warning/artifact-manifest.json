@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "model_collapse_early_warning_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "model-collapse-early-warning-report.json",
+      "sha256": "52443fdcd9711ca38f6793501b4db1d9ab23548255a91c2faa44acfd2204d75d",
+      "size_bytes": 29958
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "covariance_mode": "shrinkage",
+    "source": "tiny pseudo-label self-training loop",
+    "workflow": "model_collapse_early_warning"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

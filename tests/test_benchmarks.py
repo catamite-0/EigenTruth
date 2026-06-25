@@ -2380,6 +2380,51 @@ def test_training_telemetry_tiny_finetune_rank_leads_eval_loss(tmp_path, capsys)
     assert summary["clean_final_eval_accuracy"] > summary["duplicate_final_eval_accuracy"]
 
 
+def test_model_collapse_early_warning_detects_rank_decay_before_quality_loss(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.model_collapse_early_warning")
+    report_path = tmp_path / "model-collapse.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        train_count=320,
+        probe_count=192,
+        pool_count=320,
+        input_dim=8,
+        hidden_dim=12,
+        generations=5,
+        initial_epochs=20,
+        generation_epochs=12,
+        seed=42,
+        learning_rate=0.03,
+        weight_decay=0.02,
+        covariance_mode="shrinkage",
+        anchors_per_class_base=16,
+        noise_scale=0.08,
+        noise_decay=0.55,
+        target_layer=-1,
+        min_rank_drop=0.04,
+        min_intrinsic_dimension_drop=0.09,
+        min_accuracy_drop=0.05,
+        min_eval_loss_increase=0.05,
+        monotonic_tolerance=0.02,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+    summary = payload["summary"]
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert summary["status"] == "pass"
+    assert summary["rank_signal_pass"] is True
+    assert summary["rank_monotonic"] is True
+    assert summary["rank_total_drop"] >= 0.04
+    assert summary["telemetry_warning_generation"] < summary["quality_loss_generation"]
+    assert summary["intrinsic_dimension_supports_warning"] is True
+    assert payload["generations"][0]["self_training"]["phase"] == "clean_warm_start"
+    assert payload["generations"][-1]["self_training"]["anchors_per_class"] == 1
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
