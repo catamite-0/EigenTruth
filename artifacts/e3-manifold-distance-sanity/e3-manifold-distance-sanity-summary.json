@@ -1,0 +1,113 @@
+{
+  "metric": "gaussian_2_wasserstein",
+  "overall": {
+    "all_available": true,
+    "all_coherent": true,
+    "n_coherent": 4,
+    "n_reports": 4
+  },
+  "purpose": "Check whether adjacent monitored layers are closer than distant monitored layers in saved l80 TruthfulQA layer-stats caches.",
+  "reports": [
+    {
+      "covariance_mode": "full",
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "locality": {
+        "adjacent_mean_distance": 7.858069062232971,
+        "adjacent_pair_count": 4,
+        "adjacent_to_distant_ratio": 0.646830489182976,
+        "available": true,
+        "coherent": true,
+        "distant_mean_distance": 12.1485755443573,
+        "distant_pair_count": 6,
+        "min_layer_gap": 2,
+        "nearest_adjacent_fraction": 1.0
+      },
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "name": "qwen05-l80-full",
+      "report": "artifacts/e3-manifold-distance-sanity/qwen05-l80-full-distance-report.json",
+      "source_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/qwen05-l80/layer-stats.pt"
+    },
+    {
+      "covariance_mode": "full",
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "locality": {
+        "adjacent_mean_distance": 94.24634552001953,
+        "adjacent_pair_count": 4,
+        "adjacent_to_distant_ratio": 0.5261270926184769,
+        "available": true,
+        "coherent": true,
+        "distant_mean_distance": 179.13227971394858,
+        "distant_pair_count": 6,
+        "min_layer_gap": 2,
+        "nearest_adjacent_fraction": 1.0
+      },
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "name": "smollm2-l80-full",
+      "report": "artifacts/e3-manifold-distance-sanity/smollm2-l80-full-distance-report.json",
+      "source_cache": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt"
+    },
+    {
+      "covariance_mode": "shrinkage",
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "locality": {
+        "adjacent_mean_distance": 7.474258899688721,
+        "adjacent_pair_count": 4,
+        "adjacent_to_distant_ratio": 0.6362391698713561,
+        "available": true,
+        "coherent": true,
+        "distant_mean_distance": 11.747561693191528,
+        "distant_pair_count": 6,
+        "min_layer_gap": 2,
+        "nearest_adjacent_fraction": 1.0
+      },
+      "model": "Qwen/Qwen2.5-0.5B-Instruct",
+      "name": "qwen05-l80-shrinkage",
+      "report": "artifacts/e3-manifold-distance-sanity/qwen05-l80-shrinkage-distance-report.json",
+      "source_cache": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/qwen05-l80/shrinkage/layer-stats.pt"
+    },
+    {
+      "covariance_mode": "shrinkage",
+      "layers": [
+        -12,
+        -16,
+        -14,
+        -10,
+        -8
+      ],
+      "locality": {
+        "adjacent_mean_distance": 91.43677806854248,
+        "adjacent_pair_count": 4,
+        "adjacent_to_distant_ratio": 0.517996149721449,
+        "available": true,
+        "coherent": true,
+        "distant_mean_distance": 176.52018864949545,
+        "distant_pair_count": 6,
+        "min_layer_gap": 2,
+        "nearest_adjacent_fraction": 1.0
+      },
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "name": "smollm2-l80-shrinkage",
+      "report": "artifacts/e3-manifold-distance-sanity/smollm2-l80-shrinkage-distance-report.json",
+      "source_cache": "artifacts/cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt"
+    }
+  ],
+  "workflow": "e3_manifold_distance_sanity"
+}

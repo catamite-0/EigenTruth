@@ -1,0 +1,57 @@
+{
+  "artifacts": {
+    "qwen05-l80-full": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-full-distance-report.json",
+      "sha256": "d5e58d74944afa54ed622b978ba8fa0b975edf342f0c883b9030510f443f810b",
+      "size_bytes": 3670
+    },
+    "qwen05-l80-shrinkage": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80-shrinkage-distance-report.json",
+      "sha256": "2b8fd9013b7893b23b4c9da0f5e9402d07697d95514ec7ef60dd69743d3c3f48",
+      "size_bytes": 3808
+    },
+    "smollm2-l80-full": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-full-distance-report.json",
+      "sha256": "042a3efc850a28c5ef952595b500d704b9863dc202acdb9f54e82405bf2afce6",
+      "size_bytes": 3690
+    },
+    "smollm2-l80-shrinkage": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-shrinkage-distance-report.json",
+      "sha256": "d6908bf1e6b1b3c399f87dece07f7b08d8e81d23d46a7efc453ff22616651ece",
+      "size_bytes": 3819
+    },
+    "summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "e3-manifold-distance-sanity-summary.json",
+      "sha256": "5ff7dc057c8c8b9991361248affc74731843fd8740bad0588497229b94294ca2",
+      "size_bytes": 3595
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "metric": "gaussian_2_wasserstein",
+    "source": "cached layer-stats only; no model forward pass",
+    "workflow": "e3_manifold_distance_sanity"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

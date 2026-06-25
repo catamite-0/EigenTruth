@@ -66,7 +66,11 @@ representation-observability toolkit spanning **training and inference**.
 - **Cost:** low. **Status:** core closed-form Gaussian 2-Wasserstein/Bures
   implementation landed as `gaussian_wasserstein_distance()`,
   `manifold_distance()`, and `manifold_wasserstein_distance()` with synthetic
-  metric-property tests; real layer-distance locality sanity remains pending.
+  metric-property tests. Cached l80 Qwen/SmolLM2 layer-stats sanity passes for
+  both full and shrinkage covariance: adjacent monitored layers are closer than
+  distant monitored layers and nearest-neighbor locality is 1.0 in all four
+  reports. A denser layer matrix remains useful before relying on this as a
+  fine-grained checkpoint-drift signal.
 
 ### E4. Intrinsic dimension → cheap layer-selection signal
 - **Question:** Does the TwoNN intrinsic-dimension profile across layers reproduce the
@@ -135,7 +139,7 @@ representation-observability toolkit spanning **training and inference**.
 | E0 | 2026-06-10 | **truth_proj wins**: 0.723 @L-8, peak 0.753 @L-6, beats maha (0.622/0.638) at every layer except -12; both collapse at L-1. Default guidance: contrastive direction, mid-late layers (-8…-4); maha as no-false-data fallback. | `benchmarks/results_gpt2_sweep.json` |
 | E1 | 2026-06-10 | **ACCEPT**: empirical false-alarm tracks nominal within 1.3% at α∈{.05,.1,.2} for both maha_last and truth_proj (20 seeded splits). Power at α=0.2: truth_proj 46.9% vs maha 34.1%. Conformal thresholds replace hand-picked ones. | `benchmarks/results_conformal_*.json` |
 | E2 | 2026-06-25 | **ACCEPT shrinkage**: spectrum diagnostics and OAS-style shrinkage mode landed; tiny offline matrix smoke passes; l80 cache-only covariance gate promotes `shrinkage` for both Qwen and SmolLM2. Qwen also accepts `low_rank_16`; SmolLM2 rejects `low_rank_16` at the 0.01 `maha_last` AUROC-drop gate; both reject `diag`. | `TruthManifold.spectrum()` / `covariance_spectrum()` / `covariance_shrinkage_intensity()` unit tests; `eval_truthfulqa.py --include-layer-spectra` tests; `artifacts/tiny_covariance_shrinkage_matrix/cache-profile-matrix-report.json`; `artifacts/truthfulqa-frontier-covariance-gate-l80/covariance-mode-gate-report.json` |
-| E3 | 2026-06-25 | **CORE LANDED**: dependency-free Gaussian 2-Wasserstein/Bures distance added for tensor Gaussians and `TruthManifold` objects; synthetic metric-property tests pass. Full gpt2/Qwen layer-distance locality sanity remains pending before accepting the research direction. | `gaussian_wasserstein_distance()` / `manifold_distance()` / `manifold_wasserstein_distance()` unit tests |
+| E3 | 2026-06-25 | **ACCEPT initial locality**: dependency-free Gaussian 2-Wasserstein/Bures distance added for tensor Gaussians and `TruthManifold` objects; synthetic metric-property tests pass. Cached l80 Qwen/SmolLM2 reports show adjacent monitored layers closer than distant layers for both `full` and `shrinkage` covariance, with nearest-adjacent fraction 1.0. Treat as accepted for coarse layer/checkpoint drift inspection; run a denser layer matrix before using it as a fine-grained training diagnostic. | `gaussian_wasserstein_distance()` / `manifold_distance()` / `manifold_wasserstein_distance()` unit tests; `benchmarks/compare_manifold_distances.py`; `artifacts/e3-manifold-distance-sanity/e3-manifold-distance-sanity-summary.json` |
 | E4 | | pending | |
 | E5 | | pending | |
 | E6 | | pending | |

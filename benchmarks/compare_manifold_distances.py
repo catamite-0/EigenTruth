@@ -71,6 +71,70 @@ def _manifold_summary(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _mean(values: Sequence[float]) -> float | None:
+    if not values:
+        return None
+    return float(sum(values) / len(values))
+
+
+def _layer_locality_summary(
+    summaries: Sequence[dict[str, Any]],
+    matrix: Sequence[Sequence[float]],
+    nearest_neighbors: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    layers = [summary.get("layer") for summary in summaries]
+    if len(layers) < 3:
+        return {"available": False, "reason": "fewer than three layer-indexed manifolds"}
+    if any(layer is None for layer in layers):
+        return {"available": False, "reason": "one or more manifolds do not have a layer index"}
+
+    numeric_layers = [int(layer) for layer in layers]
+    pair_distances: list[tuple[int, float]] = []
+    for i, layer_i in enumerate(numeric_layers):
+        for j in range(i + 1, len(numeric_layers)):
+            gap = abs(layer_i - numeric_layers[j])
+            if gap > 0:
+                pair_distances.append((gap, float(matrix[i][j])))
+    if not pair_distances:
+        return {"available": False, "reason": "layer indexes do not contain distinct values"}
+
+    min_gap = min(gap for gap, _distance in pair_distances)
+    adjacent = [distance for gap, distance in pair_distances if gap == min_gap]
+    distant = [distance for gap, distance in pair_distances if gap > min_gap]
+    adjacent_mean = _mean(adjacent)
+    distant_mean = _mean(distant)
+    nearest_adjacent = 0
+    id_to_layer = {str(summary["id"]): int(summary["layer"]) for summary in summaries}
+    for neighbor in nearest_neighbors:
+        source_layer = id_to_layer[str(neighbor["id"])]
+        target_layer = id_to_layer[str(neighbor["nearest_id"])]
+        if abs(source_layer - target_layer) == min_gap:
+            nearest_adjacent += 1
+    nearest_adjacent_fraction = nearest_adjacent / len(nearest_neighbors)
+    coherent = (
+        adjacent_mean is not None
+        and distant_mean is not None
+        and adjacent_mean < distant_mean
+        and nearest_adjacent_fraction >= 0.5
+    )
+
+    return {
+        "available": True,
+        "coherent": bool(coherent),
+        "min_layer_gap": int(min_gap),
+        "adjacent_pair_count": len(adjacent),
+        "distant_pair_count": len(distant),
+        "adjacent_mean_distance": adjacent_mean,
+        "distant_mean_distance": distant_mean,
+        "adjacent_to_distant_ratio": (
+            None
+            if adjacent_mean is None or distant_mean is None or distant_mean <= 0.0
+            else adjacent_mean / distant_mean
+        ),
+        "nearest_adjacent_fraction": nearest_adjacent_fraction,
+    }
+
+
 def compare_manifold_distances(
     items: Sequence[dict[str, Any]],
     *,
@@ -105,6 +169,7 @@ def compare_manifold_distances(
             "nearest_id": summaries[nearest_idx]["id"],
             "distance": nearest_distance,
         })
+    locality = _layer_locality_summary(summaries, matrix, nearest_neighbors)
 
     return {
         "workflow": "compare_manifold_distances",
@@ -114,6 +179,7 @@ def compare_manifold_distances(
         "items": summaries,
         "distance_matrix": matrix,
         "nearest_neighbors": nearest_neighbors,
+        "layer_locality": locality,
     }
 
 

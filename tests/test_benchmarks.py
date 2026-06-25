@@ -2165,6 +2165,10 @@ def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     assert matrix[0][1] == pytest.approx(matrix[1][0])
     assert matrix[0][1] < matrix[0][2]
     assert report["nearest_neighbors"][0]["nearest_id"] == "layer:1"
+    assert report["layer_locality"]["available"] is True
+    assert report["layer_locality"]["coherent"] is True
+    assert report["layer_locality"]["min_layer_gap"] == 1
+    assert report["layer_locality"]["adjacent_mean_distance"] < report["layer_locality"]["distant_mean_distance"]
 
 
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
