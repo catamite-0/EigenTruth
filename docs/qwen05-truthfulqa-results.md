@@ -399,7 +399,7 @@ simple rank-normalized ensembles without rerunning a model. Current report:
 python benchmarks/eval_score_ensemble.py \
   --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores.json \
   --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores.json \
-  --signals truth_proj,maha_last,subspace_resid,eigenscore \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
   --methods max_rank,mean_rank \
   --repeats 50 \
   --json artifacts/truthfulqa_score_ensemble_report.json
@@ -419,6 +419,43 @@ current score set, the product should keep `truth_proj` as the primary calibrate
 internal diagnostic and use other internal scores as auxiliary diagnostics until
 a stronger ensemble method proves incremental detection under the same
 false-alarm budget.
+
+## Frontier Stability Report
+
+`benchmarks/eval_frontier_stability.py` replays saved frontier score dumps across
+multiple split-conformal seeds without rerunning model forward passes. Current
+registered l80 report:
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability
+
+python benchmarks/eval_frontier_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
+  --methods max_rank,mean_rank \
+  --alphas 0.05,0.1,0.2 \
+  --best-alpha 0.10 \
+  --sweep-alpha 0.10 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --repeats 20 \
+  --json "$OUT/frontier-stability-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json"
+```
+
+At alpha 0.100 across seeds `0..9`:
+
+- Qwen l80: `truth_proj` is the best single signal in 10/10 seeds; best
+  ensemble is `mean_rank` in 10/10 seeds; single signal beats ensemble in 10/10
+  seeds with mean detection margin 0.034.
+- SmolLM2 l80: `truth_proj` is the best single signal in 10/10 seeds; best
+  ensemble is `mean_rank` in 10/10 seeds; single signal beats ensemble in 10/10
+  seeds with mean detection margin 0.053.
+
+The report is registered as
+`report:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`; the verified
+manifest is registered as
+`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`.
 
 ## Oracle Verifier Ensemble Upper Bound
 

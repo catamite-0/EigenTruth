@@ -585,6 +585,44 @@ stable per-cell `statement-encodings.json`, `layer-stats.pt`, `eval-reps-cache`,
 and warmup checkpoint paths; use `--refresh-caches` only for the first cache
 build or when changing cache-defining model/data/layer parameters.
 
+## `eval_frontier_stability.py`
+
+Replays existing frontier score dumps across several split-conformal seeds
+without loading a model. Use it after `run_truthfulqa_frontier_workflow.py` to
+check whether the best internal signal and simple rank-fusion comparison are
+stable under calibration splits.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability
+
+python benchmarks/eval_frontier_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
+  --methods max_rank,mean_rank \
+  --alphas 0.05,0.1,0.2 \
+  --best-alpha 0.10 \
+  --sweep-alpha 0.10 \
+  --sweep-best-by auroc \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --repeats 20 \
+  --json "$OUT/frontier-stability-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2-l80-stability \
+  --version 0.1
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --recursive \
+  --json "$OUT/manifest-verification.json"
+```
+
+The stability manifest fingerprints both score manifest files and their JSONL
+records sidecars. If the result is used as release evidence, promote the
+verified manifest with `promote_artifact_manifest.py` so the registry contains
+both the report and the manifest verification record.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier
@@ -2391,6 +2429,15 @@ frontier wall-clock drops from 1140.245s to 24.028s. Per-cell replay drops Qwen
 from 784.040s to 3.496s and SmolLM2 from 336.829s to 2.797s. This makes l80
 multi-seed, layer/score resweeps, and post-hoc calibration experiments practical
 without re-running model forward passes.
+
+The registered post-hoc stability report
+(`report:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`) replays seeds
+`0..9` with 20 split-conformal repeats per seed. For Qwen l80, `truth_proj` is
+the best single signal in 10/10 seeds and beats the best `mean_rank` ensemble in
+10/10 seeds; mean detection margin is 0.034. For SmolLM2 l80, `truth_proj` is
+also best in 10/10 seeds and beats `mean_rank` in 10/10 seeds; mean detection
+margin is 0.053. The verified manifest is registered as
+`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`.
 
 ## `eval_calibration_transfer.py`
 

@@ -1029,6 +1029,117 @@ def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp
     assert record.metadata["signals"] == ["truth_proj", "subspace_resid"]
 
 
+def test_eval_frontier_stability_builds_seed_summary_and_registry(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    labels = [0] * 12 + [1] * 8
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "truth_proj": list(range(12)) + [14, 15, 16, 17, 0, 1, 2, 3],
+            "subspace_resid": list(range(30, 42)) + list(range(8)),
+        },
+        "sweep_scores": {
+            "-2": {
+                "truth_proj": list(range(12)) + list(range(40, 48)),
+                "subspace_resid": list(range(30, 42)) + list(range(8)),
+            }
+        },
+    })
+    write_score_dump_jsonl(dump, scores_path)
+    report_path = tmp_path / "stability" / "frontier-stability.json"
+    manifest_path = tmp_path / "stability" / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/eval_frontier_stability.py",
+            "--scores",
+            f"synthetic={scores_path}",
+            "--signals",
+            "truth_proj,subspace_resid",
+            "--methods",
+            "max_rank,mean_rank",
+            "--alphas",
+            "0.2",
+            "--best-alpha",
+            "0.2",
+            "--sweep-alpha",
+            "0.2",
+            "--seeds",
+            "0,1,2",
+            "--repeats",
+            "2",
+            "--json",
+            str(report_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-frontier-stability",
+            "--version",
+            "0.1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    verification = registry_module.ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=True,
+    )
+    record = registry.get("report:synthetic-frontier-stability:0.1")
+    run = payload["runs"][0]
+
+    assert payload["status"] == "complete"
+    assert payload["config"]["seeds"] == [0, 1, 2]
+    assert "score_dump_cache" in payload
+    assert run["deterministic_sweep_best"]["score_name"] == "truth_proj"
+    assert run["deterministic_sweep_best"]["layer"] == -2
+    assert run["stability"]["best_single_name_counts"] == {"truth_proj": 3}
+    assert run["stability"]["single_beats_ensemble_seed_count"] >= 1
+    assert manifest["metadata"]["runner"] == "eval_frontier_stability"
+    assert manifest["summary"]["missing_count"] == 0
+    assert "input_score_records.synthetic" in manifest["artifacts"]
+    assert verification.passed
+    assert record.metadata["workflow"] == "eval_frontier_stability"
+    assert record.metadata["runs"] == ["synthetic"]
+    assert record.metadata["run_summaries"][0]["deterministic_best_score"] == "truth_proj"
+
+
+def test_eval_frontier_stability_rejects_duplicate_score_names(tmp_path):
+    module = importlib.import_module("benchmarks.eval_frontier_stability")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    dump = ScoreDump.from_mapping({
+        "labels": [0, 0, 1],
+        "scores": {"truth_proj": [0.0, 0.1, 1.0]},
+    })
+    first = tmp_path / "first" / "scores.manifest.json"
+    second = tmp_path / "second" / "scores.manifest.json"
+    write_score_dump_jsonl(dump, first)
+    write_score_dump_jsonl(dump, second)
+
+    with pytest.raises(ValueError, match="score dump names must be unique"):
+        module.build_frontier_stability_report(
+            ((first.stem, first), (second.stem, second)),
+            signals=("truth_proj",),
+            seeds=(0,),
+            alphas=(0.2,),
+            best_alpha=0.2,
+            sweep_alpha=0.2,
+            repeats=1,
+        )
+
+
 def test_calibrated_observability_limited_sweep_defaults_to_hooks(tmp_path):
     result = subprocess.run(
         [

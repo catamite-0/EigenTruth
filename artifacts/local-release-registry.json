@@ -3305,6 +3305,129 @@
       "name": "truthfulqa-frontier-qwen-smollm2-l80-cache-only",
       "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/truthfulqa-frontier-workflow.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/artifact-manifest.json",
+        "best_alpha": 0.1,
+        "run_summaries": [
+          {
+            "best_ensemble_name_counts": {
+              "mean_rank": 10
+            },
+            "best_single_name_counts": {
+              "truth_proj": 10
+            },
+            "deterministic_best_auroc": 0.7644575163398692,
+            "deterministic_best_detection": 0.24183006535947713,
+            "deterministic_best_false_alarm": 0.096,
+            "deterministic_best_layer": -10,
+            "deterministic_best_score": "truth_proj",
+            "name": "qwen05-l80",
+            "single_beats_ensemble_seed_count": 10,
+            "single_minus_ensemble_detection_mean": 0.03385620915032682
+          },
+          {
+            "best_ensemble_name_counts": {
+              "mean_rank": 10
+            },
+            "best_single_name_counts": {
+              "truth_proj": 10
+            },
+            "deterministic_best_auroc": 0.7819869281045752,
+            "deterministic_best_detection": 0.2647058823529412,
+            "deterministic_best_false_alarm": 0.096,
+            "deterministic_best_layer": -16,
+            "deterministic_best_score": "truth_proj",
+            "name": "smollm2-l80",
+            "single_beats_ensemble_seed_count": 10,
+            "single_minus_ensemble_detection_mean": 0.05259803921568627
+          }
+        ],
+        "runs": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "status": "complete",
+        "workflow": "eval_frontier_stability"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-stability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/frontier-stability-report.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "benchmark_manifest",
+      "metadata": {
+        "artifact_fingerprint_cache_entries": 5,
+        "artifact_json_cache": {
+          "entries": 1,
+          "errors": 0,
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 1,
+          "requests": 1
+        },
+        "checked": 5,
+        "evidence": "truthfulqa_frontier_qwen_smollm2_l80_stability",
+        "failure_count": 0,
+        "manifest_fingerprint_workers": 1,
+        "manifest_metadata": {
+          "best_alpha": 0.1,
+          "runner": "eval_frontier_stability",
+          "seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "status": "complete"
+        },
+        "manifest_summary": {
+          "artifact_count": 5,
+          "directory_count": 0,
+          "file_count": 5,
+          "missing_count": 0
+        },
+        "nested_count": 0,
+        "recursive": true,
+        "verification_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/manifest-verification.json",
+        "verified": true,
+        "workflow": "eval_frontier_stability"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-stability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/artifact-manifest.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "truthfulqa-frontier-qwen-smollm2-l80-stability",
+        "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-stability-verification",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/manifest-verification.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
