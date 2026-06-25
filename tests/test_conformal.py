@@ -10,6 +10,8 @@ import pytest
 import torch
 
 from eigentruth.eval.conformal import (
+    AdaptiveScoreTransform,
+    adaptive_anomaly_scores,
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
@@ -138,3 +140,53 @@ class TestConformalThreshold:
             directional_conformal_threshold(torch.tensor([1.0, float("-inf")]), 0.1, "lower")
         with pytest.raises(ValueError, match="NaN"):
             directional_trigger_rate(torch.tensor([1.0]), float("nan"), "higher")
+
+
+class TestAdaptiveConformalScores:
+    def test_adaptive_anomaly_scores_inflate_by_features(self):
+        adjusted = adaptive_anomaly_scores(
+            [1.0, 2.0, 3.0],
+            feature_values={"entropy": [0.0, 1.0, 2.0], "citation": [1.0, 0.0, 1.0]},
+            feature_weights={"entropy": 0.5, "citation": 2.0},
+            intercept=0.25,
+        )
+
+        assert adjusted.tolist() == pytest.approx([3.25, 2.75, 6.25])
+
+    def test_adaptive_anomaly_scores_orient_lower_direction(self):
+        adjusted = adaptive_anomaly_scores(
+            [10.0, 8.0],
+            feature_values={"risk": [0.0, 1.0]},
+            feature_weights={"risk": 2.0},
+            direction="lower",
+        )
+
+        assert adjusted.tolist() == pytest.approx([-10.0, -6.0])
+        assert adjusted[1] > adjusted[0]
+
+    def test_adaptive_score_transform_roundtrip(self):
+        transform = AdaptiveScoreTransform(
+            feature_weights={"semantic_entropy": 1.5},
+            intercept=0.25,
+            direction="higher",
+        )
+
+        loaded = AdaptiveScoreTransform.from_dict(transform.to_dict())
+        adjusted = loaded.transform([1.0, 2.0], {"semantic_entropy": [0.0, 1.0]})
+
+        assert loaded == transform
+        assert adjusted.tolist() == pytest.approx([1.25, 3.75])
+
+    def test_adaptive_score_transform_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="direction"):
+            AdaptiveScoreTransform(direction="sideways")
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform(feature_weights={"risk": float("nan")})
+        with pytest.raises(ValueError, match="missing required feature"):
+            adaptive_anomaly_scores([1.0], feature_weights={"risk": 1.0})
+        with pytest.raises(ValueError, match="same length"):
+            adaptive_anomaly_scores(
+                [1.0, 2.0],
+                feature_values={"risk": [1.0]},
+                feature_weights={"risk": 1.0},
+            )

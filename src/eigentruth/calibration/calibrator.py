@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Mapping, Optional, Sequence
 
@@ -10,7 +10,11 @@ import torch
 
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.eval.conformal import directional_conformal_threshold
+from eigentruth.eval.conformal import (
+    AdaptiveScoreTransform,
+    conformal_threshold,
+    directional_conformal_threshold,
+)
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -87,6 +91,67 @@ class ConformalCalibrator:
             steering_policy=steering_policy or SteeringPolicyConfig(),
             warmup_dataset_metadata=warmup_dataset_metadata or {},
             calibration_dataset_metadata=calibration_dataset_metadata or {},
+            created_at=created_at or datetime.now(timezone.utc).isoformat(),
+            commit_sha=commit_sha,
+        )
+
+
+@dataclass(frozen=True)
+class AdaptiveConformalCalibrator:
+    """Build calibration artifacts from feature-adjusted nonconformity scores."""
+
+    alpha: float = 0.1
+    transform: AdaptiveScoreTransform = field(default_factory=AdaptiveScoreTransform)
+
+    def __post_init__(self) -> None:
+        if not (0.0 < self.alpha < 1.0):
+            raise ValueError("alpha must be in (0, 1).")
+
+    def calibrate(
+        self,
+        *,
+        model_id: str,
+        target_layer: int,
+        score_name: str,
+        calibration_scores: ArrayLike,
+        feature_values: Mapping[str, ArrayLike] | None = None,
+        output_score_name: str | None = None,
+        model_revision: Optional[str] = None,
+        steering_policy: Optional[SteeringPolicyConfig] = None,
+        warmup_dataset_metadata: Optional[Mapping[str, Any]] = None,
+        calibration_dataset_metadata: Optional[Mapping[str, Any]] = None,
+        created_at: Optional[str] = None,
+        commit_sha: Optional[str] = None,
+        eigentruth_version: str = __version__,
+    ) -> CalibrationArtifact:
+        """Create an artifact for an adaptive conformal diagnostic score."""
+        adjusted_scores = self.transform.transform(calibration_scores, feature_values)
+        threshold = conformal_threshold(adjusted_scores, self.alpha)
+        resolved_score_name = output_score_name or f"{score_name}_adaptive"
+        metadata = dict(calibration_dataset_metadata or {})
+        metadata["adaptive_conformal"] = {
+            "base_score_name": str(score_name),
+            "output_score_name": resolved_score_name,
+            "transform": self.transform.to_dict(),
+            "n_calibration": int(adjusted_scores.numel()),
+        }
+
+        return CalibrationArtifact(
+            model_id=model_id,
+            model_revision=model_revision,
+            target_layer=target_layer,
+            scores=(
+                CalibrationScore(
+                    name=resolved_score_name,
+                    threshold=threshold,
+                    conformal_alpha=self.alpha,
+                    direction="higher",
+                ),
+            ),
+            eigentruth_version=eigentruth_version,
+            steering_policy=steering_policy or SteeringPolicyConfig(),
+            warmup_dataset_metadata=warmup_dataset_metadata or {},
+            calibration_dataset_metadata=metadata,
             created_at=created_at or datetime.now(timezone.utc).isoformat(),
             commit_sha=commit_sha,
         )

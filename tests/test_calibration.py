@@ -5,6 +5,7 @@ import json
 import pytest
 
 from eigentruth.calibration import (
+    AdaptiveConformalCalibrator,
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
@@ -12,6 +13,7 @@ from eigentruth.calibration import (
     RankScoreFusionCalibrator,
     SteeringPolicyConfig,
 )
+from eigentruth.eval import AdaptiveScoreTransform
 
 
 def test_artifact_json_roundtrip(tmp_path):
@@ -75,6 +77,35 @@ def test_conformal_calibrator_supports_lower_is_anomalous_scores():
     assert score.direction == "lower"
 
 
+def test_adaptive_conformal_calibrator_builds_feature_adjusted_artifact():
+    transform = AdaptiveScoreTransform(
+        feature_weights={"semantic_entropy": 2.0},
+        intercept=0.5,
+        direction="higher",
+    )
+    calibrator = AdaptiveConformalCalibrator(alpha=0.4, transform=transform)
+
+    artifact = calibrator.calibrate(
+        model_id="tiny-model",
+        target_layer=-4,
+        score_name="maha",
+        calibration_scores=[1.0, 2.0, 3.0, 4.0],
+        feature_values={"semantic_entropy": [0.0, 0.0, 1.0, 1.0]},
+        created_at="2026-06-25T00:00:00+00:00",
+        eigentruth_version="0.1.0",
+    )
+
+    score = artifact.get_score("maha_adaptive")
+    adaptive_metadata = artifact.calibration_dataset_metadata["adaptive_conformal"]
+
+    assert score.threshold == pytest.approx(5.5)
+    assert score.direction == "higher"
+    assert score.conformal_alpha == pytest.approx(0.4)
+    assert adaptive_metadata["base_score_name"] == "maha"
+    assert adaptive_metadata["transform"] == transform.to_dict()
+    assert adaptive_metadata["n_calibration"] == 4
+
+
 def test_conformal_calibrator_rejects_invalid_inputs():
     with pytest.raises(ValueError, match="alpha"):
         ConformalCalibrator(alpha=1.0)
@@ -89,6 +120,9 @@ def test_conformal_calibrator_rejects_invalid_inputs():
             calibration_scores={"score": [1.0, 2.0]},
             directions={"score": "sideways"},
         )
+
+    with pytest.raises(ValueError, match="alpha"):
+        AdaptiveConformalCalibrator(alpha=0.0)
 
 
 def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):

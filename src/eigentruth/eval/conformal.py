@@ -21,12 +21,73 @@ false-alarm rate of at most alpha.
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Sequence, Union
 
 import torch
 from torch import Tensor
 
 ArrayLike = Union[Tensor, Sequence[float]]
+
+
+@dataclass(frozen=True)
+class AdaptiveScoreTransform:
+    """Feature-adjust a native score into a higher-is-anomalous score.
+
+    This is a dependency-free scoring primitive for adaptive conformal workflows:
+    the base score is first converted into anomaly direction, then caller-provided
+    feature values add a deterministic inflation term.
+    """
+
+    feature_weights: Mapping[str, float] = field(default_factory=dict)
+    intercept: float = 0.0
+    direction: str = "higher"
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        intercept = _finite_float(self.intercept, name="intercept")
+        weights = {
+            str(name): _finite_float(weight, name=f"feature_weights.{name}")
+            for name, weight in self.feature_weights.items()
+        }
+        object.__setattr__(self, "intercept", intercept)
+        object.__setattr__(self, "feature_weights", weights)
+
+    def transform(
+        self,
+        scores: ArrayLike,
+        feature_values: Mapping[str, ArrayLike] | None = None,
+    ) -> Tensor:
+        """Return adjusted scores where higher means more anomalous."""
+        return adaptive_anomaly_scores(
+            scores,
+            feature_values=feature_values,
+            feature_weights=self.feature_weights,
+            intercept=self.intercept,
+            direction=self.direction,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-serializable transform description."""
+        return {
+            "feature_weights": dict(self.feature_weights),
+            "intercept": self.intercept,
+            "direction": self.direction,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, object]) -> "AdaptiveScoreTransform":
+        """Build a transform from JSON-like data."""
+        raw_weights = data.get("feature_weights", {})
+        if not isinstance(raw_weights, Mapping):
+            raise ValueError("feature_weights must be a mapping.")
+        return cls(
+            feature_weights={str(name): float(weight) for name, weight in raw_weights.items()},
+            intercept=float(data.get("intercept", 0.0)),
+            direction=str(data.get("direction", "higher")),
+        )
 
 
 def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor:
@@ -114,8 +175,54 @@ def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str
     return float((scores_t < threshold).double().mean().item())
 
 
+def adaptive_anomaly_scores(
+    scores: ArrayLike,
+    *,
+    feature_values: Mapping[str, ArrayLike] | None = None,
+    feature_weights: Mapping[str, float] | None = None,
+    intercept: float = 0.0,
+    direction: str = "higher",
+) -> Tensor:
+    """Return feature-adjusted anomaly scores for adaptive conformal calibration.
+
+    The returned tensor is always in higher-is-more-anomalous orientation. Feature
+    weights are additive: ``adjusted = oriented_score + intercept + sum(w_i*x_i)``.
+    """
+    if direction == "higher":
+        adjusted = _finite_flat_tensor(scores, name="scores")
+    elif direction == "lower":
+        adjusted = -_finite_flat_tensor(scores, name="scores")
+    else:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+
+    offset = torch.full_like(adjusted, _finite_float(intercept, name="intercept"))
+    weights = {} if feature_weights is None else dict(feature_weights)
+    values = {} if feature_values is None else feature_values
+    for name, raw_weight in weights.items():
+        weight = _finite_float(raw_weight, name=f"feature_weights.{name}")
+        if name not in values:
+            raise ValueError(f"feature_values is missing required feature '{name}'.")
+        feature = _finite_flat_tensor(values[name], name=f"feature_values.{name}")
+        if feature.numel() != adjusted.numel():
+            raise ValueError("feature values must have the same length as scores.")
+        offset = offset + weight * feature
+    return adjusted + offset
+
+
 def _finite_flat_tensor(values: ArrayLike, *, name: str) -> Tensor:
     tensor = torch.as_tensor(values, dtype=torch.float64).flatten()
     if not torch.isfinite(tensor).all():
         raise ValueError(f"{name} must contain only finite values.")
     return tensor
+
+
+def _finite_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be a finite number.")
+    try:
+        result = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite number.") from exc
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite number.")
+    return result

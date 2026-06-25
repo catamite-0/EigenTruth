@@ -8,7 +8,7 @@ network dependencies.
 from __future__ import annotations
 
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.calibration.calibrator import ConformalCalibrator
+from eigentruth.calibration.calibrator import AdaptiveConformalCalibrator, ConformalCalibrator
 from eigentruth.calibration.fusion import (
     RankScoreFusionArtifact,
     RankScoreFusionCalibrator,
@@ -23,6 +23,7 @@ from eigentruth.calibration.sweeps import (
 )
 
 __all__ = [
+    "AdaptiveConformalCalibrator",
     "CalibrationArtifact",
     "CalibrationScore",
     "ConformalCalibrator",

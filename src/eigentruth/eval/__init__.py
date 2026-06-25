@@ -10,6 +10,8 @@ benchmark runners live in `benchmarks/` at the repository root.
 from __future__ import annotations
 
 from eigentruth.eval.conformal import (
+    AdaptiveScoreTransform,
+    adaptive_anomaly_scores,
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
@@ -53,6 +55,8 @@ __all__ = [
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
+    "AdaptiveScoreTransform",
+    "adaptive_anomaly_scores",
     "conformal_pvalues",
     "conformal_threshold",
     "directional_conformal_threshold",
