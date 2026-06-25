@@ -179,6 +179,8 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("repeats must be >=1.")
         if self.cache_only and self.cache_dir is None:
             raise ValueError("cache_only requires cache_dir.")
+        if self.refresh_caches and self.cache_dir is None:
+            raise ValueError("refresh_caches requires cache_dir.")
         if self.cache_only and self.refresh_caches:
             raise ValueError("cache_only cannot refresh caches.")
         if self.hidden_state_capture not in {"outputs", "hooks"}:
@@ -362,6 +364,7 @@ def _cell_summary(
         },
         "status": report.get("status"),
         "workflow_report": _nested(report, "paths", "workflow_report"),
+        "artifact_manifest": _nested(report, "paths", "artifact_manifest"),
         "score_dump": score_dump,
         "best": {
             "score_name": calibration.get("best_score_name"),
@@ -419,6 +422,7 @@ def _artifact_paths(
     for cell in cell_reports:
         name = str(cell["name"])
         artifacts[f"cells.{name}.workflow_report"] = cell.get("workflow_report")
+        artifacts[f"cells.{name}.artifact_manifest"] = cell.get("artifact_manifest")
         artifacts[f"cells.{name}.score_dump"] = _nested(cell, "score_dump", "path")
     return artifacts
 
@@ -450,7 +454,7 @@ def _write_artifact_manifest(
 
 
 def _record_registry(config: TruthfulQAFrontierWorkflowConfig, report: Mapping[str, Any]) -> None:
-    if config.registry_path is None:
+    if config.registry_path is None or config.dry_run:
         return
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_report(

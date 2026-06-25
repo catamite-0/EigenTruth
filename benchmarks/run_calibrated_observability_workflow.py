@@ -196,6 +196,12 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("eval_reps_cache_shard_size must be >=0.")
         if self.eval_reps_shard_read_cache_size < 1:
             raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        if self.refresh_statement_encoding_cache and self.statement_encoding_cache is None:
+            raise ValueError("refresh_statement_encoding_cache requires statement_encoding_cache.")
+        if self.refresh_layer_stats_cache and self.layer_stats_cache is None:
+            raise ValueError("refresh_layer_stats_cache requires layer_stats_cache.")
+        if self.refresh_eval_reps_cache and self.eval_reps_cache is None:
+            raise ValueError("refresh_eval_reps_cache requires eval_reps_cache.")
         if self.cache_only and (self.layer_stats_cache is None or self.eval_reps_cache is None):
             raise ValueError("cache_only requires layer_stats_cache and eval_reps_cache.")
         if self.cache_only and (
@@ -268,7 +274,11 @@ def run_calibrated_observability_workflow(
         shutil.rmtree(config.output_dir)
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
-    score_dump_reused = config.resolved_scores_path.exists() and not config.refresh_scores
+    score_dump_reused = (
+        config.resolved_scores_path.exists()
+        and not config.refresh_scores
+        and not _score_materialization_requested(config)
+    )
     truthfulqa_command = _truthfulqa_command(config)
     conformal_command = _conformal_command(config)
     execution: dict[str, Any] = {
@@ -385,7 +395,7 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         command.append("--auto-batch-size")
     if config.cache_only:
         command.append("--cache-only")
-    if config.statement_encoding_cache is not None:
+    if config.statement_encoding_cache is not None and not config.cache_only:
         command.extend(["--statement-encoding-cache", str(config.statement_encoding_cache)])
         if config.refresh_statement_encoding_cache:
             command.append("--refresh-statement-encoding-cache")
@@ -444,6 +454,15 @@ def _conformal_command(config: CalibratedObservabilityWorkflowConfig) -> list[st
 
 def _run_command(command: Sequence[str]) -> None:
     subprocess.run(command, cwd=REPO_ROOT, check=True)
+
+
+def _score_materialization_requested(config: CalibratedObservabilityWorkflowConfig) -> bool:
+    return (
+        config.cache_only
+        or config.refresh_statement_encoding_cache
+        or config.refresh_layer_stats_cache
+        or config.refresh_eval_reps_cache
+    )
 
 
 def _workflow_status(
@@ -632,7 +651,7 @@ def _artifact_paths(
         "best_calibration": config.best_calibration_path,
         "conformal_artifact_manifest": config.conformal_artifact_manifest_path,
     }
-    if config.statement_encoding_cache is not None:
+    if config.statement_encoding_cache is not None and not config.cache_only:
         artifacts["statement_encoding_cache"] = config.statement_encoding_cache
     if config.layer_stats_cache is not None:
         artifacts["layer_stats_cache"] = config.layer_stats_cache
@@ -694,7 +713,7 @@ def _record_registry(
     config: CalibratedObservabilityWorkflowConfig,
     report: Mapping[str, Any],
 ) -> None:
-    if config.registry_path is None:
+    if config.registry_path is None or config.dry_run:
         return
     registry = ArtifactRegistry.load_json(config.registry_path)
     registry.record_report(

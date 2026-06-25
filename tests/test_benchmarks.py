@@ -770,6 +770,38 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     assert manifest["summary"]["missing_count"] > 0
 
 
+def test_calibrated_observability_cache_refresh_forces_score_materialization(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+    scores_path = tmp_path / "workflow" / "scores.manifest.json"
+    scores_path.parent.mkdir(parents=True)
+    scores_path.write_text("{}", encoding="utf-8")
+
+    payload = module.run_calibrated_observability_workflow(
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            scores_path=scores_path,
+            layer_stats_cache=tmp_path / "cache" / "layer-stats.pt",
+            refresh_layer_stats_cache=True,
+            eval_reps_cache=tmp_path / "cache" / "eval-reps-cache",
+            refresh_eval_reps_cache=True,
+            dry_run=True,
+            python_executable=sys.executable,
+        )
+    )
+
+    assert payload["execution"]["score_dump_reused"] is False
+
+
+def test_calibrated_observability_rejects_refresh_without_cache_path(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+
+    with pytest.raises(ValueError, match="refresh_layer_stats_cache requires layer_stats_cache"):
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            refresh_layer_stats_cache=True,
+        )
+
+
 def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path):
     result = subprocess.run(
         [
@@ -864,6 +896,7 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     assert cell["name"] == "tiny-l4"
     assert cell["status"] == "needs_evidence"
     assert cell["score_dump"]["path"].endswith("tiny-l4/scores.manifest.json")
+    assert cell["artifact_manifest"].endswith("tiny-l4/artifact-manifest.json")
     assert truthfulqa_command[truthfulqa_command.index("--statement-encoding-cache") + 1].endswith(
         "frontier-cache/tiny-l4/statement-encodings.json"
     )
@@ -877,9 +910,43 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache-shard-size") + 1] == "3"
     assert truthfulqa_command[truthfulqa_command.index("--eval-reps-shard-read-cache-size") + 1] == "5"
     assert "--refresh-eval-reps-cache" in truthfulqa_command
+    assert manifest["artifacts"]["cells.tiny-l4.artifact_manifest"]["path"].endswith(
+        "tiny-l4/artifact-manifest.json"
+    )
     assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
     assert manifest["metadata"]["dry_run"] is True
     assert manifest["summary"]["missing_count"] > 0
+
+
+def test_truthfulqa_frontier_workflow_rejects_refresh_caches_without_cache_dir(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+
+    with pytest.raises(ValueError, match="refresh_caches requires cache_dir"):
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=tmp_path / "frontier",
+            models=(module.ModelSpec(name="tiny", model_id="tiny-local"),),
+            scales=(module.ScaleSpec(name="l4", limit=4, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            refresh_caches=True,
+        )
+
+
+def test_truthfulqa_frontier_workflow_dry_run_does_not_write_registry(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+    registry = tmp_path / "registry.json"
+
+    module.run_truthfulqa_frontier_workflow(
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=tmp_path / "frontier",
+            models=(module.ModelSpec(name="tiny", model_id="tiny-local"),),
+            scales=(module.ScaleSpec(name="l4", limit=4, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            registry_path=registry,
+            name="dry-run-frontier",
+            version="0.1",
+            dry_run=True,
+        )
+    )
+
+    assert not registry.exists()
 
 
 def test_truthfulqa_frontier_workflow_rejects_conformal_signal_outside_signals(tmp_path):
