@@ -18,6 +18,7 @@ from eigentruth.eval.metrics import (
     euclidean_dispersion,
     roc_auc,
     selective_classification_report,
+    spearman_correlation,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -110,6 +111,28 @@ class TestRocAuc:
         scores = torch.tensor([0.1, 0.9, 0.2, 0.8])
         labels = torch.tensor([0, 1, 0, 1])
         assert roc_auc(scores, labels) == pytest.approx(1.0)
+
+
+class TestSpearmanCorrelation:
+    def test_perfect_rank_correlation(self):
+        assert spearman_correlation([1, 2, 3, 4], [10, 20, 30, 40]) == pytest.approx(1.0)
+        assert spearman_correlation([1, 2, 3, 4], [40, 30, 20, 10]) == pytest.approx(-1.0)
+
+    def test_ties_use_average_ranks(self):
+        value = spearman_correlation([1, 1, 2, 3], [4, 4, 2, 1])
+
+        assert value == pytest.approx(-1.0)
+
+    def test_constant_axis_returns_nan(self):
+        assert math.isnan(spearman_correlation([1, 1, 1], [1, 2, 3]))
+
+    def test_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="same length"):
+            spearman_correlation([1, 2], [1])
+        with pytest.raises(ValueError, match="at least two"):
+            spearman_correlation([1], [1])
+        with pytest.raises(ValueError, match="finite"):
+            spearman_correlation([1, float("nan")], [1, 2])
 
 
 class TestEuclideanDispersion:

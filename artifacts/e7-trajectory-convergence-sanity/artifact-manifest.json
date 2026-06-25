@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "trajectory_convergence_sanity_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trajectory-convergence-sanity-report.json",
+      "sha256": "2d18924082e75e720327a526e4928a912e8ca5276b11a4dd358da92e33cd9233",
+      "size_bytes": 100035
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "source": "synthetic generation trajectory convergence",
+    "workflow": "trajectory_convergence_sanity"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

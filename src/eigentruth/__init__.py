@@ -35,6 +35,12 @@ from eigentruth.core.math_engine import (
     sherman_morrison_update,
 )
 from eigentruth.core.subspace import TruthSubspace
+from eigentruth.core.trajectory import (
+    TrajectoryConvergenceMetrics,
+    TrajectoryConvergenceReport,
+    TrajectoryMonitor,
+    trajectory_convergence_metrics,
+)
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.models.wrapper import EigenTruthWrapper
 from eigentruth.training import (
@@ -53,6 +59,10 @@ __all__ = [
     "TruthProbe",
     "TruthManifold",
     "TruthSubspace",
+    "TrajectoryConvergenceMetrics",
+    "TrajectoryConvergenceReport",
+    "TrajectoryMonitor",
+    "trajectory_convergence_metrics",
     "RepTelemetryCallback",
     "RepresentationTelemetryRecorder",
     "RepresentationTelemetryReport",

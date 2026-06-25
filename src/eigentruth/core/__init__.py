@@ -26,10 +26,20 @@ from eigentruth.core.math_engine import (
     sherman_morrison_update,
 )
 from eigentruth.core.subspace import TruthSubspace
+from eigentruth.core.trajectory import (
+    TrajectoryConvergenceMetrics,
+    TrajectoryConvergenceReport,
+    TrajectoryMonitor,
+    trajectory_convergence_metrics,
+)
 
 __all__ = [
     "TruthManifold",
     "TruthSubspace",
+    "TrajectoryConvergenceMetrics",
+    "TrajectoryConvergenceReport",
+    "TrajectoryMonitor",
+    "trajectory_convergence_metrics",
     "COVARIANCE_MODES",
     "CovarianceSpectrum",
     "covariance_shrinkage_intensity",

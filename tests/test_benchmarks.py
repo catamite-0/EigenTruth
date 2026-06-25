@@ -2425,6 +2425,36 @@ def test_model_collapse_early_warning_detects_rank_decay_before_quality_loss(tmp
     assert payload["generations"][-1]["self_training"]["anchors_per_class"] == 1
 
 
+def test_trajectory_convergence_sanity_correlates_with_quality(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.trajectory_convergence_sanity")
+    report_path = tmp_path / "trajectory-convergence.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        sample_count=48,
+        step_count=8,
+        hidden_dim=12,
+        seed=42,
+        min_abs_spearman=0.3,
+        min_auroc=0.55,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+    summary = payload["summary"]
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert summary["status"] == "pass"
+    assert summary["spearman_convergence_quality"] > 0.3
+    assert summary["spearman_convergence_nll"] < -0.3
+    assert summary["quality_auroc"] > 0.55
+    assert (
+        summary["mean_high_quality_convergence_score"]
+        > summary["mean_low_quality_convergence_score"]
+    )
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

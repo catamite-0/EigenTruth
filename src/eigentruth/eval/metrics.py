@@ -75,6 +75,26 @@ def roc_auc(scores: ArrayLike, labels: ArrayLike) -> float:
     return (sum_ranks_pos - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg)
 
 
+def spearman_correlation(x: ArrayLike, y: ArrayLike) -> float:
+    """Return Spearman rank correlation with average ranks for ties."""
+    x_t = torch.as_tensor(x, dtype=torch.float64).flatten()
+    y_t = torch.as_tensor(y, dtype=torch.float64).flatten()
+    if x_t.numel() != y_t.numel():
+        raise ValueError("x and y must have the same length.")
+    if int(x_t.numel()) < 2:
+        raise ValueError("Spearman correlation requires at least two samples.")
+    if not torch.isfinite(x_t).all() or not torch.isfinite(y_t).all():
+        raise ValueError("x and y must contain only finite values.")
+    x_rank = _average_ranks(x_t)
+    y_rank = _average_ranks(y_t)
+    x_centered = x_rank - x_rank.mean()
+    y_centered = y_rank - y_rank.mean()
+    denominator = torch.sqrt((x_centered * x_centered).sum() * (y_centered * y_centered).sum())
+    if float(denominator.item()) == 0.0:
+        return float("nan")
+    return float(((x_centered * y_centered).sum() / denominator).item())
+
+
 def euclidean_dispersion(points: Tensor) -> Tensor:
     """一组点到其质心的平均欧氏距离（双曲 HSE 的欧氏对照基线）。
     Mean Euclidean distance of points to their centroid — the Euclidean counterpart

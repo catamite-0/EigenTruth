@@ -41,6 +41,7 @@ from eigentruth.eval.metrics import (
     euclidean_dispersion,
     roc_auc,
     selective_classification_report,
+    spearman_correlation,
 )
 from eigentruth.eval.score_dump import (
     ScoreDump,
@@ -71,6 +72,7 @@ from eigentruth.eval.score_fusion import (
 
 __all__ = [
     "roc_auc",
+    "spearman_correlation",
     "euclidean_dispersion",
     "binomial_confidence_interval",
     "selective_classification_report",

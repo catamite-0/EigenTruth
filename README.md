@@ -362,6 +362,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | Computes dependency-free closed-form Gaussian 2-Wasserstein/Bures distance for comparing representation manifolds across layers, checkpoints, or runs. |
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | Estimates dependency-free TwoNN intrinsic dimension from hidden-state samples, producing cheap layer-profile evidence for layer selection and representation-collapse experiments. |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | Records training-side per-layer representation telemetry without mandatory Trainer dependencies: mean norm, variance trace, spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to an initialization baseline; the optional callback exposes HF Trainer-compatible hook names while staying dependency-free. |
+| `TrajectoryMonitor` / `trajectory_convergence_metrics` | Computes generation-trajectory convergence diagnostics from per-token hidden states, including step-distance decay, Koopman-style rate, path efficiency, and a convergence score for quality/confidence correlation checks. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
@@ -413,6 +414,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `training_telemetry_sanity.py` | Runs a deterministic synthetic clean-vs-corrupt training telemetry sanity check, gating on distance-to-baseline growth and effective-rank collapse. |
 | `training_telemetry_tiny_finetune.py` | Runs a pure PyTorch tiny clean-vs-duplicate fine-tune comparison and checks whether representation-rank telemetry separates before eval-loss degradation. |
 | `model_collapse_early_warning.py` | Runs a deterministic pseudo-label self-training loop and checks whether representation diversity telemetry warns before visible quality loss. |
+| `trajectory_convergence_sanity.py` | Runs a deterministic synthetic generation-trajectory sanity check and reports Spearman/AUROC correlation between convergence diagnostics and quality proxies. |
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache/staged-verification route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
@@ -461,6 +463,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | 计算无新增依赖的 Gaussian 2-Wasserstein/Bures 距离，用于比较不同 layer、checkpoint 或 run 的表征流形。 |
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | 基于 hidden-state 样本估计无新增依赖的 TwoNN intrinsic dimension，为 layer selection 和 representation-collapse 实验提供低成本层级 profile 证据。 |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | 无需强绑定 Trainer 的训练侧逐层表征 telemetry：记录 mean norm、variance trace、谱 rank 诊断，以及到初始化 baseline 的 Gaussian 2-Wasserstein/Bures 距离；可选 callback 暴露 HF Trainer-compatible hook 名称，但本身仍无 transformers 强依赖。 |
+| `TrajectoryMonitor` / `trajectory_convergence_metrics` | 从逐 token hidden states 计算 generation trajectory convergence 诊断，包括 step-distance decay、Koopman-style rate、path efficiency 和用于质量/置信相关性检查的 convergence score。 |
 | `poincare_map` | 将表征投影到有界双曲空间。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |
@@ -511,6 +514,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `training_telemetry_sanity.py` | 执行确定性的 synthetic clean-vs-corrupt training telemetry sanity check，用 distance-to-baseline 增长和 effective-rank collapse 做 gate。 |
 | `training_telemetry_tiny_finetune.py` | 执行纯 PyTorch tiny clean-vs-duplicate fine-tune 对照，检查 representation-rank telemetry 是否早于 eval-loss 退化分离。 |
 | `model_collapse_early_warning.py` | 执行确定性的 pseudo-label self-training loop，检查表征多样性 telemetry 是否早于可见质量退化发出预警。 |
+| `trajectory_convergence_sanity.py` | 执行确定性的 synthetic generation-trajectory sanity check，报告 convergence diagnostics 与质量代理之间的 Spearman/AUROC 相关性。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
