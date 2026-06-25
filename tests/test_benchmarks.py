@@ -738,7 +738,7 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     assert payload["evidence_bundle"]["calibration"]["best_score_name"] is None
     assert "--dump-scores-format" in truthfulqa_command
     assert "jsonl" in truthfulqa_command
-    assert "--sweep-layers" in truthfulqa_command
+    assert "--sweep-layers=-2,-3" in truthfulqa_command
     assert "--artifact-manifest" in conformal_command
     assert manifest["metadata"]["runner"] == "run_calibrated_observability_workflow"
     assert manifest["metadata"]["dry_run"] is True
@@ -782,8 +782,7 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert truthfulqa_command[truthfulqa_command.index("--batch-size") + 1] == "4"
     assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "hooks"
     assert "--auto-batch-size" in truthfulqa_command
-    assert "--sweep-layers" in truthfulqa_command
-    assert "-1,-2,-4" in truthfulqa_command
+    assert "--sweep-layers=-1,-2,-4" in truthfulqa_command
     assert "--signals" in conformal_command
     assert "maha_last,truth_proj,subspace_resid,resid_update_norm" in conformal_command
     assert "--repeats" in conformal_command

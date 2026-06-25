@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "dc848382c35acdea0e9122d23582d3c9e0b959d0f20b3e6d928a0db8a1d477b5",
+      "size_bytes": 862
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "977a61c70d96c12d6bdce77f31399880f87508e85aa9bc2d86c503d109016e78",
+      "size_bytes": 1378
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "e2baf0dc8bf07d9df298f9fddf0e7d423f5d8da709c7356bb61712b26bfb3981",
+      "size_bytes": 28858
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "b42a620adaa7a17eb57a99ec1843b9f8059401ec48070dd214b7ec689ecda46c",
+      "size_bytes": 3017
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.records.jsonl",
+      "sha256": "4eede2d68df86d763fe688e3afef9b871e375f461039cb9ca8ed432e811a4933",
+      "size_bytes": 237847
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "708b0d761ab1a8c185af90fb0eb11b31d1039d1dd8aca9d682c417a67670588d",
+      "size_bytes": 12441
+    },
+    "truthfulqa_profile": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-profile.json",
+      "sha256": "547f22b181a627f8cf1e85b1f2e9a8fe3b968a13709216953efd289964236a52",
+      "size_bytes": 1795
+    },
+    "truthfulqa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-report.json",
+      "sha256": "5edf4f065f2aa510d08df8c2ee7988d695bdbbe8b0b8d99829a87de7ce66dc3b",
+      "size_bytes": 16826
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "678572b28d5280ac422855d536e6738b6f0f499f0a301579bf449579e6750b8c",
+      "size_bytes": 7350
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -8,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": false,
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

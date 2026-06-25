@@ -336,7 +336,7 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         config.dump_scores_format,
     ]
     if config.sweep_layers:
-        command.extend(["--sweep-layers", ",".join(str(layer) for layer in config.sweep_layers)])
+        command.append(f"--sweep-layers={','.join(str(layer) for layer in config.sweep_layers)}")
     elif config.sweep:
         command.append("--sweep")
     if config.offline:

@@ -3180,6 +3180,79 @@
       "name": "smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate-verification",
       "path": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_staged_release_candidate_manifest_verification.json",
       "version": "0.2"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-smollm2-l20/artifact-manifest.json",
+        "models": [
+          "smollm2"
+        ],
+        "scales": [
+          "l20"
+        ],
+        "score_ensemble_report": "artifacts/truthfulqa-frontier-smollm2-l20/score-ensemble-report.json",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ],
+        "status": "complete",
+        "workflow": "run_truthfulqa_frontier_workflow"
+      },
+      "name": "truthfulqa-frontier-smollm2-l20",
+      "path": "artifacts/truthfulqa-frontier-smollm2-l20/truthfulqa-frontier-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen05-l20/artifact-manifest.json",
+        "models": [
+          "qwen05"
+        ],
+        "scales": [
+          "l20"
+        ],
+        "score_ensemble_report": "artifacts/truthfulqa-frontier-qwen05-l20/score-ensemble-report.json",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ],
+        "status": "complete",
+        "workflow": "run_truthfulqa_frontier_workflow"
+      },
+      "name": "truthfulqa-frontier-qwen05-l20",
+      "path": "artifacts/truthfulqa-frontier-qwen05-l20/truthfulqa-frontier-workflow.json",
+      "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-l20-comparison/artifact-manifest.json",
+        "models": [
+          "smollm2",
+          "qwen05"
+        ],
+        "scale": "l20",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ],
+        "status": "complete",
+        "workflow": "eval_score_ensemble"
+      },
+      "name": "truthfulqa-frontier-l20-comparison",
+      "path": "artifacts/truthfulqa-frontier-l20-comparison/score-ensemble-report.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1
