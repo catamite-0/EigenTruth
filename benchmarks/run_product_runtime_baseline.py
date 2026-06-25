@@ -431,6 +431,21 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "selective_claim_skip_rate": metrics.get("selective_claim_skip_rate"),
         "verified_claim_count": metrics.get("verified_claim_count"),
         "verifier_saved_claim_count": metrics.get("verifier_saved_claim_count"),
+        "verification_plan_summary": dict(_mapping(metrics.get("verification_plan_summary"))),
+        "verification_plan_available": bool(metrics.get("verification_plan_available")),
+        "verification_plan_source": metrics.get("verification_plan_source"),
+        "verification_plan_scope": metrics.get("verification_plan_scope"),
+        "verification_plan_claim_count": metrics.get("verification_plan_claim_count"),
+        "verification_plan_verify_claim_count": metrics.get("verification_plan_verify_claim_count"),
+        "verification_plan_skipped_claim_count": metrics.get("verification_plan_skipped_claim_count"),
+        "verification_plan_triggered_claim_count": metrics.get("verification_plan_triggered_claim_count"),
+        "verification_plan_route_hint_count": metrics.get("verification_plan_route_hint_count"),
+        "verification_plan_route_counts": dict(_mapping(metrics.get("verification_plan_route_counts"))),
+        "verification_plan_retrieval_query_count": metrics.get("verification_plan_retrieval_query_count"),
+        "verification_plan_calculation_check_count": metrics.get("verification_plan_calculation_check_count"),
+        "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
+        "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
+        "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
     }
 
 
@@ -477,6 +492,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verified_claim_count": _numeric_summary(item.get("verified_claim_count") for item in metrics),
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
+        "verification_plan": _aggregate_verification_plan(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
         "profiles": _aggregate_contexts(contexts),
@@ -539,6 +555,11 @@ def _optimization_report(
                 summary,
                 "verification_stage",
                 "claim_skip_rate",
+            ),
+            "verification_plan_coverage": _nested(
+                summary,
+                "verification_plan",
+                "coverage_rate",
             ),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
@@ -1073,6 +1094,49 @@ def _aggregate_verification_stage(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "reason_counts": reason_counts,
         "triggered_feature_counts": triggered_feature_counts,
         "triggered_metadata_counts": triggered_metadata_counts,
+    }
+
+
+def _aggregate_verification_plan(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("verification_plan_summary")) for item in metrics]
+    available_count = sum(1 for item in metrics if bool(item.get("verification_plan_available")))
+    route_counts: dict[str, int] = {}
+    tool_payload_counts: dict[str, int] = {}
+    for item in metrics:
+        _merge_counts(route_counts, _mapping(item.get("verification_plan_route_counts")))
+        summary = _mapping(item.get("verification_plan_summary"))
+        _merge_counts(tool_payload_counts, _mapping(summary.get("tool_payload_counts")))
+    return {
+        "source_trace_count": len(metrics),
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(item.get("verification_plan_source") for item in metrics),
+        "verification_scope_counts": _counts(item.get("verification_plan_scope") for item in metrics),
+        "run_verifier_trace_count": sum(
+            1 for item in metrics if item.get("verification_plan_run_verifier") is True
+        ),
+        "claim_count": _sum_float(metrics, "verification_plan_claim_count"),
+        "verify_claim_count": _sum_float(metrics, "verification_plan_verify_claim_count"),
+        "skipped_claim_count": _sum_float(metrics, "verification_plan_skipped_claim_count"),
+        "triggered_claim_count": _sum_float(metrics, "verification_plan_triggered_claim_count"),
+        "route_hint_count": _sum_float(metrics, "verification_plan_route_hint_count"),
+        "dependency_count": _sum_float(metrics, "verification_plan_dependency_count"),
+        "route_counts": route_counts,
+        "tool_payload_counts": tool_payload_counts,
+        "per_trace_claim_count": _numeric_summary(
+            item.get("verification_plan_claim_count") for item in metrics
+        ),
+        "per_trace_verify_claim_count": _numeric_summary(
+            item.get("verification_plan_verify_claim_count") for item in metrics
+        ),
+        "per_trace_route_hint_count": _numeric_summary(
+            item.get("verification_plan_route_hint_count") for item in metrics
+        ),
+        "per_trace_dependency_count": _numeric_summary(
+            item.get("verification_plan_dependency_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
     }
 
 

@@ -449,6 +449,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_cache_metrics(trace))
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
+        metrics.update(_verification_plan_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
@@ -482,6 +483,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_cache_metrics(trace))
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
+    metrics.update(_verification_plan_metrics(trace))
     return metrics
 
 
@@ -596,6 +598,133 @@ def _verification_stage_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "verified_claim_count": _finite_float(summary.get("verified_claim_count")),
         "verifier_saved_claim_count": _finite_float(summary.get("saved_claim_count")),
     }
+
+
+def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        payload = trace.to_dict()
+    else:
+        payload = dict(trace)
+
+    plan = _mapping(payload.get("verification_plan"))
+    source = "full_trace" if plan else None
+    if not plan:
+        summary_plan = _mapping(_mapping(payload.get("summaries")).get("verification_plan"))
+        if summary_plan:
+            plan = summary_plan
+            source = "bounded_summary"
+
+    if not plan or plan.get("available") is False:
+        return {
+            "verification_plan_available": False,
+            "verification_plan_source": source or "missing",
+            "verification_plan_summary": {
+                "available": False,
+                "source": source or "missing",
+            },
+            "verification_plan_run_verifier": None,
+            "verification_plan_scope": None,
+            "verification_plan_claim_count": None,
+            "verification_plan_verify_claim_count": None,
+            "verification_plan_skipped_claim_count": None,
+            "verification_plan_triggered_claim_count": None,
+            "verification_plan_route_hint_count": None,
+            "verification_plan_route_counts": {},
+            "verification_plan_retrieval_query_count": None,
+            "verification_plan_calculation_check_count": None,
+            "verification_plan_state_check_count": None,
+            "verification_plan_world_model_check_count": None,
+            "verification_plan_dependency_count": None,
+        }
+
+    if source == "bounded_summary":
+        route_counts = _int_mapping(plan.get("route_counts"))
+        tool_counts = _mapping(plan.get("tool_payload_counts"))
+        claim_count = _finite_float(plan.get("claim_count"))
+        verify_claim_count = _finite_float(plan.get("verify_claim_count"))
+        skipped_claim_count = _finite_float(plan.get("skipped_claim_count"))
+        triggered_claim_count = _finite_float(plan.get("triggered_claim_count"))
+        route_hint_count = None
+        retrieval_query_count = _finite_float(tool_counts.get("retrieval_queries"))
+        calculation_check_count = _finite_float(tool_counts.get("calculation_checks"))
+        state_check_count = _finite_float(tool_counts.get("state_checks"))
+        world_model_check_count = _finite_float(tool_counts.get("world_model_checks"))
+        dependency_count = _finite_float(plan.get("dependency_count"))
+    else:
+        route_counts = _route_counts_from_plan(plan)
+        claim_count = float(len(_sequence(plan.get("claims"))))
+        verify_claim_count = float(len(_sequence(plan.get("verify_claim_ids"))))
+        skipped_claim_count = float(len(_sequence(plan.get("skipped_claim_ids"))))
+        triggered_claim_count = float(len(_sequence(plan.get("triggered_claim_ids"))))
+        route_hint_count = float(len(_sequence(plan.get("route_hints"))))
+        retrieval_query_count = float(len(_sequence(plan.get("retrieval_queries"))))
+        calculation_check_count = float(len(_sequence(plan.get("calculation_checks"))))
+        state_check_count = float(len(_sequence(plan.get("state_checks"))))
+        world_model_check_count = float(len(_sequence(plan.get("world_model_checks"))))
+        dependency_count = float(len(_sequence(plan.get("dependencies"))))
+
+    summary = {
+        "available": True,
+        "source": source or "full_trace",
+        "run_verifier": plan.get("run_verifier"),
+        "verification_scope": plan.get("verification_scope"),
+        "claim_count": claim_count,
+        "verify_claim_count": verify_claim_count,
+        "skipped_claim_count": skipped_claim_count,
+        "triggered_claim_count": triggered_claim_count,
+        "route_hint_count": route_hint_count,
+        "route_counts": route_counts,
+        "tool_payload_counts": {
+            "retrieval_queries": retrieval_query_count,
+            "calculation_checks": calculation_check_count,
+            "state_checks": state_check_count,
+            "world_model_checks": world_model_check_count,
+        },
+        "dependency_count": dependency_count,
+    }
+    return {
+        "verification_plan_available": True,
+        "verification_plan_source": source or "full_trace",
+        "verification_plan_summary": summary,
+        "verification_plan_run_verifier": (
+            plan.get("run_verifier")
+            if isinstance(plan.get("run_verifier"), bool)
+            else None
+        ),
+        "verification_plan_scope": plan.get("verification_scope"),
+        "verification_plan_claim_count": claim_count,
+        "verification_plan_verify_claim_count": verify_claim_count,
+        "verification_plan_skipped_claim_count": skipped_claim_count,
+        "verification_plan_triggered_claim_count": triggered_claim_count,
+        "verification_plan_route_hint_count": route_hint_count,
+        "verification_plan_route_counts": route_counts,
+        "verification_plan_retrieval_query_count": retrieval_query_count,
+        "verification_plan_calculation_check_count": calculation_check_count,
+        "verification_plan_state_check_count": state_check_count,
+        "verification_plan_world_model_check_count": world_model_check_count,
+        "verification_plan_dependency_count": dependency_count,
+    }
+
+
+def _route_counts_from_plan(plan: Mapping[str, Any]) -> dict[str, int]:
+    route_counts: dict[str, int] = {}
+    for hint in _sequence(plan.get("route_hints")):
+        if not isinstance(hint, Mapping):
+            continue
+        for route in _sequence(hint.get("routes")):
+            route_name = str(route)
+            route_counts[route_name] = route_counts.get(route_name, 0) + 1
+    return route_counts
+
+
+def _int_mapping(value: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for key, raw_count in _mapping(value).items():
+        count = _finite_float(raw_count)
+        if count is None:
+            continue
+        counts[str(key)] = int(count)
+    return counts
 
 
 def _max_metric_check(

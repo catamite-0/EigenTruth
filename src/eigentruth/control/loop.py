@@ -499,6 +499,7 @@ def run_verification_loop(
             TraceEvent("final_risk_decision", final_decision.to_dict()),
         ),
         metadata={
+            **dict(metadata or {}),
             "loop_version": "0.4",
             "source": "eigentruth.control.run_verification_loop",
             "claim_verification_plan": {
@@ -516,7 +517,6 @@ def run_verification_loop(
                 final_coherence_report,
                 missing_dependency_claim_ids=missing_dependency_claim_ids,
             ),
-            **dict(metadata or {}),
         },
         runtime_trace=runtime_trace,
     )

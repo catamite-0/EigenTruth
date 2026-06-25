@@ -14496,6 +14496,30 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     },
                 }
             ],
+            "verification_plan": {
+                "run_verifier": True,
+                "reason": "verification is not staged; all claims are selected",
+                "verification_scope": "all",
+                "claims": [{"claim_id": "c1", "text": "Paris is the capital of France."}],
+                "verify_claim_ids": ["c1"],
+                "skipped_claim_ids": [],
+                "triggered_claim_ids": ["c1"],
+                "triggered_features": {"c1": ["has_number"]},
+                "triggered_metadata": {},
+                "route_hints": [
+                    {
+                        "claim_id": "c1",
+                        "routes": ["structured_qa", "retrieval"],
+                        "reasons": ["feature:has_number"],
+                        "metadata": {},
+                    }
+                ],
+                "retrieval_queries": [{"claim_id": "c1", "query": "Paris capital France"}],
+                "calculation_checks": [],
+                "state_checks": [],
+                "world_model_checks": [],
+                "dependencies": [],
+            },
             "metadata": {"cache": {"verifier": {"hits": 1, "misses": 1}}},
         }),
         encoding="utf-8",
@@ -14563,6 +14587,11 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["summary"]["routes"]["by_route"]["retrieval_structured_qa"]["retrieval_use_rate"] == pytest.approx(
         1.0
     )
+    assert payload["summary"]["verification_plan"]["coverage_rate"] == pytest.approx(0.5)
+    assert payload["summary"]["verification_plan"]["route_counts"]["retrieval"] == 1
+    assert payload["summary"]["verification_plan"]["tool_payload_counts"]["retrieval_queries"] == 1
+    assert payload["traces"][0]["metrics"]["verification_plan_available"] is True
+    assert payload["traces"][1]["metrics"]["verification_plan_available"] is False
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"

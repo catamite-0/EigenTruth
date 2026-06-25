@@ -411,6 +411,10 @@ def test_verification_loop_records_claim_verification_plan():
         claims=claims,
         verifier=_CountingVerifier(status=VerificationStatus.INSUFFICIENT_EVIDENCE),
         controller=RiskController(_artifact()),
+        metadata={
+            "claim_verification_plan": {"verify_claim_count": 999},
+            "custom_metadata": "kept",
+        },
         stage_policy=StagedVerificationPolicy(
             verify_claim_feature_flags=("has_number",),
             verify_triggered_claims_only=True,
@@ -430,6 +434,7 @@ def test_verification_loop_records_claim_verification_plan():
     assert trace_payload["verification_plan"]["verification_scope"] == "triggered"
     assert trace_payload["verification_plan"]["verify_claim_ids"] == ("c2",)
     assert trace_payload["metadata"]["claim_verification_plan"]["verify_claim_count"] == 1
+    assert trace_payload["metadata"]["custom_metadata"] == "kept"
     assert trace_payload["events"][0]["event_type"] == "diagnostic_risk_decision"
     assert any(event["event_type"] == "claim_verification_plan" for event in trace_payload["events"])
     assert result.to_dict()["claim_verification_plan"]["skipped_claim_ids"] == ("c1", "c3")

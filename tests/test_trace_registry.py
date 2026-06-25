@@ -131,6 +131,20 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     assert bounded["summaries"]["verification_plan"]["route_counts"]["retrieval"] == 2
     assert bounded["summaries"]["verification_plan"]["tool_payload_counts"]["calculation_checks"] == 1
     assert "verification_plan" not in bounded
+
+    metrics = product_runtime_metrics(trace)
+    bounded_metrics = product_runtime_metrics(bounded)
+    assert metrics["verification_plan_available"] is True
+    assert metrics["verification_plan_source"] == "full_trace"
+    assert metrics["verification_plan_claim_count"] == 2.0
+    assert metrics["verification_plan_route_hint_count"] == 2.0
+    assert metrics["verification_plan_route_counts"]["retrieval"] == 2
+    assert metrics["verification_plan_calculation_check_count"] == 1.0
+    assert bounded_metrics["verification_plan_available"] is True
+    assert bounded_metrics["verification_plan_source"] == "bounded_summary"
+    assert bounded_metrics["verification_plan_claim_count"] == 2.0
+    assert bounded_metrics["verification_plan_route_hint_count"] is None
+    assert bounded_metrics["verification_plan_route_counts"]["retrieval"] == 2
     json.dumps(payload)
     json.dumps(bounded)
 
