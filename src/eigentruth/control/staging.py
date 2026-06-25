@@ -101,6 +101,7 @@ class StagedVerificationPolicy:
     )
     verify_claim_metadata_keys: Sequence[str] = ("requires_verification",)
     verify_triggered_claims_only: bool = False
+    fail_closed_on_skip: bool = True
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -129,6 +130,14 @@ class StagedVerificationPolicy:
             _coerce_bool(
                 self.verify_triggered_claims_only,
                 field_name="verify_triggered_claims_only",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "fail_closed_on_skip",
+            _coerce_bool(
+                self.fail_closed_on_skip,
+                field_name="fail_closed_on_skip",
             ),
         )
 
@@ -221,6 +230,7 @@ class StagedVerificationPolicy:
             "verify_claim_feature_flags": tuple(self.verify_claim_feature_flags),
             "verify_claim_metadata_keys": tuple(self.verify_claim_metadata_keys),
             "verify_triggered_claims_only": self.verify_triggered_claims_only,
+            "fail_closed_on_skip": self.fail_closed_on_skip,
         }
 
 

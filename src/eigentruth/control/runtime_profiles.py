@@ -25,6 +25,7 @@ _CONTROL_DEFAULT_KEYS = frozenset({
     "stage_verify_claim_feature_flags",
     "stage_verify_claim_metadata_keys",
     "stage_verify_triggered_claims_only",
+    "stage_fail_closed_on_skip",
     "max_verifier_route_attempts",
 })
 _DEFAULT_SENSITIVE_CLAIM_FEATURE_FLAGS = (
@@ -461,6 +462,7 @@ RUNTIME_PROFILES: Mapping[str, RuntimeProfile] = MappingProxyType({
             "stage_verify_claim_feature_flags": ("has_number", "has_citation", "is_time_sensitive"),
             "stage_verify_claim_metadata_keys": ("requires_verification",),
             "stage_verify_triggered_claims_only": True,
+            "stage_fail_closed_on_skip": True,
             "max_verifier_route_attempts": 1,
         },
     ),
@@ -487,6 +489,7 @@ RUNTIME_PROFILES: Mapping[str, RuntimeProfile] = MappingProxyType({
             ),
             "stage_verify_claim_feature_flags": ("has_number", "has_citation", "is_time_sensitive"),
             "stage_verify_claim_metadata_keys": ("requires_verification",),
+            "stage_fail_closed_on_skip": True,
             "max_verifier_route_attempts": 2,
         },
     ),

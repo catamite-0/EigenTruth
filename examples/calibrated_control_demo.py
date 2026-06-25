@@ -378,9 +378,12 @@ def stage_policy_from_runtime_profile(
         else dict(control_defaults)
     )
     staged_enabled = (
-        bool(control_defaults.get("staged_verification", False))
+        _strict_bool(
+            control_defaults.get("staged_verification", False),
+            field_name="staged_verification",
+        )
         if staged_verification is None
-        else bool(staged_verification)
+        else _strict_bool(staged_verification, field_name="staged_verification")
     )
     if not staged_enabled:
         return None
@@ -406,7 +409,23 @@ def stage_policy_from_runtime_profile(
             "stage_verify_triggered_claims_only",
             default_policy.verify_triggered_claims_only,
         ),
+        fail_closed_on_skip=control_defaults.get(
+            "stage_fail_closed_on_skip",
+            default_policy.fail_closed_on_skip,
+        ),
     )
+
+
+def _strict_bool(value: Any, *, field_name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{field_name} must be a boolean")
 
 
 def verifier_route_attempts_from_runtime_profile(

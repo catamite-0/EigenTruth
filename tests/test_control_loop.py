@@ -256,7 +256,7 @@ def test_verification_loop_does_not_override_refuted_claim_with_retrieval():
     assert result.final_decision.risk_level is RiskLevel.HIGH
 
 
-def test_staged_verification_loop_skips_expensive_verifier_for_low_risk_claim():
+def test_staged_verification_loop_fails_closed_when_low_risk_claim_skips_verifier():
     claims = (Claim("Paris is a city.", claim_id="c1"),)
     verifier = _CountingVerifier()
 
@@ -273,8 +273,11 @@ def test_staged_verification_loop_skips_expensive_verifier_for_low_risk_claim():
     assert verifier.verify_calls == 0
     assert result.initial_verification_results == ()
     assert result.final_verification_results == ()
-    assert result.initial_decision.action is ControlAction.ACCEPT
-    assert result.final_decision.action is ControlAction.ACCEPT
+    assert result.initial_decision.action is ControlAction.CLARIFY
+    assert result.initial_decision.risk_level is RiskLevel.UNKNOWN
+    assert result.initial_decision.diagnostics["verification_skipped_fail_closed"] is True
+    assert result.final_decision.action is ControlAction.CLARIFY
+    assert result.final_decision.risk_level is RiskLevel.UNKNOWN
     assert result.verification_stage_decision is not None
     assert result.verification_stage_decision.run_verifier is False
     trace = result.trace.to_dict()
@@ -283,16 +286,39 @@ def test_staged_verification_loop_skips_expensive_verifier_for_low_risk_claim():
         "high",
         "unknown",
     )
+    assert trace["metadata"]["staged_verification"]["fail_closed_on_skip"] is True
     assert trace["events"][1]["event_type"] == "verification_stage_decision"
     assert trace["events"][1]["payload"]["run_verifier"] is False
     assert trace["events"][2]["event_type"] == "initial_verification_skipped"
     assert trace["events"][3]["payload"]["skipped"] is True
+    assert trace["events"][4]["payload"]["action"] == "clarify"
     runtime_trace = trace["runtime_trace"]
     assert runtime_trace is not None
     phase_names = {phase["name"] for phase in runtime_trace["phases"]}
     assert "verification_stage_decision" in phase_names
     assert "initial_verification" not in phase_names
     json.dumps(result.to_dict())
+
+
+def test_staged_verification_loop_can_allow_legacy_unverified_accept():
+    claims = (Claim("Paris is a city.", claim_id="c1"),)
+    verifier = _CountingVerifier()
+
+    result = run_verification_loop(
+        request_id="req-stage-low-legacy",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(fail_closed_on_skip=False),
+    )
+
+    assert verifier.verify_many_calls == 0
+    assert result.initial_verification_results == ()
+    assert result.final_verification_results == ()
+    assert result.final_decision.action is ControlAction.ACCEPT
+    assert result.final_decision.risk_level is RiskLevel.LOW
+    assert result.trace.to_dict()["metadata"]["staged_verification"]["fail_closed_on_skip"] is False
 
 
 def test_staged_verification_loop_runs_verifier_for_sensitive_claim_metadata():
@@ -483,6 +509,7 @@ def test_staged_verification_policy_parses_string_feature_and_metadata_flags():
     policy = StagedVerificationPolicy(
         verify_claim_feature_flags=("has_number",),
         verify_claim_metadata_keys=("requires_verification",),
+        fail_closed_on_skip="false",
     )
 
     string_true = policy.decide(
@@ -522,6 +549,7 @@ def test_staged_verification_policy_parses_string_feature_and_metadata_flags():
     assert string_true.run_verifier is True
     assert string_true.triggered_features == {"c1": ("has_number",)}
     assert string_false.run_verifier is False
+    assert policy.fail_closed_on_skip is False
     assert ambiguous.run_verifier is True
     assert ambiguous.triggered_metadata == {"c3": ("requires_verification",)}
 

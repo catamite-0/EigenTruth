@@ -218,7 +218,37 @@ def test_calibrated_control_demo_latency_profile_skips_low_risk_non_sensitive_ve
     assert stage_event["payload"]["reason"] == "diagnostics and claim metadata did not require verification"
     assert payload["metadata"]["verification_stage_summary"]["skipped"] is True
     assert payload["metadata"]["verification_stage_summary"]["saved_claim_count"] == 2
-    assert payload["risk_decision"]["action"] == "accept"
+    assert payload["metadata"]["staged_verification"]["fail_closed_on_skip"] is True
+    assert payload["risk_decision"]["action"] == "clarify"
+    assert payload["risk_decision"]["risk_level"] == "unknown"
+
+
+def test_calibrated_control_demo_can_disable_staged_verification_from_string_default():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    policy = demo.stage_policy_from_runtime_profile(
+        None,
+        staged_verification=None,
+        control_defaults={"staged_verification": "false"},
+    )
+
+    assert policy is None
+
+
+def test_calibrated_control_demo_can_opt_out_of_fail_closed_staged_skip():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    policy = demo.stage_policy_from_runtime_profile(
+        None,
+        staged_verification=None,
+        control_defaults={
+            "staged_verification": "true",
+            "stage_fail_closed_on_skip": "false",
+        },
+    )
+
+    assert policy is not None
+    assert policy.fail_closed_on_skip is False
 
 
 def test_calibrated_control_demo_balanced_profile_verifies_diagnostic_risk():
@@ -435,7 +465,8 @@ def test_calibrated_control_demo_uses_promotion_contract_release_efficiency_prof
     }
     assert payload["metadata"]["staged_verification_enabled"] is True
     assert payload["metadata"]["verification_stage_summary"]["skipped"] is True
-    assert payload["risk_decision"]["action"] == "accept"
+    assert payload["metadata"]["staged_verification"]["fail_closed_on_skip"] is True
+    assert payload["risk_decision"]["action"] == "clarify"
 
 
 def test_calibrated_control_demo_can_record_runtime_budget_result():

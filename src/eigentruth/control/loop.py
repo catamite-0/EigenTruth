@@ -15,7 +15,7 @@ from eigentruth.control.actions import (
     DefaultCorrectionPolicy,
 )
 from eigentruth.control.controller import RiskController
-from eigentruth.control.policy import RiskDecision
+from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
 from eigentruth.json_utils import to_jsonable
@@ -293,7 +293,15 @@ def run_verification_loop(
             initial_skipped_claim_ids = tuple(stage_decision.skipped_claim_ids) or _claim_ids(claims)
             initial_verification_scope = "none"
             initial_results = ()
-            initial_decision = diagnostic_decision
+            initial_decision = (
+                _fail_closed_unverified_skip_decision(
+                    diagnostic_decision,
+                    stage_decision=stage_decision,
+                    skipped_claim_ids=initial_skipped_claim_ids,
+                )
+                if stage_policy.fail_closed_on_skip and claims
+                else diagnostic_decision
+            )
 
     action_planning_claims, action_planning_results, missing_dependency_claim_ids = (
         _extend_scope_with_missing_parent_claims(
@@ -511,6 +519,27 @@ def _verify_many_fail_closed(
         raw_results,
         claims_tuple,
         phase=phase,
+    )
+
+
+def _fail_closed_unverified_skip_decision(
+    diagnostic_decision: RiskDecision,
+    *,
+    stage_decision: VerificationStageDecision,
+    skipped_claim_ids: Sequence[str],
+) -> RiskDecision:
+    return RiskDecision(
+        action=ControlAction.CLARIFY,
+        risk_level=RiskLevel.UNKNOWN,
+        confidence=1.0,
+        reason="claim verification skipped; unverified claims require clarification",
+        diagnostics={
+            **dict(diagnostic_decision.diagnostics),
+            "diagnostic_decision": diagnostic_decision.to_dict(),
+            "verification_skipped_fail_closed": True,
+            "verification_stage_reason": stage_decision.reason,
+            "skipped_claim_ids": tuple(skipped_claim_ids),
+        },
     )
 
 

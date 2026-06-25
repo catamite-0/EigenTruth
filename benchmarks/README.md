@@ -673,7 +673,11 @@ python benchmarks/eval_verifier_ensemble.py \
 
 Each run reports `staged_verification.skipped_records`, `skip_rate`,
 `reason_counts`, triggered feature/metadata counts, and the staged conformal
-threshold used for the verifier gate.
+threshold used for the verifier gate. Product control loops treat skipped
+claim verification as unverified by default (`fail_closed_on_skip=true`), so
+cost-aware staging does not silently convert low diagnostic risk into factual
+acceptance; explicit local latency experiments can opt out with
+`stage_fail_closed_on_skip=false` in control defaults.
 
 ## `eval_verifier_stability.py`
 
