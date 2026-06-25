@@ -3,8 +3,11 @@
 import json
 
 import pytest
+import torch
 
+import eigentruth.calibration.sweeps as sweep_module
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
+from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
 
 
@@ -85,6 +88,25 @@ def test_layer_score_sweep_parallel_matches_serial():
     assert [layer.layer for layer in parallel.layers] == [layer.layer for layer in serial.layers]
     assert parallel.best_score() == serial.best_score()
     assert parallel.metadata["sweep_max_workers"] == 3
+
+
+def test_layer_score_sweep_prepares_each_score_once(monkeypatch):
+    prepared = []
+    original_prepare = sweep_module._prepare_sweep_score_tensor
+
+    def count_prepare(scores, *, score_name):
+        prepared.append(str(score_name))
+        return original_prepare(scores, score_name=score_name)
+
+    monkeypatch.setattr(sweep_module, "_prepare_sweep_score_tensor", count_prepare)
+
+    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_dump(
+        _score_dump(),
+        signals=("maha_last", "subspace_resid"),
+    )
+
+    assert report.best_score().score_name == "maha_last"
+    assert sorted(prepared) == ["maha_last", "maha_last", "subspace_resid", "subspace_resid"]
 
 
 def test_layer_score_sweep_rejects_invalid_worker_count():
@@ -183,3 +205,8 @@ def test_layer_score_sweep_supports_lower_is_anomalous_scores():
     assert score.auroc == 1.0
     assert score.threshold == 3.0
     assert score.false_alarm == 0.25
+    true_scores = torch.tensor([4.0, 3.0, 3.0, 2.0], dtype=torch.float64)
+    false_scores = torch.tensor([1.0, 0.0, -1.0, -2.0], dtype=torch.float64)
+    assert score.threshold == directional_conformal_threshold(true_scores, 0.4, "lower")
+    assert score.false_alarm == directional_trigger_rate(true_scores, score.threshold, "lower")
+    assert score.detection == directional_trigger_rate(false_scores, score.threshold, "lower")

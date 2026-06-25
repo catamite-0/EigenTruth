@@ -14,7 +14,6 @@ import torch
 
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
-from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
 from eigentruth.eval.score_dump import ScoreDump, load_score_dump_layer_scores
 from eigentruth.json_utils import strict_json_dumps
@@ -377,18 +376,22 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from validated score families."""
         selected = set(signals) if signals is not None else _all_score_names(layer_scores)
+        labels_t, true_mask, false_mask = _prepare_labels(labels)
         jobs: list[_SweepScoreJob] = []
         for layer in sorted(layer_scores):
             for score_name in sorted(layer_scores[layer]):
                 if score_name not in selected:
                     continue
                 direction = _score_direction(score_name, directions)
+                scores_t = _prepare_sweep_score_tensor(layer_scores[layer][score_name], score_name=score_name)
                 jobs.append(
                     _SweepScoreJob(
                         layer=layer,
                         score_name=score_name,
-                        scores=layer_scores[layer][score_name],
-                        labels=labels,
+                        scores=scores_t,
+                        labels=labels_t,
+                        true_mask=true_mask,
+                        false_mask=false_mask,
                         alpha=self.alpha,
                         direction=direction,
                     )
@@ -429,8 +432,10 @@ class LayerScoreSweepCalibrator:
 class _SweepScoreJob:
     layer: int
     score_name: str
-    scores: Sequence[float]
+    scores: torch.Tensor
     labels: torch.Tensor
+    true_mask: torch.Tensor
+    false_mask: torch.Tensor
     alpha: float
     direction: str
 
@@ -474,18 +479,42 @@ def _calibrate_score(
     alpha: float,
     direction: str,
 ) -> SweepScoreResult:
-    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
-    if scores_t.numel() != labels.numel():
-        raise ValueError(f"score '{score_name}' has {scores_t.numel()} values but labels has {labels.numel()}.")
-    true_scores = scores_t[labels == 0]
-    false_scores = scores_t[labels == 1]
+    labels_t, true_mask, false_mask = _prepare_labels(labels)
+    scores_t = _prepare_sweep_score_tensor(scores, score_name=score_name)
+    return _calibrate_prepared_score(
+        layer=layer,
+        score_name=score_name,
+        scores=scores_t,
+        labels=labels_t,
+        true_mask=true_mask,
+        false_mask=false_mask,
+        alpha=alpha,
+        direction=direction,
+    )
+
+
+def _calibrate_prepared_score(
+    *,
+    layer: int,
+    score_name: str,
+    scores: torch.Tensor,
+    labels: torch.Tensor,
+    true_mask: torch.Tensor,
+    false_mask: torch.Tensor,
+    alpha: float,
+    direction: str,
+) -> SweepScoreResult:
+    if scores.numel() != labels.numel():
+        raise ValueError(f"score '{score_name}' has {scores.numel()} values but labels has {labels.numel()}.")
+    true_scores = scores[true_mask]
+    false_scores = scores[false_mask]
     if true_scores.numel() == 0 or false_scores.numel() == 0:
         raise ValueError("sweep calibration requires at least one true and one false labeled score.")
 
-    threshold = directional_conformal_threshold(true_scores, alpha, direction)
-    anomaly_scores = _anomaly_scores(scores_t, direction)
-    false_alarm = directional_trigger_rate(true_scores, threshold, direction)
-    detection = directional_trigger_rate(false_scores, threshold, direction)
+    threshold = _directional_conformal_threshold_from_tensor(true_scores, alpha, direction)
+    anomaly_scores = _anomaly_scores(scores, direction)
+    false_alarm = _directional_trigger_rate_from_tensor(true_scores, threshold, direction)
+    detection = _directional_trigger_rate_from_tensor(false_scores, threshold, direction)
     return SweepScoreResult(
         layer=layer,
         score_name=score_name,
@@ -514,14 +543,67 @@ def _calibrate_score_jobs(
 
 
 def _calibrate_score_job(job: _SweepScoreJob) -> SweepScoreResult:
-    return _calibrate_score(
+    return _calibrate_prepared_score(
         layer=job.layer,
         score_name=job.score_name,
         scores=job.scores,
         labels=job.labels,
+        true_mask=job.true_mask,
+        false_mask=job.false_mask,
         alpha=job.alpha,
         direction=job.direction,
     )
+
+
+def _prepare_labels(labels: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    true_mask = labels_t == 0
+    false_mask = labels_t == 1
+    return labels_t, true_mask, false_mask
+
+
+def _prepare_sweep_score_tensor(scores: ArrayLike, *, score_name: str) -> torch.Tensor:
+    scores_t = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    if not torch.isfinite(scores_t).all():
+        raise ValueError(f"score '{score_name}' must contain only finite values.")
+    return scores_t
+
+
+def _directional_conformal_threshold_from_tensor(
+    true_scores: torch.Tensor,
+    alpha: float,
+    direction: str,
+) -> float:
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+    n = true_scores.numel()
+    if n == 0:
+        raise ValueError("calibration scores must be non-empty.")
+    rank = math.ceil((n + 1) * (1.0 - alpha))
+    if rank > n:
+        threshold = float("inf")
+    else:
+        oriented = true_scores if direction == "higher" else -true_scores
+        threshold = float(torch.sort(oriented).values[rank - 1].item())
+    return threshold if direction == "higher" else -threshold
+
+
+def _directional_trigger_rate_from_tensor(
+    scores: torch.Tensor,
+    threshold: float,
+    direction: str,
+) -> float:
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    if math.isnan(float(threshold)):
+        raise ValueError("threshold must not be NaN.")
+    if scores.numel() == 0:
+        return 0.0
+    if direction == "higher":
+        return float((scores > threshold).double().mean().item())
+    return float((scores < threshold).double().mean().item())
 
 
 def _anomaly_scores(scores: torch.Tensor, direction: str) -> torch.Tensor:
