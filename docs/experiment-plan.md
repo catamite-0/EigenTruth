@@ -49,7 +49,9 @@ representation-observability toolkit spanning **training and inference**.
   synthetic collapse.
 - **Deliverable:** `Manifold.spectrum()` (eigvals, MP edges, n_spikes, eff_rank) +
   optional shrinkage mode.
-- **Cost:** low-medium.
+- **Cost:** low-medium. **Status:** spectrum diagnostics foundation implemented
+  (`TruthManifold.spectrum()` / `covariance_spectrum()`); shrinkage and real AUROC
+  comparison still pending.
 
 ### E3. Bures–Wasserstein distance → manifold-to-manifold metric
 - **Question:** Is closed-form 2-Wasserstein between Gaussians the right metric for
@@ -126,7 +128,7 @@ representation-observability toolkit spanning **training and inference**.
 | (hyperbolic HSE vs Euclidean) | 2026-06-08 | no lift (0.474 vs 0.484, gpt2 L-8) | `benchmarks/results_gpt2_l-8.json` |
 | E0 | 2026-06-10 | **truth_proj wins**: 0.723 @L-8, peak 0.753 @L-6, beats maha (0.622/0.638) at every layer except -12; both collapse at L-1. Default guidance: contrastive direction, mid-late layers (-8…-4); maha as no-false-data fallback. | `benchmarks/results_gpt2_sweep.json` |
 | E1 | 2026-06-10 | **ACCEPT**: empirical false-alarm tracks nominal within 1.3% at α∈{.05,.1,.2} for both maha_last and truth_proj (20 seeded splits). Power at α=0.2: truth_proj 46.9% vs maha 34.1%. Conformal thresholds replace hand-picked ones. | `benchmarks/results_conformal_*.json` |
-| E2 | | pending | |
+| E2 | 2026-06-25 | partial: spectrum diagnostics landed, shrinkage/AUROC gate pending | `TruthManifold.spectrum()` / `covariance_spectrum()` unit tests |
 | E3 | | pending | |
 | E4 | | pending | |
 | E5 | | pending | |

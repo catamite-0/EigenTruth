@@ -73,3 +73,4 @@ Added a combined frontier release-evidence comparator:
 1. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
 2. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
 3. Integrate the combined frontier release-evidence verdict as an optional gate in the broader local release-candidate workflow.
+4. Wire `TruthManifold.spectrum()` into layer-sweep and training-telemetry reports so Marchenko-Pastur spikes/effective-rank drift can be tested against collapse and layer-selection hypotheses.

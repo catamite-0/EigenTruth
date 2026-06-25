@@ -8,7 +8,7 @@ EigenTruth 的产品定位是：面向 LLM 系统的表征观测与事实性控�
 
 Implemented today:
 
-- `TruthManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support.
+- `TruthManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support, and dependency-free covariance-spectrum diagnostics with Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number.
 - `TruthProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, HSE tracking, and optional activation steering.
 - `EigenTruthWrapper`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
 - `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, confidence intervals, and high-confidence error audits.

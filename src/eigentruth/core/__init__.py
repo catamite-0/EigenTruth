@@ -13,7 +13,9 @@ from eigentruth.core.inside import (
 )
 from eigentruth.core.math_engine import (
     COVARIANCE_MODES,
+    CovarianceSpectrum,
     TruthManifold,
+    covariance_spectrum,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
     poincare_map,
@@ -25,6 +27,8 @@ __all__ = [
     "TruthManifold",
     "TruthSubspace",
     "COVARIANCE_MODES",
+    "CovarianceSpectrum",
+    "covariance_spectrum",
     "cluster_assignment_entropy",
     "embedding_semantic_entropy",
     "internal_eigenscore",

@@ -10,8 +10,10 @@ import torch
 
 from eigentruth.core.math_engine import (
     COVARIANCE_MODES,
+    CovarianceSpectrum,
     TruthManifold,
     _poincare_distance,
+    covariance_spectrum,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
     poincare_map,
@@ -312,6 +314,85 @@ class TestTruthManifold:
 
     def test_covariance_modes_are_public(self):
         assert COVARIANCE_MODES == ("full", "diag", "low_rank")
+
+    def test_covariance_spectrum_reports_mp_spike_and_effective_rank(self):
+        """An anisotropic covariance exposes an out-of-bulk spectral spike."""
+        cov = torch.diag(torch.tensor([9.0, 1.0, 1.0, 1.0]))
+        report = covariance_spectrum(cov, sample_count=100)
+
+        assert isinstance(report, CovarianceSpectrum)
+        assert report.source == "full"
+        assert report.hidden_dim == 4
+        assert report.spike_count == 1
+        assert report.eigenvalues.tolist() == [9.0, 1.0, 1.0, 1.0]
+        assert report.effective_rank < 4.0
+        assert report.participation_ratio < 4.0
+        payload = report.to_dict()
+        assert payload["spike_count"] == 1
+        assert payload["eigenvalues"] == [9.0, 1.0, 1.0, 1.0]
+        assert "eigenvalues" not in report.to_dict(include_eigenvalues=False)
+
+    def test_truth_manifold_spectrum_uses_full_scatter_when_available(self):
+        torch.manual_seed(303)
+        samples = torch.randn(240, 8)
+        samples[:, 0] *= 4.0
+        m = TruthManifold()
+        m.update_many(samples)
+
+        report = m.spectrum()
+
+        assert report.source == "full"
+        assert report.sample_count == 240
+        assert report.hidden_dim == 8
+        assert report.spike_count >= 1
+        assert report.eigenvalues[0] > report.marchenko_pastur_upper
+        assert 1.0 <= report.effective_rank <= 8.0
+
+    def test_truth_manifold_spectrum_handles_diag_mode_without_full_scatter(self):
+        torch.manual_seed(404)
+        m = TruthManifold(covariance_mode="diag")
+        m.update_many(torch.randn(32, 5))
+
+        report = m.covariance_spectrum()
+
+        assert report.source == "diagonal"
+        assert report.hidden_dim == 5
+        assert m._M2 is None  # noqa: SLF001 - verifies diag mode stays memory-saving.
+        assert torch.all(report.eigenvalues[:-1] >= report.eigenvalues[1:])
+        assert report.to_dict(include_eigenvalues=False)["source"] == "diagonal"
+
+    def test_truth_manifold_spectrum_handles_degenerate_covariance(self):
+        m = TruthManifold()
+        m.update_many(torch.ones(6, 4))
+
+        report = m.spectrum()
+
+        assert report.spike_count == 0
+        assert report.effective_rank == 0.0
+        assert report.participation_ratio == 0.0
+        assert report.stable_rank == 0.0
+        assert report.condition_number == 0.0
+        assert report.marchenko_pastur_upper == 0.0
+
+    def test_covariance_spectrum_rejects_invalid_inputs(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="sample_count"):
+            covariance_spectrum(torch.eye(2), sample_count=1)
+        with pytest.raises(ValueError, match="square"):
+            covariance_spectrum(torch.randn(2, 3), sample_count=10)
+        with pytest.raises(ValueError, match="finite"):
+            covariance_spectrum(torch.tensor([1.0, float("nan")]), sample_count=10)
+
+    def test_truth_manifold_spectrum_requires_two_samples(self):
+        import pytest
+
+        m = TruthManifold()
+        with pytest.raises(ValueError, match="at least two samples"):
+            m.spectrum()
+        m.update(torch.randn(3))
+        with pytest.raises(ValueError, match="at least two samples"):
+            m.spectrum()
 
     def test_first_update_initializes(self):
         """首次更新初始化 mean 和 cov_inv。"""

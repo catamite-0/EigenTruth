@@ -13,6 +13,7 @@ All float-intensive computations are forced to FP32 internally to ensure numeric
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -33,6 +34,56 @@ def _validate_covariance_mode(mode: str) -> str:
             f"covariance_mode must be one of {COVARIANCE_MODES}, got {mode!r}."
         )
     return mode
+
+
+@dataclass(frozen=True)
+class CovarianceSpectrum:
+    """Spectrum diagnostics for a representation covariance estimate.
+
+    Eigenvalues are sorted descending and clamped to non-negative values after
+    covariance symmetrization. Marchenko-Pastur edges use the average variance
+    as the isotropic noise scale and ``hidden_dim / (sample_count - 1)`` as the
+    aspect ratio. The report is a diagnostic, not a shrinkage estimator.
+    """
+
+    eigenvalues: Tensor
+    sample_count: int
+    hidden_dim: int
+    source: str
+    variance_scale: float
+    aspect_ratio: float
+    marchenko_pastur_lower: float
+    marchenko_pastur_upper: float
+    spike_count: int
+    effective_rank: float
+    participation_ratio: float
+    stable_rank: float
+    numerical_rank: int
+    condition_number: float
+
+    def to_dict(self, *, include_eigenvalues: bool = True) -> dict[str, object]:
+        """Return a JSON-ready spectrum report."""
+        payload: dict[str, object] = {
+            "sample_count": self.sample_count,
+            "hidden_dim": self.hidden_dim,
+            "source": self.source,
+            "variance_scale": self.variance_scale,
+            "aspect_ratio": self.aspect_ratio,
+            "marchenko_pastur_lower": self.marchenko_pastur_lower,
+            "marchenko_pastur_upper": self.marchenko_pastur_upper,
+            "spike_count": self.spike_count,
+            "effective_rank": self.effective_rank,
+            "participation_ratio": self.participation_ratio,
+            "stable_rank": self.stable_rank,
+            "numerical_rank": self.numerical_rank,
+            "condition_number": self.condition_number,
+        }
+        if include_eigenvalues:
+            payload["eigenvalues"] = [
+                float(value) for value in self.eigenvalues.detach().cpu().tolist()
+            ]
+        return payload
+
 
 @dataclass
 class TruthManifold:
@@ -362,6 +413,28 @@ class TruthManifold:
         """Alias for ``mahalanobis_distance``."""
         return self.mahalanobis_distance(h)
 
+    def covariance_spectrum(self, *, eps: float = 1e-12) -> CovarianceSpectrum:
+        """Return covariance spectrum diagnostics for this manifold.
+
+        Full and low-rank covariance modes keep the full Welford scatter matrix,
+        so the report uses true covariance eigenvalues. Diagonal mode stores only
+        diagonal scatter statistics; in that mode the report is marked
+        ``source="diagonal"`` and uses sorted diagonal variances as an
+        approximation.
+        """
+        if self.mean is None or self.n < 2:
+            raise ValueError("TruthManifold needs at least two samples before spectrum diagnostics.")
+        if self._M2 is not None:
+            covariance = self._M2.to(torch.float32) / (self.n - 1)
+            return covariance_spectrum(covariance, sample_count=self.n, source="full", eps=eps)
+        if self._M2_diag is not None:
+            return covariance_spectrum(self._normalized_cov_diag(), sample_count=self.n, source="diagonal", eps=eps)
+        raise RuntimeError("TruthManifold has no covariance statistics.")
+
+    def spectrum(self, *, eps: float = 1e-12) -> CovarianceSpectrum:
+        """Alias for ``covariance_spectrum``."""
+        return self.covariance_spectrum(eps=eps)
+
     def to(self, device: Union[str, torch.device]) -> "TruthManifold":
         """Move manifold tensors to a device in-place and return self."""
         device = torch.device(device)
@@ -446,6 +519,120 @@ class TruthManifold:
 # ---------------------------------------------------------------------------
 # 核心数学函数
 # ---------------------------------------------------------------------------
+
+
+def covariance_spectrum(
+    covariance: Tensor,
+    *,
+    sample_count: int,
+    source: str = "full",
+    eps: float = 1e-12,
+) -> CovarianceSpectrum:
+    """Compute covariance spectrum diagnostics with Marchenko-Pastur edges.
+
+    Args:
+        covariance: Full covariance matrix ``[D, D]`` or diagonal covariance
+            vector ``[D]``.
+        sample_count: Number of observations used to estimate the covariance.
+        source: Human-readable source marker, usually ``"full"`` or
+            ``"diagonal"``.
+        eps: Positive numerical tolerance for rank and entropy calculations.
+
+    Returns:
+        ``CovarianceSpectrum`` with descending eigenvalues and JSON-ready
+        summary metrics.
+    """
+    if int(sample_count) < 2:
+        raise ValueError("sample_count must be >= 2.")
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    cov = torch.as_tensor(covariance, dtype=torch.float32)
+    if cov.ndim == 1:
+        if cov.numel() < 1:
+            raise ValueError("diagonal covariance vector must be non-empty.")
+        if not torch.isfinite(cov).all():
+            raise ValueError("covariance must contain only finite values.")
+        eigenvalues = torch.sort(torch.clamp(cov, min=0.0), descending=True).values
+    elif cov.ndim == 2:
+        if cov.shape[0] != cov.shape[1] or cov.shape[0] < 1:
+            raise ValueError("full covariance must be a non-empty square matrix.")
+        if not torch.isfinite(cov).all():
+            raise ValueError("covariance must contain only finite values.")
+        symmetric = 0.5 * (cov + cov.T)
+        eigenvalues = torch.sort(torch.linalg.eigvalsh(symmetric).clamp_min(0.0), descending=True).values
+    else:
+        raise ValueError("covariance must be a vector [D] or square matrix [D, D].")
+
+    return _covariance_spectrum_from_eigenvalues(
+        eigenvalues,
+        sample_count=int(sample_count),
+        source=str(source),
+        eps=float(eps),
+    )
+
+
+def _covariance_spectrum_from_eigenvalues(
+    eigenvalues: Tensor,
+    *,
+    sample_count: int,
+    source: str,
+    eps: float,
+) -> CovarianceSpectrum:
+    hidden_dim = int(eigenvalues.numel())
+    total_variance = float(eigenvalues.sum().item())
+    max_eigenvalue = float(eigenvalues[0].item()) if hidden_dim else 0.0
+    variance_scale = total_variance / float(hidden_dim) if hidden_dim else 0.0
+    aspect_ratio = float(hidden_dim) / float(max(sample_count - 1, 1))
+    if variance_scale <= eps:
+        mp_lower = 0.0
+        mp_upper = 0.0
+        spike_count = 0
+    else:
+        sqrt_aspect = math.sqrt(aspect_ratio)
+        mp_lower = variance_scale * (1.0 - sqrt_aspect) ** 2
+        mp_upper = variance_scale * (1.0 + sqrt_aspect) ** 2
+        spike_margin = max(abs(mp_upper) * eps, eps)
+        spike_count = int((eigenvalues > (mp_upper + spike_margin)).sum().item())
+
+    if total_variance <= eps or max_eigenvalue <= eps:
+        effective_rank = 0.0
+        participation_ratio = 0.0
+        stable_rank = 0.0
+        numerical_rank = 0
+        condition_number = 0.0
+    else:
+        probs = eigenvalues / max(total_variance, eps)
+        entropy = -(probs * torch.log(probs.clamp_min(eps))).sum()
+        effective_rank = float(torch.exp(entropy).item())
+        variance_sq_sum = float(eigenvalues.square().sum().clamp_min(eps).item())
+        participation_ratio = float((total_variance * total_variance) / variance_sq_sum)
+        stable_rank = float(total_variance / max(max_eigenvalue, eps))
+        rank_threshold = max(max_eigenvalue * eps, eps)
+        positive = eigenvalues[eigenvalues > rank_threshold]
+        numerical_rank = int(positive.numel())
+        condition_number = (
+            float(max_eigenvalue / positive[-1].item())
+            if positive.numel() > 0
+            else 0.0
+        )
+
+    return CovarianceSpectrum(
+        eigenvalues=eigenvalues,
+        sample_count=sample_count,
+        hidden_dim=hidden_dim,
+        source=source,
+        variance_scale=variance_scale,
+        aspect_ratio=aspect_ratio,
+        marchenko_pastur_lower=mp_lower,
+        marchenko_pastur_upper=mp_upper,
+        spike_count=spike_count,
+        effective_rank=effective_rank,
+        participation_ratio=participation_ratio,
+        stable_rank=stable_rank,
+        numerical_rank=numerical_rank,
+        condition_number=condition_number,
+    )
+
 
 def sherman_morrison_update(
     cov_inv: Tensor,
