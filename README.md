@@ -140,8 +140,8 @@ score or score-dump extra fields:
 ```bash
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --signal maha_last \
-  --adaptive-feature inside_semantic_entropy \
-  --adaptive-feature-weight inside_semantic_entropy=0.5 \
+  --adaptive-feature inside_semantic_energy \
+  --adaptive-feature-weight inside_semantic_energy=0.5 \
   --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
 ```
 
@@ -336,7 +336,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `mahalanobis_distance` | Measures relative deviation from the warmup manifold. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
-| `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` | Computes INSIDE/EigenScore-style spectral diversity and dependency-free semantic-entropy proxies from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, and `inside_embedding_entropy`. |
+| `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
 | `TruthProbe` | Captures selected-layer hidden states and optionally applies steering. |
 | `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
@@ -424,7 +424,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `mahalanobis_distance` | 测量相对于 warmup 流形的相对偏移。 |
 | `poincare_map` | 将表征投影到有界双曲空间。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
-| `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度和无依赖语义熵代理；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy` 和 `inside_embedding_entropy`。 |
+| `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |
 | `TruthProbe` | 捕获指定层的隐藏状态，并可选地应用激活引导。 |
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |

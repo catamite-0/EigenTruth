@@ -14,7 +14,7 @@ Implemented today:
 - `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, confidence intervals, and high-confidence error audits.
 - `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, adaptive feature-inflated conformal calibrators, layer/score sweep reports, and rank-calibrated multi-score fusion artifacts.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
-- `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy`: INSIDE/EigenScore-style spectral diversity and dependency-free sampled semantic-entropy proxies, including adaptive sampling budget support in benchmarks.
+- `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy`: INSIDE/EigenScore-style spectral diversity, dependency-free sampled semantic-entropy proxies, and confidence-weighted semantic-energy disagreement, including adaptive sampling budget support in benchmarks.
 - `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
 - `eigentruth.control.PreGenerationRiskPolicy` / `select_pre_generation_profile`: dependency-free pre-generation runtime-profile routing from prompt features and caller metadata before model or verifier work.
 - `eigentruth.control.DefaultCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/execute-tool/abstain/clarify flows.

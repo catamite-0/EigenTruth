@@ -25,10 +25,11 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
 3. **Does internal-state spectral diversity add a cheap uncertainty signal?**
    `eigenscore` is an INSIDE/EigenScore-style log-det score over answer-token
    hidden embeddings. Add `--inside-samples K` (`K >= 2`) to also run
-   `inside_eigenscore`, `inside_semantic_entropy`, and `inside_embedding_entropy`,
-   closer multi-response proxies that sample verifier-style continuations,
-   compute EigenScore over their sentence embeddings, and compute dependency-free
-   lexical and embedding-cluster entropy over the sampled responses.
+   `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`,
+   and `inside_semantic_energy`, closer multi-response proxies that sample
+   verifier-style continuations, compute EigenScore over their sentence embeddings,
+   and compute dependency-free lexical entropy, embedding-cluster entropy, and
+   confidence-weighted semantic-energy disagreement over the sampled responses.
 4. **Does the answer activate an unusual cross-layer update?**
    `resid_update_norm` is an ICR-inspired residual-dynamics proxy: it measures
    the RMS update from the previous hidden-state layer to the current layer for
@@ -194,7 +195,7 @@ Use `--inside-trigger-signal` with either `--inside-trigger-threshold` or
 `--inside-trigger-top-fraction` to run sampled INSIDE only on suspicious
 statements. In this budgeted mode, untriggered statements receive
 `inside_eigenscore=0.0`, `inside_semantic_entropy=0.0`, and
-`inside_embedding_entropy=0.0`; read them as two-stage policy scores, not as full
+`inside_embedding_entropy=0.0`, and `inside_semantic_energy=0.0`; read them as two-stage policy scores, not as full
 INSIDE-only AUROC. The JSON output includes `inside_sampling` counts.
 Use `--inside-diagnostics-cache path.json` for repeated triggered INSIDE runs.
 The cache stores sampled INSIDE diagnostics keyed by statement, model, layer,
@@ -328,8 +329,8 @@ progress output.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
   hyperbolic component.
 - Treat `eigenscore` as an internal-state spectral-diversity proxy. Use
-  `inside_eigenscore`, `inside_semantic_entropy`, and
-  `inside_embedding_entropy` when `--inside-samples` is enabled to test a closer
+  `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`,
+  and `inside_semantic_energy` when `--inside-samples` is enabled to test a closer
   multi-response INSIDE path. Calibrate them like other
   higher-is-more-anomalous scores before using them for routing.
 - Results depend strongly on the target layer; sweep it.
@@ -390,9 +391,10 @@ than an 8 GB machine comfortably provides) before drawing conclusions.
   hallucination during free generation.
 - Within-statement token dispersion and `eigenscore` are **cheap proxies** for
   sample-based semantic uncertainty and INSIDE/EigenScore. `inside_eigenscore`,
-  `inside_semantic_entropy`, and `inside_embedding_entropy` are closer because
-  they sample multiple continuations, but they are still verifier-prompted
-  benchmark proxies rather than full published reproductions.
+  `inside_semantic_entropy`, `inside_embedding_entropy`, and
+  `inside_semantic_energy` are closer because they sample multiple continuations,
+  but they are still verifier-prompted benchmark proxies rather than full
+  published reproductions.
 - A small model (e.g. 0.5B) and a few hundred items give wide confidence intervals.
   Treat AUROC values as indicative, not conclusive, and report `n`.
 - Beating these in-house baselines is necessary but not sufficient; a real claim needs
@@ -429,13 +431,13 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal tru
 
 # Build an adaptive conformal report/artifact from primary score or dump extra fields:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json --signal maha_last \
-  --adaptive-feature inside_semantic_entropy \
-  --adaptive-feature-weight inside_semantic_entropy=0.5 \
+  --adaptive-feature inside_semantic_energy \
+  --adaptive-feature-weight inside_semantic_energy=0.5 \
   --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy \
+  --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
   --artifact-alpha 0.2 \
   --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \

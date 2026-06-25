@@ -65,6 +65,7 @@ from eigentruth.core import (
     TruthSubspace,
     embedding_semantic_entropy,
     internal_eigenscore,
+    lexical_semantic_energy,
     lexical_semantic_entropy,
 )
 from eigentruth.core.math_engine import (
@@ -93,7 +94,13 @@ SIGNALS = [
 INSIDE_SIGNAL = "inside_eigenscore"
 INSIDE_SEMANTIC_ENTROPY_SIGNAL = "inside_semantic_entropy"
 INSIDE_EMBEDDING_ENTROPY_SIGNAL = "inside_embedding_entropy"
-INSIDE_SIGNALS = (INSIDE_SIGNAL, INSIDE_SEMANTIC_ENTROPY_SIGNAL, INSIDE_EMBEDDING_ENTROPY_SIGNAL)
+INSIDE_SEMANTIC_ENERGY_SIGNAL = "inside_semantic_energy"
+INSIDE_SIGNALS = (
+    INSIDE_SIGNAL,
+    INSIDE_SEMANTIC_ENTROPY_SIGNAL,
+    INSIDE_EMBEDDING_ENTROPY_SIGNAL,
+    INSIDE_SEMANTIC_ENERGY_SIGNAL,
+)
 REPORT_ALPHA = 0.10
 HIDDEN_STATE_CAPTURE_METHODS = ("outputs", "hooks")
 SCORE_DUMP_FORMATS = ("json", "jsonl")
@@ -105,6 +112,7 @@ SCORE_DUMP_RECORD_EXTRA_NAMES = (
     "inside_stopped_early",
     "inside_stop_reasons",
     "inside_sample_texts",
+    "inside_sample_logprobs",
 )
 PROFILE_GROUPS = {
     "startup": ("load_data", "load_model"),
@@ -167,6 +175,7 @@ class StatementEncoding:
 class SampledResponseDiagnostics:
     embeddings_by_layer: dict[int, torch.Tensor]
     sample_texts: tuple[str, ...]
+    sample_logprobs: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -174,7 +183,9 @@ class SampledInsideDiagnostics:
     eigenscore_by_layer: dict[int, float]
     semantic_entropy: float
     embedding_entropy_by_layer: dict[int, float]
+    semantic_energy: float = 0.0
     sample_texts: tuple[str, ...] = ()
+    sample_logprobs: tuple[float, ...] = ()
     n_samples: int = 0
     adaptive_rounds: int = 1
     stopped_early: bool = False
@@ -906,7 +917,9 @@ def _sampled_inside_diagnostics_to_cache_record(diagnostics: SampledInsideDiagno
         "embedding_entropy_by_layer": {
             str(layer): float(value) for layer, value in diagnostics.embedding_entropy_by_layer.items()
         },
+        "semantic_energy": float(diagnostics.semantic_energy),
         "sample_texts": list(diagnostics.sample_texts),
+        "sample_logprobs": [float(value) for value in diagnostics.sample_logprobs],
         "n_samples": int(diagnostics.n_samples),
         "adaptive_rounds": int(diagnostics.adaptive_rounds),
         "stopped_early": bool(diagnostics.stopped_early),
@@ -926,6 +939,17 @@ def _sampled_inside_diagnostics_from_cache_record(record: Mapping[str, object]) 
         }
         semantic_entropy = float(record.get("semantic_entropy"))
         sample_texts = tuple(str(text) for text in record.get("sample_texts") or ())
+        sample_logprobs = tuple(float(value) for value in record.get("sample_logprobs") or ())
+        semantic_energy = (
+            float(record["semantic_energy"])
+            if "semantic_energy" in record
+            else float(
+                lexical_semantic_energy(
+                    sample_texts,
+                    sample_logprobs=sample_logprobs or None,
+                ).item()
+            )
+        )
         n_samples = int(record.get("n_samples"))
         adaptive_rounds = int(record.get("adaptive_rounds", 1))
         stopped_early = bool(record.get("stopped_early", False))
@@ -935,13 +959,20 @@ def _sampled_inside_diagnostics_from_cache_record(record: Mapping[str, object]) 
         return None
     if not eigenscore_by_layer or not embedding_entropy_by_layer or n_samples < 2:
         return None
-    if not math.isfinite(semantic_entropy):
+    if not math.isfinite(semantic_entropy) or not math.isfinite(semantic_energy):
+        return None
+    if sample_logprobs and (
+        len(sample_logprobs) != n_samples
+        or not all(math.isfinite(value) for value in sample_logprobs)
+    ):
         return None
     return SampledInsideDiagnostics(
         eigenscore_by_layer=eigenscore_by_layer,
         semantic_entropy=semantic_entropy,
         embedding_entropy_by_layer=embedding_entropy_by_layer,
+        semantic_energy=semantic_energy,
         sample_texts=sample_texts,
+        sample_logprobs=sample_logprobs,
         n_samples=n_samples,
         adaptive_rounds=adaptive_rounds,
         stopped_early=stopped_early,
@@ -1025,6 +1056,7 @@ def _score_reps_batch(
             "inside_scores": None,
             "inside_semantic_entropy": None,
             "inside_embedding_entropy": None,
+            "inside_semantic_energy": None,
             "inside_sampled": False,
         }
         for stmt, _ in valid
@@ -2716,7 +2748,7 @@ def sampled_response_diagnostics_batch(
         torch.manual_seed(int(seed))
         if device.type == "cuda":
             torch.cuda.manual_seed_all(int(seed))
-        generated = model.generate(
+        generated_output = model.generate(
             input_ids=input_ids,
             attention_mask=attention_mask,
             do_sample=True,
@@ -2726,10 +2758,20 @@ def sampled_response_diagnostics_batch(
             top_p=top_p,
             pad_token_id=pad_token_id,
             eos_token_id=tokenizer.eos_token_id,
+            return_dict_in_generate=True,
+            output_scores=True,
         )
 
+    generated = generated_output.sequences if hasattr(generated_output, "sequences") else generated_output
     prompt_width = input_ids.shape[1]
     new_width = max(generated.shape[1] - prompt_width, 1)
+    sample_logprobs = _sample_logprobs_from_generate_output(
+        generated_output,
+        generated,
+        prompt_width=prompt_width,
+        n_statements=len(statements),
+        n_samples=n_samples,
+    )
     generated_attention = torch.cat([
         attention_mask.repeat_interleave(n_samples, dim=0),
         torch.ones((len(statements) * n_samples, new_width), dtype=attention_mask.dtype, device=device),
@@ -2771,8 +2813,45 @@ def sampled_response_diagnostics_batch(
         SampledResponseDiagnostics(
             embeddings_by_layer=embeddings_by_statement[stmt_idx],
             sample_texts=sample_texts[stmt_idx],
+            sample_logprobs=sample_logprobs[stmt_idx],
         )
         for stmt_idx in range(len(statements))
+    ]
+
+
+def _sample_logprobs_from_generate_output(
+    generated_output,
+    generated: torch.Tensor,
+    *,
+    prompt_width: int,
+    n_statements: int,
+    n_samples: int,
+) -> list[tuple[float, ...]]:
+    scores = getattr(generated_output, "scores", None)
+    if scores is None:
+        return [() for _ in range(n_statements)]
+    score_steps = tuple(scores)
+    if not score_steps:
+        return [() for _ in range(n_statements)]
+    n_rows = int(generated.shape[0])
+    n_steps = min(len(score_steps), max(0, int(generated.shape[1]) - int(prompt_width)))
+    if n_steps <= 0:
+        return [() for _ in range(n_statements)]
+    if n_rows != int(n_statements) * int(n_samples):
+        return [() for _ in range(n_statements)]
+    row_totals = torch.zeros(n_rows, dtype=torch.float64, device=generated.device)
+    row_counts = torch.zeros(n_rows, dtype=torch.float64, device=generated.device)
+    for step_idx, logits in enumerate(score_steps[:n_steps]):
+        if logits.shape[0] != n_rows:
+            return [() for _ in range(n_statements)]
+        token_ids = generated[:, int(prompt_width) + step_idx].to(logits.device)
+        step_logprobs = torch.log_softmax(logits.float(), dim=-1).gather(1, token_ids.unsqueeze(1)).squeeze(1)
+        row_totals += step_logprobs.to(row_totals.device, dtype=torch.float64)
+        row_counts += 1.0
+    means = (row_totals / row_counts.clamp_min(1.0)).detach().cpu().tolist()
+    return [
+        tuple(float(value) for value in means[start:start + n_samples])
+        for start in range(0, n_rows, n_samples)
     ]
 
 
@@ -2892,7 +2971,14 @@ def _inside_diagnostics_from_response(
             )
             for layer, values in response_diagnostics.embeddings_by_layer.items()
         },
+        semantic_energy=float(
+            lexical_semantic_energy(
+                response_diagnostics.sample_texts,
+                sample_logprobs=response_diagnostics.sample_logprobs or None,
+            ).item()
+        ),
         sample_texts=tuple(response_diagnostics.sample_texts),
+        sample_logprobs=tuple(response_diagnostics.sample_logprobs),
         n_samples=n_samples,
         adaptive_rounds=adaptive_rounds,
         stopped_early=stopped_early,
@@ -2912,6 +2998,7 @@ def _merge_response_diagnostics(
             for layer in previous.embeddings_by_layer
         },
         sample_texts=previous.sample_texts + new.sample_texts,
+        sample_logprobs=previous.sample_logprobs + new.sample_logprobs,
     )
 
 
@@ -2928,6 +3015,7 @@ def _inside_diagnostics_delta(
     )
     return max(
         abs(float(current.semantic_entropy) - float(previous.semantic_entropy)),
+        abs(float(current.semantic_energy) - float(previous.semantic_energy)),
         abs(float(current.embedding_entropy_by_layer[layer]) - float(previous.embedding_entropy_by_layer[layer])),
     )
 
@@ -3130,7 +3218,9 @@ def sampled_inside_adaptive_diagnostics_batch(
                     eigenscore_by_layer=current.eigenscore_by_layer,
                     semantic_entropy=current.semantic_entropy,
                     embedding_entropy_by_layer=current.embedding_entropy_by_layer,
+                    semantic_energy=current.semantic_energy,
                     sample_texts=current.sample_texts,
+                    sample_logprobs=current.sample_logprobs,
                     n_samples=current.n_samples,
                     adaptive_rounds=current.adaptive_rounds,
                     stopped_early=stop_reason is not None,
@@ -3714,6 +3804,7 @@ def run(args) -> dict:
     inside_stopped_early: List[bool] = []
     inside_stop_reasons: list[str | None] = []
     inside_sample_texts: list[list[str]] = []
+    inside_sample_logprobs: list[list[float]] = []
     scored_batch_indexes: list[int] = []
     inside_triggered_total = 0
     inside_skipped_total = 0
@@ -3936,6 +4027,9 @@ def run(args) -> dict:
                 batch_records[position]["inside_embedding_entropy"] = (
                     sampled.embedding_entropy_by_layer if sampled is not None else None
                 )
+                batch_records[position]["inside_semantic_energy"] = (
+                    sampled.semantic_energy if sampled is not None else None
+                )
                 batch_records[position]["inside_sample_count"] = sampled.n_samples if sampled is not None else 0
                 batch_records[position]["inside_adaptive_rounds"] = (
                     sampled.adaptive_rounds if sampled is not None else 0
@@ -3949,6 +4043,9 @@ def run(args) -> dict:
                 batch_records[position]["inside_sample_texts"] = (
                     tuple(sampled.sample_texts) if sampled is not None else ()
                 )
+                batch_records[position]["inside_sample_logprobs"] = (
+                    tuple(sampled.sample_logprobs) if sampled is not None else ()
+                )
                 batch_records[position]["inside_sampled"] = sampled is not None
 
             for position, record in enumerate(batch_records):
@@ -3956,21 +4053,27 @@ def run(args) -> dict:
                     record["inside_scores"] = _empty_inside_scores(layers)
                     record["inside_semantic_entropy"] = 0.0
                     record["inside_embedding_entropy"] = _empty_inside_scores(layers)
+                    record["inside_semantic_energy"] = 0.0
                     record["inside_sample_count"] = 0
                     record["inside_adaptive_rounds"] = 0
                     record["inside_stopped_early"] = False
                     record["inside_stop_reason"] = None
                     record["inside_sample_texts"] = ()
+                    record["inside_sample_logprobs"] = ()
 
         with _profile_phase(profile, "score_postprocess"):
             for record in batch_records:
                 inside_scores = record["inside_scores"]
                 inside_embedding_entropy = record["inside_embedding_entropy"]
+                inside_semantic_energy = record["inside_semantic_energy"]
                 if _inside_enabled(args) and (inside_scores is None or inside_embedding_entropy is None):
                     continue
                 inside_entropy = record["inside_semantic_entropy"]
                 if inside_scores is not None:
                     inside_entropy = 0.0 if inside_entropy is None else float(inside_entropy)
+                    inside_semantic_energy = (
+                        0.0 if inside_semantic_energy is None else float(inside_semantic_energy)
+                    )
 
                 for layer in layers:
                     layer_scores = record["layer_scores"][layer]
@@ -3984,6 +4087,9 @@ def run(args) -> dict:
                         sweep_scores[layer][INSIDE_SEMANTIC_ENTROPY_SIGNAL].append(float(inside_entropy))
                         sweep_scores[layer][INSIDE_EMBEDDING_ENTROPY_SIGNAL].append(
                             float(inside_embedding_entropy[layer])
+                        )
+                        sweep_scores[layer][INSIDE_SEMANTIC_ENERGY_SIGNAL].append(
+                            float(inside_semantic_energy)
                         )
 
                 primary_scores = record["primary_scores"]
@@ -4000,6 +4106,7 @@ def run(args) -> dict:
                     scores[INSIDE_EMBEDDING_ENTROPY_SIGNAL].append(
                         sweep_scores[args.layer][INSIDE_EMBEDDING_ENTROPY_SIGNAL][-1]
                     )
+                    scores[INSIDE_SEMANTIC_ENERGY_SIGNAL].append(float(inside_semantic_energy))
                 scores["nll_answer"].append(primary_scores["nll_answer"])
                 labels.append(record["stmt"].is_false)
                 scored_statements.append(_statement_to_dump(record["stmt"]))
@@ -4012,6 +4119,7 @@ def run(args) -> dict:
                     inside_stop_reasons.append(record.get("inside_stop_reason"))
                     if dump_inside_samples:
                         inside_sample_texts.append(list(record.get("inside_sample_texts", ())))
+                        inside_sample_logprobs.append(list(record.get("inside_sample_logprobs", ())))
                 scored += 1
 
                 if _progress_report_due(scored, len(eval_stmts), args.progress_every, eval_last_reported):
@@ -4253,6 +4361,7 @@ def run(args) -> dict:
             dump["inside_sampling"] = payload["inside_sampling"]
             if dump_inside_samples:
                 dump["inside_sample_texts"] = inside_sample_texts
+                dump["inside_sample_logprobs"] = inside_sample_logprobs
         if _sweep_output_enabled(args):
             dump["sweep_scores"] = {str(layer): sweep_scores[layer] for layer in layers}
         dump_format = getattr(args, "dump_scores_format", "json")
@@ -4306,7 +4415,7 @@ def main():
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
-                        "and inside_embedding_entropy")
+                        "inside_embedding_entropy, and inside_semantic_energy")
     p.add_argument("--inside-batch-size", type=int, default=1,
                    help="number of prompts to sample in one generate() call for --inside-samples")
     p.add_argument("--inside-max-new-tokens", type=int, default=12,

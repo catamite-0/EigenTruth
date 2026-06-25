@@ -598,6 +598,7 @@ def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
         "inside_sampled": [True, False],
         "inside_sample_counts": [2, 0],
         "inside_sample_texts": [["true sample a", "true sample b"], []],
+        "inside_sample_logprobs": [[-0.1, -0.2], []],
         "inside_sampling": {"mode": "triggered"},
     }
 
@@ -612,8 +613,10 @@ def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
     assert manifest["n_true"] == 1
     assert manifest["n_false"] == 1
     assert records[0].extras["inside_sample_counts"] == 2
+    assert records[0].extras["inside_sample_logprobs"] == [-0.1, -0.2]
     assert records[1].extras["inside_sampled"] is False
     assert loaded.to_mapping()["inside_sample_texts"] == [["true sample a", "true sample b"], []]
+    assert loaded.to_mapping()["inside_sample_logprobs"] == [[-0.1, -0.2], []]
     assert loaded.to_mapping()["inside_sampling"] == {"mode": "triggered"}
 
 
@@ -18687,15 +18690,19 @@ def test_eval_truthfulqa_multisample_inside_signal_is_optional():
     assert module.INSIDE_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL not in module._enabled_signals(disabled)
+    assert module.INSIDE_SEMANTIC_ENERGY_SIGNAL not in module._enabled_signals(disabled)
     assert module.INSIDE_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL in module._enabled_signals(enabled)
+    assert module.INSIDE_SEMANTIC_ENERGY_SIGNAL in module._enabled_signals(enabled)
     assert module.INSIDE_SIGNAL in module._sweep_signal_names(enabled)
     assert module.INSIDE_SEMANTIC_ENTROPY_SIGNAL in module._sweep_signal_names(enabled)
     assert module.INSIDE_EMBEDDING_ENTROPY_SIGNAL in module._sweep_signal_names(enabled)
+    assert module.INSIDE_SEMANTIC_ENERGY_SIGNAL in module._sweep_signal_names(enabled)
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SIGNAL] == "higher"
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SEMANTIC_ENTROPY_SIGNAL] == "higher"
     assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_EMBEDDING_ENTROPY_SIGNAL] == "higher"
+    assert module.DEFAULT_SCORE_DIRECTIONS[module.INSIDE_SEMANTIC_ENERGY_SIGNAL] == "higher"
     assert module._sweep_output_enabled(sweep_layers) is True
 
 
@@ -19675,7 +19682,9 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
         eigenscore_by_layer={-1: 0.25},
         semantic_entropy=0.5,
         embedding_entropy_by_layer={-1: 0.75},
+        semantic_energy=0.4,
         sample_texts=("one", "two", "three"),
+        sample_logprobs=(-0.1, -0.2, -0.3),
         n_samples=3,
         adaptive_rounds=2,
         stopped_early=True,
@@ -19697,7 +19706,9 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
     assert restored.eigenscore_by_layer[-1] == pytest.approx(0.25)
     assert restored.semantic_entropy == pytest.approx(0.5)
     assert restored.embedding_entropy_by_layer[-1] == pytest.approx(0.75)
+    assert restored.semantic_energy == pytest.approx(0.4)
     assert restored.sample_texts == ("one", "two", "three")
+    assert restored.sample_logprobs == pytest.approx((-0.1, -0.2, -0.3))
     assert restored.n_samples == 3
     assert restored.stopped_early is True
     assert restored.stop_reason == "stability_delta"
@@ -19883,6 +19894,7 @@ def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(mo
                     ])
                 },
                 sample_texts=("Paris is correct.", "Paris is correct.", "Lyon is correct."),
+                sample_logprobs=(-0.1, -0.1, -0.1),
             )
         ]
 
@@ -19907,9 +19919,45 @@ def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(mo
 
     assert diagnostics is not None
     assert diagnostics.semantic_entropy > 0.0
+    assert diagnostics.semantic_energy > 0.0
+    assert diagnostics.semantic_energy <= diagnostics.semantic_entropy
     assert diagnostics.embedding_entropy_by_layer[-1] > 0.99
     assert -1 in diagnostics.eigenscore_by_layer
     assert diagnostics.sample_texts == ("Paris is correct.", "Paris is correct.", "Lyon is correct.")
+    assert diagnostics.sample_logprobs == pytest.approx((-0.1, -0.1, -0.1))
+
+
+def test_eval_truthfulqa_sample_logprobs_group_generated_sequences():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    generated = torch.tensor([
+        [1, 2, 3],
+        [1, 2, 4],
+        [5, 6, 7],
+        [5, 6, 8],
+    ])
+    step0 = torch.full((4, 10), -10.0)
+    step1 = torch.full((4, 10), -10.0)
+    step0[0, 2] = 3.0
+    step0[1, 2] = 1.0
+    step0[2, 6] = 2.0
+    step0[3, 6] = 0.5
+    step1[0, 3] = 3.0
+    step1[1, 4] = 1.0
+    step1[2, 7] = 2.0
+    step1[3, 8] = 0.5
+
+    grouped = module._sample_logprobs_from_generate_output(
+        SimpleNamespace(scores=(step0, step1)),
+        generated,
+        prompt_width=1,
+        n_statements=2,
+        n_samples=2,
+    )
+
+    assert len(grouped) == 2
+    assert len(grouped[0]) == 2
+    assert grouped[0][0] > grouped[0][1]
+    assert grouped[1][0] > grouped[1][1]
 
 
 def test_eval_truthfulqa_adaptive_inside_stops_when_entropy_is_stable(monkeypatch):

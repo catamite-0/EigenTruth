@@ -78,6 +78,23 @@ def lexical_semantic_entropy(samples: Sequence[str], *, normalize: bool = True, 
     return cluster_assignment_entropy(keys, normalize=normalize, eps=eps)
 
 
+def lexical_semantic_energy(
+    samples: Sequence[str],
+    *,
+    sample_logprobs: Sequence[float] | Tensor | None = None,
+    normalize: bool = True,
+    eps: float = 1e-12,
+) -> Tensor:
+    """Return confidence-weighted semantic disagreement over normalized texts."""
+    keys = [_normalized_sample_key(sample) for sample in samples]
+    return semantic_energy_score(
+        keys,
+        sample_logprobs=sample_logprobs,
+        normalize=normalize,
+        eps=eps,
+    )
+
+
 def embedding_semantic_entropy(
     embeddings: Tensor,
     *,
@@ -100,6 +117,53 @@ def embedding_semantic_entropy(
     labels = _connected_similarity_clusters(similarities, float(similarity_threshold))
     entropy = cluster_assignment_entropy(labels, normalize=normalize, eps=eps)
     return states.new_tensor(float(entropy.item()))
+
+
+def semantic_energy_score(
+    assignments: Sequence[object],
+    *,
+    sample_logprobs: Sequence[float] | Tensor | None = None,
+    normalize: bool = True,
+    eps: float = 1e-12,
+) -> Tensor:
+    """Return a confidence-weighted semantic disagreement score.
+
+    ``assignments`` are externally supplied semantic cluster labels. Optional
+    ``sample_logprobs`` should contain one average log-probability per sampled
+    response. With log-probs, the score is high when the model assigns confident
+    probability mass across multiple semantic clusters. Without log-probs it
+    falls back to normalized cluster entropy, keeping the metric useful for
+    dependency-free or cached INSIDE experiments.
+    """
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    labels = tuple(assignments)
+    if len(labels) < 2:
+        return torch.tensor(0.0)
+
+    label_order: dict[Hashable, int] = {}
+    label_indexes: list[int] = []
+    for label in labels:
+        if not isinstance(label, Hashable):
+            raise ValueError("semantic energy assignments must be hashable.")
+        if label not in label_order:
+            label_order[label] = len(label_order)
+        label_indexes.append(label_order[label])
+
+    weights, confidence = _semantic_energy_weights(
+        n=len(labels),
+        sample_logprobs=sample_logprobs,
+        eps=eps,
+    )
+    cluster_mass = torch.zeros(len(label_order), dtype=torch.float64)
+    for idx, weight in zip(label_indexes, weights, strict=True):
+        cluster_mass[idx] += weight
+    entropy = -(cluster_mass * torch.log(cluster_mass.clamp_min(eps))).sum()
+    if normalize:
+        denominator = math.log(float(len(labels)))
+        if denominator > eps:
+            entropy = entropy / denominator
+    return (entropy * confidence).to(torch.float32)
 
 
 def _entropy_from_counts(counts: Sequence[int], total: int, *, normalize: bool, eps: float) -> Tensor:
@@ -141,6 +205,27 @@ def _connected_similarity_clusters(similarities: Tensor, threshold: float) -> tu
             roots[root] = len(roots)
         labels.append(roots[root])
     return tuple(labels)
+
+
+def _semantic_energy_weights(
+    *,
+    n: int,
+    sample_logprobs: Sequence[float] | Tensor | None,
+    eps: float,
+) -> tuple[Tensor, Tensor]:
+    if sample_logprobs is None:
+        weights = torch.full((n,), 1.0 / float(n), dtype=torch.float64)
+        return weights, torch.tensor(1.0, dtype=torch.float64)
+
+    logprobs = torch.as_tensor(sample_logprobs, dtype=torch.float64).flatten()
+    if logprobs.numel() != n:
+        raise ValueError("sample_logprobs must have one value per assignment.")
+    if not torch.isfinite(logprobs).all():
+        raise ValueError("sample_logprobs must contain only finite values.")
+    normalized = torch.softmax(logprobs, dim=0)
+    mean_logprob = torch.logsumexp(logprobs, dim=0) - math.log(float(n))
+    confidence = torch.exp(torch.minimum(mean_logprob, torch.tensor(0.0, dtype=torch.float64))).clamp_min(eps)
+    return normalized, confidence
 
 
 def _normalized_sample_key(sample: str) -> str:

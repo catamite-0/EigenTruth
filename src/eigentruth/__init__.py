@@ -15,7 +15,9 @@ from eigentruth.core.inside import (
     cluster_assignment_entropy,
     embedding_semantic_entropy,
     internal_eigenscore,
+    lexical_semantic_energy,
     lexical_semantic_entropy,
+    semantic_energy_score,
     spectral_effective_rank,
 )
 from eigentruth.core.math_engine import (
@@ -39,7 +41,9 @@ __all__ = [
     "cluster_assignment_entropy",
     "embedding_semantic_entropy",
     "internal_eigenscore",
+    "lexical_semantic_energy",
     "lexical_semantic_entropy",
+    "semantic_energy_score",
     "spectral_effective_rank",
     "mahalanobis_distance",
     "poincare_map",
