@@ -29,6 +29,12 @@ from eigentruth.eval.conformal import (
     directional_trigger_rate,
     evaluate_conformal_abstention,
 )
+from eigentruth.eval.intrinsic_dimension import (
+    IntrinsicDimensionReport,
+    intrinsic_dimension_peak_layer,
+    intrinsic_dimension_profile,
+    twonn_intrinsic_dimension,
+)
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
     confidence_error_report,
@@ -69,6 +75,10 @@ __all__ = [
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
+    "IntrinsicDimensionReport",
+    "twonn_intrinsic_dimension",
+    "intrinsic_dimension_profile",
+    "intrinsic_dimension_peak_layer",
     "ABSTENTION_COMPARISON_METRICS",
     "AdaptiveScoreTransform",
     "ConformalAbstentionComparisonCandidate",

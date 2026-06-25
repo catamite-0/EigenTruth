@@ -2171,6 +2171,51 @@ def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     assert report["layer_locality"]["adjacent_mean_distance"] < report["layer_locality"]["distant_mean_distance"]
 
 
+def test_eval_intrinsic_dimension_profiles_from_warmup_checkpoint(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.eval_intrinsic_dimension")
+    torch.manual_seed(2468)
+    n = 160
+    line = torch.zeros(n, 5)
+    line[:, 0] = torch.randn(n)
+    full = torch.randn(n, 5)
+    plane = torch.zeros(n, 5)
+    plane[:, :2] = torch.randn(n, 2)
+    checkpoint_path = tmp_path / "warmup-checkpoint.pt"
+    torch.save(
+        {
+            "metadata": {
+                "model": "synthetic",
+                "layers": [-3, -2, -1],
+            },
+            "true_state_lists": {
+                -3: [row for row in line],
+                -2: [row for row in full],
+                -1: [row for row in plane],
+            },
+            "false_state_lists": {},
+        },
+        checkpoint_path,
+    )
+    report_path = tmp_path / "intrinsic-dimension-report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    args = SimpleNamespace(
+        warmup_checkpoint=[f"synthetic={checkpoint_path}"],
+        split="true",
+        trim_fraction=0.05,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    )
+
+    report = module.run(args)
+    capsys.readouterr()
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert report["summary"]["all_rise_then_fall"] is True
+    assert report["reports"][0]["peak_layer"] == -2
+    assert report["reports"][0]["shape"]["rise_then_fall"] is True
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
