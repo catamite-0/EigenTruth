@@ -15,7 +15,13 @@ from typing import Any, Mapping, MutableMapping, Sequence
 
 import torch
 
-from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS, RankScoreFusionArtifact, RankScoreFusionCalibrator
+from eigentruth.calibration import (
+    DEFAULT_SCORE_DIRECTIONS,
+    GeometryScoreFusionArtifact,
+    GeometryScoreFusionCalibrator,
+    RankScoreFusionArtifact,
+    RankScoreFusionCalibrator,
+)
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
 from eigentruth.eval.score_dump import (
@@ -24,6 +30,7 @@ from eigentruth.eval.score_dump import (
     score_dump_file_metadata,
 )
 from eigentruth.eval.score_fusion import (
+    combine_geometry_uncertainty_scores,
     combine_rank_anomaly_scores,
     directional_rank_anomaly_scores,
     native_anomaly_scores,
@@ -31,6 +38,7 @@ from eigentruth.eval.score_fusion import (
 
 ALPHAS = (0.05, 0.10, 0.20)
 METHODS = ("max_rank", "mean_rank")
+GEOMETRY_FUSION_METHODS = ("interaction",)
 TOLERANCE = 0.03
 
 
@@ -52,6 +60,32 @@ def _parse_csv(value: str | None, *, name: str) -> tuple[str, ...] | None:
     if not parts:
         raise ValueError(f"{name} must contain at least one value.")
     return parts
+
+
+def _dedupe_signals(*groups: Sequence[str] | None) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(
+        signal
+        for group in groups
+        if group is not None
+        for signal in group
+    ))
+
+
+def _resolve_geometry_groups(
+    geometry_signals: Sequence[str] | None,
+    uncertainty_signals: Sequence[str] | None,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    geometry = tuple(geometry_signals or ())
+    uncertainty = tuple(uncertainty_signals or ())
+    if bool(geometry) != bool(uncertainty):
+        raise ValueError("geometry_signals and uncertainty_signals must be provided together.")
+    if len(set(geometry)) != len(geometry):
+        raise ValueError("geometry_signals must contain unique values.")
+    if len(set(uncertainty)) != len(uncertainty):
+        raise ValueError("uncertainty_signals must contain unique values.")
+    if set(geometry) & set(uncertainty):
+        raise ValueError("geometry_signals and uncertainty_signals must not overlap.")
+    return geometry, uncertainty
 
 
 def _mean(values: Sequence[float]) -> float:
@@ -179,6 +213,78 @@ def _score_ensemble(
     }
 
 
+def _score_geometry_fusion(
+    *,
+    selected_scores: Mapping[str, torch.Tensor],
+    labels: torch.Tensor,
+    directions: Mapping[str, str],
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+    geometry_method: str,
+    uncertainty_method: str,
+    fusion_method: str,
+    alphas: Sequence[float],
+    repeats: int,
+    seed: int,
+) -> dict[str, Any]:
+    true_idx = torch.nonzero(labels == 0, as_tuple=False).flatten()
+    false_idx = torch.nonzero(labels == 1, as_tuple=False).flatten()
+    false_alarm_by_alpha = {alpha: [] for alpha in alphas}
+    detection_by_alpha = {alpha: [] for alpha in alphas}
+    aurocs = []
+    for repeat in range(repeats):
+        generator = torch.Generator().manual_seed(seed + repeat)
+        perm = true_idx[torch.randperm(true_idx.numel(), generator=generator)]
+        half = true_idx.numel() // 2
+        calib_idx = perm[:half]
+        test_true_idx = perm[half:]
+        geometry_rank_scores = [
+            directional_rank_anomaly_scores(
+                selected_scores[name][calib_idx],
+                selected_scores[name],
+                direction=directions[name],
+            )
+            for name in geometry_signals
+        ]
+        uncertainty_rank_scores = [
+            directional_rank_anomaly_scores(
+                selected_scores[name][calib_idx],
+                selected_scores[name],
+                direction=directions[name],
+            )
+            for name in uncertainty_signals
+        ]
+        geometry_scores = combine_rank_anomaly_scores(geometry_rank_scores, geometry_method)
+        uncertainty_scores = combine_rank_anomaly_scores(uncertainty_rank_scores, uncertainty_method)
+        fusion_scores = combine_geometry_uncertainty_scores(
+            geometry_scores,
+            uncertainty_scores,
+            method=fusion_method,
+        )
+        aurocs.append(roc_auc(fusion_scores, labels))
+        for alpha in alphas:
+            threshold = directional_conformal_threshold(fusion_scores[calib_idx], alpha, "higher")
+            false_alarm_by_alpha[alpha].append(
+                directional_trigger_rate(fusion_scores[test_true_idx], threshold, "higher")
+            )
+            detection_by_alpha[alpha].append(
+                directional_trigger_rate(fusion_scores[false_idx], threshold, "higher")
+            )
+    return {
+        "geometry_method": geometry_method,
+        "uncertainty_method": uncertainty_method,
+        "fusion_method": fusion_method,
+        "direction": "higher",
+        "geometry_signals": list(geometry_signals),
+        "uncertainty_signals": list(uncertainty_signals),
+        "auroc": _mean(aurocs),
+        "alphas": {
+            str(alpha): _rate_payload(false_alarm_by_alpha[alpha], detection_by_alpha[alpha], alpha)
+            for alpha in alphas
+        },
+    }
+
+
 def _best_at_alpha(results: Mapping[str, Mapping[str, Any]], alpha: float) -> dict[str, Any] | None:
     key = str(alpha)
     available = [
@@ -205,6 +311,11 @@ def build_ensemble_report(
     *,
     signals: Sequence[str],
     methods: Sequence[str] = METHODS,
+    geometry_signals: Sequence[str] | None = None,
+    uncertainty_signals: Sequence[str] | None = None,
+    geometry_method: str = "mean_rank",
+    uncertainty_method: str = "mean_rank",
+    geometry_fusion_methods: Sequence[str] = GEOMETRY_FUSION_METHODS,
     alphas: Sequence[float] = ALPHAS,
     repeats: int = 20,
     seed: int = 0,
@@ -219,19 +330,21 @@ def build_ensemble_report(
         raise ValueError("repeats must be >= 1.")
     if any(not (0.0 < float(alpha) < 1.0) for alpha in alphas):
         raise ValueError("alphas must be in (0, 1).")
+    geometry_signals, uncertainty_signals = _resolve_geometry_groups(geometry_signals, uncertainty_signals)
+    load_signals = _dedupe_signals(signals, geometry_signals, uncertainty_signals)
 
     runs = []
     score_dump_metadata_cache = {} if score_dump_cache is None else score_dump_cache
     for name, path in score_dumps:
-        dump = _load_scores(path, signals=signals, cache=score_dump_metadata_cache)
+        dump = _load_scores(path, signals=load_signals, cache=score_dump_metadata_cache)
         labels = dump["labels"]
-        missing = [signal for signal in signals if signal not in dump["scores"]]
+        missing = [signal for signal in load_signals if signal not in dump["scores"]]
         if missing:
             raise ValueError(f"{path} is missing requested score(s): {missing}.")
-        selected_scores = {signal: dump["scores"][signal] for signal in signals}
+        selected_scores = {signal: dump["scores"][signal] for signal in load_signals}
         directions = {
             signal: DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
-            for signal in signals
+            for signal in load_signals
         }
         single_results = {
             signal: _score_signal(
@@ -246,7 +359,7 @@ def build_ensemble_report(
         }
         ensemble_results = {
             method: _score_ensemble(
-                selected_scores=selected_scores,
+                selected_scores={signal: selected_scores[signal] for signal in signals},
                 labels=labels,
                 directions=directions,
                 method=method,
@@ -256,6 +369,24 @@ def build_ensemble_report(
             )
             for method in methods
         }
+        geometry_fusion_results = {}
+        if geometry_signals and uncertainty_signals:
+            geometry_fusion_results = {
+                method: _score_geometry_fusion(
+                    selected_scores=selected_scores,
+                    labels=labels,
+                    directions=directions,
+                    geometry_signals=geometry_signals,
+                    uncertainty_signals=uncertainty_signals,
+                    geometry_method=geometry_method,
+                    uncertainty_method=uncertainty_method,
+                    fusion_method=method,
+                    alphas=alphas,
+                    repeats=repeats,
+                    seed=seed,
+                )
+                for method in geometry_fusion_methods
+            }
         runs.append({
             "name": name,
             "scores_path": str(path),
@@ -266,20 +397,30 @@ def build_ensemble_report(
             },
             "config": dump["config"],
             "signals": list(signals),
+            "loaded_signals": list(load_signals),
             "directions": directions,
+            "geometry_signals": list(geometry_signals),
+            "uncertainty_signals": list(uncertainty_signals),
             "n_total": int(labels.numel()),
             "n_true": int((labels == 0).sum().item()),
             "n_false": int((labels == 1).sum().item()),
             "single_results": single_results,
             "ensemble_results": ensemble_results,
+            "geometry_fusion_results": geometry_fusion_results,
             "best_single_at_alpha": _best_at_alpha(single_results, best_alpha),
             "best_ensemble_at_alpha": _best_at_alpha(ensemble_results, best_alpha),
+            "best_geometry_fusion_at_alpha": _best_at_alpha(geometry_fusion_results, best_alpha),
         })
 
     return {
         "schema_version": 1,
         "signals": list(signals),
         "methods": list(methods),
+        "geometry_signals": list(geometry_signals),
+        "uncertainty_signals": list(uncertainty_signals),
+        "geometry_method": geometry_method,
+        "uncertainty_method": uncertainty_method,
+        "geometry_fusion_methods": list(geometry_fusion_methods),
         "alphas": [float(alpha) for alpha in alphas],
         "repeats": int(repeats),
         "seed": int(seed),
@@ -326,17 +467,78 @@ def build_fusion_artifact_from_score_dump(
     )
 
 
+def build_geometry_fusion_artifact_from_score_dump(
+    score_dump: tuple[str, Path],
+    *,
+    geometry_signals: Sequence[str],
+    uncertainty_signals: Sequence[str],
+    geometry_method: str,
+    uncertainty_method: str,
+    fusion_method: str,
+    alpha: float,
+    cache: MutableMapping[str, Any] | None = None,
+) -> GeometryScoreFusionArtifact:
+    """Fit a deployable geometry-by-uncertainty fusion artifact from one score dump."""
+    name, path = score_dump
+    load_signals = _dedupe_signals(geometry_signals, uncertainty_signals)
+    dump = _load_scores(path, signals=load_signals, cache=cache)
+    missing = [signal for signal in load_signals if signal not in dump["scores"]]
+    if missing:
+        raise ValueError(f"{path} is missing requested score(s): {missing}.")
+    config = dump["config"]
+    directions = {
+        signal: DEFAULT_SCORE_DIRECTIONS.get(signal, "higher")
+        for signal in load_signals
+    }
+    target_layer = config.get("layer")
+    calibrator = GeometryScoreFusionCalibrator(
+        alpha=alpha,
+        geometry_method=geometry_method,
+        uncertainty_method=uncertainty_method,
+        fusion_method=fusion_method,
+    )
+    return calibrator.calibrate(
+        labels=dump["labels"].tolist(),
+        scores={signal: dump["scores"][signal].tolist() for signal in load_signals},
+        geometry_signals=geometry_signals,
+        uncertainty_signals=uncertainty_signals,
+        directions=directions,
+        model_id=None if config.get("model") is None else str(config.get("model")),
+        target_layer=None if target_layer is None else int(target_layer),
+        model_revision=None if config.get("model_revision") is None else str(config.get("model_revision")),
+        score_dump_metadata={
+            "run_name": name,
+            **score_dump_file_metadata(path, cache=cache),
+            "summary": dump["score_dump_summary"],
+            "source_format": dump["score_dump_source_format"],
+        },
+    )
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     score_dumps = [_parse_named_path(value) for value in args.scores]
     signals = _parse_csv(args.signals, name="signals")
     if signals is None:
         raise ValueError("--signals is required.")
     methods = _parse_csv(args.methods, name="methods") or METHODS
+    geometry_signals = _parse_csv(getattr(args, "geometry_signals", None), name="geometry_signals")
+    uncertainty_signals = _parse_csv(getattr(args, "uncertainty_signals", None), name="uncertainty_signals")
+    geometry_method = str(getattr(args, "geometry_method", "mean_rank"))
+    uncertainty_method = str(getattr(args, "uncertainty_method", "mean_rank"))
+    geometry_fusion_methods = (
+        _parse_csv(getattr(args, "geometry_fusion_methods", None), name="geometry_fusion_methods")
+        or GEOMETRY_FUSION_METHODS
+    )
     alphas = tuple(float(value) for value in (_parse_csv(args.alphas, name="alphas") or ()))
     payload = build_ensemble_report(
         score_dumps,
         signals=signals,
         methods=methods,
+        geometry_signals=geometry_signals,
+        uncertainty_signals=uncertainty_signals,
+        geometry_method=geometry_method,
+        uncertainty_method=uncertainty_method,
+        geometry_fusion_methods=geometry_fusion_methods,
         alphas=alphas or ALPHAS,
         repeats=args.repeats,
         seed=args.seed,
@@ -368,6 +570,42 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "calibration_size": artifact.calibration_size(),
         }
         print(f"Wrote score fusion artifact to {artifact_path}")
+    if getattr(args, "save_best_geometry_fusion_artifact", None):
+        if len(score_dumps) != 1:
+            raise ValueError("--save-best-geometry-fusion-artifact requires exactly one --scores input.")
+        if geometry_signals is None or uncertainty_signals is None:
+            raise ValueError(
+                "--save-best-geometry-fusion-artifact requires --geometry-signals and --uncertainty-signals."
+            )
+        run_payload = payload["runs"][0]
+        best_geometry = run_payload["best_geometry_fusion_at_alpha"]
+        if best_geometry is None:
+            raise ValueError("no best geometry fusion is available at --best-alpha.")
+        artifact_path = Path(args.save_best_geometry_fusion_artifact)
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        artifact = build_geometry_fusion_artifact_from_score_dump(
+            score_dumps[0],
+            geometry_signals=geometry_signals,
+            uncertainty_signals=uncertainty_signals,
+            geometry_method=geometry_method,
+            uncertainty_method=uncertainty_method,
+            fusion_method=str(best_geometry["name"]),
+            alpha=args.best_alpha,
+            cache={},
+        )
+        artifact.save_json(artifact_path)
+        run_payload["best_geometry_fusion_artifact"] = {
+            "path": str(artifact_path),
+            "fusion_method": artifact.fusion_method,
+            "geometry_method": artifact.geometry_method,
+            "uncertainty_method": artifact.uncertainty_method,
+            "threshold": artifact.threshold,
+            "conformal_alpha": artifact.conformal_alpha,
+            "geometry_signals": [signal.name for signal in artifact.geometry_signals],
+            "uncertainty_signals": [signal.name for signal in artifact.uncertainty_signals],
+            "calibration_size": artifact.calibration_size(),
+        }
+        print(f"Wrote geometry fusion artifact to {artifact_path}")
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -385,6 +623,16 @@ def main() -> None:
                         help="comma-list of score names to combine")
     parser.add_argument("--methods", default=",".join(METHODS),
                         help="comma-list of ensemble methods: max_rank,mean_rank")
+    parser.add_argument("--geometry-signals", default=None,
+                        help="optional comma-list of representation-geometry scores for geometry fusion")
+    parser.add_argument("--uncertainty-signals", default=None,
+                        help="optional comma-list of confidence or uncertainty scores for geometry fusion")
+    parser.add_argument("--geometry-method", default="mean_rank",
+                        help="rank fusion method for geometry signals")
+    parser.add_argument("--uncertainty-method", default="mean_rank",
+                        help="rank fusion method for uncertainty signals")
+    parser.add_argument("--geometry-fusion-methods", default=",".join(GEOMETRY_FUSION_METHODS),
+                        help="comma-list of geometry/uncertainty fusion methods")
     parser.add_argument("--alphas", default=",".join(str(alpha) for alpha in ALPHAS),
                         help="comma-list of conformal alpha values")
     parser.add_argument("--repeats", type=int, default=20)
@@ -393,6 +641,8 @@ def main() -> None:
                         help="alpha used for best single/ensemble summary")
     parser.add_argument("--save-best-fusion-artifact", default=None,
                         help="optional path to save a deployable artifact for the best ensemble")
+    parser.add_argument("--save-best-geometry-fusion-artifact", default=None,
+                        help="optional path to save a deployable artifact for the best geometry fusion")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     args = parser.parse_args()
     payload = run(args)
@@ -400,12 +650,15 @@ def main() -> None:
     for run_payload in payload["runs"]:
         best_single = run_payload["best_single_at_alpha"]
         best_ensemble = run_payload["best_ensemble_at_alpha"]
+        best_geometry = run_payload["best_geometry_fusion_at_alpha"]
         print(
             f"{run_payload['name']}: "
             f"best_single@{key}={None if best_single is None else best_single['name']} "
             f"det={None if best_single is None else best_single['detection']}  "
             f"best_ensemble@{key}={None if best_ensemble is None else best_ensemble['name']} "
-            f"det={None if best_ensemble is None else best_ensemble['detection']}"
+            f"det={None if best_ensemble is None else best_ensemble['detection']}  "
+            f"best_geometry_fusion@{key}={None if best_geometry is None else best_geometry['name']} "
+            f"det={None if best_geometry is None else best_geometry['detection']}"
         )
 
 

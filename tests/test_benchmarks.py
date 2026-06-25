@@ -20265,6 +20265,101 @@ def test_eval_score_ensemble_saves_best_fusion_artifact(tmp_path):
     assert saved_report["runs"][0]["best_fusion_artifact"]["method"] == "max_rank"
 
 
+def test_eval_score_ensemble_reports_geometry_calibrated_fusion(tmp_path):
+    module = importlib.import_module("benchmarks.eval_score_ensemble")
+    scores_path = tmp_path / "scores.json"
+    labels = [0] * 20 + [1] * 8
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": labels,
+            "scores": {
+                "truth_proj": list(range(20)) + [0, 1, 2, 3, 4, 5, 6, 7],
+                "subspace_resid": list(range(20)) + [40, 41, 42, 43, 44, 45, 46, 47],
+                "nll_answer": list(range(20)) + [50, 51, 52, 53, 54, 55, 56, 57],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_ensemble_report(
+        [("synthetic", scores_path)],
+        signals=("truth_proj", "subspace_resid"),
+        methods=("mean_rank",),
+        geometry_signals=("subspace_resid",),
+        uncertainty_signals=("nll_answer",),
+        geometry_fusion_methods=("interaction", "product"),
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        best_alpha=0.2,
+    )
+
+    run = payload["runs"][0]
+
+    assert payload["geometry_signals"] == ["subspace_resid"]
+    assert payload["uncertainty_signals"] == ["nll_answer"]
+    assert run["signals"] == ["truth_proj", "subspace_resid"]
+    assert run["loaded_signals"] == ["truth_proj", "subspace_resid", "nll_answer"]
+    assert run["geometry_fusion_results"]["interaction"]["geometry_signals"] == ["subspace_resid"]
+    assert run["geometry_fusion_results"]["interaction"]["uncertainty_signals"] == ["nll_answer"]
+    assert run["geometry_fusion_results"]["interaction"]["auroc"] > 0.95
+    assert run["geometry_fusion_results"]["interaction"]["alphas"]["0.2"]["detection"] == pytest.approx(1.0)
+    assert run["best_geometry_fusion_at_alpha"]["name"] == "interaction"
+
+
+def test_eval_score_ensemble_saves_best_geometry_fusion_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.eval_score_ensemble")
+    scores_path = tmp_path / "scores.json"
+    report_path = tmp_path / "report.json"
+    artifact_path = tmp_path / "geometry-fusion.json"
+    labels = [0] * 20 + [1] * 8
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": labels,
+            "scores": {
+                "truth_proj": list(range(20)) + [0, 1, 2, 3, 4, 5, 6, 7],
+                "subspace_resid": list(range(20)) + [40, 41, 42, 43, 44, 45, 46, 47],
+                "nll_answer": list(range(20)) + [50, 51, 52, 53, 54, 55, 56, 57],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        SimpleNamespace(
+            scores=[str(scores_path)],
+            signals="truth_proj,subspace_resid",
+            methods="mean_rank",
+            geometry_signals="subspace_resid",
+            uncertainty_signals="nll_answer",
+            geometry_method="mean_rank",
+            uncertainty_method="mean_rank",
+            geometry_fusion_methods="interaction,product",
+            alphas="0.2",
+            repeats=1,
+            seed=0,
+            best_alpha=0.2,
+            save_best_fusion_artifact=None,
+            save_best_geometry_fusion_artifact=str(artifact_path),
+            json=str(report_path),
+        )
+    )
+
+    artifact = module.GeometryScoreFusionArtifact.load_json(artifact_path)
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert artifact.fusion_method == "interaction"
+    assert artifact.geometry_method == "mean_rank"
+    assert artifact.uncertainty_method == "mean_rank"
+    assert artifact.conformal_alpha == pytest.approx(0.2)
+    assert artifact.signal_names() == ("subspace_resid", "nll_answer")
+    assert artifact.score_dump_metadata["summary"]["n_total"] == len(labels)
+    assert payload["runs"][0]["best_geometry_fusion_artifact"]["path"] == str(artifact_path)
+    assert saved_report["runs"][0]["best_geometry_fusion_artifact"]["fusion_method"] == "interaction"
+
+
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

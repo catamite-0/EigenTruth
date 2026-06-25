@@ -2618,6 +2618,21 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
 
+It can also evaluate the newer geometry-calibrated interaction score by
+separating representation-geometry signals from uncertainty/confidence proxies:
+
+```bash
+python benchmarks/eval_score_ensemble.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores.json \
+  --signals truth_proj,subspace_resid,resid_update_norm \
+  --geometry-signals subspace_resid,resid_update_norm \
+  --uncertainty-signals nll_answer,inside_semantic_energy \
+  --geometry-fusion-methods interaction,product \
+  --best-alpha 0.10 \
+  --save-best-geometry-fusion-artifact artifacts/qwen05_geometry_fusion_artifact.json \
+  --json artifacts/qwen05_score_ensemble_report.json
+```
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
@@ -2630,7 +2645,11 @@ conformal alpha, and threshold. They can be supplied to
 `recommend_runtime_config.py` with `--score-ensemble-report`; the runtime
 recommendation only promotes a fusion signal when its selected alpha passed the
 conformal false-alarm gate. They are intended for controlled follow-up
-experiments rather than as a default product policy.
+experiments rather than as a default product policy. Geometry fusion artifacts
+preserve the same provenance plus geometry/uncertainty group membership and
+their rank-fusion methods, so follow-up reports can compare single `truth_proj`,
+naive rank fusion, and geometry-by-uncertainty interaction under one score-dump
+fingerprint.
 
 Current frontier Qwen l80 / SmolLM2 l80 result
 (`artifacts/truthfulqa-frontier-qwen-smollm2-l80/`): simple internal-score

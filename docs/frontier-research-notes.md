@@ -78,10 +78,10 @@ Added a geometry-calibrated score primitive:
 
 - `geometry_calibrated_anomaly_scores(...)` rank-calibrates representation geometry signals and uncertainty/confidence proxies against normal calibration records, then fuses them with an explicit interaction term.
 - `GeometryScoreFusionArtifact` and `GeometryScoreFusionCalibrator` make that score deployable as a conformal artifact without changing score-dump schemas or adding dependencies.
-- The next empirical step is wiring this artifact into `eval_score_ensemble.py` or a dedicated score-fusion report, then comparing it against single `truth_proj`, naive rank fusion, and staged verifier evidence on the existing Qwen/SmolLM2 score dumps.
+- `eval_score_ensemble.py` now evaluates the geometry-by-uncertainty fusion family alongside single signals and naive rank fusion, and can save a deployable `GeometryScoreFusionArtifact` from the selected `--best-alpha`.
 
 ## Next Research-to-Code Candidates
 
-1. Wire geometry-calibrated fusion into benchmark reports and release evidence, then compare it against `truth_proj`, naive rank fusion, and staged verifier routing.
+1. Run geometry-calibrated fusion on the existing Qwen/SmolLM2 l80 score dumps, then compare it against single `truth_proj`, naive rank fusion, and staged verifier routing under the same false-alarm budget.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.
