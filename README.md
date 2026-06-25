@@ -139,6 +139,11 @@ needed. When a selected-column JSONL loader has already scanned the records
 sidecar in the same run, it primes the run-local records fingerprint cache so
 later provenance metadata can reuse the full SHA-256 without a second records
 pass.
+For random-matrix spectrum diagnostics, add `--include-layer-spectra` to
+`eval_truthfulqa.py --json ...`; the report will include compact per-layer
+Marchenko-Pastur bulk edges, spike counts, effective rank, and top covariance
+eigenvalues. This is off by default because full eigendecomposition can be
+expensive on large hidden dimensions.
 
 For ACSE-style experiments, `eval_conformal.py` can also build an adaptive
 conformal report and artifact by inflating the selected diagnostic with primary

@@ -136,7 +136,7 @@ PROFILE_GROUPS = {
         "write_inside_diagnostics_cache",
         "save_inside_diagnostics_cache",
     ),
-    "postprocess": ("score_postprocess", "reporting", "sweep_reporting"),
+    "postprocess": ("score_postprocess", "reporting", "sweep_reporting", "spectrum_reporting"),
 }
 
 
@@ -1036,6 +1036,41 @@ def _inside_trigger_indexes(records: Sequence[Mapping], args) -> set[int]:
 
 def _empty_inside_scores(layers: Sequence[int]) -> dict[int, float]:
     return {int(layer): 0.0 for layer in layers}
+
+
+def _layer_spectrum_reports(
+    manifolds: Mapping[int, TruthManifold],
+    *,
+    top_k: int = 16,
+) -> dict[str, dict[str, object]]:
+    if top_k < 0:
+        raise ValueError("top_k must be >= 0.")
+    reports: dict[str, dict[str, object]] = {}
+    for layer in sorted(manifolds):
+        manifold = manifolds[layer]
+        try:
+            spectrum = manifold.spectrum()
+        except (RuntimeError, ValueError) as exc:
+            reports[str(layer)] = {
+                "status": "unavailable",
+                "error": str(exc),
+                "sample_count": int(manifold.n),
+                "hidden_dim": int(manifold.hidden_dim),
+                "covariance_mode": manifold.covariance_mode,
+            }
+            continue
+        payload = spectrum.to_dict(include_eigenvalues=False)
+        limit = min(int(top_k), int(spectrum.eigenvalues.numel()))
+        payload.update({
+            "status": "ready",
+            "covariance_mode": manifold.covariance_mode,
+            "top_eigenvalues": [
+                float(value) for value in spectrum.eigenvalues[:limit].detach().cpu().tolist()
+            ],
+            "top_eigenvalue_count": limit,
+        })
+        reports[str(layer)] = payload
+    return reports
 
 
 def _score_reps_batch(
@@ -3789,6 +3824,13 @@ def run(args) -> dict:
           f"covariance={primary.covariance_mode}, "
           f"contrastive_direction={'yes' if primary.contrastive_direction is not None else 'no'}  "
           f"subspace={'yes' if args.layer in subspaces else 'no'}\n")
+    layer_spectra = None
+    if bool(getattr(args, "include_layer_spectra", False)):
+        with _profile_phase(profile, "spectrum_reporting"):
+            layer_spectra = _layer_spectrum_reports(
+                manifolds,
+                top_k=int(getattr(args, "layer_spectrum_top_k", 16)),
+            )
 
     signals = _enabled_signals(args)
     sweep_signal_names = _sweep_signal_names(args)
@@ -4244,6 +4286,8 @@ def run(args) -> dict:
                    "warmup_checkpoint_every": args.warmup_checkpoint_every,
                    "covariance_mode": getattr(args, "covariance_mode", "full"),
                    "covariance_low_rank": getattr(args, "covariance_low_rank", 16),
+                   "include_layer_spectra": bool(getattr(args, "include_layer_spectra", False)),
+                   "layer_spectrum_top_k": int(getattr(args, "layer_spectrum_top_k", 16)),
                    "dump_scores_format": getattr(args, "dump_scores_format", "json"),
                    "sweep_layers": layers if (args.sweep or args.sweep_layers) else None},
         "auroc": results,
@@ -4251,6 +4295,8 @@ def run(args) -> dict:
         "sweep": sweep_payload,
         "batch_size_fallback": batch_fallback_state.to_dict(),
     }
+    if layer_spectra is not None:
+        payload["layer_spectra"] = layer_spectra
     if _inside_enabled(args):
         sampled_count = int(sum(inside_sampled))
         total_sample_count = int(sum(inside_sample_counts))
@@ -4410,6 +4456,11 @@ def main():
                    help="TruthManifold covariance approximation for maha_last: full, diag, or low_rank")
     p.add_argument("--covariance-low-rank", type=int, default=16,
                    help="rank used when --covariance-mode low_rank")
+    p.add_argument("--include-layer-spectra", action="store_true",
+                   help="include compact per-layer covariance-spectrum diagnostics in the JSON report; "
+                        "off by default because full eigendecomposition can be expensive on large layers")
+    p.add_argument("--layer-spectrum-top-k", type=int, default=16,
+                   help="number of largest covariance eigenvalues to include when --include-layer-spectra is set")
     p.add_argument("--eigenscore-alpha", type=float, default=1e-3,
                    help="regularization alpha for EigenScore-style log-det scores")
     p.add_argument("--inside-samples", type=int, default=0,
@@ -4506,6 +4557,8 @@ def main():
         p.error("--max-batch-tokens must be >=0")
     if args.covariance_low_rank < 1:
         p.error("--covariance-low-rank must be >=1")
+    if args.layer_spectrum_top_k < 0:
+        p.error("--layer-spectrum-top-k must be >=0")
     if args.inside_batch_size < 1:
         p.error("--inside-batch-size must be >=1")
     if args.inside_samples == 1:

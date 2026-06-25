@@ -102,6 +102,11 @@ python benchmarks/eval_truthfulqa.py --model Qwen/Qwen2.5-0.5B-Instruct \
 # Fast pipeline self-check (tiny model, bundled statements, no dataset download):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline
 
+# Optional covariance-spectrum diagnostics in the JSON report:
+python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
+  --json artifacts/tiny-spectrum-report.json --include-layer-spectra \
+  --layer-spectrum-top-k 8
+
 # Optional multi-response INSIDE proxy (slower: samples K continuations per statement):
 python benchmarks/eval_truthfulqa.py --model sshleifer/tiny-gpt2 --offline \
   --batch-size 4 --inside-samples 3 --inside-batch-size 2 --inside-max-new-tokens 6
@@ -141,6 +146,11 @@ inverse. The default remains `full` for backward-compatible scores. The
 experimental `--covariance-mode low_rank --covariance-low-rank K` path scores
 with a ridge plus top-K covariance approximation; use it as a profiling
 candidate and recalibrate thresholds because `maha_last` scale changes by mode.
+Use `--include-layer-spectra` with `--json` to add compact
+Marchenko-Pastur/effective-rank covariance diagnostics for each warmed layer.
+The report stores top eigenvalues only (`--layer-spectrum-top-k`, default 16) so
+large hidden dimensions do not inflate JSON artifacts; the flag is off by default
+because full eigendecomposition is extra post-processing cost.
 Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
 bundle or create one when missing. The cache is validated against model, dtype,
 layer list, max length, subspace rank, covariance mode/rank, warmup mode, and

@@ -19780,6 +19780,33 @@ def test_eval_truthfulqa_layer_stats_cache_preserves_diag_covariance_mode(tmp_pa
     assert torch.isfinite(loaded.mahalanobis_distance(torch.tensor([0.5, 0.5]))).all()
 
 
+def test_eval_truthfulqa_layer_spectrum_reports_are_compact():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    full = module.TruthManifold()
+    full.update_many(torch.tensor([
+        [0.0, 0.0, 0.0],
+        [3.0, 0.0, 0.0],
+        [6.0, 1.0, 0.0],
+        [9.0, -1.0, 0.0],
+    ]))
+    diag = module.TruthManifold(covariance_mode="diag")
+    diag.update_many(torch.tensor([
+        [0.0, 0.0],
+        [1.0, 2.0],
+        [2.0, 4.0],
+    ]))
+
+    reports = module._layer_spectrum_reports({-1: full, -2: diag}, top_k=1)
+
+    assert list(reports) == ["-2", "-1"]
+    assert reports["-1"]["status"] == "ready"
+    assert reports["-1"]["top_eigenvalue_count"] == 1
+    assert len(reports["-1"]["top_eigenvalues"]) == 1
+    assert "eigenvalues" not in reports["-1"]
+    assert reports["-2"]["source"] == "diagonal"
+    assert reports["-2"]["covariance_mode"] == "diag"
+
+
 def test_eval_truthfulqa_warmup_checkpoint_can_resume_completed_state(tmp_path):
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     true_states = [torch.tensor([1.0, 0.0]), torch.tensor([0.0, 1.0])]
@@ -20323,6 +20350,8 @@ def test_eval_truthfulqa_cache_only_can_skip_dataset_load_from_eval_reps_metadat
         profile_json=None,
         json=None,
         dump_scores=None,
+        include_layer_spectra=True,
+        layer_spectrum_top_k=1,
     ))
 
     assert result["config"]["cache_only_restored_eval_statements"] is True
@@ -20330,7 +20359,13 @@ def test_eval_truthfulqa_cache_only_can_skip_dataset_load_from_eval_reps_metadat
     assert result["config"]["max_length"] == 32
     assert result["config"]["n_pos"] == 1
     assert result["config"]["n_neg"] == 1
+    assert result["config"]["include_layer_spectra"] is True
+    assert result["layer_spectra"]["-1"]["status"] == "ready"
+    assert result["layer_spectra"]["-1"]["top_eigenvalue_count"] == 1
+    assert len(result["layer_spectra"]["-1"]["top_eigenvalues"]) == 1
+    assert result["layer_spectra"]["-1"]["sample_count"] == 2
     assert "load_data" not in result["profile"]["phases"]
+    assert "spectrum_reporting" in result["profile"]["phases"]
     assert result["profile"]["summary"]["bottleneck"] != "load_data"
 
 
