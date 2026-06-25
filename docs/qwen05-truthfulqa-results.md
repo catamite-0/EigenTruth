@@ -656,6 +656,44 @@ verified false alarm 0.000, verified detection 1.000, p99 route duration
 available in the manifest and registry metadata: skip-rate 0.811, staged
 verified false alarm 0.009, and staged verified detection 0.275.
 
+## Frontier Verifier Stability Report
+
+`benchmarks/eval_verifier_stability.py` replays the staged structured-QA route
+over current frontier l80 JSONL score dumps across multiple split-conformal
+seeds without rerunning model forward passes.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability
+
+python benchmarks/eval_verifier_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --best-alpha 0.10 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --repeats 20 \
+  --staged-verification \
+  --staged-alpha 0.10 \
+  --json "$OUT/verifier-stability-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json"
+```
+
+At alpha 0.100 across seeds `0..9`:
+
+- Qwen l80: verified false alarm mean 0.006, verified detection mean 0.305,
+  and verified detection beats internal-only detection in 10/10 seeds. Route
+  selection is stable at `staged_skip=441`, `structured_qa=115`.
+- SmolLM2 l80: verified false alarm mean 0.010, verified detection mean 0.244,
+  and verified detection beats internal-only detection in 10/10 seeds. Route
+  selection is stable at `staged_skip=461`, `structured_qa=95`.
+
+The report is registered as
+`report:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`; the
+verified manifest is registered as
+`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`.
+
 A local release-candidate smoke artifact now pairs that staged route baseline
 with a tiny-gpt2 offline readiness/runtime baseline:
 
@@ -855,11 +893,10 @@ evidence, not as the default low-latency path.
 6. Promote a Qwen l20/l80 readiness baseline through the same registry workflow
    if Qwen-specific runtime evidence is needed; SmolLM2 now has the first
    non-tiny registered readiness/release candidate.
-7. Replace the label-derived oracle evidence fixture with real retrieval,
-   database, calculator, or world-model evidence and rerun
-   `benchmarks/eval_verifier_ensemble.py` under the same conformal false-alarm
-   budgets. Use `benchmarks/build_evidence_fixture.py` with a local corpus as
-   the first reproducible non-oracle baseline before networked retrieval.
+7. Extend the new verifier-stability path from structured QA to real retrieval,
+   database, calculator, and world-model evidence under the same conformal
+   false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
+   corpus as the reproducible non-oracle baseline before networked retrieval.
 8. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a
    deterministic tool adapter, not a broad natural-language math parser.

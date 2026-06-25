@@ -671,6 +671,50 @@ Each run reports `staged_verification.skipped_records`, `skip_rate`,
 `reason_counts`, triggered feature/metadata counts, and the staged conformal
 threshold used for the verifier gate.
 
+## `eval_verifier_stability.py`
+
+Replays `eval_verifier_ensemble.py` across several split-conformal seeds without
+loading a model. Use it when a verifier route looks promising and needs the same
+seed-stability evidence as internal diagnostic sweeps.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability
+
+python benchmarks/eval_verifier_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --best-alpha 0.10 \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --repeats 20 \
+  --staged-verification \
+  --staged-alpha 0.10 \
+  --verification-cache-dir artifacts/cache/truthfulqa-frontier-qwen-smollm2/verifier-stability \
+  --json "$OUT/verifier-stability-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2-l80-verifier-stability \
+  --version 0.1
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --recursive \
+  --json "$OUT/manifest-verification.json"
+```
+
+The current registered frontier l80 verifier-stability report
+(`report:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`) uses
+staged structured QA on the current Qwen/SmolLM2 l80 JSONL score dumps. Across
+seeds `0..9`, Qwen verified false alarm averages 0.006 and verified detection
+averages 0.305, beating internal-only detection in 10/10 seeds while routing
+115/556 records to `structured_qa`. SmolLM2 verified false alarm averages 0.010
+and verified detection averages 0.244, also beating internal-only detection in
+10/10 seeds while routing 95/556 records to `structured_qa`. The verified
+manifest is registered as
+`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`.
+
 If the score dump does not contain `statements`, provide a fixture with one
 record per score:
 

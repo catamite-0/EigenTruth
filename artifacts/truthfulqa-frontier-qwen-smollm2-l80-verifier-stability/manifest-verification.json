@@ -1,0 +1,7 @@
+{
+  "checked": 6,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

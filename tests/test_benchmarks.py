@@ -1140,6 +1140,97 @@ def test_eval_frontier_stability_rejects_duplicate_score_names(tmp_path):
         )
 
 
+def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    scores_path = tmp_path / "scores.json"
+    qa_path = tmp_path / "qa.json"
+    report_path = tmp_path / "verifier-stability" / "verifier-stability-report.json"
+    manifest_path = tmp_path / "verifier-stability" / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.3, 0.4, 3.0, 3.5]},
+            "statements": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+                {"question": "Q3?", "answer": "A3", "text": "Q3? A3"},
+                {"question": "Q4?", "answer": "A4", "text": "Q4? A4"},
+                {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+                {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "source": "qa:q2"},
+                {"question": "Q3?", "answer": "A3", "source": "qa:q3"},
+                {"question": "Q4?", "answer": "A4", "source": "qa:q4"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/eval_verifier_stability.py",
+            "--scores",
+            f"synthetic={scores_path}",
+            "--qa-corpus",
+            str(qa_path),
+            "--signal",
+            "truth_proj",
+            "--alphas",
+            "0.2",
+            "--best-alpha",
+            "0.2",
+            "--seeds",
+            "0,1,2",
+            "--repeats",
+            "2",
+            "--json",
+            str(report_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-verifier-stability",
+            "--version",
+            "0.1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    verification = registry_module.ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=True,
+    )
+    record = registry.get("report:synthetic-verifier-stability:0.1")
+    run = payload["runs"][0]
+
+    assert payload["status"] == "complete"
+    assert payload["config"]["seeds"] == [0, 1, 2]
+    assert run["stability"]["verified_detection"]["mean"] == pytest.approx(1.0)
+    assert run["stability"]["verified_false_alarm"]["mean"] == pytest.approx(0.0)
+    assert run["stability"]["verified_pass_seed_count"] == 3
+    assert run["stability"]["route_signature_counts"] == {"structured_qa:6": 3}
+    assert run["stability"]["selected_route_totals"] == {"structured_qa": 18}
+    assert manifest["artifacts"]["qa_corpus"]["exists"] is True
+    assert verification.passed
+    assert record.metadata["workflow"] == "eval_verifier_stability"
+    assert record.metadata["run_summaries"][0]["verified_detection_mean"] == pytest.approx(1.0)
+
+
 def test_calibrated_observability_limited_sweep_defaults_to_hooks(tmp_path):
     result = subprocess.run(
         [
