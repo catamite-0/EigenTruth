@@ -182,6 +182,21 @@ class RoutedVerifier:
             and last_result is not None
             and last_route is not None
         ):
+            if last_result.status in last_route.fallthrough_statuses:
+                last_result = VerificationResult(
+                    status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                    confidence=max(0.5, last_result.confidence),
+                    evidence=tuple(last_result.evidence),
+                    explanation=(
+                        "route fanout budget exhausted before a conclusive verifier result; "
+                        f"last fallthrough status was {last_result.status.value}"
+                    ),
+                    metadata={
+                        **dict(last_result.metadata),
+                        "budget_exhaustion_original_status": last_result.status.value,
+                        "budget_exhaustion_original_explanation": last_result.explanation,
+                    },
+                )
             return _with_route_metadata(
                 last_result,
                 route=last_route,

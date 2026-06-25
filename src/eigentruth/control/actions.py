@@ -7,12 +7,13 @@ import math
 import sqlite3
 from concurrent.futures import Future, ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
-from dataclasses import dataclass, field, is_dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.json_utils import strict_json_dumps, to_jsonable
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 
 
@@ -271,7 +272,7 @@ class JsonActionExecutionLedger:
         data = self._load()
         data.setdefault(str(idempotency_key), result.to_dict())
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        self.path.write_text(strict_json_dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     def _load(self) -> dict[str, Any]:
         if not self.path.exists():
@@ -324,7 +325,7 @@ class SQLiteActionExecutionLedger:
                 insert or ignore into {self.table_name} (idempotency_key, result_json)
                 values (?, ?)
                 """,
-                (str(idempotency_key), json.dumps(result.to_dict(), sort_keys=True)),
+                (str(idempotency_key), strict_json_dumps(result.to_dict(), sort_keys=True)),
             )
             connection.commit()
 
@@ -1019,14 +1020,4 @@ def _verification_evidence(result: VerificationResult | Mapping[str, Any]) -> tu
 
 
 def _jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return tuple(_jsonable(item) for item in value)
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
-    if is_dataclass(value) and hasattr(value, "to_dict"):
-        return value.to_dict()
-    return value
+    return to_jsonable(value)

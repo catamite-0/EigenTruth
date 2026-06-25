@@ -17,15 +17,51 @@ from eigentruth.eval.score_fusion import (
     combine_rank_anomaly_scores,
     directional_rank_anomaly_scores,
 )
+from eigentruth.json_utils import strict_json_dumps
 
 
 def _finite_float_tuple(values: Sequence[float], *, name: str) -> tuple[float, ...]:
+    if any(isinstance(value, bool) for value in values):
+        raise ValueError(f"{name} must contain only finite numeric values, not bool.")
     result = tuple(float(value) for value in values)
     if not result:
         raise ValueError(f"{name} must be non-empty.")
     if not all(math.isfinite(value) for value in result):
         raise ValueError(f"{name} must contain only finite values.")
     return result
+
+
+def _binary_label_tensor(labels: Sequence[int]) -> torch.Tensor:
+    raw_labels = labels.flatten().tolist() if isinstance(labels, torch.Tensor) else tuple(labels)
+    parsed = tuple(_coerce_binary_label(label) for label in raw_labels)
+    if not parsed:
+        raise ValueError("labels must be non-empty.")
+    return torch.tensor(parsed, dtype=torch.int64)
+
+
+def _coerce_binary_label(value: Any) -> int:
+    if isinstance(value, torch.Tensor):
+        if value.numel() != 1:
+            raise ValueError("labels must be scalar binary values.")
+        value = value.item()
+    if isinstance(value, bool):
+        raise ValueError("labels must be integer 0/1 values, not bool.")
+    if isinstance(value, int):
+        label = value
+    elif isinstance(value, float):
+        if not math.isfinite(value) or not value.is_integer():
+            raise ValueError("labels must be binary integer values in {0, 1}.")
+        label = int(value)
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if stripped not in {"0", "1"}:
+            raise ValueError("labels must be strings '0' or '1' when provided as strings.")
+        label = int(stripped)
+    else:
+        raise ValueError("labels must be binary values in {0, 1}.")
+    if label not in {0, 1}:
+        raise ValueError("labels must be binary values in {0, 1}.")
+    return label
 
 
 @dataclass(frozen=True)
@@ -62,7 +98,7 @@ class ScoreFusionSignal:
         return cls(
             name=str(data["name"]),
             direction=str(data.get("direction", "higher")),
-            calibration_scores=tuple(float(value) for value in data["calibration_scores"]),
+            calibration_scores=tuple(data["calibration_scores"]),
         )
 
 
@@ -91,11 +127,20 @@ class RankScoreFusionArtifact:
         names = [signal.name for signal in self.signals]
         if len(set(names)) != len(names):
             raise ValueError("signals must have unique names.")
-        if self.threshold is not None and not math.isfinite(float(self.threshold)):
-            if not math.isinf(float(self.threshold)):
+        if self.threshold is not None:
+            if isinstance(self.threshold, bool):
+                raise ValueError("threshold must be finite or infinite, not bool.")
+            threshold = float(self.threshold)
+            if not math.isfinite(threshold) and not math.isinf(threshold):
                 raise ValueError("threshold must be finite or infinite.")
-        if self.conformal_alpha is not None and not (0.0 < self.conformal_alpha < 1.0):
-            raise ValueError("conformal_alpha must be in (0, 1).")
+            object.__setattr__(self, "threshold", threshold)
+        if self.conformal_alpha is not None:
+            if isinstance(self.conformal_alpha, bool):
+                raise ValueError("conformal_alpha must be in (0, 1).")
+            conformal_alpha = float(self.conformal_alpha)
+            if not (0.0 < conformal_alpha < 1.0):
+                raise ValueError("conformal_alpha must be in (0, 1).")
+            object.__setattr__(self, "conformal_alpha", conformal_alpha)
 
     def signal_names(self) -> tuple[str, ...]:
         """Return signal names in artifact order."""
@@ -166,8 +211,8 @@ class RankScoreFusionArtifact:
         return cls(
             signals=tuple(ScoreFusionSignal.from_dict(signal) for signal in data["signals"]),
             method=str(data.get("method", "max_rank")),
-            threshold=None if data.get("threshold") is None else float(data["threshold"]),
-            conformal_alpha=None if data.get("conformal_alpha") is None else float(data["conformal_alpha"]),
+            threshold=data.get("threshold"),
+            conformal_alpha=data.get("conformal_alpha"),
             model_id=None if data.get("model_id") is None else str(data["model_id"]),
             target_layer=None if data.get("target_layer") is None else int(data["target_layer"]),
             model_revision=None if data.get("model_revision") is None else str(data["model_revision"]),
@@ -180,7 +225,7 @@ class RankScoreFusionArtifact:
 
     def save_json(self, path: str | Path) -> None:
         """Save artifact metadata as UTF-8 JSON."""
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        Path(path).write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "RankScoreFusionArtifact":
@@ -216,11 +261,7 @@ class RankScoreFusionCalibrator:
         """Fit a deployment artifact using label 0 records as calibration normals."""
         if not scores:
             raise ValueError("scores must contain at least one signal.")
-        labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
-        if labels_t.numel() == 0:
-            raise ValueError("labels must be non-empty.")
-        if not torch.logical_or(labels_t == 0, labels_t == 1).all():
-            raise ValueError("labels must be binary values in {0, 1}.")
+        labels_t = _binary_label_tensor(labels)
         normal_mask = labels_t == 0
         if int(normal_mask.sum().item()) == 0:
             raise ValueError("at least one label 0 calibration record is required.")

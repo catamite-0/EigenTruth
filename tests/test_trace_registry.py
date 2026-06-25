@@ -1,6 +1,7 @@
 """Product trace and artifact registry tests."""
 
 import json
+import math
 import os
 from pathlib import Path
 
@@ -20,6 +21,7 @@ from eigentruth.control import (
     ProductRuntimeBudgetPolicy,
     ProductTrace,
     RiskController,
+    RiskDecision,
     RiskLevel,
     RuntimePhaseTiming,
     RuntimeTrace,
@@ -103,6 +105,55 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert payload["action_results"][0]["status"] == "dry_run"
     assert payload["action_results"][0]["output"]["would_execute"] == "retriever"
     json.dumps(payload)
+
+
+def test_product_trace_feedback_and_registry_normalize_strict_json_values(tmp_path):
+    trace = ProductTrace(
+        request_id="req-json",
+        diagnostics={"bad": math.inf, "path": tmp_path / "diag.json", "tags": {"b", "a"}},
+        risk_decision=RiskDecision(
+            action=ControlAction.CLARIFY,
+            risk_level=RiskLevel.UNKNOWN,
+            confidence=1.0,
+            reason="invalid input",
+            diagnostics={"raw": math.nan, "blob": b"abc"},
+        ),
+        metadata={"path": tmp_path / "trace.json", "items": {"z", "a"}},
+    )
+    payload = trace.to_dict()
+
+    json.dumps(payload, allow_nan=False)
+    assert payload["diagnostics"]["bad"] == "inf"
+    assert payload["diagnostics"]["path"] == str(tmp_path / "diag.json")
+    assert tuple(payload["diagnostics"]["tags"]) == ("a", "b")
+    assert payload["risk_decision"]["diagnostics"]["raw"] == "nan"
+    assert payload["risk_decision"]["diagnostics"]["blob"]["encoding"] == "base64"
+
+    fingerprint = product_trace_fingerprint(trace)
+    assert fingerprint == product_trace_fingerprint(trace)
+
+    feedback_path = tmp_path / "feedback.jsonl"
+    write_feedback_jsonl(
+        feedback_path,
+        (ProductFeedbackRecord(request_id="req-json", outcome=FeedbackOutcome.UNKNOWN, metadata={"raw": math.inf}),),
+    )
+    assert json.loads(feedback_path.read_text(encoding="utf-8"))["metadata"]["raw"] == "inf"
+
+    registry_path = tmp_path / "registry.json"
+    ArtifactRegistry(
+        registry_path,
+        records=(
+            RegistryRecord(
+                name="trace",
+                artifact_type="trace",
+                path=str(tmp_path / "trace.json"),
+                version="1",
+                metadata={"path": tmp_path / "trace.json", "raw": math.nan},
+            ),
+        ),
+    ).save_json()
+    registry_payload = json.loads(registry_path.read_text(encoding="utf-8"))
+    assert registry_payload["records"][0]["metadata"]["raw"] == "nan"
 
 
 def test_product_feedback_record_jsonl_roundtrip_and_trace_fingerprint(tmp_path):

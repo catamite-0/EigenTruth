@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
+from eigentruth.json_utils import strict_json_dumps
+
 
 @dataclass(frozen=True)
 class CalibrationScore:
@@ -34,8 +36,13 @@ class CalibrationScore:
         if math.isnan(threshold):
             raise ValueError("threshold must be numeric and must not be NaN.")
         object.__setattr__(self, "threshold", threshold)
-        if self.conformal_alpha is not None and not (0.0 < self.conformal_alpha < 1.0):
-            raise ValueError("conformal_alpha must be in (0, 1).")
+        if self.conformal_alpha is not None:
+            if isinstance(self.conformal_alpha, bool):
+                raise ValueError("conformal_alpha must be in (0, 1).")
+            conformal_alpha = float(self.conformal_alpha)
+            if not (0.0 < conformal_alpha < 1.0):
+                raise ValueError("conformal_alpha must be in (0, 1).")
+            object.__setattr__(self, "conformal_alpha", conformal_alpha)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -51,8 +58,8 @@ class CalibrationScore:
         """Build a score config from JSON-like data."""
         return cls(
             name=str(data["name"]),
-            threshold=float(data["threshold"]),
-            conformal_alpha=(None if data.get("conformal_alpha") is None else float(data["conformal_alpha"])),
+            threshold=data["threshold"],
+            conformal_alpha=data.get("conformal_alpha"),
             direction=str(data.get("direction", "higher")),
         )
 
@@ -157,7 +164,7 @@ class CalibrationArtifact:
 
     def save_json(self, path: str | Path) -> None:
         """Save artifact metadata as UTF-8 JSON."""
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        Path(path).write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "CalibrationArtifact":

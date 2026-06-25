@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Iterator, Mapping, Sequence
 
 from eigentruth.control.trace import ProductTrace
+from eigentruth.json_utils import strict_json_dumps, to_jsonable
 
 
 class FeedbackOutcome(str, Enum):
@@ -123,8 +124,8 @@ class ProductFeedbackStore:
 def product_trace_fingerprint(trace: ProductTrace | Mapping[str, Any]) -> str:
     """Return a stable SHA-256 fingerprint for a ProductTrace payload."""
     payload = trace.to_dict() if isinstance(trace, ProductTrace) else dict(trace)
-    encoded = json.dumps(
-        _jsonable(payload),
+    encoded = strict_json_dumps(
+        payload,
         ensure_ascii=False,
         sort_keys=True,
         separators=(",", ":"),
@@ -178,7 +179,7 @@ def write_feedback_jsonl(
 
 
 def _feedback_json_line(record: ProductFeedbackRecord) -> str:
-    return json.dumps(record.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    return strict_json_dumps(record.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
 
 
 def _feedback_record(record: ProductFeedbackRecord | Mapping[str, Any]) -> ProductFeedbackRecord:
@@ -212,12 +213,4 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return tuple(_jsonable(item) for item in value)
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
-    return value
+    return to_jsonable(value)

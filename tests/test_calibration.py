@@ -1,6 +1,7 @@
 """Calibration artifact and conformal calibrator tests."""
 
 import json
+import math
 
 import pytest
 
@@ -41,6 +42,28 @@ def test_artifact_json_roundtrip(tmp_path):
     raw = json.loads(path.read_text())
     assert raw["schema_version"] == 1
     assert raw["scores"][1]["direction"] == "lower"
+
+
+def test_calibration_artifacts_write_strict_json_for_infinite_threshold(tmp_path):
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=math.inf, conformal_alpha=0.05),),
+        eigentruth_version="0.1.0",
+    )
+
+    path = tmp_path / "calibration.json"
+    artifact.save_json(path)
+    raw = path.read_text(encoding="utf-8")
+
+    assert "Infinity" not in raw
+    assert json.loads(raw)["scores"][0]["threshold"] == "inf"
+    assert CalibrationArtifact.load_json(path).get_score("maha").threshold == math.inf
+
+
+def test_calibration_score_from_dict_rejects_bool_threshold():
+    with pytest.raises(ValueError, match="threshold"):
+        CalibrationScore.from_dict({"name": "maha", "threshold": True})
 
 
 def test_conformal_calibrator_builds_higher_is_anomalous_artifact():
@@ -158,3 +181,12 @@ def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):
     assert evaluation["false_alarm"] == pytest.approx(0.25)
     assert evaluation["detection"] == pytest.approx(1.0)
     assert evaluation["auroc"] > 0.5
+
+
+def test_rank_score_fusion_rejects_fractional_and_bool_labels():
+    calibrator = RankScoreFusionCalibrator(alpha=0.4, method="max_rank")
+
+    with pytest.raises(ValueError, match="labels"):
+        calibrator.calibrate(labels=[0.0, 0.9, 1.0], scores={"maha": [0.0, 0.1, 1.0]})
+    with pytest.raises(ValueError, match="bool"):
+        calibrator.calibrate(labels=[False, 0, 1], scores={"maha": [0.0, 0.1, 1.0]})

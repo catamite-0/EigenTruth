@@ -17,6 +17,7 @@ from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationSco
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
 from eigentruth.eval.metrics import roc_auc
 from eigentruth.eval.score_dump import ScoreDump, load_score_dump_layer_scores
+from eigentruth.json_utils import strict_json_dumps
 
 ArrayLike = torch.Tensor | Sequence[float]
 
@@ -53,8 +54,15 @@ class SweepScoreResult:
     def __post_init__(self) -> None:
         if self.direction not in {"higher", "lower"}:
             raise ValueError("direction must be 'higher' or 'lower'.")
-        if not (0.0 < self.conformal_alpha < 1.0):
+        if isinstance(self.threshold, bool):
+            raise ValueError("threshold must be numeric and must not be bool.")
+        object.__setattr__(self, "threshold", float(self.threshold))
+        if isinstance(self.conformal_alpha, bool):
             raise ValueError("conformal_alpha must be in (0, 1).")
+        conformal_alpha = float(self.conformal_alpha)
+        if not (0.0 < conformal_alpha < 1.0):
+            raise ValueError("conformal_alpha must be in (0, 1).")
+        object.__setattr__(self, "conformal_alpha", conformal_alpha)
 
     def score_config(self) -> CalibrationScore:
         """Return this sweep result as a calibration score config."""
@@ -87,8 +95,8 @@ class SweepScoreResult:
             layer=int(data["layer"]),
             score_name=str(data["score_name"]),
             direction=str(data.get("direction", "higher")),
-            threshold=float(data["threshold"]),
-            conformal_alpha=float(data["conformal_alpha"]),
+            threshold=data["threshold"],
+            conformal_alpha=data["conformal_alpha"],
             auroc=float(data["auroc"]),
             false_alarm=float(data["false_alarm"]),
             detection=float(data["detection"]),
@@ -224,7 +232,7 @@ class LayerScoreSweepReport:
 
     def save_json(self, path: str | Path) -> None:
         """Save the sweep report as UTF-8 JSON."""
-        Path(path).write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        Path(path).write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "LayerScoreSweepReport":
@@ -332,9 +340,10 @@ class LayerScoreSweepCalibrator:
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from an ``eval_truthfulqa`` score dump."""
-        labels = torch.as_tensor(dump["labels"], dtype=torch.int64)
-        config = dict(dump.get("config", {}))
-        layer_scores = _collect_layer_scores(dump)
+        score_dump = ScoreDump.from_mapping(dump)
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.int64)
+        config = dict(score_dump.config)
+        layer_scores = _collect_layer_scores_from_score_dump(score_dump)
         return self._calibrate_layer_scores(
             labels=labels,
             config=config,

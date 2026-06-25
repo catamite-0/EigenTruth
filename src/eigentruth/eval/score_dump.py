@@ -286,12 +286,7 @@ class ScoreDumpRecord:
         """Build and validate one JSONL score-dump record."""
         if not isinstance(payload, Mapping):
             raise ValueError("score dump JSONL record must be a JSON object.")
-        try:
-            label = int(payload.get("label"))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("score dump JSONL record label must be an integer.") from exc
-        if label not in {0, 1}:
-            raise ValueError("score dump JSONL record label must be binary values in {0, 1}.")
+        label = _coerce_binary_label(payload.get("label"), name="score dump JSONL record label")
         scores = _coerce_record_scores(
             payload.get("scores"),
             score_names=score_names,
@@ -1079,10 +1074,6 @@ def _metadata_jsonl_manifest(
     if cached_manifest is not None:
         return cached_manifest
     try:
-        with path.open("r", encoding="utf-8") as stream:
-            head = stream.read(64 * 1024)
-        if JSONL_FORMAT not in head:
-            return None
         payload = json.loads(path.read_text(encoding="utf-8"))
         if not _is_jsonl_manifest_payload(payload):
             return None
@@ -1885,13 +1876,7 @@ def _coerce_manifest_sweep_score_names(value: Any) -> dict[str, tuple[str, ...]]
 
 
 def _coerce_record_label(value: Any) -> int:
-    try:
-        label = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("score dump JSONL record label must be an integer.") from exc
-    if label not in {0, 1}:
-        raise ValueError("score dump JSONL record label must be binary values in {0, 1}.")
-    return label
+    return _coerce_binary_label(value, name="score dump JSONL record label")
 
 
 def _coerce_optional_non_negative_int(value: Any, *, name: str) -> int | None:
@@ -2162,13 +2147,31 @@ def _manifest_records_path(manifest_file: Path, records_file: Path) -> str:
 def _coerce_labels(value: Any, *, allow_empty: bool) -> tuple[int, ...]:
     if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
         raise ValueError("score dump labels must be a list.")
-    labels = tuple(int(label) for label in value)
+    labels = tuple(_coerce_binary_label(label, name="score dump label") for label in value)
     if not labels and not allow_empty:
         raise ValueError("score dump labels must be non-empty.")
-    invalid = [label for label in labels if label not in {0, 1}]
-    if invalid:
-        raise ValueError("score dump labels must be binary values in {0, 1}.")
     return labels
+
+
+def _coerce_binary_label(value: Any, *, name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be an integer 0 or 1, not bool.")
+    if isinstance(value, int):
+        label = value
+    elif isinstance(value, float):
+        if not math.isfinite(value) or not value.is_integer():
+            raise ValueError(f"{name} must be an integer 0 or 1.")
+        label = int(value)
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if stripped not in {"0", "1"}:
+            raise ValueError(f"{name} must be the string '0' or '1'.")
+        label = int(stripped)
+    else:
+        raise ValueError(f"{name} must be an integer 0 or 1.")
+    if label not in {0, 1}:
+        raise ValueError(f"{name} must be binary values in {{0, 1}}.")
+    return label
 
 
 def _coerce_score_mapping(

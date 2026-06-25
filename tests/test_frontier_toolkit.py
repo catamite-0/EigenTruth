@@ -1497,6 +1497,38 @@ def test_routed_verifier_can_cap_route_fanout():
     assert result.metadata["skipped_routes"] == ()
 
 
+def test_routed_verifier_fails_closed_when_not_applicable_route_exhausts_budget():
+    fallback = InMemoryVerifier({normalize_claim_text("Fallback fact"): VerificationStatus.SUPPORTED})
+    verifier = RoutedVerifier(
+        (
+            VerifierRoute("calculator", CalculatorVerifier(), fallback=True),
+            VerifierRoute("fallback", fallback, fallback=True),
+        ),
+        max_attempted_routes=1,
+    )
+
+    result = verifier.verify(Claim("Fallback fact."))
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["budget_exhaustion_original_status"] == "not_applicable"
+    assert result.metadata["route_budget_exhausted"] is True
+    assert result.metadata["unattempted_routes"] == ("fallback",)
+
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha_last", threshold=1.0),),
+        eigentruth_version="0.1.0",
+    )
+    decision = RiskController(artifact).decide(
+        {"maha_last": 0.0},
+        verification_results=(result,),
+    )
+
+    assert decision.action is ControlAction.RETRIEVE
+    assert decision.risk_level is RiskLevel.MEDIUM
+
+
 def test_routed_verifier_rejects_invalid_route_fanout_budget():
     route = VerifierRoute("calculator", CalculatorVerifier(), metadata_keys=("calculation",))
 

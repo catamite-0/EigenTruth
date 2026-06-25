@@ -84,8 +84,8 @@ class AdaptiveScoreTransform:
         if not isinstance(raw_weights, Mapping):
             raise ValueError("feature_weights must be a mapping.")
         return cls(
-            feature_weights={str(name): float(weight) for name, weight in raw_weights.items()},
-            intercept=float(data.get("intercept", 0.0)),
+            feature_weights={str(name): weight for name, weight in raw_weights.items()},
+            intercept=data.get("intercept", 0.0),
             direction=str(data.get("direction", "higher")),
         )
 
@@ -198,7 +198,7 @@ def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str
     if math.isnan(float(threshold)):
         raise ValueError("threshold must not be NaN.")
     scores_t = _finite_flat_tensor(scores, name="scores")
-    if scores_t.numel() == 0 or math.isinf(threshold):
+    if scores_t.numel() == 0:
         return 0.0
     if direction == "higher":
         return float((scores_t > threshold).double().mean().item())

@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field, is_dataclass
-from enum import Enum
+from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
 from eigentruth.control.actions import (
@@ -19,6 +18,7 @@ from eigentruth.control.controller import RiskController
 from eigentruth.control.policy import RiskDecision
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
+from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.coherence import (
     ClaimCoherenceReport,
     ClaimDependency,
@@ -775,14 +775,4 @@ def _append_evidence(
 
 
 def _jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return tuple(_jsonable(item) for item in value)
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
-    if is_dataclass(value) and hasattr(value, "to_dict"):
-        return value.to_dict()
-    return value
+    return to_jsonable(value)

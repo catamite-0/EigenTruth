@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
 from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
 
@@ -55,6 +57,14 @@ def test_layer_score_sweep_report_selects_best_artifact(tmp_path):
 
     assert loaded.best_score() == best
     assert json.loads(path.read_text())["best"]["score_name"] == "maha_last"
+
+
+def test_layer_score_sweep_rejects_fractional_labels():
+    dump = _score_dump()
+    dump["labels"] = [0.0, 0.9, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0]
+
+    with pytest.raises(ValueError, match="label"):
+        LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_dump(dump)
 
 
 def test_layer_score_sweep_parallel_matches_serial():

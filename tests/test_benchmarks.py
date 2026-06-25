@@ -103,6 +103,55 @@ def test_eval_conformal_rejects_invalid_split_config(tmp_path):
         module.run(args)
 
 
+def test_eval_conformal_accepts_conservative_small_sample_thresholds(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 0, 1],
+            "scores": {"maha_last": [0.1, 0.2, 10.0]},
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        sweep_workers=1,
+        artifact_alpha=0.10,
+        direction=None,
+        adaptive_feature=(),
+        adaptive_feature_weight=(),
+        adaptive_intercept=0.0,
+        adaptive_score_name="adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+
+    assert payload["verdict"] == "ACCEPT"
+    assert payload["results"]["0.05"]["false_alarm"] == 0.0
+    assert payload["results"]["0.05"]["conservative"] is True
+
+
 def test_eval_conformal_run_reports_high_confidence_errors(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"

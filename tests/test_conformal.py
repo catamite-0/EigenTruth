@@ -147,6 +147,14 @@ class TestConformalThreshold:
         with pytest.raises(ValueError, match="direction"):
             directional_trigger_rate(torch.tensor([1.0]), 0.0, "sideways")
 
+    def test_directional_trigger_rate_preserves_infinite_threshold_comparison_semantics(self):
+        scores = torch.tensor([1.0, 2.0, 3.0])
+
+        assert directional_trigger_rate(scores, float("inf"), "higher") == 0.0
+        assert directional_trigger_rate(scores, float("-inf"), "higher") == 1.0
+        assert directional_trigger_rate(scores, float("-inf"), "lower") == 0.0
+        assert directional_trigger_rate(scores, float("inf"), "lower") == 1.0
+
     def test_conformal_helpers_reject_non_finite_scores(self):
         with pytest.raises(ValueError, match="finite"):
             conformal_threshold(torch.tensor([1.0, float("nan")]), 0.1)
@@ -198,6 +206,10 @@ class TestAdaptiveConformalScores:
             AdaptiveScoreTransform(direction="sideways")
         with pytest.raises(ValueError, match="finite"):
             AdaptiveScoreTransform(feature_weights={"risk": float("nan")})
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform.from_dict({"feature_weights": {"risk": True}})
+        with pytest.raises(ValueError, match="finite"):
+            AdaptiveScoreTransform.from_dict({"intercept": False})
         with pytest.raises(ValueError, match="missing required feature"):
             adaptive_anomaly_scores([1.0], feature_weights={"risk": 1.0})
         with pytest.raises(ValueError, match="same length"):

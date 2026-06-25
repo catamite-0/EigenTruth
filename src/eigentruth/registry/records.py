@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
+from eigentruth.json_utils import strict_json_dumps, to_jsonable
+
 
 @dataclass(frozen=True)
 class RegistryRecord:
@@ -29,7 +31,7 @@ class RegistryRecord:
             "artifact_type": self.artifact_type,
             "path": self.path,
             "version": self.version,
-            "metadata": dict(self.metadata),
+            "metadata": to_jsonable(self.metadata),
         }
 
     @classmethod
@@ -350,7 +352,7 @@ class ArtifactRegistry:
         """Save registry records to UTF-8 JSON."""
         output_path = Path(path or self.path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output_path.write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     @classmethod
     def load_json(cls, path: str | Path) -> "ArtifactRegistry":

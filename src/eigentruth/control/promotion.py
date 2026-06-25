@@ -9,6 +9,7 @@ from typing import Any, Iterable, Mapping
 
 from eigentruth.control.controller import ControlPolicyConfig
 from eigentruth.control.runtime_budget import ProductRuntimeBudgetPolicy
+from eigentruth.json_utils import strict_json_dumps
 from eigentruth.registry import (
     ArtifactManifestVerification,
     ArtifactRegistry,
@@ -459,7 +460,7 @@ class ProductPromotionContract:
         """Write the contract payload to JSON."""
         output = Path(path)
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        output.write_text(strict_json_dumps(self.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
 @dataclass(frozen=True)

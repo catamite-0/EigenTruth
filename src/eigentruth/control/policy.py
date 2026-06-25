@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping
 
+from eigentruth.json_utils import to_jsonable
+
 
 class RiskLevel(str, Enum):
     """Coarse factuality risk level."""
@@ -49,17 +51,5 @@ class RiskDecision:
             "risk_level": self.risk_level.value,
             "confidence": self.confidence,
             "reason": self.reason,
-            "diagnostics": _jsonable(self.diagnostics),
+            "diagnostics": to_jsonable(self.diagnostics),
         }
-
-
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return tuple(_jsonable(item) for item in value)
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
-    return value

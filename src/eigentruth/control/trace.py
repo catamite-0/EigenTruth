@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field, is_dataclass
-from enum import Enum
+from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.policy import ControlAction, RiskDecision
+from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.protocols import Claim, VerificationResult
 
 
@@ -1193,17 +1193,7 @@ def _combine_cache_stats(stats: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
 
 
 def _to_jsonable(value: Any) -> Any:
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, Mapping):
-        return {str(key): _to_jsonable(item) for key, item in value.items()}
-    if isinstance(value, tuple):
-        return tuple(_to_jsonable(item) for item in value)
-    if isinstance(value, list):
-        return [_to_jsonable(item) for item in value]
-    if is_dataclass(value) and hasattr(value, "to_dict"):
-        return value.to_dict()
-    return value
+    return to_jsonable(value)
 
 
 def _finite_float(value: Any) -> float | None:

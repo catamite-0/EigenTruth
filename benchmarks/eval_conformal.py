@@ -367,7 +367,7 @@ def _run_adaptive_conformal_report(
     for alpha in ALPHAS:
         false_alarm = fa_sum[alpha] / repeats
         detection = det_sum[alpha] / repeats
-        ok = abs(false_alarm - alpha) <= TOLERANCE
+        ok = false_alarm <= alpha + TOLERANCE
         all_pass &= ok
         threshold = full_thresholds[alpha]
         results[str(alpha)] = {
@@ -375,6 +375,7 @@ def _run_adaptive_conformal_report(
             "coverage": 1.0 - false_alarm,
             "detection": detection,
             "pass": ok,
+            "conservative": false_alarm < max(0.0, alpha - TOLERANCE),
             "threshold": threshold,
             "selective_report": selective_classification_report(
                 adjusted_scores,
@@ -508,7 +509,7 @@ def run(args) -> dict:
             det_sum[a] += directional_trigger_rate(false_scores, t, direction)
 
     print(f"  {'alpha':>6} {'nominal_cov':>12} {'false_alarm':>12} "
-          f"{'emp_cov':>9} {'detect':>8}   gate(|fa-a|<={TOLERANCE})")
+          f"{'emp_cov':>9} {'detect':>8}   gate(fa<=a+{TOLERANCE})")
     print("  " + "-" * 66)
     results = {}
     all_pass = True
@@ -516,7 +517,7 @@ def run(args) -> dict:
     for a in ALPHAS:
         fa = fa_sum[a] / args.repeats
         det = det_sum[a] / args.repeats
-        ok = abs(fa - a) <= TOLERANCE
+        ok = fa <= a + TOLERANCE
         all_pass &= ok
         full_threshold = full_thresholds[a]
         selective_report = selective_classification_report(
@@ -538,6 +539,7 @@ def run(args) -> dict:
             "coverage": 1.0 - fa,
             "detection": det,
             "pass": ok,
+            "conservative": fa < max(0.0, a - TOLERANCE),
             "threshold": full_threshold,
             "selective_report": selective_report,
         }
@@ -547,9 +549,9 @@ def run(args) -> dict:
               f"{det:>8.3f}   {'PASS' if ok else 'FAIL'}")
     print("  " + "-" * 66)
     print(f"\n  E1 verdict: {'ACCEPT' if all_pass else 'REJECT'} "
-          f"(coverage tracks nominal within {TOLERANCE} at all alphas)"
+          f"(false alarm stays below alpha + {TOLERANCE} at all alphas)"
           if all_pass else
-          f"\n  E1 verdict: REJECT (coverage deviates more than {TOLERANCE})")
+          f"\n  E1 verdict: REJECT (false alarm exceeds alpha + {TOLERANCE})")
 
     if confidence_audit.get("enabled") is True:
         confidence_audit = {

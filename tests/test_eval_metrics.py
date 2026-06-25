@@ -22,6 +22,7 @@ from eigentruth.eval.score_dump import (
     ScoreDump,
     ScoreDumpIdentity,
     ScoreDumpJsonlManifest,
+    ScoreDumpRecord,
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
@@ -569,6 +570,33 @@ class TestScoreDump:
         assert columns.scores == {"maha_last": (0.1, 0.9)}
         assert columns.extras == {"inside_sample_counts": (0, 2)}
         assert columns.source_format == "eigentruth.score_dump.jsonl"
+
+    def test_score_dump_rejects_non_integer_and_bool_labels(self):
+        with pytest.raises(ValueError, match="label"):
+            ScoreDump.from_mapping({
+                "labels": [0.9, 1.0],
+                "scores": {"maha_last": [0.1, 0.2]},
+            })
+
+        with pytest.raises(ValueError, match="bool"):
+            ScoreDumpRecord.from_mapping({
+                "label": True,
+                "scores": {"maha_last": 0.1},
+            })
+
+    def test_score_dump_metadata_recognizes_jsonl_manifest_after_large_extras(self, tmp_path):
+        dump = ScoreDump.from_mapping({
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+            "large_extra": "x" * (70 * 1024),
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+
+        write_score_dump_jsonl(dump, manifest_path)
+        metadata = score_dump_file_metadata(manifest_path)
+
+        assert metadata["source_format"] == "eigentruth.score_dump.jsonl"
+        assert metadata["summary"]["score_names"] == ("maha_last",)
 
     def test_load_score_dump_columns_ignores_unselected_jsonl_scores(self, tmp_path):
         manifest_path = tmp_path / "scores.manifest.json"
