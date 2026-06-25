@@ -124,12 +124,17 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
 
     assert payload["verification_plan"]["run_verifier"] is True
     assert payload["verification_plan"]["verification_scope"] == "all"
-    assert payload["verification_plan"]["route_hints"][0]["routes"] == ("retrieval", "groundedness")
+    assert payload["verification_plan"]["route_hints"][0]["routes"] == (
+        "retrieval",
+        "triple_evidence",
+        "groundedness",
+    )
     assert payload["verification_plan"]["calculation_checks"][0]["expression"] == "2 + 2"
-    assert payload["verification_plan"]["cost_estimate"]["estimated_cost_units"] == pytest.approx(4.25)
+    assert payload["verification_plan"]["cost_estimate"]["estimated_cost_units"] == pytest.approx(4.95)
     assert bounded["summaries"]["verification_plan"]["available"] is True
     assert bounded["summaries"]["verification_plan"]["claim_count"] == 2
     assert bounded["summaries"]["verification_plan"]["route_counts"]["retrieval"] == 2
+    assert bounded["summaries"]["verification_plan"]["route_counts"]["triple_evidence"] == 2
     assert bounded["summaries"]["verification_plan"]["tool_payload_counts"]["calculation_checks"] == 1
     assert bounded["summaries"]["verification_plan"]["cost_estimate"]["claim_count"] == 2
     assert bounded["summaries"]["verification_plan"]["cost_estimate"]["_truncated"] is True
@@ -142,12 +147,14 @@ def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
     assert metrics["verification_plan_claim_count"] == 2.0
     assert metrics["verification_plan_route_hint_count"] == 2.0
     assert metrics["verification_plan_route_counts"]["retrieval"] == 2
+    assert metrics["verification_plan_route_counts"]["triple_evidence"] == 2
     assert metrics["verification_plan_calculation_check_count"] == 1.0
     assert bounded_metrics["verification_plan_available"] is True
     assert bounded_metrics["verification_plan_source"] == "bounded_summary"
     assert bounded_metrics["verification_plan_claim_count"] == 2.0
     assert bounded_metrics["verification_plan_route_hint_count"] is None
     assert bounded_metrics["verification_plan_route_counts"]["retrieval"] == 2
+    assert bounded_metrics["verification_plan_route_counts"]["triple_evidence"] == 2
     json.dumps(payload)
     json.dumps(bounded)
 

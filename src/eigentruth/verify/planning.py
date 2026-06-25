@@ -20,6 +20,7 @@ from eigentruth.verify.protocols import Claim
 
 DEFAULT_VERIFICATION_ROUTE_COST_UNITS: Mapping[str, float] = {
     "groundedness": 0.25,
+    "triple_evidence": 0.35,
     "calculator": 0.5,
     "state": 0.75,
     "retrieval": 1.0,
@@ -45,6 +46,9 @@ DEFAULT_VERIFY_CLAIM_METADATA_KEYS = (
     "world_model_check",
     "world_model_checks",
     "state_transition",
+    "requires_triple_audit",
+    "triples",
+    "claim_triples",
     "retrieval_query",
     "retrieval_queries",
     "route_hints",
@@ -69,6 +73,16 @@ DEFAULT_WORLD_MODEL_METADATA_KEYS = (
     "state_transition",
 )
 DEFAULT_EXPLICIT_ROUTE_METADATA_KEYS = ("route_hints", "routes")
+DEFAULT_TRIPLE_EVIDENCE_FEATURE_FLAGS = (
+    "has_number",
+    "has_citation",
+    "is_time_sensitive",
+)
+DEFAULT_TRIPLE_EVIDENCE_METADATA_KEYS = (
+    "requires_triple_audit",
+    "triples",
+    "claim_triples",
+)
 
 
 @dataclass(frozen=True)
@@ -297,6 +311,8 @@ class ClaimVerificationPlanner:
     state_metadata_keys: Sequence[str] = DEFAULT_STATE_METADATA_KEYS
     world_model_metadata_keys: Sequence[str] = DEFAULT_WORLD_MODEL_METADATA_KEYS
     explicit_route_metadata_keys: Sequence[str] = DEFAULT_EXPLICIT_ROUTE_METADATA_KEYS
+    triple_evidence_feature_flags: Sequence[str] = DEFAULT_TRIPLE_EVIDENCE_FEATURE_FLAGS
+    triple_evidence_metadata_keys: Sequence[str] = DEFAULT_TRIPLE_EVIDENCE_METADATA_KEYS
     infer_dependencies: bool = True
 
     def __post_init__(self) -> None:
@@ -327,6 +343,16 @@ class ClaimVerificationPlanner:
             self,
             "explicit_route_metadata_keys",
             tuple(_non_empty_strings(self.explicit_route_metadata_keys)),
+        )
+        object.__setattr__(
+            self,
+            "triple_evidence_feature_flags",
+            tuple(_non_empty_strings(self.triple_evidence_feature_flags)),
+        )
+        object.__setattr__(
+            self,
+            "triple_evidence_metadata_keys",
+            tuple(_non_empty_strings(self.triple_evidence_metadata_keys)),
         )
         object.__setattr__(self, "infer_dependencies", _strict_bool(self.infer_dependencies))
 
@@ -442,6 +468,10 @@ class ClaimVerificationPlanner:
         for route in _explicit_routes(metadata, self.explicit_route_metadata_keys):
             _append_unique(routes, route)
             reasons.append(f"metadata:route:{route}")
+        for key in self.triple_evidence_metadata_keys:
+            if metadata_path_enabled(metadata, key):
+                _append_unique(routes, "triple_evidence")
+                reasons.append(f"metadata:{key}")
         for key in self.calculator_metadata_keys:
             if metadata_path_enabled(metadata, key):
                 _append_unique(routes, "calculator")
@@ -460,6 +490,9 @@ class ClaimVerificationPlanner:
                 reasons.append(f"metadata:{key}")
         for feature in enabled_feature_names(features, self.retrieval_feature_flags):
             _append_unique(routes, "retrieval")
+            reasons.append(f"feature:{feature}")
+        for feature in enabled_feature_names(features, self.triple_evidence_feature_flags):
+            _append_unique(routes, "triple_evidence")
             reasons.append(f"feature:{feature}")
         if _feature_enabled(features, "has_calculation"):
             _append_unique(routes, "calculator")

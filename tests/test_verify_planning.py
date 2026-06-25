@@ -27,8 +27,8 @@ def test_claim_verification_planner_extracts_and_routes_text_claims():
     assert plan.triggered_features["c1"] == ("has_number", "has_citation", "is_time_sensitive")
     assert plan.triggered_features["c2"] == ("has_number", "has_calculation")
     route_by_claim = {hint.claim_id: hint.routes for hint in plan.route_hints}
-    assert route_by_claim["c1"] == ("retrieval", "groundedness")
-    assert route_by_claim["c2"] == ("calculator", "retrieval", "groundedness")
+    assert route_by_claim["c1"] == ("retrieval", "triple_evidence", "groundedness")
+    assert route_by_claim["c2"] == ("calculator", "retrieval", "triple_evidence", "groundedness")
     assert plan.retrieval_queries[0]["claim_id"] == "c1"
     assert plan.retrieval_queries[0]["query"].startswith("As of 2026")
     assert plan.calculation_checks[0]["claim_id"] == "c2"
@@ -37,19 +37,19 @@ def test_claim_verification_planner_extracts_and_routes_text_claims():
     assert plan.selected_claims() == tuple(plan.claims)
     cost = plan.cost_estimate()
     assert isinstance(cost, VerificationPlanCostEstimate)
-    assert cost.route_counts == {"retrieval": 2, "groundedness": 2, "calculator": 1}
+    assert cost.route_counts == {"retrieval": 2, "triple_evidence": 2, "groundedness": 2, "calculator": 1}
     assert cost.tool_payload_counts == {
         "retrieval_queries": 2,
         "calculation_checks": 1,
         "state_checks": 0,
         "world_model_checks": 0,
     }
-    assert cost.estimated_route_attempts == 5
+    assert cost.estimated_route_attempts == 7
     assert cost.estimated_tool_payloads == 3
-    assert cost.estimated_cost_units == pytest.approx(4.25)
+    assert cost.estimated_cost_units == pytest.approx(4.95)
     payload = plan.to_dict()
-    assert payload["cost_estimate"]["estimated_cost_units"] == pytest.approx(4.25)
-    assert estimate_verification_plan_cost(payload).estimated_cost_units == pytest.approx(4.25)
+    assert payload["cost_estimate"]["estimated_cost_units"] == pytest.approx(4.95)
+    assert estimate_verification_plan_cost(payload).estimated_cost_units == pytest.approx(4.95)
     json.dumps(payload)
 
 
@@ -126,6 +126,38 @@ def test_claim_verification_planner_emits_tool_payloads_from_metadata():
     assert plan.state_checks[0]["claim_id"] == "inventory"
     assert plan.world_model_checks[0]["claim_id"] == "inventory"
     json.dumps(plan.to_dict())
+
+
+def test_claim_verification_planner_routes_metadata_triples_to_triple_evidence():
+    claim = Claim(
+        "Revenue grew to 10 million.",
+        claim_id="rev",
+        metadata={
+            "requires_triple_audit": "true",
+            "claim_triples": {
+                "subject": "Revenue",
+                "predicate": "grew_to",
+                "object": "10 million",
+            },
+        },
+    )
+    planner = ClaimVerificationPlanner(
+        verify_all_by_default=False,
+        verify_triggered_claims_only=True,
+        retrieval_feature_flags=(),
+    )
+
+    plan = planner.plan((claim,))
+
+    assert plan.run_verifier is True
+    assert plan.verify_claim_ids == ("rev",)
+    assert plan.triggered_metadata["rev"] == ("requires_triple_audit", "claim_triples")
+    assert plan.route_hints[0].routes == ("triple_evidence", "groundedness")
+    assert plan.route_hints[0].reasons == (
+        "metadata:requires_triple_audit",
+        "metadata:claim_triples",
+    )
+    assert plan.cost_estimate().route_counts == {"triple_evidence": 1, "groundedness": 1}
 
 
 def test_claim_verification_plan_json_shape_matches_stage_decision_fields():
