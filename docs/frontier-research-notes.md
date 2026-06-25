@@ -108,8 +108,25 @@ alarm. This is a controlled local-corpus baseline; it should be stress-tested
 with external/domain-shifted retrieval before being treated as open-domain
 evidence.
 
+Added a text/length redline baseline for detector claims:
+
+- `build_text_baseline_score_dump.py` appends answer length, claim length,
+  question/answer lexical overlap, negation, and number-count signals to
+  statement-bearing score dumps without rerunning models or adding dependencies.
+- `artifacts/truthfulqa-l80-text-baseline-comparison/` evaluates those cheap
+  controls through the same `eval_score_ensemble.py` conformal pipeline used for
+  internal and verifier signals.
+- At alpha `0.100`, `truth_proj` remains strongest for Qwen (`0.279` detection,
+  `0.091` false alarm) and SmolLM2 (`0.229` detection, `0.095` false alarm).
+  The cheap controls are near-random: `answer_token_count` AUROC `0.519`,
+  `claim_token_count` AUROC `0.527`, and low `question_answer_token_overlap`
+  triggers no detections under the calibrated gate.
+- This does not improve product behavior directly; it prevents overclaiming by
+  requiring future verifier/retrieval/selfcheck features to beat simple text
+  artifacts under the same false-alarm budget.
+
 ## Next Research-to-Code Candidates
 
-1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py`.
+1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against the text/length redline artifact.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

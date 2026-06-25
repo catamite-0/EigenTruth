@@ -2654,6 +2654,40 @@ python benchmarks/build_verifier_signal_score_dump.py \
   --output-format jsonl
 ```
 
+Simple text baselines can also be appended to statement-bearing dumps as
+redline controls. This is a post-hoc check for whether a proposed detector is
+actually beating answer length, claim length, lexical overlap, negation, and
+number-count artifacts under the same conformal/fusion evaluation:
+
+```bash
+python benchmarks/build_text_baseline_score_dump.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output artifacts/text-baselines/qwen-l80-text-baseline-scores.manifest.json \
+  --output-format jsonl \
+  --json artifacts/text-baselines/qwen-l80-text-baseline-report.json
+
+python benchmarks/eval_score_ensemble.py \
+  --scores qwen-l80=artifacts/text-baselines/qwen-l80-text-baseline-scores.manifest.json \
+  --signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer,answer_char_length,answer_token_count,claim_char_length,claim_token_count,question_answer_token_overlap,answer_negation_flag,answer_number_count \
+  --methods max_rank,mean_rank \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --best-alpha 0.10 \
+  --json artifacts/text-baselines/score-ensemble-report.json
+```
+
+The committed l80 comparison at
+`artifacts/truthfulqa-l80-text-baseline-comparison/` uses both Qwen and SmolLM2
+statement-bearing dumps. At alpha `0.100`, `truth_proj` remains the strongest
+single signal: Qwen detection `0.279` at false alarm `0.091`, and SmolLM2
+detection `0.229` at false alarm `0.095`. The strongest cheap text controls are
+near-random: `answer_token_count` AUROC `0.519` with detection `0.110`,
+`claim_token_count` AUROC `0.527` with detection `0.089`, and
+`question_answer_token_overlap` AUROC `0.330` with zero triggered detection
+under the low-overlap direction. Treat this as a redline baseline for future
+verifier/retrieval/selfcheck signals.
+
 For non-oracle local evidence experiments, `run_verifier_signal_fusion_workflow.py`
 wraps the same chain into one reproducible artifact bundle. It can build a
 retrieval fixture from local JSON/JSONL/text corpora, merge optional

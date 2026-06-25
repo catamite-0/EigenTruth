@@ -525,6 +525,55 @@ correct-answer corpus, so the next frontier step is replacing that corpus with
 external or domain-shifted retrieval evidence and adding aligned selfcheck
 samples.
 
+## Text Baseline Redline
+
+`benchmarks/build_text_baseline_score_dump.py` appends simple text controls to
+statement-bearing score dumps without rerunning either model. The current l80
+artifact is:
+
+```bash
+OUT=artifacts/truthfulqa-l80-text-baseline-comparison
+
+python benchmarks/build_text_baseline_score_dump.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output "$OUT/qwen-l80-text-baseline-scores.manifest.json" \
+  --output-format jsonl \
+  --json "$OUT/qwen-l80-text-baseline-report.json"
+
+python benchmarks/build_text_baseline_score_dump.py \
+  --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output "$OUT/smollm2-l80-text-baseline-scores.manifest.json" \
+  --output-format jsonl \
+  --json "$OUT/smollm2-l80-text-baseline-report.json"
+
+python benchmarks/eval_score_ensemble.py \
+  --scores qwen-l80="$OUT/qwen-l80-text-baseline-scores.manifest.json" \
+  --scores smollm2-l80="$OUT/smollm2-l80-text-baseline-scores.manifest.json" \
+  --signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer,answer_char_length,answer_token_count,claim_char_length,claim_token_count,question_answer_token_overlap,answer_negation_flag,answer_number_count \
+  --methods max_rank,mean_rank \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 50 \
+  --best-alpha 0.10 \
+  --json "$OUT/score-ensemble-report.json"
+```
+
+The artifact manifest verifies 9/9 files. At alpha 0.100:
+
+- Qwen: `truth_proj` remains strongest with AUROC 0.761 and detection 0.279
+  at false alarm 0.091. Cheap controls are weak: `answer_token_count` AUROC
+  0.519 / detection 0.110, `claim_token_count` AUROC 0.527 / detection 0.089,
+  and low `question_answer_token_overlap` triggers no detections.
+- SmolLM2: `truth_proj` remains strongest with AUROC 0.740 and detection 0.229
+  at false alarm 0.095. The text controls are identical because they come from
+  the same statement metadata; none beats the internal monitor.
+
+This is not a new product signal. It is a redline control: future
+verifier/retrieval/selfcheck claims should beat these simple text artifacts
+under the same conformal false-alarm budget before being treated as frontier
+evidence.
+
 ## Frontier Stability Report
 
 `benchmarks/eval_frontier_stability.py` replays saved frontier score dumps across
@@ -1003,7 +1052,8 @@ evidence, not as the default low-latency path.
 7. Extend the new verifier-stability path from structured QA to real retrieval,
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
-   corpus as the reproducible non-oracle baseline before networked retrieval.
+   corpus as the reproducible non-oracle baseline before networked retrieval,
+   and compare every new signal against the text/length redline artifact.
 8. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a
    deterministic tool adapter, not a broad natural-language math parser.

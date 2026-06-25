@@ -20466,6 +20466,62 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     ]
 
 
+def test_build_text_baseline_score_dump_from_statement_metadata(tmp_path):
+    module = importlib.import_module("benchmarks.build_text_baseline_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    output_path = tmp_path / "text-baselines.manifest.json"
+    report_path = tmp_path / "text-baseline-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [
+                {
+                    "question": "What city is the capital of France?",
+                    "answer": "Paris is the capital of France.",
+                    "text": "What city is the capital of France? Paris is the capital of France.",
+                },
+                {
+                    "question": "What city is the capital of France?",
+                    "answer": "No, Lyon is not the capital of France in 2024.",
+                    "text": "What city is the capital of France? No, Lyon is not the capital of France in 2024.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    report = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            output=str(output_path),
+            output_format="jsonl",
+            keep_signals="truth_proj",
+            baseline_signals=None,
+            json=str(report_path),
+        )
+    )
+    enhanced = load_score_dump(
+        output_path,
+        required_scores=("answer_token_count", "question_answer_token_overlap", "answer_negation_flag"),
+    )
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["n_total"] == 2
+    assert saved_report["text_baseline_signals"] == list(module.DEFAULT_TEXT_BASELINE_SIGNALS)
+    assert enhanced.scores["answer_token_count"] == pytest.approx((6.0, 10.0))
+    assert enhanced.scores["answer_negation_flag"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["answer_number_count"] == pytest.approx((0.0, 1.0))
+    assert enhanced.scores["question_answer_token_overlap"][0] > enhanced.scores["question_answer_token_overlap"][1]
+    assert enhanced.config["text_baseline_score_dump"]["signals"] == list(module.DEFAULT_TEXT_BASELINE_SIGNALS)
+    assert enhanced.extras["text_baseline_metadata"]["signal_definitions"]["answer_token_count"]
+    assert DEFAULT_SCORE_DIRECTIONS["question_answer_token_overlap"] == "lower"
+
+
 def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(tmp_path):
     module = importlib.import_module("benchmarks.run_verifier_signal_fusion_workflow")
     from eigentruth.eval.score_dump import load_score_dump
