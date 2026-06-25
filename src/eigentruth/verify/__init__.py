@@ -29,7 +29,9 @@ from eigentruth.verify.groundedness import EvidenceDocument, EvidenceQualityPoli
 from eigentruth.verify.planning import (
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
+    VerificationPlanCostEstimate,
     VerificationRouteHint,
+    estimate_verification_plan_cost,
 )
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
@@ -57,6 +59,7 @@ __all__ = [
     "VerifierCacheStats",
     "Verifier",
     "VerifierRoute",
+    "VerificationPlanCostEstimate",
     "VerificationRouteHint",
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
@@ -64,6 +67,7 @@ __all__ = [
     "claim_features",
     "extract_calculation",
     "extract_claims",
+    "estimate_verification_plan_cost",
     "infer_claim_dependencies",
     "normalize_claim_text",
     "stable_cache_key",

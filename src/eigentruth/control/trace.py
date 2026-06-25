@@ -9,7 +9,7 @@ from typing import Any, Mapping, Optional, Sequence
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.json_utils import to_jsonable
-from eigentruth.verify.planning import ClaimVerificationPlan
+from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 from eigentruth.verify.protocols import Claim, VerificationResult
 
 
@@ -573,6 +573,7 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "route_counts": {},
             "tool_payload_counts": {},
             "dependency_count": 0,
+            "cost_estimate": None,
         }
     route_counts: dict[str, int] = {}
     for hint in _as_sequence(plan.get("route_hints", ())):
@@ -581,6 +582,7 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
         for route in _as_sequence(hint.get("routes", ())):
             route_name = str(route)
             route_counts[route_name] = route_counts.get(route_name, 0) + 1
+    cost_estimate = estimate_verification_plan_cost(plan).to_dict()
     return {
         "available": True,
         "run_verifier": _optional_bool(plan.get("run_verifier")),
@@ -598,6 +600,7 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
             "world_model_checks": len(_as_sequence(plan.get("world_model_checks", ()))),
         },
         "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
+        "cost_estimate": cost_estimate,
     }
 
 

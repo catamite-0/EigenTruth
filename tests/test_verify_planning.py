@@ -10,7 +10,9 @@ from eigentruth.verify import (
     Claim,
     ClaimVerificationPlan,
     ClaimVerificationPlanner,
+    VerificationPlanCostEstimate,
     VerificationRouteHint,
+    estimate_verification_plan_cost,
 )
 
 
@@ -33,7 +35,22 @@ def test_claim_verification_planner_extracts_and_routes_text_claims():
     assert plan.calculation_checks[0]["expression"] == "2 + 2"
     assert plan.calculation_checks[0]["expected"] == 5.0
     assert plan.selected_claims() == tuple(plan.claims)
-    json.dumps(plan.to_dict())
+    cost = plan.cost_estimate()
+    assert isinstance(cost, VerificationPlanCostEstimate)
+    assert cost.route_counts == {"retrieval": 2, "groundedness": 2, "calculator": 1}
+    assert cost.tool_payload_counts == {
+        "retrieval_queries": 2,
+        "calculation_checks": 1,
+        "state_checks": 0,
+        "world_model_checks": 0,
+    }
+    assert cost.estimated_route_attempts == 5
+    assert cost.estimated_tool_payloads == 3
+    assert cost.estimated_cost_units == pytest.approx(4.25)
+    payload = plan.to_dict()
+    assert payload["cost_estimate"]["estimated_cost_units"] == pytest.approx(4.25)
+    assert estimate_verification_plan_cost(payload).estimated_cost_units == pytest.approx(4.25)
+    json.dumps(payload)
 
 
 def test_claim_verification_planner_preserves_existing_claims_and_bool_semantics():

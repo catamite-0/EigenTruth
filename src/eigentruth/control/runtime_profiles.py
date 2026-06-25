@@ -10,6 +10,7 @@ from typing import Any, Mapping, Sequence
 from eigentruth.control.policy import ControlAction, RiskDecision, RiskLevel
 from eigentruth.verify.features import enabled_feature_names as _enabled_claim_feature_names
 from eigentruth.verify.features import metadata_path_enabled, normalized_feature_flags
+from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 
 _DEFAULT_KEYS = frozenset({
     "inside_trigger_budget_policy",
@@ -139,6 +140,7 @@ class RuntimeProfileSelection:
     triggered_claim_ids: Sequence[str] = ()
     triggered_features: Mapping[str, Sequence[str]] = field(default_factory=dict)
     triggered_metadata: Mapping[str, Sequence[str]] = field(default_factory=dict)
+    verification_plan_cost: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         selected_profile = _normalize_profile_name(self.selected_profile)
@@ -172,6 +174,11 @@ class RuntimeProfileSelection:
             "triggered_metadata",
             _string_sequence_mapping(self.triggered_metadata),
         )
+        object.__setattr__(
+            self,
+            "verification_plan_cost",
+            None if self.verification_plan_cost is None else dict(self.verification_plan_cost),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -189,6 +196,7 @@ class RuntimeProfileSelection:
                 claim_id: tuple(keys)
                 for claim_id, keys in self.triggered_metadata.items()
             },
+            "verification_plan_cost": self.verification_plan_cost,
         }
 
 
@@ -212,6 +220,8 @@ class RuntimeProfileSelectorPolicy:
     )
     sensitive_claim_feature_flags: Sequence[str] = _DEFAULT_SENSITIVE_CLAIM_FEATURE_FLAGS
     sensitive_claim_metadata_keys: Sequence[str] = _DEFAULT_SENSITIVE_CLAIM_METADATA_KEYS
+    plan_balanced_cost_threshold: float | None = 2.0
+    plan_audit_cost_threshold: float | None = 5.0
 
     def __post_init__(self) -> None:
         low_risk_profile = _normalize_profile_name(self.low_risk_profile)
@@ -259,6 +269,28 @@ class RuntimeProfileSelectorPolicy:
                 field_name="sensitive_claim_metadata_keys",
             ),
         )
+        object.__setattr__(
+            self,
+            "plan_balanced_cost_threshold",
+            _optional_non_negative_float(
+                self.plan_balanced_cost_threshold,
+                field_name="plan_balanced_cost_threshold",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "plan_audit_cost_threshold",
+            _optional_non_negative_float(
+                self.plan_audit_cost_threshold,
+                field_name="plan_audit_cost_threshold",
+            ),
+        )
+        if (
+            self.plan_balanced_cost_threshold is not None
+            and self.plan_audit_cost_threshold is not None
+            and self.plan_balanced_cost_threshold > self.plan_audit_cost_threshold
+        ):
+            raise ValueError("plan_balanced_cost_threshold must be <= plan_audit_cost_threshold")
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "RuntimeProfileSelectorPolicy":
@@ -278,6 +310,14 @@ class RuntimeProfileSelectorPolicy:
             sensitive_claim_metadata_keys=_as_sequence(
                 payload.get("sensitive_claim_metadata_keys", cls.sensitive_claim_metadata_keys)
             ),
+            plan_balanced_cost_threshold=payload.get(
+                "plan_balanced_cost_threshold",
+                cls.plan_balanced_cost_threshold,
+            ),
+            plan_audit_cost_threshold=payload.get(
+                "plan_audit_cost_threshold",
+                cls.plan_audit_cost_threshold,
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -293,6 +333,8 @@ class RuntimeProfileSelectorPolicy:
             "high_risk_actions": tuple(self.high_risk_actions),
             "sensitive_claim_feature_flags": tuple(self.sensitive_claim_feature_flags),
             "sensitive_claim_metadata_keys": tuple(self.sensitive_claim_metadata_keys),
+            "plan_balanced_cost_threshold": self.plan_balanced_cost_threshold,
+            "plan_audit_cost_threshold": self.plan_audit_cost_threshold,
         }
 
 
@@ -603,6 +645,7 @@ def select_runtime_profile(
     diagnostic_decision: RiskDecision | Mapping[str, Any],
     *,
     claims: Sequence[Any] = (),
+    verification_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None,
     selector_policy: RuntimeProfileSelectorPolicy | Mapping[str, Any] | None = None,
     low_risk_profile: str = "latency",
     default_profile: str = "balanced",
@@ -639,12 +682,16 @@ def select_runtime_profile(
         feature_flags=policy.sensitive_claim_feature_flags,
         metadata_keys=policy.sensitive_claim_metadata_keys,
     )
+    plan_cost = (
+        None if verification_plan is None else estimate_verification_plan_cost(verification_plan).to_dict()
+    )
     if risk_level.value in policy.high_risk_levels:
         return RuntimeProfileSelection(
             selected_profile=policy.high_risk_profile,
             reason=f"diagnostic risk level is {risk_level.value}",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
+            verification_plan_cost=plan_cost,
         )
     if action.value in policy.high_risk_actions:
         return RuntimeProfileSelection(
@@ -652,6 +699,7 @@ def select_runtime_profile(
             reason=f"diagnostic action is {action.value}",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
+            verification_plan_cost=plan_cost,
         )
     if sensitive_claims["triggered_claim_ids"]:
         return RuntimeProfileSelection(
@@ -662,19 +710,46 @@ def select_runtime_profile(
             triggered_claim_ids=sensitive_claims["triggered_claim_ids"],
             triggered_features=sensitive_claims["triggered_features"],
             triggered_metadata=sensitive_claims["triggered_metadata"],
+            verification_plan_cost=plan_cost,
         )
+    if plan_cost is not None:
+        estimated_cost_units = float(plan_cost["estimated_cost_units"])
+        if (
+            policy.plan_audit_cost_threshold is not None
+            and estimated_cost_units >= policy.plan_audit_cost_threshold
+        ):
+            return RuntimeProfileSelection(
+                selected_profile=policy.high_risk_profile,
+                reason="verification plan estimated cost requires audit profile",
+                diagnostic_risk_level=risk_level.value,
+                diagnostic_action=action.value,
+                verification_plan_cost=plan_cost,
+            )
+        if (
+            policy.plan_balanced_cost_threshold is not None
+            and estimated_cost_units >= policy.plan_balanced_cost_threshold
+        ):
+            return RuntimeProfileSelection(
+                selected_profile=policy.default_profile,
+                reason="verification plan estimated cost requires balanced profile",
+                diagnostic_risk_level=risk_level.value,
+                diagnostic_action=action.value,
+                verification_plan_cost=plan_cost,
+            )
     if risk_level.value in policy.low_risk_levels and action.value in policy.low_risk_actions:
         return RuntimeProfileSelection(
             selected_profile=policy.low_risk_profile,
             reason="low diagnostic risk and no sensitive claim metadata",
             diagnostic_risk_level=risk_level.value,
             diagnostic_action=action.value,
+            verification_plan_cost=plan_cost,
         )
     return RuntimeProfileSelection(
         selected_profile=policy.default_profile,
         reason=f"default profile for diagnostic risk level {risk_level.value}",
         diagnostic_risk_level=risk_level.value,
         diagnostic_action=action.value,
+        verification_plan_cost=plan_cost,
     )
 
 
@@ -804,6 +879,18 @@ def _non_empty_string_tuple(values: Sequence[Any], *, field_name: str) -> tuple[
             raise ValueError(f"{field_name} entries must be non-empty strings")
         normalized.append(item)
     return tuple(dict.fromkeys(normalized))
+
+
+def _optional_non_negative_float(value: Any, *, field_name: str) -> float | None:
+    if value is None:
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field_name} must be a non-negative finite number or None") from exc
+    if parsed < 0.0 or not (parsed == parsed) or parsed in {float("inf"), float("-inf")}:
+        raise ValueError(f"{field_name} must be a non-negative finite number or None")
+    return parsed
 
 
 def _string_sequence_mapping(value: Mapping[str, Sequence[str]]) -> dict[str, tuple[str, ...]]:

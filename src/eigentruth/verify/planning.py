@@ -18,6 +18,19 @@ from eigentruth.verify.coherence import ClaimDependency, infer_claim_dependencie
 from eigentruth.verify.features import enabled_feature_names, metadata_path_enabled
 from eigentruth.verify.protocols import Claim
 
+DEFAULT_VERIFICATION_ROUTE_COST_UNITS: Mapping[str, float] = {
+    "groundedness": 0.25,
+    "calculator": 0.5,
+    "state": 0.75,
+    "retrieval": 1.0,
+    "world_model": 1.5,
+}
+DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS: Mapping[str, float] = {
+    "retrieval_queries": 0.5,
+    "calculation_checks": 0.25,
+    "state_checks": 0.5,
+    "world_model_checks": 0.75,
+}
 DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS = (
     "has_number",
     "has_citation",
@@ -90,6 +103,77 @@ class VerificationRouteHint:
 
 
 @dataclass(frozen=True)
+class VerificationPlanCostEstimate:
+    """Dependency-free cost summary for a claim verification plan."""
+
+    claim_count: int
+    verify_claim_count: int
+    skipped_claim_count: int
+    route_counts: Mapping[str, int] = field(default_factory=dict)
+    tool_payload_counts: Mapping[str, int] = field(default_factory=dict)
+    dependency_count: int = 0
+    estimated_route_attempts: int = 0
+    estimated_tool_payloads: int = 0
+    estimated_route_cost_units: float = 0.0
+    estimated_tool_payload_cost_units: float = 0.0
+
+    def __post_init__(self) -> None:
+        claim_count = _non_negative_int(self.claim_count, name="claim_count")
+        verify_claim_count = _non_negative_int(self.verify_claim_count, name="verify_claim_count")
+        skipped_claim_count = _non_negative_int(self.skipped_claim_count, name="skipped_claim_count")
+        dependency_count = _non_negative_int(self.dependency_count, name="dependency_count")
+        route_counts = _non_negative_int_mapping(self.route_counts, name="route_counts")
+        tool_payload_counts = _non_negative_int_mapping(self.tool_payload_counts, name="tool_payload_counts")
+        estimated_route_attempts = _non_negative_int(
+            self.estimated_route_attempts,
+            name="estimated_route_attempts",
+        )
+        estimated_tool_payloads = _non_negative_int(
+            self.estimated_tool_payloads,
+            name="estimated_tool_payloads",
+        )
+        estimated_route_cost_units = _non_negative_float(
+            self.estimated_route_cost_units,
+            name="estimated_route_cost_units",
+        )
+        estimated_tool_payload_cost_units = _non_negative_float(
+            self.estimated_tool_payload_cost_units,
+            name="estimated_tool_payload_cost_units",
+        )
+        object.__setattr__(self, "claim_count", claim_count)
+        object.__setattr__(self, "verify_claim_count", verify_claim_count)
+        object.__setattr__(self, "skipped_claim_count", skipped_claim_count)
+        object.__setattr__(self, "route_counts", route_counts)
+        object.__setattr__(self, "tool_payload_counts", tool_payload_counts)
+        object.__setattr__(self, "dependency_count", dependency_count)
+        object.__setattr__(self, "estimated_route_attempts", estimated_route_attempts)
+        object.__setattr__(self, "estimated_tool_payloads", estimated_tool_payloads)
+        object.__setattr__(self, "estimated_route_cost_units", estimated_route_cost_units)
+        object.__setattr__(self, "estimated_tool_payload_cost_units", estimated_tool_payload_cost_units)
+
+    @property
+    def estimated_cost_units(self) -> float:
+        """Return route and tool-payload cost units combined."""
+        return self.estimated_route_cost_units + self.estimated_tool_payload_cost_units
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable representation."""
+        return {
+            "claim_count": self.claim_count,
+            "verify_claim_count": self.verify_claim_count,
+            "skipped_claim_count": self.skipped_claim_count,
+            "route_counts": dict(self.route_counts),
+            "tool_payload_counts": dict(self.tool_payload_counts),
+            "dependency_count": self.dependency_count,
+            "estimated_route_attempts": self.estimated_route_attempts,
+            "estimated_tool_payloads": self.estimated_tool_payloads,
+            "estimated_route_cost_units": self.estimated_route_cost_units,
+            "estimated_tool_payload_cost_units": self.estimated_tool_payload_cost_units,
+            "estimated_cost_units": self.estimated_cost_units,
+        }
+
+
+@dataclass(frozen=True)
 class ClaimVerificationPlan:
     """JSON-ready plan for claim verification and tool routing."""
 
@@ -153,6 +237,19 @@ class ClaimVerificationPlan:
             if _claim_id(claim, index) in selected_ids
         )
 
+    def cost_estimate(
+        self,
+        *,
+        route_cost_units: Mapping[str, Any] | None = None,
+        tool_payload_cost_units: Mapping[str, Any] | None = None,
+    ) -> VerificationPlanCostEstimate:
+        """Estimate relative verifier/tool cost from the plan shape."""
+        return estimate_verification_plan_cost(
+            self,
+            route_cost_units=route_cost_units,
+            tool_payload_cost_units=tool_payload_cost_units,
+        )
+
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
         return {
@@ -180,6 +277,7 @@ class ClaimVerificationPlan:
             "state_checks": tuple(dict(item) for item in self.state_checks),
             "world_model_checks": tuple(dict(item) for item in self.world_model_checks),
             "dependencies": tuple(item.to_dict() for item in self.dependencies),
+            "cost_estimate": self.cost_estimate().to_dict(),
         }
 
 
@@ -394,6 +492,94 @@ class ClaimVerificationPlanner:
         },)
 
 
+def estimate_verification_plan_cost(
+    plan: ClaimVerificationPlan | Mapping[str, Any],
+    *,
+    route_cost_units: Mapping[str, Any] | None = None,
+    tool_payload_cost_units: Mapping[str, Any] | None = None,
+) -> VerificationPlanCostEstimate:
+    """Estimate route and tool-payload cost from a verification plan.
+
+    The units are relative, not wall-clock predictions. They are intended for
+    release-gate comparisons and runtime-profile routing before any external
+    verifier, retriever, calculator, or world-model adapter runs.
+    """
+    payload = _cost_estimate_payload(plan)
+    run_verifier = _strict_bool(payload.get("run_verifier", False))
+    claims = _as_sequence(payload.get("claims", ()))
+    verify_claim_ids = tuple(_non_empty_strings(_as_sequence(payload.get("verify_claim_ids", ()))))
+    skipped_claim_ids = tuple(_non_empty_strings(_as_sequence(payload.get("skipped_claim_ids", ()))))
+    selected_claim_ids = set(verify_claim_ids)
+    route_counts: dict[str, int] = {}
+    tool_payload_counts: dict[str, int] = {}
+    if run_verifier:
+        for raw_hint in _as_sequence(payload.get("route_hints", ())):
+            hint = raw_hint.to_dict() if isinstance(raw_hint, VerificationRouteHint) else raw_hint
+            if not isinstance(hint, Mapping):
+                continue
+            claim_id = str(hint.get("claim_id", "")).strip()
+            if selected_claim_ids and claim_id not in selected_claim_ids:
+                continue
+            for route in _as_sequence(hint.get("routes", ())):
+                route_name = str(route).strip()
+                if route_name:
+                    route_counts[route_name] = route_counts.get(route_name, 0) + 1
+        for key in DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS:
+            tool_payload_counts[key] = _selected_payload_count(
+                _as_sequence(payload.get(key, ())),
+                selected_claim_ids=selected_claim_ids,
+            )
+    else:
+        tool_payload_counts = {key: 0 for key in DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS}
+    route_costs = _non_negative_float_mapping(
+        DEFAULT_VERIFICATION_ROUTE_COST_UNITS if route_cost_units is None else route_cost_units,
+        name="route_cost_units",
+    )
+    tool_payload_costs = _non_negative_float_mapping(
+        DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS
+        if tool_payload_cost_units is None
+        else tool_payload_cost_units,
+        name="tool_payload_cost_units",
+    )
+    route_cost = sum(
+        count * route_costs.get(route_name, 1.0)
+        for route_name, count in route_counts.items()
+    )
+    tool_payload_cost = sum(
+        count * tool_payload_costs.get(name, 0.0)
+        for name, count in tool_payload_counts.items()
+    )
+    return VerificationPlanCostEstimate(
+        claim_count=len(claims),
+        verify_claim_count=len(verify_claim_ids) if run_verifier else 0,
+        skipped_claim_count=len(skipped_claim_ids) if run_verifier else len(claims),
+        route_counts=route_counts,
+        tool_payload_counts=tool_payload_counts,
+        dependency_count=len(_as_sequence(payload.get("dependencies", ()))),
+        estimated_route_attempts=sum(route_counts.values()),
+        estimated_tool_payloads=sum(tool_payload_counts.values()),
+        estimated_route_cost_units=route_cost,
+        estimated_tool_payload_cost_units=tool_payload_cost,
+    )
+
+
+def _cost_estimate_payload(plan: ClaimVerificationPlan | Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(plan, ClaimVerificationPlan):
+        return dict(plan)
+    return {
+        "run_verifier": plan.run_verifier,
+        "claims": plan.claims,
+        "verify_claim_ids": plan.verify_claim_ids,
+        "skipped_claim_ids": plan.skipped_claim_ids,
+        "route_hints": plan.route_hints,
+        "retrieval_queries": plan.retrieval_queries,
+        "calculation_checks": plan.calculation_checks,
+        "state_checks": plan.state_checks,
+        "world_model_checks": plan.world_model_checks,
+        "dependencies": plan.dependencies,
+    }
+
+
 def _verification_scope(value: str | None, *, run_verifier: bool) -> str:
     if value is None:
         scope = "all" if run_verifier else "none"
@@ -600,10 +786,62 @@ def _non_empty_strings(values: Sequence[Any]) -> tuple[str, ...]:
     return tuple(value for value in normalized if value)
 
 
+def _selected_payload_count(values: Sequence[Any], *, selected_claim_ids: set[str]) -> int:
+    if not selected_claim_ids:
+        return len(tuple(values))
+    count = 0
+    for item in values:
+        if not isinstance(item, Mapping):
+            count += 1
+            continue
+        raw_claim_id = item.get("claim_id")
+        if raw_claim_id is not None and str(raw_claim_id) in selected_claim_ids:
+            count += 1
+    return count
+
+
 def _append_unique(values: list[str], value: str) -> None:
     value = str(value).strip()
     if value and value not in values:
         values.append(value)
+
+
+def _non_negative_int(value: Any, *, name: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative integer.") from exc
+    if parsed < 0:
+        raise ValueError(f"{name} must be a non-negative integer.")
+    return parsed
+
+
+def _non_negative_float(value: Any, *, name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a non-negative finite number.") from exc
+    if parsed < 0.0 or not (parsed == parsed) or parsed in {float("inf"), float("-inf")}:
+        raise ValueError(f"{name} must be a non-negative finite number.")
+    return parsed
+
+
+def _non_negative_int_mapping(value: Mapping[str, Any], *, name: str) -> dict[str, int]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{name} must be a mapping.")
+    return {
+        str(key): _non_negative_int(item, name=f"{name}.{key}")
+        for key, item in value.items()
+    }
+
+
+def _non_negative_float_mapping(value: Mapping[str, Any], *, name: str) -> dict[str, float]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{name} must be a mapping.")
+    return {
+        str(key): _non_negative_float(item, name=f"{name}.{key}")
+        for key, item in value.items()
+    }
 
 
 def _strict_bool(value: Any) -> bool:

@@ -60,6 +60,7 @@ from eigentruth.verify import (
     CachedVerifier,
     Claim,
     ClaimDependency,
+    ClaimVerificationPlan,
     CompositeVerifier,
     EvidenceDocument,
     EvidenceQualityPolicy,
@@ -69,6 +70,7 @@ from eigentruth.verify import (
     RoutedVerifier,
     SelfConsistencyVerifier,
     VerificationResult,
+    VerificationRouteHint,
     VerificationStatus,
     VerifierRoute,
     apply_claim_coherence,
@@ -275,6 +277,74 @@ def test_runtime_profile_selector_policy_roundtrip_and_routes():
     assert policy.to_dict()["sensitive_claim_feature_flags"] == ("has_citation",)
     with pytest.raises(ValueError, match="high_risk_levels"):
         RuntimeProfileSelectorPolicy(high_risk_levels=("bad",))
+
+
+def test_select_runtime_profile_uses_verification_plan_cost_when_available():
+    low = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=1.0,
+        reason="ok",
+    )
+    balanced_plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim("Current revenue is 10.", claim_id="c1"),
+            Claim("Current margin is 20.", claim_id="c2"),
+        ),
+        verify_claim_ids=("c1", "c2"),
+        route_hints=(
+            VerificationRouteHint("c1", ("retrieval", "groundedness")),
+            VerificationRouteHint("c2", ("retrieval", "groundedness")),
+        ),
+        retrieval_queries=(
+            {"claim_id": "c1", "query": "current revenue"},
+            {"claim_id": "c2", "query": "current margin"},
+        ),
+    )
+    audit_plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(
+            Claim("Current revenue is 10.", claim_id="c1"),
+            Claim("Current margin is 20.", claim_id="c2"),
+            Claim("Current forecast is 30.", claim_id="c3"),
+        ),
+        verify_claim_ids=("c1", "c2", "c3"),
+        route_hints=(
+            VerificationRouteHint("c1", ("retrieval", "groundedness")),
+            VerificationRouteHint("c2", ("retrieval", "groundedness")),
+            VerificationRouteHint("c3", ("retrieval", "groundedness")),
+        ),
+        retrieval_queries=(
+            {"claim_id": "c1", "query": "current revenue"},
+            {"claim_id": "c2", "query": "current margin"},
+            {"claim_id": "c3", "query": "current forecast"},
+        ),
+    )
+
+    balanced_selection = select_runtime_profile(low, verification_plan=balanced_plan)
+    audit_selection = select_runtime_profile(low, verification_plan=audit_plan)
+    disabled_selection = select_runtime_profile(
+        low,
+        verification_plan=audit_plan,
+        selector_policy=RuntimeProfileSelectorPolicy(
+            plan_balanced_cost_threshold=None,
+            plan_audit_cost_threshold=None,
+        ),
+    )
+
+    assert balanced_selection.selected_profile == "balanced"
+    assert balanced_selection.reason == "verification plan estimated cost requires balanced profile"
+    assert balanced_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(3.5)
+    assert audit_selection.selected_profile == "audit"
+    assert audit_selection.reason == "verification plan estimated cost requires audit profile"
+    assert audit_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(5.25)
+    assert disabled_selection.selected_profile == "latency"
+    assert disabled_selection.verification_plan_cost["estimated_cost_units"] == pytest.approx(5.25)
 
 
 def test_select_pre_generation_profile_routes_prompt_risk():
