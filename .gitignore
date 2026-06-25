@@ -47,6 +47,7 @@ benchmarks/scores_*.json
 # Local benchmark/runtime scratch artifacts. Commit promoted reports/manifests
 # intentionally with git add -f when they are part of a maintained baseline.
 artifacts/runtime_evidence/
+artifacts/cache/truthfulqa-frontier-qwen-smollm2/
 artifacts/**/shared/
 artifacts/**/shared-caches/
 artifacts/**/eval-reps-cache/
