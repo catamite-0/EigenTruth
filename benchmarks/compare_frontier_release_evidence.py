@@ -258,6 +258,8 @@ def _abstention_run_decision(
     config: Mapping[str, float],
 ) -> dict[str, Any]:
     stability = _mapping(run.get("stability"))
+    feasibility = _mapping(run.get("supervised_feasibility_frontier"))
+    feasible_best = _mapping(feasibility.get("best"))
     seed_count = _positive_int(stability.get("seed_count"))
     metrics = {
         "conditional_correctness_lower_bound_mean": _stat_mean(
@@ -273,6 +275,17 @@ def _abstention_run_decision(
         ),
         "stable_recommended_score_name": stability.get("stable_recommended_score_name"),
         "recommended_score_name_counts": _mapping(stability.get("recommended_score_name_counts")),
+        "supervised_feasibility_target_passed": feasibility.get("target_passed"),
+        "supervised_feasibility_score_name": feasible_best.get("score_name"),
+        "supervised_feasibility_conditional_correctness_lower_bound": feasible_best.get(
+            "conditional_correctness_lower_bound"
+        ),
+        "supervised_feasibility_empirical_selective_accuracy": feasible_best.get(
+            "empirical_selective_accuracy"
+        ),
+        "supervised_feasibility_empirical_abstention_rate": feasible_best.get(
+            "empirical_abstention_rate"
+        ),
     }
     checks: list[dict[str, Any]] = []
     blocking_reasons: list[str] = []

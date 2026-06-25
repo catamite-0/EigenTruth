@@ -701,7 +701,12 @@ Each seed calibrates thresholds on a stratified calibration split of correct
 records and evaluates participation metrics on the held-out split. The report
 summarizes recommended-signal counts, conditional-correctness lower-bound
 variance, abstention-rate variance, and release-gate pass/block counts per
-score dump. JSONL inputs load only the requested abstention candidate columns.
+score dump. It also emits a `supervised_feasibility_frontier` diagnostic: a
+label-using threshold sweep that estimates the best conditional-correctness
+lower bound achievable by each candidate signal under the configured abstention
+budget. This is an upper-bound diagnostic only (`promotion_eligible=false`), not
+a runtime calibration artifact. JSONL inputs load only the requested abstention
+candidate columns.
 
 ## `compare_frontier_release_evidence.py`
 

@@ -273,6 +273,141 @@ def _candidate_summary(candidate: Mapping[str, Any] | None) -> dict[str, Any] | 
     }
 
 
+def _report_summary(report: ConformalAbstentionReport) -> dict[str, Any]:
+    return {
+        "score_name": report.score_name,
+        "direction": report.direction,
+        "threshold": report.threshold,
+        "empirical_participation_rate": report.empirical_participation_rate,
+        "empirical_abstention_rate": report.empirical_abstention_rate,
+        "empirical_selective_accuracy": report.empirical_selective_accuracy,
+        "correct_retention_lower_bound": report.correct_retention_lower_bound,
+        "conditional_correctness_lower_bound": report.conditional_correctness_lower_bound,
+        "retained_count": report.retained_count,
+        "correct_retained_count": report.correct_retained_count,
+        "abstained_count": report.abstained_count,
+    }
+
+
+def _best_supervised_threshold_report(
+    labels: Sequence[int],
+    scores: Sequence[float],
+    *,
+    signal: str,
+    direction: str,
+    alpha: float,
+    max_abstention_rate: float,
+) -> ConformalAbstentionReport | None:
+    thresholds = sorted({float(score) for score in scores})
+    if not thresholds:
+        return None
+    best: ConformalAbstentionReport | None = None
+    correctness = _correctness(labels, tuple(range(len(labels))))
+    for threshold in thresholds:
+        report = evaluate_conformal_abstention(
+            scores,
+            correctness,
+            threshold=threshold,
+            alpha=alpha,
+            direction=direction,
+            score_name=signal,
+        )
+        if report.empirical_abstention_rate > max_abstention_rate:
+            continue
+        if best is None or _supervised_feasibility_sort_key(report) > _supervised_feasibility_sort_key(best):
+            best = report
+    return best
+
+
+def _supervised_feasibility_sort_key(report: ConformalAbstentionReport) -> tuple[float, float, float, float, str]:
+    return (
+        report.conditional_correctness_lower_bound,
+        -1.0 if report.empirical_selective_accuracy is None else report.empirical_selective_accuracy,
+        report.correct_retention_lower_bound,
+        -report.empirical_abstention_rate,
+        "" if report.score_name is None else report.score_name,
+    )
+
+
+def _supervised_feasibility_frontier(
+    labels: Sequence[int],
+    scores: Mapping[str, Sequence[float]],
+    *,
+    signals: Sequence[str],
+    directions: Mapping[str, str],
+    alpha: float,
+    min_conditional_correctness_lower_bound: float,
+    max_abstention_rate: float,
+) -> dict[str, Any]:
+    signal_reports = []
+    for signal in signals:
+        report = _best_supervised_threshold_report(
+            labels,
+            scores[signal],
+            signal=signal,
+            direction=directions[signal],
+            alpha=alpha,
+            max_abstention_rate=max_abstention_rate,
+        )
+        if report is None:
+            signal_reports.append({
+                "score_name": signal,
+                "direction": directions[signal],
+                "target_passed": False,
+                "blocking_reasons": ("no threshold satisfied the abstention budget",),
+            })
+            continue
+        summary = _report_summary(report)
+        passed = (
+            report.conditional_correctness_lower_bound
+            >= min_conditional_correctness_lower_bound
+            and report.empirical_abstention_rate <= max_abstention_rate
+        )
+        summary.update({
+            "target_passed": passed,
+            "blocking_reasons": (
+                []
+                if passed
+                else [
+                    "conditional_correctness_lower_bound "
+                    f"{report.conditional_correctness_lower_bound:.6g} "
+                    "is below required minimum "
+                    f"{min_conditional_correctness_lower_bound:.6g}"
+                ]
+            ),
+        })
+        signal_reports.append(summary)
+
+    ranked = sorted(
+        signal_reports,
+        key=lambda item: (
+            -_sortable_value(item.get("conditional_correctness_lower_bound")),
+            -_sortable_value(item.get("empirical_selective_accuracy")),
+            _sortable_value(item.get("empirical_abstention_rate")),
+            str(item.get("score_name", "")),
+        ),
+    )
+    best = None if not ranked else ranked[0]
+    return {
+        "scope": "supervised_full_run_threshold_sweep",
+        "uses_labels": True,
+        "promotion_eligible": False,
+        "note": (
+            "Diagnostic upper bound only: this sweep uses held-out labels and "
+            "must not be used as a runtime calibration artifact."
+        ),
+        "target": {
+            "min_conditional_correctness_lower_bound": float(
+                min_conditional_correctness_lower_bound
+            ),
+            "max_abstention_rate": float(max_abstention_rate),
+        },
+        "target_passed": bool(best and best.get("target_passed") is True),
+        "best": best,
+        "signals": ranked,
+    }
+
+
 def _metric_values(
     seed_entries: Sequence[Mapping[str, Any]],
     section: str,
@@ -415,12 +550,24 @@ def build_abstention_stability_report(
     runs = []
     for name, path in score_dumps:
         seed_entries = seed_run_map.get(name, [])
+        columns = column_view_by_name[name]
         runs.append({
             "name": name,
             "scores_path": str(path),
             "score_dump": source_metadata_by_name[name],
             "seed_runs": seed_entries,
             "stability": _summarize_seed_entries(seed_entries),
+            "supervised_feasibility_frontier": _supervised_feasibility_frontier(
+                columns.labels,
+                columns.scores,
+                signals=signals,
+                directions=directions,
+                alpha=float(alpha),
+                min_conditional_correctness_lower_bound=(
+                    min_conditional_correctness_lower_bound
+                ),
+                max_abstention_rate=max_abstention_rate,
+            ),
         })
 
     return {
@@ -500,6 +647,12 @@ def _registry_run_summaries(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
         stability = run.get("stability")
         if not isinstance(stability, Mapping):
             stability = {}
+        feasibility = run.get("supervised_feasibility_frontier")
+        if not isinstance(feasibility, Mapping):
+            feasibility = {}
+        feasible_best = feasibility.get("best")
+        if not isinstance(feasible_best, Mapping):
+            feasible_best = {}
         correctness = stability.get("conditional_correctness_lower_bound")
         abstention = stability.get("empirical_abstention_rate")
         summaries.append({
@@ -514,6 +667,17 @@ def _registry_run_summaries(payload: Mapping[str, Any]) -> list[dict[str, Any]]:
             ),
             "empirical_abstention_rate_mean": (
                 abstention.get("mean") if isinstance(abstention, Mapping) else None
+            ),
+            "supervised_feasibility_target_passed": feasibility.get("target_passed"),
+            "supervised_feasibility_score_name": feasible_best.get("score_name"),
+            "supervised_feasibility_conditional_correctness_lower_bound": feasible_best.get(
+                "conditional_correctness_lower_bound"
+            ),
+            "supervised_feasibility_empirical_selective_accuracy": feasible_best.get(
+                "empirical_selective_accuracy"
+            ),
+            "supervised_feasibility_empirical_abstention_rate": feasible_best.get(
+                "empirical_abstention_rate"
             ),
         })
     return summaries

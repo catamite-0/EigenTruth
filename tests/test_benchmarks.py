@@ -1490,6 +1490,16 @@ def test_eval_abstention_stability_builds_seed_summary_and_registry(tmp_path):
     assert run["stability"]["stable_recommended_score_name"] == "uncertainty_good"
     assert run["stability"]["release_gate_pass_seed_count"] == 3
     assert run["stability"]["all_release_gates_passed"] is True
+    assert run["supervised_feasibility_frontier"]["uses_labels"] is True
+    assert run["supervised_feasibility_frontier"]["promotion_eligible"] is False
+    assert run["supervised_feasibility_frontier"]["target_passed"] is True
+    assert run["supervised_feasibility_frontier"]["best"]["score_name"] == "uncertainty_good"
+    assert (
+        run["supervised_feasibility_frontier"]["best"][
+            "conditional_correctness_lower_bound"
+        ]
+        >= 0.2
+    )
     assert manifest["metadata"]["runner"] == "eval_abstention_stability"
     assert manifest["summary"]["missing_count"] == 0
     assert "input_score_records.synthetic" in manifest["artifacts"]
@@ -1497,6 +1507,42 @@ def test_eval_abstention_stability_builds_seed_summary_and_registry(tmp_path):
     assert record.metadata["workflow"] == "eval_abstention_stability"
     assert record.metadata["runs"] == ["synthetic"]
     assert record.metadata["run_summaries"][0]["stable_recommended_score_name"] == "uncertainty_good"
+    assert record.metadata["run_summaries"][0]["supervised_feasibility_target_passed"] is True
+    assert (
+        record.metadata["run_summaries"][0]["supervised_feasibility_score_name"]
+        == "uncertainty_good"
+    )
+
+
+def test_eval_abstention_stability_reports_supervised_feasibility_upper_bound(tmp_path):
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 1, 1, 0, 1],
+        "scores": {"flat_uncertainty": [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]},
+    })
+    write_score_dump_jsonl(dump, scores_path)
+
+    payload = module.build_abstention_stability_report(
+        (("flat", scores_path),),
+        signals=("flat_uncertainty",),
+        seeds=(0, 1),
+        alpha=0.5,
+        min_conditional_correctness_lower_bound=0.8,
+        max_abstention_rate=0.5,
+    )
+    frontier = payload["runs"][0]["supervised_feasibility_frontier"]
+
+    assert frontier["scope"] == "supervised_full_run_threshold_sweep"
+    assert frontier["promotion_eligible"] is False
+    assert frontier["target_passed"] is False
+    assert frontier["best"]["score_name"] == "flat_uncertainty"
+    assert frontier["best"]["empirical_selective_accuracy"] == pytest.approx(0.5)
+    assert frontier["best"]["conditional_correctness_lower_bound"] < 0.8
+    assert "below required minimum" in frontier["best"]["blocking_reasons"][0]
 
 
 def test_eval_abstention_stability_rejects_duplicate_score_names(tmp_path):
@@ -1606,6 +1652,12 @@ def test_compare_frontier_release_evidence_promotes_when_both_tracks_pass(tmp_pa
     assert payload["evidence_summary"]["run_names"] == ["synthetic"]
     assert payload["run_decisions"][0]["verifier_decision"]["metrics"]["verified_pass_seed_rate"] == 1.0
     assert payload["run_decisions"][0]["abstention_decision"]["metrics"]["release_gate_pass_seed_rate"] == 1.0
+    assert payload["run_decisions"][0]["abstention_decision"]["metrics"][
+        "supervised_feasibility_target_passed"
+    ] is True
+    assert payload["run_decisions"][0]["abstention_decision"]["metrics"][
+        "supervised_feasibility_conditional_correctness_lower_bound"
+    ] == pytest.approx(0.9)
 
 
 def _synthetic_verifier_stability_payload() -> dict[str, object]:
@@ -1635,6 +1687,7 @@ def _synthetic_abstention_stability_payload(
     pass_seed_count: int,
     correctness_mean: float,
 ) -> dict[str, object]:
+    feasibility_lower_bound = 0.9 if correctness_mean >= 0.8 else 0.6
     return {
         "schema_version": 1,
         "workflow": "abstention_stability",
@@ -1651,6 +1704,15 @@ def _synthetic_abstention_stability_payload(
                     "release_gate_block_seed_count": 3 - pass_seed_count,
                     "stable_recommended_score_name": "truth_proj",
                     "recommended_score_name_counts": {"truth_proj": 3},
+                },
+                "supervised_feasibility_frontier": {
+                    "target_passed": feasibility_lower_bound >= 0.8,
+                    "best": {
+                        "score_name": "truth_proj",
+                        "conditional_correctness_lower_bound": feasibility_lower_bound,
+                        "empirical_selective_accuracy": 0.92,
+                        "empirical_abstention_rate": 0.2,
+                    },
                 },
             }
         ],
