@@ -18877,6 +18877,170 @@ def test_eval_truthfulqa_inside_diagnostics_cache_roundtrip_and_key_scope(tmp_pa
     assert restored_cache.stats()["misses"] == 0
 
 
+def test_eval_truthfulqa_inside_diagnostics_cache_batches_cold_misses(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("q1", "a1", 0),
+        module.Statement("q2", "a2", 1),
+        module.Statement("q3", "a3", 1),
+    ]
+    layers = [-1]
+    n_layers = 2
+    metadata_args = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        subspace_rank=2,
+        length_bucketed_batches=False,
+        eigenscore_alpha=1e-3,
+    )
+    stats_metadata = module._layer_stats_cache_metadata(
+        metadata_args,
+        layers=layers,
+        n_layers=n_layers,
+        true_texts=["t1", "t2"],
+        false_texts=["f1"],
+    )
+    eval_metadata = module._eval_reps_cache_metadata(
+        metadata_args,
+        layers=layers,
+        n_layers=n_layers,
+        eval_statements=statements,
+    )
+    manifold = module.TruthManifold()
+    manifold.update(torch.tensor([0.0, 0.0]))
+    manifold.update(torch.tensor([1.0, 0.0]))
+    manifold.contrastive_direction = torch.tensor([1.0, 0.0])
+    stats_cache = tmp_path / "layer-stats.pt"
+    eval_reps_cache = tmp_path / "eval-reps.pt"
+    inside_cache = tmp_path / "inside-diagnostics.json"
+    module.save_layer_stats_cache(stats_cache, {-1: manifold}, {}, metadata=stats_metadata)
+    module.save_eval_reps_cache(
+        eval_reps_cache,
+        [
+            {
+                "last": {-1: torch.tensor([0.0, 0.0])},
+                "ans_hs": torch.tensor([[0.0, 0.0], [0.1, 0.0]]),
+                "eigenscore_by_layer": {-1: 0.1},
+                "nll": 1.0,
+            },
+            {
+                "last": {-1: torch.tensor([2.0, 0.0])},
+                "ans_hs": torch.tensor([[1.0, 0.0], [2.0, 0.0]]),
+                "eigenscore_by_layer": {-1: 0.2},
+                "nll": 2.0,
+            },
+            {
+                "last": {-1: torch.tensor([3.0, 0.0])},
+                "ans_hs": torch.tensor([[2.0, 0.0], [3.0, 0.0]]),
+                "eigenscore_by_layer": {-1: 0.3},
+                "nll": 3.0,
+            },
+        ],
+        metadata=eval_metadata,
+    )
+    calls = []
+
+    def fake_sample_inside_diagnostics_for_args(
+        _model,
+        _tokenizer,
+        batch_statements,
+        batch_layers,
+        _device,
+        args,
+        **kwargs,
+    ):
+        calls.append(([statement.answer for statement in batch_statements], int(kwargs["seed"])))
+        n_samples = int(args.inside_samples)
+        return [
+            module.SampledInsideDiagnostics(
+                eigenscore_by_layer={layer: float(index + 1) for layer in batch_layers},
+                semantic_entropy=float(index + 1),
+                embedding_entropy_by_layer={layer: float(index + 2) for layer in batch_layers},
+                sample_texts=tuple(f"{statement.answer}-{sample_idx}" for sample_idx in range(n_samples)),
+                n_samples=n_samples,
+            )
+            for index, statement in enumerate(batch_statements)
+        ]
+
+    monkeypatch.setattr(module, "_sample_inside_diagnostics_for_args", fake_sample_inside_diagnostics_for_args)
+    args = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        layer=-1,
+        sweep=False,
+        sweep_layers=None,
+        limit=None,
+        manifold_questions=None,
+        max_length=32,
+        batch_size=3,
+        max_batch_tokens=0,
+        auto_batch_size=False,
+        length_bucketed_batches=False,
+        hidden_state_capture="outputs",
+        prefix_kv_cache=False,
+        subspace_rank=2,
+        eigenscore_alpha=1e-3,
+        inside_samples=3,
+        inside_batch_size=2,
+        inside_max_new_tokens=8,
+        inside_temperature=0.7,
+        inside_top_p=0.9,
+        inside_pooling="last",
+        inside_embedding_threshold=0.9,
+        inside_adaptive_sampling=False,
+        inside_min_samples=2,
+        inside_sample_step=1,
+        inside_stability_delta=0.05,
+        inside_selfcheck_early_stop=False,
+        inside_selfcheck_min_overlap=0.65,
+        inside_selfcheck_support_threshold=0.60,
+        inside_selfcheck_refute_threshold=0.50,
+        inside_trigger_signal=None,
+        inside_trigger_threshold=None,
+        inside_trigger_top_fraction=None,
+        seed=0,
+        offline=True,
+        cache_only=True,
+        statement_encoding_cache=None,
+        refresh_statement_encoding_cache=False,
+        layer_stats_cache=str(stats_cache),
+        refresh_layer_stats_cache=False,
+        warmup_checkpoint=None,
+        warmup_checkpoint_every=0,
+        eval_reps_cache=str(eval_reps_cache),
+        eval_reps_cache_shard_size=0,
+        eval_reps_shard_read_cache_size=2,
+        refresh_eval_reps_cache=False,
+        inside_diagnostics_cache=str(inside_cache),
+        refresh_inside_diagnostics_cache=False,
+        progress_every=0,
+        profile=True,
+        profile_json=None,
+        json=None,
+        dump_scores=None,
+        dump_scores_format="json",
+        dump_inside_samples=False,
+        covariance_mode="full",
+        covariance_low_rank=16,
+    )
+
+    cold_result = module.run(args)
+
+    assert [batch for batch, _seed in calls] == [["a1", "a2"], ["a3"]]
+    assert cold_result["cache_stats"]["inside_diagnostics"]["writes"] == 3
+    cache_payload = json.loads(inside_cache.read_text(encoding="utf-8"))
+    assert len(cache_payload["entries"]) == 3
+
+    calls.clear()
+    hot_result = module.run(args)
+
+    assert calls == []
+    assert hot_result["cache_stats"]["inside_diagnostics"]["hits"] == 3
+    assert hot_result["cache_stats"]["inside_diagnostics"]["misses"] == 0
+
+
 def test_eval_truthfulqa_sampled_inside_diagnostics_include_embedding_entropy(monkeypatch):
     module = importlib.import_module("benchmarks.eval_truthfulqa")
 

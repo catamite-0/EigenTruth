@@ -199,16 +199,20 @@ class InsideDiagnosticsCache:
             self.entries = {str(key): dict(value) for key, value in entries.items() if isinstance(value, Mapping)}
 
     def get(self, key: str) -> SampledInsideDiagnostics | None:
-        record = self.entries.get(str(key))
-        if record is None:
-            self.misses += 1
-            return None
-        diagnostics = _sampled_inside_diagnostics_from_cache_record(record)
-        if diagnostics is None:
-            self.misses += 1
-            return None
-        self.hits += 1
-        return diagnostics
+        return self.get_any((key,))
+
+    def get_any(self, keys: Sequence[str]) -> SampledInsideDiagnostics | None:
+        for key in keys:
+            record = self.entries.get(str(key))
+            if record is None:
+                continue
+            diagnostics = _sampled_inside_diagnostics_from_cache_record(record)
+            if diagnostics is None:
+                continue
+            self.hits += 1
+            return diagnostics
+        self.misses += 1
+        return None
 
     def put(self, key: str, diagnostics: SampledInsideDiagnostics | None) -> None:
         if diagnostics is None:
@@ -643,6 +647,44 @@ def _inside_statement_seed(base_seed: int, stmt: Statement) -> int:
     return int.from_bytes(hashlib.sha256(payload).digest()[:8], "big") % (2**63 - 1)
 
 
+def _inside_statement_identity(stmt: Statement) -> dict[str, object]:
+    return {
+        "question": stmt.question,
+        "answer": stmt.answer,
+        "is_false": int(stmt.is_false),
+    }
+
+
+def _inside_statement_batch_digest(statements: Sequence[Statement]) -> str:
+    payload = [_inside_statement_identity(stmt) for stmt in statements]
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
+def _inside_statement_batch_seed(base_seed: int, statements: Sequence[Statement]) -> int:
+    payload = {
+        "base_seed": int(base_seed),
+        "statements_sha256": _inside_statement_batch_digest(statements),
+    }
+    blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return int.from_bytes(hashlib.sha256(blob).digest()[:8], "big") % (2**63 - 1)
+
+
+def _inside_batch_cache_context(
+    base_seed: int,
+    statements: Sequence[Statement],
+    *,
+    batch_position: int,
+) -> dict[str, object]:
+    return {
+        "seed_scope": "statement_batch",
+        "seed": _inside_statement_batch_seed(base_seed, statements),
+        "batch_position": int(batch_position),
+        "batch_size": len(statements),
+        "statements_sha256": _inside_statement_batch_digest(statements),
+    }
+
+
 def _inside_diagnostics_cache_key(
     stmt: Statement,
     args,
@@ -650,21 +692,21 @@ def _inside_diagnostics_cache_key(
     layers: Sequence[int],
     adaptive: bool,
     selfcheck_early_stop: bool,
+    batch_cache_context: Mapping[str, object] | None = None,
 ) -> str:
+    seed = _inside_statement_seed(int(args.seed), stmt)
+    if batch_cache_context is not None:
+        seed = int(batch_cache_context["seed"])
     payload = {
-        "schema_version": 1,
-        "statement": {
-            "question": stmt.question,
-            "answer": stmt.answer,
-            "is_false": int(stmt.is_false),
-        },
+        "schema_version": 2 if batch_cache_context is not None else 1,
+        "statement": _inside_statement_identity(stmt),
         "model": args.model,
         "dtype": getattr(args, "dtype", None),
         "layers": [int(layer) for layer in layers],
         "target_layer": int(args.layer),
         "max_length": int(args.max_length),
         "hidden_state_capture": args.hidden_state_capture,
-        "seed": _inside_statement_seed(int(args.seed), stmt),
+        "seed": seed,
         "sampling": {
             "adaptive": bool(adaptive),
             "selfcheck_early_stop": bool(selfcheck_early_stop) if adaptive else False,
@@ -695,6 +737,8 @@ def _inside_diagnostics_cache_key(
             "eigenscore_alpha": float(args.eigenscore_alpha),
         },
     }
+    if batch_cache_context is not None:
+        payload["cache_batch"] = dict(batch_cache_context)
     blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(blob).hexdigest()
 
@@ -3539,29 +3583,55 @@ def run(args) -> dict:
             triggered_positions = [idx for idx in range(len(batch_records)) if idx in triggered]
             sampled_by_position: dict[int, SampledInsideDiagnostics | None] = {}
             cache_keys_by_position: dict[int, str] = {}
-            missing_positions = triggered_positions
+            missing_position_batches: list[tuple[list[int], list[Statement], int]] = []
             if inside_diagnostics_cache is not None:
                 with _profile_phase(profile, "read_inside_diagnostics_cache"):
-                    missing_positions = []
-                    for position in triggered_positions:
-                        cache_key = _inside_diagnostics_cache_key(
-                            batch_records[position]["stmt"],
-                            args,
-                            layers=layers,
-                            adaptive=inside_adaptive_sampling,
-                            selfcheck_early_stop=inside_selfcheck_early_stop,
+                    for position_batch in _chunked(triggered_positions, args.inside_batch_size):
+                        inside_batch = [batch_records[position]["stmt"] for position in position_batch]
+                        batch_seed = (
+                            _inside_statement_seed(args.seed, inside_batch[0])
+                            if len(inside_batch) == 1
+                            else _inside_statement_batch_seed(args.seed, inside_batch)
                         )
-                        cache_keys_by_position[position] = cache_key
-                        cached = inside_diagnostics_cache.get(cache_key)
-                        if cached is None:
-                            missing_positions.append(position)
-                        else:
-                            sampled_by_position[position] = cached
+                        missing_in_batch = False
+                        for batch_position, position in enumerate(position_batch):
+                            batch_context = (
+                                None
+                                if len(inside_batch) == 1
+                                else _inside_batch_cache_context(
+                                    args.seed,
+                                    inside_batch,
+                                    batch_position=batch_position,
+                                )
+                            )
+                            cache_key = _inside_diagnostics_cache_key(
+                                batch_records[position]["stmt"],
+                                args,
+                                layers=layers,
+                                adaptive=inside_adaptive_sampling,
+                                selfcheck_early_stop=inside_selfcheck_early_stop,
+                                batch_cache_context=batch_context,
+                            )
+                            cache_keys_by_position[position] = cache_key
+                            cache_lookup_keys = [cache_key]
+                            if batch_context is not None:
+                                cache_lookup_keys.append(_inside_diagnostics_cache_key(
+                                    batch_records[position]["stmt"],
+                                    args,
+                                    layers=layers,
+                                    adaptive=inside_adaptive_sampling,
+                                    selfcheck_early_stop=inside_selfcheck_early_stop,
+                                ))
+                            cached = inside_diagnostics_cache.get_any(cache_lookup_keys)
+                            if cached is None:
+                                missing_in_batch = True
+                            else:
+                                sampled_by_position[position] = cached
+                        if missing_in_batch:
+                            missing_position_batches.append((list(position_batch), inside_batch, batch_seed))
 
             if inside_diagnostics_cache is not None:
-                for position in missing_positions:
-                    inside_batch = [batch_records[position]["stmt"]]
-                    seed = _inside_statement_seed(args.seed, inside_batch[0])
+                for position_batch, inside_batch, seed in missing_position_batches:
                     with _profile_phase(profile, "inside_generation"):
                         sampled_batch = _sample_inside_diagnostics_for_args(
                             model,
@@ -3581,12 +3651,13 @@ def run(args) -> dict:
                             inside_selfcheck_refute_threshold=inside_selfcheck_refute_threshold,
                             seed=seed,
                         )
-                    sampled = sampled_batch[0] if sampled_batch else None
-                    sampled_by_position[position] = sampled
                     with _profile_phase(profile, "write_inside_diagnostics_cache"):
-                        inside_diagnostics_cache.put(cache_keys_by_position[position], sampled)
+                        for position, sampled in zip(position_batch, sampled_batch):
+                            sampled_by_position.setdefault(position, sampled)
+                            inside_diagnostics_cache.put(cache_keys_by_position[position], sampled)
             else:
-                for inside_batch_idx, position_batch in enumerate(_chunked(missing_positions, args.inside_batch_size)):
+                inside_position_batches = _chunked(triggered_positions, args.inside_batch_size)
+                for inside_batch_idx, position_batch in enumerate(inside_position_batches):
                     inside_batch = [batch_records[position]["stmt"] for position in position_batch]
                     with _profile_phase(profile, "inside_generation"):
                         sampled_batch = _sample_inside_diagnostics_for_args(
