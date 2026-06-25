@@ -2429,6 +2429,33 @@ python benchmarks/run_cache_profile_triplet.py \
   --clean
 ```
 
+For a minimal same-machine runtime evidence pass after cache/profile changes,
+keep scratch outputs under `/tmp` and record the command plus commit SHA in the
+handoff notes:
+
+```bash
+python benchmarks/run_cache_profile_triplet.py \
+  --output-dir /tmp/eigentruth-cache-profile-triplet-recent \
+  --model sshleifer/tiny-gpt2 \
+  --limit 4 \
+  --manifold-questions 2 \
+  --layer -1 \
+  --batch-size 2 \
+  --max-length 32 \
+  --eval-reps-cache-shard-size 2 \
+  --eval-reps-shard-read-cache-size 2 \
+  --clean \
+  --fail-on-regression
+```
+
+This writes `result-*.json`, `profile-*.json`,
+`cache-profile-comparison.json`, `cache-profile-triplet-commands.json`, caches,
+and an artifact manifest in the output directory. The offline fixture does not
+download TruthfulQA, but non-cache-only runs still load the configured model and
+may download weights if they are not already in the local Hugging Face cache.
+Treat the result as local runtime evidence only; publish it by promoting a
+minimal report/manifest/registry bundle, not by committing the scratch caches.
+
 Use `--real-truthfulqa` for representative model/data profile artifacts. Start
 small, then increase `--limit` and `--manifold-questions` once the machine and
 cache settings are known:
@@ -2445,6 +2472,37 @@ python benchmarks/run_cache_profile_triplet.py \
   --eval-reps-cache-shard-size 8 \
   --clean
 ```
+
+For INSIDE sampling changes, collect sampling-cost evidence separately because
+`--cache-only` intentionally does not run sampled INSIDE:
+
+```bash
+python benchmarks/run_inside_sampling_profile.py \
+  --output-dir /tmp/eigentruth-inside-profile-recent \
+  --model sshleifer/tiny-gpt2 \
+  --limit 4 \
+  --manifold-questions 2 \
+  --layer -1 \
+  --batch-size 2 \
+  --max-length 32 \
+  --inside-samples 3 \
+  --inside-min-samples 2 \
+  --inside-sample-step 1 \
+  --inside-batch-size 2 \
+  --inside-max-new-tokens 4 \
+  --inside-trigger-signal truth_proj \
+  --inside-trigger-top-fraction 0.5 \
+  --inside-diagnostics-cache /tmp/eigentruth-inside-profile-recent/inside-diagnostics-cache.json \
+  --refresh-shared-caches \
+  --clean \
+  --fail-on-regression
+```
+
+This writes per-run result/profile files plus
+`inside-sampling-profile-comparison.json`; use its leaderboard for generated
+sample counts and `inside_generation` ratios. The deterministic smoke scripts in
+`make perf-check` remain gate-only checks and should not be cited as runtime
+claims.
 
 Use `--dry-run` first to inspect the exact commands without loading a model.
 Add `--fail-on-regression` when using the generated gate in automation. Treat

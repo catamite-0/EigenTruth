@@ -548,6 +548,11 @@ make perf-check     # deterministic profile/cache/worker/registry smokes; no mod
 make release-check  # also builds the package
 ```
 
+`make perf-check` validates gate mechanics, not machine speed. For runtime
+claims, generate same-machine profile evidence under `/tmp/eigentruth-*` first
+and commit only the explicitly promoted report/manifest/registry bundle needed
+for a maintained baseline.
+
 The unit suite covers numerical stability, hook behavior, warmup, diagnostics, and wrapper lifecycle. It does not replace evaluation against factuality benchmarks or model-specific integration testing.
 
 单元测试覆盖数值稳定性、hook 行为、warmup、诊断信息和 wrapper 生命周期。它不能替代事实性基准测试或针对具体模型的集成测试。
