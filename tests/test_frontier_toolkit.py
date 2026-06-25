@@ -41,6 +41,7 @@ from eigentruth.control import (
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
     InMemoryActionExecutionLedger,
+    PlanAwareCorrectionPolicy,
     PolicyGuardedActionExecutor,
     PreGenerationRiskAssessment,
     PreGenerationRiskPolicy,
@@ -513,6 +514,62 @@ def test_default_correction_policy_plans_action_payloads():
     assert abstain.action is ControlAction.ABSTAIN
     assert abstain.payload["blocked_claims"][0]["status"] == "refuted"
     assert abstain.payload["blocked_claims"][0]["evidence"] == ("nasa",)
+
+
+def test_plan_aware_correction_policy_injects_retrieval_queries():
+    base_policy = DefaultCorrectionPolicy()
+    policy = PlanAwareCorrectionPolicy(base_policy=base_policy)
+    claim = Claim("AlphaCorp has 10 offices.", claim_id="c1")
+    plan = ClaimVerificationPlan(
+        run_verifier=True,
+        reason="manual",
+        verification_scope="all",
+        claims=(claim,),
+        verify_claim_ids=("c1",),
+        route_hints=(VerificationRouteHint("c1", ("retrieval", "groundedness")),),
+        retrieval_queries=({"claim_id": "c1", "query": "zephyr-token retrieval-key"},),
+    )
+    retrieve_decision = RiskDecision(
+        action=ControlAction.RETRIEVE,
+        risk_level=RiskLevel.MEDIUM,
+        confidence=0.6,
+        reason="unsupported claim",
+    )
+    accept_decision = RiskDecision(
+        action=ControlAction.ACCEPT,
+        risk_level=RiskLevel.LOW,
+        confidence=0.9,
+        reason="diagnostics are low",
+    )
+    abstain_decision = RiskDecision(
+        action=ControlAction.ABSTAIN,
+        risk_level=RiskLevel.HIGH,
+        confidence=0.9,
+        reason="refuted claim",
+    )
+
+    retrieve_requests = policy.plan(
+        retrieve_decision,
+        claims=(claim,),
+        verification_results=(VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2),),
+        context={"verification_plan": plan},
+    )
+    accept_requests = policy.plan(accept_decision, claims=(claim,), context={"verification_plan": plan})
+    abstain_requests = policy.plan(abstain_decision, claims=(claim,), context={"verification_plan": plan})
+
+    retrieve = retrieve_requests[0]
+    assert len(retrieve_requests) == 1
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.payload["retrieval_targets"][0]["text"] == "AlphaCorp has 10 offices."
+    assert retrieve.payload["retrieval_targets"][1]["text"] == "zephyr-token retrieval-key"
+    assert retrieve.payload["retrieval_queries"][0]["query"] == "zephyr-token retrieval-key"
+    assert retrieve.metadata["plan_aware_policy"] == "PlanAwareCorrectionPolicy"
+    assert retrieve.metadata["verification_plan_action_injected"] is True
+    assert retrieve.metadata["verification_plan_cost"]["estimated_cost_units"] > 0.0
+    assert [request.action for request in accept_requests] == [ControlAction.ACCEPT, ControlAction.RETRIEVE]
+    assert accept_requests[1].payload["retrieval_queries"][0]["claim_id"] == "c1"
+    assert [request.action for request in abstain_requests] == [ControlAction.ABSTAIN]
+    assert abstain_requests[0].metadata["verification_plan_action_injected"] is False
 
 
 def test_dry_run_action_executor_records_execution_without_side_effects():

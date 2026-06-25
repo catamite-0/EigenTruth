@@ -15,6 +15,7 @@ from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.json_utils import strict_json_dumps, to_jsonable
+from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus
 
 
@@ -497,7 +498,7 @@ class DefaultCorrectionPolicy:
 
         metadata = {
             "policy": type(self).__name__,
-            "context": dict(context or {}),
+            "context": _metadata_context(context),
         }
         return (
             ActionRequest(
@@ -507,6 +508,103 @@ class DefaultCorrectionPolicy:
                 metadata=metadata,
             ),
         )
+
+
+@dataclass(frozen=True)
+class PlanAwareCorrectionPolicy:
+    """Bridge claim verification plans into executable action payloads.
+
+    The wrapper preserves the wrapped policy's normal decision-to-action
+    behavior, then enriches retrieval actions with `ClaimVerificationPlan`
+    retrieval queries found in ``context["verification_plan"]``. If the wrapped
+    policy did not plan a retrieval action but the plan selected retrieval
+    queries, the wrapper can append a side-effect-free retrieval action for the
+    executor registry to handle.
+    """
+
+    base_policy: CorrectionPolicy = field(default_factory=DefaultCorrectionPolicy)
+    append_retrieval_action: bool = True
+    enrich_existing_retrieve: bool = True
+    append_for_actions: Sequence[ControlAction | str] = (
+        ControlAction.ACCEPT,
+        ControlAction.RETRIEVE,
+        ControlAction.REWRITE,
+        ControlAction.CLARIFY,
+    )
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "append_retrieval_action", _parse_policy_bool(
+            self.append_retrieval_action,
+            name="append_retrieval_action",
+        ))
+        object.__setattr__(self, "enrich_existing_retrieve", _parse_policy_bool(
+            self.enrich_existing_retrieve,
+            name="enrich_existing_retrieve",
+        ))
+        object.__setattr__(
+            self,
+            "append_for_actions",
+            tuple(_coerce_action(action) for action in self.append_for_actions),
+        )
+
+    def plan(
+        self,
+        decision: RiskDecision,
+        *,
+        claims: Sequence[Claim | Mapping[str, Any]] = (),
+        verification_results: Sequence[VerificationResult | Mapping[str, Any]] = (),
+        context: Mapping[str, Any] | None = None,
+    ) -> tuple[ActionRequest, ...]:
+        """Build action requests, optionally executing plan-level retrieval."""
+        context_payload = dict(context or {})
+        plan = _verification_plan_from_context(context_payload)
+        base_context = {
+            key: value
+            for key, value in context_payload.items()
+            if key != "verification_plan"
+        }
+        requests = tuple(
+            self.base_policy.plan(
+                decision,
+                claims=claims,
+                verification_results=verification_results,
+                context=base_context,
+            )
+        )
+        if plan is None:
+            return requests
+        retrieval_targets, retrieval_queries = _retrieval_targets_from_plan(plan)
+        if not retrieval_targets:
+            return tuple(
+                _with_plan_metadata(request, plan=plan, injected=False)
+                for request in requests
+            )
+
+        enriched: list[ActionRequest] = []
+        enriched_existing = False
+        for request in requests:
+            if request.action is ControlAction.RETRIEVE and self.enrich_existing_retrieve:
+                enriched.append(_with_plan_retrieval_payload(
+                    request,
+                    retrieval_targets=retrieval_targets,
+                    retrieval_queries=retrieval_queries,
+                    plan=plan,
+                ))
+                enriched_existing = True
+            else:
+                enriched.append(_with_plan_metadata(request, plan=plan, injected=False))
+        if (
+            self.append_retrieval_action
+            and not enriched_existing
+            and decision.action in set(self.append_for_actions)
+        ):
+            enriched.append(_plan_retrieval_action_request(
+                decision,
+                retrieval_targets=retrieval_targets,
+                retrieval_queries=retrieval_queries,
+                plan=plan,
+            ))
+        return tuple(enriched)
 
 
 @dataclass(frozen=True)
@@ -930,6 +1028,208 @@ class ActionExecutorRegistry:
     ) -> tuple[ActionResult, ...]:
         """Execute multiple action requests through the registry."""
         return tuple(self.execute(request, context=context) for request in requests)
+
+
+def _verification_plan_from_context(context: Mapping[str, Any]) -> dict[str, Any] | None:
+    raw_plan = context.get("verification_plan")
+    if raw_plan is None:
+        return None
+    if isinstance(raw_plan, ClaimVerificationPlan):
+        return raw_plan.to_dict()
+    if isinstance(raw_plan, Mapping):
+        return dict(raw_plan)
+    raise ValueError("context.verification_plan must be a ClaimVerificationPlan or JSON-like mapping.")
+
+
+def _metadata_context(context: Mapping[str, Any] | None) -> dict[str, Any]:
+    return {
+        str(key): value
+        for key, value in dict(context or {}).items()
+        if str(key) != "verification_plan"
+    }
+
+
+def _retrieval_targets_from_plan(
+    plan: Mapping[str, Any],
+) -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:
+    if not _parse_policy_bool(plan.get("run_verifier", False), name="verification_plan.run_verifier"):
+        return (), ()
+    selected_claim_ids = {
+        str(item)
+        for item in _as_tuple(plan.get("verify_claim_ids", ()))
+        if str(item).strip()
+    }
+    targets: list[dict[str, Any]] = []
+    queries: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str]] = set()
+    for item in _as_tuple(plan.get("retrieval_queries", ())):
+        query = _retrieval_query_mapping(item, selected_claim_ids=selected_claim_ids)
+        if query is None:
+            continue
+        key = (query["claim_id"], query["query"])
+        if key in seen:
+            continue
+        seen.add(key)
+        queries.append(query)
+        targets.append({
+            "claim_id": query["claim_id"],
+            "text": query["query"],
+            "metadata": {
+                "source": "claim_verification_plan",
+                "query_metadata": query["metadata"],
+            },
+        })
+    return tuple(targets), tuple(queries)
+
+
+def _retrieval_query_mapping(item: Any, *, selected_claim_ids: set[str]) -> dict[str, Any] | None:
+    if isinstance(item, str):
+        query_text = item.strip()
+        if not query_text or selected_claim_ids:
+            return None
+        return {"query": query_text, "claim_id": None, "metadata": {"source": "claim_verification_plan"}}
+    if not isinstance(item, Mapping):
+        return None
+    raw_query = item.get("query", item.get("text"))
+    if raw_query is None or not str(raw_query).strip():
+        return None
+    raw_claim_id = item.get("claim_id")
+    claim_id = None if raw_claim_id is None else str(raw_claim_id)
+    if selected_claim_ids and claim_id not in selected_claim_ids:
+        return None
+    metadata = dict(item.get("metadata", {})) if isinstance(item.get("metadata", {}), Mapping) else {}
+    for key, value in item.items():
+        metadata_key = str(key)
+        if metadata_key not in {"query", "text", "claim_id", "metadata"} and metadata_key not in metadata:
+            metadata[metadata_key] = value
+    metadata.setdefault("source", "claim_verification_plan")
+    return {
+        "query": str(raw_query).strip(),
+        "claim_id": claim_id,
+        "metadata": _jsonable(metadata),
+    }
+
+
+def _with_plan_retrieval_payload(
+    request: ActionRequest,
+    *,
+    retrieval_targets: Sequence[Mapping[str, Any]],
+    retrieval_queries: Sequence[Mapping[str, Any]],
+    plan: Mapping[str, Any],
+) -> ActionRequest:
+    payload = dict(request.payload)
+    payload["retrieval_targets"] = _merge_retrieval_targets(
+        payload.get("retrieval_targets", ()),
+        retrieval_targets,
+    )
+    payload["retrieval_queries"] = _merge_retrieval_queries(
+        payload.get("retrieval_queries", ()),
+        retrieval_queries,
+    )
+    payload["plan_retrieval_query_count"] = len(retrieval_queries)
+    payload.setdefault("instruction", "retrieve evidence requested by unresolved claims")
+    return ActionRequest(
+        action=request.action,
+        reason=request.reason,
+        payload=payload,
+        metadata=_plan_aware_metadata(request.metadata, plan=plan, injected=True),
+        request_id=request.request_id,
+    )
+
+
+def _with_plan_metadata(request: ActionRequest, *, plan: Mapping[str, Any], injected: bool) -> ActionRequest:
+    return ActionRequest(
+        action=request.action,
+        reason=request.reason,
+        payload=request.payload,
+        metadata=_plan_aware_metadata(request.metadata, plan=plan, injected=injected),
+        request_id=request.request_id,
+    )
+
+
+def _plan_retrieval_action_request(
+    decision: RiskDecision,
+    *,
+    retrieval_targets: Sequence[Mapping[str, Any]],
+    retrieval_queries: Sequence[Mapping[str, Any]],
+    plan: Mapping[str, Any],
+) -> ActionRequest:
+    return ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="claim verification plan requested retrieval",
+        payload={
+            "risk_level": decision.risk_level.value,
+            "decision_confidence": decision.confidence,
+            "decision_reason": decision.reason,
+            "retrieval_targets": tuple(dict(item) for item in retrieval_targets),
+            "retrieval_queries": tuple(dict(item) for item in retrieval_queries),
+            "plan_retrieval_query_count": len(retrieval_queries),
+            "instruction": "retrieve evidence requested by the claim verification plan",
+        },
+        metadata=_plan_aware_metadata({}, plan=plan, injected=True),
+    )
+
+
+def _plan_aware_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    plan: Mapping[str, Any],
+    injected: bool,
+) -> dict[str, Any]:
+    return {
+        **dict(metadata),
+        "plan_aware_policy": "PlanAwareCorrectionPolicy",
+        "verification_plan_action_injected": bool(injected),
+        "verification_plan_cost": estimate_verification_plan_cost(plan).to_dict(),
+    }
+
+
+def _merge_retrieval_targets(
+    existing: Any,
+    extra: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    merged: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str]] = set()
+    for item in (*_as_tuple(existing), *tuple(extra)):
+        if isinstance(item, Mapping):
+            text = str(item.get("text", item.get("query", ""))).strip()
+            raw_claim_id = item.get("claim_id")
+            claim_id = None if raw_claim_id is None else str(raw_claim_id)
+            payload = dict(item)
+            if text and "text" not in payload:
+                payload["text"] = text
+        elif isinstance(item, str):
+            text = item.strip()
+            claim_id = None
+            payload = {"text": text}
+        else:
+            continue
+        if not text:
+            continue
+        key = (claim_id, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(payload)
+    return tuple(merged)
+
+
+def _merge_retrieval_queries(
+    existing: Any,
+    extra: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], ...]:
+    merged: list[dict[str, Any]] = []
+    seen: set[tuple[str | None, str]] = set()
+    for item in (*_as_tuple(existing), *tuple(extra)):
+        query = _retrieval_query_mapping(item, selected_claim_ids=set())
+        if query is None:
+            continue
+        key = (query["claim_id"], query["query"])
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(query)
+    return tuple(merged)
 
 
 def _coerce_action(action: ControlAction | str) -> ControlAction:

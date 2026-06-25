@@ -10,6 +10,7 @@ from eigentruth.control import (
     ActionResult,
     ControlAction,
     EvidenceBundle,
+    PlanAwareCorrectionPolicy,
     RiskController,
     RiskLevel,
     StagedVerificationPolicy,
@@ -438,6 +439,39 @@ def test_verification_loop_records_claim_verification_plan():
     assert trace_payload["events"][0]["event_type"] == "diagnostic_risk_decision"
     assert any(event["event_type"] == "claim_verification_plan" for event in trace_payload["events"])
     assert result.to_dict()["claim_verification_plan"]["skipped_claim_ids"] == ("c1", "c3")
+
+
+def test_verification_loop_can_execute_plan_aware_retrieval_query():
+    claims = (
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="c1",
+            metadata={"retrieval_query": "zephyr-token retrieval-key"},
+        ),
+    )
+    registry = _registry_with_retrieval(("zephyr-token retrieval-key evidence",), min_overlap=0.5)
+
+    result = run_verification_loop(
+        request_id="req-plan-aware",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=_CountingVerifier(status=VerificationStatus.INSUFFICIENT_EVIDENCE),
+        controller=RiskController(_artifact()),
+        correction_policy=PlanAwareCorrectionPolicy(),
+        executor_registry=registry,
+    )
+
+    assert result.claim_verification_plan.retrieval_queries[0]["query"] == "zephyr-token retrieval-key"
+    retrieve = result.action_requests[0]
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.payload["retrieval_queries"][0]["query"] == "zephyr-token retrieval-key"
+    assert retrieve.metadata["plan_aware_policy"] == "PlanAwareCorrectionPolicy"
+    assert result.action_results[0].status is ActionExecutionStatus.SUCCEEDED
+    assert [query["query"] for query in result.action_results[0].output["queries"]] == [
+        "AlphaCorp has 10 offices.",
+        "zephyr-token retrieval-key",
+    ]
+    assert result.action_results[0].output["hits"][0]["text"] == "zephyr-token retrieval-key evidence"
 
 
 def test_verification_loop_can_enforce_claim_coherence_for_triggered_subset():

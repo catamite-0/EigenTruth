@@ -320,13 +320,21 @@ def run_verification_loop(
         )
     )
 
+    claim_verification_plan = _build_claim_verification_plan(
+        claims=claims,
+        stage_policy=stage_policy,
+        stage_decision=stage_decision,
+        claim_dependencies=claim_dependencies,
+    )
+
     phase_started_at = _start_runtime_phase(profile_runtime)
     policy = correction_policy or DefaultCorrectionPolicy()
+    action_planning_context = {**base_context, "verification_plan": claim_verification_plan}
     action_requests = policy.plan(
         initial_decision,
         claims=action_planning_claims,
         verification_results=action_planning_results,
-        context=base_context,
+        context=action_planning_context,
     )
     _record_runtime_phase(
         runtime_phases,
@@ -396,12 +404,6 @@ def run_verification_loop(
         final_decision = initial_decision
         final_coherence_report = initial_coherence_report
 
-    claim_verification_plan = _build_claim_verification_plan(
-        claims=claims,
-        stage_policy=stage_policy,
-        stage_decision=stage_decision,
-        claim_dependencies=claim_dependencies,
-    )
     runtime_trace = _build_runtime_trace(runtime_phases, loop_started_at)
     trace = ProductTrace(
         request_id=request_id,
