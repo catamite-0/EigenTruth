@@ -435,6 +435,12 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json --s
   --adaptive-feature-weight inside_semantic_energy=0.5 \
   --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
 
+# Build a conformal abstention sidecar for calibrated participation control:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
+  --abstention-signal maha_last \
+  --abstention-alpha 0.1 \
+  --save-abstention-report artifacts/gpt2-abstention-report.json
+
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
@@ -461,6 +467,12 @@ for deterministic low-resource local runs. Structured reports also include
 `selective_report` fields for threshold, coverage, selective accuracy, detection,
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
+When `--save-abstention-report` or `--include-abstention-report` is set,
+`eval_conformal.py` also emits a `ConformalAbstentionReport`: it calibrates the
+retained participation region on correct responses, then reports empirical
+participation/abstention, selective accuracy, correct-retention, and conservative
+conditional-correctness lower bounds. This is for answer participation control and
+does not change the base E1 conformal verdict.
 When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature from
 a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
 per-record extra, then writes an `adaptive_conformal_report` whose adjusted score

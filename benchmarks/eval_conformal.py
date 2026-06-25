@@ -46,6 +46,7 @@ from eigentruth.calibration import (  # noqa: E402
 from eigentruth.eval.conformal import (  # noqa: E402
     AdaptiveScoreTransform,
     adaptive_anomaly_scores,
+    conformal_abstention_report,
     directional_conformal_thresholds,
     directional_trigger_rate,
 )
@@ -332,6 +333,7 @@ def _artifact_paths(args) -> dict[str, str | Path | None]:
         "conformal_report": args.json,
         "calibration_artifact": args.save_calibration,
         "adaptive_calibration_artifact": getattr(args, "save_adaptive_calibration", None),
+        "abstention_report": getattr(args, "save_abstention_report", None),
         "sweep_report": args.save_sweep_report,
         "best_calibration_artifact": args.save_best_calibration,
     }
@@ -498,6 +500,25 @@ def _run_adaptive_conformal_report(
     )
 
 
+def _run_abstention_report(
+    *,
+    scores: torch.Tensor,
+    labels: torch.Tensor,
+    signal: str,
+    direction: str,
+    alpha: float,
+) -> dict:
+    correctness = tuple(int(label == 0) for label in labels.tolist())
+    report = conformal_abstention_report(
+        scores,
+        correctness,
+        alpha,
+        direction=direction,
+        score_name=signal,
+    )
+    return report.to_dict()
+
+
 def _add_planned_manifest_fields(args, payload: dict) -> None:
     artifact_manifest = getattr(args, "artifact_manifest", None)
     if artifact_manifest is None:
@@ -529,6 +550,7 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
             "direction": payload.get("config", {}).get("direction"),
             "has_sweep_report": "sweep_report" in payload,
             "has_adaptive_report": "adaptive_conformal_report" in payload,
+            "has_abstention_report": "abstention_report" in payload,
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -559,6 +581,19 @@ def run(args) -> dict:
         getattr(args, "adaptive_feature_weight", None),
         adaptive_feature_names,
     )
+    abstention_signal = getattr(args, "abstention_signal", None)
+    if abstention_signal is None:
+        abstention_signal = args.signal
+    else:
+        abstention_signal = str(abstention_signal)
+    abstention_direction = _direction_for(
+        abstention_signal,
+        getattr(args, "abstention_direction", None),
+    )
+    additional_signals = tuple(dict.fromkeys((
+        *adaptive_feature_names,
+        *(name for name in (abstention_signal,) if name != args.signal),
+    )))
     if getattr(args, "save_adaptive_calibration", None) and not adaptive_feature_names:
         raise ValueError("--save-adaptive-calibration requires at least one --adaptive-feature.")
     wants_sweep = bool(
@@ -578,7 +613,7 @@ def run(args) -> dict:
             prefer_layer_scores=wants_sweep,
             confidence_signal=confidence_signal,
             disable_confidence_audit=disable_confidence_audit,
-            additional_signals=adaptive_feature_names,
+            additional_signals=additional_signals,
             cache=score_dump_metadata_cache,
         )
     )
@@ -674,6 +709,38 @@ def run(args) -> dict:
                "results": results,
                "component_verdicts": {"base_conformal": base_verdict},
                "verdict": base_verdict}
+
+    if getattr(args, "save_abstention_report", None) or bool(getattr(args, "include_abstention_report", False)):
+        if abstention_signal not in score_dump.scores:
+            available = tuple(sorted(str(name) for name in score_dump.scores))
+            raise ValueError(
+                f"score dump is missing abstention signal {abstention_signal!r}; "
+                f"available signals: {available}"
+            )
+        abstention_scores = torch.tensor(score_dump.scores[abstention_signal], dtype=torch.float64)
+        abstention_report = _run_abstention_report(
+            scores=abstention_scores,
+            labels=labels,
+            signal=abstention_signal,
+            direction=abstention_direction,
+            alpha=float(getattr(args, "abstention_alpha", args.artifact_alpha)),
+        )
+        payload["abstention_report"] = abstention_report
+        save_abstention_report = getattr(args, "save_abstention_report", None)
+        if save_abstention_report:
+            Path(save_abstention_report).parent.mkdir(parents=True, exist_ok=True)
+            Path(save_abstention_report).write_text(
+                json.dumps(abstention_report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"\nWrote abstention report to {save_abstention_report}")
+        print(
+            f"\n  Conformal abstention: signal={abstention_signal} "
+            f"direction={abstention_direction} "
+            f"alpha={abstention_report['alpha']:.3f} "
+            f"participation={abstention_report['empirical_participation_rate']:.3f} "
+            f"selective_accuracy={abstention_report['empirical_selective_accuracy']}"
+        )
 
     if adaptive_feature_names:
         adaptive_feature_values = _load_adaptive_feature_values(
@@ -835,6 +902,10 @@ def main():
                    help="optional path to write a CalibrationArtifact JSON for the selected signal")
     p.add_argument("--save-adaptive-calibration", default=None,
                    help="optional path to write an adaptive CalibrationArtifact JSON")
+    p.add_argument("--save-abstention-report", default=None,
+                   help="optional path to write a conformal abstention report JSON")
+    p.add_argument("--include-abstention-report", action="store_true",
+                   help="include a conformal abstention report in the main JSON payload without a sidecar")
     p.add_argument("--save-sweep-report", default=None,
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,
@@ -847,6 +918,12 @@ def main():
                    help="maximum worker threads for layer/score sweep calibration")
     p.add_argument("--artifact-alpha", type=float, default=0.10,
                    help="alpha used for --save-calibration artifact threshold")
+    p.add_argument("--abstention-alpha", type=float, default=0.10,
+                   help="correct-response miss budget used for conformal abstention")
+    p.add_argument("--abstention-signal", default=None,
+                   help="optional score used for conformal abstention; defaults to --signal")
+    p.add_argument("--abstention-direction", choices=("higher", "lower"), default=None,
+                   help="optional override for which side of the abstention signal is less reliable")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,
                    help="optional override for whether higher or lower signal values are more anomalous")
     p.add_argument("--adaptive-feature", action="append", default=None,

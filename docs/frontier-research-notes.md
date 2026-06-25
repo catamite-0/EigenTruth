@@ -24,9 +24,16 @@ Added dependency-free conformal abstention primitives:
 
 The report exposes threshold, coverage/participation, empirical selective accuracy, conservative correct-retention lower bound, and conservative conditional-correctness lower bound. Runtime code can call `report.decide(score)` to get a structured `participate` or `abstain` decision.
 
+Wired the primitive into `benchmarks/eval_conformal.py`:
+
+- `--save-abstention-report PATH` writes a sidecar report from any selected score dump signal.
+- `--include-abstention-report` embeds the same report in the main conformal payload.
+- `--abstention-signal`, `--abstention-direction`, and `--abstention-alpha` make the report reusable across internal diagnostics, output confidence proxies, and score-fusion outputs.
+- The abstention block is evidence-only and does not change the base E1 conformal verdict.
+
 ## Next Research-to-Code Candidates
 
 1. Wire abstention reports into `RiskController` as an optional pre-action gate.
-2. Add a benchmark mode that builds abstention reports from TruthfulQA score dumps and compares selective accuracy/coverage across `maha_last`, `truth_proj`, `subspace_resid`, `inside_eigenscore`, and score fusion.
+2. Add multi-signal abstention comparison across `maha_last`, `truth_proj`, `subspace_resid`, `inside_eigenscore`, and score-fusion outputs.
 3. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
 4. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.

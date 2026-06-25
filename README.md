@@ -116,6 +116,7 @@ python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
   --dump-scores-format jsonl
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --json artifacts/gpt2-conformal-report.json \
+  --save-abstention-report artifacts/gpt2-abstention-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json \
   --artifact-manifest artifacts/gpt2-conformal-manifest.json
@@ -144,6 +145,12 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --adaptive-feature-weight inside_semantic_energy=0.5 \
   --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
 ```
+
+For calibrated participation-control experiments, add
+`--save-abstention-report` or `--include-abstention-report`. The abstention report
+calibrates the selected uncertainty score on correct responses and reports
+participation, abstention, selective accuracy, and conservative conditional
+correctness lower bounds without changing the base conformal gate verdict.
 
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size`
 to trade memory for benchmark throughput. Add `--inside-adaptive-sampling` to

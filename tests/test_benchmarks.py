@@ -203,6 +203,69 @@ def test_eval_conformal_run_reports_high_confidence_errors(tmp_path):
     assert confidence_report["high_confidence_false_miss_rate"]["estimate"] == pytest.approx(1.0)
 
 
+def test_eval_conformal_run_writes_abstention_report(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    abstention_path = tmp_path / "abstention.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {
+                "maha_last": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+                "uncertainty": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            },
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_abstention_report=str(abstention_path),
+        include_abstention_report=False,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        abstention_alpha=0.50,
+        abstention_signal="uncertainty",
+        abstention_direction="higher",
+        direction=None,
+        adaptive_feature=(),
+        adaptive_feature_weight=(),
+        adaptive_intercept=0.0,
+        adaptive_score_name="adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+    report = payload["abstention_report"]
+    sidecar = json.loads(abstention_path.read_text(encoding="utf-8"))
+
+    assert report == sidecar
+    assert report["score_name"] == "uncertainty"
+    assert report["direction"] == "higher"
+    assert report["threshold"] == pytest.approx(0.3)
+    assert report["empirical_participation_rate"] == pytest.approx(0.5)
+    assert report["empirical_selective_accuracy"] == pytest.approx(1.0)
+    assert report["conditional_correctness_lower_bound"] == pytest.approx(0.6)
+
+
 def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_conformal")
     from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
