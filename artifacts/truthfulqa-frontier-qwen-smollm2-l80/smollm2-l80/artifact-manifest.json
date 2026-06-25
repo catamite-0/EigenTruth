@@ -1,0 +1,124 @@
+{
+  "artifacts": {
+    "best_calibration": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "best-calibration.json",
+      "sha256": "23b0b612e9f611a06df7a6b465d54d7f8ffec055a5ebd0ea5144ae5c92fea24f",
+      "size_bytes": 873
+    },
+    "conformal_artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-artifact-manifest.json",
+      "sha256": "e5ac790046e290f2aeb46996eecbdaec7eceb7b022401272a5cada9691d1fda3",
+      "size_bytes": 1379
+    },
+    "conformal_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "conformal-report.json",
+      "sha256": "33eb72b84f46125fc7332ccb86a92cdc5c21e63c8bd0e69e9efdc4dc42f0b060",
+      "size_bytes": 28964
+    },
+    "eval_reps_cache": {
+      "exists": true,
+      "file_count": 36,
+      "kind": "directory",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/eval-reps-cache",
+      "sha256": "089a8d8e967eea04ee76f8d3432541ced709770cd035cffb259cc865c05f985b",
+      "size_bytes": 160240134
+    },
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/layer-stats.pt",
+      "sha256": "cdcba7d11183432be16be61675c3fdf9dd4da3a368b26093f29ae0e444cd486c",
+      "size_bytes": 6752936
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.json",
+      "sha256": "a417279938bd6a153947ec43b39be0dc26206f0e0651aa85d8309310cfb14251",
+      "size_bytes": 3333
+    },
+    "score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    },
+    "statement_encoding_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/statement-encodings.json",
+      "sha256": "f159e8c112361ae8f0179649138f782d588177a8bfa906a528c118151c5823a2",
+      "size_bytes": 161897
+    },
+    "sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sweep-report.json",
+      "sha256": "6d19f0af6f3a7b5cb68b269955a10814d238738ce3f94276b5b32bf63391ebcc",
+      "size_bytes": 12435
+    },
+    "truthfulqa_profile": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-profile.json",
+      "sha256": "886c32ae36f779d9a1c3eae49650be82193271921732dcd78b9d0696fa8a2ecb",
+      "size_bytes": 2077
+    },
+    "truthfulqa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-report.json",
+      "sha256": "b3da19fa39b6d10f268c18bc4e0053e2a26c55dc9ecdce3e9e618fac7d5edda5",
+      "size_bytes": 17338
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "calibrated-observability-workflow.json",
+      "sha256": "58c3d86e2f9cccb7f8657a221247b30ef407ecf4669284c113b36a55fd6e034b",
+      "size_bytes": 9566
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "artifact_alpha": 0.1,
+    "best_by": "auroc",
+    "cache_only": false,
+    "conformal_verdict": "ACCEPT",
+    "dry_run": false,
+    "dtype": "float32",
+    "dump_scores_format": "jsonl",
+    "layer": -12,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "runner": "run_calibrated_observability_workflow",
+    "runtime_preset": "custom",
+    "score_dump_reused": false,
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 12,
+    "directory_count": 1,
+    "file_count": 11,
+    "missing_count": 0
+  }
+}

@@ -3253,6 +3253,32 @@
       "name": "truthfulqa-frontier-l20-comparison",
       "path": "artifacts/truthfulqa-frontier-l20-comparison/score-ensemble-report.json",
       "version": "0.1"
+    },
+    {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/artifact-manifest.json",
+        "models": [
+          "qwen05",
+          "smollm2"
+        ],
+        "scales": [
+          "l80"
+        ],
+        "score_ensemble_report": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/score-ensemble-report.json",
+        "signals": [
+          "truth_proj",
+          "maha_last",
+          "subspace_resid",
+          "resid_update_norm",
+          "eigenscore"
+        ],
+        "status": "complete",
+        "workflow": "run_truthfulqa_frontier_workflow"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80/truthfulqa-frontier-workflow.json",
+      "version": "0.1"
     }
   ],
   "schema_version": 1

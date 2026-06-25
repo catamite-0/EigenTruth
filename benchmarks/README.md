@@ -2374,11 +2374,15 @@ recommendation only promotes a fusion signal when its selected alpha passed the
 conformal false-alarm gate. They are intended for controlled follow-up
 experiments rather than as a default product policy.
 
-Current Qwen l80 / SmolLM2 l80 result: simple internal-score ensembles do not
-beat `truth_proj`. At alpha 0.100, Qwen's best single signal detects 0.279 while
-the best ensemble detects 0.235; SmolLM2's best single detects 0.229 while the
-best ensemble detects 0.196. Treat this as a negative result for naive score
-fusion, not as evidence against richer verifier/retrieval ensembles.
+Current frontier Qwen l80 / SmolLM2 l80 result
+(`artifacts/truthfulqa-frontier-qwen-smollm2-l80/`): simple internal-score
+ensembles do not beat `truth_proj`. At alpha 0.100, Qwen's best single signal
+detects 0.282 while the best ensemble detects 0.254; SmolLM2's best single
+detects 0.240 while the best ensemble detects 0.193. The layer/score sweep is
+stronger than the main layer alone: Qwen peaks at `truth_proj` layer `-10`
+with AUROC 0.764, and SmolLM2 peaks at `truth_proj` layer `-16` with AUROC
+0.782. Treat this as a negative result for naive score fusion, not as evidence
+against richer verifier/retrieval ensembles.
 
 ## `eval_calibration_transfer.py`
 

@@ -1,0 +1,99 @@
+{
+  "artifacts": {
+    "cells.qwen05-l80.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/artifact-manifest.json",
+      "sha256": "b4dc2b41aa00a1cda2847d1a8aeaa1ba9f16048d9caaebbcb1e5b16fc2964707",
+      "size_bytes": 3838
+    },
+    "cells.qwen05-l80.score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/scores.manifest.json",
+      "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+      "size_bytes": 3320
+    },
+    "cells.qwen05-l80.workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen05-l80/calibrated-observability-workflow.json",
+      "sha256": "93ef62312628720210614ef3677ff592f277702aa87951dca638da889bcb9faa",
+      "size_bytes": 9506
+    },
+    "cells.smollm2-l80.artifact_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/artifact-manifest.json",
+      "sha256": "95fc5ae96df970cf3cc214fa8d6f3674278fb63d664f7bcd9c41fbd5a8077561",
+      "size_bytes": 3849
+    },
+    "cells.smollm2-l80.score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/scores.manifest.json",
+      "sha256": "a417279938bd6a153947ec43b39be0dc26206f0e0651aa85d8309310cfb14251",
+      "size_bytes": 3333
+    },
+    "cells.smollm2-l80.workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80/calibrated-observability-workflow.json",
+      "sha256": "58c3d86e2f9cccb7f8657a221247b30ef407ecf4669284c113b36a55fd6e034b",
+      "size_bytes": 9566
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "b5bd370ac23ded75a9a53822ff5a91ee151ababfec044058e71aba2234c87e7b",
+      "size_bytes": 27951
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "truthfulqa-frontier-workflow.json",
+      "sha256": "ce3efcff5ae544ccbdbf016ec8956371fb0fb615e752c9f8357437be844ae1a7",
+      "size_bytes": 7294
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "dry_run": false,
+    "ensemble_methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "models": [
+      "qwen05",
+      "smollm2"
+    ],
+    "runner": "run_truthfulqa_frontier_workflow",
+    "scales": [
+      "l80"
+    ],
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "status": "complete"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 8,
+    "directory_count": 0,
+    "file_count": 8,
+    "missing_count": 0
+  }
+}
