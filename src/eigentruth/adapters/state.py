@@ -9,7 +9,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Protocol, Sequence
 
-from eigentruth.control.actions import ActionResult
+from eigentruth.control.actions import ActionExecutionStatus, ActionResult
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus
 
 
@@ -503,6 +503,8 @@ def _indexed_tool_outputs(
     first_by_action: dict[str, Any] = {}
     last_by_action: dict[str, Any] = {}
     for index, payload in enumerate(result_payloads):
+        if not _action_result_payload_succeeded(payload):
+            continue
         output = payload.get("output", {})
         if not isinstance(output, Mapping):
             continue
@@ -535,6 +537,8 @@ def _mapped_tool_output_value(
         candidates.append(outputs)
     for index, result in enumerate(action_results):
         payload = _action_result_payload(result, index=index)
+        if not _action_result_payload_succeeded(payload):
+            continue
         if mapping.action is not None and payload.get("action") != mapping.action:
             continue
         if mapping.request_id is not None and payload.get("request_id") != mapping.request_id:
@@ -571,6 +575,10 @@ def _action_result_payload(result: ActionResult | Mapping[str, Any], *, index: i
     if not isinstance(payload["output"], Mapping):
         raise ValueError(f"action result output at index {index} must be a JSON object.")
     return payload
+
+
+def _action_result_payload_succeeded(payload: Mapping[str, Any]) -> bool:
+    return str(payload.get("status")) == ActionExecutionStatus.SUCCEEDED.value
 
 
 def _jsonable_mapping(value: Mapping[str, Any]) -> dict[str, Any]:

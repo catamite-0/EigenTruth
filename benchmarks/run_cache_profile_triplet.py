@@ -346,6 +346,7 @@ def _build_comparison_if_available(config: CacheProfileTripletConfig) -> dict[st
         ],
         aggregate_repeats="median" if int(config.repeats) > 1 else None,
         max_run_total_ratios=max_run_total_ratios,
+        fail_on_any_repeat_regression=int(config.repeats) > 1,
     )
     with open(config.comparison_report, "w", encoding="utf-8") as f:
         json.dump(comparison, f, indent=2)

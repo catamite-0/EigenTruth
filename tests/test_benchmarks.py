@@ -2361,8 +2361,73 @@ def test_compare_profiles_can_aggregate_repeated_runs_by_median(tmp_path):
     assert candidate["cache_efficiency"]["eval_reps_reader.records_per_read"] == pytest.approx(6.0)
     assert candidate["repeat_total_seconds"]["min"] == pytest.approx(54.0)
     assert candidate["repeat_total_seconds"]["max"] == pytest.approx(66.0)
+    assert candidate["repeat_total_seconds"]["q1"] == pytest.approx(54.0)
+    assert candidate["repeat_total_seconds"]["q3"] == pytest.approx(66.0)
+    assert candidate["repeat_total_seconds"]["iqr"] == pytest.approx(12.0)
+    assert candidate["repeat_total_ratio_to_baseline"]["paired"] is True
+    assert candidate["repeat_total_ratio_to_baseline"]["values"] == pytest.approx([
+        54.0 / 100.0,
+        66.0 / 120.0,
+        60.0 / 110.0,
+    ])
+    assert candidate["repeat_total_ratio_to_baseline"]["median"] == pytest.approx(60.0 / 110.0)
+    assert candidate["repeat_total_ratio_to_baseline"]["iqr"] == pytest.approx((66.0 / 120.0) - (54.0 / 100.0))
     assert candidate["sources"] == [str(path) for path in candidate_paths]
     assert payload["regression_gate"]["passed"] is True
+
+
+def test_compare_profiles_repeat_gate_can_fail_any_paired_repeat(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    profiles = []
+    for idx, (baseline_total, candidate_total) in enumerate(((100.0, 50.0), (100.0, 50.0), (100.0, 80.0))):
+        baseline_path = tmp_path / f"baseline-{idx}.json"
+        candidate_path = tmp_path / f"candidate-{idx}.json"
+        baseline_path.write_text(
+            json.dumps({"total_seconds": baseline_total, "phases": {"total": baseline_total}}),
+            encoding="utf-8",
+        )
+        candidate_path.write_text(
+            json.dumps({"total_seconds": candidate_total, "phases": {"total": candidate_total}}),
+            encoding="utf-8",
+        )
+        profiles.extend([("baseline", baseline_path), ("candidate", candidate_path)])
+
+    median_only = module.build_profile_comparison(
+        profiles,
+        baseline="baseline",
+        aggregate_repeats="median",
+        max_total_ratio=0.60,
+    )
+    strict = module.build_profile_comparison(
+        profiles,
+        baseline="baseline",
+        aggregate_repeats="median",
+        max_total_ratio=0.60,
+        fail_on_any_repeat_regression=True,
+    )
+
+    assert median_only["regression_gate"]["passed"] is True
+    assert strict["regression_gate"]["passed"] is False
+    failure = strict["regression_gate"]["failures"][0]
+    assert failure["metric"] == "repeat_total_seconds"
+    assert failure["repeat_index"] == 3
+    assert failure["value"] == pytest.approx(0.8)
+    assert failure["seconds"] == pytest.approx(80.0)
+    assert failure["baseline_seconds"] == pytest.approx(100.0)
+    assert failure["source"].endswith("candidate-2.json")
+    assert failure["baseline_source"].endswith("baseline-2.json")
+
+
+def test_compare_profiles_rejects_nonfinite_profile_timings(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    bad_path = tmp_path / "bad.json"
+    bad_path.write_text(
+        json.dumps({"total_seconds": "NaN", "phases": {"forced_answer_forward": 1.0}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid timing"):
+        module.build_profile_comparison([("bad", bad_path)])
 
 
 def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
@@ -10926,6 +10991,7 @@ def test_run_cache_profile_triplet_repeats_use_median_comparison(tmp_path, monke
         str(tmp_path / "profile-cached-r3.json"),
     ]
     assert report["repeat_aggregation"] == "median"
+    assert report["regression_gate"]["config"]["fail_on_any_repeat_regression"] is True
     assert cached_run["repeat_count"] == 3
     assert cached_run["total_seconds"] == pytest.approx(66.0)
     assert cached_run["total_delta"]["ratio_to_baseline"] == pytest.approx(66.0 / 110.0)

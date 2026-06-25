@@ -38,6 +38,7 @@ from eigentruth.control import (
     ActionRequest,
     ActionResult,
     ControlAction,
+    InMemoryActionExecutionLedger,
     JsonActionExecutionLedger,
     PolicyGuardedActionExecutor,
     ProductTrace,
@@ -484,7 +485,7 @@ def _run_with_database(args: argparse.Namespace, database_path: Path, *, tempora
 def _execution_ledger(args: argparse.Namespace, *, backend: str | None = None):
     path = getattr(args, "execution_ledger", None)
     if not path:
-        return None
+        return InMemoryActionExecutionLedger()
     backend = _execution_ledger_backend(args) if backend is None else backend
     if backend == "json":
         return JsonActionExecutionLedger(path)
@@ -495,7 +496,7 @@ def _execution_ledger(args: argparse.Namespace, *, backend: str | None = None):
 
 def _execution_ledger_backend(args: argparse.Namespace) -> str | None:
     if not getattr(args, "execution_ledger", None):
-        return None
+        return "memory"
     backend = str(getattr(args, "execution_ledger_backend", "json")).strip().lower()
     if backend not in {"json", "sqlite"}:
         raise ValueError("--execution-ledger-backend must be 'json' or 'sqlite'.")

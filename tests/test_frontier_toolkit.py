@@ -1301,6 +1301,55 @@ def test_tool_output_state_source_handles_raw_outputs_defaults_and_required_mapp
         required_missing.load_state()
 
 
+def test_tool_output_state_source_ignores_failed_action_outputs_for_state_mapping():
+    failed_result = ActionResult(
+        action=ControlAction.RETRIEVE,
+        status=ActionExecutionStatus.FAILED,
+        request_id="retrieve-failed",
+        output={"reservation": {"remaining_available": 0}},
+        error="tool failed",
+    )
+    timed_out_result = ActionResult(
+        action=ControlAction.RETRIEVE,
+        status=ActionExecutionStatus.TIMED_OUT,
+        request_id="retrieve-timeout",
+        output={"reservation": {"remaining_available": 1}},
+        error="tool timed out",
+    )
+    source = ToolOutputStateSource(
+        action_results=(failed_result, timed_out_result),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="retrieve-failed",
+                required=False,
+            ),
+        ),
+    )
+    required_source = ToolOutputStateSource(
+        action_results=(failed_result,),
+        mappings=(
+            ToolOutputMapping(
+                state_path="inventory.sku_123.available",
+                output_path="reservation.remaining_available",
+                action=ControlAction.RETRIEVE,
+                request_id="retrieve-failed",
+                required=True,
+            ),
+        ),
+    )
+
+    state = source.load_state()
+
+    assert "inventory" not in state
+    assert state["tool_outputs"]["results"][0]["status"] == "failed"
+    assert "by_request_id" not in state["tool_outputs"]
+    with pytest.raises(ValueError, match="required tool output mapping"):
+        required_source.load_state()
+
+
 def test_composite_verifier_skips_not_applicable_tool_results():
     fallback = InMemoryVerifier({normalize_claim_text("Paris is the capital of France"): VerificationStatus.SUPPORTED})
     verifier = CompositeVerifier((CalculatorVerifier(), fallback))
@@ -1665,6 +1714,27 @@ def test_action_executor_registry_uses_fallback_and_registered_executor():
     assert retrieve_result.metadata["executor"] == "RetrievalActionExecutor"
 
 
+def test_action_executor_registry_converts_executor_exception_to_failed_result():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("boom")
+
+        def execute_many(self, requests, context=None):
+            return tuple(self.execute(request, context=context) for request in requests)
+
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="unsupported claim", request_id="req-explode")
+    registry = ActionExecutorRegistry({ControlAction.RETRIEVE: ExplodingExecutor()})
+
+    result = registry.execute(request, context={"request_id": "req-explode"})
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-explode"
+    assert result.metadata["executor"] == "ActionExecutorRegistry"
+    assert result.metadata["wrapped_executor"] == "ExplodingExecutor"
+    assert result.metadata["possible_side_effects"] is True
+    assert "boom" in result.error
+
+
 def test_policy_guarded_action_executor_validates_side_effect_contract():
     class RecordingExecutor:
         def __init__(self):
@@ -1764,6 +1834,72 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
     assert ledger.get("reserve-1") == allowed
 
 
+def test_policy_guarded_action_executor_fails_closed_on_executor_and_ledger_errors():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("executor boom")
+
+    class ExplodingLedger:
+        def __init__(self, *, fail_get=False, fail_record=False):
+            self.fail_get = fail_get
+            self.fail_record = fail_record
+
+        def get(self, key):
+            if self.fail_get:
+                raise RuntimeError("ledger get boom")
+            return None
+
+        def record(self, key, result):
+            if self.fail_record:
+                raise RuntimeError("ledger record boom")
+
+    class SuccessfulExecutor:
+        def execute(self, request, context=None):
+            return ActionResult(
+                action=request.action,
+                status=ActionExecutionStatus.SUCCEEDED,
+                output={"ok": True},
+                metadata={"side_effects": True},
+                request_id=request.request_id,
+            )
+
+    request = ActionRequest(
+        action=ControlAction.EXECUTE_TOOL,
+        reason="reserve inventory",
+        metadata={"idempotency_key": "reserve-2"},
+        request_id="reserve-2",
+    )
+    policy = ActionExecutionPolicy(side_effecting=True, require_idempotency_key=True)
+
+    missing_ledger = PolicyGuardedActionExecutor(SuccessfulExecutor(), policy=policy).execute(request)
+    wrapped_failure = PolicyGuardedActionExecutor(
+        ExplodingExecutor(),
+        policy=policy,
+        idempotency_ledger=InMemoryActionExecutionLedger(),
+    ).execute(request)
+    get_failure = PolicyGuardedActionExecutor(
+        SuccessfulExecutor(),
+        policy=policy,
+        idempotency_ledger=ExplodingLedger(fail_get=True),
+    ).execute(request)
+    record_failure = PolicyGuardedActionExecutor(
+        SuccessfulExecutor(),
+        policy=policy,
+        idempotency_ledger=ExplodingLedger(fail_record=True),
+    ).execute(request)
+
+    assert missing_ledger.status is ActionExecutionStatus.FAILED
+    assert "idempotency ledger" in missing_ledger.error
+    assert wrapped_failure.status is ActionExecutionStatus.FAILED
+    assert wrapped_failure.metadata["possible_side_effects"] is True
+    assert "executor boom" in wrapped_failure.error
+    assert get_failure.status is ActionExecutionStatus.FAILED
+    assert "ledger lookup" in get_failure.error
+    assert record_failure.status is ActionExecutionStatus.FAILED
+    assert record_failure.metadata["side_effect_status"] == "unknown_after_success"
+    assert record_failure.metadata["possible_side_effects"] is True
+
+
 def test_timeout_action_executor_returns_timed_out_result():
     class SlowExecutor:
         def execute(self, request, context=None):
@@ -1795,8 +1931,31 @@ def test_timeout_action_executor_returns_timed_out_result():
     assert result.request_id == "req-timeout"
     assert result.metadata["timeout_enforced"] is True
     assert result.metadata["wrapped_executor"] == "SlowExecutor"
-    assert result.metadata["side_effects"] is False
+    assert result.metadata["side_effects"] is None
+    assert result.metadata["side_effect_status"] == "unknown_after_timeout"
+    assert result.metadata["possible_side_effects"] is True
     assert "timed out" in result.error
+
+
+def test_timeout_action_executor_converts_unbounded_executor_exception_to_failed_result():
+    class ExplodingExecutor:
+        def execute(self, request, context=None):
+            raise RuntimeError("boom")
+
+    executor = TimeoutActionExecutor(ExplodingExecutor())
+    request = ActionRequest(action=ControlAction.RETRIEVE, reason="explode", request_id="req-timeout-explode")
+
+    try:
+        result = executor.execute(request)
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-timeout-explode"
+    assert result.metadata["wrapped_executor"] == "ExplodingExecutor"
+    assert result.metadata["side_effect_status"] == "unknown_after_failure"
+    assert result.metadata["possible_side_effects"] is True
+    assert "boom" in result.error
 
 
 def test_timeout_action_executor_preserves_success_metadata():

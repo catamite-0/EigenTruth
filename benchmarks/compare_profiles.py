@@ -54,8 +54,13 @@ def _load_profile(path: Path) -> dict[str, Any]:
         raise ValueError(f"profile phases in {path} must be a JSON object.")
     total_seconds = float(profile["total_seconds"])
     phase_seconds = {str(name): float(seconds) for name, seconds in phases.items()}
-    if total_seconds < 0 or any(seconds < 0 for seconds in phase_seconds.values()):
-        raise ValueError(f"profile payload in {path} contains negative timing values.")
+    if (
+        not math.isfinite(total_seconds)
+        or any(not math.isfinite(seconds) for seconds in phase_seconds.values())
+        or total_seconds < 0
+        or any(seconds < 0 for seconds in phase_seconds.values())
+    ):
+        raise ValueError(f"profile payload in {path} contains invalid timing values.")
     summary = profile.get("summary")
     if not isinstance(summary, Mapping):
         summary = _minimal_profile_summary(phase_seconds, total_seconds)
@@ -183,6 +188,31 @@ def _median(values: Sequence[float]) -> float:
     return float(statistics.median(float(value) for value in values))
 
 
+def _quartiles(values: Sequence[float]) -> tuple[float, float]:
+    if not values:
+        raise ValueError("cannot compute quartiles for an empty sequence.")
+    sorted_values = sorted(float(value) for value in values)
+    midpoint = len(sorted_values) // 2
+    if len(sorted_values) == 1:
+        value = sorted_values[0]
+        return value, value
+    if len(sorted_values) % 2:
+        lower = sorted_values[:midpoint]
+        upper = sorted_values[midpoint + 1 :]
+    else:
+        lower = sorted_values[:midpoint]
+        upper = sorted_values[midpoint:]
+    if not lower or not upper:
+        value = sorted_values[0]
+        return value, value
+    return _median(lower), _median(upper)
+
+
+def _iqr(values: Sequence[float]) -> float:
+    q1, q3 = _quartiles(values)
+    return q3 - q1
+
+
 def _median_mapping(
     rows: Sequence[Mapping[str, float]],
     *,
@@ -206,6 +236,7 @@ def _aggregate_profile_repeats(name: str, profiles: Sequence[Mapping[str, Any]])
     sources = [str(profile["source"]) for profile in profiles]
     totals = [float(profile["total_seconds"]) for profile in profiles]
     total_seconds = _median(totals)
+    total_q1, total_q3 = _quartiles(totals)
     phases = _median_mapping([profile["phases"] for profile in profiles], missing_as_zero=True)
     groups = _median_mapping(
         [_group_seconds(profile["summary"]) for profile in profiles],
@@ -228,6 +259,9 @@ def _aggregate_profile_repeats(name: str, profiles: Sequence[Mapping[str, Any]])
             "median": total_seconds,
             "min": min(totals),
             "max": max(totals),
+            "q1": total_q1,
+            "q3": total_q3,
+            "iqr": total_q3 - total_q1,
             "values": totals,
         },
         "total_seconds": total_seconds,
@@ -241,6 +275,60 @@ def _aggregate_profile_repeats(name: str, profiles: Sequence[Mapping[str, Any]])
         ),
     }
     return payload
+
+
+def _repeat_total_values(profile: Mapping[str, Any]) -> list[float] | None:
+    payload = profile.get("repeat_total_seconds")
+    if not isinstance(payload, Mapping):
+        return None
+    values = payload.get("values")
+    if not isinstance(values, (list, tuple)):
+        return None
+    result = [float(value) for value in values]
+    if any(not math.isfinite(value) or value < 0 for value in result):
+        return None
+    return result
+
+
+def _paired_repeat_total_ratio(
+    current: Mapping[str, Any],
+    baseline: Mapping[str, Any],
+) -> dict[str, Any] | None:
+    current_values = _repeat_total_values(current)
+    baseline_values = _repeat_total_values(baseline)
+    if current_values is None or baseline_values is None:
+        return None
+    if len(current_values) != len(baseline_values) or not current_values:
+        return {
+            "paired": False,
+            "reason": "repeat count mismatch",
+            "repeat_count": len(current_values),
+            "baseline_repeat_count": len(baseline_values),
+        }
+    ratios: list[float | None] = []
+    for current_value, baseline_value in zip(current_values, baseline_values):
+        ratios.append(_safe_div(current_value, baseline_value))
+    finite_ratios = [float(value) for value in ratios if value is not None and math.isfinite(float(value))]
+    if len(finite_ratios) != len(ratios):
+        return {
+            "paired": False,
+            "reason": "non-finite paired repeat ratio",
+            "repeat_count": len(current_values),
+            "baseline_repeat_count": len(baseline_values),
+            "values": ratios,
+        }
+    q1, q3 = _quartiles(finite_ratios)
+    return {
+        "paired": True,
+        "repeat_count": len(current_values),
+        "values": finite_ratios,
+        "median": _median(finite_ratios),
+        "min": min(finite_ratios),
+        "max": max(finite_ratios),
+        "q1": q1,
+        "q3": q3,
+        "iqr": q3 - q1,
+    }
 
 
 def _numeric_metric_deltas(
@@ -294,6 +382,7 @@ def _build_regression_gate(
     max_run_total_ratios: Mapping[str, float],
     max_phase_ratios: Mapping[str, float],
     min_throughput_ratios: Mapping[str, float],
+    fail_on_any_repeat_regression: bool,
 ) -> dict[str, Any] | None:
     if (
         max_total_ratio is None
@@ -304,9 +393,17 @@ def _build_regression_gate(
         return None
     failures = []
     checked_runs = [run for run in runs if run["name"] != baseline]
+    baseline_run = next((run for run in runs if run["name"] == baseline), None)
+    baseline_repeat_values = []
+    baseline_repeat_sources = []
+    if baseline_run is not None:
+        baseline_repeat_values = list(dict(baseline_run.get("repeat_total_seconds") or {}).get("values") or [])
+        baseline_repeat_sources = list(baseline_run.get("sources") or [])
 
     for run in checked_runs:
         name = run["name"]
+        run_repeat_values = list(dict(run.get("repeat_total_seconds") or {}).get("values") or [])
+        run_repeat_sources = list(run.get("sources") or [])
         run_total_limit = max_run_total_ratios.get(name, max_total_ratio)
         if run_total_limit is not None:
             total = run["total_delta"]
@@ -325,6 +422,42 @@ def _build_regression_gate(
                     "seconds": total["seconds"],
                     "baseline_seconds": total["baseline_seconds"],
                 })
+            if fail_on_any_repeat_regression and "repeat_total_ratio_to_baseline" in run:
+                repeat_ratio = run["repeat_total_ratio_to_baseline"]
+                if not repeat_ratio.get("paired", False):
+                    failures.append({
+                        "run": name,
+                        "metric": "repeat_total_seconds",
+                        "limit_type": "max_ratio_to_baseline",
+                        "limit": run_total_limit,
+                        "value": None,
+                        "reason": repeat_ratio.get("reason", "paired repeat ratios unavailable"),
+                    })
+                for repeat_index, ratio in enumerate(repeat_ratio.get("values", ()), start=1):
+                    if ratio is None or not _check_max_ratio(
+                        ratio=float(ratio),
+                        current=float("inf"),
+                        baseline=1.0,
+                        maximum=run_total_limit,
+                    ):
+                        failure = {
+                            "run": name,
+                            "metric": "repeat_total_seconds",
+                            "repeat_index": repeat_index,
+                            "limit_type": "max_ratio_to_baseline",
+                            "limit": run_total_limit,
+                            "value": ratio,
+                        }
+                        value_index = repeat_index - 1
+                        if value_index < len(run_repeat_values):
+                            failure["seconds"] = run_repeat_values[value_index]
+                        if value_index < len(baseline_repeat_values):
+                            failure["baseline_seconds"] = baseline_repeat_values[value_index]
+                        if value_index < len(run_repeat_sources):
+                            failure["source"] = run_repeat_sources[value_index]
+                        if value_index < len(baseline_repeat_sources):
+                            failure["baseline_source"] = baseline_repeat_sources[value_index]
+                        failures.append(failure)
 
         for phase_name, limit in max_phase_ratios.items():
             phase = run["phase_deltas"].get(phase_name)
@@ -391,6 +524,7 @@ def _build_regression_gate(
             "max_run_total_ratios": dict(max_run_total_ratios),
             "max_phase_ratios": dict(max_phase_ratios),
             "min_throughput_ratios": dict(min_throughput_ratios),
+            "fail_on_any_repeat_regression": bool(fail_on_any_repeat_regression),
         },
         "failures": failures,
     }
@@ -426,6 +560,7 @@ def build_profile_comparison(
     max_run_total_ratios: Mapping[str, float] | None = None,
     max_phase_ratios: Mapping[str, float] | None = None,
     min_throughput_ratios: Mapping[str, float] | None = None,
+    fail_on_any_repeat_regression: bool = False,
 ) -> dict[str, Any]:
     if not profiles:
         raise ValueError("at least one profile is required.")
@@ -494,6 +629,9 @@ def build_profile_comparison(
             run["repeat_count"] = item["repeat_count"]
             run["sources"] = item["sources"]
             run["repeat_total_seconds"] = item["repeat_total_seconds"]
+            paired_ratio = _paired_repeat_total_ratio(item, baseline_profile)
+            if paired_ratio is not None:
+                run["repeat_total_ratio_to_baseline"] = paired_ratio
         runs.append(run)
 
     fastest = min(runs, key=lambda run: float(run["total_seconds"]))
@@ -523,6 +661,7 @@ def build_profile_comparison(
         max_run_total_ratios=max_run_total_ratios,
         max_phase_ratios=max_phase_ratios,
         min_throughput_ratios=min_throughput_ratios,
+        fail_on_any_repeat_regression=bool(fail_on_any_repeat_regression),
     )
     if gate is not None:
         payload["regression_gate"] = gate
@@ -546,6 +685,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_run_total_ratios=max_run_total_ratios,
         max_phase_ratios=max_phase_ratios,
         min_throughput_ratios=min_throughput_ratios,
+        fail_on_any_repeat_regression=bool(args.fail_on_any_repeat_regression),
     )
     if args.json:
         output_path = Path(args.json)
@@ -576,6 +716,8 @@ def main() -> None:
                         help="fail when a phase exceeds this ratio, formatted as phase=ratio; repeatable")
     parser.add_argument("--min-throughput-ratio", action="append", default=[],
                         help="fail when throughput drops below this ratio, formatted as metric=ratio; repeatable")
+    parser.add_argument("--fail-on-any-repeat-regression", action="store_true",
+                        help="with --aggregate-repeats, fail the gate if any paired repeat exceeds its ratio limit")
     args = parser.parse_args()
     if args.max_total_ratio is not None and args.max_total_ratio < 0:
         raise ValueError("--max-total-ratio must be non-negative.")

@@ -95,6 +95,39 @@ class ActionRequest:
         )
 
 
+def _failed_action_result(
+    request: ActionRequest,
+    error: str,
+    *,
+    executor: str,
+    wrapped_executor: str | None = None,
+    context: Mapping[str, Any] | None = None,
+    metadata: Mapping[str, Any] | None = None,
+    side_effect_status: str = "not_started",
+    possible_side_effects: bool = False,
+) -> ActionResult:
+    """Build a fail-closed action result at executor boundaries."""
+    result_metadata: dict[str, Any] = {
+        "executor": executor,
+        "side_effects": None if possible_side_effects else False,
+        "side_effect_status": side_effect_status,
+        "possible_side_effects": bool(possible_side_effects),
+    }
+    if wrapped_executor is not None:
+        result_metadata["wrapped_executor"] = wrapped_executor
+    if context is not None:
+        result_metadata["context"] = dict(context)
+    result_metadata.update(dict(metadata or {}))
+    return ActionResult(
+        action=request.action,
+        status=ActionExecutionStatus.FAILED,
+        output={},
+        metadata=result_metadata,
+        request_id=request.request_id,
+        error=error,
+    )
+
+
 @dataclass(frozen=True)
 class ActionExecutionPolicy:
     """Request-level execution contract for action executors.
@@ -553,7 +586,17 @@ class TimeoutActionExecutor:
         except ValueError as exc:
             return self._failed_result(request, str(exc), timeout_seconds=None, context=context)
         if timeout_seconds is None:
-            return self.executor.execute(request, context=context)
+            try:
+                return self.executor.execute(request, context=context)
+            except Exception as exc:  # pragma: no cover - defensive adapter boundary
+                return self._failed_result(
+                    request,
+                    f"wrapped executor failed: {exc}",
+                    timeout_seconds=None,
+                    context=context,
+                    side_effect_status="unknown_after_failure",
+                    possible_side_effects=True,
+                )
 
         future: Future[ActionResult] = self._pool.submit(self.executor.execute, request, context)
         try:
@@ -571,7 +614,9 @@ class TimeoutActionExecutor:
                     "timeout_enforced": True,
                     "timeout_mechanism": "thread_future_result",
                     "executor_cancelled": cancelled,
-                    "side_effects": False,
+                    "side_effects": None,
+                    "side_effect_status": "unknown_after_timeout",
+                    "possible_side_effects": True,
                     "context": dict(context or {}),
                 },
                 request_id=request.request_id,
@@ -583,6 +628,8 @@ class TimeoutActionExecutor:
                 f"wrapped executor failed: {exc}",
                 timeout_seconds=timeout_seconds,
                 context=context,
+                side_effect_status="unknown_after_failure",
+                possible_side_effects=True,
             )
 
         metadata = dict(result.metadata)
@@ -626,6 +673,8 @@ class TimeoutActionExecutor:
         *,
         timeout_seconds: float | None,
         context: Mapping[str, Any] | None,
+        side_effect_status: str = "not_started",
+        possible_side_effects: bool = False,
     ) -> ActionResult:
         return ActionResult(
             action=request.action,
@@ -636,7 +685,9 @@ class TimeoutActionExecutor:
                 "wrapped_executor": type(self.executor).__name__,
                 "timeout_seconds": timeout_seconds,
                 "timeout_enforced": False,
-                "side_effects": False,
+                "side_effects": None if possible_side_effects else False,
+                "side_effect_status": side_effect_status,
+                "possible_side_effects": bool(possible_side_effects),
                 "context": dict(context or {}),
             },
             request_id=request.request_id,
@@ -676,24 +727,39 @@ class PolicyGuardedActionExecutor:
         audit_metadata["idempotency_request_fingerprint"] = request_fingerprint
         audit_metadata["idempotency_fingerprint_schema"] = 1
         if violations:
-            return ActionResult(
-                action=request.action,
-                status=ActionExecutionStatus.FAILED,
-                output={},
+            return _failed_action_result(
+                request,
+                "action execution policy violation: " + "; ".join(violations),
+                executor=type(self).__name__,
+                wrapped_executor=type(self.executor).__name__,
                 metadata={
                     "executor": type(self).__name__,
                     "wrapped_executor": type(self.executor).__name__,
-                    "side_effects": False,
                     **audit_metadata,
                     "violations": violations,
                 },
-                request_id=request.request_id,
-                error="action execution policy violation: " + "; ".join(violations),
             )
 
         idempotency_key = audit_metadata.get("idempotency_key")
+        if self.policy.side_effecting and idempotency_key is not None and self.idempotency_ledger is None:
+            return _failed_action_result(
+                request,
+                "side-effecting idempotent actions require an idempotency ledger.",
+                executor=type(self).__name__,
+                wrapped_executor=type(self.executor).__name__,
+                metadata={**audit_metadata, "idempotency_ledger_required": True},
+            )
         if self.idempotency_ledger is not None and idempotency_key is not None:
-            recorded = self.idempotency_ledger.get(str(idempotency_key))
+            try:
+                recorded = self.idempotency_ledger.get(str(idempotency_key))
+            except Exception as exc:  # pragma: no cover - defensive ledger boundary
+                return _failed_action_result(
+                    request,
+                    f"idempotency ledger lookup failed: {exc}",
+                    executor=type(self).__name__,
+                    wrapped_executor=type(self.executor).__name__,
+                    metadata={**audit_metadata, "idempotency_ledger": type(self.idempotency_ledger).__name__},
+                )
             if recorded is not None:
                 return self._replay_result(
                     recorded,
@@ -702,7 +768,19 @@ class PolicyGuardedActionExecutor:
                     request_id=request.request_id,
                 )
 
-        result = self.executor.execute(request, context=context)
+        try:
+            result = self.executor.execute(request, context=context)
+        except Exception as exc:  # pragma: no cover - defensive executor boundary
+            return _failed_action_result(
+                request,
+                f"wrapped executor failed: {exc}",
+                executor=type(self).__name__,
+                wrapped_executor=type(self.executor).__name__,
+                context=context,
+                metadata=audit_metadata,
+                side_effect_status="unknown_after_failure" if self.policy.side_effecting else "unknown_after_failure",
+                possible_side_effects=self.policy.side_effecting,
+            )
         metadata = dict(result.metadata)
         if audit_metadata.get("timeout_seconds") is None and metadata.get("timeout_seconds") is not None:
             audit_metadata["timeout_seconds"] = metadata["timeout_seconds"]
@@ -728,7 +806,22 @@ class PolicyGuardedActionExecutor:
             and idempotency_key is not None
             and guarded_result.status in self.record_statuses
         ):
-            self.idempotency_ledger.record(str(idempotency_key), guarded_result)
+            try:
+                self.idempotency_ledger.record(str(idempotency_key), guarded_result)
+            except Exception as exc:  # pragma: no cover - defensive ledger boundary
+                return _failed_action_result(
+                    request,
+                    f"idempotency ledger record failed: {exc}",
+                    executor=type(self).__name__,
+                    wrapped_executor=type(self.executor).__name__,
+                    context=context,
+                    metadata={
+                        **audit_metadata,
+                        "idempotency_ledger": type(self.idempotency_ledger).__name__,
+                    },
+                    side_effect_status="unknown_after_success",
+                    possible_side_effects=self.policy.side_effecting or bool(metadata.get("side_effects", False)),
+                )
         return guarded_result
 
     def execute_many(
@@ -816,7 +909,19 @@ class ActionExecutorRegistry:
         context: Mapping[str, Any] | None = None,
     ) -> ActionResult:
         """Execute one action request through the registry."""
-        return self.get(request.action).execute(request, context=context)
+        executor = self.get(request.action)
+        try:
+            return executor.execute(request, context=context)
+        except Exception as exc:  # pragma: no cover - defensive executor boundary
+            return _failed_action_result(
+                request,
+                f"action executor failed: {exc}",
+                executor=type(self).__name__,
+                wrapped_executor=type(executor).__name__,
+                context=context,
+                side_effect_status="unknown_after_failure",
+                possible_side_effects=True,
+            )
 
     def execute_many(
         self,
