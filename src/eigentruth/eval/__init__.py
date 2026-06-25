@@ -43,6 +43,7 @@ from eigentruth.eval.score_dump import (
     score_dump_file_metadata,
     score_dump_identity,
     write_score_dump_jsonl,
+    write_score_dump_jsonl_mapping,
 )
 from eigentruth.eval.score_fusion import (
     RANK_SCORE_FUSION_METHODS,
@@ -85,4 +86,5 @@ __all__ = [
     "score_dump_file_metadata",
     "score_dump_identity",
     "write_score_dump_jsonl",
+    "write_score_dump_jsonl_mapping",
 ]

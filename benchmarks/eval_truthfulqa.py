@@ -73,7 +73,7 @@ from eigentruth.core.math_engine import (
 )
 from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import euclidean_dispersion, roc_auc, selective_classification_report
-from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+from eigentruth.eval.score_dump import write_score_dump_jsonl_mapping
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.verify import Claim, SelfConsistencyVerifier
 
@@ -325,9 +325,8 @@ def _write_score_dump(path: str | Path, dump: Mapping[str, object], dump_format:
         output_path.write_text(json.dumps(dump), encoding="utf-8")
         return
     if dump_format == "jsonl":
-        score_dump = ScoreDump.from_mapping(dump)
-        write_score_dump_jsonl(
-            score_dump,
+        write_score_dump_jsonl_mapping(
+            dump,
             output_path,
             record_extra_names=tuple(name for name in SCORE_DUMP_RECORD_EXTRA_NAMES if name in dump),
         )

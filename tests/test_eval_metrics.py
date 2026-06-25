@@ -33,6 +33,7 @@ from eigentruth.eval.score_dump import (
     score_dump_file_metadata,
     score_dump_identity,
     write_score_dump_jsonl,
+    write_score_dump_jsonl_mapping,
 )
 
 
@@ -428,6 +429,33 @@ class TestScoreDump:
         assert metadata["identity"]["source_format"] == "eigentruth.score_dump.jsonl"
         assert metadata["identity"]["content_hash"] == metadata["sha256"]
         assert metadata["identity"]["records_hash"] == metadata["records"]["sha256"]
+
+    def test_jsonl_mapping_writer_roundtrip_and_streaming_records(self, tmp_path):
+        payload = {
+            "config": {"model": "unit-model", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+            "sweep_scores": {"-2": {"truth_proj": [0.3, 0.8]}},
+            "statements": [{"text": "true"}, {"text": "false"}],
+            "inside_sampling": {"mode": "off"},
+            "batch_indexes": [0, 1],
+        }
+        manifest_path = tmp_path / "scores.manifest.json"
+
+        manifest = write_score_dump_jsonl_mapping(
+            payload,
+            manifest_path,
+            record_extra_names=("batch_indexes",),
+        )
+        records = tuple(iter_score_dump_jsonl_records(manifest_path))
+        loaded = load_score_dump(manifest_path, required_scores=("maha_last",))
+
+        assert manifest.records_path == "scores.manifest.records.jsonl"
+        assert manifest.extras == {"inside_sampling": {"mode": "off"}}
+        assert records[0].extras["batch_indexes"] == 0
+        assert records[1].sweep_scores["-2"]["truth_proj"] == pytest.approx(0.8)
+        assert loaded.summary() == ScoreDump.from_mapping(payload).summary()
+        assert loaded.to_mapping()["batch_indexes"] == [0, 1]
 
     def test_score_dump_identity_uses_jsonl_manifest_without_materializing_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({

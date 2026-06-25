@@ -613,6 +613,29 @@ def test_eval_truthfulqa_write_score_dump_jsonl_manifest(tmp_path):
     assert loaded.to_mapping()["inside_sampling"] == {"mode": "triggered"}
 
 
+def test_eval_truthfulqa_jsonl_dump_avoids_full_score_dump_materialization(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    score_dump_module = importlib.import_module("eigentruth.eval.score_dump")
+    manifest_path = tmp_path / "truthfulqa-scores.manifest.json"
+    dump = {
+        "config": {"model": "tiny", "layer": -1},
+        "labels": [0, 1],
+        "scores": {"truth_proj": [0.2, 0.8]},
+        "statements": [{"text": "true"}, {"text": "false"}],
+    }
+
+    def fail_from_mapping(*_args, **_kwargs):
+        raise AssertionError("ScoreDump.from_mapping should not be used for JSONL dump writes")
+
+    monkeypatch.setattr(score_dump_module.ScoreDump, "from_mapping", fail_from_mapping)
+
+    module._write_score_dump(manifest_path, dump, "jsonl")
+    records = tuple(score_dump_module.iter_score_dump_jsonl_records(manifest_path))
+
+    assert [record.label for record in records] == [0, 1]
+    assert records[1].scores["truth_proj"] == pytest.approx(0.8)
+
+
 def test_calibrated_observability_workflow_reuses_jsonl_scores_and_registers(tmp_path):
     module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
     registry_module = importlib.import_module("eigentruth.registry")

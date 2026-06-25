@@ -742,6 +742,94 @@ def write_score_dump_jsonl(
     return manifest
 
 
+def write_score_dump_jsonl_mapping(
+    payload: Mapping[str, Any],
+    manifest_path: str | Path,
+    *,
+    records_path: str | Path | None = None,
+    record_extra_names: Sequence[str] = (),
+    allow_empty: bool = False,
+) -> ScoreDumpJsonlManifest:
+    """Write a score-dump mapping as JSONL without materializing a ``ScoreDump`` copy."""
+    if not isinstance(payload, Mapping):
+        raise ValueError("score dump must be a JSON object.")
+
+    labels = _coerce_labels(payload.get("labels"), allow_empty=allow_empty)
+    n_total = len(labels)
+    scores = _score_dump_score_columns_from_mapping(payload.get("scores"), n_total=n_total, name="scores")
+    sweep_scores = _score_dump_sweep_columns_from_mapping(payload.get("sweep_scores", {}), n_total=n_total)
+    statements = _coerce_statements(
+        payload.get("statements", ()),
+        n_labels=n_total,
+        require_statements=False,
+    )
+    extras = {
+        str(key): value
+        for key, value in payload.items()
+        if key not in {"config", "labels", "scores", "sweep_scores", "statements"}
+    }
+
+    manifest_file = Path(manifest_path)
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    if records_path is None:
+        records_file = manifest_file.with_suffix(".records.jsonl")
+    else:
+        records_file = Path(records_path)
+    if records_path is not None and not records_file.is_absolute():
+        records_file = manifest_file.parent / records_file
+    records_file.parent.mkdir(parents=True, exist_ok=True)
+
+    relative_records_path = _manifest_records_path(manifest_file, records_file)
+    record_extra_columns = _record_extra_columns(
+        extras,
+        record_extra_names=record_extra_names,
+        n_total=n_total,
+    )
+    manifest_extras = {
+        name: value
+        for name, value in extras.items()
+        if name not in record_extra_columns
+    }
+    manifest = ScoreDumpJsonlManifest(
+        records_path=relative_records_path,
+        config=dict(_mapping(payload.get("config"))),
+        score_names=tuple(scores),
+        sweep_score_names={
+            str(layer): tuple(layer_scores)
+            for layer, layer_scores in sweep_scores.items()
+        },
+        n_total=n_total,
+        n_true=sum(1 for label in labels if label == 0),
+        n_false=sum(1 for label in labels if label == 1),
+        has_statements=bool(statements),
+        extras=manifest_extras,
+    )
+    with records_file.open("w", encoding="utf-8") as stream:
+        for index, label in enumerate(labels):
+            record = ScoreDumpRecord(
+                label=label,
+                scores={
+                    name: _coerce_score_value(values[index], name=f"score {name!r}")
+                    for name, values in scores.items()
+                },
+                sweep_scores={
+                    str(layer): {
+                        name: _coerce_score_value(
+                            values[index],
+                            name=f"sweep score {name!r} for layer {str(layer)!r}",
+                        )
+                        for name, values in layer_scores.items()
+                    }
+                    for layer, layer_scores in sweep_scores.items()
+                },
+                statement=statements[index] if statements else None,
+                extras={name: values[index] for name, values in record_extra_columns.items()},
+            )
+            stream.write(json.dumps(record.to_mapping(), sort_keys=True) + "\n")
+    manifest.save_json(manifest_file)
+    return manifest
+
+
 def score_dump_identity(
     path: str | Path,
     dump: ScoreDump | None = None,
@@ -2135,6 +2223,52 @@ def _record_extra_columns(
             )
         columns[name] = column
     return columns
+
+
+def _score_dump_score_columns_from_mapping(
+    value: Any,
+    *,
+    n_total: int,
+    name: str,
+) -> dict[str, Sequence[Any]]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"score dump {name} must be an object.")
+    if not value:
+        raise ValueError("score dump must contain at least one score family.")
+    columns: dict[str, Sequence[Any]] = {}
+    for raw_name, raw_values in value.items():
+        score_name = str(raw_name)
+        if not isinstance(raw_values, Sequence) or isinstance(raw_values, (str, bytes, bytearray)):
+            raise ValueError(f"score {score_name!r} must be a list.")
+        if len(raw_values) != n_total:
+            raise ValueError(
+                f"score {score_name!r} length does not match labels "
+                f"({len(raw_values)} values vs {n_total} labels)."
+            )
+        columns[score_name] = raw_values
+    return columns
+
+
+def _score_dump_sweep_columns_from_mapping(
+    value: Any,
+    *,
+    n_total: int,
+) -> dict[str, dict[str, Sequence[Any]]]:
+    if value in (None, {}):
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("score dump sweep_scores must be an object.")
+    sweep_columns: dict[str, dict[str, Sequence[Any]]] = {}
+    for raw_layer, raw_scores in value.items():
+        layer = str(raw_layer)
+        if not isinstance(raw_scores, Mapping):
+            raise ValueError(f"score dump sweep_scores layer {layer!r} must be an object.")
+        sweep_columns[layer] = _score_dump_score_columns_from_mapping(
+            raw_scores,
+            n_total=n_total,
+            name=f"sweep_scores[{layer!r}]",
+        )
+    return sweep_columns
 
 
 def _manifest_records_path(manifest_file: Path, records_file: Path) -> str:
