@@ -404,7 +404,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | Maps local tool or action execution outputs into structured verifier state for post-tool checks. |
 | `StateTransitionVerifier` / `StateTransitionCheck` | Uses a world-model adapter to predict next state after an action, then checks structured postconditions. |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | Adds request-scoped in-memory caching and hit/miss stats for repeated verifier, retrieval, and state-source calls. |
-| `CompositeVerifier` / `RoutedVerifier` | Compose deterministic tools with lexical, retrieval, database, or world-model verifiers; routing can use claim metadata, context, or text patterns, cap route fanout, and record match reasons. |
+| `CompositeVerifier` / `RoutedVerifier` / `default_routed_verifier` | Compose deterministic tools with lexical, retrieval, database, triple-evidence, or world-model verifiers; routing can use claim metadata, context, feature flags, or text patterns, cap route fanout, and record match reasons. The default route stack runs deterministic tools first, strict triple audits for sensitive factual claims next, and lexical groundedness as fallback. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
 | `SelfConsistencyVerifier` | Checks claims against caller-supplied sampled responses with FactSelfCheck-style support/refutation rates and no model or retrieval dependency. |
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
@@ -507,7 +507,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | 将本地工具或 action 执行输出映射成结构化 verifier state，用于工具调用后的校验。 |
 | `StateTransitionVerifier` / `StateTransitionCheck` | 通过 world-model adapter 预测 action 后的下一状态，再校验结构化 postcondition。 |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | 为重复 verifier、retrieval 和 state-source 调用提供 request-scoped 内存缓存与 hit/miss 统计。 |
-| `CompositeVerifier` / `RoutedVerifier` | 组合确定性工具与词面、检索、数据库或 world-model verifier；路由可依据 claim metadata、context 或文本模式，可限制 route fanout，并记录匹配原因。 |
+| `CompositeVerifier` / `RoutedVerifier` / `default_routed_verifier` | 组合确定性工具与词面、检索、数据库、triple-evidence 或 world-model verifier；路由可依据 claim metadata、context、feature flags 或文本模式，可限制 route fanout，并记录匹配原因。默认路由栈会先跑确定性工具，再对敏感事实 claim 进行严格 triple audit，最后用 lexical groundedness 兜底。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |
 | `SelfConsistencyVerifier` | 用调用方提供的 sampled responses 对 claim 做 FactSelfCheck 风格支持/反证率检查，不增加模型或检索依赖。 |
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |

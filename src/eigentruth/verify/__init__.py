@@ -34,6 +34,7 @@ from eigentruth.verify.planning import (
     estimate_verification_plan_cost,
 )
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
+from eigentruth.verify.routing import default_routed_verifier, default_verifier_routes
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
 from eigentruth.verify.selfcheck import SelfConsistencyVerifier
 from eigentruth.verify.triples import (
@@ -82,6 +83,8 @@ __all__ = [
     "apply_claim_coherence",
     "audit_claim_triples",
     "claim_features",
+    "default_routed_verifier",
+    "default_verifier_routes",
     "extract_calculation",
     "extract_claims",
     "extract_claim_triples",

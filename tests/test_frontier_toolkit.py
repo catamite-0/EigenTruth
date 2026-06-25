@@ -84,6 +84,8 @@ from eigentruth.verify import (
     VerifierRoute,
     apply_claim_coherence,
     audit_claim_triples,
+    default_routed_verifier,
+    default_verifier_routes,
     extract_calculation,
     extract_claim_triples,
     extract_claims,
@@ -1805,6 +1807,61 @@ def test_routed_verifier_rejects_invalid_route_fanout_budget():
         RoutedVerifier((route,), max_attempted_routes=True)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="max_attempted_routes"):
         RoutedVerifier((route,), max_attempted_routes=1.5)  # type: ignore[arg-type]
+
+
+def test_default_verifier_routes_include_strict_triple_evidence_for_sensitive_claims():
+    verifier = default_routed_verifier(evidence=("AlphaCorp has 10 offices.",))
+
+    result = verifier.verify(
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="alpha",
+            metadata={"features": {"has_number": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "triple_evidence"
+    assert result.metadata["selected_verifier"] == "TripleEvidenceVerifier"
+    assert result.metadata["matched_route_details"][0]["match_reasons"] == (
+        "feature_flag:has_number",
+    )
+    assert result.metadata["audit_report"]["passed"] is True
+
+
+def test_default_verifier_routes_fall_back_to_groundedness_for_ordinary_claims():
+    verifier = default_routed_verifier(evidence=("Paris is the capital of France.",))
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "groundedness"
+    assert result.metadata["selected_verifier"] == "GroundednessVerifier"
+
+
+def test_default_verifier_routes_do_not_weaken_failed_triple_audits():
+    verifier = default_routed_verifier(evidence=("AlphaCorp has offices."))
+
+    result = verifier.verify(
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="alpha",
+            metadata={"features": {"has_number": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["selected_route"] == "triple_evidence"
+    assert result.metadata["skipped_routes"] == ()
+    assert result.metadata["audit_report"]["failed_count"] == 1
+    assert result.metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
+
+
+def test_default_verifier_routes_can_be_constructed_without_optional_routes():
+    routes = default_verifier_routes(include_calculator=False, include_triple_evidence=False)
+
+    assert tuple(route.name for route in routes) == ("groundedness",)
+    assert routes[0].fallback is True
 
 
 def test_in_memory_world_model_adapter_verifies_and_predicts_state():
