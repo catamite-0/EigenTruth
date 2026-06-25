@@ -2216,6 +2216,103 @@ def test_eval_intrinsic_dimension_profiles_from_warmup_checkpoint(tmp_path, caps
     assert report["reports"][0]["shape"]["rise_then_fall"] is True
 
 
+def test_compare_intrinsic_dimension_layers_reports_topk_alignment(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.compare_intrinsic_dimension_layers")
+    intrinsic_path = tmp_path / "intrinsic.json"
+    sweep_path = tmp_path / "sweep.json"
+    output_path = tmp_path / "comparison.json"
+    manifest_path = tmp_path / "manifest.json"
+    intrinsic_path.write_text(
+        json.dumps({
+            "reports": [
+                {
+                    "name": "synthetic-run",
+                    "model": "synthetic/model",
+                    "peak_layer": -2,
+                    "shape": {"peak_intrinsic_dimension": 2.5, "rise_then_fall": True},
+                    "profile": [
+                        {"layer": -3, "intrinsic_dimension": 1.5},
+                        {"layer": -2, "intrinsic_dimension": 2.5},
+                        {"layer": -1, "intrinsic_dimension": 2.0},
+                    ],
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "synthetic/model",
+            "layers": [
+                {"layer": -3, "scores": [{"score_name": "truth_proj", "auroc": 0.61}]},
+                {"layer": -2, "scores": [{"score_name": "truth_proj", "auroc": 0.72}]},
+                {"layer": -1, "scores": [{"score_name": "truth_proj", "auroc": 0.81}]},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        intrinsic_report=(str(intrinsic_path),),
+        sweep_report=(str(sweep_path),),
+        score="truth_proj",
+        top_k=2,
+        note=("synthetic test",),
+        json=str(output_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+
+    run = payload["runs"][0]
+    assert output_path.exists()
+    assert manifest_path.exists()
+    assert payload["summary"]["status"] == "pass"
+    assert payload["summary"]["n_peak_in_top_k"] == 1
+    assert run["matched"] is True
+    assert run["selected_layer_rank"] == 2
+    assert run["peak_in_top_k"] is True
+    assert run["auroc_regret"] == pytest.approx(0.09)
+    assert run["absolute_layer_gap"] == 1
+
+
+def test_compare_intrinsic_dimension_layers_marks_missing_sweep(tmp_path):
+    module = importlib.import_module("benchmarks.compare_intrinsic_dimension_layers")
+    intrinsic_path = tmp_path / "intrinsic.json"
+    sweep_path = tmp_path / "sweep.json"
+    intrinsic_path.write_text(
+        json.dumps({
+            "reports": [
+                {
+                    "name": "unmatched-run",
+                    "model": "unmatched/model",
+                    "peak_layer": -2,
+                    "profile": [{"layer": -2, "intrinsic_dimension": 2.5}],
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "other/model",
+            "layers": [{"layer": -2, "scores": [{"score_name": "truth_proj", "auroc": 0.8}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_intrinsic_dimension_layers(
+        [("intrinsic", intrinsic_path)],
+        [("other", sweep_path)],
+        score_name="truth_proj",
+        top_k=3,
+    )
+
+    assert payload["summary"]["status"] == "no_evidence"
+    assert payload["summary"]["n_missing_sweep"] == 1
+    assert payload["runs"][0]["matched"] is False
+    assert "no sweep report matched" in payload["runs"][0]["missing_reason"]
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

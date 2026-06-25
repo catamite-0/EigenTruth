@@ -408,6 +408,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_truthfulqa_frontier_workflow.py` | Runs the multi-model/multi-scale TruthfulQA frontier workflow: calibrated-observability cells for Qwen/SmolLM2-style l20/l80 runs, optional per-cell cache roots for l80/multi-seed reuse, cross-cell rank-fusion ensemble reporting, and a top-level manifest. |
 | `compare_manifold_distances.py` | Builds a Gaussian 2-Wasserstein/Bures distance matrix from saved `TruthManifold` artifacts or `eval_truthfulqa.py` layer-stats caches for offline layer/checkpoint drift inspection. |
 | `eval_intrinsic_dimension.py` | Builds TwoNN intrinsic-dimension profiles from saved warmup checkpoints, including peak-layer and rise-then-fall shape summaries without reloading model weights. |
+| `compare_intrinsic_dimension_layers.py` | Compares intrinsic-dimension peak layers with saved layer/score sweep AUROC rankings, reporting top-k hits, rank, AUROC regret, and layer gap for cheap layer-selection validation. |
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache/staged-verification route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
@@ -501,6 +502,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_truthfulqa_frontier_workflow.py` | 执行多模型/多尺度 TruthfulQA frontier workflow：批量运行 Qwen/SmolLM2 风格 l20/l80 calibrated-observability cells，支持 per-cell cache root 复用 l80/多 seed 证据，生成跨 cell rank-fusion ensemble report 和顶层 manifest。 |
 | `compare_manifold_distances.py` | 从已保存的 `TruthManifold` artifact 或 `eval_truthfulqa.py` layer-stats cache 生成 Gaussian 2-Wasserstein/Bures 距离矩阵，用于离线检查 layer/checkpoint drift。 |
 | `eval_intrinsic_dimension.py` | 从已保存 warmup checkpoint 生成 TwoNN intrinsic-dimension profile，输出 peak-layer 和 rise-then-fall shape summary，不重新加载模型权重。 |
+| `compare_intrinsic_dimension_layers.py` | 将 intrinsic-dimension peak layer 与已保存 layer/score sweep AUROC 排名对齐，输出 top-k 命中、rank、AUROC regret 和层距离，用于低成本 layer-selection 验证。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |

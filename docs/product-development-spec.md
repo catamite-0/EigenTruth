@@ -32,7 +32,7 @@ Implemented today:
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
 - `eigentruth.adapters.StateTransitionVerifier`: dependency-free action-conditioned postcondition verifier that predicts next state through a world-model adapter, then reuses structured state checks.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, and saved concept metadata.
-- Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, conformal calibration, and selective reporting.
+- Benchmark scripts for TruthfulQA-style evaluation, TruthSubspace residual scoring, layer/score sweeps, conformal calibration, selective reporting, manifold-distance sanity checks, and intrinsic-dimension layer-selection validation.
 - Local development baseline: `make check-fast` runs lint, tests, and dependency consistency; `make check` adds deterministic profile-gate smoke checks; `make release-check` also builds the package.
 
 Recent cleanup and platform changes:

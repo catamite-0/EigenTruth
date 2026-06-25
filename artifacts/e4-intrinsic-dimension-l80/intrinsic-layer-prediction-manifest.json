@@ -1,0 +1,25 @@
+{
+  "artifacts": {
+    "intrinsic_layer_prediction_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "intrinsic-layer-prediction-report.json",
+      "sha256": "cee85dcdd8ed00c6edd58cc3d5709529e24d9f620fd472a172646c51ec66375b",
+      "size_bytes": 4724
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "score_name": "truth_proj",
+    "top_k": 3,
+    "workflow": "compare_intrinsic_dimension_layers"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}
