@@ -29,6 +29,10 @@ TruthfulQA, in a deterministic, judge-free, single-forward-pass setup (SAPLMA-st
    closer multi-response proxies that sample verifier-style continuations,
    compute EigenScore over their sentence embeddings, and compute dependency-free
    lexical and embedding-cluster entropy over the sampled responses.
+4. **Does the answer activate an unusual cross-layer update?**
+   `resid_update_norm` is an ICR-inspired residual-dynamics proxy: it measures
+   the RMS update from the previous hidden-state layer to the current layer for
+   the final answer token. It is dependency-free and reuses the same forward pass.
 
 ### Method
 
@@ -317,6 +321,8 @@ progress output.
 
 - `maha_last > 0.5` means the manifold distance ranks false statements above true ones.
 - `subspace_resid > 0.5` means false statements sit farther from the fitted factual subspace.
+- `resid_update_norm > 0.5` means false statements induce larger final-token
+  cross-layer residual updates at the selected layer.
 - Compare `maha_last` against `nll_answer`: geometry is only interesting if it adds
   signal over plain perplexity.
 - Compare `disp_hse` against `disp_euclid`: this is the decisive ablation for the
@@ -429,7 +435,7 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json --s
 
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
-  --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy \
+  --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy \
   --artifact-alpha 0.2 \
   --json artifacts/gpt2-conformal-report.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
@@ -2294,7 +2300,7 @@ single calibrated signal?"
 python benchmarks/eval_score_ensemble.py \
   --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores.json \
   --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores.json \
-  --signals truth_proj,maha_last,subspace_resid,eigenscore \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
   --methods max_rank,mean_rank \
   --repeats 50 \
   --json artifacts/truthfulqa_score_ensemble_report.json
@@ -2306,7 +2312,7 @@ For a single score dump, the same runner can also save a deployable
 ```bash
 python benchmarks/eval_score_ensemble.py \
   --scores artifacts/qwen05_truthfulqa_l80_scores.json \
-  --signals truth_proj,maha_last,subspace_resid \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm \
   --methods max_rank,mean_rank \
   --best-alpha 0.10 \
   --save-best-fusion-artifact artifacts/qwen05_score_fusion_artifact.json \

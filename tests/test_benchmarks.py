@@ -18078,6 +18078,9 @@ def test_eval_truthfulqa_exposes_internal_eigenscore_signal():
 
     assert "eigenscore" in module.SIGNALS
     assert module.DEFAULT_SCORE_DIRECTIONS["eigenscore"] == "higher"
+    assert "resid_update_norm" in module.SIGNALS
+    assert "resid_update_norm" in module._sweep_signal_names(SimpleNamespace(inside_samples=0))
+    assert module.DEFAULT_SCORE_DIRECTIONS["resid_update_norm"] == "higher"
 
 
 def test_eval_truthfulqa_multisample_inside_signal_is_optional():
@@ -18536,6 +18539,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
         "last": {-1: torch.tensor([1.0, 0.0]), -2: torch.tensor([0.0, 1.0])},
         "ans_hs": torch.tensor([[1.0, 2.0], [3.0, 4.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
+        "resid_update_norm_by_layer": {-1: 1.5, -2: 0.5},
         "nll": 1.5,
     }
 
@@ -18573,6 +18577,7 @@ def test_eval_truthfulqa_eval_reps_cache_roundtrip(tmp_path):
     assert torch.allclose(loaded[0]["last"][-1], reps["last"][-1])
     assert torch.allclose(loaded[0]["ans_hs"], reps["ans_hs"])
     assert loaded[0]["eigenscore_by_layer"][-2] == pytest.approx(0.25)
+    assert loaded[0]["resid_update_norm_by_layer"][-1] == pytest.approx(1.5)
     assert loaded[0]["nll"] == pytest.approx(1.5)
     assert loaded[1] is None
 
@@ -18954,12 +18959,14 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
         "last": {-1: torch.tensor([1.0, 1.0, 0.5]), -2: torch.tensor([0.0, 1.0, 1.0])},
         "ans_hs": torch.tensor([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.125, -2: 0.25},
+        "resid_update_norm_by_layer": {-1: 0.75, -2: 0.25},
         "nll": 1.5,
     }
     reps_3 = {
         "last": {-1: torch.tensor([0.0, 1.0, 1.5]), -2: torch.tensor([1.0, 0.0, 1.0])},
         "ans_hs": torch.tensor([[0.0, 1.0, 0.0], [0.0, 2.0, 0.0]]),
         "eigenscore_by_layer": {-1: 0.5, -2: 0.75},
+        "resid_update_norm_by_layer": {-1: 1.25, -2: 0.5},
         "nll": 2.0,
     }
 
@@ -18982,9 +18989,15 @@ def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
             -torch.dot(h, manifold_1.contrastive_direction).item()
         )
         assert record["layer_scores"][-1]["subspace_resid"] == pytest.approx(subspace.residual_distance(h).item())
+        assert record["layer_scores"][-1]["resid_update_norm"] == pytest.approx(
+            reps["resid_update_norm_by_layer"][-1]
+        )
         assert record["layer_scores"][-2]["truth_proj"] == pytest.approx(0.0)
         assert record["layer_scores"][-2]["subspace_resid"] == pytest.approx(0.0)
         assert record["primary_scores"]["eigenscore"] == pytest.approx(reps["eigenscore_by_layer"][-1])
+        assert record["primary_scores"]["resid_update_norm"] == pytest.approx(
+            reps["resid_update_norm_by_layer"][-1]
+        )
         assert record["primary_scores"]["disp_euclid"] == pytest.approx(
             module.euclidean_dispersion(reps["ans_hs"]).item()
         )
@@ -19734,7 +19747,47 @@ def test_eval_truthfulqa_batched_statement_reps_can_use_precomputed_encodings():
 
     assert reps[0]["last"][0].shape == (4,)
     assert reps[0]["ans_hs"].shape == (2, 4)
+    assert reps[0]["resid_update_norm_by_layer"][0] == pytest.approx(0.0)
     assert reps[0]["nll"] == pytest.approx(torch.log(torch.tensor(64.0)).item())
+
+
+def test_eval_truthfulqa_batched_statement_reps_scores_residual_update_norm():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class TwoStateModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.config = SimpleNamespace(num_hidden_layers=1)
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            state0 = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            state1 = state0 + 2.0
+            logits = torch.zeros((*input_ids.shape, 64), dtype=torch.float32)
+            return SimpleNamespace(
+                logits=logits,
+                hidden_states=(state0, state1) if output_hidden_states else None,
+            )
+
+    reps = module.batched_statement_reps(
+        TwoStateModel(),
+        NoCallTokenizer(),
+        [module.Statement("Q?", "A.", 0)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 5, 6), 2)],
+    )
+
+    assert torch.allclose(reps[0]["last"][1], torch.tensor([8.0, 8.0, 8.0, 8.0]))
+    assert reps[0]["resid_update_norm_by_layer"][1] == pytest.approx(2.0)
 
 
 def test_eval_truthfulqa_batched_statement_reps_skips_lm_head_when_metrics_disabled():

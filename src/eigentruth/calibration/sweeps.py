@@ -25,6 +25,7 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "maha": "higher",
     "truth_proj": "higher",
     "subspace_resid": "higher",
+    "resid_update_norm": "higher",
     "disp_euclid": "higher",
     "disp_hse": "higher",
     "eigenscore": "higher",

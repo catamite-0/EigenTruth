@@ -13,6 +13,9 @@ EigenTruth benchmark — can hidden-state geometry separate true vs. false state
        Is the contrastive-direction projection (the tool's own steering direction used as a
        mass-mean probe, cf. Marks & Tegmark) an even stronger detector, and which layer is
        best (--sweep)?
+    4. 跨层 residual 更新幅度 (resid_update_norm) 是否提供 ICR-like 隐状态动态信号？
+       Does the cross-layer residual update magnitude provide an ICR-like hidden-state
+       dynamics signal?
 
 方法 / Method (SAPLMA 式、确定性、无需 LLM 裁判 / SAPLMA-style, deterministic, judge-free):
     - 从**留出**题目的*正确*答案构建真值流形（无标签泄漏）。
@@ -81,6 +84,7 @@ SIGNALS = [
     "maha_last",
     "truth_proj",
     "subspace_resid",
+    "resid_update_norm",
     "disp_euclid",
     "disp_hse",
     "eigenscore",
@@ -354,7 +358,7 @@ def _enabled_signals(args) -> list[str]:
 
 
 def _sweep_signal_names(args) -> list[str]:
-    signals = ["maha_last", "truth_proj", "subspace_resid", "eigenscore"]
+    signals = ["maha_last", "truth_proj", "subspace_resid", "resid_update_norm", "eigenscore"]
     if _inside_enabled(args):
         signals.extend(INSIDE_SIGNALS)
     return signals
@@ -415,6 +419,68 @@ def _normalize_hidden_state_index(layer: int, n_layers: int) -> int:
             f"hidden-state index {layer} is out of range for {n_layers} transformer layers."
         )
     return normalized
+
+
+def _model_num_hidden_layers(model) -> int | None:
+    config = getattr(model, "config", None)
+    raw = getattr(config, "num_hidden_layers", None)
+    if raw is None:
+        return None
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value >= 0 else None
+
+
+def _previous_hidden_state_index(layer: int, n_layers: int | None) -> int | None:
+    if n_layers is None:
+        if int(layer) <= 0:
+            return None
+        return int(layer) - 1
+    normalized = _normalize_hidden_state_index(int(layer), int(n_layers))
+    if normalized <= 0:
+        return None
+    return normalized - 1
+
+
+def _residual_dynamics_capture_layers(
+    layers: Sequence[int],
+    *,
+    n_layers: int | None,
+    hidden_state_capture: str,
+) -> list[int]:
+    capture_layers = [int(layer) for layer in layers]
+    seen = set(capture_layers)
+    for layer in layers:
+        previous = _previous_hidden_state_index(int(layer), n_layers)
+        if previous is None:
+            continue
+        if hidden_state_capture == "hooks" and n_layers is not None and previous in {0, int(n_layers)}:
+            continue
+        if previous not in seen:
+            capture_layers.append(previous)
+            seen.add(previous)
+    return capture_layers
+
+
+def _residual_update_norm(
+    hidden_by_layer: Mapping[int, torch.Tensor],
+    layer: int,
+    *,
+    n_layers: int | None,
+    row: int,
+    token_index: int,
+) -> float:
+    previous = _previous_hidden_state_index(int(layer), n_layers)
+    if previous is None or previous not in hidden_by_layer or int(layer) not in hidden_by_layer:
+        return 0.0
+    current_state = hidden_by_layer[int(layer)][row, token_index, :].float()
+    previous_state = hidden_by_layer[previous][row, token_index, :].float()
+    delta = current_state - previous_state
+    if delta.numel() == 0:
+        return 0.0
+    return float(torch.linalg.vector_norm(delta).item() / math.sqrt(float(delta.numel())))
 
 
 def _hook_capture_layer_map(model, layers: Sequence[int]) -> dict[int, int]:
@@ -983,14 +1049,19 @@ def _score_reps_batch(
         else:
             resid_values = [0.0] * len(records)
 
+        resid_update_values = [
+            float(dict(reps.get("resid_update_norm_by_layer") or {}).get(layer, 0.0))
+            for _, reps in valid
+        ]
         eigenscore_values = [float(reps["eigenscore_by_layer"][layer]) for _, reps in valid]
-        for record, maha, proj, resid, eigenscore in zip(
-            records, maha_values, proj_values, resid_values, eigenscore_values
+        for record, maha, proj, resid, resid_update, eigenscore in zip(
+            records, maha_values, proj_values, resid_values, resid_update_values, eigenscore_values
         ):
             record["layer_scores"][layer] = {
                 "maha_last": float(maha),
                 "truth_proj": float(proj),
                 "subspace_resid": float(resid),
+                "resid_update_norm": float(resid_update),
                 "eigenscore": float(eigenscore),
             }
 
@@ -1583,6 +1654,7 @@ def _eval_reps_cache_metadata(
         "layers": [int(layer) for layer in layers],
         "max_length": int(args.max_length),
         "eigenscore_alpha": float(args.eigenscore_alpha),
+        "resid_update_norm_schema": 1,
         "length_bucketed_batches": bool(args.length_bucketed_batches),
         "n_eval": len(eval_statements),
         "eval_fingerprint": _statement_fingerprint(eval_statements),
@@ -1636,6 +1708,10 @@ def _reps_to_cache_state(reps: Optional[Mapping]) -> Optional[dict]:
         "eigenscore_by_layer": {
             int(layer): float(value) for layer, value in reps["eigenscore_by_layer"].items()
         },
+        "resid_update_norm_by_layer": {
+            int(layer): float(value)
+            for layer, value in dict(reps.get("resid_update_norm_by_layer") or {}).items()
+        },
         "nll": float(reps["nll"]),
     }
 
@@ -1648,6 +1724,10 @@ def _reps_from_cache_state(state: Optional[Mapping]) -> Optional[dict]:
         "ans_hs": state["ans_hs"],
         "eigenscore_by_layer": {
             int(layer): float(value) for layer, value in state["eigenscore_by_layer"].items()
+        },
+        "resid_update_norm_by_layer": {
+            int(layer): float(value)
+            for layer, value in dict(state.get("resid_update_norm_by_layer") or {}).items()
         },
         "nll": float(state["nll"]),
     }
@@ -2303,6 +2383,12 @@ def batched_statement_reps(
                 eigenscore_alpha=eigenscore_alpha,
             )
 
+    n_layers = _model_num_hidden_layers(model)
+    capture_layers = _residual_dynamics_capture_layers(
+        layers,
+        n_layers=n_layers,
+        hidden_state_capture=hidden_state_capture,
+    )
     pad_token_id = _pad_token_id(tokenizer)
     batch_len = max(len(ids) for _, ids, _ in encoded)
     input_ids = torch.full((len(encoded), batch_len), pad_token_id, dtype=torch.long, device=device)
@@ -2316,7 +2402,7 @@ def batched_statement_reps(
         model,
         input_ids=input_ids,
         attention_mask=attention_mask,
-        layers=layers,
+        layers=capture_layers,
         hidden_state_capture=hidden_state_capture,
         need_logits=compute_answer_metrics,
     )
@@ -2339,12 +2425,23 @@ def batched_statement_reps(
             ).item())
             for layer in layers
         }
+        resid_update_norm_by_layer = {
+            layer: _residual_update_norm(
+                hidden_by_layer,
+                int(layer),
+                n_layers=n_layers,
+                row=row,
+                token_index=seq_len - 1,
+            )
+            for layer in layers
+        }
 
         nll = _answer_nll_from_logits(out.logits[row], input_ids[row], seq_len, n_ans)
         results[original_idx] = {
             "last": last_by_layer,
             "ans_hs": ans_hs,
             "eigenscore_by_layer": eigenscore_by_layer,
+            "resid_update_norm_by_layer": resid_update_norm_by_layer,
             "nll": nll,
         }
     return results
@@ -2362,6 +2459,12 @@ def _batched_statement_reps_with_prefix_kv(
     """Score encoded statements by reusing one prefix KV cache per shared prefix."""
     results: list[Optional[dict]] = [None] * int(result_count)
     groups: dict[tuple[int, ...], list[tuple[int, list[int], int]]] = {}
+    n_layers = _model_num_hidden_layers(model)
+    capture_layers = _residual_dynamics_capture_layers(
+        layers,
+        n_layers=n_layers,
+        hidden_state_capture="outputs",
+    )
     for original_idx, ids, n_ans in encoded:
         prefix_len = len(ids) - int(n_ans)
         if prefix_len <= 0:
@@ -2397,7 +2500,7 @@ def _batched_statement_reps_with_prefix_kv(
                 output_hidden_states=True,
                 use_cache=False,
             )
-            hidden_by_layer = {int(layer): answer_out.hidden_states[int(layer)] for layer in layers}
+            hidden_by_layer = {int(layer): answer_out.hidden_states[int(layer)] for layer in capture_layers}
             answer_len = len(answer_ids)
             last_by_layer = {
                 int(layer): hidden_by_layer[int(layer)][0, answer_len - 1, :].float().cpu()
@@ -2411,6 +2514,16 @@ def _batched_statement_reps_with_prefix_kv(
                 ).item())
                 for layer in layers
             }
+            resid_update_norm_by_layer = {
+                int(layer): _residual_update_norm(
+                    hidden_by_layer,
+                    int(layer),
+                    n_layers=n_layers,
+                    row=0,
+                    token_index=answer_len - 1,
+                )
+                for layer in layers
+            }
             prediction_logits = prefix_next_logits
             if answer_len > 1:
                 prediction_logits = torch.cat(
@@ -2422,6 +2535,7 @@ def _batched_statement_reps_with_prefix_kv(
                 "last": last_by_layer,
                 "ans_hs": ans_hs,
                 "eigenscore_by_layer": eigenscore_by_layer,
+                "resid_update_norm_by_layer": resid_update_norm_by_layer,
                 "nll": nll,
             }
     return results
@@ -3863,6 +3977,7 @@ def run(args) -> dict:
                     sweep_scores[layer]["maha_last"].append(layer_scores["maha_last"])
                     sweep_scores[layer]["truth_proj"].append(layer_scores["truth_proj"])
                     sweep_scores[layer]["subspace_resid"].append(layer_scores["subspace_resid"])
+                    sweep_scores[layer]["resid_update_norm"].append(layer_scores["resid_update_norm"])
                     sweep_scores[layer]["eigenscore"].append(layer_scores["eigenscore"])
                     if inside_scores is not None:
                         sweep_scores[layer][INSIDE_SIGNAL].append(float(inside_scores[layer]))
@@ -3875,6 +3990,7 @@ def run(args) -> dict:
                 scores["maha_last"].append(primary_scores["maha_last"])
                 scores["truth_proj"].append(primary_scores["truth_proj"])
                 scores["subspace_resid"].append(primary_scores["subspace_resid"])
+                scores["resid_update_norm"].append(primary_scores["resid_update_norm"])
                 scores["disp_euclid"].append(primary_scores["disp_euclid"])
                 scores["disp_hse"].append(primary_scores["disp_hse"])
                 scores["eigenscore"].append(primary_scores["eigenscore"])
