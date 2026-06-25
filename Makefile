@@ -27,6 +27,7 @@ perf-check:
 	$(PYTHON) benchmarks/cache_worker_sweep_smoke.py
 	$(PYTHON) benchmarks/registry_baseline_smoke.py
 	$(PYTHON) benchmarks/performance_baseline_smoke.py
+	$(PYTHON) benchmarks/product_trace_replay_smoke.py
 	$(PYTHON) benchmarks/release_candidate_registry_smoke.py
 
 build:

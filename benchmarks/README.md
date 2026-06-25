@@ -3575,11 +3575,13 @@ python benchmarks/run_registry_baseline_workflow.py \
 `benchmarks/inside_sampling_profile_smoke.py`,
 `benchmarks/cache_worker_sweep_smoke.py`, and
 `benchmarks/registry_baseline_smoke.py`, plus
-`benchmarks/performance_baseline_smoke.py` and
+`benchmarks/performance_baseline_smoke.py`,
+`benchmarks/product_trace_replay_smoke.py`, and
 `benchmarks/release_candidate_registry_smoke.py`. These use fixed synthetic profile
 payloads to verify that direct gates, cache-profile gates, worker-count sweep
 decisions, INSIDE sampling sample-efficiency gates, and registry-backed
-baseline/release gates pass acceptable candidates and catch expected regressions. They
+baseline/ProductTrace replay/release gates pass acceptable candidates, reject bounded
+telemetry payloads where full traces are required, and catch expected regressions. They
 are stable enough for default local/CI checks because they do not load a model
 or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
 artifacts, `run_cache_profile_triplet.py`, or `run_inside_sampling_profile.py`

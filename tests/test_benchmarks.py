@@ -10788,6 +10788,25 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
+def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tmp_path):
+    module = importlib.import_module("benchmarks.product_trace_replay_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    payload = module.build_product_trace_replay_smoke(tmp_path)
+    workflow = payload["workflow_report"]
+    bounded = payload["bounded_rejection_report"]
+    registry = registry_module.ArtifactRegistry.load_json(tmp_path / "registry.json")
+
+    assert workflow["status"] == "promote"
+    assert workflow["corpus"]["accepted_count"] == 3
+    assert workflow["selector_replay"]["status"] == "promote"
+    assert workflow["manifest_verification"]["verification"]["passed"] is True
+    assert bounded["status"] == "blocked"
+    assert "bounded ProductTrace telemetry" in bounded["decision"]["blocking_reasons"][0]
+    assert Path(workflow["paths"]["artifact_manifest"]).exists()
+    assert registry.get("report:product-trace-replay-smoke:0.1").metadata["status"] == "promote"
+
+
 def test_release_candidate_registry_smoke_writes_promoted_and_blocked_reports(tmp_path):
     module = importlib.import_module("benchmarks.release_candidate_registry_smoke")
     registry_module = importlib.import_module("eigentruth.registry")
