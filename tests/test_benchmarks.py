@@ -1419,6 +1419,106 @@ def test_eval_frontier_stability_rejects_duplicate_score_names(tmp_path):
         )
 
 
+def test_eval_abstention_stability_builds_seed_summary_and_registry(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    scores_path = tmp_path / "scores.manifest.json"
+    labels = [0] * 12 + [1] * 8
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "uncertainty_good": [index / 100.0 for index in range(12)]
+            + [0.8 + index / 100.0 for index in range(8)],
+            "uncertainty_bad": [index / 100.0 for index in range(12)]
+            + [0.02 + index / 100.0 for index in range(8)],
+        },
+    })
+    write_score_dump_jsonl(dump, scores_path)
+    report_path = tmp_path / "abstention-stability" / "abstention-stability-report.json"
+    manifest_path = tmp_path / "abstention-stability" / "artifact-manifest.json"
+    registry_path = tmp_path / "registry.json"
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/eval_abstention_stability.py",
+            "--scores",
+            f"synthetic={scores_path}",
+            "--signals",
+            "uncertainty_good,uncertainty_bad",
+            "--alpha",
+            "0.5",
+            "--seeds",
+            "0,1,2",
+            "--min-abstention-conditional-correctness-lower-bound",
+            "0.2",
+            "--max-abstention-rate",
+            "0.85",
+            "--json",
+            str(report_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-abstention-stability",
+            "--version",
+            "0.1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    verification = registry_module.ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=True,
+    )
+    record = registry.get("report:synthetic-abstention-stability:0.1")
+    run = payload["runs"][0]
+
+    assert payload["status"] == "complete"
+    assert payload["config"]["seeds"] == [0, 1, 2]
+    assert payload["config"]["release_gate"]["max_abstention_rate"] == pytest.approx(0.85)
+    assert "score_dump_cache" in payload
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
+    assert run["stability"]["recommended_score_name_counts"] == {"uncertainty_good": 3}
+    assert run["stability"]["stable_recommended_score_name"] == "uncertainty_good"
+    assert run["stability"]["release_gate_pass_seed_count"] == 3
+    assert run["stability"]["all_release_gates_passed"] is True
+    assert manifest["metadata"]["runner"] == "eval_abstention_stability"
+    assert manifest["summary"]["missing_count"] == 0
+    assert "input_score_records.synthetic" in manifest["artifacts"]
+    assert verification.passed
+    assert record.metadata["workflow"] == "eval_abstention_stability"
+    assert record.metadata["runs"] == ["synthetic"]
+    assert record.metadata["run_summaries"][0]["stable_recommended_score_name"] == "uncertainty_good"
+
+
+def test_eval_abstention_stability_rejects_duplicate_score_names(tmp_path):
+    module = importlib.import_module("benchmarks.eval_abstention_stability")
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(
+        json.dumps({
+            "labels": [0, 0, 1],
+            "scores": {"uncertainty": [0.1, 0.2, 0.9]},
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="score dump names must be unique"):
+        module.build_abstention_stability_report(
+            (("scores", scores_path), ("scores", scores_path)),
+            signals=("uncertainty",),
+            seeds=(0,),
+            alpha=0.5,
+        )
+
+
 def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
     registry_module = importlib.import_module("eigentruth.registry")
     scores_path = tmp_path / "scores.json"

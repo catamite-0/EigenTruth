@@ -666,6 +666,43 @@ both the report and the manifest verification record.
 The l80 stability report also records score-dump cache reuse: the shared JSONL
 selected-view cache currently hits 18/22 lookups across the multi-seed replay.
 
+## `eval_abstention_stability.py`
+
+Replays existing score dumps across seeded conformal-abstention splits without
+loading a model. Use it after building abstention comparison/release-gate
+sidecars to check whether the recommended participation-gate signal and
+release-gate verdict remain stable under calibration splits.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability
+
+python benchmarks/eval_abstention_stability.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --signals maha_last,truth_proj,subspace_resid,inside_eigenscore,inside_semantic_energy \
+  --alpha 0.10 \
+  --best-by conditional_correctness_lower_bound \
+  --seeds 0,1,2,3,4,5,6,7,8,9 \
+  --min-abstention-conditional-correctness-lower-bound 0.8 \
+  --max-abstention-rate 0.5 \
+  --json "$OUT/abstention-stability-report.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2-l80-abstention-stability \
+  --version 0.1
+
+python benchmarks/verify_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --recursive \
+  --json "$OUT/manifest-verification.json"
+```
+
+Each seed calibrates thresholds on a stratified calibration split of correct
+records and evaluates participation metrics on the held-out split. The report
+summarizes recommended-signal counts, conditional-correctness lower-bound
+variance, abstention-rate variance, and release-gate pass/block counts per
+score dump. JSONL inputs load only the requested abstention candidate columns.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

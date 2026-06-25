@@ -49,9 +49,15 @@ Added the first promotion check for participation control:
 - It blocks promotion when the selected candidate's conservative conditional-correctness lower bound is too low or its empirical abstention rate is too high.
 - `eval_conformal.py` can write the gate verdict as a sidecar, embed it in the main payload, and set the main verdict to `REJECT` when the release gate fails.
 
+Added post-hoc stability replay for participation gates:
+
+- `benchmarks/eval_abstention_stability.py` consumes existing score dumps and does not load a model.
+- Each seed calibrates abstention thresholds on a stratified split of correct records, evaluates held-out participation metrics, ranks candidate signals, and applies the abstention release gate.
+- The report records recommended-signal counts, metric variance, release-gate pass/block counts, artifact manifests, and optional registry metadata for frontier l80-style evidence.
+
 ## Next Research-to-Code Candidates
 
-1. Add a post-hoc abstention stability replay across frontier l80 score dumps and seeds, mirroring `eval_frontier_stability.py`.
-2. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
-3. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
-4. Promote release-gate outputs into the broader release-candidate registry workflow once stability evidence is available.
+1. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
+2. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
+3. Promote release-gate outputs into the broader release-candidate registry workflow once stability evidence is available.
+4. Run and register the abstention-stability replay on the current Qwen/SmolLM2 l80 score dumps.

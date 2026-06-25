@@ -239,7 +239,7 @@ For product features:
 ### Completed 0.2-0.3 Foundation
 
 - Score dump -> layer/score sweep -> conformal calibration artifact -> risk decision -> action request/result -> product trace.
-- Conformal abstention report -> runtime `participate/abstain` decision helper plus `eval_conformal.py --save-abstention-report`, `--save-abstention-comparison`, and `--save-abstention-release-gate` sidecars for risk-coverage-controlled answer participation, multi-signal selection, and fail-closed promotion checks; `ParticipationGateConfig` can now consume a single report, candidate, or comparison report and let `RiskController` abstain/clarify accepted answers when the selected uncertainty score is outside the retained region.
+- Conformal abstention report -> runtime `participate/abstain` decision helper plus `eval_conformal.py --save-abstention-report`, `--save-abstention-comparison`, and `--save-abstention-release-gate` sidecars for risk-coverage-controlled answer participation, multi-signal selection, and fail-closed promotion checks; `eval_abstention_stability.py` replays participation-gate candidates across seeded calibration splits without reloading models; `ParticipationGateConfig` can now consume a single report, candidate, or comparison report and let `RiskController` abstain/clarify accepted answers when the selected uncertainty score is outside the retained region.
 - Configurable risk policy hooks for refuted, unsupported, error, and compound diagnostic/verification cases.
 - Action executor registry with dry-run fallback and a dependency-free in-memory retrieval executor shell.
 - Claim extraction metadata for numbers, citations, negation, and time-sensitive claims.
