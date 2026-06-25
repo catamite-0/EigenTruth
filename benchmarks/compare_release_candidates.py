@@ -1000,6 +1000,8 @@ def _adapter_family_matrix_gate(
     promotion_decision = _mapping(report.get("promotion_decision"))
     route_comparison = _mapping(report.get("route_comparison"))
     quality_gate = _mapping(route_comparison.get("quality_gate"))
+    retrieval_routes = tuple(str(route) for route in report.get("retrieval_routes", ()) if str(route))
+    audit_routes = tuple(str(route) for route in report.get("audit_routes", ()) if str(route))
     gate = _adapter_family_gate(
         report_error=report_error,
         promotion_decision=promotion_decision,
@@ -1017,6 +1019,8 @@ def _adapter_family_matrix_gate(
         "n_records": report.get("n_records"),
         "routes": routes,
         "required_routes": required,
+        "retrieval_routes": retrieval_routes,
+        "audit_routes": audit_routes,
         "promoted_routes": tuple(route for route, status in family_statuses.items() if status == "promote"),
         "family_statuses": family_statuses,
         "promotion_status": promotion_decision.get("status"),
@@ -2722,6 +2726,8 @@ def _candidate_with_gates(
             "matrix_path": adapter_family.get("matrix_path"),
             "required_routes": tuple(adapter_family.get("required_routes", ())),
             "routes": tuple(adapter_family.get("routes", ())),
+            "retrieval_routes": tuple(adapter_family.get("retrieval_routes", ())),
+            "audit_routes": tuple(adapter_family.get("audit_routes", ())),
             "promoted_routes": tuple(adapter_family.get("promoted_routes", ())),
             "promotion_status": adapter_family.get("promotion_status"),
         }

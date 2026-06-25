@@ -5650,6 +5650,8 @@ def _write_adapter_family_matrix(
             "alpha": 0.2,
             "n_records": 8,
             "routes": list(routes),
+            "retrieval_routes": [route for route in routes if route.startswith("retrieval_")],
+            "audit_routes": [route for route in routes if route == "triple_evidence"],
             "families": families,
             "route_comparison": {
                 "quality_gate": {"passed": promotion_status == "promote" and blocked_route is None},
@@ -6802,8 +6804,65 @@ def test_run_adapter_readiness_registry_workflow_promotes_manifest(tmp_path, mon
     assert record.metadata["recommended_best_quality_auroc"] == pytest.approx(0.91)
     assert record.metadata["recommended_inside_sampling_run"] == "adaptive_selfcheck"
     assert record.metadata["recommended_inside_sampling_sample_count_ratio_to_baseline"] == pytest.approx(0.4)
+    assert record.metadata["adapter_family_matrix_report"].endswith("adapter-family-matrix.json")
+    assert record.metadata["adapter_family_audit_routes"] == ["triple_evidence"]
+    assert record.metadata["adapter_family_retrieval_routes"] == [
+        "retrieval_groundedness",
+        "retrieval_structured_qa",
+    ]
+    assert record.metadata["adapter_include_retrieval"] is True
+    assert record.metadata["adapter_include_retrieval_structured_qa"] is True
+    assert record.metadata["adapter_include_triple_evidence"] is True
     assert record.metadata["scope"] == "unit"
     assert (tmp_path / "workflow.json").exists()
+
+
+def test_adapter_readiness_registry_workflow_cli_passes_adapter_family_flags(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_registry_workflow")
+    captured = {}
+
+    def fake_registry_workflow(config):
+        captured["config"] = config
+        return {
+            "decision": {
+                "status": "promote",
+                "readiness_status": "promote",
+                "registry_record": "benchmark_manifest:readiness-baseline:0.6",
+            }
+        }
+
+    monkeypatch.setattr(module, "run_adapter_readiness_registry_workflow", fake_registry_workflow)
+    module.main([
+        "--output-dir",
+        str(tmp_path / "readiness"),
+        "--registry",
+        str(tmp_path / "registry.json"),
+        "--name",
+        "readiness-baseline",
+        "--version",
+        "0.6",
+        "--include-retrieval",
+        "--include-retrieval-structured-qa",
+        "--include-triple-evidence",
+        "--min-false-refuted-rate",
+        "0.0",
+        "--max-mean-attempted-route-count",
+        "2.1",
+        "--max-retrieval-use-rate",
+        "1.0",
+        "--triple-min-slot-coverage",
+        "0.75",
+        "--performance-dry-run",
+    ])
+
+    config = captured["config"]
+    assert config.readiness.include_retrieval is True
+    assert config.readiness.include_retrieval_structured_qa is True
+    assert config.readiness.include_triple_evidence is True
+    assert config.readiness.min_false_refuted_rate == pytest.approx(0.0)
+    assert config.readiness.max_mean_attempted_route_count == pytest.approx(2.1)
+    assert config.readiness.max_retrieval_use_rate == pytest.approx(1.0)
+    assert config.readiness.triple_min_slot_coverage == pytest.approx(0.75)
 
 
 def test_run_adapter_readiness_registry_workflow_blocks_non_promoted_readiness(tmp_path, monkeypatch):
@@ -8118,7 +8177,10 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         version="0.6",
         metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
     ).save_json()
-    matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
+    matrix_path = _write_adapter_family_matrix(
+        tmp_path / "adapter-family-matrix.json",
+        routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
+    )
     blocked_matrix_path = _write_adapter_family_matrix(
         tmp_path / "blocked-adapter-family-matrix.json",
         blocked_route="retrieval_groundedness",
@@ -8134,7 +8196,7 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         adapter_family_matrix_path=matrix_path,
-        required_adapter_routes=("structured_state", "state_transition"),
+        required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
     )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -8150,9 +8212,15 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
 
     assert promoted["decision"]["status"] == "promote"
     assert promoted["decision"]["adapter_family_status"] == "promote"
-    assert promoted["decision"]["required_adapter_routes"] == ("structured_state", "state_transition")
+    assert promoted["decision"]["required_adapter_routes"] == (
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    )
     assert promoted["adapter_family_matrix_gate"]["gate"]["passed"] is True
+    assert promoted["adapter_family_matrix_gate"]["audit_routes"] == ("triple_evidence",)
     assert promoted["release_candidate"]["adapter_family_matrix"]["matrix_path"] == str(matrix_path)
+    assert promoted["release_candidate"]["adapter_family_matrix"]["audit_routes"] == ("triple_evidence",)
     assert promoted["release_candidate"]["manifests"]["adapter_family_matrix_report"] == str(matrix_path)
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
@@ -9421,7 +9489,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         version="0.1",
         metadata={"workflow": "run_feedback_policy_workflow", "status": "recommend"},
     ).save_json()
-    adapter_family_matrix_path = _write_adapter_family_matrix(tmp_path / "adapter-family-matrix.json")
+    adapter_family_matrix_path = _write_adapter_family_matrix(
+        tmp_path / "adapter-family-matrix.json",
+        routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
+    )
     original_sha256_file = provenance_module._sha256_file
     fingerprint_calls_by_path: dict[str, int] = {}
 
@@ -9462,7 +9533,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
         required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
         adapter_family_matrix_path=adapter_family_matrix_path,
-        required_adapter_routes=("structured_state", "state_transition"),
+        required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
         runtime_profile="balanced",
         inside_trigger_budget_policy="cost_first",
         min_best_quality_auroc=0.70,
@@ -9570,7 +9641,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_feedback_policy_candidate_control_policy"].endswith(
         "candidate-control-policy.json"
     )
-    assert manifest["metadata"]["required_adapter_routes"] == ["structured_state", "state_transition"]
+    assert manifest["metadata"]["required_adapter_routes"] == [
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    ]
     assert manifest["metadata"]["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
     ]
@@ -9635,7 +9710,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "feedback-policy-workflow/artifact-manifest.json"
     )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
-    assert manifest["metadata"]["adapter_family_required_routes"] == ["structured_state", "state_transition"]
+    assert manifest["metadata"]["adapter_family_required_routes"] == [
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    ]
+    assert manifest["metadata"]["adapter_family_audit_routes"] == ["triple_evidence"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
     assert manifest["metadata"]["required_route_baseline_manifests"] == [str(retrieval_manifest)]
     assert manifest["metadata"]["required_route_budget_policy"]["required_route_max_runtime_total_seconds"] == (
@@ -9672,7 +9752,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
     assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
-    assert payload["config"]["required_adapter_routes"] == ("structured_state", "state_transition")
+    assert payload["config"]["required_adapter_routes"] == (
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    )
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
     assert payload["release_candidate_comparison"]["config"]["required_route_baseline_keys"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -9798,7 +9882,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         pytest.approx(30.0)
     )
     assert record.metadata["required_route_budget_policy"]["required_route_require_non_oracle_evidence"] is True
-    assert record.metadata["adapter_family_required_routes"] == ["structured_state", "state_transition"]
+    assert record.metadata["adapter_family_required_routes"] == [
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    ]
+    assert record.metadata["adapter_family_audit_routes"] == ["triple_evidence"]
     assert record.metadata["recommended_model"] == "Qwen/Qwen2.5-0.5B-Instruct"
     assert record.metadata["recommended_route"] == "structured_state"
     assert record.metadata["recommended_route_retrieval_use_rate"] == pytest.approx(0.0)
@@ -11629,7 +11718,24 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
     output_dir.mkdir(parents=True, exist_ok=True)
     readiness_path = output_dir / "adapter-readiness-report.json"
     runtime_path = output_dir / "runtime-recommendation.json"
+    adapter_path = output_dir / "adapter-family-matrix.json"
     manifest_path = output_dir / "artifact-manifest.json"
+    adapter_payload = {
+        "workflow": "adapter_family_matrix",
+        "include_retrieval": True,
+        "include_retrieval_structured_qa": True,
+        "include_triple_evidence": True,
+        "routes": (
+            "structured_qa",
+            "structured_state",
+            "state_transition",
+            "retrieval_groundedness",
+            "retrieval_structured_qa",
+            "triple_evidence",
+        ),
+        "retrieval_routes": ("retrieval_groundedness", "retrieval_structured_qa"),
+        "audit_routes": ("triple_evidence",),
+    }
     runtime_payload = {
         "status": runtime_status,
         "recommendation": (
@@ -11663,6 +11769,8 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
     }
     report = {
         "artifact_manifest": str(manifest_path),
+        "adapter_family_matrix_path": str(adapter_path),
+        "adapter_family_matrix": adapter_payload,
         "runtime_recommendation_path": str(runtime_path),
         "runtime_recommendation": runtime_payload,
         "readiness_decision": {
@@ -11675,11 +11783,13 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
     }
     readiness_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     runtime_path.write_text(json.dumps(runtime_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    adapter_path.write_text(json.dumps(adapter_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     manifest_path.write_text(
         json.dumps(
             build_artifact_manifest(
                 {
                     "readiness_report": readiness_path,
+                    "adapter_family_matrix": adapter_path,
                     "runtime_recommendation": runtime_path,
                 },
                 root=output_dir,

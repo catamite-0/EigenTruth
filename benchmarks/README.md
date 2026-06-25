@@ -1496,7 +1496,10 @@ baseline.
 To run readiness and register the verified manifest in one command, use
 `run_adapter_readiness_registry_workflow.py`. It promotes only when
 `readiness_decision.status=promote` unless `--allow-non-promote` is explicitly
-set:
+set. The registry workflow accepts the same adapter-family inclusion flags as
+the readiness workflow, including `--include-retrieval`,
+`--include-retrieval-structured-qa`, and `--include-triple-evidence`, and records
+the generated retrieval/audit route families in registry metadata:
 
 ```bash
 python benchmarks/run_adapter_readiness_registry_workflow.py \

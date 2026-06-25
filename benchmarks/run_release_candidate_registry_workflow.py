@@ -948,6 +948,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
         "adapter_family_routes": adapter_family.get("routes"),
+        "adapter_family_retrieval_routes": adapter_family.get("retrieval_routes"),
+        "adapter_family_audit_routes": adapter_family.get("audit_routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
         "adapter_family_required_routes": adapter_family.get("required_routes"),
         "required_route_baseline_registry": required_route_baselines.get("registry"),

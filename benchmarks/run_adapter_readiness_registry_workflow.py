@@ -142,6 +142,7 @@ def _promotion_metadata(
     decision = dict(readiness_report.get("readiness_decision") or {})
     runtime = dict(readiness_report.get("runtime_recommendation") or {})
     runtime_config = dict(runtime.get("recommendation") or {})
+    adapter_family = dict(readiness_report.get("adapter_family_matrix") or {})
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     score_fusion = dict(runtime_config.get("score_fusion") or {})
     metadata = {
@@ -166,6 +167,23 @@ def _promotion_metadata(
         "recommended_score_fusion_signal": score_fusion.get("signal_name"),
         "recommended_score_fusion_auroc": score_fusion.get("auroc"),
         "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+        "adapter_family_matrix_report": readiness_report.get("adapter_family_matrix_path"),
+        "adapter_family_routes": tuple(adapter_family.get("routes") or ()),
+        "adapter_family_retrieval_routes": tuple(adapter_family.get("retrieval_routes") or ()),
+        "adapter_family_audit_routes": tuple(adapter_family.get("audit_routes") or ()),
+        "adapter_include_retrieval": adapter_family.get(
+            "include_retrieval",
+            config.readiness.include_retrieval,
+        ),
+        "adapter_include_retrieval_structured_qa": adapter_family.get(
+            "include_retrieval_structured_qa",
+            config.readiness.include_retrieval_structured_qa,
+        ),
+        "adapter_include_triple_evidence": adapter_family.get(
+            "include_triple_evidence",
+            config.readiness.include_triple_evidence,
+        ),
+        "adapter_triple_min_slot_coverage": config.readiness.triple_min_slot_coverage,
     }
     inside_sampling = dict(runtime_config.get("inside_sampling") or {})
     if inside_sampling:
@@ -236,6 +254,13 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessRegistryWorkf
         max_max_duration_seconds=args.max_max_duration_seconds,
         max_mean_attempted_route_count=args.max_mean_attempted_route_count,
         max_retrieval_use_rate=args.max_retrieval_use_rate,
+        include_retrieval=bool(args.include_retrieval),
+        include_retrieval_structured_qa=bool(args.include_retrieval_structured_qa),
+        include_triple_evidence=bool(args.include_triple_evidence),
+        verifier_min_overlap=args.verifier_min_overlap,
+        retriever_min_overlap=args.retriever_min_overlap,
+        retrieval_limit=args.retrieval_limit,
+        triple_min_slot_coverage=args.triple_min_slot_coverage,
         model=args.model,
         dtype=args.dtype,
         layers=_parse_int_list(args.layers, flag="--layers"),
@@ -325,6 +350,16 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-max-duration-seconds", type=float, default=1.0)
     parser.add_argument("--max-mean-attempted-route-count", type=float, default=1.1)
     parser.add_argument("--max-retrieval-use-rate", type=float, default=0.0)
+    parser.add_argument("--include-retrieval", action="store_true",
+                        help="include the local retrieval-groundedness route in the adapter-family matrix")
+    parser.add_argument("--include-retrieval-structured-qa", action="store_true",
+                        help="include the local retrieval structured-QA route in the adapter-family matrix")
+    parser.add_argument("--include-triple-evidence", action="store_true",
+                        help="include the strict triple-evidence audit route in the adapter-family matrix")
+    parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
+    parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
+    parser.add_argument("--retrieval-limit", type=int, default=1)
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0)
     parser.add_argument("--model", default="sshleifer/tiny-gpt2")
     parser.add_argument("--dtype", default="float32")
     parser.add_argument("--layers", default="-1")
