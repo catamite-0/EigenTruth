@@ -23,7 +23,7 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Sequence, Union
+from typing import Any, Sequence, Union
 
 import torch
 from torch import Tensor
@@ -87,6 +87,214 @@ class AdaptiveScoreTransform:
             feature_weights={str(name): weight for name, weight in raw_weights.items()},
             intercept=data.get("intercept", 0.0),
             direction=str(data.get("direction", "higher")),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionDecision:
+    """Runtime participation decision from a conformal abstention threshold."""
+
+    participate: bool
+    score: float
+    threshold: float
+    direction: str = "higher"
+    reason: str = ""
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        score = _finite_float(self.score, name="score")
+        threshold = _threshold_float(self.threshold, name="threshold")
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "reason", str(self.reason))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @property
+    def action(self) -> str:
+        """Return ``participate`` or ``abstain`` for compact policy logs."""
+        return "participate" if self.participate else "abstain"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable decision payload."""
+        return {
+            "participate": self.participate,
+            "action": self.action,
+            "score": self.score,
+            "threshold": self.threshold,
+            "direction": self.direction,
+            "reason": self.reason,
+            "metadata": dict(self.metadata),
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionDecision":
+        """Build a decision from JSON-like data."""
+        return cls(
+            participate=bool(data["participate"]),
+            score=data["score"],
+            threshold=data["threshold"],
+            direction=str(data.get("direction", "higher")),
+            reason=str(data.get("reason", "")),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionReport:
+    """Finite-sample participation and selective-correctness report.
+
+    ``direction`` describes which side of the uncertainty score means "less
+    reliable." For ``higher``, scores above ``threshold`` abstain. For ``lower``,
+    scores below ``threshold`` abstain.
+    """
+
+    threshold: float
+    alpha: float
+    direction: str = "higher"
+    n_calibration: int = 0
+    n_correct: int = 0
+    retained_count: int = 0
+    correct_retained_count: int = 0
+    abstained_count: int = 0
+    empirical_base_accuracy: float = 0.0
+    empirical_participation_rate: float = 0.0
+    empirical_abstention_rate: float = 0.0
+    empirical_selective_accuracy: float | None = None
+    correct_retention_rate: float = 0.0
+    correct_retention_lower_bound: float = 0.0
+    participation_upper_bound: float = 0.0
+    conditional_correctness_lower_bound: float = 0.0
+    score_name: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        threshold = _threshold_float(self.threshold, name="threshold")
+        alpha = _alpha_float(self.alpha)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "alpha", alpha)
+        for name in (
+            "n_calibration",
+            "n_correct",
+            "retained_count",
+            "correct_retained_count",
+            "abstained_count",
+        ):
+            value = int(getattr(self, name))
+            if value < 0:
+                raise ValueError(f"{name} must be non-negative.")
+            object.__setattr__(self, name, value)
+        for name in (
+            "empirical_base_accuracy",
+            "empirical_participation_rate",
+            "empirical_abstention_rate",
+            "correct_retention_rate",
+            "correct_retention_lower_bound",
+            "participation_upper_bound",
+            "conditional_correctness_lower_bound",
+        ):
+            value = _unit_interval_float(getattr(self, name), name=name)
+            object.__setattr__(self, name, value)
+        if self.empirical_selective_accuracy is not None:
+            value = _unit_interval_float(
+                self.empirical_selective_accuracy,
+                name="empirical_selective_accuracy",
+            )
+            object.__setattr__(self, "empirical_selective_accuracy", value)
+        if self.score_name is not None:
+            object.__setattr__(self, "score_name", str(self.score_name))
+
+    def should_participate(self, score: float) -> bool:
+        """Return whether a runtime score is inside the retained region."""
+        value = _finite_float(score, name="score")
+        if self.direction == "higher":
+            return value <= self.threshold
+        return value >= self.threshold
+
+    def decide(
+        self,
+        score: float,
+        *,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> ConformalAbstentionDecision:
+        """Return a structured runtime abstention decision."""
+        value = _finite_float(score, name="score")
+        participate = self.should_participate(value)
+        operator = "<=" if self.direction == "higher" else ">="
+        reason = (
+            f"uncertainty score {value:.6g} {operator} conformal abstention "
+            f"threshold {self.threshold:.6g}"
+            if participate
+            else (
+                f"uncertainty score {value:.6g} outside conformal abstention "
+                f"threshold {self.threshold:.6g}"
+            )
+        )
+        return ConformalAbstentionDecision(
+            participate=participate,
+            score=value,
+            threshold=self.threshold,
+            direction=self.direction,
+            reason=reason,
+            metadata={
+                "alpha": self.alpha,
+                "score_name": self.score_name,
+                "conditional_correctness_lower_bound": self.conditional_correctness_lower_bound,
+                **({} if metadata is None else dict(metadata)),
+            },
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable abstention report."""
+        return {
+            "threshold": self.threshold,
+            "alpha": self.alpha,
+            "direction": self.direction,
+            "n_calibration": self.n_calibration,
+            "n_correct": self.n_correct,
+            "retained_count": self.retained_count,
+            "correct_retained_count": self.correct_retained_count,
+            "abstained_count": self.abstained_count,
+            "empirical_base_accuracy": self.empirical_base_accuracy,
+            "empirical_participation_rate": self.empirical_participation_rate,
+            "empirical_abstention_rate": self.empirical_abstention_rate,
+            "empirical_selective_accuracy": self.empirical_selective_accuracy,
+            "correct_retention_rate": self.correct_retention_rate,
+            "correct_retention_lower_bound": self.correct_retention_lower_bound,
+            "participation_upper_bound": self.participation_upper_bound,
+            "conditional_correctness_lower_bound": self.conditional_correctness_lower_bound,
+            "score_name": self.score_name,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionReport":
+        """Build an abstention report from JSON-like data."""
+        return cls(
+            threshold=data["threshold"],
+            alpha=data["alpha"],
+            direction=str(data.get("direction", "higher")),
+            n_calibration=int(data.get("n_calibration", 0)),
+            n_correct=int(data.get("n_correct", 0)),
+            retained_count=int(data.get("retained_count", 0)),
+            correct_retained_count=int(data.get("correct_retained_count", 0)),
+            abstained_count=int(data.get("abstained_count", 0)),
+            empirical_base_accuracy=float(data.get("empirical_base_accuracy", 0.0)),
+            empirical_participation_rate=float(data.get("empirical_participation_rate", 0.0)),
+            empirical_abstention_rate=float(data.get("empirical_abstention_rate", 0.0)),
+            empirical_selective_accuracy=(
+                None
+                if data.get("empirical_selective_accuracy") is None
+                else float(data["empirical_selective_accuracy"])
+            ),
+            correct_retention_rate=float(data.get("correct_retention_rate", 0.0)),
+            correct_retention_lower_bound=float(data.get("correct_retention_lower_bound", 0.0)),
+            participation_upper_bound=float(data.get("participation_upper_bound", 0.0)),
+            conditional_correctness_lower_bound=float(
+                data.get("conditional_correctness_lower_bound", 0.0)
+            ),
+            score_name=None if data.get("score_name") is None else str(data["score_name"]),
         )
 
 
@@ -205,6 +413,129 @@ def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str
     return float((scores_t < threshold).double().mean().item())
 
 
+def conformal_abstention_report(
+    uncertainty_scores: ArrayLike,
+    correctness: Sequence[bool | int | float],
+    alpha: float,
+    *,
+    direction: str = "higher",
+    score_name: str | None = None,
+) -> ConformalAbstentionReport:
+    """Calibrate a conformal participation threshold and selective-accuracy report.
+
+    The threshold is calibrated on responses marked correct, then evaluated on all
+    calibration responses. For ``higher`` uncertainty, scores above the threshold
+    abstain; for ``lower`` uncertainty, scores below the threshold abstain.
+
+    Args:
+        uncertainty_scores: Reliability scores on calibration responses. ``direction``
+            determines which side is less reliable.
+        correctness: Binary correctness labels for the same calibration responses.
+        alpha: Correct-response miss budget in ``(0, 1)``. With exchangeable
+            correct responses, at most alpha should fall outside the retained
+            participation region.
+        direction: ``higher`` when larger scores are less reliable; ``lower`` when
+            smaller scores are less reliable.
+        score_name: Optional stable score name for trace metadata.
+    """
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    alpha_value = _alpha_float(alpha)
+    scores = _finite_flat_tensor(uncertainty_scores, name="uncertainty scores")
+    labels = _binary_flat_tensor(correctness, name="correctness")
+    if scores.numel() == 0:
+        raise ValueError("uncertainty scores must be non-empty.")
+    if labels.numel() != scores.numel():
+        raise ValueError("correctness must have the same length as uncertainty scores.")
+    correct_scores = scores[labels]
+    if correct_scores.numel() == 0:
+        raise ValueError("correctness must contain at least one correct response for calibration.")
+
+    threshold = directional_conformal_threshold(correct_scores, alpha_value, direction)
+    return evaluate_conformal_abstention(
+        scores,
+        labels.tolist(),
+        threshold=threshold,
+        alpha=alpha_value,
+        direction=direction,
+        score_name=score_name,
+    )
+
+
+def evaluate_conformal_abstention(
+    uncertainty_scores: ArrayLike,
+    correctness: Sequence[bool | int | float],
+    *,
+    threshold: float,
+    alpha: float,
+    direction: str = "higher",
+    score_name: str | None = None,
+) -> ConformalAbstentionReport:
+    """Evaluate selective participation metrics for a fixed abstention threshold."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    alpha_value = _alpha_float(alpha)
+    threshold_value = _threshold_float(threshold, name="threshold")
+    scores = _finite_flat_tensor(uncertainty_scores, name="uncertainty scores")
+    labels = _binary_flat_tensor(correctness, name="correctness")
+    if scores.numel() == 0:
+        raise ValueError("uncertainty scores must be non-empty.")
+    if labels.numel() != scores.numel():
+        raise ValueError("correctness must have the same length as uncertainty scores.")
+
+    retained = scores <= threshold_value if direction == "higher" else scores >= threshold_value
+    correct = labels
+    correct_retained = retained & correct
+    n = int(scores.numel())
+    n_correct = int(correct.sum().item())
+    retained_count = int(retained.sum().item())
+    correct_retained_count = int(correct_retained.sum().item())
+    abstained_count = n - retained_count
+
+    empirical_base_accuracy = n_correct / n
+    empirical_participation_rate = retained_count / n
+    empirical_abstention_rate = abstained_count / n
+    empirical_selective_accuracy = (
+        None if retained_count == 0 else correct_retained_count / retained_count
+    )
+    correct_retention_rate = 0.0 if n_correct == 0 else correct_retained_count / n_correct
+    # Conservative finite-sample style bounds used for post-hoc policy routing:
+    # correct-retention uses the correct-response calibration count, base accuracy
+    # uses the all-response calibration count, and participation uses the retained
+    # rank among all calibration samples.
+    correct_retention_lower_bound = (
+        0.0 if n_correct == 0 else correct_retained_count / (n_correct + 1.0)
+    )
+    base_accuracy_lower_bound = n_correct / (n + 1.0)
+    participation_upper_bound = min(1.0, (retained_count + 1.0) / (n + 1.0))
+    conditional_correctness_lower_bound = 0.0
+    if participation_upper_bound > 0.0:
+        conditional_correctness_lower_bound = (
+            correct_retention_lower_bound * base_accuracy_lower_bound / participation_upper_bound
+        )
+    conditional_correctness_lower_bound = max(0.0, min(1.0, conditional_correctness_lower_bound))
+
+    return ConformalAbstentionReport(
+        threshold=threshold_value,
+        alpha=alpha_value,
+        direction=direction,
+        n_calibration=n,
+        n_correct=n_correct,
+        retained_count=retained_count,
+        correct_retained_count=correct_retained_count,
+        abstained_count=abstained_count,
+        empirical_base_accuracy=empirical_base_accuracy,
+        empirical_participation_rate=empirical_participation_rate,
+        empirical_abstention_rate=empirical_abstention_rate,
+        empirical_selective_accuracy=empirical_selective_accuracy,
+        correct_retention_rate=correct_retention_rate,
+        correct_retention_lower_bound=correct_retention_lower_bound,
+        participation_upper_bound=participation_upper_bound,
+        conditional_correctness_lower_bound=conditional_correctness_lower_bound,
+        score_name=score_name,
+    )
+
+
 def adaptive_anomaly_scores(
     scores: ArrayLike,
     *,
@@ -246,6 +577,29 @@ def _finite_flat_tensor(values: ArrayLike, *, name: str) -> Tensor:
     return tensor
 
 
+def _binary_flat_tensor(values: Sequence[bool | int | float], *, name: str) -> Tensor:
+    try:
+        tensor = torch.as_tensor(values)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a binary sequence.") from exc
+    tensor = tensor.flatten()
+    if tensor.dtype == torch.bool:
+        return tensor
+    numeric = torch.as_tensor(values, dtype=torch.float64).flatten()
+    if not torch.isfinite(numeric).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    if not (((numeric == 0.0) | (numeric == 1.0)).all()):
+        raise ValueError(f"{name} must contain only 0/1 or bool labels.")
+    return numeric.to(torch.bool)
+
+
+def _alpha_float(value: object) -> float:
+    alpha = _finite_float(value, name="alpha")
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+    return alpha
+
+
 def _finite_float(value: object, *, name: str) -> float:
     if isinstance(value, bool):
         raise ValueError(f"{name} must be a finite number.")
@@ -255,4 +609,23 @@ def _finite_float(value: object, *, name: str) -> float:
         raise ValueError(f"{name} must be a finite number.") from exc
     if not math.isfinite(result):
         raise ValueError(f"{name} must be a finite number.")
+    return result
+
+
+def _threshold_float(value: object, *, name: str) -> float:
+    if isinstance(value, bool):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    try:
+        result = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric and must not be NaN.") from exc
+    if math.isnan(result):
+        raise ValueError(f"{name} must be numeric and must not be NaN.")
+    return result
+
+
+def _unit_interval_float(value: object, *, name: str) -> float:
+    result = _finite_float(value, name=name)
+    if not (0.0 <= result <= 1.0):
+        raise ValueError(f"{name} must be in [0, 1].")
     return result

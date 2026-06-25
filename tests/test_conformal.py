@@ -11,12 +11,15 @@ import torch
 
 from eigentruth.eval.conformal import (
     AdaptiveScoreTransform,
+    ConformalAbstentionReport,
     adaptive_anomaly_scores,
+    conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
     directional_conformal_thresholds,
     directional_trigger_rate,
+    evaluate_conformal_abstention,
 )
 
 
@@ -164,6 +167,85 @@ class TestConformalThreshold:
             directional_conformal_threshold(torch.tensor([1.0, float("-inf")]), 0.1, "lower")
         with pytest.raises(ValueError, match="NaN"):
             directional_trigger_rate(torch.tensor([1.0]), float("nan"), "higher")
+
+
+class TestConformalAbstention:
+    def test_higher_uncertainty_report_and_runtime_decision(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        assert report.threshold == pytest.approx(0.3)
+        assert report.n_calibration == 5
+        assert report.n_correct == 3
+        assert report.retained_count == 3
+        assert report.abstained_count == 2
+        assert report.correct_retained_count == 3
+        assert report.empirical_base_accuracy == pytest.approx(0.6)
+        assert report.empirical_participation_rate == pytest.approx(0.6)
+        assert report.empirical_selective_accuracy == pytest.approx(1.0)
+        assert report.correct_retention_lower_bound == pytest.approx(0.75)
+        assert report.participation_upper_bound == pytest.approx(4.0 / 6.0)
+        assert report.conditional_correctness_lower_bound == pytest.approx(0.75 * (3.0 / 6.0) / (4.0 / 6.0))
+
+        keep = report.decide(0.25, metadata={"request_id": "r1"})
+        abstain = report.decide(0.8)
+        loaded = ConformalAbstentionReport.from_dict(report.to_dict())
+
+        assert keep.participate is True
+        assert keep.action == "participate"
+        assert keep.metadata["request_id"] == "r1"
+        assert keep.metadata["score_name"] == "uncertainty"
+        assert abstain.participate is False
+        assert abstain.action == "abstain"
+        assert loaded == report
+
+    def test_lower_uncertainty_report_uses_lower_tail_as_abstain_region(self):
+        report = conformal_abstention_report(
+            [10.0, 9.0, 8.0, 7.0, 6.0],
+            [1, 1, 0, 0, 0],
+            0.4,
+            direction="lower",
+        )
+
+        assert report.threshold == pytest.approx(9.0)
+        assert report.retained_count == 2
+        assert report.abstained_count == 3
+        assert report.should_participate(9.0) is True
+        assert report.should_participate(8.0) is False
+        assert report.decide(8.0).action == "abstain"
+
+    def test_evaluate_conformal_abstention_handles_no_retained_or_correct_samples(self):
+        report = evaluate_conformal_abstention(
+            [1.0, 2.0, 3.0],
+            [0, 0, 0],
+            threshold=0.0,
+            alpha=0.5,
+        )
+
+        assert report.retained_count == 0
+        assert report.empirical_selective_accuracy is None
+        assert report.correct_retention_rate == 0.0
+        assert report.conditional_correctness_lower_bound == 0.0
+
+    def test_conformal_abstention_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="same length"):
+            conformal_abstention_report([1.0, 2.0], [1], 0.5)
+        with pytest.raises(ValueError, match="0/1"):
+            conformal_abstention_report([1.0, 2.0], [1, 0.5], 0.5)
+        with pytest.raises(ValueError, match="finite"):
+            conformal_abstention_report([1.0, float("nan")], [1, 0], 0.5)
+        with pytest.raises(ValueError, match="at least one correct"):
+            conformal_abstention_report([1.0, 2.0], [0, 0], 0.5)
+        with pytest.raises(ValueError, match="alpha"):
+            conformal_abstention_report([1.0, 2.0], [1, 0], 1.0)
+        with pytest.raises(ValueError, match="direction"):
+            conformal_abstention_report([1.0, 2.0], [1, 0], 0.5, direction="sideways")
+        with pytest.raises(ValueError, match="threshold"):
+            evaluate_conformal_abstention([1.0], [1], threshold=float("nan"), alpha=0.5)
 
 
 class TestAdaptiveConformalScores:

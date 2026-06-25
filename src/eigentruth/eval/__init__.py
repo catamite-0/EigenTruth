@@ -11,12 +11,16 @@ from __future__ import annotations
 
 from eigentruth.eval.conformal import (
     AdaptiveScoreTransform,
+    ConformalAbstentionDecision,
+    ConformalAbstentionReport,
     adaptive_anomaly_scores,
+    conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
     directional_conformal_thresholds,
     directional_trigger_rate,
+    evaluate_conformal_abstention,
 )
 from eigentruth.eval.metrics import (
     binomial_confidence_interval,
@@ -59,6 +63,10 @@ __all__ = [
     "selective_classification_report",
     "confidence_error_report",
     "AdaptiveScoreTransform",
+    "evaluate_conformal_abstention",
+    "conformal_abstention_report",
+    "ConformalAbstentionReport",
+    "ConformalAbstentionDecision",
     "adaptive_anomaly_scores",
     "conformal_pvalues",
     "conformal_threshold",

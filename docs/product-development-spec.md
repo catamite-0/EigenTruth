@@ -12,7 +12,7 @@ Implemented today:
 - `TruthProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, HSE tracking, and optional activation steering.
 - `EigenTruthWrapper`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
 - `eigentruth.eval`: conformal p-values/thresholds plus CPU-testable metrics such as AUROC, Euclidean dispersion, selective accuracy, coverage, confidence intervals, and high-confidence error audits.
-- `eigentruth.calibration`: JSON-serializable calibration artifacts, split-conformal calibrators, adaptive feature-inflated conformal calibrators, layer/score sweep reports, and rank-calibrated multi-score fusion artifacts.
+- `eigentruth.calibration` / `eigentruth.eval.conformal`: JSON-serializable calibration artifacts, split-conformal calibrators, adaptive feature-inflated conformal calibrators, layer/score sweep reports, rank-calibrated multi-score fusion artifacts, and conformal abstention reports with conservative selective-correctness lower bounds.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy`: INSIDE/EigenScore-style spectral diversity, dependency-free sampled semantic-entropy proxies, and confidence-weighted semantic-energy disagreement, including adaptive sampling budget support in benchmarks.
 - `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
@@ -239,6 +239,7 @@ For product features:
 ### Completed 0.2-0.3 Foundation
 
 - Score dump -> layer/score sweep -> conformal calibration artifact -> risk decision -> action request/result -> product trace.
+- Conformal abstention report -> runtime `participate/abstain` decision helper for risk-coverage-controlled answer participation.
 - Configurable risk policy hooks for refuted, unsupported, error, and compound diagnostic/verification cases.
 - Action executor registry with dry-run fallback and a dependency-free in-memory retrieval executor shell.
 - Claim extraction metadata for numbers, citations, negation, and time-sensitive claims.
