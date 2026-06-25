@@ -114,6 +114,17 @@ class CalibratedObservabilityWorkflowConfig:
     length_bucketed_batches: bool = True
     offline: bool = True
     auto_batch_size: bool = False
+    cache_only: bool = False
+    statement_encoding_cache: Path | None = None
+    refresh_statement_encoding_cache: bool = False
+    layer_stats_cache: Path | None = None
+    refresh_layer_stats_cache: bool = False
+    warmup_checkpoint: Path | None = None
+    warmup_checkpoint_every: int = 50
+    eval_reps_cache: Path | None = None
+    eval_reps_cache_shard_size: int = 0
+    eval_reps_shard_read_cache_size: int = 2
+    refresh_eval_reps_cache: bool = False
     dump_scores_format: str = "jsonl"
     refresh_scores: bool = False
     signals: Sequence[str] = DEFAULT_SWEEP_SIGNALS
@@ -130,7 +141,15 @@ class CalibratedObservabilityWorkflowConfig:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
-        for field_name in ("scores_path", "report_path", "registry_path"):
+        for field_name in (
+            "scores_path",
+            "report_path",
+            "registry_path",
+            "statement_encoding_cache",
+            "layer_stats_cache",
+            "warmup_checkpoint",
+            "eval_reps_cache",
+        ):
             value = getattr(self, field_name)
             if value is not None:
                 object.__setattr__(self, field_name, Path(value))
@@ -143,6 +162,9 @@ class CalibratedObservabilityWorkflowConfig:
         object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
         object.__setattr__(self, "max_length", int(self.max_length))
         object.__setattr__(self, "progress_every", int(self.progress_every))
+        object.__setattr__(self, "warmup_checkpoint_every", int(self.warmup_checkpoint_every))
+        object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
+        object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
         object.__setattr__(self, "repeats", int(self.repeats))
         object.__setattr__(self, "seed", int(self.seed))
         object.__setattr__(self, "artifact_alpha", float(self.artifact_alpha))
@@ -168,6 +190,22 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("max_length must be >=1.")
         if self.progress_every < 0:
             raise ValueError("progress_every must be >=0.")
+        if self.warmup_checkpoint_every < 0:
+            raise ValueError("warmup_checkpoint_every must be >=0.")
+        if self.eval_reps_cache_shard_size < 0:
+            raise ValueError("eval_reps_cache_shard_size must be >=0.")
+        if self.eval_reps_shard_read_cache_size < 1:
+            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        if self.cache_only and (self.layer_stats_cache is None or self.eval_reps_cache is None):
+            raise ValueError("cache_only requires layer_stats_cache and eval_reps_cache.")
+        if self.cache_only and (
+            self.refresh_layer_stats_cache
+            or self.refresh_eval_reps_cache
+            or self.refresh_statement_encoding_cache
+        ):
+            raise ValueError("cache_only cannot refresh caches.")
+        if self.eval_reps_cache_shard_size > 0 and self.eval_reps_cache is None:
+            raise ValueError("eval_reps_cache_shard_size requires eval_reps_cache.")
         if self.repeats < 1:
             raise ValueError("repeats must be >=1.")
 
@@ -345,6 +383,26 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         command.append("--length-bucketed-batches")
     if config.auto_batch_size:
         command.append("--auto-batch-size")
+    if config.cache_only:
+        command.append("--cache-only")
+    if config.statement_encoding_cache is not None:
+        command.extend(["--statement-encoding-cache", str(config.statement_encoding_cache)])
+        if config.refresh_statement_encoding_cache:
+            command.append("--refresh-statement-encoding-cache")
+    if config.layer_stats_cache is not None:
+        command.extend(["--layer-stats-cache", str(config.layer_stats_cache)])
+        if config.refresh_layer_stats_cache:
+            command.append("--refresh-layer-stats-cache")
+    if config.warmup_checkpoint is not None:
+        command.extend(["--warmup-checkpoint", str(config.warmup_checkpoint)])
+        command.extend(["--warmup-checkpoint-every", str(config.warmup_checkpoint_every)])
+    if config.eval_reps_cache is not None:
+        command.extend(["--eval-reps-cache", str(config.eval_reps_cache)])
+        if config.eval_reps_cache_shard_size > 0:
+            command.extend(["--eval-reps-cache-shard-size", str(config.eval_reps_cache_shard_size)])
+        command.extend(["--eval-reps-shard-read-cache-size", str(config.eval_reps_shard_read_cache_size)])
+        if config.refresh_eval_reps_cache:
+            command.append("--refresh-eval-reps-cache")
     if config.limit is not None:
         command.extend(["--limit", str(config.limit)])
     if config.manifold_questions is not None:
@@ -452,7 +510,9 @@ def _evidence_bundle_summary(
             "offline": config.offline,
             "max_batch_tokens": config.max_batch_tokens,
             "auto_batch_size": config.auto_batch_size,
+            "cache_only": config.cache_only,
         },
+        "caches": _cache_payload(config),
         "score_dump": {
             "path": str(config.resolved_scores_path),
             "reused": dict(report.get("execution") or {}).get("score_dump_reused"),
@@ -543,6 +603,8 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         "length_bucketed_batches": config.length_bucketed_batches,
         "offline": config.offline,
         "auto_batch_size": config.auto_batch_size,
+        "cache_only": config.cache_only,
+        "caches": _cache_payload(config),
         "dump_scores_format": config.dump_scores_format,
         "refresh_scores": config.refresh_scores,
         "signals": tuple(config.signals),
@@ -570,6 +632,12 @@ def _artifact_paths(
         "best_calibration": config.best_calibration_path,
         "conformal_artifact_manifest": config.conformal_artifact_manifest_path,
     }
+    if config.statement_encoding_cache is not None:
+        artifacts["statement_encoding_cache"] = config.statement_encoding_cache
+    if config.layer_stats_cache is not None:
+        artifacts["layer_stats_cache"] = config.layer_stats_cache
+    if config.eval_reps_cache is not None:
+        artifacts["eval_reps_cache"] = config.eval_reps_cache
     if not score_dump_reused:
         artifacts["truthfulqa_report"] = config.truthfulqa_report_path
         artifacts["truthfulqa_profile"] = config.truthfulqa_profile_path
@@ -612,6 +680,7 @@ def _write_artifact_manifest(
             "dump_scores_format": config.dump_scores_format,
             "artifact_alpha": config.artifact_alpha,
             "best_by": config.best_by,
+            "cache_only": config.cache_only,
         },
     )
     config.artifact_manifest_path.write_text(
@@ -663,6 +732,23 @@ def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
             return None
         value = value.get(key)
     return value
+
+
+def _cache_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, Any]:
+    return {
+        "statement_encoding_cache": (
+            None if config.statement_encoding_cache is None else str(config.statement_encoding_cache)
+        ),
+        "refresh_statement_encoding_cache": config.refresh_statement_encoding_cache,
+        "layer_stats_cache": None if config.layer_stats_cache is None else str(config.layer_stats_cache),
+        "refresh_layer_stats_cache": config.refresh_layer_stats_cache,
+        "warmup_checkpoint": None if config.warmup_checkpoint is None else str(config.warmup_checkpoint),
+        "warmup_checkpoint_every": config.warmup_checkpoint_every,
+        "eval_reps_cache": None if config.eval_reps_cache is None else str(config.eval_reps_cache),
+        "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+        "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+        "refresh_eval_reps_cache": config.refresh_eval_reps_cache,
+    }
 
 
 def _load_json(path: str | Path) -> dict[str, Any]:
@@ -757,6 +843,19 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
         length_bucketed_batches=_arg_or_preset(args, preset_defaults, "length_bucketed_batches", True),
         offline=_arg_or_preset(args, preset_defaults, "offline", True),
         auto_batch_size=_arg_or_preset(args, preset_defaults, "auto_batch_size", False),
+        cache_only=args.cache_only,
+        statement_encoding_cache=(
+            Path(args.statement_encoding_cache) if args.statement_encoding_cache else None
+        ),
+        refresh_statement_encoding_cache=args.refresh_statement_encoding_cache,
+        layer_stats_cache=Path(args.layer_stats_cache) if args.layer_stats_cache else None,
+        refresh_layer_stats_cache=args.refresh_layer_stats_cache,
+        warmup_checkpoint=Path(args.warmup_checkpoint) if args.warmup_checkpoint else None,
+        warmup_checkpoint_every=args.warmup_checkpoint_every,
+        eval_reps_cache=Path(args.eval_reps_cache) if args.eval_reps_cache else None,
+        eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
+        refresh_eval_reps_cache=args.refresh_eval_reps_cache,
         dump_scores_format=_arg_or_preset(args, preset_defaults, "dump_scores_format", "jsonl"),
         refresh_scores=args.refresh_scores,
         signals=signals,
@@ -840,6 +939,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     auto_batch_group = parser.add_mutually_exclusive_group()
     auto_batch_group.add_argument("--auto-batch-size", dest="auto_batch_size", action="store_true", default=None)
     auto_batch_group.add_argument("--no-auto-batch-size", dest="auto_batch_size", action="store_false")
+    parser.add_argument("--cache-only", action="store_true",
+                        help="score only from --layer-stats-cache and --eval-reps-cache")
+    parser.add_argument("--statement-encoding-cache", default=None)
+    parser.add_argument("--refresh-statement-encoding-cache", action="store_true")
+    parser.add_argument("--layer-stats-cache", default=None)
+    parser.add_argument("--refresh-layer-stats-cache", action="store_true")
+    parser.add_argument("--warmup-checkpoint", default=None)
+    parser.add_argument("--warmup-checkpoint-every", type=int, default=50)
+    parser.add_argument("--eval-reps-cache", default=None)
+    parser.add_argument("--eval-reps-cache-shard-size", type=int, default=0)
+    parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2)
+    parser.add_argument("--refresh-eval-reps-cache", action="store_true")
     parser.add_argument("--dump-scores-format", default=None, choices=("json", "jsonl"))
     parser.add_argument("--refresh-scores", action="store_true", help="rerun eval_truthfulqa even if --scores exists")
     parser.add_argument("--signal", default=None, help="primary conformal signal")

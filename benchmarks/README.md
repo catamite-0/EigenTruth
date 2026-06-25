@@ -539,6 +539,13 @@ will skip `eval_truthfulqa.py`, rerun only conformal calibration, and keep the
 top-level manifest focused on the reused score dump plus generated calibration
 artifacts.
 
+For larger real-model runs, pass the TruthfulQA caches through this workflow:
+`--statement-encoding-cache`, `--layer-stats-cache`, and `--eval-reps-cache`
+reuse tokenization, warmup manifolds, and forced-answer hidden states across
+calibration iterations. Add `--refresh-*-cache` only when the cache should be
+rebuilt, and use `--cache-only` with existing layer/eval caches when the model
+forward pass should be skipped entirely.
+
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
 with longer contexts and auto batch-size fallback. Any explicit CLI parameter
@@ -563,6 +570,7 @@ python benchmarks/run_truthfulqa_frontier_workflow.py \
   --batch-size 4 \
   --max-length 96 \
   --hidden-state-capture hooks \
+  --cache-dir artifacts/cache/truthfulqa-frontier-qwen-smollm2 \
   --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
   --registry artifacts/local-release-registry.json \
   --name truthfulqa-frontier-qwen-smollm2 \
@@ -572,6 +580,10 @@ python benchmarks/run_truthfulqa_frontier_workflow.py \
 Use `--dry-run --offline` first to verify commands and artifact paths without
 model downloads. Re-running without `--refresh-scores` reuses existing cell
 score dumps and only refreshes conformal/ensemble reports.
+Use `--cache-dir` for l80 or multi-seed runs so each model/scale cell gets
+stable per-cell `statement-encodings.json`, `layer-stats.pt`, `eval-reps-cache`,
+and warmup checkpoint paths; use `--refresh-caches` only for the first cache
+build or when changing cache-defining model/data/layer parameters.
 
 ## `eval_verifier_ensemble.py`
 

@@ -110,6 +110,7 @@ class TruthfulQAFrontierWorkflowConfig:
     registry_path: Path | None = None
     name: str | None = None
     version: str | None = None
+    cache_dir: Path | None = None
     dtype: str = "float32"
     batch_size: int = 4
     max_batch_tokens: int = 0
@@ -121,6 +122,11 @@ class TruthfulQAFrontierWorkflowConfig:
     length_bucketed_batches: bool = True
     offline: bool = False
     auto_batch_size: bool = True
+    cache_only: bool = False
+    refresh_caches: bool = False
+    warmup_checkpoint_every: int = 50
+    eval_reps_cache_shard_size: int = 16
+    eval_reps_shard_read_cache_size: int = 2
     dump_scores_format: str = "jsonl"
     refresh_scores: bool = False
     signals: Sequence[str] = DEFAULT_FRONTIER_SIGNALS
@@ -141,6 +147,8 @@ class TruthfulQAFrontierWorkflowConfig:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
         if self.registry_path is not None:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
+        if self.cache_dir is not None:
+            object.__setattr__(self, "cache_dir", Path(self.cache_dir))
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
         models = tuple(self.models)
@@ -161,8 +169,18 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("max_length must be >=1.")
         if int(self.covariance_low_rank) < 1:
             raise ValueError("covariance_low_rank must be >=1.")
+        if int(self.warmup_checkpoint_every) < 0:
+            raise ValueError("warmup_checkpoint_every must be >=0.")
+        if int(self.eval_reps_cache_shard_size) < 0:
+            raise ValueError("eval_reps_cache_shard_size must be >=0.")
+        if int(self.eval_reps_shard_read_cache_size) < 1:
+            raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
         if int(self.conformal_repeats) < 1 or int(self.ensemble_repeats) < 1:
             raise ValueError("repeats must be >=1.")
+        if self.cache_only and self.cache_dir is None:
+            raise ValueError("cache_only requires cache_dir.")
+        if self.cache_only and self.refresh_caches:
+            raise ValueError("cache_only cannot refresh caches.")
         if self.hidden_state_capture not in {"outputs", "hooks"}:
             raise ValueError("hidden_state_capture must be one of: outputs, hooks.")
         if self.covariance_mode not in {"full", "diag", "low_rank"}:
@@ -196,6 +214,9 @@ class TruthfulQAFrontierWorkflowConfig:
         object.__setattr__(self, "max_length", int(self.max_length))
         object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
         object.__setattr__(self, "progress_every", int(self.progress_every))
+        object.__setattr__(self, "warmup_checkpoint_every", int(self.warmup_checkpoint_every))
+        object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
+        object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
         object.__setattr__(self, "conformal_repeats", int(self.conformal_repeats))
         object.__setattr__(self, "ensemble_repeats", int(self.ensemble_repeats))
         object.__setattr__(self, "seed", int(self.seed))
@@ -305,6 +326,8 @@ def _cell_config(
         length_bucketed_batches=config.length_bucketed_batches,
         offline=config.offline,
         auto_batch_size=config.auto_batch_size,
+        cache_only=config.cache_only,
+        **_cell_cache_config(config, cell_name=f"{model.name}-{scale.name}"),
         dump_scores_format=config.dump_scores_format,
         refresh_scores=config.refresh_scores,
         signals=config.signals,
@@ -468,6 +491,12 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "length_bucketed_batches": config.length_bucketed_batches,
         "offline": config.offline,
         "auto_batch_size": config.auto_batch_size,
+        "cache_only": config.cache_only,
+        "cache_dir": None if config.cache_dir is None else str(config.cache_dir),
+        "refresh_caches": config.refresh_caches,
+        "warmup_checkpoint_every": config.warmup_checkpoint_every,
+        "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+        "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
         "dump_scores_format": config.dump_scores_format,
         "refresh_scores": config.refresh_scores,
         "signals": tuple(config.signals),
@@ -491,6 +520,24 @@ def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
             return None
         value = value.get(key)
     return value
+
+
+def _cell_cache_config(config: TruthfulQAFrontierWorkflowConfig, *, cell_name: str) -> dict[str, Any]:
+    if config.cache_dir is None:
+        return {}
+    cache_root = config.cache_dir / cell_name
+    return {
+        "statement_encoding_cache": cache_root / "statement-encodings.json",
+        "refresh_statement_encoding_cache": config.refresh_caches,
+        "layer_stats_cache": cache_root / "layer-stats.pt",
+        "refresh_layer_stats_cache": config.refresh_caches,
+        "warmup_checkpoint": cache_root / "warmup-checkpoint.pt",
+        "warmup_checkpoint_every": config.warmup_checkpoint_every,
+        "eval_reps_cache": cache_root / "eval-reps-cache",
+        "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
+        "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+        "refresh_eval_reps_cache": config.refresh_caches,
+    }
 
 
 def _parse_model(value: str) -> ModelSpec:
@@ -545,6 +592,7 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
         version=args.version,
+        cache_dir=Path(args.cache_dir) if args.cache_dir else None,
         dtype=args.dtype,
         batch_size=args.batch_size,
         max_batch_tokens=args.max_batch_tokens,
@@ -556,6 +604,11 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         length_bucketed_batches=not args.no_length_bucketed_batches,
         offline=args.offline,
         auto_batch_size=not args.no_auto_batch_size,
+        cache_only=args.cache_only,
+        refresh_caches=args.refresh_caches,
+        warmup_checkpoint_every=args.warmup_checkpoint_every,
+        eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
+        eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
         dump_scores_format=args.dump_scores_format,
         refresh_scores=args.refresh_scores,
         signals=_parse_csv(args.signals, name="--signals"),
@@ -596,6 +649,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)
     parser.add_argument("--version", default=None)
+    parser.add_argument("--cache-dir", default=None,
+                        help="optional root for per-cell statement/layer/eval cache artifacts")
     parser.add_argument("--dtype", default="float32")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-batch-tokens", type=int, default=0)
@@ -608,6 +663,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--offline", action="store_true",
                         help="use eval_truthfulqa.py --offline for bounded fixture runs")
     parser.add_argument("--no-auto-batch-size", action="store_true")
+    parser.add_argument("--cache-only", action="store_true",
+                        help="score from existing per-cell caches under --cache-dir")
+    parser.add_argument("--refresh-caches", action="store_true",
+                        help="rebuild per-cell caches under --cache-dir")
+    parser.add_argument("--warmup-checkpoint-every", type=int, default=50)
+    parser.add_argument("--eval-reps-cache-shard-size", type=int, default=16)
+    parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2)
     parser.add_argument("--dump-scores-format", choices=("json", "jsonl"), default="jsonl")
     parser.add_argument("--refresh-scores", action="store_true")
     parser.add_argument("--signals", default=",".join(DEFAULT_FRONTIER_SIGNALS))

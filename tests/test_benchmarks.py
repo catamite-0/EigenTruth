@@ -719,6 +719,16 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
         module.CalibratedObservabilityWorkflowConfig(
             output_dir=tmp_path / "workflow",
             scores_path=tmp_path / "workflow" / "scores.manifest.json",
+            statement_encoding_cache=tmp_path / "cache" / "statement-encodings.json",
+            refresh_statement_encoding_cache=True,
+            layer_stats_cache=tmp_path / "cache" / "layer-stats.pt",
+            refresh_layer_stats_cache=True,
+            warmup_checkpoint=tmp_path / "cache" / "warmup-checkpoint.pt",
+            warmup_checkpoint_every=7,
+            eval_reps_cache=tmp_path / "cache" / "eval-reps-cache",
+            eval_reps_cache_shard_size=3,
+            eval_reps_shard_read_cache_size=5,
+            refresh_eval_reps_cache=True,
             model="tiny-local",
             layer=-2,
             sweep_layers=(-2, -3),
@@ -739,6 +749,21 @@ def test_calibrated_observability_workflow_dry_run_writes_plan(tmp_path):
     assert "--dump-scores-format" in truthfulqa_command
     assert "jsonl" in truthfulqa_command
     assert "--sweep-layers=-2,-3" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--statement-encoding-cache") + 1].endswith(
+        "statement-encodings.json"
+    )
+    assert "--refresh-statement-encoding-cache" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--layer-stats-cache") + 1].endswith("layer-stats.pt")
+    assert "--refresh-layer-stats-cache" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--warmup-checkpoint") + 1].endswith(
+        "warmup-checkpoint.pt"
+    )
+    assert truthfulqa_command[truthfulqa_command.index("--warmup-checkpoint-every") + 1] == "7"
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache") + 1].endswith("eval-reps-cache")
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache-shard-size") + 1] == "3"
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-shard-read-cache-size") + 1] == "5"
+    assert "--refresh-eval-reps-cache" in truthfulqa_command
+    assert payload["config"]["caches"]["eval_reps_cache"].endswith("eval-reps-cache")
     assert "--artifact-manifest" in conformal_command
     assert manifest["metadata"]["runner"] == "run_calibrated_observability_workflow"
     assert manifest["metadata"]["dry_run"] is True
@@ -802,6 +827,13 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
             "--scale",
             "l4=4:2:-1:-1,-2",
             "--offline",
+            "--cache-dir",
+            str(tmp_path / "frontier-cache"),
+            "--refresh-caches",
+            "--eval-reps-cache-shard-size",
+            "3",
+            "--eval-reps-shard-read-cache-size",
+            "5",
             "--signals",
             "truth_proj,resid_update_norm",
             "--conformal-signal",
@@ -819,15 +851,32 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     payload = json.loads(result.stdout)
     manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
     cell = payload["cells"][0]
+    cell_workflow = json.loads(Path(cell["workflow_report"]).read_text(encoding="utf-8"))
+    truthfulqa_command = cell_workflow["execution"]["truthfulqa_command"]
 
     assert payload["status"] == "needs_evidence"
     assert payload["config"]["models"][0]["name"] == "tiny"
     assert payload["config"]["scales"][0]["name"] == "l4"
     assert payload["config"]["signals"] == ["truth_proj", "resid_update_norm"]
+    assert payload["config"]["cache_dir"].endswith("frontier-cache")
+    assert payload["config"]["eval_reps_cache_shard_size"] == 3
     assert payload["ensemble"] is None
     assert cell["name"] == "tiny-l4"
     assert cell["status"] == "needs_evidence"
     assert cell["score_dump"]["path"].endswith("tiny-l4/scores.manifest.json")
+    assert truthfulqa_command[truthfulqa_command.index("--statement-encoding-cache") + 1].endswith(
+        "frontier-cache/tiny-l4/statement-encodings.json"
+    )
+    assert "--refresh-statement-encoding-cache" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--layer-stats-cache") + 1].endswith(
+        "frontier-cache/tiny-l4/layer-stats.pt"
+    )
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache") + 1].endswith(
+        "frontier-cache/tiny-l4/eval-reps-cache"
+    )
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-cache-shard-size") + 1] == "3"
+    assert truthfulqa_command[truthfulqa_command.index("--eval-reps-shard-read-cache-size") + 1] == "5"
+    assert "--refresh-eval-reps-cache" in truthfulqa_command
     assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
     assert manifest["metadata"]["dry_run"] is True
     assert manifest["summary"]["missing_count"] > 0
