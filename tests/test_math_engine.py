@@ -15,8 +15,11 @@ from eigentruth.core.math_engine import (
     _poincare_distance,
     covariance_shrinkage_intensity,
     covariance_spectrum,
+    gaussian_wasserstein_distance,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
+    manifold_distance,
+    manifold_wasserstein_distance,
     poincare_map,
     sherman_morrison_update,
 )
@@ -162,6 +165,79 @@ class TestMahalanobisDistance:
             cov_inv = torch.eye(d)
             dist = mahalanobis_distance(h, mean, cov_inv)
             assert dist >= 0.0
+
+
+# ===================================================================
+# Gaussian / Manifold Wasserstein Distance
+# ===================================================================
+
+class TestGaussianWassersteinDistance:
+    """Closed-form Gaussian 2-Wasserstein distance tests."""
+
+    def test_identical_diag_gaussians_have_zero_distance(self):
+        mean = torch.tensor([1.0, -2.0, 0.5])
+        covariance = torch.tensor([1.0, 4.0, 9.0])
+
+        dist = gaussian_wasserstein_distance(mean, covariance, mean, covariance)
+
+        assert torch.isclose(dist, torch.tensor(0.0), atol=1e-6)
+
+    def test_identical_full_gaussians_have_zero_distance(self):
+        mean = torch.tensor([0.0, 1.0])
+        covariance = torch.tensor([[2.0, 0.25], [0.25, 1.0]])
+
+        dist = gaussian_wasserstein_distance(mean, covariance, mean, covariance)
+
+        assert torch.isclose(dist, torch.tensor(0.0), atol=1e-4)
+
+    def test_symmetric_for_full_covariances(self):
+        mean_a = torch.tensor([0.0, 0.0])
+        mean_b = torch.tensor([1.0, -1.0])
+        cov_a = torch.tensor([[3.0, 0.4], [0.4, 1.0]])
+        cov_b = torch.tensor([[1.5, -0.1], [-0.1, 2.0]])
+
+        ab = gaussian_wasserstein_distance(mean_a, cov_a, mean_b, cov_b)
+        ba = gaussian_wasserstein_distance(mean_b, cov_b, mean_a, cov_a)
+
+        assert torch.isclose(ab, ba, atol=1e-5)
+        assert ab > 0.0
+
+    def test_diag_closed_form_matches_expected(self):
+        mean_a = torch.zeros(3)
+        mean_b = torch.tensor([1.0, 2.0, 2.0])
+        cov_a = torch.tensor([1.0, 4.0, 9.0])
+        cov_b = torch.tensor([4.0, 9.0, 16.0])
+        expected_sq = torch.tensor(9.0) + (torch.sqrt(cov_a) - torch.sqrt(cov_b)).square().sum()
+
+        actual_sq = gaussian_wasserstein_distance(mean_a, cov_a, mean_b, cov_b, squared=True)
+
+        assert torch.isclose(actual_sq, expected_sq, atol=1e-6)
+
+    def test_identical_covariance_reduces_to_euclidean_mean_distance(self):
+        mean_a = torch.tensor([1.0, 2.0, 3.0])
+        mean_b = torch.tensor([2.0, 4.0, 5.0])
+        covariance = torch.eye(3)
+
+        dist = gaussian_wasserstein_distance(mean_a, covariance, mean_b, covariance)
+
+        assert torch.isclose(dist, torch.norm(mean_a - mean_b), atol=1e-5)
+
+    def test_rejects_invalid_inputs(self):
+        import pytest
+
+        with pytest.raises(ValueError, match="mean dimension mismatch"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.ones(2), torch.zeros(3), torch.ones(2))
+        with pytest.raises(ValueError, match="shape mismatch"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.eye(3), torch.zeros(2), torch.eye(2))
+        with pytest.raises(ValueError, match="finite"):
+            gaussian_wasserstein_distance(
+                torch.zeros(2),
+                torch.tensor([1.0, float("nan")]),
+                torch.zeros(2),
+                torch.ones(2),
+            )
+        with pytest.raises(ValueError, match="non-negative"):
+            gaussian_wasserstein_distance(torch.zeros(2), torch.tensor([1.0, -0.1]), torch.zeros(2), torch.ones(2))
 
 
 # ===================================================================
@@ -645,6 +721,50 @@ class TestTruthManifold:
 
         with pytest.raises(ValueError, match="covariance_mode"):
             TruthManifold(covariance_mode="bad")
+
+    def test_manifold_distance_is_zero_and_symmetric_for_matching_manifolds(self):
+        torch.manual_seed(606)
+        samples = torch.randn(24, 5)
+        shifted = samples + torch.tensor([1.0, 0.0, 0.0, 0.0, 0.0])
+        m1 = TruthManifold()
+        m2 = TruthManifold()
+        m3 = TruthManifold()
+        m1.update_many(samples)
+        m2.update_many(samples)
+        m3.update_many(shifted)
+
+        assert torch.isclose(m1.manifold_distance(m2), torch.tensor(0.0), atol=1e-4)
+        forward = manifold_distance(m1, m3)
+        backward = manifold_wasserstein_distance(m3, m1)
+
+        assert torch.isclose(forward, backward, atol=1e-5)
+        assert forward > 0.0
+
+    def test_manifold_distance_supports_diag_and_shrinkage_modes(self):
+        torch.manual_seed(707)
+        samples_a = torch.randn(20, 4)
+        samples_b = torch.randn(20, 4) + 0.2
+        for mode in ["diag", "shrinkage"]:
+            m1 = TruthManifold(covariance_mode=mode)
+            m2 = TruthManifold(covariance_mode=mode)
+            m1.update_many(samples_a)
+            m2.update_many(samples_b)
+
+            dist = manifold_distance(m1, m2)
+
+            assert torch.isfinite(dist).all()
+            assert dist >= 0.0
+
+    def test_manifold_distance_requires_ready_manifolds(self):
+        import pytest
+
+        m1 = TruthManifold()
+        m2 = TruthManifold()
+        m1.update(torch.zeros(2))
+        m2.update_many(torch.randn(2, 2))
+
+        with pytest.raises(ValueError, match="at least two samples"):
+            manifold_distance(m1, m2)
 
 
 # ===================================================================

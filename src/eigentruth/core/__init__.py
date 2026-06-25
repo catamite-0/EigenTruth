@@ -17,8 +17,11 @@ from eigentruth.core.math_engine import (
     TruthManifold,
     covariance_shrinkage_intensity,
     covariance_spectrum,
+    gaussian_wasserstein_distance,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
+    manifold_distance,
+    manifold_wasserstein_distance,
     poincare_map,
     sherman_morrison_update,
 )
@@ -31,6 +34,7 @@ __all__ = [
     "CovarianceSpectrum",
     "covariance_shrinkage_intensity",
     "covariance_spectrum",
+    "gaussian_wasserstein_distance",
     "cluster_assignment_entropy",
     "embedding_semantic_entropy",
     "internal_eigenscore",
@@ -40,6 +44,8 @@ __all__ = [
     "spectral_effective_rank",
     "hyperbolic_semantic_entropy",
     "mahalanobis_distance",
+    "manifold_distance",
+    "manifold_wasserstein_distance",
     "poincare_map",
     "sherman_morrison_update",
 ]

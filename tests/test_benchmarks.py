@@ -2124,6 +2124,49 @@ def test_build_truthfulqa_corpus_outputs_correct_answer_documents(monkeypatch):
     assert payload["documents"][2]["metadata"]["is_false"] == 0
 
 
+def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.compare_manifold_distances")
+    eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
+    samples = torch.randn(12, 4)
+    manifolds = {}
+    for layer, offset in ((0, 0.0), (1, 0.2), (2, 2.0)):
+        manifold = module.TruthManifold()
+        manifold.update_many(samples + offset)
+        manifolds[layer] = manifold
+
+    cache_path = tmp_path / "layer-stats.pt"
+    output_path = tmp_path / "distance-report.json"
+    eval_module.save_layer_stats_cache(
+        cache_path,
+        manifolds,
+        {},
+        metadata={
+            "format": 1,
+            "layers": [0, 1, 2],
+            "model": "synthetic",
+        },
+    )
+    args = SimpleNamespace(
+        layer_stats_cache=str(cache_path),
+        manifold=[],
+        covariance_mode="model",
+        squared=False,
+        device="cpu",
+        json=str(output_path),
+    )
+
+    report = module.run(args)
+    capsys.readouterr()
+    matrix = report["distance_matrix"]
+
+    assert output_path.exists()
+    assert report["items"][0]["id"] == "layer:0"
+    assert matrix[0][0] == pytest.approx(0.0)
+    assert matrix[0][1] == pytest.approx(matrix[1][0])
+    assert matrix[0][1] < matrix[0][2]
+    assert report["nearest_neighbors"][0]["nearest_id"] == "layer:1"
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")

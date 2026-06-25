@@ -504,6 +504,41 @@ class TruthManifold:
         """Alias for ``covariance_spectrum``."""
         return self.covariance_spectrum(eps=eps)
 
+    def covariance_for_distance(self, *, covariance_mode: str = "model") -> Tensor:
+        """Return the covariance estimate used for Gaussian manifold distance.
+
+        ``covariance_mode="model"`` follows this manifold's configured scoring
+        mode. Diagonal mode returns a variance vector; shrinkage returns the OAS
+        covariance; full and low-rank modes return the empirical full covariance
+        currently stored by the manifold.
+        """
+        if not self.is_ready():
+            raise ValueError("TruthManifold needs at least two samples before manifold distance.")
+        mode = self.covariance_mode if covariance_mode == "model" else _validate_covariance_mode(covariance_mode)
+        if mode == "diag":
+            return self._normalized_cov_diag()
+        if mode == "shrinkage":
+            covariance, _alpha = self._shrinkage_covariance()
+            return covariance
+        return self._normalized_full_covariance()
+
+    def manifold_distance(
+        self,
+        other: "TruthManifold",
+        *,
+        squared: bool = False,
+        covariance_mode: str = "model",
+        eps: float = 1e-10,
+    ) -> Tensor:
+        """Return closed-form Gaussian 2-Wasserstein distance to another manifold."""
+        return manifold_distance(
+            self,
+            other,
+            squared=squared,
+            covariance_mode=covariance_mode,
+            eps=eps,
+        )
+
     def to(self, device: Union[str, torch.device]) -> "TruthManifold":
         """Move manifold tensors to a device in-place and return self."""
         device = torch.device(device)
@@ -700,6 +735,160 @@ def _covariance_spectrum_from_eigenvalues(
         stable_rank=stable_rank,
         numerical_rank=numerical_rank,
         condition_number=condition_number,
+    )
+
+
+def _as_finite_vector(value: Tensor, *, name: str, device: torch.device | None = None) -> Tensor:
+    vector = torch.as_tensor(value, dtype=torch.float64, device=device)
+    if vector.ndim != 1 or vector.numel() < 1:
+        raise ValueError(f"{name} must be a non-empty vector [hidden_dim].")
+    if not torch.isfinite(vector).all():
+        raise ValueError(f"{name} must contain only finite values.")
+    return vector
+
+
+def _as_finite_covariance(
+    value: Tensor,
+    *,
+    name: str,
+    hidden_dim: int,
+    eps: float,
+    device: torch.device,
+) -> Tensor:
+    covariance = torch.as_tensor(value, dtype=torch.float64, device=device)
+    if covariance.ndim == 1:
+        if covariance.shape[0] != hidden_dim:
+            raise ValueError(
+                f"{name} diagonal dimension mismatch: expected {hidden_dim}, got {covariance.shape[0]}."
+            )
+        if not torch.isfinite(covariance).all():
+            raise ValueError(f"{name} must contain only finite values.")
+        if bool((covariance < -eps).any()):
+            raise ValueError(f"{name} diagonal covariance values must be non-negative.")
+        return torch.clamp(covariance, min=0.0)
+    if covariance.ndim == 2:
+        if covariance.shape != (hidden_dim, hidden_dim):
+            raise ValueError(
+                f"{name} full covariance shape mismatch: expected {(hidden_dim, hidden_dim)}, "
+                f"got {tuple(covariance.shape)}."
+            )
+        if not torch.isfinite(covariance).all():
+            raise ValueError(f"{name} must contain only finite values.")
+        return 0.5 * (covariance + covariance.T)
+    raise ValueError(f"{name} must be a vector [hidden_dim] or square matrix [hidden_dim, hidden_dim].")
+
+
+def _covariance_as_matrix(covariance: Tensor) -> Tensor:
+    if covariance.ndim == 1:
+        return torch.diag(covariance)
+    return covariance
+
+
+def _matrix_sqrt_psd(matrix: Tensor, *, eps: float) -> Tensor:
+    symmetric = 0.5 * (matrix + matrix.T)
+    eigenvalues, eigenvectors = torch.linalg.eigh(symmetric)
+    safe_values = torch.sqrt(torch.clamp(eigenvalues, min=0.0))
+    sqrt_matrix = (eigenvectors * safe_values.unsqueeze(0)) @ eigenvectors.T
+    sqrt_matrix = 0.5 * (sqrt_matrix + sqrt_matrix.T)
+    return torch.where(torch.abs(sqrt_matrix) < eps, torch.zeros_like(sqrt_matrix), sqrt_matrix)
+
+
+def gaussian_wasserstein_distance(
+    mean_a: Tensor,
+    covariance_a: Tensor,
+    mean_b: Tensor,
+    covariance_b: Tensor,
+    *,
+    squared: bool = False,
+    eps: float = 1e-10,
+) -> Tensor:
+    """Closed-form 2-Wasserstein distance between two Gaussian distributions.
+
+    Covariances may be full PSD matrices ``[D, D]`` or diagonal variance vectors
+    ``[D]``. The returned scalar is non-negative; set ``squared=True`` to return
+    the squared distance.
+    """
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    a_mean = _as_finite_vector(mean_a, name="mean_a")
+    b_mean = _as_finite_vector(mean_b, name="mean_b", device=a_mean.device)
+    if b_mean.shape != a_mean.shape:
+        raise ValueError(f"mean dimension mismatch: expected {a_mean.shape[0]}, got {b_mean.shape[0]}.")
+
+    hidden_dim = int(a_mean.shape[0])
+    a_cov = _as_finite_covariance(
+        covariance_a,
+        name="covariance_a",
+        hidden_dim=hidden_dim,
+        eps=float(eps),
+        device=a_mean.device,
+    )
+    b_cov = _as_finite_covariance(
+        covariance_b,
+        name="covariance_b",
+        hidden_dim=hidden_dim,
+        eps=float(eps),
+        device=a_mean.device,
+    )
+
+    mean_distance_sq = (a_mean - b_mean).square().sum()
+    if a_cov.ndim == 1 and b_cov.ndim == 1:
+        covariance_distance_sq = (torch.sqrt(a_cov) - torch.sqrt(b_cov)).square().sum()
+    else:
+        a_matrix = _covariance_as_matrix(a_cov)
+        b_matrix = _covariance_as_matrix(b_cov)
+        sqrt_a = _matrix_sqrt_psd(a_matrix, eps=float(eps))
+        middle = sqrt_a @ b_matrix @ sqrt_a
+        sqrt_middle = _matrix_sqrt_psd(middle, eps=float(eps))
+        covariance_distance_sq = torch.trace(a_matrix) + torch.trace(b_matrix) - 2.0 * torch.trace(sqrt_middle)
+
+    distance_sq = torch.clamp(mean_distance_sq + covariance_distance_sq, min=0.0)
+    if squared:
+        return distance_sq.to(torch.float32)
+    return torch.sqrt(distance_sq).to(torch.float32)
+
+
+def manifold_distance(
+    manifold_a: TruthManifold,
+    manifold_b: TruthManifold,
+    *,
+    squared: bool = False,
+    covariance_mode: str = "model",
+    eps: float = 1e-10,
+) -> Tensor:
+    """Return Gaussian 2-Wasserstein distance between two ``TruthManifold`` objects."""
+    if manifold_a.mean is None or manifold_b.mean is None:
+        raise ValueError("Both TruthManifold objects must be initialized before manifold distance.")
+    if manifold_a.hidden_dim != manifold_b.hidden_dim:
+        raise ValueError(
+            f"TruthManifold hidden dimension mismatch: expected {manifold_a.hidden_dim}, "
+            f"got {manifold_b.hidden_dim}."
+        )
+    return gaussian_wasserstein_distance(
+        manifold_a.mean,
+        manifold_a.covariance_for_distance(covariance_mode=covariance_mode),
+        manifold_b.mean,
+        manifold_b.covariance_for_distance(covariance_mode=covariance_mode),
+        squared=squared,
+        eps=eps,
+    )
+
+
+def manifold_wasserstein_distance(
+    manifold_a: TruthManifold,
+    manifold_b: TruthManifold,
+    *,
+    squared: bool = False,
+    covariance_mode: str = "model",
+    eps: float = 1e-10,
+) -> Tensor:
+    """Alias for ``manifold_distance`` with an explicit metric name."""
+    return manifold_distance(
+        manifold_a,
+        manifold_b,
+        squared=squared,
+        covariance_mode=covariance_mode,
+        eps=eps,
     )
 
 

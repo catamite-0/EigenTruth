@@ -359,6 +359,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 |---|---|
 | `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | Maintains a Welford online mean and covariance, exposed as a ridge-regularized, sample-count-normalized precision matrix; supports `covariance_mode="full"`, `"diag"`, experimental `"low_rank"`, and OAS-style `"shrinkage"` so local benchmarks can trade exact covariance scoring for lower memory/compute cost or small-sample conditioning; `TruthManifold.spectrum()` reports Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number as dependency-free representation-spectrum diagnostics. |
 | `mahalanobis_distance` | Measures relative deviation from the warmup manifold. |
+| `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | Computes dependency-free closed-form Gaussian 2-Wasserstein/Bures distance for comparing representation manifolds across layers, checkpoints, or runs. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
@@ -404,6 +405,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_frontier_stability.py` | Replays saved frontier score dumps across multiple split-conformal seeds, summarizes best-signal stability, fingerprints source score records, and optionally registers the post-hoc stability report. |
 | `run_calibrated_observability_workflow.py` | Runs or reuses a TruthfulQA score dump, executes conformal layer/score calibration, writes nested artifact manifests plus an evidence-bundle summary, forwards optional TruthfulQA cache paths, and optionally records the calibrated-observability closure in the local registry. |
 | `run_truthfulqa_frontier_workflow.py` | Runs the multi-model/multi-scale TruthfulQA frontier workflow: calibrated-observability cells for Qwen/SmolLM2-style l20/l80 runs, optional per-cell cache roots for l80/multi-seed reuse, cross-cell rank-fusion ensemble reporting, and a top-level manifest. |
+| `compare_manifold_distances.py` | Builds a Gaussian 2-Wasserstein/Bures distance matrix from saved `TruthManifold` artifacts or `eval_truthfulqa.py` layer-stats caches for offline layer/checkpoint drift inspection. |
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache/staged-verification route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
@@ -449,6 +451,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 |---|---|
 | `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | 用 Welford 维护在线均值与协方差，对外暴露为按样本数归一化、ridge 正则化的精度矩阵；支持 `covariance_mode="full"`、`"diag"`、实验性 `"low_rank"` 和 OAS 风格 `"shrinkage"`，便于本地 benchmark 在精确协方差评分、低内存/低计算成本和小样本病态矩阵稳定性之间取舍；`TruthManifold.spectrum()` 会输出 Marchenko-Pastur bulk 边界、spike count、effective rank、participation ratio、stable rank 和 condition number，作为无新增依赖的表征谱诊断。 |
 | `mahalanobis_distance` | 测量相对于 warmup 流形的相对偏移。 |
+| `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | 计算无新增依赖的 Gaussian 2-Wasserstein/Bures 距离，用于比较不同 layer、checkpoint 或 run 的表征流形。 |
 | `poincare_map` | 将表征投影到有界双曲空间。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |
@@ -493,6 +496,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_frontier_stability.py` | 对已保存 frontier score dump 做多 seed split-conformal 重放，总结最佳信号稳定性，指纹化 source score records，并可选登记 post-hoc stability report。 |
 | `run_calibrated_observability_workflow.py` | 运行或复用 TruthfulQA score dump，执行 conformal layer/score 校准，写入嵌套 artifact manifest 和 evidence-bundle summary，透传可选 TruthfulQA cache 路径，并可选把 calibrated-observability 闭环登记到本地 registry。 |
 | `run_truthfulqa_frontier_workflow.py` | 执行多模型/多尺度 TruthfulQA frontier workflow：批量运行 Qwen/SmolLM2 风格 l20/l80 calibrated-observability cells，支持 per-cell cache root 复用 l80/多 seed 证据，生成跨 cell rank-fusion ensemble report 和顶层 manifest。 |
+| `compare_manifold_distances.py` | 从已保存的 `TruthManifold` artifact 或 `eval_truthfulqa.py` layer-stats cache 生成 Gaussian 2-Wasserstein/Bures 距离矩阵，用于离线检查 layer/checkpoint drift。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |
