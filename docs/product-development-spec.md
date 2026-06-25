@@ -15,7 +15,7 @@ Implemented today:
 - `eigentruth.calibration` / `eigentruth.eval.conformal`: JSON-serializable calibration artifacts, split-conformal calibrators, adaptive feature-inflated conformal calibrators, layer/score sweep reports, rank-calibrated multi-score fusion artifacts, and conformal abstention/comparison reports with conservative selective-correctness lower bounds.
 - `eigentruth.core.TruthSubspace`: low-rank factual subspace scoring, benchmark residual signal, and optional true-minus-false projection.
 - `eigentruth.core.internal_eigenscore` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy`: INSIDE/EigenScore-style spectral diversity, dependency-free sampled semantic-entropy proxies, and confidence-weighted semantic-energy disagreement, including adaptive sampling budget support in benchmarks.
-- `eigentruth.control.RiskController` / `ControlPolicyConfig`: maps calibrated diagnostic thresholds and optional claim verification results to configurable product actions.
+- `eigentruth.control.RiskController` / `ControlPolicyConfig` / `ParticipationGateConfig`: maps calibrated diagnostic thresholds, optional claim verification results, and optional conformal abstention participation gates to configurable product actions.
 - `eigentruth.control.PreGenerationRiskPolicy` / `select_pre_generation_profile`: dependency-free pre-generation runtime-profile routing from prompt features and caller metadata before model or verifier work.
 - `eigentruth.control.DefaultCorrectionPolicy` / `PlanAwareCorrectionPolicy` / `ActionRequest`: compiles decisions into executable JSON-ready payloads for accept/retrieve/rewrite/steer/execute-tool/abstain/clarify flows; the plan-aware wrapper can enrich or append retrieval actions from `ClaimVerificationPlan` retrieval queries without changing the wrapped policy by default.
 - `eigentruth.control.ActionExecutorRegistry` / `DryRunActionExecutor` / `TimeoutActionExecutor` / `ActionResult`: routes action requests to registered executors with side-effect-free fallback execution and best-effort timeout wrapping for local control-loop traces.
@@ -239,7 +239,7 @@ For product features:
 ### Completed 0.2-0.3 Foundation
 
 - Score dump -> layer/score sweep -> conformal calibration artifact -> risk decision -> action request/result -> product trace.
-- Conformal abstention report -> runtime `participate/abstain` decision helper plus `eval_conformal.py --save-abstention-report` and `--save-abstention-comparison` sidecars for risk-coverage-controlled answer participation and multi-signal selection.
+- Conformal abstention report -> runtime `participate/abstain` decision helper plus `eval_conformal.py --save-abstention-report` and `--save-abstention-comparison` sidecars for risk-coverage-controlled answer participation and multi-signal selection; `ParticipationGateConfig` can now consume a single report, candidate, or comparison report and let `RiskController` abstain/clarify accepted answers when the selected uncertainty score is outside the retained region.
 - Configurable risk policy hooks for refuted, unsupported, error, and compound diagnostic/verification cases.
 - Action executor registry with dry-run fallback and a dependency-free in-memory retrieval executor shell.
 - Claim extraction metadata for numbers, citations, negation, and time-sensitive claims.

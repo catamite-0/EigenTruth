@@ -41,6 +41,7 @@ from eigentruth.control import (
     DefaultCorrectionPolicy,
     DryRunActionExecutor,
     InMemoryActionExecutionLedger,
+    ParticipationGateConfig,
     PlanAwareCorrectionPolicy,
     PolicyGuardedActionExecutor,
     PreGenerationRiskAssessment,
@@ -57,6 +58,10 @@ from eigentruth.control import (
     select_runtime_profile,
 )
 from eigentruth.core import TruthSubspace
+from eigentruth.eval.conformal import (
+    conformal_abstention_comparison_report,
+    conformal_abstention_report,
+)
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
@@ -2227,6 +2232,82 @@ def test_risk_controller_uses_configurable_control_policy():
     assert unsupported.risk_level is RiskLevel.MEDIUM
 
 
+def test_risk_controller_applies_participation_gate_to_accepted_answers():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    gate_report = conformal_abstention_report(
+        [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+        score_name="uncertainty",
+    )
+    controller = RiskController(artifact, participation_gate=gate_report)
+
+    accepted = controller.decide({"maha": 1.0, "uncertainty": 0.2})
+    abstained = controller.decide({"maha": 1.0, "uncertainty": 0.9})
+    skipped = controller.decide({"maha": 4.0})
+    missing = controller.decide({"maha": 1.0})
+
+    assert accepted.action is ControlAction.ACCEPT
+    assert accepted.diagnostics["participation_gate"]["status"] == "participate"
+    assert accepted.diagnostics["participation_gate"]["threshold"] == pytest.approx(0.3)
+    assert abstained.action is ControlAction.ABSTAIN
+    assert abstained.risk_level is RiskLevel.HIGH
+    assert abstained.diagnostics["participation_gate"]["status"] == "abstain"
+    assert abstained.diagnostics["participation_gate"]["value"] == pytest.approx(0.9)
+    assert "participation gate abstained" in abstained.reason
+    assert skipped.action is ControlAction.RETRIEVE
+    assert skipped.diagnostics["participation_gate"]["status"] == "skipped"
+    assert missing.action is ControlAction.CLARIFY
+    assert missing.risk_level is RiskLevel.UNKNOWN
+    assert missing.diagnostics["participation_gate"]["status"] == "missing_score"
+
+
+def test_participation_gate_can_use_abstention_comparison_recommendation_and_policy_scope():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    comparison = conformal_abstention_comparison_report(
+        {
+            "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+            "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        },
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+    )
+    gate = ParticipationGateConfig.from_dict(comparison.to_dict())
+    policy = ControlPolicyConfig.from_dict({
+        "participation_gate_action": "clarify",
+        "participation_gate_risk_level": "unknown",
+        "participation_gate_confidence_floor": 0.85,
+        "participation_gate_applies_to_actions": "accept,retrieve",
+    })
+    controller = RiskController(
+        artifact,
+        participation_gate=comparison.to_dict(),
+        policy_config=policy,
+    )
+
+    decision = controller.decide({"maha": 4.0, "strong": 0.9})
+
+    assert gate.score_name == "strong"
+    assert gate.source == "conformal_abstention_comparison_report"
+    assert gate.metadata["rank"] == 1
+    assert policy.to_dict()["participation_gate_applies_to_actions"] == ["accept", "retrieve"]
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.confidence == pytest.approx(0.85)
+    assert decision.diagnostics["participation_gate"]["score_name"] == "strong"
+    assert decision.diagnostics["participation_gate"]["status"] == "abstain"
+
+
 def test_control_policy_config_from_dict_parses_boolean_strings():
     disabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "false"})
     enabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "on"})
@@ -2235,6 +2316,8 @@ def test_control_policy_config_from_dict_parses_boolean_strings():
     assert enabled.compound_verification_escalates is True
     with pytest.raises(ValueError, match="compound_verification_escalates"):
         ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
+    with pytest.raises(ValueError, match="participation_gate_applies_to_actions"):
+        ControlPolicyConfig.from_dict({"participation_gate_applies_to_actions": "unknown"})
 
 
 def test_risk_controller_routes_non_finite_diagnostics_to_unknown():

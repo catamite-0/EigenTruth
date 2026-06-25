@@ -34,10 +34,15 @@ Wired the primitive into `benchmarks/eval_conformal.py`:
 - `--save-abstention-comparison PATH` and `--include-abstention-comparison` rank multiple `--abstention-signals` by conservative conditional correctness, selective accuracy, participation, or retention.
 - The abstention block is evidence-only and does not change the base E1 conformal verdict.
 
+Wired abstention into the control plane:
+
+- `ParticipationGateConfig` can consume a single abstention report, a comparison candidate, or a full comparison report and select the recommended candidate.
+- `RiskController(..., participation_gate=...)` records a `participation_gate` trace block and, by default, only gates decisions that would otherwise `accept`.
+- `ControlPolicyConfig` can change the gate action, risk level, confidence floor, and action scope when a product wants to gate `retrieve` or other actions as well.
+
 ## Next Research-to-Code Candidates
 
-1. Wire abstention reports into `RiskController` as an optional pre-action gate.
-2. Add a post-hoc abstention stability replay across frontier l80 score dumps and seeds, mirroring `eval_frontier_stability.py`.
+1. Add a post-hoc abstention stability replay across frontier l80 score dumps and seeds, mirroring `eval_frontier_stability.py`.
+2. Add a release gate that requires the promoted participation gate to preserve a minimum conservative conditional-correctness lower bound and maximum abstention rate.
 3. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
-4. Wire the best abstention comparison candidate into `RiskController` as a policy-configured participation gate rather than a benchmark-only report.
-5. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
+4. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.

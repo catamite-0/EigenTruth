@@ -20,7 +20,7 @@ from eigentruth.control.actions import (
     SQLiteActionExecutionLedger,
     TimeoutActionExecutor,
 )
-from eigentruth.control.controller import ControlPolicyConfig, RiskController
+from eigentruth.control.controller import ControlPolicyConfig, ParticipationGateConfig, RiskController
 from eigentruth.control.feedback import (
     FeedbackOutcome,
     ProductFeedbackRecord,
@@ -86,6 +86,7 @@ __all__ = [
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
     "PlanAwareCorrectionPolicy",
+    "ParticipationGateConfig",
     "SQLiteActionExecutionLedger",
     "RUNTIME_PROFILE_NAMES",
     "RUNTIME_PROFILES",
