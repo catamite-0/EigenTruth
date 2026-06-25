@@ -16,7 +16,14 @@ from eigentruth.control import (
     evidence_bundle_from_action_results,
     run_verification_loop,
 )
-from eigentruth.verify import Claim, GroundednessVerifier, VerificationResult, VerificationStatus, extract_claims
+from eigentruth.verify import (
+    Claim,
+    ClaimDependency,
+    GroundednessVerifier,
+    VerificationResult,
+    VerificationStatus,
+    extract_claims,
+)
 
 
 def _artifact() -> CalibrationArtifact:
@@ -286,6 +293,122 @@ def test_staged_verification_loop_can_verify_only_triggered_claims():
     assert summary["skip_rate"] == 2 / 3
     assert summary["verified_claim_ids"] == ("c2",)
     assert summary["skipped_claim_ids"] == ("c1", "c3")
+
+
+def test_verification_loop_can_enforce_claim_coherence_for_triggered_subset():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim(
+            "Therefore the treatment is proven effective.",
+            claim_id="c2",
+            metadata={
+                "depends_on": "c1",
+                "requires_verification": True,
+            },
+        ),
+    )
+    verifier = _CountingVerifier(status=VerificationStatus.SUPPORTED)
+
+    result = run_verification_loop(
+        request_id="req-coherence",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(
+            verify_claim_metadata_keys=("requires_verification",),
+            verify_triggered_claims_only=True,
+        ),
+        enforce_claim_coherence=True,
+    )
+
+    assert verifier.claim_ids == ("c2",)
+    assert result.initial_verification_results[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.initial_coherence_report is not None
+    assert result.initial_coherence_report.blocked_claim_ids == ("c2",)
+    assert result.initial_coherence_report.missing_parent_ids == ("c1",)
+    assert result.initial_decision.action is ControlAction.RETRIEVE
+    assert result.final_decision.action is ControlAction.RETRIEVE
+    assert [target["claim_id"] for target in result.action_requests[0].payload["retrieval_targets"]] == ["c2", "c1"]
+
+    trace = result.trace.to_dict()
+    assert trace["metadata"]["claim_coherence"]["enabled"] is True
+    assert trace["metadata"]["claim_coherence"]["blocked_claim_ids"] == ("c2",)
+    assert trace["metadata"]["claim_coherence"]["action_scope_added_claim_ids"] == ("c1",)
+    assert "initial_claim_coherence" in {event["event_type"] for event in trace["events"]}
+    json.dumps(result.to_dict())
+
+
+def test_verification_loop_enables_claim_coherence_when_dependencies_are_supplied():
+    claims = (
+        Claim("The premise has no evidence.", claim_id="c1"),
+        Claim("The conclusion is true.", claim_id="c2"),
+    )
+    verifier = GroundednessVerifier(evidence=("The conclusion is true.",), min_overlap=0.8)
+
+    result = run_verification_loop(
+        request_id="req-coherence-explicit",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        claim_dependencies=(ClaimDependency(parent_id="c1", child_id="c2", source="test"),),
+    )
+
+    assert result.initial_coherence_report is not None
+    assert result.initial_coherence_report.blocked_claim_ids == ("c2",)
+    assert result.initial_decision.action is ControlAction.RETRIEVE
+    assert result.trace.to_dict()["metadata"]["claim_coherence"]["enabled"] is True
+
+
+def test_verification_loop_rechecks_missing_dependency_after_retrieval():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim(
+            "Therefore the treatment is proven effective.",
+            claim_id="c2",
+            metadata={
+                "depends_on": "c1",
+                "requires_verification": True,
+            },
+        ),
+    )
+    verifier = GroundednessVerifier(evidence=(), min_overlap=0.8)
+    registry = _registry_with_retrieval(
+        (
+            "The trial was randomized.",
+            "Therefore the treatment is proven effective.",
+        ),
+        min_overlap=0.8,
+    )
+
+    result = run_verification_loop(
+        request_id="req-coherence-retrieve",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=verifier,
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+        stage_policy=StagedVerificationPolicy(
+            verify_claim_metadata_keys=("requires_verification",),
+            verify_triggered_claims_only=True,
+        ),
+        enforce_claim_coherence=True,
+    )
+
+    assert [target["claim_id"] for target in result.action_requests[0].payload["retrieval_targets"]] == ["c2", "c1"]
+    assert result.initial_coherence_report is not None
+    assert result.initial_coherence_report.missing_parent_ids == ("c1",)
+    assert result.final_coherence_report is not None
+    assert result.final_coherence_report.issues == ()
+    assert [item.status for item in result.final_verification_results] == [
+        VerificationStatus.SUPPORTED,
+        VerificationStatus.SUPPORTED,
+    ]
+    assert result.final_decision.action is ControlAction.ACCEPT
+    trace = result.trace.to_dict()
+    assert trace["metadata"]["claim_coherence"]["final_issue_count"] == 0
+    assert "final_claim_coherence" in {event["event_type"] for event in trace["events"]}
 
 
 def test_staged_verification_policy_parses_string_feature_and_metadata_flags():

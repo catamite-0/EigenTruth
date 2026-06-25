@@ -59,6 +59,7 @@ from eigentruth.core import TruthSubspace
 from eigentruth.verify import (
     CachedVerifier,
     Claim,
+    ClaimDependency,
     CompositeVerifier,
     EvidenceDocument,
     GroundednessVerifier,
@@ -69,8 +70,10 @@ from eigentruth.verify import (
     VerificationResult,
     VerificationStatus,
     VerifierRoute,
+    apply_claim_coherence,
     extract_calculation,
     extract_claims,
+    infer_claim_dependencies,
     normalize_claim_text,
 )
 
@@ -483,6 +486,106 @@ def test_claim_extraction_and_in_memory_verifier():
     assert results[0].status is VerificationStatus.SUPPORTED
     assert results[0].evidence == ("atlas",)
     assert results[1].status is VerificationStatus.REFUTED
+
+
+def test_claim_coherence_infers_metadata_and_discourse_dependencies():
+    claims = (
+        Claim("The trial enrolled 100 patients.", claim_id="c1"),
+        Claim("Therefore the treatment is proven effective.", claim_id="c2"),
+        Claim("The report requires review.", claim_id="c3", metadata={"depends_on": "c2"}),
+    )
+
+    dependencies = infer_claim_dependencies(claims)
+
+    assert dependencies == (
+        ClaimDependency(
+            parent_id="c1",
+            child_id="c2",
+            relation="discourse_marker",
+            source="text_rule",
+            reason="claim starts with a discourse marker",
+        ),
+        ClaimDependency(parent_id="c2", child_id="c3"),
+    )
+
+
+def test_claim_coherence_blocks_supported_child_when_parent_is_missing_or_unsupported():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim("Therefore the treatment is proven effective.", claim_id="c2", metadata={"depends_on": "c1"}),
+    )
+    results = (
+        VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.2),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9, evidence=("abstract",)),
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results)
+
+    assert adjusted[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert adjusted[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert adjusted[1].confidence == pytest.approx(0.5)
+    assert adjusted[1].metadata["claim_coherence"]["blocked"] is True
+    assert adjusted[1].metadata["claim_coherence"]["parent_status"] == "insufficient_evidence"
+    assert report.blocked_claim_ids == ("c2",)
+    assert report.issues[0].parent_id == "c1"
+
+    subset_adjusted, subset_report = apply_claim_coherence(
+        claims=(claims[1],),
+        verification_results=(VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),),
+        dependency_claims=claims,
+    )
+
+    assert subset_adjusted[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert subset_report.missing_parent_ids == ("c1",)
+
+
+def test_claim_coherence_propagates_transitive_dependencies_independent_of_order():
+    claims = (
+        Claim("The trial was randomized.", claim_id="c1"),
+        Claim("The treatment caused improvement.", claim_id="c2"),
+        Claim("Therefore the treatment should be approved.", claim_id="c3"),
+    )
+    results = (
+        VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.2),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+    )
+    dependencies = (
+        ClaimDependency(parent_id="c2", child_id="c3"),
+        ClaimDependency(parent_id="c1", child_id="c2"),
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results, dependencies=dependencies)
+
+    assert [result.status for result in adjusted] == [
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+        VerificationStatus.INSUFFICIENT_EVIDENCE,
+    ]
+    assert report.blocked_claim_ids == ("c2", "c3")
+    assert [(issue.parent_id, issue.child_id) for issue in report.issues] == [("c1", "c2"), ("c2", "c3")]
+
+
+def test_claim_coherence_accepts_json_like_inputs_with_enum_statuses():
+    claims = (
+        {"text": "The parent claim.", "claim_id": "c1"},
+        {
+            "text": "The child claim.",
+            "claim_id": "c2",
+            "metadata": {"dependencies": [{"parent": "c1", "relation": "premise"}]},
+        },
+    )
+    results = (
+        {"status": VerificationStatus.REFUTED, "confidence": 0.8, "evidence": None},
+        {"status": VerificationStatus.SUPPORTED, "confidence": "0.9", "evidence": ("child evidence",)},
+    )
+
+    adjusted, report = apply_claim_coherence(claims, results)
+
+    assert adjusted[0].status is VerificationStatus.REFUTED
+    assert adjusted[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert report.to_dict()["dependencies"][0]["relation"] == "premise"
+    assert report.to_dict()["issues"][0]["parent_status"] == "refuted"
 
 
 def test_groundedness_verifier_supports_refutes_and_reports_evidence():

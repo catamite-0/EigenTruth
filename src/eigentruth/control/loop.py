@@ -19,7 +19,12 @@ from eigentruth.control.controller import RiskController
 from eigentruth.control.policy import RiskDecision
 from eigentruth.control.staging import StagedVerificationPolicy, VerificationStageDecision
 from eigentruth.control.trace import ProductTrace, RuntimePhaseTiming, RuntimeTrace, TraceEvent
-from eigentruth.verify.protocols import Claim, VerificationResult, Verifier
+from eigentruth.verify.coherence import (
+    ClaimCoherenceReport,
+    ClaimDependency,
+    apply_claim_coherence,
+)
+from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 
 
 @dataclass(frozen=True)
@@ -76,6 +81,8 @@ class VerificationLoopResult:
     final_decision: RiskDecision
     trace: ProductTrace
     verification_stage_decision: VerificationStageDecision | Mapping[str, Any] | None = None
+    initial_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
+    final_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "initial_verification_results", tuple(self.initial_verification_results))
@@ -99,6 +106,8 @@ class VerificationLoopResult:
             "final_decision": self.final_decision.to_dict(),
             "trace": self.trace.to_dict(),
             "verification_stage_decision": _stage_decision_to_dict(self.verification_stage_decision),
+            "initial_coherence_report": _coherence_report_to_dict(self.initial_coherence_report),
+            "final_coherence_report": _coherence_report_to_dict(self.final_coherence_report),
         }
 
 
@@ -165,6 +174,8 @@ def run_verification_loop(
     metadata: Mapping[str, Any] | None = None,
     stage_policy: StagedVerificationPolicy | None = None,
     profile_runtime: bool = True,
+    claim_dependencies: Sequence[ClaimDependency | Mapping[str, Any]] | None = None,
+    enforce_claim_coherence: bool = False,
 ) -> VerificationLoopResult:
     """Run a dependency-free verification/action/reverification loop."""
     base_context = dict(context or {})
@@ -176,6 +187,9 @@ def run_verification_loop(
     initial_verified_claim_ids: tuple[str, ...] = _claim_ids(claims)
     initial_skipped_claim_ids: tuple[str, ...] = ()
     initial_verification_scope = "all"
+    initial_coherence_report: ClaimCoherenceReport | None = None
+    final_coherence_report: ClaimCoherenceReport | None = None
+    coherence_enabled = bool(enforce_claim_coherence or claim_dependencies is not None)
     if stage_policy is None:
         phase_started_at = _start_runtime_phase(profile_runtime)
         initial_results = tuple(verifier.verify_many(initial_verification_claims, context=base_context))
@@ -189,6 +203,13 @@ def run_verification_loop(
                 "skipped": False,
                 "verification_scope": initial_verification_scope,
             },
+        )
+        initial_results, initial_coherence_report = _apply_claim_coherence_if_enabled(
+            enabled=coherence_enabled,
+            claims=initial_verification_claims,
+            verification_results=initial_results,
+            dependency_claims=claims,
+            dependencies=claim_dependencies,
         )
         phase_started_at = _start_runtime_phase(profile_runtime)
         initial_decision = controller.decide(diagnostics, verification_results=initial_results)
@@ -241,6 +262,13 @@ def run_verification_loop(
                     "skipped_claim_count": len(initial_skipped_claim_ids),
                 },
             )
+            initial_results, initial_coherence_report = _apply_claim_coherence_if_enabled(
+                enabled=coherence_enabled,
+                claims=initial_verification_claims,
+                verification_results=initial_results,
+                dependency_claims=claims,
+                dependencies=claim_dependencies,
+            )
             phase_started_at = _start_runtime_phase(profile_runtime)
             initial_decision = controller.decide(diagnostics, verification_results=initial_results)
             _record_runtime_phase(
@@ -257,19 +285,31 @@ def run_verification_loop(
             initial_results = ()
             initial_decision = diagnostic_decision
 
+    action_planning_claims, action_planning_results, missing_dependency_claim_ids = (
+        _extend_scope_with_missing_parent_claims(
+            verified_claims=initial_verification_claims,
+            verification_results=initial_results,
+            all_claims=claims,
+            coherence_report=initial_coherence_report,
+        )
+    )
+
     phase_started_at = _start_runtime_phase(profile_runtime)
     policy = correction_policy or DefaultCorrectionPolicy()
     action_requests = policy.plan(
         initial_decision,
-        claims=initial_verification_claims,
-        verification_results=initial_results,
+        claims=action_planning_claims,
+        verification_results=action_planning_results,
         context=base_context,
     )
     _record_runtime_phase(
         runtime_phases,
         "action_planning",
         phase_started_at,
-        metadata={"n_actions": len(action_requests)},
+        metadata={
+            "n_actions": len(action_requests),
+            "missing_dependency_claim_count": len(missing_dependency_claim_ids),
+        },
     )
     registry = executor_registry or ActionExecutorRegistry()
     execution_context = {**base_context, "request_id": request_id}
@@ -291,7 +331,7 @@ def run_verification_loop(
     )
 
     if retrieval_evidence.has_evidence():
-        final_verification_claims = initial_verification_claims or tuple(claims)
+        final_verification_claims = action_planning_claims or initial_verification_claims or tuple(claims)
         phase_started_at = _start_runtime_phase(profile_runtime)
         final_results = _verify_with_retrieved_evidence(
             verifier,
@@ -310,6 +350,13 @@ def run_verification_loop(
                 "verification_scope": initial_verification_scope,
             },
         )
+        final_results, final_coherence_report = _apply_claim_coherence_if_enabled(
+            enabled=coherence_enabled,
+            claims=final_verification_claims,
+            verification_results=final_results,
+            dependency_claims=claims,
+            dependencies=claim_dependencies,
+        )
         phase_started_at = _start_runtime_phase(profile_runtime)
         final_decision = controller.decide(diagnostics, verification_results=final_results)
         _record_runtime_phase(
@@ -321,6 +368,7 @@ def run_verification_loop(
     else:
         final_results = initial_results
         final_decision = initial_decision
+        final_coherence_report = initial_coherence_report
 
     runtime_trace = _build_runtime_trace(runtime_phases, loop_started_at)
     trace = ProductTrace(
@@ -365,8 +413,19 @@ def run_verification_loop(
                     "results": tuple(_verification_result_to_dict(result) for result in initial_results),
                 },
             ),
+            *(
+                (TraceEvent("initial_claim_coherence", initial_coherence_report.to_dict()),)
+                if initial_coherence_report is not None
+                else ()
+            ),
             TraceEvent("initial_risk_decision", initial_decision.to_dict()),
-            TraceEvent("actions_planned", {"n_actions": len(action_requests)}),
+            TraceEvent(
+                "actions_planned",
+                {
+                    "n_actions": len(action_requests),
+                    "missing_dependency_claim_ids": missing_dependency_claim_ids,
+                },
+            ),
             TraceEvent(
                 "actions_executed",
                 {
@@ -377,7 +436,16 @@ def run_verification_loop(
             TraceEvent("retrieval_evidence_collected", retrieval_evidence.to_dict()),
             TraceEvent(
                 "final_verification",
-                {"n_claims": len(claims), "used_retrieval_evidence": retrieval_evidence.has_evidence()},
+                {
+                    "n_claims": len(claims),
+                    "used_retrieval_evidence": retrieval_evidence.has_evidence(),
+                },
+            ),
+            *(
+                (TraceEvent("final_claim_coherence", final_coherence_report.to_dict()),)
+                if final_coherence_report is not None
+                and final_coherence_report is not initial_coherence_report
+                else ()
             ),
             TraceEvent("final_risk_decision", final_decision.to_dict()),
         ),
@@ -385,6 +453,11 @@ def run_verification_loop(
             "loop_version": "0.4",
             "source": "eigentruth.control.run_verification_loop",
             "staged_verification": None if stage_policy is None else stage_policy.to_dict(),
+            "claim_coherence": None if not coherence_enabled else _claim_coherence_metadata(
+                initial_coherence_report,
+                final_coherence_report,
+                missing_dependency_claim_ids=missing_dependency_claim_ids,
+            ),
             **dict(metadata or {}),
         },
         runtime_trace=runtime_trace,
@@ -399,6 +472,8 @@ def run_verification_loop(
         final_decision=final_decision,
         trace=trace,
         verification_stage_decision=stage_decision,
+        initial_coherence_report=initial_coherence_report,
+        final_coherence_report=final_coherence_report,
     )
 
 
@@ -502,6 +577,104 @@ def _stage_decision_to_dict(
     if isinstance(decision, VerificationStageDecision):
         return decision.to_dict()
     return dict(_jsonable(decision))
+
+
+def _coherence_report_to_dict(
+    report: ClaimCoherenceReport | Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if report is None:
+        return None
+    if isinstance(report, ClaimCoherenceReport):
+        return report.to_dict()
+    return dict(_jsonable(report))
+
+
+def _apply_claim_coherence_if_enabled(
+    *,
+    enabled: bool,
+    claims: Sequence[Claim],
+    verification_results: Sequence[VerificationResult],
+    dependency_claims: Sequence[Claim],
+    dependencies: Sequence[ClaimDependency | Mapping[str, Any]] | None,
+) -> tuple[tuple[VerificationResult, ...], ClaimCoherenceReport | None]:
+    results = tuple(verification_results)
+    if not enabled:
+        return results, None
+    adjusted, report = apply_claim_coherence(
+        claims,
+        results,
+        dependency_claims=dependency_claims,
+        dependencies=dependencies,
+    )
+    return adjusted, report
+
+
+def _extend_scope_with_missing_parent_claims(
+    *,
+    verified_claims: Sequence[Claim],
+    verification_results: Sequence[VerificationResult],
+    all_claims: Sequence[Claim],
+    coherence_report: ClaimCoherenceReport | None,
+) -> tuple[tuple[Claim, ...], tuple[VerificationResult, ...], tuple[str, ...]]:
+    claims = tuple(verified_claims)
+    results = tuple(verification_results)
+    if coherence_report is None or not coherence_report.missing_parent_ids:
+        return claims, results, ()
+
+    existing_ids = set(_claim_ids(claims))
+    all_claims_by_id = {
+        claim_id: _claim_with_id(claim, claim_id)
+        for index, claim in enumerate(all_claims)
+        for claim_id in (_claim_id_for_index(claim, index),)
+    }
+    appended_claims: list[Claim] = []
+    appended_results: list[VerificationResult] = []
+    appended_ids: list[str] = []
+    for claim_id in coherence_report.missing_parent_ids:
+        if claim_id in existing_ids:
+            continue
+        parent_claim = all_claims_by_id.get(claim_id)
+        if parent_claim is None:
+            continue
+        appended_claims.append(parent_claim)
+        appended_results.append(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.0,
+                explanation="parent claim was not verified before coherence check",
+                metadata={
+                    "claim_coherence": {
+                        "missing_parent": True,
+                        "source": "dependency_graph",
+                    }
+                },
+            )
+        )
+        appended_ids.append(claim_id)
+        existing_ids.add(claim_id)
+    return (
+        (*claims, *appended_claims),
+        (*results, *appended_results),
+        tuple(appended_ids),
+    )
+
+
+def _claim_coherence_metadata(
+    initial_report: ClaimCoherenceReport | None,
+    final_report: ClaimCoherenceReport | None,
+    *,
+    missing_dependency_claim_ids: Sequence[str] = (),
+) -> dict[str, Any]:
+    active_report = final_report or initial_report
+    return {
+        "enabled": True,
+        "dependency_count": 0 if active_report is None else len(active_report.dependencies),
+        "initial_issue_count": 0 if initial_report is None else len(initial_report.issues),
+        "final_issue_count": 0 if final_report is None else len(final_report.issues),
+        "blocked_claim_ids": () if active_report is None else tuple(active_report.blocked_claim_ids),
+        "missing_parent_ids": () if active_report is None else tuple(active_report.missing_parent_ids),
+        "action_scope_added_claim_ids": tuple(str(item) for item in missing_dependency_claim_ids),
+    }
 
 
 def _context_with_retrieved_evidence(

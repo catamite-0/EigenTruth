@@ -17,6 +17,13 @@ from eigentruth.verify.claims import (
     extract_calculation,
     extract_claims,
 )
+from eigentruth.verify.coherence import (
+    ClaimCoherenceIssue,
+    ClaimCoherenceReport,
+    ClaimDependency,
+    apply_claim_coherence,
+    infer_claim_dependencies,
+)
 from eigentruth.verify.composite import CompositeVerifier, RoutedVerifier, VerifierRoute
 from eigentruth.verify.groundedness import EvidenceDocument, GroundednessVerifier
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
@@ -26,6 +33,9 @@ from eigentruth.verify.selfcheck import SelfConsistencyVerifier
 __all__ = [
     "CachedVerifier",
     "Claim",
+    "ClaimCoherenceIssue",
+    "ClaimCoherenceReport",
+    "ClaimDependency",
     "ClaimExtractor",
     "CompositeVerifier",
     "EvidenceDocument",
@@ -41,9 +51,11 @@ __all__ = [
     "VerifierRoute",
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
+    "apply_claim_coherence",
     "claim_features",
     "extract_calculation",
     "extract_claims",
+    "infer_claim_dependencies",
     "normalize_claim_text",
     "stable_cache_key",
     "verifier_cache_key",

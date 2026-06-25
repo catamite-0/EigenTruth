@@ -16,7 +16,7 @@ from eigentruth.control import (
     SQLiteActionExecutionLedger,
 )
 from eigentruth.registry import RegistryRecord
-from eigentruth.verify import Claim, VerificationResult, VerificationStatus
+from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
 
 
 def test_calibration_artifact_score_lookup():
@@ -220,6 +220,30 @@ def test_verification_result_and_world_model_prediction_validate_confidence():
         VerificationResult(VerificationStatus.ERROR, confidence=-0.1)
     with pytest.raises(ValueError):
         WorldModelPrediction(state={}, confidence=1.1)
+
+
+def test_claim_dependency_json_roundtrip_and_validation():
+    dependency = ClaimDependency(
+        parent_id="c1",
+        child_id="c2",
+        relation="requires",
+        source="unit",
+        reason="child claim depends on parent claim",
+    )
+
+    payload = dependency.to_dict()
+    loaded = ClaimDependency.from_mapping(payload)
+
+    assert payload == {
+        "parent_id": "c1",
+        "child_id": "c2",
+        "relation": "requires",
+        "source": "unit",
+        "reason": "child claim depends on parent claim",
+    }
+    assert loaded == dependency
+    with pytest.raises(ValueError, match="cannot point to itself"):
+        ClaimDependency(parent_id="c1", child_id="c1")
 
 
 def test_registry_record_key():

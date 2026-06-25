@@ -239,7 +239,10 @@ execute retrieve actions, feed retrieved evidence back into verification, and
 emit a final decision trace; pass `StagedVerificationPolicy` when low-risk,
 non-sensitive claims should skip expensive verifier routes while diagnostic risk
 or claim metadata such as numbers, citations, or time-sensitive language still
-triggers verification. Running `examples/calibrated_control_demo.py` with
+triggers verification. When claim conclusions depend on earlier premises, pass
+`claim_dependencies=` or `enforce_claim_coherence=True` so missing or unsupported
+parent claims downgrade supported child claims to insufficient evidence and get
+recorded in the trace. Running `examples/calibrated_control_demo.py` with
 `--pre-generation-profile auto` records the earlier prompt/metadata risk
 assessment in trace metadata and, when no explicit runtime profile is supplied,
 uses it to choose the first `latency`, `balanced`, or `audit` runtime profile.
@@ -340,6 +343,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | Adds dependency-free request validation, idempotency replay, and audit metadata for side-effecting executors, including request ids, idempotency keys, and timeout bounds. |
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | Stores successful idempotent action results so repeated product requests can replay outputs without repeating side effects. |
 | `run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle` | Runs verify -> decide -> execute -> reverify loops, optionally gates expensive verifier routes behind diagnostic risk or sensitive claim metadata, and converts retrieval action results into verifier-ready evidence context. |
+| `ClaimDependency` / `ClaimCoherenceReport` / `apply_claim_coherence` | Adds an optional dependency-graph coherence pass for claim verification: supported child claims are downgraded to insufficient evidence when required parent claims are missing or unsupported, and `run_verification_loop(..., enforce_claim_coherence=True)` records coherence reports in the trace. |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
 | `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims, simple symbolic equations, and calculation metadata extracted from limited arithmetic text. |
 | `QuestionAnswerVerifier` | Provides a dependency-free structured QA/domain-state verifier adapter for exact question and candidate-answer facts. |
@@ -422,6 +426,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ActionExecutionPolicy` / `PolicyGuardedActionExecutor` | 为有副作用 executor 增加无依赖请求校验、idempotency replay 和审计元数据，包括 request id、idempotency key 与 timeout 上限。 |
 | `InMemoryActionExecutionLedger` / `JsonActionExecutionLedger` / `SQLiteActionExecutionLedger` | 保存成功的幂等 action 结果，让重复产品请求可重放输出而不重复执行副作用。 |
 | `run_verification_loop` / `StagedVerificationPolicy` / `EvidenceBundle` | 执行 verify -> decide -> execute -> reverify 闭环，可按诊断风险或敏感 claim metadata 延迟触发昂贵 verifier，并把 retrieval action result 转成 verifier 可消费的 evidence context。 |
+| `ClaimDependency` / `ClaimCoherenceReport` / `apply_claim_coherence` | 为 claim verification 增加可选依赖图一致性检查：当父 claim 缺失或 unsupported 时，被判 supported 的子 claim 会降级为 insufficient evidence；`run_verification_loop(..., enforce_claim_coherence=True)` 会把 coherence report 写入 trace。 |
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
 | `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim、简单符号等式，以及从有限算术文本中抽取出的 calculation metadata。 |
 | `QuestionAnswerVerifier` | 提供无依赖结构化 QA/领域状态 verifier adapter，用于精确问题与候选答案事实。 |
