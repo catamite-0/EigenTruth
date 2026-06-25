@@ -22,6 +22,7 @@ pip-check:
 perf-check:
 	$(PYTHON) benchmarks/profile_gate_smoke.py
 	$(PYTHON) benchmarks/cache_profile_smoke.py
+	$(PYTHON) benchmarks/score_fusion_profile_smoke.py
 	$(PYTHON) benchmarks/inside_sampling_profile_smoke.py
 	$(PYTHON) benchmarks/cache_worker_sweep_smoke.py
 	$(PYTHON) benchmarks/registry_baseline_smoke.py

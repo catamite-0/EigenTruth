@@ -10020,6 +10020,25 @@ def test_cache_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     assert failure_report["regression_gate"]["failures"][0]["metric"] == "total_seconds"
 
 
+def test_score_fusion_profile_smoke_writes_runtime_cache_report(tmp_path):
+    module = importlib.import_module("benchmarks.score_fusion_profile_smoke")
+
+    payload = module.build_score_fusion_profile_smoke(
+        tmp_path,
+        calibration_size=128,
+        batch_size=32,
+        repeats=2,
+    )
+
+    assert (tmp_path / "score_fusion_profile_smoke_report.json").exists()
+    assert payload["profile"] == "score_fusion_rank_cache"
+    assert payload["runtime_sort_calls_cached"] == 0
+    assert payload["artifact_schema_unchanged"] is True
+    assert payload["max_abs_diff"] == pytest.approx(0.0)
+    assert payload["cached_seconds"] > 0.0
+    assert payload["uncached_seconds"] > 0.0
+
+
 def test_inside_sampling_profile_smoke_writes_pass_and_expected_failure_reports(tmp_path):
     module = importlib.import_module("benchmarks.inside_sampling_profile_smoke")
 
