@@ -68,9 +68,14 @@ Added a combined frontier release-evidence comparator:
 - It emits separate verifier and abstention track verdicts plus one fail-closed release decision.
 - On the current l80 artifacts, verifier stability promotes while abstention stability blocks; this records the correct product posture: staged verifier routing is supported by current evidence, participation-gate promotion is not.
 
+Added dependency-free fact-level claim metadata:
+
+- `extract_claims(..., include_triples=True)` and `SentenceClaimExtractor(include_triples=True)` can attach rule-based `claim_triples` metadata without requiring an external extractor.
+- `ClaimVerificationPlanner(include_extracted_triples=True)` routes those extracted triples into the existing `triple_evidence` path, so local fact-level audits can be planned before a stronger extractor is available.
+- The API keeps stronger extraction optional through the existing claim and triple extractor protocols.
+
 ## Next Research-to-Code Candidates
 
-1. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
-2. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
-3. Integrate the combined frontier release-evidence verdict as an optional gate in the broader local release-candidate workflow.
-4. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.
+1. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
+2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
+3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

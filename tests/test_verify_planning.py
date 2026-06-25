@@ -13,6 +13,7 @@ from eigentruth.verify import (
     VerificationPlanCostEstimate,
     VerificationRouteHint,
     estimate_verification_plan_cost,
+    extract_claims,
 )
 
 
@@ -158,6 +159,41 @@ def test_claim_verification_planner_routes_metadata_triples_to_triple_evidence()
         "metadata:claim_triples",
     )
     assert plan.cost_estimate().route_counts == {"triple_evidence": 1, "groundedness": 1}
+
+
+def test_claim_extraction_can_attach_rule_based_fact_triples():
+    claims = extract_claims(
+        "Paris is the capital of France. AlphaCorp has 10 offices in Europe.",
+        include_triples=True,
+        require_triple_audit=True,
+    )
+
+    assert claims[0].metadata["requires_triple_audit"] is True
+    assert claims[0].metadata["claim_triples"][0]["subject"] == "France"
+    assert claims[0].metadata["claim_triples"][0]["predicate"] == "capital_of"
+    assert claims[0].metadata["claim_triples"][0]["object"] == "Paris"
+    assert claims[1].metadata["claim_triples"][0]["subject"] == "AlphaCorp"
+    assert claims[1].metadata["claim_triples"][0]["object"] == "10 offices in Europe"
+
+
+def test_claim_verification_planner_can_route_extracted_fact_triples():
+    planner = ClaimVerificationPlanner(
+        include_extracted_triples=True,
+        verify_all_by_default=False,
+        verify_triggered_claims_only=True,
+        verify_claim_feature_flags=(),
+        retrieval_feature_flags=(),
+        triple_evidence_feature_flags=(),
+    )
+
+    plan = planner.plan("Paris is the capital of France.")
+
+    assert plan.run_verifier is True
+    assert plan.verify_claim_ids == ("c1",)
+    assert plan.triggered_metadata["c1"] == ("claim_triples",)
+    assert plan.route_hints[0].routes == ("triple_evidence", "groundedness")
+    assert plan.route_hints[0].reasons == ("metadata:claim_triples",)
+    assert plan.claims[0].metadata["claim_triples"][0]["predicate"] == "capital_of"
 
 
 def test_claim_verification_plan_json_shape_matches_stage_decision_fields():

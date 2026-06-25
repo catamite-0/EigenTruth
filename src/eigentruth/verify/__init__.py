@@ -14,6 +14,7 @@ from eigentruth.verify.claims import (
     ClaimExtractor,
     SentenceClaimExtractor,
     claim_features,
+    enrich_claims_with_triples,
     extract_calculation,
     extract_claims,
 )
@@ -85,6 +86,7 @@ __all__ = [
     "claim_features",
     "default_routed_verifier",
     "default_verifier_routes",
+    "enrich_claims_with_triples",
     "extract_calculation",
     "extract_claims",
     "extract_claim_triples",

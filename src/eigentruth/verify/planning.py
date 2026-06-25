@@ -314,6 +314,7 @@ class ClaimVerificationPlanner:
     triple_evidence_feature_flags: Sequence[str] = DEFAULT_TRIPLE_EVIDENCE_FEATURE_FLAGS
     triple_evidence_metadata_keys: Sequence[str] = DEFAULT_TRIPLE_EVIDENCE_METADATA_KEYS
     infer_dependencies: bool = True
+    include_extracted_triples: bool = False
 
     def __post_init__(self) -> None:
         if self.min_chars < 1:
@@ -355,10 +356,20 @@ class ClaimVerificationPlanner:
             tuple(_non_empty_strings(self.triple_evidence_metadata_keys)),
         )
         object.__setattr__(self, "infer_dependencies", _strict_bool(self.infer_dependencies))
+        object.__setattr__(
+            self,
+            "include_extracted_triples",
+            _strict_bool(self.include_extracted_triples),
+        )
 
     def extract(self, text: str) -> tuple[Claim, ...]:
         """Extract claims with the configured extractor."""
-        return extract_claims(text, min_chars=self.min_chars, extractor=self.extractor)
+        return extract_claims(
+            text,
+            min_chars=self.min_chars,
+            extractor=self.extractor,
+            include_triples=self.include_extracted_triples,
+        )
 
     def plan(
         self,
