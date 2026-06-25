@@ -30,9 +30,9 @@ The current implementation explores a research hypothesis: hallucination-related
 
 EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 
-- build a `TruthManifold` from factual warmup examples
+- build a `TruthManifold` / `RepresentationManifold` from factual warmup examples
 - track Mahalanobis-style distance from that warmup manifold
-- project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE)
+- optionally project hidden states into a Poincare ball and compute Hyperbolic Semantic Entropy (HSE) for ablations
 - optionally build a contrastive direction from factual and false examples
 - fit a low-rank `TruthSubspace` and score residual distance from factual states
 - save versioned `ConceptArtifact` files and attach multiple concept probes at once
@@ -43,9 +43,9 @@ EigenTruth wraps a decoder-only language model with PyTorch hooks. It can:
 
 EigenTruth 通过 PyTorch hook 包装 decoder-only 语言模型。它可以：
 
-- 使用事实性 warmup 样本构建 `TruthManifold`
+- 使用事实性 warmup 样本构建 `TruthManifold` / `RepresentationManifold`
 - 跟踪隐藏状态相对于 warmup 流形的马氏距离风格指标
-- 将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）
+- 可选地将隐藏状态投影到庞加莱球并计算双曲语义熵（HSE）用于消融实验
 - 可选地使用事实与错误样本构建对比方向
 - 拟合低秩 `TruthSubspace`，并计算相对事实子空间的残差距离
 - 保存版本化 `ConceptArtifact`，并同时挂载多个 concept probe
@@ -333,7 +333,7 @@ target-layer hidden states ---> TruthManifold
 generation hidden states -------------+
         |
         +--> distance diagnostic
-        +--> Poincare-ball projection --> HSE diagnostic
+        +--> optional Poincare-ball projection --> HSE ablation diagnostic
         +--> optional threshold-triggered steering --> model generation
 ```
 
@@ -342,7 +342,7 @@ The high-level workflow is:
 1. **Warm up**: collect final-token hidden states from factual texts and optionally false texts.
 2. **Build diagnostics**: incrementally construct a ridge-regularized precision matrix and an optional contrastive direction.
 3. **Attach a hook**: register a `forward_hook` on a selected Transformer layer.
-4. **Monitor**: calculate representation-distance and HSE diagnostics during generation.
+4. **Monitor**: calculate representation-distance diagnostics during generation; enable HSE explicitly for ablations.
 5. **Experiment with steering**: optionally inject a normalized steering vector after a configured threshold is exceeded.
 
 工作流程：
@@ -350,7 +350,7 @@ The high-level workflow is:
 1. **Warmup**：从事实文本和可选的错误文本中收集最后一个 token 的隐藏状态。
 2. **构建诊断**：增量构建 ridge 正则化的精度矩阵和可选的对比方向。
 3. **挂载 Hook**：在选定的 Transformer 层注册 `forward_hook`。
-4. **监测**：在生成期间计算表征距离和 HSE 诊断指标。
+4. **监测**：在生成期间计算表征距离诊断；HSE 需要显式开启，主要用于消融实验。
 5. **实验性引导**：可选地在超过配置阈值后注入归一化引导向量。
 
 See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, calibration guidance, and limitations.
@@ -359,18 +359,18 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 
 | Component | Purpose |
 |---|---|
-| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | Maintains a Welford online mean and covariance, exposed as a ridge-regularized, sample-count-normalized precision matrix; supports `covariance_mode="full"`, `"diag"`, experimental `"low_rank"`, and OAS-style `"shrinkage"` so local benchmarks can trade exact covariance scoring for lower memory/compute cost or small-sample conditioning; `TruthManifold.spectrum()` reports Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number as dependency-free representation-spectrum diagnostics. |
+| `TruthManifold` / `RepresentationManifold` / `CovarianceSpectrum` / `covariance_spectrum` | Maintains a Welford online mean and covariance, exposed as a ridge-regularized, sample-count-normalized precision matrix; supports `covariance_mode="full"`, `"diag"`, experimental `"low_rank"`, and OAS-style `"shrinkage"` so local benchmarks can trade exact covariance scoring for lower memory/compute cost or small-sample conditioning; `TruthManifold.spectrum()` reports Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number as dependency-free representation-spectrum diagnostics. |
 | `mahalanobis_distance` | Measures relative deviation from the warmup manifold. |
 | `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | Computes dependency-free closed-form Gaussian 2-Wasserstein/Bures distance for comparing representation manifolds across layers, checkpoints, or runs. |
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | Estimates dependency-free TwoNN intrinsic dimension from hidden-state samples, producing cheap layer-profile evidence for layer selection and representation-collapse experiments. |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | Records training-side per-layer representation telemetry without mandatory Trainer dependencies: mean norm, variance trace, spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to an initialization baseline; the optional callback exposes HF Trainer-compatible hook names while staying dependency-free. |
 | `TrajectoryMonitor` / `trajectory_convergence_metrics` | Computes generation-trajectory convergence diagnostics from per-token hidden states, including step-distance decay, Koopman-style rate, path efficiency, and a convergence score for quality/confidence correlation checks. |
-| `poincare_map` | Projects representations into a bounded hyperbolic space. |
-| `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
+| `poincare_map` | Projects representations into a bounded hyperbolic space for optional HSE ablations. |
+| `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states; retained as an opt-in ablation signal, not the default runtime path. |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | Computes INSIDE/EigenScore-style spectral diversity, dependency-free semantic-entropy proxies, and confidence-weighted semantic-energy disagreement from sampled hidden-state/text clusters; benchmarks can optionally sample multiple continuations for `inside_eigenscore`, `inside_semantic_entropy`, `inside_embedding_entropy`, and `inside_semantic_energy`. |
-| `TruthProbe` | Captures selected-layer hidden states and optionally applies steering. |
+| `TruthProbe` / `RepresentationProbe` | Captures selected-layer hidden states and optionally applies steering; HSE tracking is opt-in via `track_hse=True`. |
 | `ConceptArtifact` / `MultiConceptMonitor` | Saves versioned concept manifolds with layer metadata and attaches several concept probes to one model, returning per-concept diagnostics without changing the single-probe wrapper path. |
-| `EigenTruthWrapper` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
+| `EigenTruthWrapper` / `RepresentationMonitor` | Provides warmup, generation passthrough, diagnostics, and probe lifecycle management. |
 | `TruthSubspace` | Fits low-rank factual subspaces and residual-distance diagnostics; fitting requires at least two factual states. |
 | `directional_conformal_threshold` / `directional_conformal_thresholds` / `directional_trigger_rate` | Apply split-conformal thresholds consistently for `higher` and `lower` anomalous score directions, including one-sort multi-alpha threshold calculation for benchmark reports. |
 | `ConformalAbstentionReleaseGate` / `conformal_abstention_release_gate` | Converts a conformal abstention report, candidate, or comparison report into a fail-closed release verdict that requires a minimum conservative conditional-correctness lower bound and maximum empirical abstention rate before promoting a participation gate. |
@@ -462,18 +462,18 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 
 | 组件 | 用途 |
 |---|---|
-| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | 用 Welford 维护在线均值与协方差，对外暴露为按样本数归一化、ridge 正则化的精度矩阵；支持 `covariance_mode="full"`、`"diag"`、实验性 `"low_rank"` 和 OAS 风格 `"shrinkage"`，便于本地 benchmark 在精确协方差评分、低内存/低计算成本和小样本病态矩阵稳定性之间取舍；`TruthManifold.spectrum()` 会输出 Marchenko-Pastur bulk 边界、spike count、effective rank、participation ratio、stable rank 和 condition number，作为无新增依赖的表征谱诊断。 |
+| `TruthManifold` / `RepresentationManifold` / `CovarianceSpectrum` / `covariance_spectrum` | 用 Welford 维护在线均值与协方差，对外暴露为按样本数归一化、ridge 正则化的精度矩阵；支持 `covariance_mode="full"`、`"diag"`、实验性 `"low_rank"` 和 OAS 风格 `"shrinkage"`，便于本地 benchmark 在精确协方差评分、低内存/低计算成本和小样本病态矩阵稳定性之间取舍；`TruthManifold.spectrum()` 会输出 Marchenko-Pastur bulk 边界、spike count、effective rank、participation ratio、stable rank 和 condition number，作为无新增依赖的表征谱诊断。 |
 | `mahalanobis_distance` | 测量相对于 warmup 流形的相对偏移。 |
 | `gaussian_wasserstein_distance` / `manifold_distance` / `manifold_wasserstein_distance` | 计算无新增依赖的 Gaussian 2-Wasserstein/Bures 距离，用于比较不同 layer、checkpoint 或 run 的表征流形。 |
 | `twonn_intrinsic_dimension` / `intrinsic_dimension_profile` | 基于 hidden-state 样本估计无新增依赖的 TwoNN intrinsic dimension，为 layer selection 和 representation-collapse 实验提供低成本层级 profile 证据。 |
 | `RepresentationTelemetryRecorder` / `RepTelemetryCallback` / `representation_telemetry_snapshot` | 无需强绑定 Trainer 的训练侧逐层表征 telemetry：记录 mean norm、variance trace、谱 rank 诊断，以及到初始化 baseline 的 Gaussian 2-Wasserstein/Bures 距离；可选 callback 暴露 HF Trainer-compatible hook 名称，但本身仍无 transformers 强依赖。 |
 | `TrajectoryMonitor` / `trajectory_convergence_metrics` | 从逐 token hidden states 计算 generation trajectory convergence 诊断，包括 step-distance decay、Koopman-style rate、path efficiency 和用于质量/置信相关性检查的 convergence score。 |
-| `poincare_map` | 将表征投影到有界双曲空间。 |
-| `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |
+| `poincare_map` | 将表征投影到有界双曲空间，供可选 HSE 消融使用。 |
+| `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度；保留为 opt-in 消融信号，不作为默认 runtime 路径。 |
 | `internal_eigenscore` / `spectral_effective_rank` / `cluster_assignment_entropy` / `lexical_semantic_entropy` / `embedding_semantic_entropy` / `semantic_energy_score` / `lexical_semantic_energy` | 基于隐藏态嵌入与文本簇计算 INSIDE/EigenScore 风格谱分散度、无依赖语义熵代理和置信度加权 semantic-energy 分歧；benchmark 可选多采样续写生成 `inside_eigenscore`、`inside_semantic_entropy`、`inside_embedding_entropy` 和 `inside_semantic_energy`。 |
-| `TruthProbe` | 捕获指定层的隐藏状态，并可选地应用激活引导。 |
+| `TruthProbe` / `RepresentationProbe` | 捕获指定层的隐藏状态，并可选地应用激活引导；HSE 采集需要显式 `track_hse=True`。 |
 | `ConceptArtifact` / `MultiConceptMonitor` | 保存带 layer metadata 的版本化 concept manifold，并把多个 concept probe 同时挂到一个模型上，返回逐 concept 诊断，不改变现有单 probe wrapper 路径。 |
-| `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
+| `EigenTruthWrapper` / `RepresentationMonitor` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
 | `directional_conformal_threshold` / `directional_conformal_thresholds` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率，并支持一次排序计算多个 alpha 阈值。 |
 | `conformal_abstention_report` / `conformal_abstention_comparison_report` / `conformal_abstention_release_gate` | 将任意 uncertainty/reliability score 校准成选择性参与阈值，输出 coverage、selective accuracy 和 conservative conditional-correctness lower bound；comparison report 可按保守正确性、选择性准确率、参与率或保留率对多个候选信号排序，release gate 会要求最低保守条件正确率和最高 abstention rate 后才允许提升为参与控制候选；runtime 可用 `report.decide(score)` 返回 `participate/abstain` 决策，也可交给 `ParticipationGateConfig` 接入 `RiskController`。 |

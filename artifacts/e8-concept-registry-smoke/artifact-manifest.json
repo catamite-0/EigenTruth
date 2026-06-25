@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "concept-registry-smoke.json",
-      "sha256": "bbdc2a12dbf517a596cfafbccd1f98808f0d1b6c18444d12cf03782bdbed74cf",
-      "size_bytes": 1644
+      "sha256": "36b1429c13d9d39baa50f4c7647df17f9e082b6e3f711212617d7e5a1384df77",
+      "size_bytes": 1700
     },
     "concepts.factuality": {
       "exists": true,

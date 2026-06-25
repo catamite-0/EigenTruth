@@ -33,7 +33,12 @@ from eigentruth.core.trajectory import (
     trajectory_convergence_metrics,
 )
 
+RepresentationManifold = TruthManifold
+RepresentationSubspace = TruthSubspace
+
 __all__ = [
+    "RepresentationManifold",
+    "RepresentationSubspace",
     "TruthManifold",
     "TruthSubspace",
     "TrajectoryConvergenceMetrics",

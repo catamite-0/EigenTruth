@@ -7,9 +7,12 @@ from eigentruth.intervention.multi_probe import (
     MultiConceptMonitor,
 )
 
+RepresentationProbe = TruthProbe
+
 __all__ = [
     "ConceptProbeConfig",
     "ConceptProbeState",
     "MultiConceptMonitor",
+    "RepresentationProbe",
     "TruthProbe",
 ]

@@ -56,9 +56,12 @@ class EigenTruthWrapper(nn.Module):
             距离尺度已按样本数归一化，阈值在不同 warmup 样本数下保持稳定。
             Mahalanobis distance threshold; triggers steering and warnings when exceeded.
             The distance scale is sample-count-normalized and stable across warmup-set sizes.
-        hse_warning_threshold: HSE 预警阈值 / HSE warning threshold.
+        hse_warning_threshold: HSE 预警阈值，仅当 ``track_hse=True`` 时生效
+            / HSE warning threshold, only active when ``track_hse=True``.
         curvature: 庞加莱球曲率 / Poincaré ball curvature.
         hse_window_size: HSE 滑动窗口大小 / HSE sliding window size.
+        track_hse: Enable optional HSE tracking. Defaults to ``False`` because
+            repository evidence did not show lift over cheaper Euclidean diagnostics.
         covariance_mode: TruthManifold covariance approximation mode:
             "full" (default), "diag", "low_rank", or "shrinkage".
         covariance_low_rank: Rank used when ``covariance_mode="low_rank"``.
@@ -74,6 +77,7 @@ class EigenTruthWrapper(nn.Module):
         hse_warning_threshold: float = 5.0,
         curvature: float = 1.0,
         hse_window_size: int = 20,
+        track_hse: bool = False,
         covariance_mode: str = "full",
         covariance_low_rank: int = 16,
         custom_layer_path: Optional[str] = None,
@@ -87,6 +91,7 @@ class EigenTruthWrapper(nn.Module):
         self.hse_warning_threshold = hse_warning_threshold
         self.curvature = curvature
         self.hse_window_size = hse_window_size
+        self.track_hse = bool(track_hse)
         self.covariance_mode = covariance_mode
         self.covariance_low_rank = covariance_low_rank
         self.custom_layer_path = custom_layer_path
@@ -296,6 +301,7 @@ class EigenTruthWrapper(nn.Module):
             "hidden_dim": self.manifold.hidden_dim,
             "last_mahalanobis_distance": self.last_distance,
             "last_hse": self.last_hse,
+            "track_hse": self.track_hse,
             "mahalanobis_threshold": self.mahalanobis_threshold,
             "hse_warning_threshold": self.hse_warning_threshold,
             "steering_lambda": self.steering_lambda,
@@ -317,6 +323,7 @@ class EigenTruthWrapper(nn.Module):
             threshold=self.mahalanobis_threshold,
             hse_window_size=self.hse_window_size,
             curvature=self.curvature,
+            track_hse=self.track_hse,
         )
         self.probe.register(
             self.model, self.target_layer_idx,
@@ -326,6 +333,8 @@ class EigenTruthWrapper(nn.Module):
     def _check_hse_warning(self) -> None:
         """检查 HSE 是否超阈值并输出预警。"""
         if self.probe is None:
+            return
+        if not self.track_hse:
             return
 
         if self.probe.last_hse > self.hse_warning_threshold:

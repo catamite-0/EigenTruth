@@ -4,7 +4,7 @@
 Using PyTorch forward_hook on Transformer hidden states:
 1. 实时拦截与马氏距离监测 / Real-time Mahalanobis distance monitoring
 2. 激活引导向量 (Steering) 注入 / Activation steering vector injection
-3. 庞加莱映射与 HSE 跟踪 / Poincaré mapping and HSE tracking
+3. 可选庞加莱映射与 HSE 跟踪 / Optional Poincaré mapping and HSE tracking
 
 所有 Hook 内部操作均在 torch.no_grad() 下执行，
 截获的张量通过 .detach() 脱离计算图，严格防止显存泄漏。
@@ -51,6 +51,7 @@ class TruthProbe:
             sample-count-normalized, so thresholds are stable across warmup-set sizes.
         last_distance: 最近一次 hook 触发时的马氏距离
             Mahalanobis distance from the last triggered hook.
+        track_hse: Whether to compute optional Hyperbolic Semantic Entropy diagnostics.
         last_hse: 最近一次计算的双曲语义熵 / The most recently computed Hyperbolic Semantic Entropy.
         is_active: hook 是否已挂载且激活 / Whether the hook is mounted and active.
     """
@@ -62,12 +63,14 @@ class TruthProbe:
         threshold: float = 15.0,
         hse_window_size: int = 20,
         curvature: float = 1.0,
+        track_hse: bool = False,
     ) -> None:
         self.manifold = manifold
         self.steering_lambda = steering_lambda
         self.threshold = threshold
         self.hse_window_size = hse_window_size
         self.curvature = curvature
+        self.track_hse = bool(track_hse)
 
         # 运行时状态 (取 Batch 最大值供快速查询)
         self.last_distance: float = 0.0
@@ -169,21 +172,22 @@ class TruthProbe:
             # 保存最大距离用于预警诊断
             self.last_distance = dist.max().item()
 
-            # 庞加莱映射 + HSE 追踪 / Poincaré mapping + HSE tracking
-            h_poincare = poincare_map(h_vec, curvature=self.curvature)  # [B, D]
-            # 动态 Batch 保护：如果 Batch 大小变化，清空历史
-            # Dynamic Batch guard: clear history if batch size changes
-            if (len(self._poincare_history) > 0
-                    and self._poincare_history[-1].shape[0] != h_poincare.shape[0]):
-                self._poincare_history.clear()
-            self._poincare_history.append(h_poincare.cpu())
+            if self.track_hse:
+                # Optional diagnostic retained for ablations; not part of the default path.
+                h_poincare = poincare_map(h_vec, curvature=self.curvature)  # [B, D]
+                # 动态 Batch 保护：如果 Batch 大小变化，清空历史
+                # Dynamic Batch guard: clear history if batch size changes
+                if (len(self._poincare_history) > 0
+                        and self._poincare_history[-1].shape[0] != h_poincare.shape[0]):
+                    self._poincare_history.clear()
+                self._poincare_history.append(h_poincare.cpu())
 
-            if len(self._poincare_history) >= 2:
-                pts = torch.stack(list(self._poincare_history))  # [W, B, D]
-                hse_batch = hyperbolic_semantic_entropy(
-                    pts, curvature=self.curvature
-                )  # [B]
-                self.last_hse = hse_batch.max().item()
+                if len(self._poincare_history) >= 2:
+                    pts = torch.stack(list(self._poincare_history))  # [W, B, D]
+                    hse_batch = hyperbolic_semantic_entropy(
+                        pts, curvature=self.curvature
+                    )  # [B]
+                    self.last_hse = hse_batch.max().item()
 
             # 引导干预 / Steering intervention
             mask = dist > self.threshold  # [B]

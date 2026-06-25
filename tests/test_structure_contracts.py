@@ -19,6 +19,22 @@ from eigentruth.registry import RegistryRecord
 from eigentruth.verify import Claim, ClaimDependency, VerificationResult, VerificationStatus
 
 
+def test_representation_aliases_point_to_existing_truth_apis():
+    import eigentruth
+    from eigentruth.core import RepresentationManifold, RepresentationSubspace, TruthManifold, TruthSubspace
+    from eigentruth.intervention import RepresentationProbe, TruthProbe
+    from eigentruth.models import EigenTruthWrapper, RepresentationMonitor
+
+    assert eigentruth.RepresentationManifold is TruthManifold
+    assert eigentruth.RepresentationSubspace is TruthSubspace
+    assert eigentruth.RepresentationProbe is TruthProbe
+    assert eigentruth.RepresentationMonitor is EigenTruthWrapper
+    assert RepresentationManifold is TruthManifold
+    assert RepresentationSubspace is TruthSubspace
+    assert RepresentationProbe is TruthProbe
+    assert RepresentationMonitor is EigenTruthWrapper
+
+
 def test_calibration_artifact_score_lookup():
     artifact = CalibrationArtifact(
         model_id="tiny-model",

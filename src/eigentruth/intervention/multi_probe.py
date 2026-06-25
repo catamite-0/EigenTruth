@@ -24,6 +24,7 @@ class ConceptProbeConfig:
     steering_lambda: float = 0.0
     hse_window_size: int = 20
     curvature: float = 1.0
+    track_hse: bool = False
     custom_layer_path: str | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -36,6 +37,7 @@ class ConceptProbeConfig:
         steering_lambda: float = 0.0,
         hse_window_size: int = 20,
         curvature: float = 1.0,
+        track_hse: bool = False,
         custom_layer_path: str | None = None,
         metadata: Mapping[str, Any] | None = None,
     ) -> "ConceptProbeConfig":
@@ -54,6 +56,7 @@ class ConceptProbeConfig:
             steering_lambda=steering_lambda,
             hse_window_size=hse_window_size,
             curvature=curvature,
+            track_hse=track_hse,
             custom_layer_path=custom_layer_path,
             metadata=merged_metadata,
         )
@@ -66,6 +69,7 @@ class ConceptProbeConfig:
             threshold=self.threshold,
             hse_window_size=self.hse_window_size,
             curvature=self.curvature,
+            track_hse=self.track_hse,
         )
 
 
@@ -79,6 +83,7 @@ class ConceptProbeState:
     last_hse: float
     threshold: float
     steering_lambda: float
+    track_hse: bool
     probe_active: bool
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
@@ -91,6 +96,7 @@ class ConceptProbeState:
             "last_hse": self.last_hse,
             "threshold": self.threshold,
             "steering_lambda": self.steering_lambda,
+            "track_hse": self.track_hse,
             "probe_active": self.probe_active,
             "metadata": to_jsonable(self.metadata),
         }
@@ -117,6 +123,7 @@ class MultiConceptMonitor:
         steering_lambda: float = 0.0,
         hse_window_size: int = 20,
         curvature: float = 1.0,
+        track_hse: bool = False,
         custom_layer_path: str | None = None,
     ) -> "MultiConceptMonitor":
         """Build a monitor from saved concept artifacts using shared probe defaults."""
@@ -128,6 +135,7 @@ class MultiConceptMonitor:
                     steering_lambda=steering_lambda,
                     hse_window_size=hse_window_size,
                     curvature=curvature,
+                    track_hse=track_hse,
                     custom_layer_path=custom_layer_path,
                 )
                 for artifact in artifacts
@@ -182,6 +190,7 @@ class MultiConceptMonitor:
                     last_hse=0.0 if probe is None else probe.last_hse,
                     threshold=config.threshold,
                     steering_lambda=config.steering_lambda,
+                    track_hse=config.track_hse,
                     probe_active=False if probe is None else probe.is_active,
                     metadata=config.metadata,
                 )

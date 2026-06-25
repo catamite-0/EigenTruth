@@ -8,9 +8,9 @@ EigenTruth 的产品定位是：面向 LLM 系统的表征观测与事实性控�
 
 Implemented today:
 
-- `TruthManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support, dependency-free covariance-spectrum diagnostics with Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number, plus closed-form Gaussian 2-Wasserstein/Bures manifold distance for comparing layers, checkpoints, or runs.
-- `TruthProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, HSE tracking, and optional activation steering.
-- `EigenTruthWrapper`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
+- `TruthManifold` / `RepresentationManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support, dependency-free covariance-spectrum diagnostics with Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number, plus closed-form Gaussian 2-Wasserstein/Bures manifold distance for comparing layers, checkpoints, or runs.
+- `TruthProbe` / `RepresentationProbe`: PyTorch forward-hook monitor for selected Transformer layers, Mahalanobis-style drift, optional HSE tracking, and optional activation steering.
+- `EigenTruthWrapper` / `RepresentationMonitor`: warmup, generation passthrough, diagnostics, and probe lifecycle management for Hugging Face-style PyTorch models.
 - `ConceptArtifact` / `MultiConceptMonitor`: versioned concept manifold artifacts plus multi-probe attachment for monitoring several concept/layer pairs at once without changing the default single-probe wrapper.
 - `eigentruth.eval`: conformal p-values/thresholds, TwoNN intrinsic-dimension profiles, plus CPU-testable metrics such as AUROC, Spearman correlation, Euclidean dispersion, selective accuracy, coverage, confidence intervals, and high-confidence error audits.
 - `eigentruth.calibration` / `eigentruth.eval.conformal`: JSON-serializable calibration artifacts, split-conformal calibrators, adaptive feature-inflated conformal calibrators, layer/score sweep reports, rank-calibrated multi-score fusion artifacts, conformal abstention/comparison reports with conservative selective-correctness lower bounds, and abstention release gates for promotion checks.

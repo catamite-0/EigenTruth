@@ -60,14 +60,23 @@ from eigentruth.training import (
     representation_telemetry_snapshot,
 )
 
+RepresentationManifold = TruthManifold
+RepresentationSubspace = TruthSubspace
+RepresentationProbe = TruthProbe
+RepresentationMonitor = EigenTruthWrapper
+
 __all__ = [
     "EigenTruthWrapper",
+    "RepresentationMonitor",
     "TruthProbe",
+    "RepresentationProbe",
     "ConceptProbeConfig",
     "ConceptProbeState",
     "MultiConceptMonitor",
     "TruthManifold",
+    "RepresentationManifold",
     "TruthSubspace",
+    "RepresentationSubspace",
     "ConceptArtifact",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",

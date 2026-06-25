@@ -20,7 +20,8 @@
         "name": "factuality",
         "probe_active": true,
         "steering_lambda": 0.0,
-        "threshold": 1000000.0
+        "threshold": 1000000.0,
+        "track_hse": false
       },
       "policy_consistency": {
         "last_hse": 0.0,
@@ -35,7 +36,8 @@
         "name": "policy_consistency",
         "probe_active": true,
         "steering_lambda": 0.0,
-        "threshold": 1000000.0
+        "threshold": 1000000.0,
+        "track_hse": false
       }
     },
     "is_active": true
