@@ -3085,13 +3085,13 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
             phase="build_layer_stats",
             hidden_state_capture=hidden_state_capture,
         )
-        for reps in reps_batch:
-            if reps is None:
+        valid_reps = [reps for reps in reps_batch if reps is not None]
+        for layer in layers:
+            states = [reps["last"][layer] for reps in valid_reps]
+            if not states:
                 continue
-            for layer in layers:
-                h = reps["last"][layer]
-                manifolds[layer].update(h)
-                true_state_lists[layer].append(h)
+            manifolds[layer].update_many(torch.stack(states))
+            true_state_lists[layer].extend(states)
         true_done += len(batch)
         true_pair_offset += len(batch_pairs)
         if _progress_report_due(true_done, len(true_statements), progress_every, true_last_reported):

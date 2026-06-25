@@ -18223,6 +18223,73 @@ def test_eval_truthfulqa_warmup_checkpoint_can_resume_completed_state(tmp_path):
     assert subspaces[-1].is_ready()
 
 
+def test_eval_truthfulqa_build_layer_stats_batches_truth_manifold_updates(monkeypatch):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    original_manifold = module.TruthManifold
+    instances = []
+
+    class CountingManifold(original_manifold):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.update_calls = 0
+            self.update_many_calls = 0
+            self.update_many_sizes = []
+            instances.append(self)
+
+        def update(self, h):
+            self.update_calls += 1
+            return super().update(h)
+
+        def update_many(self, states):
+            self.update_many_calls += 1
+            self.update_many_sizes.append(int(states.shape[0]))
+            return super().update_many(states)
+
+    def fake_batched_statement_reps_for_pairs(
+        _model,
+        _tokenizer,
+        batch_pairs,
+        layers,
+        _device,
+        _max_length,
+        **_kwargs,
+    ):
+        reps_batch = []
+        for index, _pair in enumerate(batch_pairs, start=1):
+            reps_batch.append({
+                "last": {
+                    layer: torch.tensor([float(index), float(abs(layer))])
+                    for layer in layers
+                }
+            })
+        return reps_batch
+
+    monkeypatch.setattr(module, "TruthManifold", CountingManifold)
+    monkeypatch.setattr(module, "_batched_statement_reps_for_pairs", fake_batched_statement_reps_for_pairs)
+
+    manifolds, subspaces = module.build_layer_stats(
+        None,
+        None,
+        ["true a", "true b", "true c"],
+        [],
+        [-1, -2],
+        torch.device("cpu"),
+        32,
+        1,
+        3,
+        False,
+        progress_every=0,
+    )
+
+    assert set(manifolds) == {-1, -2}
+    assert set(subspaces) == {-1, -2}
+    assert len(instances) == 2
+    assert [manifold.update_calls for manifold in instances] == [0, 0]
+    assert [manifold.update_many_calls for manifold in instances] == [1, 1]
+    assert [manifold.update_many_sizes for manifold in instances] == [[3], [3]]
+    assert [manifold.n for manifold in instances] == [3, 3]
+
+
 def test_eval_truthfulqa_layer_stats_cache_rejects_metadata_mismatch(tmp_path):
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     manifold = module.TruthManifold()

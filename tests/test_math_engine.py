@@ -364,6 +364,43 @@ class TestTruthManifold:
             m.update(torch.randn(8))
         assert m.n == 10
 
+    def test_update_many_matches_sequential_updates_across_covariance_modes(self):
+        """batch update 与逐样本 update 保持统计量和距离一致。"""
+        torch.manual_seed(1234)
+        samples = torch.randn(11, 7)
+        probe = torch.randn(7)
+        for mode in COVARIANCE_MODES:
+            sequential = TruthManifold(covariance_mode=mode, covariance_low_rank=3)
+            batched = TruthManifold(covariance_mode=mode, covariance_low_rank=3)
+            for sample in samples:
+                sequential.update(sample)
+            batched.update_many(samples[:5])
+            batched.update_many(samples[5:])
+
+            assert batched.n == sequential.n
+            assert batched.hidden_dim == sequential.hidden_dim
+            assert torch.allclose(batched.mean, sequential.mean, atol=1e-6)
+            assert torch.allclose(batched._M2_diag, sequential._M2_diag, atol=1e-5)  # noqa: SLF001
+            if mode == "diag":
+                assert batched._M2 is None  # noqa: SLF001
+            else:
+                assert torch.allclose(batched._M2, sequential._M2, atol=1e-5)  # noqa: SLF001
+            assert torch.isclose(
+                batched.mahalanobis_distance(probe),
+                sequential.mahalanobis_distance(probe),
+                atol=1e-5,
+            )
+
+    def test_update_many_rejects_bad_shapes_and_dimension_mismatch(self):
+        m = TruthManifold()
+        import pytest
+        with pytest.raises(ValueError, match="2D hidden state batch"):
+            m.update_many(torch.randn(8))
+
+        m.update_many(torch.randn(2, 8))
+        with pytest.raises(ValueError, match="Hidden dimension mismatch"):
+            m.update_many(torch.randn(2, 9))
+
     def test_rejects_non_vector_update(self):
         """update 只接受单个 1D hidden state。"""
         m = TruthManifold()

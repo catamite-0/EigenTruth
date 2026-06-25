@@ -260,6 +260,78 @@ class TruthManifold:
             self._M2 = self._M2 + torch.outer(delta, delta2)
         self._invalidate_precision_cache()
 
+    def update_many(self, states: Tensor) -> None:
+        """Batch-update the manifold with hidden states of shape ``[N, hidden_dim]``.
+
+        The update is equivalent to calling :meth:`update` for each row, but it
+        merges batch mean and scatter statistics in one step. This reduces Python
+        overhead and small matrix kernels during benchmark warmup.
+        """
+        states = states.detach()
+        if states.ndim != 2:
+            raise ValueError(
+                f"TruthManifold.update_many() expects a 2D hidden state batch, got shape {tuple(states.shape)}."
+            )
+        batch_n = int(states.shape[0])
+        if batch_n == 0:
+            return
+        if batch_n == 1:
+            self.update(states[0])
+            return
+
+        x = states.to(torch.float32)
+        batch_dim = int(x.shape[-1])
+        if self.mean is not None and batch_dim != self.hidden_dim:
+            raise ValueError(
+                f"Hidden dimension mismatch: expected {self.hidden_dim}, got {batch_dim}."
+            )
+
+        batch_mean = x.mean(dim=0)
+        centered = x - batch_mean
+        batch_m2_diag = (centered * centered).sum(dim=0)
+        batch_m2 = None
+        if self.covariance_mode != "diag":
+            batch_m2 = centered.T @ centered
+
+        if self.mean is None:
+            self.hidden_dim = batch_dim
+            self._device = x.device
+            self.mean = batch_mean.clone()
+            self._M2_diag = batch_m2_diag.clone()
+            self._M2 = None if self.covariance_mode == "diag" else batch_m2.clone()
+            self.n = batch_n
+            self._invalidate_precision_cache()
+            return
+
+        if x.device != self._device:
+            x = x.to(self._device)
+            batch_mean = batch_mean.to(self._device)
+            batch_m2_diag = batch_m2_diag.to(self._device)
+            if batch_m2 is not None:
+                batch_m2 = batch_m2.to(self._device)
+
+        old_n = int(self.n)
+        new_n = old_n + batch_n
+        delta = batch_mean - self.mean
+        self.mean = self.mean + delta * (batch_n / new_n)
+        correction = delta * delta * (old_n * batch_n / new_n)
+        if self._M2_diag is None:
+            if self._M2 is not None:
+                self._M2_diag = self._M2.diagonal().clone()
+            else:
+                self._M2_diag = torch.zeros(self.hidden_dim, device=self._device, dtype=torch.float32)
+        self._M2_diag = self._M2_diag + batch_m2_diag + correction
+        if self.covariance_mode != "diag":
+            if self._M2 is None:
+                raise RuntimeError(
+                    f"{self.covariance_mode!r} covariance mode requires full scatter statistics."
+                )
+            if batch_m2 is None:
+                raise RuntimeError("batch scatter statistics are missing.")
+            self._M2 = self._M2 + batch_m2 + torch.outer(delta, delta) * (old_n * batch_n / new_n)
+        self.n = new_n
+        self._invalidate_precision_cache()
+
     def mahalanobis_distance(self, h: Tensor) -> Tensor:
         """Compute Mahalanobis distance using the configured covariance approximation.
 
