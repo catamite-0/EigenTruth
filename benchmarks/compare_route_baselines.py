@@ -29,6 +29,10 @@ from eigentruth.registry import (  # noqa: E402
 
 _load_optional_json = _artifact_json_cache.load_optional_json
 
+DEFAULT_MIN_STRESS_FALSE_SUPPORTED_RATE = 0.50
+DEFAULT_MAX_STRESS_FALSE_REFUTED_RATE = 0.05
+ANSWER_ECHO_CORPUS_TYPE = "retrieval_stress_answer_echo"
+
 
 def compare_route_baselines(
     *,
@@ -52,6 +56,10 @@ def compare_route_baselines(
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
+    require_retrieval_stress_control: bool = False,
+    retrieval_stress_manifest: str | Path | None = None,
+    min_stress_false_supported_rate: float | None = None,
+    max_stress_false_refuted_rate: float | None = None,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     json_cache: MutableMapping[str, dict[str, Any]] | None = None,
@@ -89,6 +97,10 @@ def compare_route_baselines(
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
             require_non_oracle_evidence=require_non_oracle_evidence,
+            require_retrieval_stress_control=require_retrieval_stress_control,
+            retrieval_stress_manifest=retrieval_stress_manifest,
+            min_stress_false_supported_rate=min_stress_false_supported_rate,
+            max_stress_false_refuted_rate=max_stress_false_refuted_rate,
             fingerprint_cache=cache,
             json_cache=payload_cache,
             json_cache_stats=payload_cache_stats,
@@ -122,6 +134,16 @@ def compare_route_baselines(
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
+            "require_retrieval_stress_control": require_retrieval_stress_control,
+            "retrieval_stress_manifest": None if retrieval_stress_manifest is None else str(retrieval_stress_manifest),
+            "min_stress_false_supported_rate": _resolved_min_stress_false_supported_rate(
+                require_retrieval_stress_control=require_retrieval_stress_control,
+                min_stress_false_supported_rate=min_stress_false_supported_rate,
+            ),
+            "max_stress_false_refuted_rate": _resolved_max_stress_false_refuted_rate(
+                require_retrieval_stress_control=require_retrieval_stress_control,
+                max_stress_false_refuted_rate=max_stress_false_refuted_rate,
+            ),
         },
         "summary": {
             "record_count": len(rows),
@@ -187,6 +209,10 @@ def _route_baseline_row(
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
     require_non_oracle_evidence: bool,
+    require_retrieval_stress_control: bool,
+    retrieval_stress_manifest: str | Path | None,
+    min_stress_false_supported_rate: float | None,
+    max_stress_false_refuted_rate: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
     json_cache: MutableMapping[str, dict[str, Any]],
     json_cache_stats: MutableMapping[str, int],
@@ -260,6 +286,19 @@ def _route_baseline_row(
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         ),
     )
+    retrieval_stress_audit = _retrieval_stress_audit(
+        manifest_path=manifest_path,
+        manifest=manifest,
+        manifest_metadata=manifest_metadata,
+        recursive=recursive,
+        require_retrieval_stress_control=require_retrieval_stress_control,
+        retrieval_stress_manifest=retrieval_stress_manifest,
+        min_stress_false_supported_rate=min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=max_stress_false_refuted_rate,
+        fingerprint_cache=fingerprint_cache,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
     gate = _gate(
         verification=verification,
         allow_unverified=allow_unverified,
@@ -286,6 +325,7 @@ def _route_baseline_row(
             claims_error=claims_error,
             require_non_oracle_evidence=require_non_oracle_evidence,
         ),
+        retrieval_stress_audit=retrieval_stress_audit,
     )
     runtime_metrics = dict(runtime_budget.get("metrics") or {})
     return {
@@ -318,6 +358,7 @@ def _route_baseline_row(
         "verifier_trace_cache_hit_rate": _float_or_none(runtime_metrics.get("verifier_trace_cache_hit_rate")),
         "runtime_budget": runtime_budget,
         "evidence_audit": gate["evidence_audit"],
+        "retrieval_stress_audit": gate["retrieval_stress_audit"],
     }
 
 
@@ -371,6 +412,7 @@ def _gate(
     max_retrieval_use_rate: float | None,
     runtime_budget: Mapping[str, Any],
     evidence_audit: Mapping[str, Any],
+    retrieval_stress_audit: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
     if manifest_error is not None:
@@ -450,10 +492,16 @@ def _gate(
         failures.extend(_runtime_budget_reasons(runtime_budget))
     if evidence_audit.get("enabled") and not evidence_audit.get("passed"):
         failures.extend(f"evidence_audit: {reason}" for reason in evidence_audit.get("blocking_reasons", ()))
+    if retrieval_stress_audit.get("enabled") and not retrieval_stress_audit.get("passed"):
+        failures.extend(
+            f"retrieval_stress_audit: {reason}"
+            for reason in retrieval_stress_audit.get("blocking_reasons", ())
+        )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
         "evidence_audit": dict(evidence_audit),
+        "retrieval_stress_audit": dict(retrieval_stress_audit),
     }
 
 
@@ -507,6 +555,231 @@ def _evidence_audit(
         "score_dump_provenance_present": bool(score_dump),
         "corpus_fingerprint_count": len(corpus_fingerprints),
     }
+
+
+def _retrieval_stress_audit(
+    *,
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+    recursive: bool,
+    require_retrieval_stress_control: bool,
+    retrieval_stress_manifest: str | Path | None,
+    min_stress_false_supported_rate: float | None,
+    max_stress_false_refuted_rate: float | None,
+    fingerprint_cache: MutableMapping[str, dict[str, Any]],
+    json_cache: MutableMapping[str, dict[str, Any]],
+    json_cache_stats: MutableMapping[str, int],
+) -> dict[str, Any]:
+    min_false_supported = _resolved_min_stress_false_supported_rate(
+        require_retrieval_stress_control=require_retrieval_stress_control,
+        min_stress_false_supported_rate=min_stress_false_supported_rate,
+    )
+    max_false_refuted = _resolved_max_stress_false_refuted_rate(
+        require_retrieval_stress_control=require_retrieval_stress_control,
+        max_stress_false_refuted_rate=max_stress_false_refuted_rate,
+    )
+    enabled = bool(
+        require_retrieval_stress_control
+        or retrieval_stress_manifest is not None
+        or min_false_supported is not None
+        or max_false_refuted is not None
+    )
+    stress_manifest_path = _resolve_retrieval_stress_manifest_path(
+        manifest_path,
+        manifest,
+        manifest_metadata,
+        override=retrieval_stress_manifest,
+    )
+    audit: dict[str, Any] = {
+        "enabled": enabled,
+        "passed": True,
+        "blocking_reasons": [],
+        "stress_manifest_path": None if stress_manifest_path is None else str(stress_manifest_path),
+        "min_stress_false_supported_rate": min_false_supported,
+        "max_stress_false_refuted_rate": max_false_refuted,
+        "verification_passed": None,
+        "corpus_path": None,
+        "corpus_type": None,
+        "verifier_report_path": None,
+        "run_count": 0,
+        "min_false_supported_rate": None,
+        "max_false_refuted_rate": None,
+        "runs": [],
+    }
+    failures: list[str] = []
+    if not enabled:
+        return audit
+    if stress_manifest_path is None:
+        failures.append("retrieval stress manifest is required")
+        audit["passed"] = False
+        audit["blocking_reasons"] = failures
+        return audit
+    stress_manifest, manifest_error = _load_optional_json(
+        stress_manifest_path,
+        json_cache=json_cache,
+        json_cache_stats=json_cache_stats,
+    )
+    verification = _verify_manifest(
+        stress_manifest_path,
+        manifest=stress_manifest,
+        manifest_error=manifest_error,
+        recursive=recursive,
+        fingerprint_cache=fingerprint_cache,
+    )
+    audit["verification_passed"] = bool(verification.get("passed", False))
+    audit["verification"] = verification
+    if manifest_error is not None:
+        failures.append(f"retrieval stress manifest could not be loaded: {manifest_error}")
+    elif not bool(verification.get("passed", False)):
+        failures.append("retrieval stress manifest verification failed")
+    corpus_path = _resolve_prefixed_artifact_path(
+        stress_manifest_path,
+        stress_manifest,
+        artifact_prefix="retrieval_corpora.",
+    )
+    verifier_report_path = _resolve_artifact_path(
+        stress_manifest_path,
+        stress_manifest,
+        artifact_name="verifier_report",
+    )
+    audit["corpus_path"] = None if corpus_path is None else str(corpus_path)
+    audit["verifier_report_path"] = None if verifier_report_path is None else str(verifier_report_path)
+    corpus, corpus_error = (
+        ({}, "retrieval stress corpus artifact missing")
+        if corpus_path is None
+        else _load_optional_json(corpus_path, json_cache=json_cache, json_cache_stats=json_cache_stats)
+    )
+    verifier_report, verifier_report_error = (
+        ({}, "retrieval stress verifier_report artifact missing")
+        if verifier_report_path is None
+        else _load_optional_json(verifier_report_path, json_cache=json_cache, json_cache_stats=json_cache_stats)
+    )
+    if corpus_error is not None:
+        failures.append(f"retrieval stress corpus could not be loaded: {corpus_error}")
+    if verifier_report_error is not None:
+        failures.append(f"retrieval stress verifier report could not be loaded: {verifier_report_error}")
+    corpus_type = corpus.get("corpus_type")
+    label_usage = _mapping(corpus.get("label_usage"))
+    audit["corpus_type"] = corpus_type
+    audit["label_usage"] = label_usage
+    if corpus_type != ANSWER_ECHO_CORPUS_TYPE:
+        failures.append(f"retrieval stress corpus_type is {corpus_type!r}, expected {ANSWER_ECHO_CORPUS_TYPE!r}")
+    if label_usage.get("labels_used_for_documents") is not False:
+        failures.append("retrieval stress labels_used_for_documents must be false")
+    if label_usage.get("labels_copied_to_document_metadata") is not False:
+        failures.append("retrieval stress labels_copied_to_document_metadata must be false")
+    stress_runs = _stress_quality_runs(verifier_report)
+    audit["runs"] = stress_runs
+    audit["run_count"] = len(stress_runs)
+    if not stress_runs:
+        failures.append("retrieval stress verifier report has no finite false-supported/refuted metrics")
+    else:
+        observed_false_supported = tuple(run["false_supported_rate"] for run in stress_runs)
+        observed_false_refuted = tuple(run["false_refuted_rate"] for run in stress_runs)
+        audit["min_false_supported_rate"] = min(observed_false_supported)
+        audit["max_false_supported_rate"] = max(observed_false_supported)
+        audit["min_false_refuted_rate"] = min(observed_false_refuted)
+        audit["max_false_refuted_rate"] = max(observed_false_refuted)
+        if min_false_supported is not None and audit["min_false_supported_rate"] < min_false_supported:
+            failures.append(f"stress false_supported_rate below {min_false_supported}")
+        if max_false_refuted is not None and audit["max_false_refuted_rate"] > max_false_refuted:
+            failures.append(f"stress false_refuted_rate above {max_false_refuted}")
+    audit["passed"] = not failures
+    audit["blocking_reasons"] = failures
+    return audit
+
+
+def _resolved_min_stress_false_supported_rate(
+    *,
+    require_retrieval_stress_control: bool,
+    min_stress_false_supported_rate: float | None,
+) -> float | None:
+    if min_stress_false_supported_rate is not None:
+        return min_stress_false_supported_rate
+    if require_retrieval_stress_control:
+        return DEFAULT_MIN_STRESS_FALSE_SUPPORTED_RATE
+    return None
+
+
+def _resolved_max_stress_false_refuted_rate(
+    *,
+    require_retrieval_stress_control: bool,
+    max_stress_false_refuted_rate: float | None,
+) -> float | None:
+    if max_stress_false_refuted_rate is not None:
+        return max_stress_false_refuted_rate
+    if require_retrieval_stress_control:
+        return DEFAULT_MAX_STRESS_FALSE_REFUTED_RATE
+    return None
+
+
+def _resolve_retrieval_stress_manifest_path(
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+    *,
+    override: str | Path | None,
+) -> Path | None:
+    if override is not None:
+        return Path(override)
+    artifact_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="retrieval_stress_manifest",
+    )
+    if artifact_path is not None:
+        return artifact_path
+    raw_path = manifest_metadata.get("retrieval_stress_manifest_path")
+    if not isinstance(raw_path, str) or not raw_path:
+        return None
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+    return manifest_path.parent / path
+
+
+def _resolve_prefixed_artifact_path(
+    manifest_path: Path,
+    manifest: Mapping[str, Any],
+    *,
+    artifact_prefix: str,
+) -> Path | None:
+    artifacts = manifest.get("artifacts", {})
+    if not isinstance(artifacts, Mapping):
+        return None
+    for name in sorted(str(key) for key in artifacts):
+        if not name.startswith(artifact_prefix):
+            continue
+        artifact = artifacts.get(name)
+        if not isinstance(artifact, Mapping):
+            continue
+        raw_path = artifact.get("path")
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        path = Path(raw_path)
+        return path if path.is_absolute() else manifest_path.parent / path
+    return None
+
+
+def _stress_quality_runs(verifier_report: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for idx, run in enumerate(verifier_report.get("runs", ())):
+        if not isinstance(run, Mapping):
+            continue
+        quality = _mapping(run.get("verification_quality"))
+        false_supported_rate = _float_or_none(quality.get("false_supported_rate"))
+        false_refuted_rate = _float_or_none(quality.get("false_refuted_rate"))
+        if false_supported_rate is None or false_refuted_rate is None:
+            continue
+        rows.append({
+            "name": str(run.get("name", f"run_{idx}")),
+            "false_supported_rate": false_supported_rate,
+            "false_refuted_rate": false_refuted_rate,
+            "decision_accuracy": _float_or_none(quality.get("decision_accuracy")),
+            "true_supported_rate": _float_or_none(quality.get("true_supported_rate")),
+        })
+    return rows
 
 
 def _runtime_budget_reasons(runtime_budget: Mapping[str, Any]) -> list[str]:
@@ -720,6 +993,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
+        require_retrieval_stress_control=bool(args.require_retrieval_stress_control),
+        retrieval_stress_manifest=args.retrieval_stress_manifest,
+        min_stress_false_supported_rate=args.min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=args.max_stress_false_refuted_rate,
         notes=args.note,
     )
     if args.json:
@@ -816,6 +1093,34 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--require-non-oracle-evidence",
         action="store_true",
         help="require local retrieval claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
+        "--require-retrieval-stress-control",
+        action="store_true",
+        help="require an answer-echo retrieval stress manifest proving self-support failure",
+    )
+    parser.add_argument(
+        "--retrieval-stress-manifest",
+        default=None,
+        help="optional answer-echo retrieval stress artifact manifest; overrides per-record metadata",
+    )
+    parser.add_argument(
+        "--min-stress-false-supported-rate",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--min-stress-false-supported-rate",
+        ),
+        default=None,
+        help="minimum false-supported rate required from the answer-echo stress control",
+    )
+    parser.add_argument(
+        "--max-stress-false-refuted-rate",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--max-stress-false-refuted-rate",
+        ),
+        default=None,
+        help="maximum false-refuted rate allowed from the answer-echo stress control",
     )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless a route baseline promotes")

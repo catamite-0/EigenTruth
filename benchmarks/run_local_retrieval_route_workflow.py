@@ -90,6 +90,7 @@ class LocalRetrievalRouteWorkflowConfig:
     workflow_report_path: Path | None = None
     claims_cache_dir: Path | None = None
     verifier_trace_cache_dir: Path | None = None
+    retrieval_stress_manifest_path: Path | None = None
     compact_json: bool = False
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -111,6 +112,7 @@ class LocalRetrievalRouteWorkflowConfig:
             "claims_cache_dir",
             "retriever_index_path",
             "verifier_trace_cache_dir",
+            "retrieval_stress_manifest_path",
         ):
             value = getattr(self, attr)
             if value is not None:
@@ -359,6 +361,9 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "verifier_trace_cache_dir": (
                 None if config.verifier_trace_cache_dir is None else str(config.verifier_trace_cache_dir)
             ),
+            "retrieval_stress_manifest_path": (
+                None if config.retrieval_stress_manifest_path is None else str(config.retrieval_stress_manifest_path)
+            ),
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "max_retrieval_hit_count": config.max_retrieval_hit_count,
             "min_claims_cache_hit_rate": config.min_claims_cache_hit_rate,
@@ -435,6 +440,8 @@ def _write_artifact_manifest(
         and config.retriever_index_path.exists()
     ):
         artifacts["retriever_index"] = config.retriever_index_path
+    if config.retrieval_stress_manifest_path is not None:
+        artifacts["retrieval_stress_manifest"] = config.retrieval_stress_manifest_path
     for idx, path in enumerate(config.corpus_paths, start=1):
         artifacts[f"retrieval_corpora.{idx}.{path.stem}"] = path
     manifest = build_artifact_manifest(
@@ -495,6 +502,9 @@ def _manifest_metadata(
         "verifier_min_overlap": float(config.verifier_min_overlap),
         "retriever_min_overlap": float(config.retriever_min_overlap),
         "retrieval_limit": int(config.retrieval_limit),
+        "retrieval_stress_manifest_path": (
+            None if config.retrieval_stress_manifest_path is None else str(config.retrieval_stress_manifest_path)
+        ),
         "corpus_count": len(config.corpus_paths),
         "claims_n_records": summary.get("n_records"),
         "claims_records_with_hits": summary.get("records_with_hits"),
@@ -996,6 +1006,9 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         verifier_trace_cache_dir=(
             None if args.verifier_trace_cache_dir is None else Path(args.verifier_trace_cache_dir)
         ),
+        retrieval_stress_manifest_path=(
+            None if args.retrieval_stress_manifest is None else Path(args.retrieval_stress_manifest)
+        ),
         compact_json=bool(args.compact_json),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -1145,6 +1158,11 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--verifier-trace-cache-dir",
         default=None,
         help="optional cache directory for verified-record traces",
+    )
+    parser.add_argument(
+        "--retrieval-stress-manifest",
+        default=None,
+        help="optional answer-echo retrieval stress artifact manifest to attach to the route manifest",
     )
     parser.add_argument("--metadata", action="append", default=[], help="extra promotion metadata as key=value")
     parser.add_argument("--compact-json", action="store_true")

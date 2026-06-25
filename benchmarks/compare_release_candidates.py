@@ -97,6 +97,10 @@ def compare_release_candidates(
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
+    require_retrieval_stress_control: bool = False,
+    retrieval_stress_manifest: str | Path | None = None,
+    min_stress_false_supported_rate: float | None = None,
+    max_stress_false_refuted_rate: float | None = None,
     required_route_min_selected: int | None = None,
     required_route_min_decision_accuracy: float | None = None,
     required_route_max_false_supported_rate: float | None = None,
@@ -113,6 +117,10 @@ def compare_release_candidates(
     required_route_min_claims_cache_hit_rate: float | None = None,
     required_route_min_verifier_trace_cache_hit_rate: float | None = None,
     required_route_require_non_oracle_evidence: bool = False,
+    required_route_require_retrieval_stress_control: bool = False,
+    required_route_retrieval_stress_manifest: str | Path | None = None,
+    required_route_min_stress_false_supported_rate: float | None = None,
+    required_route_max_stress_false_refuted_rate: float | None = None,
     notes: Sequence[str] = (),
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     json_cache: MutableMapping[str, dict[str, Any]] | None = None,
@@ -309,6 +317,10 @@ def compare_release_candidates(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
+        require_retrieval_stress_control=require_retrieval_stress_control,
+        retrieval_stress_manifest=retrieval_stress_manifest,
+        min_stress_false_supported_rate=min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=max_stress_false_refuted_rate,
         notes=("release candidate route comparison",),
         fingerprint_cache=cache,
         json_cache=payload_cache,
@@ -336,6 +348,10 @@ def compare_release_candidates(
         min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=required_route_require_non_oracle_evidence,
+        require_retrieval_stress_control=required_route_require_retrieval_stress_control,
+        retrieval_stress_manifest=required_route_retrieval_stress_manifest,
+        min_stress_false_supported_rate=required_route_min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=required_route_max_stress_false_refuted_rate,
         fingerprint_cache=cache,
         json_cache=payload_cache,
         json_cache_stats=payload_cache_stats,
@@ -545,6 +561,10 @@ def compare_release_candidates(
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
+            "require_retrieval_stress_control": require_retrieval_stress_control,
+            "retrieval_stress_manifest": None if retrieval_stress_manifest is None else str(retrieval_stress_manifest),
+            "min_stress_false_supported_rate": min_stress_false_supported_rate,
+            "max_stress_false_refuted_rate": max_stress_false_refuted_rate,
             "required_route_min_selected": required_route_min_selected,
             "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
             "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
@@ -561,6 +581,14 @@ def compare_release_candidates(
             "required_route_min_claims_cache_hit_rate": required_route_min_claims_cache_hit_rate,
             "required_route_min_verifier_trace_cache_hit_rate": required_route_min_verifier_trace_cache_hit_rate,
             "required_route_require_non_oracle_evidence": required_route_require_non_oracle_evidence,
+            "required_route_require_retrieval_stress_control": required_route_require_retrieval_stress_control,
+            "required_route_retrieval_stress_manifest": (
+                None
+                if required_route_retrieval_stress_manifest is None
+                else str(required_route_retrieval_stress_manifest)
+            ),
+            "required_route_min_stress_false_supported_rate": required_route_min_stress_false_supported_rate,
+            "required_route_max_stress_false_refuted_rate": required_route_max_stress_false_refuted_rate,
         },
         "readiness_baseline_comparison": readiness,
         "route_baseline_comparison": route,
@@ -935,6 +963,10 @@ def _required_route_baseline_gate(
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
     require_non_oracle_evidence: bool,
+    require_retrieval_stress_control: bool,
+    retrieval_stress_manifest: str | Path | None,
+    min_stress_false_supported_rate: float | None,
+    max_stress_false_refuted_rate: float | None,
     fingerprint_cache: MutableMapping[str, dict[str, Any]],
     json_cache: MutableMapping[str, dict[str, Any]],
     json_cache_stats: MutableMapping[str, int],
@@ -963,6 +995,10 @@ def _required_route_baseline_gate(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
+        require_retrieval_stress_control=require_retrieval_stress_control,
+        retrieval_stress_manifest=retrieval_stress_manifest,
+        min_stress_false_supported_rate=min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=max_stress_false_refuted_rate,
         notes=("release candidate required route baseline gate",),
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
@@ -3125,6 +3161,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
+        require_retrieval_stress_control=bool(args.require_retrieval_stress_control),
+        retrieval_stress_manifest=args.retrieval_stress_manifest,
+        min_stress_false_supported_rate=args.min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=args.max_stress_false_refuted_rate,
         required_route_min_selected=args.required_route_min_selected,
         required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
@@ -3141,6 +3181,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
+        required_route_require_retrieval_stress_control=bool(
+            args.required_route_require_retrieval_stress_control
+        ),
+        required_route_retrieval_stress_manifest=args.required_route_retrieval_stress_manifest,
+        required_route_min_stress_false_supported_rate=args.required_route_min_stress_false_supported_rate,
+        required_route_max_stress_false_refuted_rate=args.required_route_max_stress_false_refuted_rate,
         notes=args.note,
     )
     if args.json:
@@ -3351,6 +3397,32 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="require selected route claims to omit labels and include input provenance",
     )
     parser.add_argument(
+        "--require-retrieval-stress-control",
+        action="store_true",
+        help="require an answer-echo retrieval stress control for selected route baselines",
+    )
+    parser.add_argument(
+        "--retrieval-stress-manifest",
+        default=None,
+        help="optional answer-echo retrieval stress artifact manifest for selected route baselines",
+    )
+    parser.add_argument(
+        "--min-stress-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--min-stress-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--max-stress-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--max-stress-false-refuted-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
         "--min-performance-score-dump-cache-jsonl-view-hit-rate",
         type=lambda value: _parse_unit_float(
             value,
@@ -3463,6 +3535,32 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--required-route-require-non-oracle-evidence",
         action="store_true",
         help="require required route claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
+        "--required-route-require-retrieval-stress-control",
+        action="store_true",
+        help="require an answer-echo retrieval stress control for required route baselines",
+    )
+    parser.add_argument(
+        "--required-route-retrieval-stress-manifest",
+        default=None,
+        help="optional answer-echo retrieval stress artifact manifest for required route baselines",
+    )
+    parser.add_argument(
+        "--required-route-min-stress-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--required-route-min-stress-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument(
+        "--required-route-max-stress-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--required-route-max-stress-false-refuted-rate",
+        ),
+        default=None,
     )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate promotes")

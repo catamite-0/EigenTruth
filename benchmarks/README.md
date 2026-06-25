@@ -1355,6 +1355,10 @@ python benchmarks/compare_route_baselines.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --require-retrieval-stress-control \
+  --retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
+  --min-stress-false-supported-rate 0.90 \
+  --max-stress-false-refuted-rate 0.05 \
   --json artifacts/route-baseline-comparison.json \
   --fail-on-blocked
 ```
@@ -1366,6 +1370,12 @@ the best quality/cost ordering. Optional runtime-budget flags read
 `runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
 verifier-trace-cache metadata from the route manifest or registry record; when a
 threshold is configured, missing or non-finite evidence blocks that baseline.
+Use `--require-retrieval-stress-control` for retrieval-grounding baselines. It
+requires an answer-echo stress artifact manifest, verifies that manifest, checks
+the corpus type is `retrieval_stress_answer_echo`, and fails closed unless the
+stress run exposes self-support with high `false_supported_rate` and low
+`false_refuted_rate`. This prevents answer-derived retrieval evidence from being
+promoted as grounding.
 
 ## `run_adapter_family_matrix.py`
 
@@ -1619,6 +1629,10 @@ python benchmarks/compare_release_candidates.py \
   --required-route-max-retrieval-hit-count 5000 \
   --required-route-max-retrieval-use-rate 1.0 \
   --required-route-require-non-oracle-evidence \
+  --required-route-require-retrieval-stress-control \
+  --required-route-retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
+  --required-route-min-stress-false-supported-rate 0.90 \
+  --required-route-max-stress-false-refuted-rate 0.05 \
   --json artifacts/release-candidate-comparison.json \
   --fail-on-blocked
 ```
@@ -1640,8 +1654,10 @@ is promoted and recursively valid. Add `--required-route-*` thresholds when the
 audit route needs its own quality, latency, retrieval-hit, or cache-reuse budget;
 add `--required-route-require-non-oracle-evidence` when that required route must
 also prove labels stayed only in the score dump and local input provenance is
-present. Otherwise the release only checks the route's already-registered promotion
-status and manifest validity. This keeps selected product-route budgets such as
+present. Add `--required-route-require-retrieval-stress-control` when the route
+must also prove the answer-echo negative control fails as expected. Otherwise the
+release only checks the route's already-registered promotion status and manifest
+validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
 retrieval or world-model adapters.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
@@ -2273,7 +2289,9 @@ The committed stress artifact at
 `run_verifier_signal_fusion_workflow.py`. It retrieves hits for 556/556 records
 but drives false-supported rate to `0.980` and false-refuted rate to `0.000`.
 Use it as a fail-fast check against retrieval setups that merely echo the model
-answer corpus.
+answer corpus. `compare_route_baselines.py --require-retrieval-stress-control`
+and `compare_release_candidates.py --required-route-require-retrieval-stress-control`
+turn this negative control into a fail-closed route/release gate.
 
 ## `build_evidence_fixture.py`
 

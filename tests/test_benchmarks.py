@@ -5263,6 +5263,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     registry_path = tmp_path / "registry.json"
     output_dir = tmp_path / "workflow"
     retriever_index_path = output_dir / "retriever.sqlite"
+    stress_manifest_path = _write_retrieval_stress_manifest(tmp_path, name="workflow-stress")
     statements = [
         {
             "claim_id": "order_true_1",
@@ -5335,6 +5336,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
             alpha=0.2,
             retriever_backend="auto",
             retriever_index_path=retriever_index_path,
+            retrieval_stress_manifest_path=stress_manifest_path,
             retrieval_limit=1,
             retriever_min_overlap=0.6,
             min_selected=4,
@@ -5382,6 +5384,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert route["retrieval_use_rate"] == pytest.approx(1.0)
     expected_manifest_artifacts = [
         "promotion_report",
+        "retrieval_stress_manifest",
         "retrieval_claims",
         "retrieval_corpora.1.corpus",
         "route_comparison_report",
@@ -5394,6 +5397,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert manifest["metadata"]["runner"] == "run_local_retrieval_route_workflow"
     assert manifest["metadata"]["recommended_route"] == "retrieval_groundedness"
     assert manifest["metadata"]["retriever_backend"] == "auto"
+    assert manifest["metadata"]["retrieval_stress_manifest_path"] == str(stress_manifest_path)
     assert manifest["metadata"]["retriever_requested_index_path"] == str(retriever_index_path)
     assert manifest["metadata"]["retriever_actual_backend"] in {"sqlite_fts", "memory"}
     assert manifest["metadata"]["labels_used_for_retrieval"] is False
@@ -5414,6 +5418,7 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     record = registry.get("benchmark_manifest:local-retrieval-route:0.7")
     assert record.metadata["workflow"] == "run_local_retrieval_route_workflow"
     assert record.metadata["recommended_route"] == "retrieval_groundedness"
+    assert record.metadata["retrieval_stress_manifest_path"] == str(stress_manifest_path)
     assert record.metadata["retriever_actual_backend"] in {"sqlite_fts", "memory"}
     assert record.metadata["recommended_retrieval_use_rate"] == pytest.approx(1.0)
     assert record.metadata["runtime_bottleneck"] in profile["phases"]
@@ -5423,8 +5428,12 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
         registry_path=registry_path,
         max_mean_attempted_route_count=2.1,
         max_retrieval_use_rate=1.0,
+        require_retrieval_stress_control=True,
+        min_stress_false_supported_rate=0.90,
+        max_stress_false_refuted_rate=0.05,
     )
     assert baseline["decision"]["status"] == "promote"
+    assert baseline["leaderboard"][0]["retrieval_stress_audit"]["passed"] is True
 
     blocked = module.run_local_retrieval_route_workflow(
         module.LocalRetrievalRouteWorkflowConfig(
@@ -5645,6 +5654,7 @@ def _write_route_baseline_manifest(
     verifier_trace_cache_hit_count: int | None = None,
     verifier_trace_cache_run_count: int | None = None,
     claims_payload: dict[str, Any] | None = None,
+    stress_manifest_path: Path | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -5679,6 +5689,8 @@ def _write_route_baseline_manifest(
         claims_path = tmp_path / f"{name}-claims.json"
         claims_path.write_text(json.dumps(claims_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         artifacts["retrieval_claims"] = claims_path
+    if stress_manifest_path is not None:
+        artifacts["retrieval_stress_manifest"] = stress_manifest_path
     metadata = {
         "runner": "run_adapter_promotion_workflow",
         "workflow": "adapter_promotion_workflow",
@@ -5701,6 +5713,75 @@ def _write_route_baseline_manifest(
         if value is not None
     })
     manifest = build_artifact_manifest(artifacts, root=tmp_path, metadata=metadata)
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest_path
+
+
+def _write_retrieval_stress_manifest(
+    tmp_path: Path,
+    *,
+    name: str = "answer-echo-stress",
+    corpus_type: str = "retrieval_stress_answer_echo",
+    false_supported_rate: float = 0.98,
+    false_refuted_rate: float = 0.0,
+    labels_used_for_documents: bool = False,
+    labels_copied_to_document_metadata: bool = False,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir = tmp_path / name
+    output_dir.mkdir(parents=True, exist_ok=True)
+    corpus_path = output_dir / "answer-echo-corpus.json"
+    verifier_report_path = output_dir / "verifier-ensemble-report.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    corpus_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "corpus_type": corpus_type,
+                "label_usage": {
+                    "labels_used_for_documents": labels_used_for_documents,
+                    "labels_copied_to_document_metadata": labels_copied_to_document_metadata,
+                },
+                "summary": {"n_documents": 4, "n_source_records": 4, "n_skipped_empty": 0},
+                "documents": [],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    verifier_report_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "runs": [
+                    {
+                        "name": "synthetic",
+                        "verification_quality": {
+                            "decision_accuracy": 0.5,
+                            "false_supported_rate": false_supported_rate,
+                            "false_refuted_rate": false_refuted_rate,
+                            "true_supported_rate": 1.0,
+                        },
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    manifest = build_artifact_manifest(
+        {
+            "retrieval_corpora.1.answer-echo-corpus": corpus_path,
+            "verifier_report": verifier_report_path,
+        },
+        root=output_dir,
+        metadata={"runner": "run_verifier_signal_fusion_workflow", "workflow": "verifier_signal_fusion_workflow"},
+    )
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return manifest_path
 
@@ -5993,6 +6074,159 @@ def test_compare_route_baselines_can_require_non_oracle_evidence(tmp_path):
     assert any(
         "evidence_audit: input_provenance.corpora must include at least one corpus fingerprint" in reason
         for reason in unfingerprinted["decision"]["blocking_reasons"]
+    )
+
+
+def test_compare_route_baselines_requires_answer_echo_retrieval_stress_control(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    strong_stress = _write_retrieval_stress_manifest(
+        tmp_path,
+        name="strong-stress",
+        false_supported_rate=0.98,
+        false_refuted_rate=0.0,
+    )
+    weak_stress = _write_retrieval_stress_manifest(
+        tmp_path,
+        name="weak-stress",
+        false_supported_rate=0.10,
+        false_refuted_rate=0.0,
+    )
+    clean_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="clean-stressed-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        stress_manifest_path=strong_stress,
+    )
+    weak_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="weak-stressed-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        stress_manifest_path=weak_stress,
+    )
+    missing_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="missing-stressed-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="clean-stressed-route",
+        path=clean_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).record_benchmark_manifest(
+        name="weak-stressed-route",
+        path=weak_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).record_benchmark_manifest(
+        name="missing-stressed-route",
+        path=missing_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    clean = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:clean-stressed-route:0.1",),
+        require_non_oracle_evidence=True,
+        require_retrieval_stress_control=True,
+        min_stress_false_supported_rate=0.90,
+        max_stress_false_refuted_rate=0.05,
+    )
+    weak = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:weak-stressed-route:0.1",),
+        require_non_oracle_evidence=True,
+        require_retrieval_stress_control=True,
+        min_stress_false_supported_rate=0.90,
+        max_stress_false_refuted_rate=0.05,
+    )
+    missing = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:missing-stressed-route:0.1",),
+        require_non_oracle_evidence=True,
+        require_retrieval_stress_control=True,
+    )
+
+    stress_audit = clean["leaderboard"][0]["retrieval_stress_audit"]
+    assert clean["decision"]["status"] == "promote"
+    assert stress_audit["passed"] is True
+    assert stress_audit["corpus_type"] == "retrieval_stress_answer_echo"
+    assert stress_audit["min_false_supported_rate"] == pytest.approx(0.98)
+    assert stress_audit["max_false_refuted_rate"] == pytest.approx(0.0)
+    assert weak["decision"]["status"] == "blocked"
+    assert any(
+        "retrieval_stress_audit: stress false_supported_rate below 0.9" in reason
+        for reason in weak["decision"]["blocking_reasons"]
+    )
+    assert missing["decision"]["status"] == "blocked"
+    assert any(
+        "retrieval_stress_audit: retrieval stress manifest is required" in reason
+        for reason in missing["decision"]["blocking_reasons"]
+    )
+
+
+def test_compare_route_baselines_blocks_invalid_retrieval_stress_corpus(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    invalid_stress = _write_retrieval_stress_manifest(
+        tmp_path,
+        name="wrong-corpus",
+        corpus_type="ordinary_local_corpus",
+        false_supported_rate=0.98,
+        false_refuted_rate=0.0,
+    )
+    manifest_path = _write_route_baseline_manifest(
+        tmp_path,
+        name="invalid-stress-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        stress_manifest_path=invalid_stress,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="invalid-stress-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    payload = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:invalid-stress-route:0.1",),
+        require_retrieval_stress_control=True,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert any(
+        "retrieval_stress_audit: retrieval stress corpus_type" in reason
+        for reason in payload["decision"]["blocking_reasons"]
     )
 
 
@@ -8473,6 +8707,7 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         runtime_total_seconds=0.8,
         runtime_n_retrieval_hits=0,
     )
+    stress_manifest = _write_retrieval_stress_manifest(tmp_path, name="required-route-stress")
     retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
         name="retrieval",
@@ -8487,6 +8722,7 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
         claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        stress_manifest_path=stress_manifest,
     )
     leaky_retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -8540,6 +8776,9 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         required_route_max_retrieval_hit_count=30,
         required_route_max_retrieval_use_rate=1.0,
         required_route_require_non_oracle_evidence=True,
+        required_route_require_retrieval_stress_control=True,
+        required_route_min_stress_false_supported_rate=0.90,
+        required_route_max_stress_false_refuted_rate=0.05,
     )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -8598,6 +8837,13 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         promoted["required_route_baseline_gate"]["comparison"]["config"]["require_non_oracle_evidence"]
         is True
     )
+    assert (
+        promoted["required_route_baseline_gate"]["comparison"]["config"]["require_retrieval_stress_control"]
+        is True
+    )
+    stress_audit = promoted["required_route_baseline_gate"]["rows"][0]["retrieval_stress_audit"]
+    assert stress_audit["passed"] is True
+    assert stress_audit["min_false_supported_rate"] == pytest.approx(0.98)
 
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
