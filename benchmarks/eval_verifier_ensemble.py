@@ -56,10 +56,12 @@ from eigentruth.verify import (
     GroundednessVerifier,
     JsonTraceCache,
     SelfConsistencyVerifier,
+    TripleEvidenceVerifier,
     VerificationResult,
     VerificationStatus,
     stable_cache_key,
 )
+from eigentruth.verify.features import flag_value_enabled
 
 ALPHAS = (0.05, 0.10, 0.20)
 TOLERANCE = 0.03
@@ -255,6 +257,11 @@ def _records_from_dump_and_fixture(
             claim_metadata["state_transition"] = statement["state_transition"]
         if "state_transition" in raw_record:
             claim_metadata["state_transition"] = raw_record["state_transition"]
+        for key in ("features", "requires_triple_audit", "triples", "claim_triples"):
+            if key in statement:
+                claim_metadata[key] = statement[key]
+            if key in raw_record:
+                claim_metadata[key] = raw_record[key]
         record_state = _merge_state_mappings(
             statement.get("state", {}),
             raw_record.get("state", {}),
@@ -446,6 +453,8 @@ def _verify_records(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
     qa_verifier: QuestionAnswerVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
@@ -471,6 +480,7 @@ def _verify_records(
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
+    triple_evidence_runners: dict[str, CachedVerifier] = {}
     retrieval_qa_runners: dict[str, CachedVerifier] = {}
     selfcheck_runners: dict[str, CachedVerifier] = {}
     retrievers: dict[str, CachedRetriever] = {}
@@ -494,6 +504,24 @@ def _verify_records(
                 )
             )
             groundedness_runners[key] = runner
+        return runner
+
+    def triple_evidence_runner(
+        evidence: Sequence[Mapping[str, Any] | str],
+    ) -> CachedVerifier:
+        key = stable_cache_key({
+            "evidence": evidence,
+            "min_slot_coverage": triple_min_slot_coverage,
+        })
+        runner = triple_evidence_runners.get(key)
+        if runner is None:
+            runner = CachedVerifier(
+                TripleEvidenceVerifier(
+                    evidence=evidence,
+                    min_slot_coverage=triple_min_slot_coverage,
+                )
+            )
+            triple_evidence_runners[key] = runner
         return runner
 
     def retrieval_qa_runner(
@@ -680,6 +708,41 @@ def _verify_records(
                 })
                 continue
 
+        triple_result = None
+        if enable_triple_evidence and _record_has_triple_evidence(record):
+            attempted_routes.append("triple_evidence")
+            triple_result = _timed_verify(
+                route_timings,
+                route="triple_evidence",
+                runner=triple_evidence_runner(record.initial_evidence),
+                claim=record.claim,
+            )
+            if triple_result.status is not VerificationStatus.NOT_APPLICABLE:
+                verified.append({
+                    "claim": {
+                        "text": record.claim.text,
+                        "claim_id": record.claim.claim_id,
+                        "metadata": dict(record.claim.metadata),
+                    },
+                    "initial": _verification_to_dict(triple_result),
+                    "final": _verification_to_dict(triple_result),
+                    "qa": None if qa_result is None else _verification_to_dict(qa_result),
+                    "state": None if state_result is None else _verification_to_dict(state_result),
+                    "transition": None,
+                    "triple_evidence": _verification_to_dict(triple_result),
+                    "selfcheck": None,
+                    "retrieval_hits": (),
+                    "route": _route_metadata(
+                        selected_route="triple_evidence",
+                        selected_verifier="TripleEvidenceVerifier",
+                        attempted_routes=attempted_routes,
+                        used_retrieval=False,
+                        route_timings=route_timings,
+                    ),
+                    "metadata": _record_metadata(record, stage_payload),
+                })
+                continue
+
         attempted_routes.append("groundedness")
         initial = _timed_verify(
             route_timings,
@@ -805,6 +868,7 @@ def _verify_records(
             "qa": None if qa_result is None else _verification_to_dict(qa_result),
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None,
+            "triple_evidence": None if triple_result is None else _verification_to_dict(triple_result),
             "selfcheck": None if selfcheck_result is None else _verification_to_dict(selfcheck_result),
             "retrieval_qa": None if retrieval_qa_result is None else _verification_to_dict(retrieval_qa_result),
             "retrieval_hits": selected_retrieval_hits,
@@ -824,6 +888,9 @@ def _verify_records(
         groundedness_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in groundedness_runners.values())
         )
+        triple_evidence_stats = combine_cache_stats(
+            *(runner.stats.to_dict() for runner in triple_evidence_runners.values())
+        )
         retrieval_qa_stats = combine_cache_stats(
             *(runner.stats.to_dict() for runner in retrieval_qa_runners.values())
         )
@@ -838,6 +905,10 @@ def _verify_records(
             "groundedness_verifiers": {
                 **groundedness_stats,
                 "instances": len(groundedness_runners),
+            },
+            "triple_evidence_verifiers": {
+                **triple_evidence_stats,
+                "instances": len(triple_evidence_runners),
             },
             "retrieval_qa_verifiers": {
                 **retrieval_qa_stats,
@@ -856,6 +927,7 @@ def _verify_records(
                 state_stats,
                 transition_stats,
                 groundedness_stats,
+                triple_evidence_stats,
                 retrieval_qa_stats,
                 selfcheck_stats,
                 retriever_stats,
@@ -869,6 +941,21 @@ def _record_has_state_check(record: ClaimEvidenceRecord, state_checks: Mapping[s
     if "state_check" in metadata or any(key in metadata for key in ("path", "key", "field")):
         return True
     return record.claim.claim_id is not None and record.claim.claim_id in state_checks
+
+
+def _record_has_triple_evidence(record: ClaimEvidenceRecord) -> bool:
+    metadata = record.claim.metadata if isinstance(record.claim.metadata, Mapping) else {}
+    if flag_value_enabled(metadata.get("requires_triple_audit")):
+        return True
+    if metadata.get("triples") is not None or metadata.get("claim_triples") is not None:
+        return True
+    features = metadata.get("features", {})
+    if isinstance(features, Mapping):
+        return any(
+            flag_value_enabled(features.get(key))
+            for key in ("has_number", "has_citation", "is_time_sensitive")
+        )
+    return False
 
 
 def _retrieval_document_payloads(
@@ -1661,6 +1748,8 @@ def _verification_trace_cache_key(
     selfcheck_refute_threshold: float,
     selfcheck_early_stop: bool,
     selfcheck_max_samples: int | None,
+    enable_triple_evidence: bool,
+    triple_min_slot_coverage: float,
     staged_verification: bool,
     staged_alpha: float,
     staged_direction: str,
@@ -1696,6 +1785,11 @@ def _verification_trace_cache_key(
             "refute_threshold": float(selfcheck_refute_threshold),
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+        },
+        "triple_evidence_verifier": {
+            "type": "TripleEvidenceVerifier",
+            "enabled": bool(enable_triple_evidence),
+            "min_slot_coverage": float(triple_min_slot_coverage),
         },
         "staged_verification": {
             "enabled": bool(staged_verification),
@@ -1833,6 +1927,8 @@ def build_verifier_ensemble_report(
     selfcheck_refute_threshold: float = 0.50,
     selfcheck_early_stop: bool = False,
     selfcheck_max_samples: int | None = None,
+    enable_triple_evidence: bool = False,
+    triple_min_slot_coverage: float = 1.0,
     verification_cache_dir: Path | None = None,
     staged_verification: bool = False,
     staged_alpha: float = 0.10,
@@ -1869,6 +1965,8 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_refute_threshold must be in [0, 1].")
     if selfcheck_max_samples is not None and selfcheck_max_samples < selfcheck_min_samples:
         raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
+    if not (0.0 <= triple_min_slot_coverage <= 1.0):
+        raise ValueError("triple_min_slot_coverage must be in [0, 1].")
     if not (0.0 < float(staged_alpha) < 1.0):
         raise ValueError("staged_alpha must be in (0, 1).")
 
@@ -1903,6 +2001,7 @@ def build_verifier_ensemble_report(
     any_state_enabled = False
     any_transition_enabled = False
     any_selfcheck_enabled = False
+    any_triple_evidence_enabled = False
     verified_record_counts: dict[str, int] = {}
     verified_record_total = 0
     verified_records_sidecar_path = None if verified_records_path is None else Path(verified_records_path)
@@ -1943,6 +2042,11 @@ def build_verifier_ensemble_report(
             any_state_enabled = any_state_enabled or state_enabled
             selfcheck_enabled = any(record.selfcheck_samples for record in records)
             any_selfcheck_enabled = any_selfcheck_enabled or selfcheck_enabled
+            triple_evidence_enabled = bool(
+                enable_triple_evidence
+                and any(_record_has_triple_evidence(record) for record in records)
+            )
+            any_triple_evidence_enabled = any_triple_evidence_enabled or triple_evidence_enabled
             transition_verifier = (
                 StateTransitionVerifier(
                     world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
@@ -1973,6 +2077,8 @@ def build_verifier_ensemble_report(
                 selfcheck_refute_threshold=selfcheck_refute_threshold,
                 selfcheck_early_stop=selfcheck_early_stop,
                 selfcheck_max_samples=selfcheck_max_samples,
+                enable_triple_evidence=bool(enable_triple_evidence),
+                triple_min_slot_coverage=float(triple_min_slot_coverage),
                 staged_verification=stage_policy is not None,
                 staged_alpha=float(staged_alpha),
                 staged_direction=resolved_direction,
@@ -2000,6 +2106,8 @@ def build_verifier_ensemble_report(
                     selfcheck_refute_threshold=selfcheck_refute_threshold,
                     selfcheck_early_stop=selfcheck_early_stop,
                     selfcheck_max_samples=selfcheck_max_samples,
+                    enable_triple_evidence=bool(enable_triple_evidence),
+                    triple_min_slot_coverage=float(triple_min_slot_coverage),
                     qa_verifier=qa_verifier,
                     state_verifier=state_verifier,
                     state_checks=global_state_checks,
@@ -2147,6 +2255,24 @@ def build_verifier_ensemble_report(
                     ),
                     **selfcheck_execution,
                 },
+                "triple_evidence_verifier": {
+                    "type": "TripleEvidenceVerifier",
+                    "enabled": triple_evidence_enabled,
+                    "min_slot_coverage": float(triple_min_slot_coverage),
+                    "records_with_triple_route": sum(
+                        1 for record in records
+                        if _record_has_triple_evidence(record)
+                    ),
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("triple_evidence") is not None
+                        and record["triple_evidence"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                            VerificationStatus.INSUFFICIENT_EVIDENCE.value,
+                        }
+                    ),
+                },
                 "retrieval": {
                     "records_with_hits": sum(1 for record in verified_records if record["retrieval_hits"]),
                     "total_hits": sum(len(record["retrieval_hits"]) for record in verified_records),
@@ -2207,6 +2333,12 @@ def build_verifier_ensemble_report(
             "refute_threshold": selfcheck_refute_threshold,
             "early_stop": bool(selfcheck_early_stop),
             "max_samples": selfcheck_max_samples,
+        },
+        "triple_evidence_verifier": {
+            "type": "TripleEvidenceVerifier",
+            "enabled": any_triple_evidence_enabled,
+            "requested": bool(enable_triple_evidence),
+            "min_slot_coverage": float(triple_min_slot_coverage),
         },
         "qa_verifier": {
             "type": "QuestionAnswerVerifier",
@@ -2276,6 +2408,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_refute_threshold=float(getattr(args, "selfcheck_refute_threshold", 0.50)),
         selfcheck_early_stop=bool(getattr(args, "selfcheck_early_stop", False)),
         selfcheck_max_samples=getattr(args, "selfcheck_max_samples", None),
+        enable_triple_evidence=bool(getattr(args, "enable_triple_evidence", False)),
+        triple_min_slot_coverage=float(getattr(args, "triple_min_slot_coverage", 1.0)),
         verification_cache_dir=(
             None
             if getattr(args, "verification_cache_dir", None) is None
@@ -2360,6 +2494,10 @@ def main() -> None:
                         help="stop self-consistency sample judging once the final threshold outcome is fixed")
     parser.add_argument("--selfcheck-max-samples", type=int, default=None,
                         help="optional cap on self-consistency samples considered per claim")
+    parser.add_argument("--enable-triple-evidence", action="store_true",
+                        help="enable strict subject-predicate-object evidence audits for sensitive factual claims")
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,
+                        help="minimum per-slot evidence coverage for triple-evidence audits")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
     parser.add_argument("--verified-records-jsonl", default=None,

@@ -410,7 +410,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `sqlite_state_control_demo.py` | Demonstrates SQLite-backed structured state checks feeding a final `ProductTrace` and dry-run action. |
 | `state_transition_control_demo.py` | Demonstrates world-model next-state prediction plus structured postcondition checks feeding a final `ProductTrace`. |
 | `production_tool_loop_demo.py` | Demonstrates a local production-like loop: SQLite pre-check, guarded side-effecting local `execute_tool`, optional JSON/SQLite idempotency ledger, tool-output state mapping, post-tool verification, action audit metadata, and route summary in one trace. |
-| `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression/refutation policies, optional staged verifier gating, route-level cost metrics, and optional JSONL sidecar records for per-claim verifier outputs. |
+| `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression/refutation policies, optional staged verifier gating, optional triple-evidence route audits, route-level cost metrics, and optional JSONL sidecar records for per-claim verifier outputs. |
 | `eval_verifier_stability.py` | Replays verifier-ensemble reports across multiple split-conformal seeds, summarizes verified risk stability and route-selection stability, fingerprints verifier inputs, and optionally registers the post-hoc report. |
 | `eval_score_ensemble.py` | Benchmarks direction-aware rank fusion across saved diagnostic score dumps and can save a deployable `RankScoreFusionArtifact` for the best ensemble in one run. |
 | `eval_frontier_stability.py` | Replays saved frontier score dumps across multiple split-conformal seeds, summarizes best-signal stability, fingerprints source score records, and optionally registers the post-hoc stability report. |
@@ -513,7 +513,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `sqlite_state_control_demo.py` | 演示 SQLite 结构化状态校验如何进入最终 `ProductTrace` 和 dry-run action。 |
 | `state_transition_control_demo.py` | 演示 world-model 下一状态预测和结构化 postcondition 校验如何进入最终 `ProductTrace`。 |
 | `production_tool_loop_demo.py` | 演示本地 production-like 闭环：SQLite 前置校验、受 guard 约束的有副作用本地 `execute_tool`、可选 JSON/SQLite idempotency ledger、工具输出状态映射、工具后校验、action audit metadata 和 trace route summary。 |
-| `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略，可选 staged verifier gating，记录 route 级成本指标，并可用 JSONL sidecar 保存逐 claim verifier 输出。 |
+| `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略，可选 staged verifier gating 和 triple-evidence route audit，记录 route 级成本指标，并可用 JSONL sidecar 保存逐 claim verifier 输出。 |
 | `eval_verifier_stability.py` | 对 verifier-ensemble report 做多 seed split-conformal 重放，总结 verified risk 和 route-selection 稳定性，指纹化 verifier 输入，并可选登记 post-hoc report。 |
 | `eval_score_ensemble.py` | 对已保存诊断 score dump 执行方向感知 rank fusion benchmark，并可在一次运行中保存最佳 ensemble 的可部署 `RankScoreFusionArtifact`。 |
 | `eval_frontier_stability.py` | 对已保存 frontier score dump 做多 seed split-conformal 重放，总结最佳信号稳定性，指纹化 source score records，并可选登记 post-hoc stability report。 |

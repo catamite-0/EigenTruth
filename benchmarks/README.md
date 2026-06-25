@@ -771,6 +771,10 @@ tools and does not need human-readable indentation.
 Add `--verified-records-jsonl` when per-claim verifier outputs are needed for
 audit or debugging; the main report keeps summary metrics and references the
 sidecar path/count instead of embedding those records.
+Add `--enable-triple-evidence` to evaluate strict fact-level
+subject-predicate-object audits for sensitive factual claims before lexical
+groundedness fallback; use `--triple-min-slot-coverage` to relax or tighten the
+per-slot evidence coverage threshold.
 Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
 views and records a `score_dump` summary plus SHA-256 fingerprint, so
 verifier-cache and route promotion evidence can be tied back to the exact score
@@ -1023,8 +1027,8 @@ Reports include `verification_quality`, a label-conditioned matrix over
 final control-policy detection and false-alarm rates. Reports also include
 `route_summary`, which breaks verification outcomes down by selected route
 (`structured_qa`, `state_transition`, `structured_state`, `groundedness`,
-`self_consistency`, `retrieval_groundedness`, `retrieval_structured_qa`, or
-`staged_skip`) and records attempted-route
+`triple_evidence`, `self_consistency`, `retrieval_groundedness`,
+`retrieval_structured_qa`, or `staged_skip`) and records attempted-route
 counts, status counts, and per-route supported/refuted/error rates. Use
 `route_quality` for label-conditioned false-support / false-refutation metrics
 per selected route, and use each alpha result's `route_control_impact` to see

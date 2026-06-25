@@ -2649,6 +2649,84 @@ def test_build_evidence_fixture_can_omit_label_metadata_without_changing_verifie
     assert run["route_summary"]["selected_counts"] == {"retrieval_groundedness": 2, "groundedness": 1}
 
 
+def test_eval_verifier_ensemble_can_route_sensitive_claims_to_triple_evidence(tmp_path):
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {"text": "AlphaCorp has 10 offices."},
+                {"text": "GammaCorp has 4 labs."},
+                {"text": "BetaCorp has 9 offices."},
+                {"text": "DeltaCorp has 8 labs."},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    fixture_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "claim": "AlphaCorp has 10 offices.",
+                    "claim_id": "alpha",
+                    "claim_metadata": {"features": {"has_number": True}},
+                    "initial_evidence": ["AlphaCorp has 10 offices."],
+                },
+                {
+                    "claim": "GammaCorp has 4 labs.",
+                    "claim_id": "gamma",
+                    "claim_metadata": {"features": {"has_number": True}},
+                    "initial_evidence": ["GammaCorp has 4 labs."],
+                },
+                {
+                    "claim": "BetaCorp has 9 offices.",
+                    "claim_id": "beta",
+                    "claim_metadata": {"features": {"has_number": True}},
+                    "initial_evidence": ["BetaCorp has offices."],
+                },
+                {
+                    "claim": "DeltaCorp has 8 labs.",
+                    "claim_id": "delta",
+                    "claim_metadata": {"features": {"has_number": True}},
+                    "initial_evidence": ["DeltaCorp has labs."],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        enable_triple_evidence=True,
+    )
+    run = payload["runs"][0]
+    quality = run["route_quality"]["triple_evidence"]
+
+    assert payload["triple_evidence_verifier"]["enabled"] is True
+    assert run["triple_evidence_verifier"]["enabled"] is True
+    assert run["triple_evidence_verifier"]["records_with_triple_route"] == 4
+    assert run["triple_evidence_verifier"]["decided_records"] == 4
+    assert run["route_summary"]["selected_counts"] == {"triple_evidence": 4}
+    statuses = run["route_summary"]["by_route"]["triple_evidence"]["statuses"]
+    assert statuses["supported"] == 2
+    assert statuses["insufficient_evidence"] == 2
+    assert statuses["refuted"] == 0
+    assert quality["selected"] == 4
+    assert quality["true_supported_rate"] == pytest.approx(1.0)
+    assert quality["false_supported_rate"] == pytest.approx(0.0)
+    assert run["cache_stats"]["triple_evidence_verifiers"]["requests"] == 4
+    assert run["cache_stats"]["groundedness_verifiers"]["requests"] == 0
+
+
 def test_eval_verifier_ensemble_uses_retrieval_structured_qa_hits(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
