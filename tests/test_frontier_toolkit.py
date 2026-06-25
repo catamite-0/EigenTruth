@@ -2267,6 +2267,68 @@ def test_risk_controller_applies_participation_gate_to_accepted_answers():
     assert missing.diagnostics["participation_gate"]["status"] == "missing_score"
 
 
+def test_participation_gate_can_be_overridden_by_strong_supported_verification():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(CalibrationScore("maha", threshold=3.0),),
+        eigentruth_version="0.1.0",
+    )
+    gate_report = conformal_abstention_report(
+        [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+        [1, 1, 1, 1, 0, 0],
+        0.5,
+        score_name="uncertainty",
+    )
+    conservative = RiskController(artifact, participation_gate=gate_report)
+    verification_aware = RiskController(
+        artifact,
+        participation_gate=gate_report,
+        policy_config=ControlPolicyConfig(
+            participation_gate_supported_override=True,
+            participation_gate_supported_override_min_confidence=0.85,
+        ),
+    )
+
+    supported = (
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.9),
+        VerificationResult(VerificationStatus.SUPPORTED, confidence=0.88),
+    )
+    weak_supported = (VerificationResult(VerificationStatus.SUPPORTED, confidence=0.7),)
+    unsupported = (VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, confidence=0.9),)
+    conservative_decision = conservative.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=supported,
+    )
+    overridden = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=supported,
+    )
+    weak = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=weak_supported,
+    )
+    retrieve = verification_aware.decide(
+        {"maha": 1.0, "uncertainty": 0.9},
+        verification_results=unsupported,
+    )
+
+    assert conservative_decision.action is ControlAction.ABSTAIN
+    assert conservative_decision.diagnostics["participation_gate"]["supported_override"][
+        "enabled"
+    ] is False
+    assert overridden.action is ControlAction.ACCEPT
+    assert overridden.diagnostics["participation_gate"]["status"] == "overridden_by_verification"
+    assert overridden.diagnostics["participation_gate"]["supported_override"]["applied"] is True
+    assert overridden.diagnostics["participation_gate"]["supported_override"][
+        "max_supported_confidence"
+    ] == pytest.approx(0.9)
+    assert weak.action is ControlAction.ABSTAIN
+    assert weak.diagnostics["participation_gate"]["supported_override"]["applied"] is False
+    assert retrieve.action is ControlAction.RETRIEVE
+    assert retrieve.diagnostics["participation_gate"]["status"] == "skipped"
+
+
 def test_participation_gate_can_use_abstention_comparison_recommendation_and_policy_scope():
     artifact = CalibrationArtifact(
         model_id="tiny",
@@ -2311,11 +2373,20 @@ def test_participation_gate_can_use_abstention_comparison_recommendation_and_pol
 def test_control_policy_config_from_dict_parses_boolean_strings():
     disabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "false"})
     enabled = ControlPolicyConfig.from_dict({"compound_verification_escalates": "on"})
+    verification_aware = ControlPolicyConfig.from_dict({
+        "participation_gate_supported_override": "yes",
+        "participation_gate_supported_override_min_confidence": 0.9,
+    })
 
     assert disabled.compound_verification_escalates is False
     assert enabled.compound_verification_escalates is True
+    assert verification_aware.participation_gate_supported_override is True
+    assert verification_aware.to_dict()["participation_gate_supported_override"] is True
+    assert verification_aware.participation_gate_supported_override_min_confidence == pytest.approx(0.9)
     with pytest.raises(ValueError, match="compound_verification_escalates"):
         ControlPolicyConfig.from_dict({"compound_verification_escalates": "maybe"})
+    with pytest.raises(ValueError, match="participation_gate_supported_override"):
+        ControlPolicyConfig.from_dict({"participation_gate_supported_override": "maybe"})
     with pytest.raises(ValueError, match="participation_gate_applies_to_actions"):
         ControlPolicyConfig.from_dict({"participation_gate_applies_to_actions": "unknown"})
 

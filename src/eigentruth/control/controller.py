@@ -168,6 +168,8 @@ class ControlPolicyConfig:
     participation_gate_applies_to_actions: tuple[ControlAction, ...] = (ControlAction.ACCEPT,)
     participation_gate_risk_level: RiskLevel = RiskLevel.HIGH
     participation_gate_confidence_floor: float = 0.75
+    participation_gate_supported_override: bool = False
+    participation_gate_supported_override_min_confidence: float = 0.85
     refuted_risk_level: RiskLevel = RiskLevel.HIGH
     unsupported_risk_level: RiskLevel = RiskLevel.MEDIUM
     verification_error_risk_level: RiskLevel = RiskLevel.UNKNOWN
@@ -197,7 +199,24 @@ class ControlPolicyConfig:
             self.participation_gate_confidence_floor,
             name="participation_gate_confidence_floor",
         )
+        override_min_confidence = _unit_interval_float(
+            self.participation_gate_supported_override_min_confidence,
+            name="participation_gate_supported_override_min_confidence",
+        )
         object.__setattr__(self, "participation_gate_confidence_floor", confidence_floor)
+        object.__setattr__(
+            self,
+            "participation_gate_supported_override",
+            _parse_bool(
+                self.participation_gate_supported_override,
+                name="participation_gate_supported_override",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "participation_gate_supported_override_min_confidence",
+            override_min_confidence,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-serializable representation."""
@@ -213,6 +232,10 @@ class ControlPolicyConfig:
             ],
             "participation_gate_risk_level": self.participation_gate_risk_level.value,
             "participation_gate_confidence_floor": self.participation_gate_confidence_floor,
+            "participation_gate_supported_override": self.participation_gate_supported_override,
+            "participation_gate_supported_override_min_confidence": (
+                self.participation_gate_supported_override_min_confidence
+            ),
             "refuted_risk_level": self.refuted_risk_level.value,
             "unsupported_risk_level": self.unsupported_risk_level.value,
             "verification_error_risk_level": self.verification_error_risk_level.value,
@@ -245,6 +268,13 @@ class ControlPolicyConfig:
             ),
             participation_gate_confidence_floor=float(
                 data.get("participation_gate_confidence_floor", 0.75)
+            ),
+            participation_gate_supported_override=_parse_bool(
+                data.get("participation_gate_supported_override", False),
+                name="participation_gate_supported_override",
+            ),
+            participation_gate_supported_override_min_confidence=float(
+                data.get("participation_gate_supported_override_min_confidence", 0.85)
             ),
             refuted_risk_level=RiskLevel(str(data.get("refuted_risk_level", RiskLevel.HIGH.value))),
             unsupported_risk_level=RiskLevel(str(data.get("unsupported_risk_level", RiskLevel.MEDIUM.value))),
@@ -508,6 +538,11 @@ class RiskController:
         gate_trace["value"] = value
         if participates:
             return _with_diagnostics(decision, trace)
+        override = _participation_gate_supported_override(trace, policy)
+        gate_trace["supported_override"] = override
+        if override["applied"]:
+            gate_trace["status"] = "overridden_by_verification"
+            return _with_diagnostics(decision, trace)
         return RiskDecision(
             action=policy.participation_gate_action,
             risk_level=policy.participation_gate_risk_level,
@@ -711,6 +746,59 @@ def _with_diagnostics(decision: RiskDecision, diagnostics: Mapping[str, Any]) ->
         reason=decision.reason,
         diagnostics=diagnostics,
     )
+
+
+def _participation_gate_supported_override(
+    trace: Mapping[str, Any],
+    policy: ControlPolicyConfig,
+) -> dict[str, Any]:
+    verification = trace.get("verification")
+    if not policy.participation_gate_supported_override:
+        return {
+            "applied": False,
+            "enabled": False,
+            "reason": "supported override disabled",
+        }
+    if not isinstance(verification, Mapping):
+        return {
+            "applied": False,
+            "enabled": True,
+            "reason": "verification summary missing",
+        }
+    total = int(verification.get("total", 0))
+    counts = verification.get("counts")
+    if not isinstance(counts, Mapping) or total <= 0:
+        return {
+            "applied": False,
+            "enabled": True,
+            "total": total,
+            "reason": "no verification results",
+        }
+    supported_count = int(counts.get(VerificationStatus.SUPPORTED.value, 0))
+    triggered_statuses = tuple(str(status) for status in verification.get("triggered_statuses", ()))
+    by_status = verification.get("max_confidence_by_status")
+    supported_confidence = (
+        float(by_status.get(VerificationStatus.SUPPORTED.value, 0.0))
+        if isinstance(by_status, Mapping)
+        else 0.0
+    )
+    required_confidence = policy.participation_gate_supported_override_min_confidence
+    applied = (
+        supported_count == total
+        and not triggered_statuses
+        and supported_confidence >= required_confidence
+    )
+    reason = "all claims strongly supported" if applied else "verification support is insufficient"
+    return {
+        "applied": applied,
+        "enabled": True,
+        "total": total,
+        "supported_count": supported_count,
+        "triggered_statuses": triggered_statuses,
+        "max_supported_confidence": supported_confidence,
+        "min_supported_confidence": required_confidence,
+        "reason": reason,
+    }
 
 
 def _summarize_verification(
