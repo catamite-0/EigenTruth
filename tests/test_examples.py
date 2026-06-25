@@ -660,6 +660,67 @@ def test_calibrated_control_demo_applies_promotion_contract_control_defaults(tmp
     assert explicit_payload["metadata"]["max_verifier_route_attempts"] == 4
 
 
+def test_calibrated_control_demo_applies_promotion_contract_control_policy(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract
+
+    contract_path = tmp_path / "promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        control_policy_config={
+            "unsupported_action": "clarify",
+            "compound_verification_escalates": False,
+        },
+        feedback_policy_workflow={
+            "report_path": "feedback-policy-workflow.json",
+            "promotion_decision": "promote_candidate_policy",
+        },
+        source_status="promote",
+    ).save_json(contract_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Unverified revenue increased by 12 percent.",
+            facts="{}",
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="balanced",
+            staged_verification=None,
+            runtime_trace=True,
+            bounded_trace=True,
+            bounded_trace_max_claims=20,
+            bounded_trace_max_verification_results=20,
+            bounded_trace_max_actions=20,
+            bounded_trace_max_action_results=20,
+            bounded_trace_max_events=20,
+            bounded_trace_max_nested_items=16,
+            bounded_trace_include_runtime_trace=False,
+            promotion_contract=str(contract_path),
+            max_verifier_route_attempts=None,
+            request_id="contract-control-policy",
+            output=None,
+            registry=None,
+        )
+    )
+
+    assert payload["risk_decision"]["action"] == "clarify"
+    assert payload["metadata"]["control_policy_source"] == "promotion_contract_feedback_policy"
+    assert payload["metadata"]["effective_control_policy_config"]["unsupported_action"] == "clarify"
+    assert payload["metadata"]["promotion_contract_control_policy_config"][
+        "unsupported_action"
+    ] == "clarify"
+    assert payload["metadata"]["promotion_contract_feedback_policy_workflow"][
+        "promotion_decision"
+    ] == "promote_candidate_policy"
+
+
 def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()

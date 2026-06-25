@@ -48,6 +48,7 @@ def export_product_promotion_contract(
         release_efficiency_report_path=release_efficiency_report,
     )
     payload = contract.to_dict()
+    control_policy_config = dict(contract.control_policy_config)
     control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
     feedback_policy_workflow = dict(contract.feedback_policy_workflow)
@@ -90,6 +91,7 @@ def export_product_promotion_contract(
                 "source_workflow": contract.source_workflow,
                 "source_status": contract.source_status,
                 "model_id": contract.model_id,
+                "control_policy_config": control_policy_config,
                 "control_defaults": control_defaults,
                 "control_default_max_verifier_route_attempts": control_defaults.get(
                     "max_verifier_route_attempts"
@@ -194,6 +196,7 @@ def export_product_promotion_contract(
             "source_status": contract.source_status,
             "runtime": dict(contract.runtime),
             "verifier_route": dict(contract.verifier_route),
+            "control_policy_config": control_policy_config,
             "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,

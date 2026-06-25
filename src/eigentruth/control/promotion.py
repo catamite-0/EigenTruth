@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from eigentruth.control.controller import ControlPolicyConfig
 from eigentruth.control.runtime_budget import ProductRuntimeBudgetPolicy
 from eigentruth.registry import (
     ArtifactManifestVerification,
@@ -26,6 +27,7 @@ class ProductPromotionContract:
     runtime_budget_policy: ProductRuntimeBudgetPolicy | Mapping[str, Any] = field(
         default_factory=ProductRuntimeBudgetPolicy
     )
+    control_policy_config: Mapping[str, Any] = field(default_factory=dict)
     control_defaults: Mapping[str, Any] = field(default_factory=dict)
     source_workflow: str | None = None
     source_status: str | None = None
@@ -44,6 +46,8 @@ class ProductPromotionContract:
         object.__setattr__(self, "runtime", dict(self.runtime))
         object.__setattr__(self, "verifier_route", dict(self.verifier_route))
         object.__setattr__(self, "runtime_budget_policy", policy)
+        control_policy = _control_policy_config_dict(self.control_policy_config)
+        object.__setattr__(self, "control_policy_config", control_policy)
         object.__setattr__(self, "control_defaults", dict(self.control_defaults))
         object.__setattr__(
             self,
@@ -78,6 +82,7 @@ class ProductPromotionContract:
                 runtime_budget_policy=ProductRuntimeBudgetPolicy.from_mapping(
                     _mapping(payload.get("runtime_budget_policy"))
                 ),
+                control_policy_config=_mapping(payload.get("control_policy_config")),
                 control_defaults=_mapping(payload.get("control_defaults")),
                 product_trace_replay_workflow=_mapping(
                     payload.get("product_trace_replay_workflow")
@@ -173,6 +178,9 @@ class ProductPromotionContract:
             verifier_route=_mapping(candidate.get("verifier_route")),
             runtime_budget_policy=product_runtime_budget_policy_from_release_candidate(
                 comparison
+            ),
+            control_policy_config=_product_control_policy_config_from_release_candidate(
+                feedback_policy_workflow
             ),
             control_defaults=_product_control_defaults_from_release_candidate(
                 comparison
@@ -439,6 +447,7 @@ class ProductPromotionContract:
             "runtime": dict(self.runtime),
             "verifier_route": dict(self.verifier_route),
             "runtime_budget_policy": self.runtime_budget_policy.to_dict(),
+            "control_policy_config": dict(self.control_policy_config),
             "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
@@ -674,6 +683,7 @@ def product_promotion_contract_metadata(
         "promotion_contract_source_status": contract.source_status,
         "promotion_contract_runtime": dict(contract.runtime),
         "promotion_contract_verifier_route": dict(contract.verifier_route),
+        "promotion_contract_control_policy_config": dict(contract.control_policy_config),
         "promotion_contract_control_defaults": dict(contract.control_defaults),
         "promotion_contract_product_trace_replay_workflow": dict(
             contract.product_trace_replay_workflow
@@ -738,6 +748,20 @@ def _product_control_defaults_from_release_candidate(
         if defaults:
             return defaults
     return {}
+
+
+def _product_control_policy_config_from_release_candidate(
+    feedback_policy_workflow: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _control_policy_config_dict(
+        _mapping(feedback_policy_workflow.get("candidate_control_policy_config"))
+    )
+
+
+def _control_policy_config_dict(payload: Mapping[str, Any]) -> dict[str, Any]:
+    if not payload:
+        return {}
+    return ControlPolicyConfig.from_dict(payload).to_dict()
 
 
 def _required_route_budget_policy(config: Mapping[str, Any]) -> dict[str, Any]:
@@ -815,7 +839,13 @@ def _feedback_policy_workflow_metadata(
         "report_status": workflow.get("report_status"),
         "promotion_decision": workflow.get("promotion_decision"),
         "candidate_control_policy": workflow.get("candidate_control_policy"),
+        "candidate_control_policy_config": _control_policy_config_dict(
+            _mapping(workflow.get("candidate_control_policy_config"))
+        ),
         "candidate_control_defaults": workflow.get("candidate_control_defaults"),
+        "candidate_control_defaults_config": _mapping(
+            workflow.get("candidate_control_defaults_config")
+        ),
         "matched_feedback_count": workflow.get("matched_feedback_count"),
         "accepted_but_wrong_rate": workflow.get("accepted_but_wrong_rate"),
         "retrieved_failure_rate": workflow.get("retrieved_failure_rate"),

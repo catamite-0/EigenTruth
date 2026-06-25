@@ -1353,7 +1353,8 @@ unregistered local JSON file. The release gate verifies the workflow artifact
 manifest, requires `workflow=feedback_policy_workflow`, accepts top-level
 `status=recommend` or `status=observed`, and requires a valid promotion decision
 (`promote_candidate_policy` or `keep_current_policy`). A `recommend` workflow
-must include candidate control-policy/default artifacts. Use
+must include candidate control-policy/default artifacts and a valid inline
+`candidate_control_policy_config` that can be parsed as `ControlPolicyConfig`. Use
 `--feedback-policy-workflow-registry` only when the workflow record lives outside
 `--readiness-registry`. Optional thresholds
 `--feedback-policy-min-matched-feedback-count`,
@@ -1543,8 +1544,9 @@ baseline/current optimization hints, so exported contracts preserve candidate
 control defaults such as `max_verifier_route_attempts` alongside the budget
 policy. When the release candidate was gated by a feedback-policy workflow, the
 contract and registry metadata also retain the feedback-policy report/manifest,
-promotion decision, candidate control-policy/default paths, and replay safety
-metrics. When the release candidate was gated by a release-efficiency report, the
+promotion decision, candidate control-policy/default paths, validated
+`ControlPolicyConfig`, control-default config, and replay safety metrics. When
+the release candidate was gated by a release-efficiency report, the
 promotion contract inherits the recommended runtime profile and efficiency score
 from the candidate. For older release-candidate reports, pass the
 release-efficiency report explicitly so the promotion contract, manifest, and
@@ -2741,9 +2743,10 @@ be trace replay or a controlled product rollout.
 
 Use `run_feedback_policy_workflow.py` when the same handoff should be produced
 as one reproducible artifact bundle. It builds or reuses the product feedback
-report, writes the candidate `ControlPolicyConfig` and runtime defaults, runs
-the replay audit, fingerprints the child reports/manifests, and optionally
-records the top-level workflow report in the local registry:
+report, writes the candidate `ControlPolicyConfig` and runtime defaults, embeds
+those configs in the top-level workflow decision, runs the replay audit,
+fingerprints the child reports/manifests, and optionally records the top-level
+workflow report in the local registry:
 
 ```bash
 python benchmarks/run_feedback_policy_workflow.py \

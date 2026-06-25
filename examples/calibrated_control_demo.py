@@ -31,6 +31,7 @@ from eigentruth.control import (
     RUNTIME_PROFILE_NAMES,
     ActionExecutorRegistry,
     ControlAction,
+    ControlPolicyConfig,
     PreGenerationRiskAssessment,
     PreGenerationRiskPolicy,
     ProductPromotionContract,
@@ -426,6 +427,15 @@ def verifier_route_attempts_from_runtime_profile(
     return None if value is None else _positive_int(value, name="max_verifier_route_attempts")
 
 
+def control_policy_config_from_promotion_contract(
+    promotion_contract: ProductPromotionContract | None,
+) -> ControlPolicyConfig | None:
+    """Return the feedback-derived control policy from a promotion contract."""
+    if promotion_contract is None or not promotion_contract.control_policy_config:
+        return None
+    return ControlPolicyConfig.from_dict(promotion_contract.control_policy_config)
+
+
 def control_defaults_from_runtime_profile(
     profile: RuntimeProfile | None,
     *,
@@ -686,7 +696,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     claims = extract_claims(args.text)
-    controller = RiskController(artifact)
+    control_policy_config = control_policy_config_from_promotion_contract(promotion_contract)
+    control_policy_source = (
+        None if control_policy_config is None else "promotion_contract_feedback_policy"
+    )
+    controller = RiskController(artifact, policy_config=control_policy_config)
     pre_generation_assessment, pre_generation_policy, pre_generation_metadata = (
         resolve_pre_generation_assessment(args)
     )
@@ -791,6 +805,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 runtime_profile_source=runtime_profile_source,
             ),
             "staged_verification_enabled": stage_policy is not None,
+            "effective_control_policy_config": (
+                None if control_policy_config is None else control_policy_config.to_dict()
+            ),
+            "control_policy_source": control_policy_source,
             "effective_control_defaults": runtime_control_defaults,
             "max_verifier_route_attempts": max_verifier_route_attempts,
             "verifier_type": type(verifier).__name__,
@@ -872,6 +890,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     runtime_profile_source=runtime_profile_source,
                 ),
                 "staged_verification_enabled": stage_policy is not None,
+                "effective_control_policy_config": (
+                    None if control_policy_config is None else control_policy_config.to_dict()
+                ),
+                "control_policy_source": control_policy_source,
                 "effective_control_defaults": runtime_control_defaults,
                 "max_verifier_route_attempts": max_verifier_route_attempts,
                 "action_execution_summary": trace.action_execution_summary(),

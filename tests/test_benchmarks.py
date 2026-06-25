@@ -5727,6 +5727,21 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
         safety_coverage_rate=0.50,
         unknown_safety_issue_rate=0.75,
     )
+    missing_config_feedback_workflow = _write_feedback_policy_workflow_report(
+        tmp_path / "missing-config-feedback-policy-workflow",
+        status="recommend",
+        matched_feedback_count=30,
+        safety_coverage_rate=1.0,
+        unknown_safety_issue_rate=0.0,
+    )
+    missing_config_payload = json.loads(
+        missing_config_feedback_workflow.read_text(encoding="utf-8")
+    )
+    missing_config_payload["decision"].pop("candidate_control_policy_config")
+    missing_config_feedback_workflow.write_text(
+        json.dumps(missing_config_payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
     payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -5754,6 +5769,19 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
     )
+    blocked_missing_config = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        feedback_policy_workflow_path=missing_config_feedback_workflow,
+        feedback_policy_min_matched_feedback_count=20,
+        feedback_policy_min_safety_coverage=0.70,
+        feedback_policy_max_unknown_safety_issue_rate=0.20,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
 
     assert payload["decision"]["status"] == "promote"
     assert payload["decision"]["feedback_policy_workflow_status"] == "promote"
@@ -5762,6 +5790,9 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
         "candidate-control-policy.json"
     )
     assert payload["feedback_policy_workflow_gate"]["gate"]["passed"] is True
+    assert payload["feedback_policy_workflow_gate"]["candidate_control_policy_config"][
+        "unsupported_action"
+    ] == "clarify"
     assert payload["feedback_policy_workflow_gate"]["matched_feedback_count"] == pytest.approx(30)
     assert payload["feedback_policy_workflow_gate"]["safety_coverage_rate"] == pytest.approx(1.0)
     assert payload["feedback_policy_workflow_gate"]["unknown_safety_issue_rate"] == pytest.approx(0.0)
@@ -5770,6 +5801,12 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
     assert candidate["feedback_policy_workflow"]["candidate_control_defaults"].endswith(
         "candidate-control-defaults.json"
     )
+    assert candidate["feedback_policy_workflow"]["candidate_control_policy_config"][
+        "unsupported_action"
+    ] == "clarify"
+    assert candidate["feedback_policy_workflow"]["candidate_control_defaults_config"][
+        "max_verifier_route_attempts"
+    ] == 2
     assert candidate["manifests"]["feedback_policy_workflow_manifest"].endswith(
         "feedback-policy-workflow/artifact-manifest.json"
     )
@@ -5780,6 +5817,11 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
     assert any(
         "matched feedback count below 20" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_missing_config["decision"]["status"] == "blocked"
+    assert any(
+        "candidate control policy config is missing" in reason
+        for reason in blocked_missing_config["decision"]["blocking_reasons"][0]["reasons"]
     )
 
 
@@ -8010,9 +8052,18 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "candidate_control_policy": (
                         "artifacts/feedback-policy-workflow/candidate-control-policy.json"
                     ),
+                    "candidate_control_policy_config": {
+                        "unsupported_action": "clarify",
+                        "compound_risk_action": "abstain",
+                        "compound_verification_escalates": False,
+                    },
                     "candidate_control_defaults": (
                         "artifacts/feedback-policy-workflow/candidate-control-defaults.json"
                     ),
+                    "candidate_control_defaults_config": {
+                        "staged_verification": True,
+                        "max_verifier_route_attempts": 2,
+                    },
                     "matched_feedback_count": 30,
                     "accepted_but_wrong_rate": 0.03,
                     "retrieved_failure_rate": 0.04,
@@ -8087,7 +8138,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["workflow"] == "product_promotion_contract"
     assert contract["runtime_budget_policy"]["max_mean_attempted_route_count"] == 1.1
     assert contract["control_defaults"] == {"max_verifier_route_attempts": 2}
+    assert contract["control_policy_config"]["unsupported_action"] == "clarify"
+    assert contract["control_policy_config"]["compound_verification_escalates"] is False
     assert payload["contract"]["control_defaults"] == {"max_verifier_route_attempts": 2}
+    assert payload["contract"]["control_policy_config"]["unsupported_action"] == "clarify"
     assert contract["product_trace_replay_workflow"]["record_key"] == (
         "report:trace-replay-workflow:0.1"
     )
@@ -8097,6 +8151,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["feedback_policy_workflow"]["candidate_control_policy"].endswith(
         "candidate-control-policy.json"
     )
+    assert contract["feedback_policy_workflow"]["candidate_control_policy_config"][
+        "unsupported_action"
+    ] == "clarify"
     assert contract["release_efficiency"]["recommended_profile"] == "balanced"
     assert contract["release_efficiency"]["recommended_efficiency_score"] == 2.0
     assert contract["metadata"]["release_efficiency_recommended_profile"] == "balanced"
@@ -8124,6 +8181,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
     assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
+    assert record.metadata["control_policy_config"]["unsupported_action"] == "clarify"
     assert record.metadata["control_default_max_verifier_route_attempts"] == 2
     assert record.metadata["recommended_route"] == "structured_qa"
     assert record.metadata["product_trace_replay_workflow_source"] == "registry"
@@ -9142,12 +9200,18 @@ def _write_feedback_policy_workflow_report(
     manifest_path = output_dir / "artifact-manifest.json"
     policy_path = output_dir / "candidate-control-policy.json"
     defaults_path = output_dir / "candidate-control-defaults.json"
+    policy_config = {
+        "unsupported_action": "clarify",
+        "compound_risk_action": "abstain",
+        "compound_verification_escalates": False,
+    }
+    defaults_config = {"staged_verification": True, "max_verifier_route_attempts": 2}
     policy_path.write_text(
-        json.dumps({"unsupported_action": "clarify", "compound_risk_action": "abstain"}, sort_keys=True) + "\n",
+        json.dumps(policy_config, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     defaults_path.write_text(
-        json.dumps({"staged_verification": True, "max_verifier_route_attempts": 2}, sort_keys=True) + "\n",
+        json.dumps(defaults_config, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     report_payload = {
@@ -9158,7 +9222,9 @@ def _write_feedback_policy_workflow_report(
             "status": status,
             "promotion_decision": promotion_decision,
             "candidate_control_policy": str(policy_path),
+            "candidate_control_policy_config": policy_config,
             "candidate_control_defaults": str(defaults_path),
+            "candidate_control_defaults_config": defaults_config,
             "matched_feedback_count": matched_feedback_count,
             "safety_coverage_rate": safety_coverage_rate,
             "unknown_safety_issue_rate": unknown_safety_issue_rate,
@@ -14008,6 +14074,7 @@ def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
     assert report["decision"]["feedback_report_status"] == "observed"
     assert report["decision"]["policy_recommendation_status"] == "recommend"
     assert report["decision"]["replay_audit_status"] == "passed"
+    assert report["decision"]["candidate_control_policy_config"]["unsupported_action"] == "clarify"
     assert report["decision"]["matched_feedback_count"] == 3
     assert report["decision"]["safety_coverage_rate"] == pytest.approx(1.0)
     assert report["children"]["product_feedback_report"]["status"] == "observed"
@@ -14016,9 +14083,12 @@ def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
     assert saved["artifact_manifest_summary"]["artifact_count"] == 9
     assert (output_dir / "candidate-control-policy.json").exists()
     assert (output_dir / "candidate-control-defaults.json").exists()
+    assert saved["decision"]["candidate_control_policy_config"]["unsupported_action"] == "clarify"
     assert record.metadata["workflow"] == "feedback_policy_workflow"
     assert record.metadata["status"] == "recommend"
     assert record.metadata["promotion_decision"] == "promote_candidate_policy"
+    assert record.metadata["candidate_control_policy_config"]["unsupported_action"] == "clarify"
+    assert record.metadata["candidate_control_defaults_config"]["max_verifier_route_attempts"] == 2
     assert record.metadata["matched_feedback_count"] == 3
     assert record.metadata["safety_coverage_rate"] == pytest.approx(1.0)
     assert record.metadata["suite"] == "unit"

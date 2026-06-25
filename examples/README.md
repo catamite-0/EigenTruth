@@ -126,6 +126,9 @@ profile. When no explicit or pre-generation profile is selected, a
 `ProductPromotionContract` with promoted release-efficiency evidence supplies
 the default runtime profile; the trace records this as
 `metadata.runtime_profile_source="promotion_contract_release_efficiency"`.
+If the same contract carries feedback-policy evidence, the demo also passes its
+validated `control_policy_config` into `RiskController` and records
+`metadata.control_policy_source` plus `metadata.effective_control_policy_config`.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence
@@ -176,8 +179,10 @@ the demo loads its promotion contract by default as route, calibrated control
 defaults, adapter-family, and required-audit metadata. The current default is
 the compact v1.5 product promotion contract artifact, which also carries
 selector replay and product-runtime-drift evidence. Contract control defaults
-such as `max_verifier_route_attempts` fill unset demo controls, while explicit
-CLI options still take precedence. Passing the same file explicitly with
+such as `max_verifier_route_attempts` fill unset demo controls, and any
+feedback-derived `ControlPolicyConfig` in the contract becomes the effective
+`RiskController` policy, while explicit CLI options still take precedence for
+runtime-budget flags. Passing the same file explicitly with
 `--promotion-contract` also enforces its runtime budget, including the
 low-latency product-route gates `max_retrieval_use_rate=0.0` and
 `max_mean_attempted_route_count=1.1`. The demo uses

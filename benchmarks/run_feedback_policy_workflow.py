@@ -450,10 +450,20 @@ def _workflow_decision(
             "paths",
             "control_policy",
         ),
+        "candidate_control_policy_config": _nested(
+            recommendation,
+            "recommendation",
+            "candidate_control_policy_config",
+        ),
         "candidate_control_defaults": _nested(
             recommendation,
             "paths",
             "control_defaults",
+        ),
+        "candidate_control_defaults_config": _nested(
+            recommendation,
+            "recommendation",
+            "candidate_control_defaults",
         ),
         "matched_feedback_count": _nested(
             feedback_report,
@@ -594,7 +604,17 @@ def _record_registry(config: FeedbackPolicyWorkflowConfig, report: Mapping[str, 
             "safety_coverage_rate": _nested(report, "decision", "safety_coverage_rate"),
             "unknown_safety_issue_rate": _nested(report, "decision", "unknown_safety_issue_rate"),
             "candidate_control_policy": _nested(report, "paths", "candidate_control_policy"),
+            "candidate_control_policy_config": _nested(
+                report,
+                "decision",
+                "candidate_control_policy_config",
+            ),
             "candidate_control_defaults": _nested(report, "paths", "candidate_control_defaults"),
+            "candidate_control_defaults_config": _nested(
+                report,
+                "decision",
+                "candidate_control_defaults_config",
+            ),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             **dict(config.metadata),
         },

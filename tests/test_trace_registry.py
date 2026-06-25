@@ -1234,6 +1234,16 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "artifacts/runtime-drift/product-runtime-drift.json"
             ),
             "product_trace_replay_workflow_status": "promote",
+            "feedback_policy_workflow_status": "promote",
+            "recommended_feedback_policy_workflow_report": (
+                "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
+            ),
+            "recommended_feedback_policy_candidate_control_policy": (
+                "artifacts/feedback-policy-workflow/candidate-control-policy.json"
+            ),
+            "recommended_feedback_policy_candidate_control_defaults": (
+                "artifacts/feedback-policy-workflow/candidate-control-defaults.json"
+            ),
             "selector_replay_status": "promote",
             "product_runtime_drift_status": "promote",
             "recommended_route": "structured_state",
@@ -1315,6 +1325,33 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_runtime_drift_report_path": (
                     "artifacts/runtime-drift/product-runtime-drift.json"
                 ),
+            },
+            "feedback_policy_workflow": {
+                "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
+                "manifest_path": "artifacts/feedback-policy-workflow/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:feedback-policy-workflow:0.1",
+                "report_status": "recommend",
+                "promotion_decision": "promote_candidate_policy",
+                "candidate_control_policy": (
+                    "artifacts/feedback-policy-workflow/candidate-control-policy.json"
+                ),
+                "candidate_control_policy_config": {
+                    "unsupported_action": "clarify",
+                    "compound_risk_action": "abstain",
+                    "compound_verification_escalates": False,
+                },
+                "candidate_control_defaults": (
+                    "artifacts/feedback-policy-workflow/candidate-control-defaults.json"
+                ),
+                "candidate_control_defaults_config": {
+                    "staged_verification": True,
+                    "max_verifier_route_attempts": 2,
+                },
+                "matched_feedback_count": 30,
+                "safety_coverage_rate": 1.0,
+                "unknown_safety_issue_rate": 0.0,
             },
             "release_efficiency": {
                 "report_path": "artifacts/efficiency/release-efficiency-report.json",
@@ -1400,6 +1437,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "performance_manifest": "artifacts/performance/artifact-manifest.json",
                 "product_trace_replay_workflow_manifest": (
                     "artifacts/trace-replay-workflow/artifact-manifest.json"
+                ),
+                "feedback_policy_workflow_manifest": (
+                    "artifacts/feedback-policy-workflow/artifact-manifest.json"
                 ),
                 "release_efficiency_manifest": "artifacts/efficiency/artifact-manifest.json",
                 "selector_replay_manifest": "artifacts/selector/artifact-manifest.json",
@@ -1508,6 +1548,22 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
+    assert contract.control_policy_config["unsupported_action"] == "clarify"
+    assert contract.control_policy_config["compound_verification_escalates"] is False
+    assert contract.feedback_policy_workflow["record_key"] == "report:feedback-policy-workflow:0.1"
+    assert contract.feedback_policy_workflow["manifest_path"] == (
+        "artifacts/feedback-policy-workflow/artifact-manifest.json"
+    )
+    assert contract.feedback_policy_workflow["candidate_control_policy_config"][
+        "unsupported_action"
+    ] == "clarify"
+    assert contract.feedback_policy_workflow["candidate_control_defaults_config"][
+        "max_verifier_route_attempts"
+    ] == 2
+    assert contract.metadata["recommended_feedback_policy_workflow_report"] == (
+        "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
+    )
+    assert contract.metadata["feedback_policy_workflow_status"] == "promote"
     assert contract.release_efficiency["recommended_profile"] == "balanced"
     assert contract.release_efficiency["recommended_efficiency_score"] == 2.0
     assert contract.metadata["release_efficiency_report"] == (
@@ -1549,6 +1605,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "artifacts/runtime-current/product-runtime-baseline.json"
     )
     assert contract.control_defaults == {"max_verifier_route_attempts": 2}
+    assert contract.to_dict()["control_policy_config"]["unsupported_action"] == "clarify"
     assert contract.to_dict()["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert contract.metadata["product_runtime_drift_gate_enabled"] is True
     assert contract.metadata["product_runtime_drift_compared_metric_count"] == 9
@@ -1584,6 +1641,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
         "verifier_trace": 0.9,
     }
     assert roundtrip == contract
+    assert roundtrip.control_policy_config == contract.control_policy_config
     json.dumps(contract.to_dict())
 
 
@@ -1600,6 +1658,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         product_trace_replay_workflow={
             "report_path": "trace-replay-workflow.json",
             "record_key": "report:trace-replay-workflow:0.1",
+        },
+        control_policy_config={
+            "unsupported_action": "clarify",
+            "compound_verification_escalates": False,
         },
         feedback_policy_workflow={
             "report_path": "feedback-policy-workflow.json",
@@ -1630,6 +1692,10 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_model_id"] == "demo-model"
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
     assert metadata["promotion_contract_verifier_route"] == {"route": "structured_qa"}
+    assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
+    assert metadata["promotion_contract_control_policy_config"][
+        "compound_verification_escalates"
+    ] is False
     assert metadata["promotion_contract_control_defaults"] == {
         "max_verifier_route_attempts": 3
     }

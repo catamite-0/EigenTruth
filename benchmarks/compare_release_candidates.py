@@ -20,7 +20,11 @@ from benchmarks.compare_readiness_baselines import (  # noqa: E402
 )
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
-from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
+from eigentruth.control import (  # noqa: E402
+    RUNTIME_PROFILE_NAMES,
+    ControlPolicyConfig,
+    get_runtime_profile,
+)
 from eigentruth.registry import (  # noqa: E402
     ArtifactRegistry,
     ArtifactVerificationContext,
@@ -1399,9 +1403,15 @@ def _feedback_policy_workflow_gate(
             _nested(report, "decision", "candidate_control_policy"),
             _nested(report, "paths", "candidate_control_policy"),
         ),
+        "candidate_control_policy_config": _feedback_policy_candidate_control_policy_config(
+            report
+        ),
         "candidate_control_defaults": _first_present(
             _nested(report, "decision", "candidate_control_defaults"),
             _nested(report, "paths", "candidate_control_defaults"),
+        ),
+        "candidate_control_defaults_config": _feedback_policy_candidate_control_defaults_config(
+            report
         ),
         "matched_feedback_count": _float_or_none(_feedback_policy_matched_feedback_count(report)),
         "accepted_but_wrong_rate": _float_or_none(
@@ -1499,6 +1509,17 @@ def _feedback_policy_workflow_report_gate(
             _nested(report, "paths", "candidate_control_policy"),
         ) is None:
             failures.append("feedback policy workflow candidate control policy is missing")
+        policy_config = _feedback_policy_candidate_control_policy_config(report)
+        if not policy_config:
+            failures.append("feedback policy workflow candidate control policy config is missing")
+        else:
+            try:
+                ControlPolicyConfig.from_dict(policy_config)
+            except ValueError as exc:
+                failures.append(
+                    "feedback policy workflow candidate control policy config "
+                    f"is invalid: {exc}"
+                )
         if _first_present(
             _nested(report, "decision", "candidate_control_defaults"),
             _nested(report, "paths", "candidate_control_defaults"),
@@ -1573,6 +1594,24 @@ def _feedback_policy_unknown_safety_issue_rate(report: Mapping[str, Any]) -> Any
     return _first_present(
         _nested(report, "decision", "unknown_safety_issue_rate"),
         _nested(report, "replay_summary", "unknown_safety_issue_rate", "estimate"),
+    )
+
+
+def _feedback_policy_candidate_control_policy_config(report: Mapping[str, Any]) -> dict[str, Any]:
+    return _mapping(
+        _first_present(
+            _nested(report, "decision", "candidate_control_policy_config"),
+            _nested(report, "recommendation", "candidate_control_policy_config"),
+        )
+    )
+
+
+def _feedback_policy_candidate_control_defaults_config(report: Mapping[str, Any]) -> dict[str, Any]:
+    return _mapping(
+        _first_present(
+            _nested(report, "decision", "candidate_control_defaults_config"),
+            _nested(report, "recommendation", "candidate_control_defaults"),
+        )
     )
 
 
@@ -2568,7 +2607,13 @@ def _candidate_with_gates(
             "report_status": feedback_policy_workflow.get("report_status"),
             "promotion_decision": feedback_policy_workflow.get("promotion_decision"),
             "candidate_control_policy": feedback_policy_workflow.get("candidate_control_policy"),
+            "candidate_control_policy_config": feedback_policy_workflow.get(
+                "candidate_control_policy_config"
+            ),
             "candidate_control_defaults": feedback_policy_workflow.get("candidate_control_defaults"),
+            "candidate_control_defaults_config": feedback_policy_workflow.get(
+                "candidate_control_defaults_config"
+            ),
             "matched_feedback_count": feedback_policy_workflow.get("matched_feedback_count"),
             "accepted_but_wrong_rate": feedback_policy_workflow.get("accepted_but_wrong_rate"),
             "retrieved_failure_rate": feedback_policy_workflow.get("retrieved_failure_rate"),
