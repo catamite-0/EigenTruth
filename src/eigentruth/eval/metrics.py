@@ -20,18 +20,18 @@ def _average_ranks(x: Tensor) -> Tensor:
     Return 1-based ranks with ties resolved to the average rank (like scipy rankdata).
     """
     n = x.numel()
+    if n == 0:
+        return torch.empty(0, dtype=torch.float64, device=x.device)
     order = torch.argsort(x)
     sorted_x = x[order]
-    ranks = torch.empty(n, dtype=torch.float64)
-    i = 0
-    while i < n:
-        j = i
-        while j + 1 < n and bool(sorted_x[j + 1] == sorted_x[i]):
-            j += 1
-        # i..j 是一组平局，取 1-based 排名 (i+1)..(j+1) 的平均
-        avg_rank = (i + j) / 2.0 + 1.0
-        ranks[order[i : j + 1]] = avg_rank
-        i = j + 1
+    _, counts = torch.unique_consecutive(sorted_x, return_counts=True)
+    counts_f = counts.to(dtype=torch.float64)
+    group_ends = torch.cumsum(counts_f, dim=0)
+    group_starts = group_ends - counts_f + 1.0
+    group_ranks = (group_starts + group_ends) / 2.0
+    sorted_ranks = torch.repeat_interleave(group_ranks, counts)
+    ranks = torch.empty(n, dtype=torch.float64, device=sorted_ranks.device)
+    ranks[order] = sorted_ranks
     return ranks
 
 
@@ -57,6 +57,10 @@ def roc_auc(scores: ArrayLike, labels: ArrayLike) -> float:
     labels_t = torch.as_tensor(labels, dtype=torch.float64).flatten()
     if scores_t.numel() != labels_t.numel():
         raise ValueError("scores and labels must have the same length.")
+    if not torch.isfinite(scores_t).all():
+        raise ValueError("scores must contain only finite values.")
+    if not torch.logical_or(labels_t == 0, labels_t == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
 
     pos_mask = labels_t == 1
     neg_mask = labels_t == 0

@@ -306,7 +306,7 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from preloaded layer-score columns."""
         return self._calibrate_layer_scores(
-            labels=torch.as_tensor(layer_scores.labels, dtype=torch.int64),
+            labels=torch.as_tensor(layer_scores.labels, dtype=torch.float64),
             config=dict(layer_scores.config),
             layer_scores=layer_scores.layer_scores,
             signals=signals,
@@ -335,7 +335,7 @@ class LayerScoreSweepCalibrator:
         metadata: Optional[Mapping[str, Any]] = None,
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from a validated ``ScoreDump``."""
-        labels = torch.as_tensor(score_dump.labels, dtype=torch.int64)
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.float64)
         config = dict(score_dump.config)
         layer_scores = _collect_layer_scores_from_score_dump(score_dump)
         return self._calibrate_layer_scores(
@@ -369,7 +369,7 @@ class LayerScoreSweepCalibrator:
     ) -> LayerScoreSweepReport:
         """Build a layer/score sweep report from an ``eval_truthfulqa`` score dump."""
         score_dump = ScoreDump.from_mapping(dump)
-        labels = torch.as_tensor(score_dump.labels, dtype=torch.int64)
+        labels = torch.as_tensor(score_dump.labels, dtype=torch.float64)
         config = dict(score_dump.config)
         layer_scores = _collect_layer_scores_from_score_dump(score_dump)
         return self._calibrate_layer_scores(
@@ -585,7 +585,12 @@ def _calibrate_score_job(job: _SweepScoreJob) -> SweepScoreResult:
 
 
 def _prepare_labels(labels: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    labels_t = torch.as_tensor(labels, dtype=torch.int64).flatten()
+    raw_labels = torch.as_tensor(labels, dtype=torch.float64).flatten()
+    if not torch.isfinite(raw_labels).all():
+        raise ValueError("labels must contain only finite values.")
+    if not torch.logical_or(raw_labels == 0, raw_labels == 1).all():
+        raise ValueError("labels must be binary values in {0, 1}.")
+    labels_t = raw_labels.to(dtype=torch.int64)
     true_mask = labels_t == 0
     false_mask = labels_t == 1
     return labels_t, true_mask, false_mask
@@ -615,7 +620,7 @@ def _directional_conformal_threshold_from_tensor(
         threshold = float("inf")
     else:
         oriented = true_scores if direction == "higher" else -true_scores
-        threshold = float(torch.sort(oriented).values[rank - 1].item())
+        threshold = float(torch.kthvalue(oriented, rank).values.item())
     return threshold if direction == "higher" else -threshold
 
 

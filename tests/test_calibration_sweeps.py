@@ -1,6 +1,7 @@
 """Layer/score sweep calibration tests."""
 
 import json
+import math
 
 import pytest
 import torch
@@ -8,7 +9,12 @@ import torch
 import eigentruth.calibration.sweeps as sweep_module
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
-from eigentruth.eval.score_dump import ScoreDump, load_score_dump_layer_scores, write_score_dump_jsonl
+from eigentruth.eval.score_dump import (
+    ScoreDump,
+    ScoreDumpLayerScores,
+    load_score_dump_layer_scores,
+    write_score_dump_jsonl,
+)
 
 
 def _score_dump():
@@ -68,6 +74,23 @@ def test_layer_score_sweep_rejects_fractional_labels():
 
     with pytest.raises(ValueError, match="label"):
         LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_dump(dump)
+
+
+def test_layer_score_sweep_rejects_non_binary_preloaded_labels():
+    dump = ScoreDump.from_mapping(_score_dump())
+    layer_scores = ScoreDumpLayerScores(
+        labels=dump.labels,
+        layer_scores=sweep_module._collect_layer_scores_from_score_dump(dump),
+        config=dump.config,
+    )
+    bad_layer_scores = ScoreDumpLayerScores(
+        labels=(0.0, 0.5, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0),
+        config=layer_scores.config,
+        layer_scores=layer_scores.layer_scores,
+    )
+
+    with pytest.raises(ValueError, match="binary"):
+        LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_layer_scores(bad_layer_scores)
 
 
 def test_layer_score_sweep_parallel_matches_serial():
@@ -231,3 +254,20 @@ def test_layer_score_sweep_supports_lower_is_anomalous_scores():
     assert score.threshold == directional_conformal_threshold(true_scores, 0.4, "lower")
     assert score.false_alarm == directional_trigger_rate(true_scores, score.threshold, "lower")
     assert score.detection == directional_trigger_rate(false_scores, score.threshold, "lower")
+
+
+def test_layer_score_sweep_tensor_threshold_matches_directional_helper_with_ties():
+    scores = torch.tensor([2.0, 1.0, 2.0, 5.0, 3.0], dtype=torch.float64)
+
+    for direction in ("higher", "lower"):
+        actual = sweep_module._directional_conformal_threshold_from_tensor(scores, 0.5, direction)
+        expected = directional_conformal_threshold(scores, 0.5, direction)
+
+        assert actual == expected
+
+
+def test_layer_score_sweep_tensor_threshold_handles_insufficient_samples():
+    scores = torch.tensor([2.0], dtype=torch.float64)
+
+    assert math.isinf(sweep_module._directional_conformal_threshold_from_tensor(scores, 0.1, "higher"))
+    assert sweep_module._directional_conformal_threshold_from_tensor(scores, 0.1, "lower") == float("-inf")

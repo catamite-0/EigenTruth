@@ -71,6 +71,19 @@ class TestRocAuc:
         labels = [0, 1, 0, 1]
         assert roc_auc(scores, labels) == pytest.approx(0.5)
 
+    def test_repeated_tie_blocks_match_pairwise_auc(self):
+        scores = [0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0]
+        labels = [0, 1, 0, 1, 1, 0, 1]
+        positives = [score for score, label in zip(scores, labels) if label == 1]
+        negatives = [score for score, label in zip(scores, labels) if label == 0]
+        wins = sum(
+            1.0 if pos > neg else 0.5 if pos == neg else 0.0
+            for pos in positives
+            for neg in negatives
+        )
+
+        assert roc_auc(scores, labels) == pytest.approx(wins / (len(positives) * len(negatives)))
+
     def test_absent_class_returns_nan(self):
         """缺少某一类时返回 NaN。"""
         assert math.isnan(roc_auc([1.0, 2.0, 3.0], [0, 0, 0]))
@@ -79,6 +92,18 @@ class TestRocAuc:
     def test_length_mismatch_raises(self):
         with pytest.raises(ValueError, match="same length"):
             roc_auc([1.0, 2.0], [1])
+
+    def test_rejects_non_binary_labels(self):
+        with pytest.raises(ValueError, match="binary"):
+            roc_auc([0.1, 0.2, 0.3], [0, 0.5, 1])
+        with pytest.raises(ValueError, match="binary"):
+            roc_auc([0.1, 0.2, 0.3], [0, 1, 2])
+
+    def test_rejects_non_finite_scores(self):
+        with pytest.raises(ValueError, match="finite"):
+            roc_auc([0.1, float("nan"), 0.3], [0, 1, 1])
+        with pytest.raises(ValueError, match="finite"):
+            roc_auc([0.1, float("inf"), 0.3], [0, 1, 1])
 
     def test_accepts_tensors(self):
         """接受张量输入。"""
