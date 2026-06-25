@@ -80,8 +80,15 @@ Added a geometry-calibrated score primitive:
 - `GeometryScoreFusionArtifact` and `GeometryScoreFusionCalibrator` make that score deployable as a conformal artifact without changing score-dump schemas or adding dependencies.
 - `eval_score_ensemble.py` now evaluates the geometry-by-uncertainty fusion family alongside single signals and naive rank fusion, and can save a deployable `GeometryScoreFusionArtifact` from the selected `--best-alpha`.
 
+Ran the current Qwen/SmolLM2 l80 geometry-fusion replay:
+
+- `artifacts/truthfulqa-frontier-qwen-smollm2-l80-geometry-fusion/score-ensemble-report.json` compares `subspace_resid,resid_update_norm,eigenscore` against `nll_answer` as the only available uncertainty proxy.
+- At alpha `0.100`, Qwen `truth_proj` detects `0.279`, naive `mean_rank` detects `0.244`, and the best geometry-fusion method detects only `0.055`.
+- At alpha `0.100`, SmolLM2 `truth_proj` detects `0.229`, naive `mean_rank` detects `0.188`, and the best geometry-fusion method detects only `0.036`.
+- Variants that add `truth_proj` to the geometry group or use `max_rank` geometry aggregation improve the fusion score slightly but still remain far below `truth_proj` (`<=0.083` Qwen, `<=0.069` SmolLM2). Current evidence says `nll_answer` is a poor final-correction proxy, not that geometry-by-uncertainty fusion is intrinsically bad.
+
 ## Next Research-to-Code Candidates
 
-1. Run geometry-calibrated fusion on the existing Qwen/SmolLM2 l80 score dumps, then compare it against single `truth_proj`, naive rank fusion, and staged verifier routing under the same false-alarm budget.
+1. Replace `nll_answer` in geometry fusion with stronger uncertainty evidence: real multi-sample semantic energy, self-consistency support/refutation rates, or retrieval/verifier disagreement features.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

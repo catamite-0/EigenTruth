@@ -1,0 +1,100 @@
+{
+  "artifacts": {
+    "qwen05_score_dump_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json",
+      "sha256": "2dd8b2b555ce201828ab884d82cc8c8bc01155a254b79256e1ee9e8a1888c056",
+      "size_bytes": 3320
+    },
+    "qwen05_score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.records.jsonl",
+      "sha256": "2a5ef4fe89528a557989cac73ef0049e02092e4034cca60f14d7d715c2fbd60a",
+      "size_bytes": 861209
+    },
+    "score_ensemble_max_geometry_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-max-geometry-report.json",
+      "sha256": "c209a4f31cf64d65ef35d636089e5e9c98d4e7ca16c9fe282e4bf1aa2b3a8db8",
+      "size_bytes": 41161
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "d4cf21e04678d4953248583358a0634daef673d133a1299abe70822b35423df1",
+      "size_bytes": 41112
+    },
+    "score_ensemble_with_truth_proj_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-with-truth-proj-report.json",
+      "sha256": "7f2cdbfe481fe250e0ddd1bc9343b6af8d955fcb7a760064ae8160e6a77f842a",
+      "size_bytes": 41509
+    },
+    "smollm2_score_dump_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json",
+      "sha256": "a417279938bd6a153947ec43b39be0dc26206f0e0651aa85d8309310cfb14251",
+      "size_bytes": 3333
+    },
+    "smollm2_score_dump_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.records.jsonl",
+      "sha256": "ca00ae6a2fa86fab0056d22e63b3f021047eb957ec7d7908195b288d3f27587f",
+      "size_bytes": 857544
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_alpha": 0.1,
+    "geometry_fusion_methods": [
+      "interaction",
+      "product",
+      "weighted_mean",
+      "noisy_or"
+    ],
+    "geometry_signals": [
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "models": [
+      "qwen05",
+      "smollm2"
+    ],
+    "runner": "eval_score_ensemble",
+    "scale": "l80",
+    "signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "resid_update_norm",
+      "eigenscore"
+    ],
+    "status": "complete",
+    "uncertainty_signals": [
+      "nll_answer"
+    ],
+    "verdict": "nll_proxy_geometry_fusion_underperforms_truth_proj"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  }
+}

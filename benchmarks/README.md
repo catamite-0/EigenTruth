@@ -2661,6 +2661,18 @@ with AUROC 0.764, and SmolLM2 peaks at `truth_proj` layer `-16` with AUROC
 0.782. Treat this as a negative result for naive score fusion, not as evidence
 against richer verifier/retrieval ensembles.
 
+The geometry-fusion replay at
+`artifacts/truthfulqa-frontier-qwen-smollm2-l80-geometry-fusion/` is also
+negative with the currently available uncertainty proxy. Using
+`subspace_resid,resid_update_norm,eigenscore` as geometry signals and
+`nll_answer` as the uncertainty proxy, the best geometry-fusion method detects
+0.055 for Qwen and 0.036 for SmolLM2 at alpha 0.100. Adding `truth_proj` to the
+geometry group or switching geometry aggregation to `max_rank` raises the best
+fusion detection only to 0.083 for Qwen and 0.069 for SmolLM2. Treat this as a
+specific rejection of `nll_answer` as a final-correction uncertainty proxy; the
+next useful test needs real multi-sample semantic energy, self-consistency, or
+verifier/retrieval disagreement features.
+
 The paired cache-only replay
 (`artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/`) reproduces the
 same score records and best sweep choices from the per-cell cache root. End-to-end

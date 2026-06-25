@@ -420,6 +420,33 @@ internal diagnostic and use other internal scores as auxiliary diagnostics until
 a stronger ensemble method proves incremental detection under the same
 false-alarm budget.
 
+Geometry-calibrated fusion was replayed on the JSONL l80 frontier score dumps:
+
+```bash
+python benchmarks/eval_score_ensemble.py \
+  --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
+  --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
+  --methods max_rank,mean_rank \
+  --geometry-signals subspace_resid,resid_update_norm,eigenscore \
+  --uncertainty-signals nll_answer \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --repeats 50 \
+  --best-alpha 0.10 \
+  --json artifacts/truthfulqa-frontier-qwen-smollm2-l80-geometry-fusion/score-ensemble-report.json
+```
+
+At alpha 0.100, `truth_proj` still dominates: Qwen detection is 0.279 for
+`truth_proj`, 0.244 for naive `mean_rank`, and 0.055 for the best geometry
+fusion; SmolLM2 detection is 0.229 for `truth_proj`, 0.188 for naive
+`mean_rank`, and 0.036 for the best geometry fusion. Two stress variants also
+failed to close the gap: adding `truth_proj` to the geometry group reached only
+0.074 / 0.068 detection, and `max_rank` geometry aggregation reached only
+0.083 / 0.069 detection for Qwen / SmolLM2. Current evidence rejects
+`nll_answer` as a useful final-correction uncertainty proxy; the next geometry
+fusion test should use real multi-sample semantic energy, self-consistency, or
+verifier disagreement features.
+
 ## Frontier Stability Report
 
 `benchmarks/eval_frontier_stability.py` replays saved frontier score dumps across
