@@ -200,61 +200,70 @@ class ProductTrace:
         and metadata payloads should be summarized while keeping routing and
         budget diagnostics available.
         """
+        prepared = _prepare_trace_payload(self)
         diagnostics = _bounded_mapping_payload(
-            self.diagnostics,
+            prepared.diagnostics,
             max_items=max_diagnostics,
             max_nested_items=max_nested_items,
             max_string_length=max_string_length,
         )
-        claims = [_claim_to_dict(claim) for claim in self.claims]
+        claims = prepared.claims
         verification_results = [
             _bounded_verification_result(
-                _verification_result_to_dict(result),
+                result,
                 max_nested_items=max_nested_items,
                 max_string_length=max_string_length,
             )
-            for result in self.verification_results
+            for result in prepared.verification_results
         ]
         actions = [
             _bounded_jsonable(
-                _action_to_dict(action),
+                action,
                 max_depth=4,
                 max_items=max_nested_items,
                 max_string_length=max_string_length,
             )
-            for action in self.actions
+            for action in prepared.actions
         ]
         action_results = [
             _bounded_action_result(
-                _action_result_to_dict(result),
+                result,
                 max_nested_items=max_nested_items,
                 max_string_length=max_string_length,
             )
-            for result in self.action_results
+            for result in prepared.action_results
         ]
         events = [
             _bounded_event(
-                _event_to_dict(event),
+                event,
                 max_nested_items=max_nested_items,
                 max_string_length=max_string_length,
             )
-            for event in self.events
+            for event in prepared.events
         ]
-        runtime_trace = _runtime_trace_to_dict(self.runtime_trace)
         summaries = {
-            "action_execution": self.action_execution_summary(),
-            "verification_route": self.verification_route_summary(),
-            "verification_route_cost": self.verification_route_cost_summary(),
-            "runtime": self.runtime_summary(),
-            "cache": self.cache_summary(),
-            "verification_stage": self.verification_stage_summary(),
+            "action_execution": _action_execution_summary_from_results(prepared.action_results),
+            "verification_route": _verification_route_summary_from_results(
+                prepared.verification_results,
+            ),
+            "verification_route_cost": _verification_route_cost_summary_from_results(
+                prepared.verification_results,
+            ),
+            "runtime": _runtime_summary_from_payload(prepared.runtime_trace),
+            "cache": _cache_summary_from_metadata(prepared.metadata),
+            "verification_stage": _verification_stage_summary_from_payload(
+                events=prepared.events,
+                metadata=prepared.metadata,
+                claim_count=len(prepared.claims),
+                verification_result_count=len(prepared.verification_results),
+            ),
         }
         payload = {
             "schema_version": 1,
             "trace_format": "bounded_product_trace",
             "request_id": self.request_id,
             "diagnostics": diagnostics["items"],
-            "risk_decision": _risk_decision_to_dict(self.risk_decision),
+            "risk_decision": prepared.risk_decision,
             "summaries": _bounded_summaries(
                 summaries,
                 max_nested_items=max_nested_items,
@@ -274,7 +283,7 @@ class ProductTrace:
                 max_nested_items=max_nested_items,
                 max_string_length=max_string_length,
             ),
-            "runtime_trace": runtime_trace if include_runtime_trace else None,
+            "runtime_trace": prepared.runtime_trace if include_runtime_trace else None,
             "truncation": {
                 "diagnostics": diagnostics["summary"],
                 "claims": _truncation_summary(len(claims), max_claims),
@@ -292,183 +301,257 @@ class ProductTrace:
 
     def action_execution_summary(self) -> dict[str, Any]:
         """Summarize action execution results for trace/registry metadata."""
-        results = [_action_result_to_dict(result) for result in self.action_results]
-        counts_by_status: dict[str, int] = {}
-        counts_by_action: dict[str, int] = {}
-        side_effects = False
-        for result in results:
-            status = str(result.get("status", "unknown"))
-            action = str(result.get("action", "unknown"))
-            counts_by_status[status] = counts_by_status.get(status, 0) + 1
-            counts_by_action[action] = counts_by_action.get(action, 0) + 1
-            metadata = result.get("metadata", {})
-            if isinstance(metadata, Mapping) and bool(metadata.get("side_effects", False)):
-                side_effects = True
-        return {
-            "total": len(results),
-            "counts_by_status": counts_by_status,
-            "counts_by_action": counts_by_action,
-            "side_effects": side_effects,
-        }
+        return _action_execution_summary_from_results(
+            tuple(_action_result_to_dict(result) for result in self.action_results)
+        )
 
     def verification_route_summary(self) -> dict[str, Any]:
         """Summarize verifier route choices recorded in result metadata."""
-        results = [_verification_result_to_dict(result) for result in self.verification_results]
-        counts_by_status: dict[str, int] = {}
-        counts_by_selected_route: dict[str, int] = {}
-        counts_by_selected_verifier: dict[str, int] = {}
-        counts_by_matched_route: dict[str, int] = {}
-        counts_by_skipped_route: dict[str, int] = {}
-        skipped_routes = []
-        routed_total = 0
-        for result in results:
-            status = str(result.get("status", "unknown"))
-            counts_by_status[status] = counts_by_status.get(status, 0) + 1
-            metadata = result.get("metadata", {})
-            if not isinstance(metadata, Mapping):
-                metadata = {}
-            selected_route = metadata.get("selected_route")
-            if selected_route is not None:
-                routed_total += 1
-                route_name = str(selected_route)
-                counts_by_selected_route[route_name] = counts_by_selected_route.get(route_name, 0) + 1
-            selected_verifier = metadata.get("selected_verifier")
-            if selected_verifier is not None:
-                verifier_name = str(selected_verifier)
-                counts_by_selected_verifier[verifier_name] = counts_by_selected_verifier.get(verifier_name, 0) + 1
-            for route in _as_sequence(metadata.get("matched_routes", ())):
-                route_name = str(route)
-                counts_by_matched_route[route_name] = counts_by_matched_route.get(route_name, 0) + 1
-            for skipped in _as_sequence(metadata.get("skipped_routes", ())):
-                if not isinstance(skipped, Mapping):
-                    continue
-                route_name = str(skipped.get("route", "unknown"))
-                counts_by_skipped_route[route_name] = counts_by_skipped_route.get(route_name, 0) + 1
-                skipped_routes.append(dict(_to_jsonable(skipped)))
-        return {
-            "total": len(results),
-            "routed_total": routed_total,
-            "unrouted_total": len(results) - routed_total,
-            "counts_by_status": counts_by_status,
-            "counts_by_selected_route": counts_by_selected_route,
-            "counts_by_selected_verifier": counts_by_selected_verifier,
-            "counts_by_matched_route": counts_by_matched_route,
-            "counts_by_skipped_route": counts_by_skipped_route,
-            "skipped_routes": skipped_routes,
-        }
+        return _verification_route_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
 
     def verification_route_cost_summary(self) -> dict[str, Any]:
         """Summarize verifier route cost metadata from verification results."""
-        results = [_verification_result_to_dict(result) for result in self.verification_results]
-        records = [_route_cost_record(result) for result in results]
-        by_route_records: dict[str, list[dict[str, Any]]] = {}
-        for record in records:
-            by_route_records.setdefault(record["route"], []).append(record)
-        summary = _route_cost_stats(records)
-        summary["by_route"] = {
-            route: _route_cost_stats(route_records)
-            for route, route_records in by_route_records.items()
-        }
-        return summary
+        return _verification_route_cost_summary_from_results(
+            tuple(_verification_result_to_dict(result) for result in self.verification_results)
+        )
 
     def runtime_summary(self) -> dict[str, Any]:
         """Return a compact runtime profile summary for trace/registry metadata."""
-        payload = _runtime_trace_to_dict(self.runtime_trace)
-        if payload is None:
-            return {
-                "total_seconds": 0.0,
-                "accounted_seconds": 0.0,
-                "unaccounted_seconds": 0.0,
-                "measured_phases": 0,
-                "phase_seconds": {},
-                "phase_counts": {},
-                "slowest_phase": None,
-            }
-        summary = payload.get("summary", {})
-        return dict(summary) if isinstance(summary, Mapping) else RuntimeTrace.from_dict(payload).summary()
+        return _runtime_summary_from_payload(_runtime_trace_to_dict(self.runtime_trace))
 
     def cache_summary(self) -> dict[str, Any]:
         """Return aggregate cache hit/miss statistics from trace metadata."""
         metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
-        caches = _cache_stats_from_metadata(metadata)
-        aggregate = _combine_cache_stats(caches.values())
-        return {
-            "total_caches": len(caches),
-            "aggregate": aggregate,
-            "caches": caches,
-        }
+        return _cache_summary_from_metadata(metadata)
 
     def verification_stage_summary(self) -> dict[str, Any]:
         """Summarize staged-verification skip decisions from trace events."""
-        events = [_event_to_dict(event) for event in self.events]
         metadata = self.metadata if isinstance(self.metadata, Mapping) else {}
-        stage_event = _latest_event_payload(events, "verification_stage_decision")
-        initial_event = _latest_event_payload(events, "initial_verification")
-        skipped_event = _latest_event_payload(events, "initial_verification_skipped")
-        claim_count = _first_non_negative_int(
-            initial_event.get("n_claims"),
-            len(self.claims),
+        return _verification_stage_summary_from_payload(
+            events=tuple(_event_to_dict(event) for event in self.events),
+            metadata=metadata,
+            claim_count=len(self.claims),
+            verification_result_count=len(self.verification_results),
         )
-        result_count = _initial_verification_result_count(initial_event)
-        if result_count is None:
-            result_count = len(self.verification_results)
-        verified_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("verified_claim_ids", ())))
-        skipped_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("skipped_claim_ids", ())))
-        verification_scope = str(
-            initial_event.get("verification_scope")
-            or stage_event.get("verification_scope")
-            or ""
-        ).strip().lower()
-        if not verification_scope:
-            verification_scope = "none" if _optional_bool(stage_event.get("run_verifier")) is False else "all"
-        run_verifier = _optional_bool(stage_event.get("run_verifier"))
-        skipped = _optional_bool(initial_event.get("skipped"))
-        if skipped is None and skipped_event:
-            skipped = True
-        if skipped is None and run_verifier is not None:
-            skipped = not run_verifier
-        if skipped is None:
-            skipped = False
-        verified_claim_count = len(verified_claim_ids) if verified_claim_ids else result_count
-        if verified_claim_count is None:
-            verified_claim_count = 0 if skipped is True else claim_count
-        if skipped is True and claim_count is not None:
-            saved_claim_count = claim_count
-        elif skipped_claim_ids:
-            saved_claim_count = len(skipped_claim_ids)
-        elif verification_scope == "triggered" and claim_count is not None and verified_claim_count is not None:
-            saved_claim_count = max(claim_count - verified_claim_count, 0)
-        else:
-            saved_claim_count = 0
-        triggered_claim_ids = tuple(str(item) for item in _as_sequence(stage_event.get("triggered_claim_ids", ())))
-        triggered_features = _string_sequence_mapping(stage_event.get("triggered_features"))
-        triggered_metadata = _string_sequence_mapping(stage_event.get("triggered_metadata"))
-        enabled = (
-            bool(stage_event)
-            or _truthy_flag(metadata.get("staged_verification_enabled"))
-            or isinstance(metadata.get("staged_verification"), Mapping)
-        )
+
+
+@dataclass(frozen=True)
+class _PreparedTracePayload:
+    diagnostics: Any
+    claims: tuple[dict[str, Any], ...]
+    verification_results: tuple[dict[str, Any], ...]
+    risk_decision: dict[str, Any] | None
+    actions: tuple[Any, ...]
+    action_results: tuple[dict[str, Any], ...]
+    events: tuple[dict[str, Any], ...]
+    metadata: Any
+    runtime_trace: dict[str, Any] | None
+
+
+def _prepare_trace_payload(trace: ProductTrace) -> _PreparedTracePayload:
+    return _PreparedTracePayload(
+        diagnostics=_to_jsonable(trace.diagnostics),
+        claims=tuple(_claim_to_dict(claim) for claim in trace.claims),
+        verification_results=tuple(
+            _verification_result_to_dict(result)
+            for result in trace.verification_results
+        ),
+        risk_decision=_risk_decision_to_dict(trace.risk_decision),
+        actions=tuple(_action_to_dict(action) for action in trace.actions),
+        action_results=tuple(_action_result_to_dict(result) for result in trace.action_results),
+        events=tuple(_event_to_dict(event) for event in trace.events),
+        metadata=_to_jsonable(trace.metadata),
+        runtime_trace=_runtime_trace_to_dict(trace.runtime_trace),
+    )
+
+
+def _action_execution_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_action: dict[str, int] = {}
+    side_effects = False
+    for result in results:
+        status = str(result.get("status", "unknown"))
+        action = str(result.get("action", "unknown"))
+        counts_by_status[status] = counts_by_status.get(status, 0) + 1
+        counts_by_action[action] = counts_by_action.get(action, 0) + 1
+        metadata = result.get("metadata", {})
+        if isinstance(metadata, Mapping) and bool(metadata.get("side_effects", False)):
+            side_effects = True
+    return {
+        "total": len(results),
+        "counts_by_status": counts_by_status,
+        "counts_by_action": counts_by_action,
+        "side_effects": side_effects,
+    }
+
+
+def _verification_route_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    counts_by_status: dict[str, int] = {}
+    counts_by_selected_route: dict[str, int] = {}
+    counts_by_selected_verifier: dict[str, int] = {}
+    counts_by_matched_route: dict[str, int] = {}
+    counts_by_skipped_route: dict[str, int] = {}
+    skipped_routes = []
+    routed_total = 0
+    for result in results:
+        status = str(result.get("status", "unknown"))
+        counts_by_status[status] = counts_by_status.get(status, 0) + 1
+        metadata = result.get("metadata", {})
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        selected_route = metadata.get("selected_route")
+        if selected_route is not None:
+            routed_total += 1
+            route_name = str(selected_route)
+            counts_by_selected_route[route_name] = counts_by_selected_route.get(route_name, 0) + 1
+        selected_verifier = metadata.get("selected_verifier")
+        if selected_verifier is not None:
+            verifier_name = str(selected_verifier)
+            counts_by_selected_verifier[verifier_name] = counts_by_selected_verifier.get(verifier_name, 0) + 1
+        for route in _as_sequence(metadata.get("matched_routes", ())):
+            route_name = str(route)
+            counts_by_matched_route[route_name] = counts_by_matched_route.get(route_name, 0) + 1
+        for skipped in _as_sequence(metadata.get("skipped_routes", ())):
+            if not isinstance(skipped, Mapping):
+                continue
+            route_name = str(skipped.get("route", "unknown"))
+            counts_by_skipped_route[route_name] = counts_by_skipped_route.get(route_name, 0) + 1
+            skipped_routes.append(dict(_to_jsonable(skipped)))
+    return {
+        "total": len(results),
+        "routed_total": routed_total,
+        "unrouted_total": len(results) - routed_total,
+        "counts_by_status": counts_by_status,
+        "counts_by_selected_route": counts_by_selected_route,
+        "counts_by_selected_verifier": counts_by_selected_verifier,
+        "counts_by_matched_route": counts_by_matched_route,
+        "counts_by_skipped_route": counts_by_skipped_route,
+        "skipped_routes": skipped_routes,
+    }
+
+
+def _verification_route_cost_summary_from_results(
+    results: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    records = [_route_cost_record(result) for result in results]
+    by_route_records: dict[str, list[dict[str, Any]]] = {}
+    for record in records:
+        by_route_records.setdefault(record["route"], []).append(record)
+    summary = _route_cost_stats(records)
+    summary["by_route"] = {
+        route: _route_cost_stats(route_records)
+        for route, route_records in by_route_records.items()
+    }
+    return summary
+
+
+def _runtime_summary_from_payload(payload: Mapping[str, Any] | None) -> dict[str, Any]:
+    if payload is None:
         return {
-            "enabled": enabled,
-            "run_verifier": run_verifier,
-            "skipped": bool(skipped),
-            "verification_scope": verification_scope,
-            "reason": stage_event.get("reason", skipped_event.get("reason")),
-            "claim_count": claim_count,
-            "verification_result_count": result_count,
-            "verified_claim_count": verified_claim_count,
-            "saved_claim_count": saved_claim_count,
-            "verified_claim_ids": verified_claim_ids,
-            "skipped_claim_ids": skipped_claim_ids,
-            "skipped_claim_count": len(skipped_claim_ids),
-            "skip_rate": _safe_div(saved_claim_count, claim_count or 0),
-            "triggered_claim_count": len(triggered_claim_ids),
-            "triggered_claim_ids": triggered_claim_ids,
-            "triggered_feature_counts": _count_nested_values(triggered_features),
-            "triggered_metadata_counts": _count_nested_values(triggered_metadata),
-            "triggered_features": triggered_features,
-            "triggered_metadata": triggered_metadata,
+            "total_seconds": 0.0,
+            "accounted_seconds": 0.0,
+            "unaccounted_seconds": 0.0,
+            "measured_phases": 0,
+            "phase_seconds": {},
+            "phase_counts": {},
+            "slowest_phase": None,
         }
+    summary = payload.get("summary", {})
+    return dict(summary) if isinstance(summary, Mapping) else RuntimeTrace.from_dict(payload).summary()
+
+
+def _cache_summary_from_metadata(metadata: Any) -> dict[str, Any]:
+    metadata_payload = metadata if isinstance(metadata, Mapping) else {}
+    caches = _cache_stats_from_metadata(metadata_payload)
+    aggregate = _combine_cache_stats(caches.values())
+    return {
+        "total_caches": len(caches),
+        "aggregate": aggregate,
+        "caches": caches,
+    }
+
+
+def _verification_stage_summary_from_payload(
+    *,
+    events: Sequence[Mapping[str, Any]],
+    metadata: Any,
+    claim_count: int,
+    verification_result_count: int,
+) -> dict[str, Any]:
+    metadata_payload = metadata if isinstance(metadata, Mapping) else {}
+    stage_event = _latest_event_payload(events, "verification_stage_decision")
+    initial_event = _latest_event_payload(events, "initial_verification")
+    skipped_event = _latest_event_payload(events, "initial_verification_skipped")
+    total_claims = _first_non_negative_int(
+        initial_event.get("n_claims"),
+        claim_count,
+    )
+    result_count = _initial_verification_result_count(initial_event)
+    if result_count is None:
+        result_count = verification_result_count
+    verified_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("verified_claim_ids", ())))
+    skipped_claim_ids = tuple(str(item) for item in _as_sequence(initial_event.get("skipped_claim_ids", ())))
+    verification_scope = str(
+        initial_event.get("verification_scope")
+        or stage_event.get("verification_scope")
+        or ""
+    ).strip().lower()
+    if not verification_scope:
+        verification_scope = "none" if _optional_bool(stage_event.get("run_verifier")) is False else "all"
+    run_verifier = _optional_bool(stage_event.get("run_verifier"))
+    skipped = _optional_bool(initial_event.get("skipped"))
+    if skipped is None and skipped_event:
+        skipped = True
+    if skipped is None and run_verifier is not None:
+        skipped = not run_verifier
+    if skipped is None:
+        skipped = False
+    verified_claim_count = len(verified_claim_ids) if verified_claim_ids else result_count
+    if verified_claim_count is None:
+        verified_claim_count = 0 if skipped is True else total_claims
+    if skipped is True and total_claims is not None:
+        saved_claim_count = total_claims
+    elif skipped_claim_ids:
+        saved_claim_count = len(skipped_claim_ids)
+    elif verification_scope == "triggered" and total_claims is not None and verified_claim_count is not None:
+        saved_claim_count = max(total_claims - verified_claim_count, 0)
+    else:
+        saved_claim_count = 0
+    triggered_claim_ids = tuple(str(item) for item in _as_sequence(stage_event.get("triggered_claim_ids", ())))
+    triggered_features = _string_sequence_mapping(stage_event.get("triggered_features"))
+    triggered_metadata = _string_sequence_mapping(stage_event.get("triggered_metadata"))
+    enabled = (
+        bool(stage_event)
+        or _truthy_flag(metadata_payload.get("staged_verification_enabled"))
+        or isinstance(metadata_payload.get("staged_verification"), Mapping)
+    )
+    return {
+        "enabled": enabled,
+        "run_verifier": run_verifier,
+        "skipped": bool(skipped),
+        "verification_scope": verification_scope,
+        "reason": stage_event.get("reason", skipped_event.get("reason")),
+        "claim_count": total_claims,
+        "verification_result_count": result_count,
+        "verified_claim_count": verified_claim_count,
+        "saved_claim_count": saved_claim_count,
+        "verified_claim_ids": verified_claim_ids,
+        "skipped_claim_ids": skipped_claim_ids,
+        "skipped_claim_count": len(skipped_claim_ids),
+        "skip_rate": _safe_div(saved_claim_count, total_claims or 0),
+        "triggered_claim_count": len(triggered_claim_ids),
+        "triggered_claim_ids": triggered_claim_ids,
+        "triggered_feature_counts": _count_nested_values(triggered_features),
+        "triggered_metadata_counts": _count_nested_values(triggered_metadata),
+        "triggered_features": triggered_features,
+        "triggered_metadata": triggered_metadata,
+    }
 
 
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:

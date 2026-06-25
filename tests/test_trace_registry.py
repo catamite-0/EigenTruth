@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import eigentruth.control.trace as trace_module
 import eigentruth.registry.provenance as registry_provenance
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
@@ -290,6 +291,58 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
     json.dumps(payload)
+
+
+def test_product_trace_bounded_payload_reuses_prepared_trace_payload(monkeypatch):
+    original_verification = trace_module._verification_result_to_dict
+    original_action_result = trace_module._action_result_to_dict
+    original_event = trace_module._event_to_dict
+    calls = {"verification": 0, "action_result": 0, "event": 0}
+
+    def counted_verification(result):
+        calls["verification"] += 1
+        return original_verification(result)
+
+    def counted_action_result(result):
+        calls["action_result"] += 1
+        return original_action_result(result)
+
+    def counted_event(event):
+        calls["event"] += 1
+        return original_event(event)
+
+    monkeypatch.setattr(trace_module, "_verification_result_to_dict", counted_verification)
+    monkeypatch.setattr(trace_module, "_action_result_to_dict", counted_action_result)
+    monkeypatch.setattr(trace_module, "_event_to_dict", counted_event)
+    trace = ProductTrace(
+        verification_results=tuple(
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                metadata={
+                    "selected_route": "structured_qa",
+                    "matched_routes": ("structured_qa",),
+                    "total_duration_seconds": 0.01,
+                },
+            )
+            for _ in range(5)
+        ),
+        action_results=tuple(
+            ActionResult(action=ControlAction.RETRIEVE, status=ActionExecutionStatus.SUCCEEDED)
+            for _ in range(4)
+        ),
+        events=(
+            TraceEvent("verification_stage_decision", {"run_verifier": True}),
+            TraceEvent("initial_verification", {"n_claims": 5, "verification_result_count": 5}),
+        ),
+    )
+
+    payload = trace.to_bounded_dict()
+
+    assert payload["summaries"]["verification_route"]["total"] == 5
+    assert payload["summaries"]["verification_route_cost"]["total"] == 5
+    assert payload["summaries"]["action_execution"]["total"] == 4
+    assert calls == {"verification": 5, "action_result": 4, "event": 2}
 
 
 def test_artifact_registry_json_roundtrip(tmp_path):
