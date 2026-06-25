@@ -61,9 +61,11 @@ class AdapterReadinessWorkflowConfig:
     max_retrieval_use_rate: float = 0.0
     include_retrieval: bool = False
     include_retrieval_structured_qa: bool = False
+    include_triple_evidence: bool = False
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.6
     retrieval_limit: int = 1
+    triple_min_slot_coverage: float = 1.0
     model: str = "sshleifer/tiny-gpt2"
     dtype: str = "float32"
     layers: Sequence[int] = (-1,)
@@ -128,9 +130,12 @@ class AdapterReadinessWorkflowConfig:
         )
         if int(self.retrieval_limit) <= 0:
             raise ValueError("retrieval_limit must be positive.")
+        if not (0.0 <= float(self.triple_min_slot_coverage) <= 1.0):
+            raise ValueError("triple_min_slot_coverage must be in [0, 1].")
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "performance_max_workers", performance_max_workers)
         object.__setattr__(self, "retrieval_limit", int(self.retrieval_limit))
+        object.__setattr__(self, "triple_min_slot_coverage", float(self.triple_min_slot_coverage))
         if self.max_batch_token_budgets is not None:
             object.__setattr__(
                 self,
@@ -190,9 +195,11 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
             max_retrieval_use_rate=config.max_retrieval_use_rate,
             include_retrieval=config.include_retrieval,
             include_retrieval_structured_qa=config.include_retrieval_structured_qa,
+            include_triple_evidence=config.include_triple_evidence,
             verifier_min_overlap=config.verifier_min_overlap,
             retriever_min_overlap=config.retriever_min_overlap,
             retrieval_limit=config.retrieval_limit,
+            triple_min_slot_coverage=config.triple_min_slot_coverage,
         )
     )
     if config.performance_report_path is None:
@@ -422,9 +429,11 @@ def _write_artifact_manifest(
             ),
             "adapter_include_retrieval": config.include_retrieval,
             "adapter_include_retrieval_structured_qa": config.include_retrieval_structured_qa,
+            "adapter_include_triple_evidence": config.include_triple_evidence,
             "adapter_verifier_min_overlap": config.verifier_min_overlap,
             "adapter_retriever_min_overlap": config.retriever_min_overlap,
             "adapter_retrieval_limit": config.retrieval_limit,
+            "adapter_triple_min_slot_coverage": config.triple_min_slot_coverage,
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "inside_sampling_report": None
             if config.inside_sampling_report_path is None
@@ -537,9 +546,11 @@ def _config_from_args(args: argparse.Namespace) -> AdapterReadinessWorkflowConfi
         max_retrieval_use_rate=args.max_retrieval_use_rate,
         include_retrieval=bool(args.include_retrieval),
         include_retrieval_structured_qa=bool(args.include_retrieval_structured_qa),
+        include_triple_evidence=bool(args.include_triple_evidence),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
+        triple_min_slot_coverage=args.triple_min_slot_coverage,
         model=args.model,
         dtype=args.dtype,
         layers=_parse_int_list(args.layers, flag="--layers"),
@@ -612,9 +623,12 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="include the local retrieval-groundedness route in the adapter-family matrix")
     parser.add_argument("--include-retrieval-structured-qa", action="store_true",
                         help="include the local retrieval structured-QA route in the adapter-family matrix")
+    parser.add_argument("--include-triple-evidence", action="store_true",
+                        help="include the strict triple-evidence audit route in the adapter-family matrix")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.6)
     parser.add_argument("--retrieval-limit", type=int, default=1)
+    parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0)
     parser.add_argument("--model", default="sshleifer/tiny-gpt2")
     parser.add_argument("--dtype", default="float32")
     parser.add_argument("--layers", default="-1")

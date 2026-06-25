@@ -6302,6 +6302,17 @@ def test_adapter_readiness_workflow_rejects_bool_performance_workers(tmp_path):
         )
 
 
+def test_adapter_readiness_workflow_rejects_invalid_triple_slot_coverage(tmp_path):
+    module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
+
+    with pytest.raises(ValueError, match="triple_min_slot_coverage"):
+        module.AdapterReadinessWorkflowConfig(
+            output_dir=tmp_path,
+            include_triple_evidence=True,
+            triple_min_slot_coverage=1.5,
+        )
+
+
 def test_run_adapter_readiness_workflow_promotes_when_quality_and_performance_pass(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_adapter_readiness_workflow")
 
@@ -6603,6 +6614,8 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
             alpha=0.2,
             include_retrieval=True,
             include_retrieval_structured_qa=True,
+            include_triple_evidence=True,
+            min_false_refuted_rate=0.0,
             max_mean_attempted_route_count=2.1,
             max_retrieval_use_rate=1.0,
             performance_report_path=performance_report_path,
@@ -6615,14 +6628,20 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
     assert payload["readiness_decision"]["status"] == "promote"
     assert payload["adapter_family_matrix"]["include_retrieval"] is True
     assert payload["adapter_family_matrix"]["include_retrieval_structured_qa"] is True
+    assert payload["adapter_family_matrix"]["include_triple_evidence"] is True
     assert "retrieval_groundedness" in payload["adapter_family_matrix"]["routes"]
     assert "retrieval_structured_qa" in payload["adapter_family_matrix"]["routes"]
+    assert "triple_evidence" in payload["adapter_family_matrix"]["routes"]
+    assert payload["adapter_family_matrix"]["audit_routes"] == ("triple_evidence",)
     assert payload["adapter_family_matrix"]["route_comparison"]["by_route"]["retrieval_groundedness"][
         "retrieval_use_rate"
     ] == pytest.approx(1.0)
     assert payload["adapter_family_matrix"]["route_comparison"]["by_route"]["retrieval_structured_qa"][
         "retrieval_use_rate"
     ] == pytest.approx(1.0)
+    assert payload["adapter_family_matrix"]["route_comparison"]["by_route"]["triple_evidence"][
+        "false_supported_rate"
+    ] == pytest.approx(0.0)
     assert payload["performance_matrix_path"] == str(performance_report_path)
     assert payload["execution"]["performance_report_reused"] is True
     assert payload["runtime_recommendation"]["recommendation"]["batch_size"] == 2
@@ -6642,7 +6661,9 @@ def test_run_adapter_readiness_workflow_can_reuse_performance_report(tmp_path, m
     assert manifest["metadata"]["performance_report_reused"] is True
     assert manifest["metadata"]["adapter_include_retrieval"] is True
     assert manifest["metadata"]["adapter_include_retrieval_structured_qa"] is True
+    assert manifest["metadata"]["adapter_include_triple_evidence"] is True
     assert manifest["metadata"]["adapter_retrieval_limit"] == 1
+    assert manifest["metadata"]["adapter_triple_min_slot_coverage"] == pytest.approx(1.0)
     assert manifest["metadata"]["inside_trigger_budget_policy"] == "cost_first"
     assert manifest["metadata"]["performance_report_path"] == str(performance_report_path)
     assert manifest["artifacts"]["performance_matrix_report"]["exists"] is True

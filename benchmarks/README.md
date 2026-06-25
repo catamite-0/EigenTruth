@@ -1440,7 +1440,10 @@ Pass `--include-retrieval --max-mean-attempted-route-count 2.1
 local retrieval-groundedness adapter family. Use
 `--include-retrieval-structured-qa` with the same route-count/retrieval-use
 gates when readiness should also prove retrieved structured question/answer
-facts.
+facts. Use `--include-triple-evidence --min-false-refuted-rate 0.0` when
+readiness should also require the strict triple-evidence audit family; this
+keeps the audit gated on zero false support without treating insufficient
+evidence as a refutation.
 
 Use `--performance-dry-run` to inspect the performance commands without loading
 a model. Dry-run performance evidence produces `needs_performance_evidence`,
