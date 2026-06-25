@@ -10,10 +10,14 @@ benchmark runners live in `benchmarks/` at the repository root.
 from __future__ import annotations
 
 from eigentruth.eval.conformal import (
+    ABSTENTION_COMPARISON_METRICS,
     AdaptiveScoreTransform,
+    ConformalAbstentionComparisonCandidate,
+    ConformalAbstentionComparisonReport,
     ConformalAbstentionDecision,
     ConformalAbstentionReport,
     adaptive_anomaly_scores,
+    conformal_abstention_comparison_report,
     conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
@@ -62,9 +66,13 @@ __all__ = [
     "binomial_confidence_interval",
     "selective_classification_report",
     "confidence_error_report",
+    "ABSTENTION_COMPARISON_METRICS",
     "AdaptiveScoreTransform",
+    "ConformalAbstentionComparisonCandidate",
+    "ConformalAbstentionComparisonReport",
     "evaluate_conformal_abstention",
     "conformal_abstention_report",
+    "conformal_abstention_comparison_report",
     "ConformalAbstentionReport",
     "ConformalAbstentionDecision",
     "adaptive_anomaly_scores",

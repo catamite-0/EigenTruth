@@ -266,6 +266,143 @@ def test_eval_conformal_run_writes_abstention_report(tmp_path):
     assert report["conditional_correctness_lower_bound"] == pytest.approx(0.6)
 
 
+def test_eval_conformal_run_writes_abstention_comparison_report(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    comparison_path = tmp_path / "abstention-comparison.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {
+                "maha_last": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "subspace_resid": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            },
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_abstention_report=None,
+        include_abstention_report=False,
+        save_abstention_comparison=str(comparison_path),
+        include_abstention_comparison=False,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        abstention_alpha=0.50,
+        abstention_signal=None,
+        abstention_direction=None,
+        abstention_signals="maha_last,subspace_resid",
+        abstention_best_by="conditional_correctness_lower_bound",
+        direction=None,
+        adaptive_feature=(),
+        adaptive_feature_weight=(),
+        adaptive_intercept=0.0,
+        adaptive_score_name="adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+    report = payload["abstention_comparison_report"]
+    sidecar = json.loads(comparison_path.read_text(encoding="utf-8"))
+
+    assert report == sidecar
+    assert report["candidate_count"] == 2
+    assert report["best_by"] == "conditional_correctness_lower_bound"
+    assert report["recommended"]["score_name"] == "subspace_resid"
+    assert report["recommended"]["selection_value"] == pytest.approx(0.6)
+    assert [item["score_name"] for item in report["candidates"]] == [
+        "subspace_resid",
+        "maha_last",
+    ]
+
+
+def test_eval_conformal_abstention_comparison_uses_jsonl_selected_columns(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "tiny", "layer": 0},
+        "labels": [0, 0, 0, 0, 1, 1],
+        "scores": {
+            "maha_last": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+            "subspace_resid": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            "unused": [99.0] * 6,
+        },
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    comparison_path = tmp_path / "abstention-comparison.json"
+    write_score_dump_jsonl(dump, scores_path)
+
+    def fail_from_mapping(*args, **kwargs):
+        raise AssertionError("eval_conformal should use selected JSONL loading")
+
+    monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_abstention_report=None,
+        include_abstention_report=False,
+        save_abstention_comparison=str(comparison_path),
+        include_abstention_comparison=False,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        abstention_alpha=0.50,
+        abstention_signal=None,
+        abstention_direction=None,
+        abstention_signals="maha_last,subspace_resid",
+        abstention_best_by="conditional_correctness_lower_bound",
+        direction=None,
+        adaptive_feature=(),
+        adaptive_feature_weight=(),
+        adaptive_intercept=0.0,
+        adaptive_score_name="adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+
+    assert payload["config"]["score_dump"]["source_format"] == "eigentruth.score_dump.jsonl"
+    assert payload["abstention_comparison_report"]["recommended"]["score_name"] == "subspace_resid"
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] == 1
+    assert comparison_path.exists()
+
+
 def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_conformal")
     from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl

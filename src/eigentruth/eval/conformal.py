@@ -298,6 +298,133 @@ class ConformalAbstentionReport:
         )
 
 
+ABSTENTION_COMPARISON_METRICS = (
+    "conditional_correctness_lower_bound",
+    "empirical_selective_accuracy",
+    "empirical_participation_rate",
+    "correct_retention_lower_bound",
+    "correct_retention_rate",
+)
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionComparisonCandidate:
+    """One ranked score candidate in a conformal abstention comparison."""
+
+    rank: int
+    score_name: str
+    direction: str
+    selection_metric: str
+    selection_value: float | None
+    report: ConformalAbstentionReport
+
+    def __post_init__(self) -> None:
+        rank = int(self.rank)
+        if rank < 1:
+            raise ValueError("rank must be >= 1.")
+        score_name = str(self.score_name)
+        if not score_name:
+            raise ValueError("score_name must be non-empty.")
+        if self.direction not in {"higher", "lower"}:
+            raise ValueError("direction must be 'higher' or 'lower'.")
+        if self.selection_metric not in ABSTENTION_COMPARISON_METRICS:
+            raise ValueError(
+                "selection_metric must be one of "
+                f"{ABSTENTION_COMPARISON_METRICS}."
+            )
+        if self.selection_value is not None:
+            value = _unit_interval_float(self.selection_value, name="selection_value")
+            object.__setattr__(self, "selection_value", value)
+        if not isinstance(self.report, ConformalAbstentionReport):
+            raise ValueError("report must be a ConformalAbstentionReport.")
+        object.__setattr__(self, "rank", rank)
+        object.__setattr__(self, "score_name", score_name)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable candidate payload."""
+        return {
+            "rank": self.rank,
+            "score_name": self.score_name,
+            "direction": self.direction,
+            "selection_metric": self.selection_metric,
+            "selection_value": self.selection_value,
+            "report": self.report.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+    ) -> "ConformalAbstentionComparisonCandidate":
+        """Build a candidate from JSON-like data."""
+        raw_report = data.get("report")
+        if not isinstance(raw_report, Mapping):
+            raise ValueError("candidate report must be a mapping.")
+        return cls(
+            rank=int(data["rank"]),
+            score_name=str(data["score_name"]),
+            direction=str(data.get("direction", "higher")),
+            selection_metric=str(
+                data.get("selection_metric", "conditional_correctness_lower_bound")
+            ),
+            selection_value=(
+                None if data.get("selection_value") is None else float(data["selection_value"])
+            ),
+            report=ConformalAbstentionReport.from_dict(raw_report),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionComparisonReport:
+    """Rank several abstention signals under a shared correctness target."""
+
+    alpha: float
+    best_by: str
+    candidates: tuple[ConformalAbstentionComparisonCandidate, ...]
+
+    def __post_init__(self) -> None:
+        alpha = _alpha_float(self.alpha)
+        if self.best_by not in ABSTENTION_COMPARISON_METRICS:
+            raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+        candidates = tuple(self.candidates)
+        ranks = tuple(candidate.rank for candidate in candidates)
+        if ranks != tuple(range(1, len(candidates) + 1)):
+            raise ValueError("candidate ranks must be contiguous starting at 1.")
+        object.__setattr__(self, "alpha", alpha)
+        object.__setattr__(self, "candidates", candidates)
+
+    @property
+    def recommended(self) -> ConformalAbstentionComparisonCandidate | None:
+        """Return the top-ranked candidate, if any."""
+        return None if not self.candidates else self.candidates[0]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable comparison report."""
+        recommended = self.recommended
+        return {
+            "alpha": self.alpha,
+            "best_by": self.best_by,
+            "candidate_count": len(self.candidates),
+            "recommended": None if recommended is None else recommended.to_dict(),
+            "candidates": [candidate.to_dict() for candidate in self.candidates],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionComparisonReport":
+        """Build a comparison report from JSON-like data."""
+        raw_candidates = data.get("candidates", ())
+        if not isinstance(raw_candidates, Sequence) or isinstance(raw_candidates, str):
+            raise ValueError("candidates must be a sequence.")
+        return cls(
+            alpha=data["alpha"],
+            best_by=str(data.get("best_by", "conditional_correctness_lower_bound")),
+            candidates=tuple(
+                ConformalAbstentionComparisonCandidate.from_dict(candidate)
+                for candidate in raw_candidates
+            ),
+        )
+
+
 def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor:
     """计算每个测试分数的保守共形 p 值。
     Conservative split-conformal p-value for each test score.
@@ -459,6 +586,89 @@ def conformal_abstention_report(
         alpha=alpha_value,
         direction=direction,
         score_name=score_name,
+    )
+
+
+def conformal_abstention_comparison_report(
+    uncertainty_scores: Mapping[str, ArrayLike],
+    correctness: Sequence[bool | int | float],
+    alpha: float,
+    *,
+    directions: Mapping[str, str] | None = None,
+    best_by: str = "conditional_correctness_lower_bound",
+) -> ConformalAbstentionComparisonReport:
+    """Rank several uncertainty scores as conformal abstention candidates.
+
+    All candidates share the same correctness labels and alpha. Higher values are
+    better for every supported ``best_by`` metric; ties are resolved by
+    conservative correctness, empirical selective accuracy, participation,
+    correct retention, then score name for deterministic reports.
+    """
+    if not isinstance(uncertainty_scores, Mapping):
+        raise ValueError("uncertainty_scores must be a mapping of score name to values.")
+    if not uncertainty_scores:
+        raise ValueError("uncertainty_scores must contain at least one score.")
+    if best_by not in ABSTENTION_COMPARISON_METRICS:
+        raise ValueError(f"best_by must be one of {ABSTENTION_COMPARISON_METRICS}.")
+    alpha_value = _alpha_float(alpha)
+    direction_map = (
+        {}
+        if directions is None
+        else {str(name): str(value) for name, value in directions.items()}
+    )
+
+    reports: list[ConformalAbstentionReport] = []
+    for raw_name, scores in uncertainty_scores.items():
+        name = str(raw_name)
+        if not name:
+            raise ValueError("score names must be non-empty.")
+        direction = direction_map.get(name, "higher")
+        reports.append(
+            conformal_abstention_report(
+                scores,
+                correctness,
+                alpha_value,
+                direction=direction,
+                score_name=name,
+            )
+        )
+
+    def metric_value(report: ConformalAbstentionReport, metric: str) -> float | None:
+        value = getattr(report, metric)
+        if value is None:
+            return None
+        return _unit_interval_float(value, name=metric)
+
+    def sortable_value(value: float | None) -> float:
+        return -1.0 if value is None else value
+
+    def sort_key(report: ConformalAbstentionReport) -> tuple[float, float, float, float, float, str]:
+        score_name = "" if report.score_name is None else report.score_name
+        return (
+            -sortable_value(metric_value(report, best_by)),
+            -sortable_value(metric_value(report, "conditional_correctness_lower_bound")),
+            -sortable_value(metric_value(report, "empirical_selective_accuracy")),
+            -sortable_value(metric_value(report, "empirical_participation_rate")),
+            -sortable_value(metric_value(report, "correct_retention_lower_bound")),
+            score_name,
+        )
+
+    ranked_reports = sorted(reports, key=sort_key)
+    candidates = tuple(
+        ConformalAbstentionComparisonCandidate(
+            rank=rank,
+            score_name=str(report.score_name),
+            direction=report.direction,
+            selection_metric=best_by,
+            selection_value=metric_value(report, best_by),
+            report=report,
+        )
+        for rank, report in enumerate(ranked_reports, start=1)
+    )
+    return ConformalAbstentionComparisonReport(
+        alpha=alpha_value,
+        best_by=best_by,
+        candidates=candidates,
     )
 
 

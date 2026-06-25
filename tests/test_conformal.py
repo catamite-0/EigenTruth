@@ -11,8 +11,10 @@ import torch
 
 from eigentruth.eval.conformal import (
     AdaptiveScoreTransform,
+    ConformalAbstentionComparisonReport,
     ConformalAbstentionReport,
     adaptive_anomaly_scores,
+    conformal_abstention_comparison_report,
     conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
@@ -246,6 +248,35 @@ class TestConformalAbstention:
             conformal_abstention_report([1.0, 2.0], [1, 0], 0.5, direction="sideways")
         with pytest.raises(ValueError, match="threshold"):
             evaluate_conformal_abstention([1.0], [1], threshold=float("nan"), alpha=0.5)
+
+    def test_abstention_comparison_ranks_multiple_signals(self):
+        report = conformal_abstention_comparison_report(
+            {
+                "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+                "support": [10.0, 11.0, 12.0, 13.0, 12.5, 1.0],
+            },
+            [1, 1, 1, 1, 0, 0],
+            0.5,
+            directions={"weak": "higher", "strong": "higher", "support": "lower"},
+        )
+
+        loaded = ConformalAbstentionComparisonReport.from_dict(report.to_dict())
+
+        assert report.recommended is not None
+        assert report.recommended.score_name == "strong"
+        assert report.recommended.rank == 1
+        assert report.candidates[0].selection_metric == "conditional_correctness_lower_bound"
+        assert report.candidates[0].selection_value == pytest.approx(0.6)
+        assert report.candidates[1].score_name == "support"
+        assert report.candidates[1].direction == "lower"
+        assert loaded == report
+
+    def test_abstention_comparison_rejects_invalid_inputs(self):
+        with pytest.raises(ValueError, match="at least one score"):
+            conformal_abstention_comparison_report({}, [1], 0.5)
+        with pytest.raises(ValueError, match="best_by"):
+            conformal_abstention_comparison_report({"u": [1.0]}, [1], 0.5, best_by="bad")
 
 
 class TestAdaptiveConformalScores:

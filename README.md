@@ -117,14 +117,16 @@ python benchmarks/eval_truthfulqa.py --model gpt2 --layer -8 --sweep \
 python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
   --json artifacts/gpt2-conformal-report.json \
   --save-abstention-report artifacts/gpt2-abstention-report.json \
+  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --save-abstention-comparison artifacts/gpt2-abstention-comparison.json \
   --save-sweep-report artifacts/gpt2-sweep-report.json \
   --save-best-calibration artifacts/gpt2-best-calibration.json \
   --artifact-manifest artifacts/gpt2-conformal-manifest.json
 ```
 
-`--artifact-manifest` fingerprints the score dump, conformal report, sweep report,
-and saved calibration artifacts so local registry/release workflows can verify the
-calibration chain without rerunning the model.
+`--artifact-manifest` fingerprints the score dump, conformal report, abstention
+reports, sweep report, and saved calibration artifacts so local registry/release
+workflows can verify the calibration chain without rerunning the model.
 Use `--dump-scores-format jsonl` for larger sweeps; it writes a compact manifest
 plus records sidecar that downstream calibration and verifier tools can stream by
 selected columns. New JSONL manifests also store label counts, so metadata
@@ -151,6 +153,10 @@ For calibrated participation-control experiments, add
 calibrates the selected uncertainty score on correct responses and reports
 participation, abstention, selective accuracy, and conservative conditional
 correctness lower bounds without changing the base conformal gate verdict.
+Use `--save-abstention-comparison` with `--abstention-signals` to rank several
+candidate uncertainty signals by conservative conditional-correctness lower bound,
+selective accuracy, participation, or retention before wiring a signal into the
+control plane.
 
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size`
 to trade memory for benchmark throughput. Add `--inside-adaptive-sampling` to
@@ -437,7 +443,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `EigenTruthWrapper` | 提供 warmup、生成透传、诊断信息和探针生命周期管理。 |
 | `TruthSubspace` | 拟合低秩事实子空间，并提供残差距离诊断；拟合至少需要两条事实状态。 |
 | `directional_conformal_threshold` / `directional_conformal_thresholds` / `directional_trigger_rate` | 对 `higher` 与 `lower` 异常方向使用一致的 split-conformal 阈值与触发率，并支持一次排序计算多个 alpha 阈值。 |
-| `conformal_abstention_report` / `ConformalAbstentionReport` | 将任意 uncertainty/reliability score 校准成选择性参与阈值，输出 coverage、selective accuracy 和 conservative conditional-correctness lower bound；runtime 可用 `report.decide(score)` 返回 `participate/abstain` 决策。 |
+| `conformal_abstention_report` / `conformal_abstention_comparison_report` | 将任意 uncertainty/reliability score 校准成选择性参与阈值，输出 coverage、selective accuracy 和 conservative conditional-correctness lower bound；comparison report 可按保守正确性、选择性准确率、参与率或保留率对多个候选信号排序，runtime 可用 `report.decide(score)` 返回 `participate/abstain` 决策。 |
 | `AdaptiveScoreTransform` / `adaptive_anomaly_scores` / `AdaptiveConformalCalibrator` | 提供无依赖 adaptive conformal scoring 层：把原始诊断统一转成 anomaly 方向，叠加调用方提供的语义/风险 feature inflation，并把调整后的分数保存成普通 `CalibrationArtifact`。 |
 | `directional_rank_anomaly_scores` / `combine_rank_anomaly_scores` / `RankScoreFusionArtifact` / `RankScoreFusionCalibrator` | 将不同方向的诊断分数转成经验异常 rank，用无依赖 rank 方法融合，并保存可部署的 conformal fusion artifact，供后续控制面实验复用。 |
 | `ScoreDump` / `ScoreDumpIdentity` / `load_score_dump` / `load_score_dump_columns` / `load_score_dump_columns_with_extras` / `load_score_dump_statement_scores` / `load_score_dump_layer_scores` / `score_dump_file_metadata` / `score_dump_identity` / `score_dump_cache_summary` | 对逐陈述 score dump 做统一校验，暴露紧凑 run summary，并给后处理校准或 ensemble report 附带 SHA-256 provenance 和稳定的 model/dataset/layer/score-schema/scoring-config identity，不重跑模型；调用方可共享可选 run-local cache，避免单次运行内重复 hash 文件、重复解析 JSONL manifest 和重复扫描同一个 JSONL selected view，并可汇总 cache hits/misses/writes 用于报告观测。`ScoreDumpJsonlManifest` / `ScoreDumpRecord` / `iter_score_dump_jsonl_records` 提供可选的 manifest-backed JSONL 大文件格式，selected-column loader 可从该格式流式读取选中的 primary、adaptive extra、带 statement 的 primary 或 layer/score 视图，缓存视图会在 manifest 或 records 文件变化后自动失效。metadata 会同时 fingerprint manifest 和 records 文件，包含 canonical identity cache key，在 manifest 自带 label counts 时走 summary fast path，并复用同一次运行中 selected JSONL scan 预热的 records hash。`eval_truthfulqa.py --dump-scores-format jsonl` 可直接写出该格式，并把 INSIDE sample counts 等逐记录字段放进 records sidecar。 |

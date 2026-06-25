@@ -44,8 +44,10 @@ from eigentruth.calibration import (  # noqa: E402
     LayerScoreSweepCalibrator,
 )
 from eigentruth.eval.conformal import (  # noqa: E402
+    ABSTENTION_COMPARISON_METRICS,
     AdaptiveScoreTransform,
     adaptive_anomaly_scores,
+    conformal_abstention_comparison_report,
     conformal_abstention_report,
     directional_conformal_thresholds,
     directional_trigger_rate,
@@ -334,6 +336,7 @@ def _artifact_paths(args) -> dict[str, str | Path | None]:
         "calibration_artifact": args.save_calibration,
         "adaptive_calibration_artifact": getattr(args, "save_adaptive_calibration", None),
         "abstention_report": getattr(args, "save_abstention_report", None),
+        "abstention_comparison_report": getattr(args, "save_abstention_comparison", None),
         "sweep_report": args.save_sweep_report,
         "best_calibration_artifact": args.save_best_calibration,
     }
@@ -519,6 +522,58 @@ def _run_abstention_report(
     return report.to_dict()
 
 
+def _run_abstention_comparison_report(
+    *,
+    score_dump: ScoreDumpColumns,
+    labels: torch.Tensor,
+    signals: Sequence[str],
+    alpha: float,
+    direction_override: str | None,
+    best_by: str,
+) -> dict:
+    missing = tuple(signal for signal in signals if signal not in score_dump.scores)
+    if missing:
+        available = tuple(sorted(str(name) for name in score_dump.scores))
+        raise ValueError(
+            f"score dump is missing abstention comparison signal(s) {missing}; "
+            f"available signals: {available}"
+        )
+    correctness = tuple(int(label == 0) for label in labels.tolist())
+    score_map = {
+        signal: torch.tensor(score_dump.scores[signal], dtype=torch.float64)
+        for signal in signals
+    }
+    directions = {
+        signal: _direction_for(signal, direction_override)
+        for signal in signals
+    }
+    report = conformal_abstention_comparison_report(
+        score_map,
+        correctness,
+        alpha,
+        directions=directions,
+        best_by=best_by,
+    )
+    return report.to_dict()
+
+
+def _resolve_abstention_comparison_signals(
+    args,
+    *,
+    abstention_signal: str,
+    enabled: bool,
+) -> tuple[str, ...]:
+    if not enabled:
+        return ()
+    parsed = _parse_signals(getattr(args, "abstention_signals", None))
+    if parsed is not None:
+        return parsed
+    sweep_signals = _parse_signals(getattr(args, "signals", None))
+    if sweep_signals is not None:
+        return sweep_signals
+    return tuple(dict.fromkeys((abstention_signal, args.signal)))
+
+
 def _add_planned_manifest_fields(args, payload: dict) -> None:
     artifact_manifest = getattr(args, "artifact_manifest", None)
     if artifact_manifest is None:
@@ -551,6 +606,7 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
             "has_sweep_report": "sweep_report" in payload,
             "has_adaptive_report": "adaptive_conformal_report" in payload,
             "has_abstention_report": "abstention_report" in payload,
+            "has_abstention_comparison_report": "abstention_comparison_report" in payload,
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -590,9 +646,19 @@ def run(args) -> dict:
         abstention_signal,
         getattr(args, "abstention_direction", None),
     )
+    wants_abstention_comparison = bool(
+        getattr(args, "save_abstention_comparison", None)
+        or getattr(args, "include_abstention_comparison", False)
+    )
+    abstention_comparison_signals = _resolve_abstention_comparison_signals(
+        args,
+        abstention_signal=abstention_signal,
+        enabled=wants_abstention_comparison,
+    )
     additional_signals = tuple(dict.fromkeys((
         *adaptive_feature_names,
         *(name for name in (abstention_signal,) if name != args.signal),
+        *(name for name in abstention_comparison_signals if name != args.signal),
     )))
     if getattr(args, "save_adaptive_calibration", None) and not adaptive_feature_names:
         raise ValueError("--save-adaptive-calibration requires at least one --adaptive-feature.")
@@ -741,6 +807,39 @@ def run(args) -> dict:
             f"participation={abstention_report['empirical_participation_rate']:.3f} "
             f"selective_accuracy={abstention_report['empirical_selective_accuracy']}"
         )
+
+    if wants_abstention_comparison:
+        abstention_comparison_report = _run_abstention_comparison_report(
+            score_dump=score_dump,
+            labels=labels,
+            signals=abstention_comparison_signals,
+            alpha=float(getattr(args, "abstention_alpha", args.artifact_alpha)),
+            direction_override=getattr(args, "abstention_direction", None),
+            best_by=str(
+                getattr(
+                    args,
+                    "abstention_best_by",
+                    "conditional_correctness_lower_bound",
+                )
+            ),
+        )
+        payload["abstention_comparison_report"] = abstention_comparison_report
+        save_abstention_comparison = getattr(args, "save_abstention_comparison", None)
+        if save_abstention_comparison:
+            Path(save_abstention_comparison).parent.mkdir(parents=True, exist_ok=True)
+            Path(save_abstention_comparison).write_text(
+                json.dumps(abstention_comparison_report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"\nWrote abstention comparison report to {save_abstention_comparison}")
+        recommended = abstention_comparison_report.get("recommended")
+        if recommended is not None:
+            print(
+                f"\n  Abstention comparison: best={recommended['score_name']} "
+                f"metric={abstention_comparison_report['best_by']} "
+                f"value={recommended['selection_value']} "
+                f"candidates={abstention_comparison_report['candidate_count']}"
+            )
 
     if adaptive_feature_names:
         adaptive_feature_values = _load_adaptive_feature_values(
@@ -906,6 +1005,10 @@ def main():
                    help="optional path to write a conformal abstention report JSON")
     p.add_argument("--include-abstention-report", action="store_true",
                    help="include a conformal abstention report in the main JSON payload without a sidecar")
+    p.add_argument("--save-abstention-comparison", default=None,
+                   help="optional path to write a multi-signal abstention comparison JSON")
+    p.add_argument("--include-abstention-comparison", action="store_true",
+                   help="include a multi-signal abstention comparison in the main JSON payload")
     p.add_argument("--save-sweep-report", default=None,
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,
@@ -923,7 +1026,13 @@ def main():
     p.add_argument("--abstention-signal", default=None,
                    help="optional score used for conformal abstention; defaults to --signal")
     p.add_argument("--abstention-direction", choices=("higher", "lower"), default=None,
-                   help="optional override for which side of the abstention signal is less reliable")
+                   help="optional override for which side of abstention signal(s) is less reliable")
+    p.add_argument("--abstention-signals", default=None,
+                   help="optional comma-list of signals for abstention comparison; "
+                        "defaults to --signals when present, otherwise --abstention-signal/--signal")
+    p.add_argument("--abstention-best-by", choices=ABSTENTION_COMPARISON_METRICS,
+                   default="conditional_correctness_lower_bound",
+                   help="metric used to rank abstention comparison candidates")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,
                    help="optional override for whether higher or lower signal values are more anomalous")
     p.add_argument("--adaptive-feature", action="append", default=None,

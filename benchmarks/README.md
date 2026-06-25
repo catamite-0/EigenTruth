@@ -441,6 +441,12 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal mah
   --abstention-alpha 0.1 \
   --save-abstention-report artifacts/gpt2-abstention-report.json
 
+# Compare several abstention candidates before promoting one into control policy:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
+  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --abstention-alpha 0.1 \
+  --save-abstention-comparison artifacts/gpt2-abstention-comparison.json
+
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
@@ -473,6 +479,12 @@ retained participation region on correct responses, then reports empirical
 participation/abstention, selective accuracy, correct-retention, and conservative
 conditional-correctness lower bounds. This is for answer participation control and
 does not change the base E1 conformal verdict.
+When `--save-abstention-comparison` or `--include-abstention-comparison` is set,
+the script emits a `ConformalAbstentionComparisonReport` over `--abstention-signals`
+(or `--signals` when no abstention list is provided). The default ranking metric is
+`conditional_correctness_lower_bound`; `--abstention-best-by` can instead rank by
+empirical selective accuracy, participation, correct-retention lower bound, or
+correct-retention rate. JSONL inputs load only the requested comparison columns.
 When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature from
 a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
 per-record extra, then writes an `adaptive_conformal_report` whose adjusted score
