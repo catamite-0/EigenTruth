@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import os
+from collections.abc import Sequence
 
 import pytest
 import torch
@@ -456,6 +457,33 @@ class TestScoreDump:
         assert records[1].sweep_scores["-2"]["truth_proj"] == pytest.approx(0.8)
         assert loaded.summary() == ScoreDump.from_mapping(payload).summary()
         assert loaded.to_mapping()["batch_indexes"] == [0, 1]
+
+    def test_jsonl_mapping_writer_does_not_copy_record_extras_before_write(self, tmp_path):
+        class IndexedOnlySequence(Sequence):
+            def __init__(self, values):
+                self._values = tuple(values)
+
+            def __len__(self):
+                return len(self._values)
+
+            def __getitem__(self, index):
+                return self._values[index]
+
+            def __iter__(self):
+                raise AssertionError("record extra sequence should not be materialized")
+
+        payload = {
+            "config": {"model": "unit-model", "layer": -2},
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 0.9]},
+            "batch_indexes": IndexedOnlySequence([3, 5]),
+        }
+        manifest_path = tmp_path / "scores.manifest.json"
+
+        write_score_dump_jsonl_mapping(payload, manifest_path, record_extra_names=("batch_indexes",))
+        records = tuple(iter_score_dump_jsonl_records(manifest_path))
+
+        assert [record.extras["batch_indexes"] for record in records] == [3, 5]
 
     def test_score_dump_identity_uses_jsonl_manifest_without_materializing_scores(self, tmp_path, monkeypatch):
         dump = ScoreDump.from_mapping({

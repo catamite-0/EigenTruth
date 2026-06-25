@@ -62,6 +62,7 @@ from eigentruth.verify import (
     ClaimDependency,
     CompositeVerifier,
     EvidenceDocument,
+    EvidenceQualityPolicy,
     GroundednessVerifier,
     InMemoryVerifier,
     JsonTraceCache,
@@ -2048,3 +2049,96 @@ def test_groundedness_verifier_uses_claim_metadata_for_failure_reason():
     assert false_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert false_result.metadata["claim_features"]["is_time_sensitive"] is False
     assert "time-sensitive" not in false_result.explanation
+
+
+def test_groundedness_evidence_quality_policy_downgrades_stale_time_sensitive_support():
+    verifier = GroundednessVerifier(
+        evidence=(
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "timestamp": "2025-01-01",
+            },
+        ),
+        min_overlap=0.7,
+        evidence_quality_policy=EvidenceQualityPolicy(
+            max_age_days=30,
+            reference_time="2026-06-25",
+            require_source=True,
+            trusted_sources=("official.gov",),
+            require_trusted_source=True,
+        ),
+    )
+    claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "evidence_quality_failed"
+    assert result.metadata["evidence_quality"]["passed"] is False
+    assert "stale_evidence" in result.metadata["evidence_quality"]["reasons"]
+
+
+def test_groundedness_evidence_quality_policy_allows_fresh_trusted_evidence():
+    verifier = GroundednessVerifier(
+        evidence=(
+            {
+                "text": "As of 2026, AlphaCorp has 10 offices.",
+                "source": "official.gov/company-registry",
+                "metadata": {"published_at": "2026-06-20"},
+            },
+        ),
+        min_overlap=0.7,
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": "true",
+            "trusted_sources": "official.gov",
+            "require_trusted_source": "true",
+        },
+    )
+    claim = extract_claims("As of 2026, AlphaCorp has 10 offices.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["decision_rule"] == "exact_containment"
+    assert result.metadata["evidence_quality"]["passed"] is True
+    assert result.metadata["evidence_quality"]["age_days"] == pytest.approx(5.0)
+
+
+def test_groundedness_evidence_quality_policy_defaults_to_time_sensitive_claims_only():
+    verifier = GroundednessVerifier(
+        evidence=("Paris is the capital of France.",),
+        min_overlap=0.7,
+        evidence_quality_policy={
+            "max_age_days": 30,
+            "reference_time": "2026-06-25",
+            "require_source": "true",
+            "time_sensitive_only": "true",
+        },
+    )
+    claim = extract_claims("Paris is the capital of France.")[0]
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert "evidence_quality" not in result.metadata
+
+
+def test_evidence_quality_policy_from_dict_strict_bool_parser():
+    policy = EvidenceQualityPolicy.from_dict({
+        "require_source": "false",
+        "require_trusted_source": "0",
+        "time_sensitive_only": "off",
+    })
+
+    assert policy.require_source is False
+    assert policy.require_trusted_source is False
+    assert policy.time_sensitive_only is False
+    with pytest.raises(ValueError, match="require_source"):
+        EvidenceQualityPolicy.from_dict({"require_source": "maybe"})
+    with pytest.raises(ValueError, match="max_age_days"):
+        EvidenceQualityPolicy.from_dict({"max_age_days": True})
+    with pytest.raises(ValueError, match="max_age_days"):
+        EvidenceQualityPolicy(max_age_days=1.5)

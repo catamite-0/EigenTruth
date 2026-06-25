@@ -2206,8 +2206,8 @@ def _record_extra_columns(
     *,
     record_extra_names: Sequence[str],
     n_total: int,
-) -> dict[str, tuple[Any, ...]]:
-    columns: dict[str, tuple[Any, ...]] = {}
+) -> dict[str, Sequence[Any]]:
+    columns: dict[str, Sequence[Any]] = {}
     for raw_name in record_extra_names:
         name = str(raw_name)
         if name not in extras:
@@ -2215,13 +2215,12 @@ def _record_extra_columns(
         values = extras[name]
         if not isinstance(values, Sequence) or isinstance(values, (str, bytes, bytearray)):
             raise ValueError(f"record extra {name!r} must be a list with one value per record.")
-        column = tuple(values)
-        if len(column) != n_total:
+        if len(values) != n_total:
             raise ValueError(
                 f"record extra {name!r} length does not match labels "
-                f"({len(column)} values vs {n_total} labels)."
+                f"({len(values)} values vs {n_total} labels)."
             )
-        columns[name] = column
+        columns[name] = values
     return columns
 
 
