@@ -25,6 +25,7 @@ def verify_manifest_file(
     *,
     root: str | Path | None = None,
     recursive: bool = False,
+    max_workers: int = 1,
     fingerprint_cache: MutableMapping[str, dict[str, Any]] | None = None,
     verification_context: ArtifactVerificationContext | None = None,
 ) -> dict[str, Any]:
@@ -36,6 +37,7 @@ def verify_manifest_file(
         manifest_path,
         root=root,
         recursive=recursive,
+        max_workers=max_workers,
     ).to_dict()
 
 
@@ -48,6 +50,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.manifest,
             root=Path(args.root) if args.root else None,
             recursive=bool(args.recursive),
+            max_workers=args.max_workers,
             verification_context=verification_context,
         )
         if args.json:
@@ -65,6 +68,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--manifest", required=True, help="artifact-manifest.json to verify")
     parser.add_argument("--root", default=None, help="optional root for relative paths; defaults to manifest parent")
     parser.add_argument("--recursive", action="store_true", help="also verify nested artifact-manifest.json records")
+    parser.add_argument("--max-workers", type=int, default=1, help="bounded artifact fingerprint workers")
     parser.add_argument("--json", default=None, help="optional path to write the verification report")
     parser.add_argument("--fingerprint-cache", default=None, help="optional JSON cache for manifest fingerprint reads")
     parser.add_argument("--no-fail", action="store_true", help="do not exit non-zero on mismatches")

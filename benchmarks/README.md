@@ -3478,9 +3478,15 @@ artifacts naturally miss and get re-read:
 python benchmarks/verify_artifact_manifest.py \
   --manifest /tmp/eigentruth-qwen05-profile-rescore/artifact-manifest.json \
   --recursive \
+  --max-workers 4 \
   --fingerprint-cache /tmp/eigentruth-qwen05-profile-rescore/fingerprints.json \
   --json /tmp/eigentruth-qwen05-profile-rescore/manifest-verification.json
 ```
+
+`--max-workers` enables bounded parallel fingerprinting for independent
+artifacts during direct manifest verification. Keep the default `1` for strictly
+serial timing comparisons; use the worker-sweep report to choose a local value
+for large release manifests.
 
 Once verification passes, `promote_artifact_manifest.py` can register the
 manifest and verification report in a local `ArtifactRegistry` JSON file:

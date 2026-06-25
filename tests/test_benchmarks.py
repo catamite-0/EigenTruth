@@ -10812,6 +10812,10 @@ def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
 
     clean = module.verify_manifest_file(manifest_path)
     assert clean["passed"] is True
+    parallel_clean = module.verify_manifest_file(manifest_path, max_workers=2)
+    assert parallel_clean["passed"] is True
+    with pytest.raises(ValueError, match="max_workers"):
+        module.verify_manifest_file(manifest_path, max_workers=True)  # type: ignore[arg-type]
 
     data_path.write_text('{"ok": false, "changed": true}\n', encoding="utf-8")
     report_path = tmp_path / "verification.json"
@@ -10824,6 +10828,8 @@ def test_verify_artifact_manifest_cli_reports_mismatch(tmp_path):
             str(report_path),
             "--fingerprint-cache",
             str(fingerprint_cache_path),
+            "--max-workers",
+            "2",
         ])
 
     assert exc_info.value.code == 1
