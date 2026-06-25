@@ -4948,6 +4948,52 @@ def _write_route_baseline_manifest(
     return manifest_path
 
 
+def _write_frontier_release_evidence_report(
+    output_dir: Path,
+    *,
+    status: str,
+    verifier_track_status: str,
+    abstention_track_status: str,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "frontier-release-evidence.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    blocking_reasons = []
+    if status != "promote":
+        blocking_reasons.append("synthetic frontier evidence blocked")
+    payload = {
+        "schema_version": 1,
+        "workflow": "frontier_release_evidence_comparison",
+        "status": "complete",
+        "paths": {
+            "frontier_release_evidence_report": str(report_path),
+            "artifact_manifest": str(manifest_path),
+        },
+        "decision": {
+            "status": status,
+            "verifier_track_status": verifier_track_status,
+            "abstention_track_status": abstention_track_status,
+            "blocking_reasons": blocking_reasons,
+        },
+        "evidence_summary": {
+            "run_count": 1,
+            "run_names": ["synthetic"],
+            "verifier_signal": "truth_proj",
+            "abstention_signals": ["truth_proj"],
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"frontier_release_evidence_report": report_path},
+        root=output_dir,
+        metadata={"runner": "compare_frontier_release_evidence", "status": status},
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _local_retrieval_claims_payload(
     *,
     labels_copied_to_record_metadata: bool,
@@ -6558,6 +6604,82 @@ def test_compare_release_candidates_promotes_readiness_and_route_baselines(tmp_p
         "runtime_budget: total_seconds above 0.1" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
     )
+
+
+def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="frontier-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="frontier-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="frontier-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_evidence_path = _write_frontier_release_evidence_report(
+        tmp_path / "frontier-blocked",
+        status="blocked",
+        verifier_track_status="promote",
+        abstention_track_status="blocked",
+    )
+    promoted_evidence_path = _write_frontier_release_evidence_report(
+        tmp_path / "frontier-promote",
+        status="promote",
+        verifier_track_status="promote",
+        abstention_track_status="promote",
+    )
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        frontier_release_evidence_path=blocked_evidence_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        frontier_release_evidence_path=promoted_evidence_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["frontier_release_evidence_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "frontier_release_evidence"
+    assert blocked["frontier_release_evidence_gate"]["gate"]["passed"] is False
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["frontier_release_evidence_status"] == "promote"
+    assert promoted["release_candidate"]["frontier_release_evidence"]["decision_status"] == "promote"
+    assert "frontier_release_evidence_manifest" in promoted["release_candidate"]["manifests"]
 
 
 def test_compare_release_candidates_verify_manifest_uses_requested_workers(tmp_path, monkeypatch):
@@ -9072,6 +9194,94 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert fingerprint_calls_by_path[retrieval_route_report_key] == (
         fingerprint_calls_after_first[retrieval_route_report_key]
+    )
+
+
+def test_run_release_candidate_registry_workflow_records_blocked_frontier_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="frontier-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="frontier-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
+        name="frontier-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_evidence_path = _write_frontier_release_evidence_report(
+        tmp_path / "frontier-blocked",
+        status="blocked",
+        verifier_track_status="promote",
+        abstention_track_status="blocked",
+    )
+
+    workflow_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=baseline_registry_path,
+        release_registry_path=release_registry_path,
+        name="frontier-gated-release",
+        version="0.1",
+        frontier_release_evidence_path=blocked_evidence_path,
+        release_report_path=tmp_path / "release-comparison.json",
+        artifact_manifest_path=tmp_path / "release-manifest.json",
+        verification_report_path=tmp_path / "release-verification.json",
+        workflow_report_path=tmp_path / "release-workflow.json",
+        allow_non_promote=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    payload = module.run_release_candidate_registry_workflow(workflow_config)
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["manifest_promoted"] is True
+    assert payload["decision"]["manifest_verified"] is True
+    comparison_decision = payload["release_candidate_comparison"]["decision"]
+    assert comparison_decision["frontier_release_evidence_status"] == "blocked"
+    assert comparison_decision["blocking_reasons"][0]["gate"] == "frontier_release_evidence"
+    manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["frontier_release_evidence_manifest"]["path"].endswith(
+        "frontier-blocked/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["release_frontier_release_evidence_status"] == "blocked"
+    assert manifest["metadata"]["frontier_release_evidence_manifest"].endswith(
+        "frontier-blocked/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["frontier_release_evidence_report"] == str(blocked_evidence_path)
+    assert manifest["metadata"]["frontier_release_evidence_decision_status"] == "blocked"
+    assert manifest["metadata"]["frontier_release_evidence_verifier_track_status"] == "promote"
+    assert manifest["metadata"]["frontier_release_evidence_abstention_track_status"] == "blocked"
+    registry = ArtifactRegistry.load_json(release_registry_path)
+    record = registry.get("benchmark_manifest:frontier-gated-release:0.1")
+    assert record.metadata["release_candidate_status"] == "blocked"
+    assert record.metadata["release_frontier_release_evidence_status"] == "blocked"
+    assert record.metadata["frontier_release_evidence_report"] == str(blocked_evidence_path)
+    assert record.metadata["frontier_release_evidence_manifest"].endswith(
+        "frontier-blocked/artifact-manifest.json"
     )
 
 

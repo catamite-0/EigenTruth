@@ -47,6 +47,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
     release_efficiency_report_path: Path | None = None
+    frontier_release_evidence_path: Path | None = None
+    frontier_release_evidence_registry_path: Path | None = None
+    frontier_release_evidence_key: str | None = None
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
@@ -138,6 +141,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "release_efficiency_report_path",
                 Path(self.release_efficiency_report_path),
+            )
+        if self.frontier_release_evidence_path is not None:
+            object.__setattr__(
+                self,
+                "frontier_release_evidence_path",
+                Path(self.frontier_release_evidence_path),
+            )
+        if self.frontier_release_evidence_registry_path is not None:
+            object.__setattr__(
+                self,
+                "frontier_release_evidence_registry_path",
+                Path(self.frontier_release_evidence_registry_path),
             )
         if self.product_trace_replay_workflow_path is not None:
             object.__setattr__(
@@ -252,6 +267,9 @@ def run_release_candidate_registry_workflow(
         selector_replay_report_path=config.selector_replay_report_path,
         product_runtime_drift_report_path=config.product_runtime_drift_report_path,
         release_efficiency_report_path=config.release_efficiency_report_path,
+        frontier_release_evidence_path=config.frontier_release_evidence_path,
+        frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
+        frontier_release_evidence_key=config.frontier_release_evidence_key,
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
@@ -396,6 +414,17 @@ def run_release_candidate_registry_workflow(
                 if config.release_efficiency_report_path is None
                 else str(config.release_efficiency_report_path)
             ),
+            "frontier_release_evidence": (
+                None
+                if config.frontier_release_evidence_path is None
+                else str(config.frontier_release_evidence_path)
+            ),
+            "frontier_release_evidence_registry": (
+                None
+                if config.frontier_release_evidence_registry_path is None
+                else str(config.frontier_release_evidence_registry_path)
+            ),
+            "frontier_release_evidence_key": config.frontier_release_evidence_key,
             "product_trace_replay_workflow": (
                 None
                 if config.product_trace_replay_workflow_path is None
@@ -556,6 +585,8 @@ def _write_artifact_manifest(
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
         "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
+        "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
+        or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -654,6 +685,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     feedback_policy_workflow = dict(candidate.get("feedback_policy_workflow") or {})
+    frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
+    if not frontier_release_evidence:
+        frontier_release_evidence = dict(comparison.get("frontier_release_evidence_gate") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -664,6 +698,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_selector_replay_status": decision.get("selector_replay_status"),
         "release_product_runtime_drift_status": decision.get("product_runtime_drift_status"),
         "release_efficiency_status": decision.get("release_efficiency_status"),
+        "release_frontier_release_evidence_status": decision.get(
+            "frontier_release_evidence_status"
+        ),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_product_trace_replay_workflow_status": decision.get(
@@ -680,6 +717,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_product_runtime_drift_report": decision.get("recommended_product_runtime_drift_report"),
         "recommended_release_efficiency_report": decision.get("recommended_release_efficiency_report"),
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
+        "recommended_frontier_release_evidence_report": decision.get(
+            "recommended_frontier_release_evidence_report"
+        ),
         "recommended_feedback_policy_workflow_report": decision.get(
             "recommended_feedback_policy_workflow_report"
         ),
@@ -940,6 +980,18 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
         "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
+        "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
+        or frontier_release_evidence.get("manifest_path"),
+        "frontier_release_evidence_report": frontier_release_evidence.get("report_path"),
+        "frontier_release_evidence_decision_status": frontier_release_evidence.get(
+            "decision_status"
+        ),
+        "frontier_release_evidence_verifier_track_status": frontier_release_evidence.get(
+            "verifier_track_status"
+        ),
+        "frontier_release_evidence_abstention_track_status": frontier_release_evidence.get(
+            "abstention_track_status"
+        ),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -965,6 +1017,19 @@ def _promotion_metadata(
     if config.promotion_metadata is not None:
         metadata.update(dict(config.promotion_metadata))
     return metadata
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _nested(payload: Mapping[str, Any], *keys: str) -> Any:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return current
 
 
 def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
@@ -1033,6 +1098,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             if args.release_efficiency_report is None
             else Path(args.release_efficiency_report)
         ),
+        frontier_release_evidence_path=(
+            None
+            if args.frontier_release_evidence is None
+            else Path(args.frontier_release_evidence)
+        ),
+        frontier_release_evidence_registry_path=(
+            None
+            if args.frontier_release_evidence_registry is None
+            else Path(args.frontier_release_evidence_registry)
+        ),
+        frontier_release_evidence_key=args.frontier_release_evidence_key,
         product_trace_replay_workflow_path=(
             None
             if args.product_trace_replay_workflow is None
@@ -1171,6 +1247,13 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional product runtime drift report that must promote and verify")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
+    parser.add_argument("--frontier-release-evidence", default=None,
+                        help="optional frontier release-evidence report that must promote and verify")
+    parser.add_argument("--frontier-release-evidence-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --frontier-release-evidence-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--frontier-release-evidence-key", default=None,
+                        help="optional report:<name>:<version> registry key for frontier release evidence")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "

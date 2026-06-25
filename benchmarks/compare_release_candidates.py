@@ -43,6 +43,9 @@ def compare_release_candidates(
     selector_replay_report_path: str | Path | None = None,
     product_runtime_drift_report_path: str | Path | None = None,
     release_efficiency_report_path: str | Path | None = None,
+    frontier_release_evidence_path: str | Path | None = None,
+    frontier_release_evidence_registry_path: str | Path | None = None,
+    frontier_release_evidence_key: str | None = None,
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
@@ -372,6 +375,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
+        frontier_release_evidence_path=frontier_release_evidence_path,
+        frontier_release_evidence_registry_path=(
+            frontier_release_evidence_registry_path
+            if frontier_release_evidence_key is not None
+            else None
+        ),
+        frontier_release_evidence_key=frontier_release_evidence_key,
+        default_registry_path=readiness_registry_path,
+    )
+    frontier_release_evidence = _frontier_release_evidence_gate(
+        frontier_release_evidence_source=frontier_release_evidence_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     decision = _decision(
         readiness,
         route,
@@ -383,6 +403,7 @@ def compare_release_candidates(
         selector_replay,
         product_runtime_drift,
         release_efficiency,
+        frontier_release_evidence,
         feedback_policy_workflow,
     )
     candidate = (
@@ -395,6 +416,7 @@ def compare_release_candidates(
             selector_replay,
             product_runtime_drift,
             release_efficiency,
+            frontier_release_evidence,
             feedback_policy_workflow,
         )
         if decision["status"] == "promote"
@@ -427,6 +449,17 @@ def compare_release_candidates(
                 if release_efficiency_report_path is None
                 else str(release_efficiency_report_path)
             ),
+            "frontier_release_evidence": (
+                None
+                if frontier_release_evidence_source is None
+                else str(frontier_release_evidence_source["path"])
+            ),
+            "frontier_release_evidence_registry": (
+                None
+                if frontier_release_evidence_source is None
+                else frontier_release_evidence_source.get("registry")
+            ),
+            "frontier_release_evidence_key": frontier_release_evidence_key,
             "product_trace_replay_workflow": (
                 None
                 if product_trace_replay_workflow_source is None
@@ -526,6 +559,7 @@ def compare_release_candidates(
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
         "release_efficiency_gate": release_efficiency,
+        "frontier_release_evidence_gate": frontier_release_evidence,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
@@ -660,6 +694,7 @@ def _decision(
     selector_replay: Mapping[str, Any] | None = None,
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
+    frontier_release_evidence: Mapping[str, Any] | None = None,
     feedback_policy_workflow: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
@@ -691,6 +726,12 @@ def _decision(
     )
     release_efficiency_status = (
         None if release_efficiency is None else release_efficiency.get("status")
+    )
+    frontier_release_evidence_gate = _mapping(
+        None if frontier_release_evidence is None else frontier_release_evidence.get("gate")
+    )
+    frontier_release_evidence_status = (
+        None if frontier_release_evidence is None else frontier_release_evidence.get("status")
     )
     feedback_policy_workflow_gate = _mapping(
         None if feedback_policy_workflow is None else feedback_policy_workflow.get("gate")
@@ -757,6 +798,15 @@ def _decision(
             "reasons": list(release_efficiency_gate.get("blocking_reasons", ())),
         })
     if (
+        frontier_release_evidence is not None
+        and frontier_release_evidence_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "frontier_release_evidence",
+            "status": frontier_release_evidence_status,
+            "reasons": list(frontier_release_evidence_gate.get("blocking_reasons", ())),
+        })
+    if (
         feedback_policy_workflow is not None
         and feedback_policy_workflow_gate.get("passed") is not True
     ):
@@ -785,6 +835,7 @@ def _decision(
         "selector_replay_status": selector_replay_status,
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
+        "frontier_release_evidence_status": frontier_release_evidence_status,
         "feedback_policy_workflow_status": feedback_policy_workflow_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
@@ -820,6 +871,14 @@ def _decision(
             None
             if release_efficiency is None or release_efficiency_gate.get("passed") is not True
             else release_efficiency.get("recommended_profile")
+        ),
+        "recommended_frontier_release_evidence_report": (
+            None
+            if (
+                frontier_release_evidence is None
+                or frontier_release_evidence_gate.get("passed") is not True
+            )
+            else frontier_release_evidence.get("report_path")
         ),
         "recommended_feedback_policy_workflow_report": (
             None
@@ -1656,6 +1715,151 @@ def _selector_replay_gate(
         "recommended": _selector_replay_summary(recommended),
         "verification": verification,
         "gate": gate,
+    }
+
+
+def _frontier_release_evidence_gate(
+    *,
+    frontier_release_evidence_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if frontier_release_evidence_source is None:
+        return None
+    report_path = Path(frontier_release_evidence_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _frontier_release_evidence_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="frontier_release_evidence_manifest",
+        verification_context=verification_context,
+    )
+    decision = _mapping(report.get("decision"))
+    summary = _mapping(report.get("evidence_summary"))
+    gate = _frontier_release_evidence_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        allow_unverified=allow_unverified,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": frontier_release_evidence_source.get("source"),
+        "registry": frontier_release_evidence_source.get("registry"),
+        "record_key": frontier_release_evidence_source.get("record_key"),
+        "record": frontier_release_evidence_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "decision_status": decision.get("status"),
+        "verifier_track_status": decision.get("verifier_track_status"),
+        "abstention_track_status": decision.get("abstention_track_status"),
+        "run_names": tuple(summary.get("run_names", ())),
+        "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _frontier_release_evidence_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"frontier release evidence report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("frontier release evidence artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("frontier release evidence manifest verification failed")
+    if report.get("workflow") != "frontier_release_evidence_comparison":
+        failures.append(
+            f"frontier release evidence workflow is {report.get('workflow')!r}, "
+            "expected 'frontier_release_evidence_comparison'"
+        )
+    if report.get("status") != "complete":
+        failures.append(
+            f"frontier release evidence status is {report.get('status')!r}, expected 'complete'"
+        )
+    decision = _mapping(report.get("decision"))
+    decision_status = decision.get("status")
+    if decision_status != "promote":
+        failures.append(
+            f"frontier release evidence decision status is {decision_status!r}, expected 'promote'"
+        )
+    for track in ("verifier_track_status", "abstention_track_status"):
+        if decision.get(track) != "promote":
+            failures.append(
+                f"frontier release evidence {track} is {decision.get(track)!r}, expected 'promote'"
+            )
+    summary = _mapping(report.get("evidence_summary"))
+    run_count = _float_or_none(summary.get("run_count"))
+    if run_count is None:
+        failures.append("frontier release evidence run count is missing")
+    elif run_count < 1:
+        failures.append("frontier release evidence run count is zero")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _frontier_release_evidence_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _nested(report, "paths", "artifact_manifest")
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_frontier_release_evidence_source(
+    *,
+    frontier_release_evidence_path: str | Path | None,
+    frontier_release_evidence_registry_path: str | Path | None,
+    frontier_release_evidence_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if frontier_release_evidence_path is not None:
+        if frontier_release_evidence_key is not None:
+            raise ValueError(
+                "frontier_release_evidence_path is mutually exclusive with "
+                "frontier_release_evidence_key."
+            )
+        return {"source": "file", "path": Path(frontier_release_evidence_path)}
+    if frontier_release_evidence_key is None:
+        if frontier_release_evidence_registry_path is not None:
+            raise ValueError(
+                "frontier_release_evidence_registry_path requires "
+                "frontier_release_evidence_key."
+            )
+        return None
+    registry_path = (
+        default_registry_path
+        if frontier_release_evidence_registry_path is None
+        else frontier_release_evidence_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(frontier_release_evidence_key))
+    return {
+        "source": "registry",
+        "path": Path(record.path),
+        "registry": str(registry_path),
+        "record_key": str(frontier_release_evidence_key),
+        "record": record.to_dict(),
     }
 
 
@@ -2500,6 +2704,7 @@ def _candidate_with_gates(
     selector_replay: Mapping[str, Any] | None,
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
+    frontier_release_evidence: Mapping[str, Any] | None,
     feedback_policy_workflow: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
@@ -2597,6 +2802,24 @@ def _candidate_with_gates(
             "leaderboard": (leaderboard_top,) if leaderboard_top else (),
         }
         manifests["release_efficiency_manifest"] = release_efficiency.get("manifest_path")
+    if frontier_release_evidence is not None:
+        payload["frontier_release_evidence"] = {
+            "report_path": frontier_release_evidence.get("report_path"),
+            "manifest_path": frontier_release_evidence.get("manifest_path"),
+            "source": frontier_release_evidence.get("source"),
+            "registry": frontier_release_evidence.get("registry"),
+            "record_key": frontier_release_evidence.get("record_key"),
+            "workflow": frontier_release_evidence.get("workflow"),
+            "report_status": frontier_release_evidence.get("report_status"),
+            "decision_status": frontier_release_evidence.get("decision_status"),
+            "verifier_track_status": frontier_release_evidence.get("verifier_track_status"),
+            "abstention_track_status": frontier_release_evidence.get("abstention_track_status"),
+            "run_names": tuple(frontier_release_evidence.get("run_names", ())),
+            "blocking_reasons": tuple(frontier_release_evidence.get("blocking_reasons", ())),
+        }
+        manifests["frontier_release_evidence_manifest"] = frontier_release_evidence.get(
+            "manifest_path"
+        )
     if feedback_policy_workflow is not None:
         payload["feedback_policy_workflow"] = {
             "report_path": feedback_policy_workflow.get("report_path"),
@@ -2802,6 +3025,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selector_replay_report_path=args.selector_replay_report,
         product_runtime_drift_report_path=args.product_runtime_drift_report,
         release_efficiency_report_path=args.release_efficiency_report,
+        frontier_release_evidence_path=args.frontier_release_evidence,
+        frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
+        frontier_release_evidence_key=args.frontier_release_evidence_key,
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
@@ -2888,7 +3114,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"performance={decision.get('recommended_performance_baseline_record')} "
         f"selector_replay={decision.get('recommended_selector_replay_candidate')} "
         f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
-        f"release_efficiency={decision.get('recommended_release_efficiency_profile')}"
+        f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
+        f"frontier_release_evidence={decision.get('frontier_release_evidence_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -2923,6 +3150,13 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional product runtime drift report that must promote and verify")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
+    parser.add_argument("--frontier-release-evidence", default=None,
+                        help="optional frontier release-evidence report that must promote and verify")
+    parser.add_argument("--frontier-release-evidence-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --frontier-release-evidence-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--frontier-release-evidence-key", default=None,
+                        help="optional report:<name>:<version> registry key for frontier release evidence")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "
