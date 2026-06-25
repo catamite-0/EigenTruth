@@ -1,0 +1,94 @@
+{
+  "artifacts": {
+    "cells.layer_m1_batch_4_capture_outputs_cov_diag.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m1_batch_4_capture_outputs_cov_diag/artifact-manifest.json",
+      "sha256": "c8e4bb6f10a85715f27b45d8a6c532607168f8d07e9b018c133cdba3e6e13e6c",
+      "size_bytes": 3545
+    },
+    "cells.layer_m1_batch_4_capture_outputs_cov_full.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m1_batch_4_capture_outputs_cov_full/artifact-manifest.json",
+      "sha256": "0755fa8be803cc504a1095be7b0fc9592056ec88146d749fac8f63ba77755dd3",
+      "size_bytes": 3545
+    },
+    "cells.layer_m1_batch_4_capture_outputs_cov_low_rank_4.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m1_batch_4_capture_outputs_cov_low_rank_4/artifact-manifest.json",
+      "sha256": "25961221166809cbda5202cf1ee838ec117ed0f287ba9853c71cc6e2faef137f",
+      "size_bytes": 3549
+    },
+    "cells.layer_m1_batch_4_capture_outputs_cov_shrinkage.triplet_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "layer_m1_batch_4_capture_outputs_cov_shrinkage/artifact-manifest.json",
+      "sha256": "dc766a99e08e8ac45104a0b31a27049a3d38311861d9bac4c4221f450522998a",
+      "size_bytes": 3550
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "cache-profile-matrix-report.json",
+      "sha256": "fa6d61eb43cf7b45c020fa794b0722c37dad45929b78be1f7d9e9a66c991469a",
+      "size_bytes": 71150
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "covariance_low_ranks": [
+      4
+    ],
+    "covariance_modes": [
+      "full",
+      "diag",
+      "low_rank",
+      "shrinkage"
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "eval_reps_shard_read_cache_sizes": [
+      2
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "layers": [
+      -1
+    ],
+    "matrix_mode": "triplet",
+    "max_batch_token_budgets": [
+      0
+    ],
+    "max_batch_tokens": 0,
+    "max_workers": 2,
+    "model": "sshleifer/tiny-gpt2",
+    "offline": true,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "runner": "run_cache_profile_matrix",
+    "shared_cache_dir": null,
+    "wall_clock_seconds": 47.312803576998704
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 5,
+    "directory_count": 0,
+    "file_count": 5,
+    "missing_count": 0
+  }
+}

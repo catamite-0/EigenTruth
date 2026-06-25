@@ -323,7 +323,10 @@ def _covariance_tradeoff_summary(
         notes.append(
             "selected covariance mode is fastest for cache-only replay but lowers maha_last AUROC versus full"
         )
-        notes.append("prefer full or a low_rank candidate when calibrated maha_last is part of the deployment signal")
+        notes.append(
+            "prefer full or another quality-preserving covariance candidate when calibrated maha_last "
+            "is part of the deployment signal"
+        )
     return {
         "status": status,
         "baseline_cell": baseline["cell_id"],
@@ -1442,7 +1445,7 @@ def _benchmark_flags(
     eval_flags = ["--layer", layer, "--batch-size", batch_size, "--hidden-state-capture", capture]
     if covariance_mode != "full":
         eval_flags.extend(["--covariance-mode", covariance_mode])
-    if covariance_mode == "low_rank" or covariance_low_rank != 16:
+    if covariance_mode == "low_rank":
         eval_flags.extend(["--covariance-low-rank", str(covariance_low_rank)])
     if max_batch_tokens > 0:
         eval_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])
@@ -1457,7 +1460,7 @@ def _benchmark_flags(
     matrix_flags = ["--layers", layer, "--batch-sizes", batch_size, "--hidden-state-captures", capture]
     if covariance_mode != "full":
         matrix_flags.extend(["--covariance-modes", covariance_mode])
-    if covariance_mode == "low_rank" or covariance_low_rank != 16:
+    if covariance_mode == "low_rank":
         matrix_flags.extend(["--covariance-low-ranks", str(covariance_low_rank)])
     if max_batch_tokens > 0:
         matrix_flags.extend(["--max-batch-tokens", str(max_batch_tokens)])

@@ -12042,7 +12042,7 @@ def test_run_cache_profile_triplet_builds_dry_run_commands(tmp_path):
     assert commands["uncached"][commands["uncached"].index("--max-batch-tokens") + 1] == "128"
     assert commands["uncached"][commands["uncached"].index("--hidden-state-capture") + 1] == "outputs"
     assert commands["uncached"][commands["uncached"].index("--covariance-mode") + 1] == "full"
-    assert commands["uncached"][commands["uncached"].index("--covariance-low-rank") + 1] == "16"
+    assert "--covariance-low-rank" not in commands["uncached"]
     assert commands["uncached"].count("--refresh-layer-stats-cache") == 1
     assert commands["uncached"].count("--refresh-eval-reps-cache") == 1
     assert commands["uncached"][commands["uncached"].index("--eval-reps-cache-shard-size") + 1] == "3"
@@ -12072,6 +12072,19 @@ def test_run_cache_profile_triplet_passes_covariance_mode(tmp_path):
     assert command[command.index("--covariance-low-rank") + 1] == "4"
     assert manifest["metadata"]["covariance_mode"] == "low_rank"
     assert manifest["metadata"]["covariance_low_rank"] == 4
+
+    shrinkage_config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path / "shrinkage",
+        model="tiny-local",
+        covariance_mode="shrinkage",
+        covariance_low_rank=4,
+        python_executable="/python",
+    )
+    shrinkage_payload = module.run_triplet(shrinkage_config, clean=True, dry_run=True)
+    shrinkage_command = shrinkage_payload["commands"]["uncached"]
+
+    assert shrinkage_command[shrinkage_command.index("--covariance-mode") + 1] == "shrinkage"
+    assert "--covariance-low-rank" not in shrinkage_command
 
     with pytest.raises(ValueError, match="covariance_mode"):
         module.CacheProfileTripletConfig(output_dir=tmp_path / "bad-mode", covariance_mode="bad")
@@ -14347,6 +14360,59 @@ def test_runtime_config_recommendation_preserves_covariance_mode():
     ]
 
 
+def test_runtime_config_recommendation_omits_low_rank_flags_for_shrinkage():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1, "length_bucketed_batches": False},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m2_batch_2_capture_outputs_cov_shrinkage",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m2_batch_2_capture_outputs_cov_shrinkage",
+                "layer": -2,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "covariance_mode": "shrinkage",
+                "covariance_low_rank": 4,
+                "cache_only_total_seconds": 0.2,
+                "truth_proj_auroc": 0.8,
+            },
+        },
+        "cells": [],
+    }
+
+    report = module.build_runtime_recommendation(matrix_report)
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["covariance_mode"] == "shrinkage"
+    assert report["benchmark_flags"]["eval_truthfulqa"] == [
+        "--layer",
+        "-2",
+        "--batch-size",
+        "2",
+        "--hidden-state-capture",
+        "outputs",
+        "--covariance-mode",
+        "shrinkage",
+    ]
+    assert report["benchmark_flags"]["run_cache_profile_matrix"] == [
+        "--layers",
+        "-2",
+        "--batch-sizes",
+        "2",
+        "--hidden-state-captures",
+        "outputs",
+        "--covariance-modes",
+        "shrinkage",
+        "--max-workers",
+        "1",
+    ]
+
+
 def test_runtime_config_recommendation_reports_covariance_tradeoff():
     module = importlib.import_module("benchmarks.recommend_runtime_config")
 
@@ -14400,6 +14466,7 @@ def test_runtime_config_recommendation_reports_covariance_tradeoff():
             cell("layer_m12_batch_4_capture_outputs_cov_full", "full", 4, 0.21, 0.61),
             cell("layer_m12_batch_4_capture_outputs_cov_diag", "diag", 4, 0.15, 0.50),
             cell("layer_m12_batch_4_capture_outputs_cov_low_rank_8", "low_rank", 8, 0.20, 0.60),
+            cell("layer_m12_batch_4_capture_outputs_cov_shrinkage", "shrinkage", 4, 0.19, 0.605),
         ],
     }
 
@@ -14418,6 +14485,8 @@ def test_runtime_config_recommendation_reports_covariance_tradeoff():
     assert selected["cache_only_speedup_vs_baseline"] == pytest.approx(1.4)
     assert selected["maha_last_delta_vs_baseline"] == pytest.approx(-0.11)
     assert any("maha_last" in note for note in tradeoff["notes"])
+    assert any(item["covariance_mode"] == "shrinkage" for item in tradeoff["candidates"])
+    assert any("quality-preserving covariance candidate" in note for note in tradeoff["notes"])
 
 
 def test_runtime_config_recommendation_uses_cell_read_cache_size():

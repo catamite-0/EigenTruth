@@ -2891,8 +2891,11 @@ versus `0.211s` for `full`) but marked `speed_quality_tradeoff` because
 `maha_last` AUROC dropped from `0.614` to `0.500`. `low_rank` with rank 8 kept
 `maha_last` close to `full` (`0.610`) with cache-only replay `0.197s`. Treat
 `diag` as a latency/memory candidate only when `maha_last` is not the deployed
-calibrated signal; prefer `full` or validated `low_rank` when `maha_last`
-quality matters.
+calibrated signal; prefer `full`, validated `low_rank`, or validated
+`shrinkage` when `maha_last` quality matters. The tiny offline shrinkage smoke
+in `artifacts/tiny_covariance_shrinkage_matrix/` validates the
+`full/diag/low_rank/shrinkage` matrix and runtime-recommendation path, but it is
+not benchmark-quality evidence.
 Use `--max-workers` to run independent matrix cells concurrently. The default is
 `1` for fully serial/reproducible local runs. Matrix reports include
 `execution.wall_clock_seconds` plus per-cell `execution_seconds`, so worker-count

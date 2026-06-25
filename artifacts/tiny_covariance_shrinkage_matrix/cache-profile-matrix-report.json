@@ -1,0 +1,1855 @@
+{
+  "dry_run": false,
+  "config": {
+    "model": "sshleifer/tiny-gpt2",
+    "dtype": "float32",
+    "layers": [
+      -1
+    ],
+    "batch_sizes": [
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "covariance_modes": [
+      "full",
+      "diag",
+      "low_rank",
+      "shrinkage"
+    ],
+    "covariance_low_ranks": [
+      4
+    ],
+    "limit": 8,
+    "manifold_questions": 6,
+    "max_length": 64,
+    "max_batch_tokens": 0,
+    "max_batch_token_budgets": [
+      0
+    ],
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 2,
+    "eval_reps_shard_read_cache_sizes": [
+      2
+    ],
+    "offline": true,
+    "length_bucketed_batches": true,
+    "shared_cache_dir": null,
+    "shared_cache_root": null,
+    "matrix_mode": "triplet",
+    "max_workers": 2
+  },
+  "cells": [
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_full",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "full",
+      "covariance_low_rank": 4,
+      "covariance_component": "cov_full",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 2,
+      "eval_reps_shard_read_cache_size_component": null,
+      "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 23.600468873000864,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "full",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-uncached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-uncached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "full",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-cached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-cached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "full",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-cache_only.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-cache_only.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "command_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "repeats": 1,
+        "profiles": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/statement-encodings.json",
+          "layer_stats_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/layer-stats.pt",
+          "eval_reps_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_full/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.033264,
+          "speedup_vs_baseline": 231.61883718133717
+        },
+        "quality_signals": {
+          "maha_last": 0.3125,
+          "truth_proj": 0.5625,
+          "subspace_resid": 0.46875,
+          "resid_update_norm": 0.5625,
+          "disp_euclid": 0.625,
+          "disp_hse": 0.6875,
+          "eigenscore": 0.5625,
+          "nll_answer": 0.4375
+        },
+        "truth_proj_auroc": 0.5625,
+        "totals": {
+          "uncached": {
+            "total_seconds": 7.704569,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 0.061673,
+            "model_forward_seconds": 0.082123
+          },
+          "cached": {
+            "total_seconds": 7.542505,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.021486760698203,
+            "ratio_to_baseline": 0.9789652088260875,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.033264,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 231.61883718133717,
+            "ratio_to_baseline": 0.004317438133138921,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_diag",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "diag",
+      "covariance_low_rank": 4,
+      "covariance_component": "cov_diag",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 2,
+      "eval_reps_shard_read_cache_size_component": null,
+      "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 23.51063441399856,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "diag",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-uncached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-uncached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "diag",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-cached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-cached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "diag",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-cache_only.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-cache_only.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "command_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "repeats": 1,
+        "profiles": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/statement-encodings.json",
+          "layer_stats_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/layer-stats.pt",
+          "eval_reps_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_diag/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.028139,
+          "speedup_vs_baseline": 274.1361811009631
+        },
+        "quality_signals": {
+          "maha_last": 0.3125,
+          "truth_proj": 0.5625,
+          "subspace_resid": 0.46875,
+          "resid_update_norm": 0.5625,
+          "disp_euclid": 0.625,
+          "disp_hse": 0.6875,
+          "eigenscore": 0.5625,
+          "nll_answer": 0.4375
+        },
+        "truth_proj_auroc": 0.5625,
+        "totals": {
+          "uncached": {
+            "total_seconds": 7.713918,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 0.060048,
+            "model_forward_seconds": 0.079909
+          },
+          "cached": {
+            "total_seconds": 7.465244,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0333109004876464,
+            "ratio_to_baseline": 0.9677629448485193,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.028139,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 274.1361811009631,
+            "ratio_to_baseline": 0.0036478220276648004,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_low_rank_4",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "low_rank",
+      "covariance_low_rank": 4,
+      "covariance_component": "cov_low_rank_4",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 2,
+      "eval_reps_shard_read_cache_size_component": null,
+      "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 23.79657113399844,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "low_rank",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-uncached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-uncached.json",
+            "--covariance-low-rank",
+            "4",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "low_rank",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-cached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-cached.json",
+            "--covariance-low-rank",
+            "4",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "low_rank",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-cache_only.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-cache_only.json",
+            "--covariance-low-rank",
+            "4",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "command_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "repeats": 1,
+        "profiles": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/statement-encodings.json",
+          "layer_stats_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/layer-stats.pt",
+          "eval_reps_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_low_rank_4/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.030973,
+          "speedup_vs_baseline": 259.79591902624867
+        },
+        "quality_signals": {
+          "maha_last": 0.375,
+          "truth_proj": 0.5625,
+          "subspace_resid": 0.46875,
+          "resid_update_norm": 0.5625,
+          "disp_euclid": 0.625,
+          "disp_hse": 0.6875,
+          "eigenscore": 0.5625,
+          "nll_answer": 0.4375
+        },
+        "truth_proj_auroc": 0.5625,
+        "totals": {
+          "uncached": {
+            "total_seconds": 8.046659,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 0.063241,
+            "model_forward_seconds": 0.082784
+          },
+          "cached": {
+            "total_seconds": 7.372944,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0913766603950876,
+            "ratio_to_baseline": 0.916273946739883,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.030973,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 259.79591902624867,
+            "ratio_to_baseline": 0.0038491751669854535,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_shrinkage",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "shrinkage",
+      "covariance_low_rank": 4,
+      "covariance_component": "cov_shrinkage",
+      "max_batch_tokens": 0,
+      "max_batch_tokens_component": null,
+      "prefix_kv_cache": false,
+      "prefix_kv_cache_component": null,
+      "eval_reps_shard_read_cache_size": 2,
+      "eval_reps_shard_read_cache_size_component": null,
+      "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage",
+      "shared_cache_group": null,
+      "uncached_cache_mode": "refresh",
+      "run_names": [
+        "uncached",
+        "cached",
+        "cache_only"
+      ],
+      "execution_seconds": 23.48812213200108,
+      "triplet": {
+        "dry_run": false,
+        "output_dir": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage",
+        "commands": {
+          "uncached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "shrinkage",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-uncached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-uncached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/statement-encodings.json",
+            "--refresh-statement-encoding-cache",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/layer-stats.pt",
+            "--refresh-layer-stats-cache",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/eval-reps-cache",
+            "--eval-reps-cache-shard-size",
+            "4",
+            "--refresh-eval-reps-cache"
+          ],
+          "cached": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "shrinkage",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-cached.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cached.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--statement-encoding-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/statement-encodings.json",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ],
+          "cache_only": [
+            "/home/z/projects/active/EigenTruth/.venv/bin/python",
+            "benchmarks/eval_truthfulqa.py",
+            "--model",
+            "sshleifer/tiny-gpt2",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-1",
+            "--batch-size",
+            "4",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--covariance-mode",
+            "shrinkage",
+            "--progress-every",
+            "0",
+            "--json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-cache_only.json",
+            "--profile-json",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cache_only.json",
+            "--offline",
+            "--limit",
+            "8",
+            "--manifold-questions",
+            "6",
+            "--length-bucketed-batches",
+            "--cache-only",
+            "--layer-stats-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/layer-stats.pt",
+            "--eval-reps-cache",
+            "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/eval-reps-cache",
+            "--eval-reps-shard-read-cache-size",
+            "2"
+          ]
+        },
+        "run_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "command_names": [
+          "uncached",
+          "cached",
+          "cache_only"
+        ],
+        "repeats": 1,
+        "profiles": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/profile-cache_only.json"
+        },
+        "results": {
+          "uncached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-uncached.json",
+          "cached": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-cached.json",
+          "cache_only": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/result-cache_only.json"
+        },
+        "comparison_report": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/cache-profile-comparison.json",
+        "comparison_skipped_reason": null,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "caches": {
+          "statement_encoding_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/statement-encodings.json",
+          "layer_stats_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/layer-stats.pt",
+          "eval_reps_cache": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/eval-reps-cache"
+        },
+        "uncached_cache_mode": "refresh",
+        "command_log": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/cache-profile-triplet-commands.json",
+        "artifact_manifest": "artifacts/tiny_covariance_shrinkage_matrix/layer_m1_batch_4_capture_outputs_cov_shrinkage/artifact-manifest.json",
+        "artifact_manifest_summary": {
+          "artifact_count": 11,
+          "missing_count": 0,
+          "directory_count": 1,
+          "file_count": 10
+        }
+      },
+      "summary": {
+        "dry_run": false,
+        "regression_gate": {
+          "enabled": true,
+          "passed": true,
+          "checked_runs": [
+            "cached",
+            "cache_only"
+          ],
+          "config": {
+            "max_total_ratio": null,
+            "max_run_total_ratios": {
+              "cached": 1.1,
+              "cache_only": 0.35
+            },
+            "max_phase_ratios": {},
+            "min_throughput_ratios": {},
+            "fail_on_any_repeat_regression": false
+          },
+          "failures": []
+        },
+        "fastest": {
+          "name": "cache_only",
+          "total_seconds": 0.029427,
+          "speedup_vs_baseline": 270.56149114758557
+        },
+        "quality_signals": {
+          "maha_last": 0.3125,
+          "truth_proj": 0.5625,
+          "subspace_resid": 0.46875,
+          "resid_update_norm": 0.5625,
+          "disp_euclid": 0.625,
+          "disp_hse": 0.6875,
+          "eigenscore": 0.5625,
+          "nll_answer": 0.4375
+        },
+        "truth_proj_auroc": 0.5625,
+        "totals": {
+          "uncached": {
+            "total_seconds": 7.961813,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.0,
+            "ratio_to_baseline": 1.0,
+            "cache_efficiency": {},
+            "cache_efficiency_deltas": {},
+            "forced_answer_forward_seconds": 0.066169,
+            "model_forward_seconds": 0.086224
+          },
+          "cached": {
+            "total_seconds": 7.274815,
+            "bottleneck": "load_model",
+            "speedup_vs_baseline": 1.09443511621945,
+            "ratio_to_baseline": 0.9137133715649941,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          },
+          "cache_only": {
+            "total_seconds": 0.029427,
+            "bottleneck": "score_postprocess",
+            "speedup_vs_baseline": 270.56149114758557,
+            "ratio_to_baseline": 0.0036960174774263096,
+            "cache_efficiency": {
+              "eval_reps_reader.records_per_read": 4.0,
+              "eval_reps_reader.shards_per_read": 1.0,
+              "eval_reps_reader.cross_shard_read_rate": 0.0,
+              "eval_reps_reader.shard_cache_hit_rate": 0.0,
+              "eval_reps_reader.shard_load_rate": 1.0,
+              "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+              "eval_reps_reader.shard_count": 2.0,
+              "eval_reps_reader.shard_cache_capacity": 2.0
+            },
+            "cache_efficiency_deltas": {
+              "eval_reps_reader.cross_shard_read_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.records_per_read": {
+                "value": 4.0,
+                "baseline_value": 0.0,
+                "delta": 4.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_capacity": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_cache_hit_rate": {
+                "value": 0.0,
+                "baseline_value": 0.0,
+                "delta": 0.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_count": {
+                "value": 2.0,
+                "baseline_value": 0.0,
+                "delta": 2.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_load_rate": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shard_manifest_scans_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              },
+              "eval_reps_reader.shards_per_read": {
+                "value": 1.0,
+                "baseline_value": 0.0,
+                "delta": 1.0,
+                "ratio_to_baseline": null
+              }
+            },
+            "model_forward_seconds": 0.0
+          }
+        }
+      }
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_diag",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "diag",
+      "covariance_low_rank": 4,
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 7.713918,
+      "cached_total_seconds": 7.465244,
+      "cache_only_total_seconds": 0.028139,
+      "uncached_forced_answer_forward_seconds": 0.060048,
+      "uncached_model_forward_seconds": 0.079909,
+      "cache_only_speedup_vs_baseline": 274.1361811009631,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_shrinkage",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "shrinkage",
+      "covariance_low_rank": 4,
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 7.961813,
+      "cached_total_seconds": 7.274815,
+      "cache_only_total_seconds": 0.029427,
+      "uncached_forced_answer_forward_seconds": 0.066169,
+      "uncached_model_forward_seconds": 0.086224,
+      "cache_only_speedup_vs_baseline": 270.56149114758557,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_low_rank_4",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "low_rank",
+      "covariance_low_rank": 4,
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 8.046659,
+      "cached_total_seconds": 7.372944,
+      "cache_only_total_seconds": 0.030973,
+      "uncached_forced_answer_forward_seconds": 0.063241,
+      "uncached_model_forward_seconds": 0.082784,
+      "cache_only_speedup_vs_baseline": 259.79591902624867,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    {
+      "id": "layer_m1_batch_4_capture_outputs_cov_full",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "full",
+      "covariance_low_rank": 4,
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 7.704569,
+      "cached_total_seconds": 7.542505,
+      "cache_only_total_seconds": 0.033264,
+      "uncached_forced_answer_forward_seconds": 0.061673,
+      "uncached_model_forward_seconds": 0.082123,
+      "cache_only_speedup_vs_baseline": 231.61883718133717,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    }
+  ],
+  "leaderboard_sort_metric": "cache_only_total_seconds",
+  "prefix_kv_comparisons": [],
+  "matrix_decision": {
+    "status": "promote",
+    "recommended_cell": "layer_m1_batch_4_capture_outputs_cov_diag",
+    "recommended": {
+      "id": "layer_m1_batch_4_capture_outputs_cov_diag",
+      "layer": -1,
+      "batch_size": 4,
+      "hidden_state_capture": "outputs",
+      "covariance_mode": "diag",
+      "covariance_low_rank": 4,
+      "max_batch_tokens": 0,
+      "prefix_kv_cache": false,
+      "eval_reps_shard_read_cache_size": 2,
+      "uncached_cache_mode": "refresh",
+      "shared_cache_group": null,
+      "uncached_total_seconds": 7.713918,
+      "cached_total_seconds": 7.465244,
+      "cache_only_total_seconds": 0.028139,
+      "uncached_forced_answer_forward_seconds": 0.060048,
+      "uncached_model_forward_seconds": 0.079909,
+      "cache_only_speedup_vs_baseline": 274.1361811009631,
+      "truth_proj_auroc": 0.5625,
+      "gate_passed": true,
+      "recommendation_metric": "cache_only_total_seconds",
+      "cache_only_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      },
+      "cached_cache_efficiency": {
+        "eval_reps_reader.records_per_read": 4.0,
+        "eval_reps_reader.shards_per_read": 1.0,
+        "eval_reps_reader.cross_shard_read_rate": 0.0,
+        "eval_reps_reader.shard_cache_hit_rate": 0.0,
+        "eval_reps_reader.shard_load_rate": 1.0,
+        "eval_reps_reader.shard_manifest_scans_per_read": 1.0,
+        "eval_reps_reader.shard_count": 2.0,
+        "eval_reps_reader.shard_cache_capacity": 2.0
+      }
+    },
+    "checked_cell_count": 4,
+    "candidate_count": 4,
+    "failed_cells": [],
+    "unchecked_cells": [],
+    "recommendation_metric": "cache_only_total_seconds",
+    "blocking_reasons": []
+  },
+  "execution": {
+    "wall_clock_seconds": 47.312803576998704,
+    "cell_count": 4,
+    "max_workers": 2,
+    "shared_cache_refresh_barrier": false
+  },
+  "report_path": "artifacts/tiny_covariance_shrinkage_matrix/cache-profile-matrix-report.json",
+  "artifact_manifest": "artifacts/tiny_covariance_shrinkage_matrix/artifact-manifest.json"
+}

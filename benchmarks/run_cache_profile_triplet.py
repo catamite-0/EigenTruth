@@ -166,8 +166,6 @@ def build_eval_command(
         config.hidden_state_capture,
         "--covariance-mode",
         config.covariance_mode,
-        "--covariance-low-rank",
-        str(config.covariance_low_rank),
         "--progress-every",
         str(config.progress_every),
         "--json",
@@ -175,6 +173,8 @@ def build_eval_command(
         "--profile-json",
         str(config.profile_path(name, repeat_index)),
     ]
+    if config.covariance_mode == "low_rank":
+        base.extend(["--covariance-low-rank", str(config.covariance_low_rank)])
     if config.offline:
         base.append("--offline")
     if config.limit is not None:
