@@ -39,6 +39,12 @@ def test_calibration_score_validates_direction_and_alpha():
         CalibrationScore("bad", threshold=1.0, direction="sideways")
     with pytest.raises(ValueError):
         CalibrationScore("bad", threshold=1.0, conformal_alpha=1.5)
+    with pytest.raises(ValueError, match="threshold"):
+        CalibrationScore("bad", threshold=float("nan"))
+    with pytest.raises(ValueError, match="threshold"):
+        CalibrationScore("bad", threshold=True)  # type: ignore[arg-type]
+
+    assert CalibrationScore("never_alarm", threshold=float("inf")).threshold == float("inf")
 
 
 def test_risk_decision_validation_and_values():

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Optional
@@ -27,6 +28,12 @@ class CalibrationScore:
     def __post_init__(self) -> None:
         if self.direction not in {"higher", "lower"}:
             raise ValueError("direction must be 'higher' or 'lower'.")
+        if isinstance(self.threshold, bool):
+            raise ValueError("threshold must be numeric and must not be NaN.")
+        threshold = float(self.threshold)
+        if math.isnan(threshold):
+            raise ValueError("threshold must be numeric and must not be NaN.")
+        object.__setattr__(self, "threshold", threshold)
         if self.conformal_alpha is not None and not (0.0 < self.conformal_alpha < 1.0):
             raise ValueError("conformal_alpha must be in (0, 1).")
 

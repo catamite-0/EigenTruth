@@ -133,6 +133,18 @@ sidecar in the same run, it primes the run-local records fingerprint cache so
 later provenance metadata can reuse the full SHA-256 without a second records
 pass.
 
+For ACSE-style experiments, `eval_conformal.py` can also build an adaptive
+conformal report and artifact by inflating the selected diagnostic with primary
+score or score-dump extra fields:
+
+```bash
+python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json \
+  --signal maha_last \
+  --adaptive-feature inside_semantic_entropy \
+  --adaptive-feature-weight inside_semantic_entropy=0.5 \
+  --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
+```
+
 Use `--batch-size` and, when sampling INSIDE continuations, `--inside-batch-size`
 to trade memory for benchmark throughput. Add `--inside-adaptive-sampling` to
 treat `--inside-samples` as a maximum budget and stop early once lexical and

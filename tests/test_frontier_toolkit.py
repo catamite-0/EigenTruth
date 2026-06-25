@@ -1931,6 +1931,26 @@ def test_risk_controller_routes_non_finite_diagnostics_to_unknown():
     assert unsupported.diagnostics["verification"]["counts"]["insufficient_evidence"] == 1
 
 
+def test_risk_controller_routes_missing_calibrated_scores_to_unknown():
+    artifact = CalibrationArtifact(
+        model_id="tiny",
+        target_layer=-1,
+        scores=(
+            CalibrationScore("maha", threshold=3.0),
+            CalibrationScore("maha_adaptive", threshold=4.0),
+        ),
+        eigentruth_version="0.1.0",
+    )
+    controller = RiskController(artifact)
+
+    decision = controller.decide({"maha": 1.0})
+
+    assert decision.action is ControlAction.CLARIFY
+    assert decision.risk_level is RiskLevel.UNKNOWN
+    assert decision.diagnostics["missing_scores"] == ("maha_adaptive",)
+    assert "missing calibrated diagnostic score" in decision.reason
+
+
 def test_risk_controller_routes_bool_diagnostics_to_unknown():
     artifact = CalibrationArtifact(
         model_id="tiny",

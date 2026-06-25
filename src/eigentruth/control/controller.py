@@ -241,6 +241,15 @@ class RiskController:
                 diagnostics=trace,
             )
 
+        if missing:
+            return RiskDecision(
+                action=ControlAction.CLARIFY,
+                risk_level=RiskLevel.UNKNOWN,
+                confidence=1.0,
+                reason=f"missing calibrated diagnostic score(s): {', '.join(missing)}",
+                diagnostics=trace,
+            )
+
         if not triggered:
             return RiskDecision(
                 action=ControlAction.ACCEPT,

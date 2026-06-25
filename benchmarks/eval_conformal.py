@@ -27,6 +27,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Sequence
 
 import torch
 
@@ -38,15 +39,23 @@ if str(REPO_ROOT) not in sys.path:
 from benchmarks.config_utils import planned_artifact_manifest_summary  # noqa: E402
 from eigentruth.calibration import (  # noqa: E402
     DEFAULT_SCORE_DIRECTIONS,
+    AdaptiveConformalCalibrator,
     ConformalCalibrator,
     LayerScoreSweepCalibrator,
 )
-from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate  # noqa: E402
+from eigentruth.eval.conformal import (  # noqa: E402
+    AdaptiveScoreTransform,
+    adaptive_anomaly_scores,
+    directional_conformal_threshold,
+    directional_trigger_rate,
+)
 from eigentruth.eval.metrics import confidence_error_report, selective_classification_report  # noqa: E402
 from eigentruth.eval.score_dump import (  # noqa: E402
     JSONL_FORMAT,
     ScoreDump,
     ScoreDumpColumns,
+    ScoreDumpJsonlManifest,
+    iter_score_dump_jsonl_records,
     load_score_dump_columns,
     score_dump_cache_summary,
     score_dump_file_metadata,
@@ -64,6 +73,54 @@ def _parse_signals(value: str | None) -> tuple[str, ...] | None:
     if not signals:
         raise ValueError("--signals must contain at least one signal name.")
     return signals
+
+
+def _parse_adaptive_feature_names(values: object) -> tuple[str, ...]:
+    if values is None:
+        return ()
+    if isinstance(values, str):
+        raw_values = (values,)
+    elif isinstance(values, tuple | list):
+        raw_values = tuple(values)
+    else:
+        raise ValueError("--adaptive-feature values must be strings.")
+    names: list[str] = []
+    for value in raw_values:
+        if not isinstance(value, str):
+            raise ValueError("--adaptive-feature values must be strings.")
+        for part in value.split(","):
+            name = part.strip()
+            if name and name not in names:
+                names.append(name)
+    return tuple(names)
+
+
+def _parse_adaptive_feature_weights(
+    values: object,
+    feature_names: tuple[str, ...],
+) -> dict[str, float]:
+    weights = {name: 1.0 for name in feature_names}
+    if values is None:
+        return weights
+    if isinstance(values, str):
+        raw_values = (values,)
+    elif isinstance(values, tuple | list):
+        raw_values = tuple(values)
+    else:
+        raise ValueError("--adaptive-feature-weight values must be NAME=FLOAT strings.")
+    valid_names = set(feature_names)
+    for value in raw_values:
+        if not isinstance(value, str) or "=" not in value:
+            raise ValueError("--adaptive-feature-weight values must use NAME=FLOAT.")
+        name, raw_weight = value.split("=", 1)
+        name = name.strip()
+        if name not in valid_names:
+            raise ValueError(f"adaptive feature weight references unknown feature {name!r}.")
+        try:
+            weights[name] = float(raw_weight)
+        except ValueError as exc:
+            raise ValueError(f"adaptive feature weight for {name!r} must be numeric.") from exc
+    return weights
 
 
 def _all_dump_signals(summary: dict) -> tuple[str, ...]:
@@ -113,6 +170,7 @@ def _load_primary_score_dump_view(
     *,
     confidence_signal: str | None = None,
     disable_confidence_audit: bool = False,
+    additional_signals: Sequence[str] = (),
     cache: dict,
 ) -> tuple[ScoreDumpColumns, dict, ScoreDump | None, dict]:
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -127,6 +185,7 @@ def _load_primary_score_dump_view(
         requested = tuple(dict.fromkeys((
             signal,
             *(name for name in (confidence_signal,) if name is not None and name in available),
+            *(name for name in additional_signals if name in available),
         )))
         columns = load_score_dump_columns(path, requested, cache=cache)
         metadata = score_dump_file_metadata(path, cache=cache)
@@ -147,6 +206,7 @@ def _load_primary_score_dump_view(
     requested = tuple(dict.fromkeys((
         signal,
         *(name for name in (confidence_signal,) if name is not None and name in available),
+        *(name for name in additional_signals if name in available),
     )))
     dump.require_scores(requested)
     columns = ScoreDumpColumns(
@@ -169,9 +229,166 @@ def _artifact_paths(args) -> dict[str, str | Path | None]:
         "input_scores": args.scores,
         "conformal_report": args.json,
         "calibration_artifact": args.save_calibration,
+        "adaptive_calibration_artifact": getattr(args, "save_adaptive_calibration", None),
         "sweep_report": args.save_sweep_report,
         "best_calibration_artifact": args.save_best_calibration,
     }
+
+
+def _coerce_feature_values(values: object, *, name: str, n_total: int) -> tuple[float, ...]:
+    try:
+        tensor = torch.as_tensor(values, dtype=torch.float64).flatten()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"adaptive feature {name!r} must be numeric.") from exc
+    if tensor.numel() != n_total:
+        raise ValueError(
+            f"adaptive feature {name!r} must contain {n_total} values, got {tensor.numel()}."
+        )
+    if not torch.isfinite(tensor).all():
+        raise ValueError(f"adaptive feature {name!r} must contain only finite values.")
+    return tuple(float(item) for item in tensor.tolist())
+
+
+def _load_jsonl_extra_features(
+    path: str | Path,
+    feature_names: Sequence[str],
+    *,
+    n_total: int,
+) -> dict[str, tuple[float, ...]]:
+    if not feature_names:
+        return {}
+    manifest = ScoreDumpJsonlManifest.load_json(path)
+    features: dict[str, tuple[float, ...]] = {}
+    missing = []
+    for name in feature_names:
+        if name in manifest.extras:
+            features[name] = _coerce_feature_values(manifest.extras[name], name=name, n_total=n_total)
+        else:
+            missing.append(name)
+    if not missing:
+        return features
+
+    collected = {name: [] for name in missing}
+    for record in iter_score_dump_jsonl_records(path, allow_missing_scores=True):
+        for name in tuple(collected):
+            if name not in record.extras:
+                continue
+            collected[name].append(record.extras[name])
+    for name, values in collected.items():
+        if len(values) == n_total:
+            features[name] = _coerce_feature_values(values, name=name, n_total=n_total)
+    return features
+
+
+def _load_adaptive_feature_values(
+    path: str | Path,
+    feature_names: Sequence[str],
+    *,
+    score_dump: ScoreDumpColumns,
+    full_score_dump: ScoreDump | None,
+) -> dict[str, tuple[float, ...]]:
+    n_total = len(score_dump.labels)
+    features: dict[str, tuple[float, ...]] = {}
+    missing = []
+    for name in feature_names:
+        if name in score_dump.scores:
+            features[name] = _coerce_feature_values(score_dump.scores[name], name=name, n_total=n_total)
+        elif full_score_dump is not None and name in full_score_dump.extras:
+            features[name] = _coerce_feature_values(full_score_dump.extras[name], name=name, n_total=n_total)
+        else:
+            missing.append(name)
+
+    if missing and full_score_dump is None:
+        jsonl_features = _load_jsonl_extra_features(path, missing, n_total=n_total)
+        features.update(jsonl_features)
+    unresolved = tuple(name for name in feature_names if name not in features)
+    if unresolved:
+        raise ValueError(
+            "score dump is missing adaptive feature(s): "
+            f"{unresolved}. Features may be primary scores, JSON extras arrays, or JSONL record extras."
+        )
+    return features
+
+
+def _run_adaptive_conformal_report(
+    *,
+    base_scores: torch.Tensor,
+    labels: torch.Tensor,
+    base_score_name: str,
+    output_score_name: str,
+    feature_values: dict[str, tuple[float, ...]],
+    transform: AdaptiveScoreTransform,
+    repeats: int,
+    seed: int,
+) -> tuple[dict, torch.Tensor]:
+    if repeats < 1:
+        raise ValueError("repeats must be >= 1.")
+    adjusted_scores = adaptive_anomaly_scores(
+        base_scores,
+        feature_values=feature_values,
+        feature_weights=transform.feature_weights,
+        intercept=transform.intercept,
+        direction=transform.direction,
+    )
+    true_scores = adjusted_scores[labels == 0]
+    false_scores = adjusted_scores[labels == 1]
+    n_true, n_false = true_scores.numel(), false_scores.numel()
+    if n_true < 2:
+        raise ValueError("score dump must contain at least two true statements for split conformal.")
+    fa_sum = {a: 0.0 for a in ALPHAS}
+    det_sum = {a: 0.0 for a in ALPHAS}
+    for repeat_idx in range(repeats):
+        generator = torch.Generator().manual_seed(seed + repeat_idx)
+        perm = torch.randperm(n_true, generator=generator)
+        half = n_true // 2
+        calib = true_scores[perm[:half]]
+        test_true = true_scores[perm[half:]]
+        for alpha in ALPHAS:
+            threshold = directional_conformal_threshold(calib, alpha, "higher")
+            fa_sum[alpha] += directional_trigger_rate(test_true, threshold, "higher")
+            det_sum[alpha] += directional_trigger_rate(false_scores, threshold, "higher")
+
+    results = {}
+    all_pass = True
+    for alpha in ALPHAS:
+        false_alarm = fa_sum[alpha] / repeats
+        detection = det_sum[alpha] / repeats
+        ok = abs(false_alarm - alpha) <= TOLERANCE
+        all_pass &= ok
+        threshold = directional_conformal_threshold(true_scores, alpha, "higher")
+        results[str(alpha)] = {
+            "false_alarm": false_alarm,
+            "coverage": 1.0 - false_alarm,
+            "detection": detection,
+            "pass": ok,
+            "threshold": threshold,
+            "selective_report": selective_classification_report(
+                adjusted_scores,
+                labels,
+                threshold,
+                direction="higher",
+            ),
+        }
+
+    return (
+        {
+            "config": {
+                "base_signal": base_score_name,
+                "score_name": output_score_name,
+                "direction": "higher",
+                "base_direction": transform.direction,
+                "transform": transform.to_dict(),
+                "feature_names": tuple(feature_values),
+                "n_true": n_true,
+                "n_false": n_false,
+                "repeats": repeats,
+                "seed": seed,
+            },
+            "results": results,
+            "verdict": "ACCEPT" if all_pass else "REJECT",
+        },
+        adjusted_scores,
+    )
 
 
 def _add_planned_manifest_fields(args, payload: dict) -> None:
@@ -204,6 +421,7 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
             "signal": args.signal,
             "direction": payload.get("config", {}).get("direction"),
             "has_sweep_report": "sweep_report" in payload,
+            "has_adaptive_report": "adaptive_conformal_report" in payload,
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -219,6 +437,8 @@ def run(args) -> dict:
     except Exception:
         pass
 
+    if int(args.repeats) < 1:
+        raise ValueError("--repeats must be >= 1.")
     score_dump_metadata_cache = {}
     disable_confidence_audit = bool(getattr(args, "disable_confidence_audit", False))
     raw_confidence_signal = getattr(args, "confidence_signal", "nll_answer")
@@ -227,11 +447,19 @@ def run(args) -> dict:
         if disable_confidence_audit or raw_confidence_signal is None
         else str(raw_confidence_signal)
     )
+    adaptive_feature_names = _parse_adaptive_feature_names(getattr(args, "adaptive_feature", None))
+    adaptive_feature_weights = _parse_adaptive_feature_weights(
+        getattr(args, "adaptive_feature_weight", None),
+        adaptive_feature_names,
+    )
+    if getattr(args, "save_adaptive_calibration", None) and not adaptive_feature_names:
+        raise ValueError("--save-adaptive-calibration requires at least one --adaptive-feature.")
     score_dump, score_dump_metadata, full_score_dump, confidence_audit = _load_primary_score_dump_view(
         args.scores,
         args.signal,
         confidence_signal=confidence_signal,
         disable_confidence_audit=disable_confidence_audit,
+        additional_signals=adaptive_feature_names,
         cache=score_dump_metadata_cache,
     )
     labels = torch.tensor(score_dump.labels)
@@ -246,6 +474,8 @@ def run(args) -> dict:
     true_scores = scores[labels == 0]   # 正常总体（可交换假设的对象）
     false_scores = scores[labels == 1]  # 希望被报警的对象（仅报告 power）
     n_true, n_false = true_scores.numel(), false_scores.numel()
+    if n_true < 2:
+        raise ValueError("score dump must contain at least two true statements for split conformal.")
     print(f"signal={args.signal}  direction={direction}  n_true={n_true}  n_false={n_false}  "
           f"repeats={args.repeats}\n")
 
@@ -312,12 +542,81 @@ def run(args) -> dict:
             "confidence_top_fraction": float(getattr(args, "confidence_top_fraction", 0.25)),
         }
 
+    base_verdict = "ACCEPT" if all_pass else "REJECT"
     payload = {"config": {"scores": args.scores, "signal": args.signal,
                           "score_dump": score_dump_metadata,
                           "direction": direction, "repeats": args.repeats, "seed": args.seed,
                           "n_true": n_true, "n_false": n_false,
                           "confidence_audit": confidence_audit},
-               "results": results, "verdict": "ACCEPT" if all_pass else "REJECT"}
+               "results": results,
+               "component_verdicts": {"base_conformal": base_verdict},
+               "verdict": base_verdict}
+
+    if adaptive_feature_names:
+        adaptive_feature_values = _load_adaptive_feature_values(
+            args.scores,
+            adaptive_feature_names,
+            score_dump=score_dump,
+            full_score_dump=full_score_dump,
+        )
+        adaptive_score_name = getattr(args, "adaptive_score_name", None) or f"{args.signal}_adaptive"
+        adaptive_transform = AdaptiveScoreTransform(
+            feature_weights=adaptive_feature_weights,
+            intercept=float(getattr(args, "adaptive_intercept", 0.0)),
+            direction=direction,
+        )
+        adaptive_report, _ = _run_adaptive_conformal_report(
+            base_scores=scores,
+            labels=labels,
+            base_score_name=args.signal,
+            output_score_name=adaptive_score_name,
+            feature_values=adaptive_feature_values,
+            transform=adaptive_transform,
+            repeats=args.repeats,
+            seed=args.seed,
+        )
+        payload["adaptive_conformal_report"] = adaptive_report
+        payload["component_verdicts"]["adaptive_conformal"] = adaptive_report["verdict"]
+        if adaptive_report["verdict"] != "ACCEPT":
+            payload["verdict"] = "REJECT"
+        print(
+            f"\n  Adaptive conformal: {args.signal} -> {adaptive_score_name} "
+            f"features={','.join(adaptive_feature_names)} "
+            f"verdict={adaptive_report['verdict']}"
+        )
+
+        save_adaptive_calibration = getattr(args, "save_adaptive_calibration", None)
+        if save_adaptive_calibration:
+            feature_tensors = {
+                name: torch.tensor(values, dtype=torch.float64)
+                for name, values in adaptive_feature_values.items()
+            }
+            normal_feature_values = {
+                name: values[labels == 0]
+                for name, values in feature_tensors.items()
+            }
+            artifact = AdaptiveConformalCalibrator(
+                alpha=args.artifact_alpha,
+                transform=adaptive_transform,
+            ).calibrate(
+                model_id=args.model_id or dump_config.get("model", "unknown"),
+                model_revision=args.model_revision,
+                target_layer=args.target_layer if args.target_layer is not None else int(dump_config.get("layer", 0)),
+                score_name=args.signal,
+                calibration_scores=true_scores,
+                feature_values=normal_feature_values,
+                output_score_name=adaptive_score_name,
+                calibration_dataset_metadata={
+                    "scores": args.scores,
+                    "signal": args.signal,
+                    "n_true": n_true,
+                    "source": "eval_conformal.py",
+                },
+                created_at=args.created_at,
+                commit_sha=args.commit_sha,
+            )
+            artifact.save_json(save_adaptive_calibration)
+            print(f"\nWrote adaptive calibration artifact to {save_adaptive_calibration}")
 
     if args.save_calibration:
         artifact = ConformalCalibrator(alpha=args.artifact_alpha).calibrate(
@@ -405,6 +704,8 @@ def main():
     p.add_argument("--json", default=None, help="optional path for structured results")
     p.add_argument("--save-calibration", default=None,
                    help="optional path to write a CalibrationArtifact JSON for the selected signal")
+    p.add_argument("--save-adaptive-calibration", default=None,
+                   help="optional path to write an adaptive CalibrationArtifact JSON")
     p.add_argument("--save-sweep-report", default=None,
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,
@@ -419,6 +720,15 @@ def main():
                    help="alpha used for --save-calibration artifact threshold")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,
                    help="optional override for whether higher or lower signal values are more anomalous")
+    p.add_argument("--adaptive-feature", action="append", default=None,
+                   help="primary score or dump extra used to inflate adaptive conformal scores; "
+                        "may be repeated or comma-separated")
+    p.add_argument("--adaptive-feature-weight", action="append", default=None,
+                   help="adaptive feature weight in NAME=FLOAT form; omitted features default to 1.0")
+    p.add_argument("--adaptive-intercept", type=float, default=0.0,
+                   help="constant added to the adaptive anomaly score")
+    p.add_argument("--adaptive-score-name", default=None,
+                   help="score name stored in adaptive reports/artifacts")
     p.add_argument("--confidence-signal", default="nll_answer",
                    help="optional primary score used to audit high-confidence errors when present")
     p.add_argument("--confidence-direction", choices=("higher", "lower"), default=None,

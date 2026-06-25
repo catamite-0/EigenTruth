@@ -59,6 +59,50 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     assert report["detection"] == pytest.approx(1.0)
 
 
+def test_eval_conformal_rejects_invalid_split_config(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 1],
+            "scores": {"maha_last": [0.1, 1.0]},
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="repeats"):
+        module.run(SimpleNamespace(repeats=0))
+
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        direction=None,
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+    with pytest.raises(ValueError, match="at least two true statements"):
+        module.run(args)
+
+
 def test_eval_conformal_run_reports_high_confidence_errors(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"
@@ -169,6 +213,136 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert payload["sweep_report"]["best"]["score_name"] == "truth_proj"
     assert payload["sweep_report"]["metadata"]["sweep_max_workers"] == 2
     assert sweep_report_path.exists()
+
+
+def test_eval_conformal_run_builds_adaptive_report_from_jsonl_record_extras(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "tiny", "layer": -1},
+        "labels": [0, 0, 0, 0, 1, 1],
+        "scores": {"maha_last": [0.0, 0.5, 1.0, 1.5, 2.0, 4.0]},
+        "inside_sample_counts": [0, 0, 1, 1, 1, 2],
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    adaptive_path = tmp_path / "adaptive-calibration.json"
+    write_score_dump_jsonl(
+        dump,
+        scores_path,
+        record_extra_names=("inside_sample_counts",),
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=str(adaptive_path),
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        sweep_workers=1,
+        artifact_alpha=0.20,
+        direction=None,
+        adaptive_feature=("inside_sample_counts",),
+        adaptive_feature_weight=("inside_sample_counts=0.5",),
+        adaptive_intercept=0.25,
+        adaptive_score_name="maha_inside_adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at="2026-06-25T00:00:00+00:00",
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+    report = payload["adaptive_conformal_report"]
+    artifact = json.loads(adaptive_path.read_text(encoding="utf-8"))
+    adaptive_metadata = artifact["calibration_dataset_metadata"]["adaptive_conformal"]
+
+    assert report["config"]["base_signal"] == "maha_last"
+    assert report["config"]["score_name"] == "maha_inside_adaptive"
+    assert report["config"]["direction"] == "higher"
+    assert report["config"]["feature_names"] == ("inside_sample_counts",)
+    assert report["config"]["transform"]["feature_weights"] == {"inside_sample_counts": 0.5}
+    assert report["config"]["transform"]["intercept"] == pytest.approx(0.25)
+    assert report["results"]["0.2"]["selective_report"]["direction"] == "higher"
+    assert artifact["scores"][0]["name"] == "maha_inside_adaptive"
+    assert artifact["scores"][0]["direction"] == "higher"
+    assert adaptive_metadata["base_score_name"] == "maha_last"
+    assert adaptive_metadata["output_score_name"] == "maha_inside_adaptive"
+    assert adaptive_metadata["n_calibration"] == 4
+
+
+def test_eval_conformal_adaptive_reject_sets_top_level_verdict(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": -1},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {
+                "maha_last": [0.0, 0.5, 1.0, 1.5, 2.0, 4.0],
+                "risk_feature": [0.0, 0.0, 0.1, 0.1, 1.0, 1.0],
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    def reject_adaptive_report(**kwargs):
+        return (
+            {"config": {"score_name": kwargs["output_score_name"]}, "results": {}, "verdict": "REJECT"},
+            torch.zeros_like(kwargs["base_scores"]),
+        )
+
+    monkeypatch.setattr(module, "TOLERANCE", 1.0)
+    monkeypatch.setattr(module, "_run_adaptive_conformal_report", reject_adaptive_report)
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        sweep_workers=1,
+        artifact_alpha=0.20,
+        direction=None,
+        adaptive_feature=("risk_feature",),
+        adaptive_feature_weight=None,
+        adaptive_intercept=0.0,
+        adaptive_score_name=None,
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+
+    assert payload["component_verdicts"] == {
+        "base_conformal": "ACCEPT",
+        "adaptive_conformal": "REJECT",
+    }
+    assert payload["verdict"] == "REJECT"
 
 
 def test_eval_conformal_run_reuses_json_score_dump_for_sweep(tmp_path, monkeypatch):

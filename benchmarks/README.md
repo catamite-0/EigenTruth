@@ -421,6 +421,12 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal sup
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal truth_proj \
   --artifact-alpha 0.2 --save-calibration artifacts/gpt2-l8-truth-proj.json
 
+# Build an adaptive conformal report/artifact from primary score or dump extra fields:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.manifest.json --signal maha_last \
+  --adaptive-feature inside_semantic_entropy \
+  --adaptive-feature-weight inside_semantic_entropy=0.5 \
+  --save-adaptive-calibration artifacts/gpt2-maha-adaptive.json
+
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy \
@@ -446,6 +452,11 @@ for deterministic low-resource local runs. Structured reports also include
 `selective_report` fields for threshold, coverage, selective accuracy, detection,
 false alarm, and simple binomial confidence intervals; thresholding honors each
 score's `higher` or `lower` anomalous direction while score dumps remain unchanged.
+When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature from
+a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
+per-record extra, then writes an `adaptive_conformal_report` whose adjusted score
+is always higher-is-more-anomalous. `--save-adaptive-calibration` stores that
+adjusted score as a standard `CalibrationArtifact` with transform metadata.
 When a primary confidence proxy such as `nll_answer` is present, `eval_conformal.py`
 also adds a `confidence_error_report` under each alpha result. By default it treats
 the lowest 25% `nll_answer` rows as the high-confidence region and reports how many
