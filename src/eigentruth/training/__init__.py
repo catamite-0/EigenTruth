@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from eigentruth.training.callbacks import (
+    RepTelemetryCallback,
+    TelemetryCallbackEvent,
+    extract_hidden_state_matrices,
+)
 from eigentruth.training.telemetry import (
     RepresentationTelemetryRecorder,
     RepresentationTelemetryReport,
@@ -11,9 +16,12 @@ from eigentruth.training.telemetry import (
 )
 
 __all__ = [
+    "RepTelemetryCallback",
     "RepresentationTelemetryRecorder",
     "RepresentationTelemetryReport",
     "RepresentationTelemetrySnapshot",
+    "TelemetryCallbackEvent",
     "build_representation_manifold",
+    "extract_hidden_state_matrices",
     "representation_telemetry_snapshot",
 ]
