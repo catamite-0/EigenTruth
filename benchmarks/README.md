@@ -703,6 +703,32 @@ summarizes recommended-signal counts, conditional-correctness lower-bound
 variance, abstention-rate variance, and release-gate pass/block counts per
 score dump. JSONL inputs load only the requested abstention candidate columns.
 
+## `compare_frontier_release_evidence.py`
+
+Combines frontier stability reports into one fail-closed release verdict without
+rerunning models, verifiers, or retrieval. It treats staged verifier stability
+and abstention-gate stability as separate tracks, then blocks the release
+candidate if either track misses its configured seed-rate or metric thresholds.
+
+```bash
+OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-release-evidence
+
+python benchmarks/compare_frontier_release_evidence.py \
+  --verifier-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json \
+  --abstention-stability-report artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability/abstention-stability-report.json \
+  --json "$OUT/frontier-release-evidence.json" \
+  --artifact-manifest "$OUT/artifact-manifest.json" \
+  --verification-report "$OUT/manifest-verification.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2-l80-release-evidence \
+  --version 0.1
+```
+
+The current l80 evidence promotes the verifier-stability track but blocks the
+abstention-stability track, so the combined release verdict is blocked. This is
+the expected posture until participation-gate evidence clears the conservative
+conditional-correctness lower-bound gate.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier

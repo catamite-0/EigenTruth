@@ -1519,6 +1519,144 @@ def test_eval_abstention_stability_rejects_duplicate_score_names(tmp_path):
         )
 
 
+def test_compare_frontier_release_evidence_blocks_negative_abstention_track(tmp_path):
+    registry_module = importlib.import_module("eigentruth.registry")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    output_path = tmp_path / "frontier-release-evidence" / "report.json"
+    manifest_path = tmp_path / "frontier-release-evidence" / "artifact-manifest.json"
+    verification_path = tmp_path / "frontier-release-evidence" / "manifest-verification.json"
+    registry_path = tmp_path / "registry.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=0, correctness_mean=0.5)),
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/compare_frontier_release_evidence.py",
+            "--verifier-stability-report",
+            str(verifier_path),
+            "--abstention-stability-report",
+            str(abstention_path),
+            "--json",
+            str(output_path),
+            "--artifact-manifest",
+            str(manifest_path),
+            "--verification-report",
+            str(verification_path),
+            "--registry",
+            str(registry_path),
+            "--name",
+            "synthetic-frontier-release-evidence",
+            "--version",
+            "0.1",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
+    external_verification = registry_module.ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=True,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["decision"]["verifier_track_status"] == "promote"
+    assert payload["decision"]["abstention_track_status"] == "blocked"
+    assert any("conditional_correctness_lower_bound_mean" in reason
+               for reason in payload["decision"]["blocking_reasons"])
+    assert payload["manifest_verification"]["passed"] is True
+    assert verification["passed"] is True
+    assert external_verification.passed is True
+    assert registry.get("report:synthetic-frontier-release-evidence:0.1").metadata["status"] == "blocked"
+    assert registry.get("benchmark_manifest:synthetic-frontier-release-evidence:0.1").metadata[
+        "manifest_verified"
+    ] is True
+    assert registry.get("manifest_verification:synthetic-frontier-release-evidence-verification:0.1")
+
+
+def test_compare_frontier_release_evidence_promotes_when_both_tracks_pass(tmp_path):
+    module = importlib.import_module("benchmarks.compare_frontier_release_evidence")
+    verifier_path = tmp_path / "verifier-stability.json"
+    abstention_path = tmp_path / "abstention-stability.json"
+    verifier_path.write_text(
+        json.dumps(_synthetic_verifier_stability_payload()),
+        encoding="utf-8",
+    )
+    abstention_path.write_text(
+        json.dumps(_synthetic_abstention_stability_payload(pass_seed_count=3, correctness_mean=0.86)),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_frontier_release_evidence(
+        verifier_stability_report_path=verifier_path,
+        abstention_stability_report_path=abstention_path,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["evidence_summary"]["run_names"] == ["synthetic"]
+    assert payload["run_decisions"][0]["verifier_decision"]["metrics"]["verified_pass_seed_rate"] == 1.0
+    assert payload["run_decisions"][0]["abstention_decision"]["metrics"]["release_gate_pass_seed_rate"] == 1.0
+
+
+def _synthetic_verifier_stability_payload() -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "workflow": "verifier_stability",
+        "status": "complete",
+        "config": {"signal": "truth_proj"},
+        "runs": [
+            {
+                "name": "synthetic",
+                "stability": {
+                    "seed_count": 3,
+                    "verified_false_alarm": {"mean": 0.01},
+                    "verified_detection": {"mean": 0.31},
+                    "delta_detection": {"mean": 0.04},
+                    "verified_pass_seed_count": 3,
+                    "verified_beats_internal_detection_seed_count": 3,
+                },
+            }
+        ],
+    }
+
+
+def _synthetic_abstention_stability_payload(
+    *,
+    pass_seed_count: int,
+    correctness_mean: float,
+) -> dict[str, object]:
+    return {
+        "schema_version": 1,
+        "workflow": "abstention_stability",
+        "status": "complete",
+        "config": {"signals": ["truth_proj"]},
+        "runs": [
+            {
+                "name": "synthetic",
+                "stability": {
+                    "seed_count": 3,
+                    "conditional_correctness_lower_bound": {"mean": correctness_mean},
+                    "empirical_abstention_rate": {"mean": 0.2},
+                    "release_gate_pass_seed_count": pass_seed_count,
+                    "release_gate_block_seed_count": 3 - pass_seed_count,
+                    "stable_recommended_score_name": "truth_proj",
+                    "recommended_score_name_counts": {"truth_proj": 3},
+                },
+            }
+        ],
+    }
+
+
 def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
     registry_module = importlib.import_module("eigentruth.registry")
     scores_path = tmp_path / "scores.json"
