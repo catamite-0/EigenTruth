@@ -2633,6 +2633,27 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/qwen05_score_ensemble_report.json
 ```
 
+Verifier outputs can be converted into the same score-dump interface before
+running the geometry-fusion comparison:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --staged-verification \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --json artifacts/verifier-signals/verifier-ensemble-report.json
+
+python benchmarks/build_verifier_signal_score_dump.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --verified-records-jsonl artifacts/verifier-signals/verified-records.jsonl \
+  --run-name qwen-l80 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output artifacts/verifier-signals/qwen-l80-enhanced-scores.manifest.json \
+  --output-format jsonl
+```
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
@@ -2672,6 +2693,19 @@ fusion detection only to 0.083 for Qwen and 0.069 for SmolLM2. Treat this as a
 specific rejection of `nll_answer` as a final-correction uncertainty proxy; the
 next useful test needs real multi-sample semantic energy, self-consistency, or
 verifier/retrieval disagreement features.
+
+The staged structured-QA verifier-signal replay at
+`artifacts/truthfulqa-l80-staged-qa-verifier-signals/` demonstrates that stronger
+external evidence can enter the same calibrated fusion path. It writes
+verified-record sidecars, converts them into `verifier_*` and `selfcheck_*`
+score columns, and saves per-model `GeometryScoreFusionArtifact` files. At
+alpha 0.100, Qwen's best verifier single signal (`verifier_refuted`) detects
+0.297 with zero false alarm, while geometry fusion detects 0.285 at false alarm
+0.089; SmolLM2's geometry fusion detects 0.261 at false alarm 0.095, beating
+both `truth_proj` (0.229) and `verifier_refuted` (0.232). This supports the
+product direction: keep `truth_proj` as the internal monitor, but use structured
+verifier/retrieval/selfcheck evidence as the final correction signal rather
+than using `nll_answer`.
 
 The paired cache-only replay
 (`artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/`) reproduces the

@@ -1,0 +1,162 @@
+{
+  "artifacts": {
+    "combined_score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "score-ensemble-report.json",
+      "sha256": "36a92ef63a4bc8c656ba808cc17a4b94219b5ce2286f07bf32bd87e68ca9e5e2",
+      "size_bytes": 47100
+    },
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_l80_correct_answer_corpus.json",
+      "sha256": "c49ed9bb55c6bea83c1c1282f072ad05d5e86449f785f2559457fc29fd66a81c",
+      "size_bytes": 196938
+    },
+    "qwen_enhanced_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-scores.manifest.json",
+      "sha256": "ff8df84e32fda9613f34d20bc07545341111d6885e4263da538eabd405cb5806",
+      "size_bytes": 4390
+    },
+    "qwen_enhanced_score_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "2dc7060a8484bdcecafe02dfc72f4076ee8e34071e0f3c45d55e1a3bad0e6ee3",
+      "size_bytes": 829405
+    },
+    "qwen_enhanced_score_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-enhanced-score-report.json",
+      "sha256": "62860e95c6de202fd5545408c1ac94ce7da5e96f4a5b9afeac9e613724af48cb",
+      "size_bytes": 1996
+    },
+    "qwen_geometry_fusion_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-geometry-fusion-artifact.json",
+      "sha256": "8a84caeff9b053cee05b6360a06822122577fe1bc88367117403080972d07e79",
+      "size_bytes": 35655
+    },
+    "qwen_score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "qwen-l80-score-ensemble-report.json",
+      "sha256": "a6ac323f716e720b2084e1dd120efb02ab7a13c0f4d00cfcd1cf3d5507596da2",
+      "size_bytes": 24830
+    },
+    "smollm2_enhanced_score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-scores.manifest.json",
+      "sha256": "1424fd522ce2012a59f1e0602b10f10b698890ab21d8795617a9a5df2869651b",
+      "size_bytes": 4540
+    },
+    "smollm2_enhanced_score_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-scores.manifest.records.jsonl",
+      "sha256": "020c71cb5f3e68727e01fe28fad649eac007d7a8bc3ccd900c71102e73bed830",
+      "size_bytes": 828852
+    },
+    "smollm2_enhanced_score_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-enhanced-score-report.json",
+      "sha256": "6f917f4d44609215dd83c233a1994800467f1a68efdf314064902f31abf9c41d",
+      "size_bytes": 2004
+    },
+    "smollm2_geometry_fusion_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-geometry-fusion-artifact.json",
+      "sha256": "4a2eaf5dd5618f2233cd0b60e3fbed0a7bd415398cb7c6b5740af955a6d449f9",
+      "size_bytes": 35599
+    },
+    "smollm2_score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-l80-score-ensemble-report.json",
+      "sha256": "43dc77adb77a0ef25231458dada3631befc815cf9ecf9978a1934eb41e890319",
+      "size_bytes": 24970
+    },
+    "source_qwen_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source_smollm2_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "39a53894be76a24513ec5549a8c67269d54a80b995e29161743aafb813b094d9",
+      "size_bytes": 572345
+    },
+    "verified_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "a94019f9a093ea945c1520d00750f2b44d71235e76ac22ce2d6fc1769f627c00",
+      "size_bytes": 3817818
+    },
+    "verifier_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verifier-ensemble-report.json",
+      "sha256": "af81ae95ddcde3ab6b847141ed20df2d98e90934e40eaf1314738045f311beff",
+      "size_bytes": 27136
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "best_alpha": 0.1,
+    "internal_geometry_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "models": [
+      "qwen05",
+      "smollm2"
+    ],
+    "runner": "build_verifier_signal_score_dump+eval_score_ensemble",
+    "scale": "l80",
+    "status": "complete",
+    "uncertainty_signals": [
+      "verifier_refuted",
+      "verifier_refute_confidence",
+      "verifier_not_supported"
+    ],
+    "verdict": "verifier_signals_improve_geometry_fusion_on_smollm2_and_provide_deployable_artifacts",
+    "verifier_route": "staged_structured_qa"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 16,
+    "directory_count": 0,
+    "file_count": 16,
+    "missing_count": 0
+  }
+}

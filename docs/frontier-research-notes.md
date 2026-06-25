@@ -87,8 +87,16 @@ Ran the current Qwen/SmolLM2 l80 geometry-fusion replay:
 - At alpha `0.100`, SmolLM2 `truth_proj` detects `0.229`, naive `mean_rank` detects `0.188`, and the best geometry-fusion method detects only `0.036`.
 - Variants that add `truth_proj` to the geometry group or use `max_rank` geometry aggregation improve the fusion score slightly but still remain far below `truth_proj` (`<=0.083` Qwen, `<=0.069` SmolLM2). Current evidence says `nll_answer` is a poor final-correction proxy, not that geometry-by-uncertainty fusion is intrinsically bad.
 
+Added verifier-signal score-dump conversion and replay:
+
+- `build_verifier_signal_score_dump.py` converts `eval_verifier_ensemble.py --verified-records-jsonl` sidecars into standard score columns such as `verifier_refuted`, `verifier_refute_confidence`, `verifier_uncertainty`, and `selfcheck_refute_rate`.
+- `artifacts/truthfulqa-l80-staged-qa-verifier-signals/` applies this to the staged structured-QA l80 verifier route and saves per-model `GeometryScoreFusionArtifact` files.
+- At alpha `0.100`, Qwen `verifier_refuted` is the strongest single signal (`0.297` detection, zero false alarm), while geometry fusion reaches `0.285` detection at `0.089` false alarm.
+- At alpha `0.100`, SmolLM2 geometry fusion reaches `0.261` detection at `0.095` false alarm, beating both `truth_proj` (`0.229`) and `verifier_refuted` (`0.232`).
+- Current frontier direction: use LLM-internal geometry as the monitor/trigger, then feed structured verifier, retrieval, and selfcheck outputs back as calibrated final-correction signals.
+
 ## Next Research-to-Code Candidates
 
-1. Replace `nll_answer` in geometry fusion with stronger uncertainty evidence: real multi-sample semantic energy, self-consistency support/refutation rates, or retrieval/verifier disagreement features.
+1. Replace the staged structured-QA upper-bound verifier signals with non-oracle retrieval/selfcheck signals, then rerun the same verifier-signal geometry-fusion report.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

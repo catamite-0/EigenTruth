@@ -34,6 +34,15 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "inside_embedding_entropy": "higher",
     "inside_semantic_energy": "higher",
     "nll_answer": "higher",
+    "verifier_not_supported": "higher",
+    "verifier_refuted": "higher",
+    "verifier_insufficient": "higher",
+    "verifier_refute_confidence": "higher",
+    "verifier_uncertainty": "higher",
+    "verifier_no_retrieval_hit": "higher",
+    "selfcheck_refute_rate": "higher",
+    "selfcheck_disagreement": "higher",
+    "selfcheck_insufficient": "higher",
 }
 
 

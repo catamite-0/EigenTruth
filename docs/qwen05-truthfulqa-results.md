@@ -447,6 +447,41 @@ failed to close the gap: adding `truth_proj` to the geometry group reached only
 fusion test should use real multi-sample semantic energy, self-consistency, or
 verifier disagreement features.
 
+The first verifier-signal replay uses the staged structured-QA verifier sidecar
+as stronger final-correction evidence:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --qa-corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --staged-verification \
+  --staged-alpha 0.1 \
+  --verified-records-jsonl artifacts/truthfulqa-l80-staged-qa-verifier-signals/verified-records.jsonl \
+  --json artifacts/truthfulqa-l80-staged-qa-verifier-signals/verifier-ensemble-report.json \
+  --compact-json
+```
+
+`benchmarks/build_verifier_signal_score_dump.py` converts that sidecar into
+standard score columns including `verifier_refuted`,
+`verifier_refute_confidence`, `verifier_not_supported`,
+`verifier_uncertainty`, and selfcheck placeholders, then `eval_score_ensemble.py`
+uses those columns as geometry-fusion uncertainty signals. At alpha 0.100:
+
+- Qwen: `verifier_refuted` is the strongest single signal with detection 0.297
+  and zero false alarm. Geometry fusion reaches detection 0.285 at false alarm
+  0.089.
+- SmolLM2: geometry fusion reaches detection 0.261 at false alarm 0.095,
+  beating both `truth_proj` (0.229) and `verifier_refuted` (0.232).
+
+This is still a structured-QA upper-bound route, not an open-domain claim. The
+engineering result is important: verifier/retrieval/selfcheck outputs can now
+be converted into calibrated score-dump signals and saved as deployable
+`GeometryScoreFusionArtifact` files.
+
 ## Frontier Stability Report
 
 `benchmarks/eval_frontier_stability.py` replays saved frontier score dumps across

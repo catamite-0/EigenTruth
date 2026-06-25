@@ -20360,6 +20360,112 @@ def test_eval_score_ensemble_saves_best_geometry_fusion_artifact(tmp_path):
     assert saved_report["runs"][0]["best_geometry_fusion_artifact"]["fusion_method"] == "interaction"
 
 
+def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
+    module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    verified_records_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "enhanced.manifest.json"
+    report_path = tmp_path / "enhanced-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -2},
+            "labels": [0, 1, 1],
+            "scores": {
+                "truth_proj": [0.1, 0.9, 0.8],
+                "subspace_resid": [0.2, 0.7, 0.6],
+            },
+            "statements": [{"text": "a"}, {"text": "b"}, {"text": "c"}],
+        }),
+        encoding="utf-8",
+    )
+    records = [
+        {
+            "run": "other",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.0,
+            "record": {"final": {"status": "supported", "confidence": 0.9}},
+        },
+        {
+            "run": "synthetic",
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "final": {"status": "supported", "confidence": 0.9},
+                "retrieval_hits": [{"id": "doc-1"}],
+            },
+        },
+        {
+            "run": "synthetic",
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "final": {"status": "refuted", "confidence": 0.8},
+                "retrieval_hits": [],
+                "selfcheck": {
+                    "status": "refuted",
+                    "confidence": 0.8,
+                    "metadata": {"support_rate": 0.1, "refute_rate": 0.7},
+                },
+            },
+        },
+        {
+            "run": "synthetic",
+            "record_index": 2,
+            "label": 1,
+            "score": 0.8,
+            "record": {
+                "final": {"status": "insufficient_evidence", "confidence": 0.4},
+                "retrieval_hits": [],
+                "selfcheck": {
+                    "status": "insufficient_evidence",
+                    "confidence": 0.3,
+                    "metadata": {"support_rate": 0.3, "refute_rate": 0.2},
+                },
+            },
+        },
+    ]
+    verified_records_path.write_text(
+        "".join(json.dumps(record, sort_keys=True) + "\n" for record in records),
+        encoding="utf-8",
+    )
+
+    report = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            verified_records_jsonl=str(verified_records_path),
+            run_name="synthetic",
+            keep_signals="truth_proj,subspace_resid",
+            verifier_signals="verifier_refuted,verifier_uncertainty,selfcheck_refute_rate,selfcheck_disagreement",
+            output=str(output_path),
+            output_format="jsonl",
+            json=str(report_path),
+        )
+    )
+    enhanced = load_score_dump(output_path, required_scores=("verifier_refuted", "selfcheck_refute_rate"))
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["n_total"] == 3
+    assert saved_report["run_name"] == "synthetic"
+    assert enhanced.labels == (0, 1, 1)
+    assert enhanced.statements[1]["text"] == "b"
+    assert enhanced.scores["verifier_refuted"] == pytest.approx((0.0, 1.0, 0.0))
+    assert enhanced.scores["verifier_uncertainty"] == pytest.approx((0.1, 0.2, 1.0))
+    assert enhanced.scores["selfcheck_refute_rate"] == pytest.approx((0.0, 0.7, 0.2))
+    assert enhanced.scores["selfcheck_disagreement"] == pytest.approx((0.0, 0.3, 0.7))
+    assert enhanced.config["verifier_signal_score_dump"]["run_name"] == "synthetic"
+    assert enhanced.extras["verifier_signal_metadata"]["signals"] == [
+        "verifier_refuted",
+        "verifier_uncertainty",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+    ]
+
+
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
