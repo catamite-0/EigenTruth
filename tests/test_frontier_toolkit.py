@@ -66,6 +66,7 @@ from eigentruth.verify import (
     CachedVerifier,
     Claim,
     ClaimDependency,
+    ClaimTriple,
     ClaimVerificationPlan,
     CompositeVerifier,
     EvidenceDocument,
@@ -74,13 +75,17 @@ from eigentruth.verify import (
     InMemoryVerifier,
     JsonTraceCache,
     RoutedVerifier,
+    RuleBasedTripleExtractor,
     SelfConsistencyVerifier,
+    TripleEvidenceVerifier,
     VerificationResult,
     VerificationRouteHint,
     VerificationStatus,
     VerifierRoute,
     apply_claim_coherence,
+    audit_claim_triples,
     extract_calculation,
+    extract_claim_triples,
     extract_claims,
     infer_claim_dependencies,
     normalize_claim_text,
@@ -619,6 +624,86 @@ def test_claim_extraction_and_in_memory_verifier():
     assert results[0].status is VerificationStatus.SUPPORTED
     assert results[0].evidence == ("atlas",)
     assert results[1].status is VerificationStatus.REFUTED
+
+
+def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
+    claims = extract_claims("Paris is the capital of France. AlphaCorp has 10 offices in Europe.")
+
+    first_triples = extract_claim_triples(claims[0])
+    second_triples = extract_claim_triples(claims[1])
+
+    assert first_triples == (
+        ClaimTriple(
+            subject="France",
+            predicate="capital_of",
+            object="Paris",
+            claim_id="c1",
+            source_text="Paris is the capital of France.",
+            confidence=0.55,
+            metadata={"extractor": "rule_based_triple_extractor", "source": "capital_of_rule"},
+        ),
+    )
+    assert second_triples[0].subject == "AlphaCorp"
+    assert second_triples[0].predicate == "has"
+    assert second_triples[0].object == "10 offices in Europe"
+
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument("France's capital is Paris.", source="atlas"),
+            EvidenceDocument("AlphaCorp has 12 offices in Europe.", source="annual-report"),
+        )
+    )
+
+    results = verifier.verify_many(claims)
+
+    assert results[0].status is VerificationStatus.SUPPORTED
+    assert results[0].metadata["audit_report"]["audits"][0]["covered_slots"] == (
+        "subject",
+        "predicate",
+        "object",
+    )
+    assert results[0].evidence == ("atlas: France's capital is Paris.",)
+    assert results[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert results[1].metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
+    assert results[1].metadata["audit_report"]["audits"][0]["slot_coverage"]["object"] < 1.0
+
+
+def test_claim_triple_audit_uses_metadata_triples_and_context_evidence():
+    claim = Claim(
+        "Revenue grew.",
+        claim_id="revenue",
+        metadata={
+            "triples": {
+                "subject": "Revenue",
+                "predicate": "grew_to",
+                "object": "10 million",
+                "confidence": 0.9,
+            }
+        },
+    )
+
+    missing = audit_claim_triples(claim, evidence=())
+    report = audit_claim_triples(
+        claim,
+        evidence=(),
+        context={"evidence": ({"text": "Revenue grew to 10 million.", "source": "filing"},)},
+    )
+
+    assert extract_claim_triples(claim)[0].confidence == pytest.approx(0.9)
+    assert missing.passed is False
+    assert missing.to_dict()["audits"][0]["missing_slots"] == ("subject", "predicate", "object")
+    assert report.passed is True
+    assert report.to_dict()["audits"][0]["metadata"]["best_source"] == "filing"
+
+
+def test_triple_evidence_verifier_reports_not_applicable_for_unparsed_claim():
+    claim = Claim("Maybe.")
+
+    result = TripleEvidenceVerifier(evidence=("Maybe what?",)).verify(claim)
+
+    assert result.status is VerificationStatus.NOT_APPLICABLE
+    assert result.metadata["audit_report"]["triple_count"] == 0
+    assert isinstance(RuleBasedTripleExtractor(), RuleBasedTripleExtractor)
 
 
 def test_claim_coherence_infers_metadata_and_discourse_dependencies():

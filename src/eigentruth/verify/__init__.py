@@ -36,6 +36,16 @@ from eigentruth.verify.planning import (
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 from eigentruth.verify.rules import InMemoryVerifier, normalize_claim_text
 from eigentruth.verify.selfcheck import SelfConsistencyVerifier
+from eigentruth.verify.triples import (
+    ClaimTriple,
+    ClaimTripleExtractor,
+    RuleBasedTripleExtractor,
+    TripleEvidenceAudit,
+    TripleEvidenceAuditReport,
+    TripleEvidenceVerifier,
+    audit_claim_triples,
+    extract_claim_triples,
+)
 
 __all__ = [
     "CachedVerifier",
@@ -44,6 +54,8 @@ __all__ = [
     "ClaimCoherenceReport",
     "ClaimDependency",
     "ClaimExtractor",
+    "ClaimTriple",
+    "ClaimTripleExtractor",
     "ClaimVerificationPlan",
     "ClaimVerificationPlanner",
     "CompositeVerifier",
@@ -52,8 +64,12 @@ __all__ = [
     "GroundednessVerifier",
     "InMemoryVerifier",
     "JsonTraceCache",
+    "RuleBasedTripleExtractor",
     "RoutedVerifier",
     "TraceCacheRecord",
+    "TripleEvidenceAudit",
+    "TripleEvidenceAuditReport",
+    "TripleEvidenceVerifier",
     "VerificationResult",
     "VerificationStatus",
     "VerifierCacheStats",
@@ -64,9 +80,11 @@ __all__ = [
     "SentenceClaimExtractor",
     "SelfConsistencyVerifier",
     "apply_claim_coherence",
+    "audit_claim_triples",
     "claim_features",
     "extract_calculation",
     "extract_claims",
+    "extract_claim_triples",
     "estimate_verification_plan_cost",
     "infer_claim_dependencies",
     "normalize_claim_text",

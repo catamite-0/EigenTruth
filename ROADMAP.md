@@ -10,6 +10,7 @@ The current packaged baseline is [`0.2.0`](docs/release-0.2.0.md): a calibrated-
 
 ### 0.3 Control And Verification Hardening
 
+- Build stricter claim audit paths from structured triples and slot-level evidence coverage.
 - Replicate the strongest diagnostics on additional small and mid-sized models.
 - Promote only routes backed by artifact manifests, replay checks, and release gates.
 - Keep network retrieval, external databases, and rewrite LLMs behind optional adapters.
