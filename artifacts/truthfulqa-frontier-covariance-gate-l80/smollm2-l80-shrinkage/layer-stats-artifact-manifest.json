@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "layer_stats_cache": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-covariance-gate-l80/smollm2-l80/shrinkage/layer-stats.pt",
+      "sha256": "c847e005b6f28fbbdb365f4d69fb10f8770c983f8789267da72cf7c74ed6642b",
+      "size_bytes": 6753000
+    },
+    "warmup_checkpoint": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../../cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/warmup-checkpoint.pt",
+      "sha256": "29caf6044984fb27ab52f00f620419ffd1fa40089b2a3453e6f70385cc93ed4b",
+      "size_bytes": 197143579
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "covariance_low_rank": 16,
+    "covariance_mode": "shrinkage",
+    "layers": [
+      -12,
+      -16,
+      -14,
+      -10,
+      -8
+    ],
+    "runner": "rebuild_layer_stats_from_warmup_checkpoint",
+    "source_warmup_checkpoint": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/smollm2-l80/warmup-checkpoint.pt"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

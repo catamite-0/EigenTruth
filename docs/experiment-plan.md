@@ -53,7 +53,8 @@ representation-observability toolkit spanning **training and inference**.
   (`TruthManifold.spectrum()` / `covariance_spectrum()`) and wired into
   `eval_truthfulqa.py --include-layer-spectra`; OAS-style `covariance_mode="shrinkage"`
   implemented; tiny offline covariance-mode matrix smoke covers
-  `full/diag/low_rank/shrinkage`, but real AUROC comparison still pending.
+  `full/diag/low_rank/shrinkage`; real Qwen/SmolLM2 l80 cache-only covariance
+  gate promotes `shrinkage` as the cross-model quality-preserving candidate.
 
 ### E3. Bures–Wasserstein distance → manifold-to-manifold metric
 - **Question:** Is closed-form 2-Wasserstein between Gaussians the right metric for
@@ -130,7 +131,7 @@ representation-observability toolkit spanning **training and inference**.
 | (hyperbolic HSE vs Euclidean) | 2026-06-08 | no lift (0.474 vs 0.484, gpt2 L-8) | `benchmarks/results_gpt2_l-8.json` |
 | E0 | 2026-06-10 | **truth_proj wins**: 0.723 @L-8, peak 0.753 @L-6, beats maha (0.622/0.638) at every layer except -12; both collapse at L-1. Default guidance: contrastive direction, mid-late layers (-8…-4); maha as no-false-data fallback. | `benchmarks/results_gpt2_sweep.json` |
 | E1 | 2026-06-10 | **ACCEPT**: empirical false-alarm tracks nominal within 1.3% at α∈{.05,.1,.2} for both maha_last and truth_proj (20 seeded splits). Power at α=0.2: truth_proj 46.9% vs maha 34.1%. Conformal thresholds replace hand-picked ones. | `benchmarks/results_conformal_*.json` |
-| E2 | 2026-06-25 | partial: spectrum diagnostics and OAS-style shrinkage mode landed; tiny offline matrix smoke passes; real AUROC gate pending | `TruthManifold.spectrum()` / `covariance_spectrum()` / `covariance_shrinkage_intensity()` unit tests; `eval_truthfulqa.py --include-layer-spectra` tests; `artifacts/tiny_covariance_shrinkage_matrix/cache-profile-matrix-report.json` |
+| E2 | 2026-06-25 | **ACCEPT shrinkage**: spectrum diagnostics and OAS-style shrinkage mode landed; tiny offline matrix smoke passes; l80 cache-only covariance gate promotes `shrinkage` for both Qwen and SmolLM2. Qwen also accepts `low_rank_16`; SmolLM2 rejects `low_rank_16` at the 0.01 `maha_last` AUROC-drop gate; both reject `diag`. | `TruthManifold.spectrum()` / `covariance_spectrum()` / `covariance_shrinkage_intensity()` unit tests; `eval_truthfulqa.py --include-layer-spectra` tests; `artifacts/tiny_covariance_shrinkage_matrix/cache-profile-matrix-report.json`; `artifacts/truthfulqa-frontier-covariance-gate-l80/covariance-mode-gate-report.json` |
 | E3 | | pending | |
 | E4 | | pending | |
 | E5 | | pending | |

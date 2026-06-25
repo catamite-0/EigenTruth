@@ -1915,7 +1915,7 @@ def test_calibrated_observability_explicit_capture_overrides_limited_sweep_defau
     assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "outputs"
 
 
-def test_calibrated_observability_passes_covariance_mode_to_truthfulqa(tmp_path):
+def test_calibrated_observability_passes_low_rank_covariance_to_truthfulqa(tmp_path):
     result = subprocess.run(
         [
             sys.executable,
@@ -1923,7 +1923,7 @@ def test_calibrated_observability_passes_covariance_mode_to_truthfulqa(tmp_path)
             "--output-dir",
             str(tmp_path / "workflow"),
             "--covariance-mode",
-            "diag",
+            "low_rank",
             "--covariance-low-rank",
             "4",
             "--dry-run",
@@ -1935,10 +1935,136 @@ def test_calibrated_observability_passes_covariance_mode_to_truthfulqa(tmp_path)
     payload = json.loads(result.stdout)
     truthfulqa_command = payload["execution"]["truthfulqa_command"]
 
-    assert payload["config"]["covariance_mode"] == "diag"
+    assert payload["config"]["covariance_mode"] == "low_rank"
     assert payload["config"]["covariance_low_rank"] == 4
-    assert truthfulqa_command[truthfulqa_command.index("--covariance-mode") + 1] == "diag"
+    assert truthfulqa_command[truthfulqa_command.index("--covariance-mode") + 1] == "low_rank"
     assert truthfulqa_command[truthfulqa_command.index("--covariance-low-rank") + 1] == "4"
+
+
+@pytest.mark.parametrize("covariance_mode", ["diag", "shrinkage"])
+def test_calibrated_observability_omits_low_rank_flag_for_non_low_rank_covariance(tmp_path, covariance_mode):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / f"workflow-{covariance_mode}"),
+            "--covariance-mode",
+            covariance_mode,
+            "--covariance-low-rank",
+            "4",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+
+    assert payload["config"]["covariance_mode"] == covariance_mode
+    assert payload["config"]["covariance_low_rank"] == 4
+    assert truthfulqa_command[truthfulqa_command.index("--covariance-mode") + 1] == covariance_mode
+    assert "--covariance-low-rank" not in truthfulqa_command
+
+
+def test_rebuild_layer_stats_from_warmup_checkpoint_generates_covariance_cache(tmp_path):
+    module = importlib.import_module("benchmarks.rebuild_layer_stats_from_warmup_checkpoint")
+    eval_module = importlib.import_module("benchmarks.eval_truthfulqa")
+    warmup_checkpoint = tmp_path / "warmup-checkpoint.pt"
+    output = tmp_path / "layer-stats.pt"
+    report_path = tmp_path / "report.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    true_states = {
+        -1: [
+            torch.tensor([1.0, 0.0, 0.0]),
+            torch.tensor([0.9, 0.1, 0.0]),
+            torch.tensor([1.1, -0.1, 0.1]),
+        ]
+    }
+    false_states = {
+        -1: [
+            torch.tensor([-1.0, 0.0, 0.0]),
+            torch.tensor([-0.8, 0.1, -0.1]),
+        ]
+    }
+    manifold = eval_module.TruthManifold(covariance_mode="full")
+    manifold.update_many(torch.stack(true_states[-1]))
+    metadata = {
+        "format": 1,
+        "model": "synthetic",
+        "dtype": "float32",
+        "offline": True,
+        "n_layers": 2,
+        "layers": [-1],
+        "max_length": 32,
+        "subspace_rank": 2,
+        "covariance_mode": "full",
+        "covariance_low_rank": 16,
+        "length_bucketed_batches": True,
+        "n_true": 3,
+        "n_false": 2,
+        "warmup_fingerprint": "unit-warmup",
+    }
+    eval_module.save_warmup_checkpoint(
+        warmup_checkpoint,
+        metadata=metadata,
+        manifolds={-1: manifold},
+        true_state_lists=true_states,
+        false_state_lists=false_states,
+        false_sums={-1: torch.stack(false_states[-1]).sum(dim=0)},
+        n_false=2,
+        true_done=3,
+        false_done=2,
+    )
+
+    payload = module.rebuild_layer_stats_from_warmup_checkpoint(
+        module.LayerStatsRebuildConfig(
+            warmup_checkpoint=warmup_checkpoint,
+            output=output,
+            covariance_mode="shrinkage",
+            covariance_low_rank=4,
+            json_report=report_path,
+            artifact_manifest=manifest_path,
+        )
+    )
+    expected_metadata = dict(metadata)
+    expected_metadata.update({"covariance_mode": "shrinkage", "covariance_low_rank": 4})
+    manifolds, subspaces, loaded_metadata = eval_module.load_layer_stats_cache(
+        output,
+        expected_metadata=expected_metadata,
+        device=torch.device("cpu"),
+    )
+
+    assert payload["status"] == "complete"
+    assert payload["rebuilt_metadata"]["covariance_mode"] == "shrinkage"
+    assert payload["layers"][0]["subspace_ready"] is True
+    assert payload["layers"][0]["shrinkage_alpha"] is not None
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert loaded_metadata["covariance_mode"] == "shrinkage"
+    assert manifolds[-1].covariance_mode == "shrinkage"
+    assert manifolds[-1].mahalanobis_distance(torch.tensor([1.0, 0.0, 0.0])) >= 0.0
+    assert subspaces[-1].is_ready()
+
+
+def test_rebuild_layer_stats_from_warmup_checkpoint_preserves_metadata_layer_order():
+    module = importlib.import_module("benchmarks.rebuild_layer_stats_from_warmup_checkpoint")
+
+    layers = module._resolve_layers(  # noqa: SLF001 - regression test for cache metadata compatibility.
+        None,
+        {"layers": [-12, -16, -14, -10, -8]},
+        {
+            -16: [torch.zeros(2)],
+            -14: [torch.zeros(2)],
+            -12: [torch.zeros(2)],
+            -10: [torch.zeros(2)],
+            -8: [torch.zeros(2)],
+        },
+        {},
+    )
+
+    assert layers == (-12, -16, -14, -10, -8)
 
 
 def test_backfill_truthfulqa_statements_validates_labels_and_builds_oracle_fixture():

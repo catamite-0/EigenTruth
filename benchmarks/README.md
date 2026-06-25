@@ -2896,6 +2896,15 @@ calibrated signal; prefer `full`, validated `low_rank`, or validated
 in `artifacts/tiny_covariance_shrinkage_matrix/` validates the
 `full/diag/low_rank/shrinkage` matrix and runtime-recommendation path, but it is
 not benchmark-quality evidence.
+For real l80 post-hoc covariance gates, use
+`rebuild_layer_stats_from_warmup_checkpoint.py` to derive covariance-specific
+layer-stats caches from existing warmup hidden states, then run
+`run_calibrated_observability_workflow.py --cache-only` against the existing
+eval-reps cache. The current Qwen/SmolLM2 l80 gate report is
+`artifacts/truthfulqa-frontier-covariance-gate-l80/covariance-mode-gate-report.json`:
+`shrinkage` preserves or slightly improves best `maha_last` AUROC for both
+models, `low_rank_16` passes for Qwen but misses the 0.01 AUROC-drop gate for
+SmolLM2, and `diag` is rejected for both models.
 Use `--max-workers` to run independent matrix cells concurrently. The default is
 `1` for fully serial/reproducible local runs. Matrix reports include
 `execution.wall_clock_seconds` plus per-cell `execution_seconds`, so worker-count

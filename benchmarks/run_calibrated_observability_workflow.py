@@ -370,8 +370,6 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         config.hidden_state_capture,
         "--covariance-mode",
         config.covariance_mode,
-        "--covariance-low-rank",
-        str(config.covariance_low_rank),
         "--progress-every",
         str(config.progress_every),
         "--json",
@@ -383,6 +381,8 @@ def _truthfulqa_command(config: CalibratedObservabilityWorkflowConfig) -> list[s
         "--dump-scores-format",
         config.dump_scores_format,
     ]
+    if config.covariance_mode == "low_rank":
+        command.extend(["--covariance-low-rank", str(config.covariance_low_rank)])
     if config.sweep_layers:
         command.append(f"--sweep-layers={','.join(str(layer) for layer in config.sweep_layers)}")
     elif config.sweep:
