@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import sqlite3
@@ -667,6 +668,13 @@ class PolicyGuardedActionExecutor:
         """Validate and execute one action request."""
         violations = self.policy.validate_request(request)
         audit_metadata = self.policy.audit_metadata(request)
+        request_fingerprint = _action_request_fingerprint(
+            request,
+            context=context,
+            policy=self.policy,
+        )
+        audit_metadata["idempotency_request_fingerprint"] = request_fingerprint
+        audit_metadata["idempotency_fingerprint_schema"] = 1
         if violations:
             return ActionResult(
                 action=request.action,
@@ -687,7 +695,12 @@ class PolicyGuardedActionExecutor:
         if self.idempotency_ledger is not None and idempotency_key is not None:
             recorded = self.idempotency_ledger.get(str(idempotency_key))
             if recorded is not None:
-                return self._replay_result(recorded, audit_metadata)
+                return self._replay_result(
+                    recorded,
+                    audit_metadata,
+                    request_fingerprint=request_fingerprint,
+                    request_id=request.request_id,
+                )
 
         result = self.executor.execute(request, context=context)
         metadata = dict(result.metadata)
@@ -726,8 +739,33 @@ class PolicyGuardedActionExecutor:
         """Validate and execute multiple action requests."""
         return tuple(self.execute(request, context=context) for request in requests)
 
-    def _replay_result(self, recorded: ActionResult, audit_metadata: Mapping[str, Any]) -> ActionResult:
+    def _replay_result(
+        self,
+        recorded: ActionResult,
+        audit_metadata: Mapping[str, Any],
+        *,
+        request_fingerprint: str,
+        request_id: str | None,
+    ) -> ActionResult:
         metadata = dict(recorded.metadata)
+        recorded_fingerprint = metadata.get("idempotency_request_fingerprint")
+        if recorded_fingerprint != request_fingerprint:
+            return ActionResult(
+                action=recorded.action,
+                status=ActionExecutionStatus.FAILED,
+                output={},
+                metadata={
+                    "policy_guard": type(self).__name__,
+                    **dict(audit_metadata),
+                    "idempotency_replayed": False,
+                    "idempotency_replay_blocked": True,
+                    "idempotency_replay_source": type(self.idempotency_ledger).__name__,
+                    "recorded_request_fingerprint": recorded_fingerprint,
+                    "side_effects": False,
+                },
+                request_id=request_id,
+                error="idempotency replay blocked: request fingerprint does not match recorded action.",
+            )
         original_side_effects = bool(metadata.get("side_effects", False))
         metadata.update({
             "policy_guard": type(self).__name__,
@@ -1017,6 +1055,26 @@ def _verification_evidence(result: VerificationResult | Mapping[str, Any]) -> tu
     if isinstance(raw_evidence, Sequence):
         return tuple(str(item) for item in raw_evidence)
     return ()
+
+
+def _action_request_fingerprint(
+    request: ActionRequest,
+    *,
+    context: Mapping[str, Any] | None,
+    policy: ActionExecutionPolicy,
+) -> str:
+    payload = {
+        "schema_version": 1,
+        "action": request.action.value,
+        "reason": request.reason,
+        "payload": _jsonable(request.payload),
+        "metadata": _jsonable(request.metadata),
+        "request_id": request.request_id,
+        "context": _jsonable(dict(context or {})),
+        "policy": policy.to_dict(),
+    }
+    blob = strict_json_dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
 
 
 def _jsonable(value: Any) -> Any:

@@ -18899,6 +18899,38 @@ def test_eval_truthfulqa_cache_only_can_skip_dataset_load_from_eval_reps_metadat
     assert result["profile"]["summary"]["bottleneck"] != "load_data"
 
 
+def test_eval_truthfulqa_eval_reps_metadata_rejects_record_count_mismatch(tmp_path):
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+    statements = [
+        module.Statement("q1", "a1", 0),
+        module.Statement("q2", "a2", 1),
+    ]
+    args_for_metadata = SimpleNamespace(
+        model="tiny",
+        dtype="float32",
+        offline=True,
+        max_length=32,
+        eigenscore_alpha=1e-3,
+        length_bucketed_batches=False,
+    )
+    metadata = module._eval_reps_cache_metadata(
+        args_for_metadata,
+        layers=[-1],
+        n_layers=2,
+        eval_statements=statements,
+    )
+    cache_path = tmp_path / "eval-reps.pt"
+    module.save_eval_reps_cache(cache_path, [None], metadata=metadata)
+
+    loaded_metadata, record_count = module._read_eval_reps_cache_metadata(cache_path)
+
+    assert record_count == 1
+    with pytest.raises(ValueError, match="n_eval does not match record_count"):
+        module._validate_eval_reps_record_count(loaded_metadata, record_count)
+    with pytest.raises(ValueError, match="eval_statements count does not match record_count"):
+        module._eval_statements_from_cache_metadata(loaded_metadata, expected_record_count=record_count)
+
+
 def test_eval_truthfulqa_score_reps_batch_matches_scalar_math():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     statements = [

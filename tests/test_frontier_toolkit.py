@@ -1725,6 +1725,15 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
             metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
             request_id="reserve-1",
         ),
+        context={"request_id": "req-1"},
+    )
+    replay_mismatch = executor.execute(
+        ActionRequest(
+            action=ControlAction.EXECUTE_TOOL,
+            reason="reserve inventory",
+            metadata={"idempotency_key": "reserve-1", "timeout_seconds": 3.0},
+            request_id="reserve-1",
+        ),
         context={"request_id": "req-2"},
     )
 
@@ -1737,14 +1746,21 @@ def test_policy_guarded_action_executor_validates_side_effect_contract():
     assert allowed.status is ActionExecutionStatus.SUCCEEDED
     assert allowed.metadata["policy_guard"] == "PolicyGuardedActionExecutor"
     assert allowed.metadata["idempotency_key"] == "reserve-1"
+    assert allowed.metadata["idempotency_request_fingerprint"]
     assert allowed.metadata["timeout_seconds"] == 3.0
     assert allowed.metadata["timeout_enforced"] is False
     assert allowed.metadata["idempotency_replayed"] is False
     assert replayed.status is ActionExecutionStatus.SUCCEEDED
     assert replayed.output == {"ok": True}
     assert replayed.metadata["idempotency_replayed"] is True
+    assert replayed.metadata["idempotency_request_fingerprint"] == allowed.metadata["idempotency_request_fingerprint"]
     assert replayed.metadata["side_effects"] is False
     assert replayed.metadata["original_side_effects"] is True
+    assert replay_mismatch.status is ActionExecutionStatus.FAILED
+    assert replay_mismatch.metadata["idempotency_replay_blocked"] is True
+    assert replay_mismatch.metadata["idempotency_replayed"] is False
+    assert "fingerprint" in replay_mismatch.error
+    assert wrapped.calls == 1
     assert ledger.get("reserve-1") == allowed
 
 

@@ -1145,6 +1145,22 @@ def _read_cache_metadata(path: str | Path) -> dict:
     return dict(cache.get("metadata", {}))
 
 
+def _read_eval_reps_cache_metadata(path: str | Path) -> tuple[dict, int]:
+    """Return eval-reps cache metadata plus the persisted record count."""
+    cache_path = Path(path)
+    if _is_sharded_eval_reps_cache(cache_path):
+        manifest = _load_eval_reps_manifest(cache_path)
+        record_count = int(manifest.get("record_count", -1))
+        if record_count < 0:
+            raise ValueError("sharded eval reps cache manifest is missing record_count.")
+        return dict(manifest.get("metadata", {})), record_count
+    if cache_path.is_dir():
+        raise ValueError(f"cache directory is missing manifest.json: {cache_path}")
+    cache = torch.load(cache_path, map_location="cpu", weights_only=True)
+    records = list(cache.get("records", []))
+    return dict(cache.get("metadata", {})), len(records)
+
+
 def _warmup_text_fingerprint(true_texts: Sequence[str], false_texts: Sequence[str]) -> str:
     payload = json.dumps(
         {"true": list(true_texts), "false": list(false_texts)},
@@ -1179,7 +1195,11 @@ def _statement_cache_payload(statements: Sequence[Statement]) -> list[dict[str, 
     ]
 
 
-def _eval_statements_from_cache_metadata(metadata: Mapping) -> list[Statement] | None:
+def _eval_statements_from_cache_metadata(
+    metadata: Mapping,
+    *,
+    expected_record_count: int | None = None,
+) -> list[Statement] | None:
     raw_statements = metadata.get("eval_statements")
     if raw_statements is None:
         return None
@@ -1201,10 +1221,25 @@ def _eval_statements_from_cache_metadata(metadata: Mapping) -> list[Statement] |
         )
     if len(statements) != int(metadata.get("n_eval", len(statements))):
         raise ValueError("eval reps cache metadata eval_statements count does not match n_eval.")
+    if expected_record_count is not None and len(statements) != int(expected_record_count):
+        raise ValueError("eval reps cache metadata eval_statements count does not match record_count.")
     expected_fingerprint = metadata.get("eval_fingerprint")
     if expected_fingerprint and _statement_fingerprint(statements) != expected_fingerprint:
         raise ValueError("eval reps cache metadata eval_statements do not match eval_fingerprint.")
     return statements
+
+
+def _validate_eval_reps_record_count(metadata: Mapping, record_count: int) -> None:
+    """Fail early when eval-reps metadata and persisted cache rows disagree."""
+    try:
+        n_eval = int(metadata["n_eval"])
+    except KeyError as exc:
+        raise ValueError("eval reps cache metadata is missing n_eval.") from exc
+    if n_eval != int(record_count):
+        raise ValueError(
+            "eval reps cache metadata n_eval does not match record_count "
+            f"({n_eval} != {int(record_count)})."
+        )
 
 
 def _eval_reps_validation_metadata(metadata: Mapping) -> dict:
@@ -3377,6 +3412,7 @@ def run(args) -> dict:
     tokenizer = None
     stats_meta: dict | None = None
     eval_meta: dict | None = None
+    eval_reps_record_count: int | None = None
     restored_eval_statements = False
     if args.cache_only:
         if stats_cache_path is None or eval_reps_cache_path is None:
@@ -3384,11 +3420,15 @@ def run(args) -> dict:
         device = torch.device("cpu")
         with _profile_phase(profile, "read_cache_metadata"):
             stats_meta = _read_cache_metadata(stats_cache_path)
-            eval_meta = _read_cache_metadata(eval_reps_cache_path)
+            eval_meta, eval_reps_record_count = _read_eval_reps_cache_metadata(eval_reps_cache_path)
+            _validate_eval_reps_record_count(eval_meta, eval_reps_record_count)
         if stats_meta.get("n_layers") != eval_meta.get("n_layers"):
             raise ValueError("cache-only mode requires layer-stats and eval-reps caches with matching n_layers.")
         n_layers = int(stats_meta["n_layers"])
-        cached_eval_stmts = _eval_statements_from_cache_metadata(eval_meta)
+        cached_eval_stmts = _eval_statements_from_cache_metadata(
+            eval_meta,
+            expected_record_count=eval_reps_record_count,
+        )
         if cached_eval_stmts is not None:
             manifold_true = [""] * int(stats_meta.get("n_true", 0))
             manifold_false = [""] * int(stats_meta.get("n_false", 0))
