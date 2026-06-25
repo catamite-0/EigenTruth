@@ -374,6 +374,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_verifier_ensemble.py` | Benchmarks calibrated internal diagnostics combined with retrieval/verifier suppression/refutation policies, optional staged verifier gating, route-level cost metrics, and optional JSONL sidecar records for per-claim verifier outputs. |
 | `eval_score_ensemble.py` | Benchmarks direction-aware rank fusion across saved diagnostic score dumps and can save a deployable `RankScoreFusionArtifact` for the best ensemble in one run. |
 | `run_calibrated_observability_workflow.py` | Runs or reuses a TruthfulQA score dump, executes conformal layer/score calibration, writes nested artifact manifests plus an evidence-bundle summary, and optionally records the calibrated-observability closure in the local registry. |
+| `run_truthfulqa_frontier_workflow.py` | Runs the multi-model/multi-scale TruthfulQA frontier workflow: calibrated-observability cells for Qwen/SmolLM2-style l20/l80 runs plus cross-cell rank-fusion ensemble reporting and a top-level manifest. |
 | `refresh_verifier_route_artifacts.py` | Regenerates new-schema verifier-route reports from saved score dumps, claims, and local verifier corpora without rerunning model forward passes. |
 | `compare_verifier_routes.py` | Aggregates saved verifier-ensemble reports into cost-aware route leaderboards, Pareto frontier candidates, route-specific promotion decisions, by-route control-impact metrics, and optional tail/cache/staged-verification route quality gates. |
 | `run_adapter_promotion_workflow.py` | Runs a fail-closed adapter promotion workflow: route comparison, `promotion_decision=promote`, and optional registry-backed performance baseline gate. |
@@ -458,6 +459,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `eval_verifier_ensemble.py` | 评估校准内部诊断与 retrieval/verifier 抑制误报、补充反证检出的组合策略，可选 staged verifier gating，记录 route 级成本指标，并可用 JSONL sidecar 保存逐 claim verifier 输出。 |
 | `eval_score_ensemble.py` | 对已保存诊断 score dump 执行方向感知 rank fusion benchmark，并可在一次运行中保存最佳 ensemble 的可部署 `RankScoreFusionArtifact`。 |
 | `run_calibrated_observability_workflow.py` | 运行或复用 TruthfulQA score dump，执行 conformal layer/score 校准，写入嵌套 artifact manifest 和 evidence-bundle summary，并可选把 calibrated-observability 闭环登记到本地 registry。 |
+| `run_truthfulqa_frontier_workflow.py` | 执行多模型/多尺度 TruthfulQA frontier workflow：批量运行 Qwen/SmolLM2 风格 l20/l80 calibrated-observability cells，生成跨 cell rank-fusion ensemble report 和顶层 manifest。 |
 | `refresh_verifier_route_artifacts.py` | 从已保存 score dump、claims 和本地 verifier corpus 重新生成新 schema verifier-route report，不重跑模型 forward。 |
 | `compare_verifier_routes.py` | 将已保存 verifier-ensemble report 聚合为成本感知 route 排行榜、Pareto frontier 候选、分 route promotion decision、分 route 控制收益指标和可选 tail/cache/staged-verification route 质量门槛。 |
 | `run_adapter_promotion_workflow.py` | 执行 fail-closed adapter promotion workflow：route comparison、`promotion_decision=promote` 和可选 registry-backed 性能基线门槛。 |

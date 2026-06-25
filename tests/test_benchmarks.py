@@ -774,7 +774,7 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert payload["config"]["hidden_state_capture"] == "hooks"
     assert payload["config"]["auto_batch_size"] is True
     assert payload["config"]["sweep_layers"] == [-1, -2, -4]
-    assert payload["config"]["signals"] == ["maha_last", "truth_proj", "subspace_resid"]
+    assert payload["config"]["signals"] == ["maha_last", "truth_proj", "subspace_resid", "resid_update_norm"]
     assert payload["evidence_bundle"]["runtime"]["runtime_preset"] == "quick"
     assert payload["evidence_bundle"]["status"] == "needs_evidence"
     assert "--limit" in truthfulqa_command
@@ -785,10 +785,133 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert "--sweep-layers" in truthfulqa_command
     assert "-1,-2,-4" in truthfulqa_command
     assert "--signals" in conformal_command
-    assert "maha_last,truth_proj,subspace_resid" in conformal_command
+    assert "maha_last,truth_proj,subspace_resid,resid_update_norm" in conformal_command
     assert "--repeats" in conformal_command
     assert "3" in conformal_command
     assert manifest["metadata"]["runtime_preset"] == "quick"
+
+
+def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_truthfulqa_frontier_workflow.py",
+            "--output-dir",
+            str(tmp_path / "frontier"),
+            "--model",
+            "tiny=sshleifer/tiny-gpt2",
+            "--scale",
+            "l4=4:2:-1:-1,-2",
+            "--offline",
+            "--signals",
+            "truth_proj,resid_update_norm",
+            "--conformal-signal",
+            "truth_proj",
+            "--conformal-repeats",
+            "1",
+            "--ensemble-repeats",
+            "1",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    cell = payload["cells"][0]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["config"]["models"][0]["name"] == "tiny"
+    assert payload["config"]["scales"][0]["name"] == "l4"
+    assert payload["config"]["signals"] == ["truth_proj", "resid_update_norm"]
+    assert payload["ensemble"] is None
+    assert cell["name"] == "tiny-l4"
+    assert cell["status"] == "needs_evidence"
+    assert cell["score_dump"]["path"].endswith("tiny-l4/scores.manifest.json")
+    assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
+    assert manifest["metadata"]["dry_run"] is True
+    assert manifest["summary"]["missing_count"] > 0
+
+
+def test_truthfulqa_frontier_workflow_rejects_conformal_signal_outside_signals(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+
+    with pytest.raises(ValueError, match="conformal_signal must be included in signals"):
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=tmp_path / "frontier",
+            models=(module.ModelSpec("tiny", "sshleifer/tiny-gpt2"),),
+            scales=(module.ScaleSpec("l4", limit=4, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            signals=("truth_proj",),
+            conformal_signal="maha_last",
+        )
+
+
+def test_truthfulqa_frontier_workflow_reuses_score_dumps_and_writes_ensemble(tmp_path):
+    module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    output_dir = tmp_path / "frontier"
+    registry_path = tmp_path / "registry.json"
+    labels = [0] * 20 + [1] * 8
+    truth_proj = list(range(20)) + [40, 41, 42, 43, 0, 1, 2, 3]
+    subspace_resid = list(range(20)) + [0, 1, 2, 3, 40, 41, 42, 43]
+    for cell_name in ("a-l2", "b-l2"):
+        scores_path = output_dir / cell_name / "scores.manifest.json"
+        scores_path.parent.mkdir(parents=True, exist_ok=True)
+        dump = ScoreDump.from_mapping({
+            "config": {"model": cell_name, "layer": -1},
+            "labels": labels,
+            "scores": {
+                "truth_proj": truth_proj,
+                "subspace_resid": subspace_resid,
+            },
+            "sweep_scores": {
+                "-1": {
+                    "truth_proj": truth_proj,
+                    "subspace_resid": subspace_resid,
+                }
+            },
+        })
+        write_score_dump_jsonl(dump, scores_path)
+
+    payload = module.run_truthfulqa_frontier_workflow(
+        module.TruthfulQAFrontierWorkflowConfig(
+            output_dir=output_dir,
+            models=(
+                module.ModelSpec("a", "synthetic-a"),
+                module.ModelSpec("b", "synthetic-b"),
+            ),
+            scales=(module.ScaleSpec("l2", limit=2, manifold_questions=2, layer=-1, sweep_layers=(-1,)),),
+            registry_path=registry_path,
+            name="unit-frontier",
+            version="0.1",
+            offline=True,
+            signals=("truth_proj", "subspace_resid"),
+            conformal_signal="truth_proj",
+            ensemble_methods=("max_rank",),
+            alphas=(0.2,),
+            conformal_repeats=1,
+            ensemble_repeats=1,
+            artifact_alpha=0.2,
+            best_alpha=0.2,
+            python_executable=sys.executable,
+        )
+    )
+    ensemble_report = json.loads(Path(payload["paths"]["score_ensemble_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:unit-frontier:0.1")
+
+    assert payload["status"] == "complete"
+    assert len(payload["cells"]) == 2
+    assert payload["ensemble"]["runs"][0]["best_ensemble_at_alpha"]["name"] == "max_rank"
+    assert ensemble_report["runs"][0]["signals"] == ["truth_proj", "subspace_resid"]
+    assert manifest["metadata"]["runner"] == "run_truthfulqa_frontier_workflow"
+    assert manifest["summary"]["missing_count"] == 0
+    assert record.metadata["workflow"] == "run_truthfulqa_frontier_workflow"
+    assert record.metadata["signals"] == ["truth_proj", "subspace_resid"]
 
 
 def test_calibrated_observability_limited_sweep_defaults_to_hooks(tmp_path):

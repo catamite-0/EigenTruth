@@ -544,6 +544,35 @@ iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs
 with longer contexts and auto batch-size fallback. Any explicit CLI parameter
 overrides the preset default.
 
+## `run_truthfulqa_frontier_workflow.py`
+
+Runs the multi-model/multi-scale frontier research path in one command. By
+default it plans Qwen 0.5B and SmolLM2 l20/l80 cells, each using the
+calibrated-observability closure, then compares the resulting score dumps with
+direction-aware rank-fusion ensembles. The default signal set includes
+`resid_update_norm` alongside `truth_proj`, `maha_last`, `subspace_resid`, and
+`eigenscore`.
+
+```bash
+python benchmarks/run_truthfulqa_frontier_workflow.py \
+  --output-dir artifacts/truthfulqa-frontier-qwen-smollm2 \
+  --model qwen05=Qwen/Qwen2.5-0.5B-Instruct \
+  --model smollm2=HuggingFaceTB/SmolLM2-135M-Instruct \
+  --scale l20=20:40:-8:-16,-14,-12,-10,-8 \
+  --scale l80=80:80:-12:-16,-14,-12,-10,-8 \
+  --batch-size 4 \
+  --max-length 96 \
+  --hidden-state-capture hooks \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2 \
+  --version 0.1
+```
+
+Use `--dry-run --offline` first to verify commands and artifact paths without
+model downloads. Re-running without `--refresh-scores` reuses existing cell
+score dumps and only refreshes conformal/ensemble reports.
+
 ## `eval_verifier_ensemble.py`
 
 Compares a single calibrated internal diagnostic against a retrieval/verifier
