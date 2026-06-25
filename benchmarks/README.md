@@ -500,7 +500,9 @@ label counts so summary-only metadata can avoid reading the records sidecar; old
 manifests still use a cached label-only record scan instead of materializing
 score columns. Selected JSONL scans also prime the run-local records fingerprint
 cache, so later metadata keeps full SHA-256 provenance without a second records
-pass.
+pass. When `eval_conformal.py` writes a sweep report or best calibration artifact
+from JSONL scores, it reuses the preloaded layer/score view for both the base
+conformal report and the sweep.
 When `--artifact-manifest` is provided, the conformal report gains
 `artifact_manifest_summary` and `paths.artifact_manifest`; the manifest
 fingerprints the input score dump plus generated conformal, sweep, and

@@ -223,6 +223,7 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     })
     scores_path = tmp_path / "scores.manifest.json"
     sweep_report_path = tmp_path / "sweep-report.json"
+    best_path = tmp_path / "best-calibration.json"
     write_score_dump_jsonl(dump, scores_path)
 
     def fail_from_mapping(*args, **kwargs):
@@ -238,7 +239,7 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
         json=None,
         save_calibration=None,
         save_sweep_report=str(sweep_report_path),
-        save_best_calibration=None,
+        save_best_calibration=str(best_path),
         best_by="auroc",
         sweep_workers=2,
         artifact_alpha=0.20,
@@ -256,12 +257,15 @@ def test_eval_conformal_run_reads_jsonl_manifest_columns(tmp_path, monkeypatch):
     assert payload["config"]["score_dump"]["records"]["sha256"]
     assert payload["config"]["score_dump"]["summary"]["score_count"] == 2
     assert payload["score_dump_cache"]["enabled"] is True
-    assert payload["score_dump_cache"]["jsonl_view"]["misses"] >= 1
-    assert payload["score_dump_cache"]["jsonl_view"]["writes"] >= 1
+    assert payload["score_dump_cache"]["jsonl_view"]["misses"] == 1
+    assert payload["score_dump_cache"]["jsonl_view"]["writes"] == 1
     assert payload["score_dump_cache"]["jsonl_summary"]["hits"] >= 1
     assert payload["sweep_report"]["best"]["score_name"] == "truth_proj"
     assert payload["sweep_report"]["metadata"]["sweep_max_workers"] == 2
     assert sweep_report_path.exists()
+    best_artifact = json.loads(best_path.read_text(encoding="utf-8"))
+    assert best_artifact["target_layer"] == payload["sweep_report"]["best"]["layer"]
+    assert best_artifact["scores"][0]["name"] == payload["sweep_report"]["best"]["score_name"]
 
 
 def test_eval_conformal_run_builds_adaptive_report_from_jsonl_record_extras(tmp_path):

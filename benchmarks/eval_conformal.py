@@ -55,9 +55,11 @@ from eigentruth.eval.score_dump import (  # noqa: E402
     ScoreDump,
     ScoreDumpColumns,
     ScoreDumpJsonlManifest,
+    ScoreDumpLayerScores,
     iter_score_dump_jsonl_records,
     load_score_dump_columns,
     load_score_dump_columns_with_extras,
+    load_score_dump_layer_scores,
     score_dump_cache_summary,
     score_dump_file_metadata,
 )
@@ -232,6 +234,96 @@ def _load_primary_score_dump_view(
         "source_format": columns.source_format,
     })
     return columns, metadata, dump, confidence_audit
+
+
+def _load_primary_score_dump_view_from_layer_scores(
+    path: str | Path,
+    signal: str,
+    *,
+    selected_sweep_signals: Sequence[str] | None,
+    confidence_signal: str | None = None,
+    disable_confidence_audit: bool = False,
+    additional_signals: Sequence[str] = (),
+    cache: dict,
+) -> tuple[ScoreDumpColumns, dict, None, dict, ScoreDumpLayerScores] | None:
+    metadata = score_dump_file_metadata(path, cache=cache)
+    if metadata.get("source_format") != JSONL_FORMAT:
+        return None
+    available = _available_primary_signals(metadata)
+    confidence_audit = _confidence_audit_status(
+        signal=confidence_signal,
+        available_primary_signals=available,
+        disabled=disable_confidence_audit,
+    )
+    requested_primary = tuple(dict.fromkeys((
+        signal,
+        *(name for name in (confidence_signal,) if name is not None and name in available),
+        *(name for name in additional_signals if name in available),
+    )))
+    if selected_sweep_signals is None:
+        layer_load_signals = None
+    else:
+        layer_load_signals = tuple(dict.fromkeys((
+            *selected_sweep_signals,
+            *requested_primary,
+        )))
+    layer_dump = load_score_dump_layer_scores(
+        path,
+        signals=layer_load_signals,
+        cache=cache,
+    )
+    primary_layer = int(layer_dump.config.get("layer", 0))
+    primary_scores = layer_dump.layer_scores.get(primary_layer, {})
+    primary_sources = layer_dump.score_sources.get(primary_layer, {})
+    if any(primary_sources.get(name) != "scores" for name in requested_primary):
+        return None
+    columns = ScoreDumpColumns(
+        labels=layer_dump.labels,
+        scores={name: primary_scores[name] for name in requested_primary},
+        config=dict(layer_dump.config),
+        summary=dict(layer_dump.summary),
+        source_format=layer_dump.source_format,
+    )
+    metadata = score_dump_file_metadata(path, cache=cache)
+    metadata.update({
+        "summary": dict(columns.summary),
+        "source_format": columns.source_format,
+    })
+    return columns, metadata, None, confidence_audit, layer_dump
+
+
+def _load_score_dump_views_for_run(
+    path: str | Path,
+    signal: str,
+    *,
+    selected_sweep_signals: Sequence[str] | None,
+    prefer_layer_scores: bool,
+    confidence_signal: str | None = None,
+    disable_confidence_audit: bool = False,
+    additional_signals: Sequence[str] = (),
+    cache: dict,
+) -> tuple[ScoreDumpColumns, dict, ScoreDump | None, dict, ScoreDumpLayerScores | None]:
+    if prefer_layer_scores:
+        preloaded = _load_primary_score_dump_view_from_layer_scores(
+            path,
+            signal,
+            selected_sweep_signals=selected_sweep_signals,
+            confidence_signal=confidence_signal,
+            disable_confidence_audit=disable_confidence_audit,
+            additional_signals=additional_signals,
+            cache=cache,
+        )
+        if preloaded is not None:
+            return preloaded
+    columns, metadata, full_score_dump, confidence_audit = _load_primary_score_dump_view(
+        path,
+        signal,
+        confidence_signal=confidence_signal,
+        disable_confidence_audit=disable_confidence_audit,
+        additional_signals=additional_signals,
+        cache=cache,
+    )
+    return columns, metadata, full_score_dump, confidence_audit, None
 
 
 def _artifact_paths(args) -> dict[str, str | Path | None]:
@@ -469,13 +561,26 @@ def run(args) -> dict:
     )
     if getattr(args, "save_adaptive_calibration", None) and not adaptive_feature_names:
         raise ValueError("--save-adaptive-calibration requires at least one --adaptive-feature.")
-    score_dump, score_dump_metadata, full_score_dump, confidence_audit = _load_primary_score_dump_view(
-        args.scores,
-        args.signal,
-        confidence_signal=confidence_signal,
-        disable_confidence_audit=disable_confidence_audit,
-        additional_signals=adaptive_feature_names,
-        cache=score_dump_metadata_cache,
+    wants_sweep = bool(
+        getattr(args, "save_sweep_report", None)
+        or getattr(args, "save_best_calibration", None)
+    )
+    selected_sweep_signals = (
+        _parse_signals(args.signals)
+        if wants_sweep
+        else None
+    )
+    score_dump, score_dump_metadata, full_score_dump, confidence_audit, preloaded_layer_scores = (
+        _load_score_dump_views_for_run(
+            args.scores,
+            args.signal,
+            selected_sweep_signals=selected_sweep_signals,
+            prefer_layer_scores=wants_sweep,
+            confidence_signal=confidence_signal,
+            disable_confidence_audit=disable_confidence_audit,
+            additional_signals=adaptive_feature_names,
+            cache=score_dump_metadata_cache,
+        )
     )
     labels = torch.tensor(score_dump.labels)
     scores = torch.tensor(score_dump.scores[args.signal], dtype=torch.float64)
@@ -655,8 +760,8 @@ def run(args) -> dict:
         artifact.save_json(args.save_calibration)
         print(f"\nWrote calibration artifact to {args.save_calibration}")
 
-    if args.save_sweep_report or args.save_best_calibration:
-        selected_signals = _parse_signals(args.signals) or _all_dump_signals(dict(score_dump.summary))
+    if wants_sweep:
+        selected_signals = selected_sweep_signals or _all_dump_signals(dict(score_dump.summary))
         direction_override = None if args.direction is None else {
             signal: args.direction for signal in selected_signals
         }
@@ -674,7 +779,13 @@ def run(args) -> dict:
             "commit_sha": args.commit_sha,
             "metadata": {"source": "eval_conformal.py", "config": dump_config},
         }
-        if full_score_dump is None:
+        if preloaded_layer_scores is not None:
+            report = calibrator.calibrate_from_layer_scores(
+                preloaded_layer_scores,
+                scores_path=args.scores,
+                **sweep_kwargs,
+            )
+        elif full_score_dump is None:
             report = calibrator.calibrate_from_file(
                 args.scores,
                 cache=score_dump_metadata_cache,

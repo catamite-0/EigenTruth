@@ -8,7 +8,7 @@ import torch
 import eigentruth.calibration.sweeps as sweep_module
 from eigentruth.calibration import LayerScoreSweepCalibrator, LayerScoreSweepReport
 from eigentruth.eval.conformal import directional_conformal_threshold, directional_trigger_rate
-from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+from eigentruth.eval.score_dump import ScoreDump, load_score_dump_layer_scores, write_score_dump_jsonl
 
 
 def _score_dump():
@@ -173,6 +173,27 @@ def test_layer_score_sweep_from_jsonl_file_reads_selected_signals(tmp_path, monk
         for layer in report.layers
         for score in layer.scores
     )
+
+
+def test_layer_score_sweep_from_preloaded_layer_scores(tmp_path, monkeypatch):
+    dump = ScoreDump.from_mapping(_score_dump())
+    manifest_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(dump, manifest_path)
+    layer_scores = load_score_dump_layer_scores(manifest_path, signals=("maha_last",))
+
+    def fail_loader(*args, **kwargs):
+        raise AssertionError("preloaded layer-score calibration should not read files")
+
+    monkeypatch.setattr(sweep_module, "load_score_dump_layer_scores", fail_loader)
+    report = LayerScoreSweepCalibrator(alpha=0.4).calibrate_from_layer_scores(
+        layer_scores,
+        signals=("maha_last",),
+        scores_path=str(manifest_path),
+    )
+
+    assert report.scores_path == str(manifest_path)
+    assert report.best_score().score_name == "maha_last"
+    assert {score.score_name for score in report.score_results()} == {"maha_last"}
 
 
 def test_layer_score_sweep_from_score_dump_public_api():

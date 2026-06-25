@@ -15,7 +15,7 @@ import torch
 from eigentruth import __version__
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.eval.metrics import roc_auc
-from eigentruth.eval.score_dump import ScoreDump, load_score_dump_layer_scores
+from eigentruth.eval.score_dump import ScoreDump, ScoreDumpLayerScores, load_score_dump_layer_scores
 from eigentruth.json_utils import strict_json_dumps
 
 ArrayLike = torch.Tensor | Sequence[float]
@@ -277,15 +277,43 @@ class LayerScoreSweepCalibrator:
         """Load a score dump and build a layer/score sweep report."""
         dump_path = Path(path)
         layer_dump = load_score_dump_layer_scores(dump_path, signals=signals, cache=cache)
-        return self._calibrate_layer_scores(
-            labels=torch.as_tensor(layer_dump.labels, dtype=torch.int64),
-            config=dict(layer_dump.config),
-            layer_scores=layer_dump.layer_scores,
+        return self.calibrate_from_layer_scores(
+            layer_dump,
             signals=signals,
             directions=directions,
             model_id=model_id,
             model_revision=model_revision,
             scores_path=str(dump_path),
+            created_at=created_at,
+            commit_sha=commit_sha,
+            eigentruth_version=eigentruth_version,
+            metadata=metadata,
+        )
+
+    def calibrate_from_layer_scores(
+        self,
+        layer_scores: ScoreDumpLayerScores,
+        *,
+        signals: Optional[Sequence[str]] = None,
+        directions: Optional[Mapping[str, str]] = None,
+        model_id: Optional[str] = None,
+        model_revision: Optional[str] = None,
+        scores_path: Optional[str] = None,
+        created_at: Optional[str] = None,
+        commit_sha: Optional[str] = None,
+        eigentruth_version: str = __version__,
+        metadata: Optional[Mapping[str, Any]] = None,
+    ) -> LayerScoreSweepReport:
+        """Build a layer/score sweep report from preloaded layer-score columns."""
+        return self._calibrate_layer_scores(
+            labels=torch.as_tensor(layer_scores.labels, dtype=torch.int64),
+            config=dict(layer_scores.config),
+            layer_scores=layer_scores.layer_scores,
+            signals=signals,
+            directions=directions,
+            model_id=model_id,
+            model_revision=model_revision,
+            scores_path=scores_path,
             created_at=created_at,
             commit_sha=commit_sha,
             eigentruth_version=eigentruth_version,
