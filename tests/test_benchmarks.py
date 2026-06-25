@@ -335,6 +335,77 @@ def test_eval_conformal_run_writes_abstention_comparison_report(tmp_path):
     ]
 
 
+def test_eval_conformal_run_writes_abstention_release_gate(tmp_path):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    scores_path = tmp_path / "scores.json"
+    gate_path = tmp_path / "abstention-release-gate.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "tiny", "layer": 0},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {
+                "maha_last": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "subspace_resid": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            },
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_abstention_report=None,
+        include_abstention_report=False,
+        save_abstention_comparison=None,
+        include_abstention_comparison=False,
+        save_abstention_release_gate=str(gate_path),
+        include_abstention_release_gate=False,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        artifact_alpha=0.10,
+        abstention_alpha=0.50,
+        abstention_signal=None,
+        abstention_direction=None,
+        abstention_signals="maha_last,subspace_resid",
+        abstention_best_by="conditional_correctness_lower_bound",
+        min_abstention_conditional_correctness_lower_bound=0.5,
+        max_abstention_rate=0.5,
+        direction=None,
+        adaptive_feature=(),
+        adaptive_feature_weight=(),
+        adaptive_intercept=0.0,
+        adaptive_score_name="adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+    gate = payload["abstention_release_gate"]
+    sidecar = json.loads(gate_path.read_text(encoding="utf-8"))
+
+    assert gate == sidecar
+    assert gate["passed"] is True
+    assert gate["status"] == "passed"
+    assert gate["source"] == "conformal_abstention_comparison_report"
+    assert gate["candidate_count"] == 2
+    assert gate["selected_score_name"] == "subspace_resid"
+    assert payload["component_verdicts"]["abstention_release_gate"] == "ACCEPT"
+
+
 def test_eval_conformal_abstention_comparison_uses_jsonl_selected_columns(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_conformal")
     from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl

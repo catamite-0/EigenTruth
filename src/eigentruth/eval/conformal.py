@@ -425,6 +425,215 @@ class ConformalAbstentionComparisonReport:
         )
 
 
+@dataclass(frozen=True)
+class ConformalAbstentionReleaseGateResult:
+    """Release-gate verdict for a selected conformal abstention report."""
+
+    passed: bool
+    blocking_reasons: tuple[str, ...]
+    selected_score_name: str | None
+    metrics: Mapping[str, float | None]
+    thresholds: Mapping[str, float]
+    source: str = "conformal_abstention_report"
+    candidate_count: int | None = None
+    selected_report: ConformalAbstentionReport | None = None
+
+    def __post_init__(self) -> None:
+        reasons = tuple(str(reason) for reason in self.blocking_reasons)
+        metrics = dict(self.metrics)
+        thresholds = dict(self.thresholds)
+        for name, value in metrics.items():
+            if value is not None:
+                metrics[name] = _unit_interval_float(value, name=f"metrics.{name}")
+        for name, value in thresholds.items():
+            thresholds[name] = _unit_interval_float(value, name=f"thresholds.{name}")
+        candidate_count = self.candidate_count
+        if candidate_count is not None:
+            candidate_count = int(candidate_count)
+            if candidate_count < 0:
+                raise ValueError("candidate_count must be non-negative.")
+        if self.selected_report is not None and not isinstance(
+            self.selected_report,
+            ConformalAbstentionReport,
+        ):
+            raise ValueError("selected_report must be a ConformalAbstentionReport.")
+        object.__setattr__(self, "passed", bool(self.passed))
+        object.__setattr__(self, "blocking_reasons", reasons)
+        object.__setattr__(self, "metrics", metrics)
+        object.__setattr__(self, "thresholds", thresholds)
+        object.__setattr__(self, "source", str(self.source))
+        object.__setattr__(self, "candidate_count", candidate_count)
+        if self.selected_score_name is not None:
+            object.__setattr__(self, "selected_score_name", str(self.selected_score_name))
+
+    @property
+    def status(self) -> str:
+        """Return ``passed`` or ``blocked`` for release workflows."""
+        return "passed" if self.passed else "blocked"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-serializable release-gate payload."""
+        return {
+            "passed": self.passed,
+            "status": self.status,
+            "blocking_reasons": list(self.blocking_reasons),
+            "selected_score_name": self.selected_score_name,
+            "metrics": dict(self.metrics),
+            "thresholds": dict(self.thresholds),
+            "source": self.source,
+            "candidate_count": self.candidate_count,
+            "selected_report": (
+                None if self.selected_report is None else self.selected_report.to_dict()
+            ),
+        }
+
+    @classmethod
+    def from_dict(
+        cls,
+        data: Mapping[str, Any],
+    ) -> "ConformalAbstentionReleaseGateResult":
+        """Build a release-gate result from JSON-like data."""
+        raw_report = data.get("selected_report")
+        return cls(
+            passed=bool(data["passed"]),
+            blocking_reasons=tuple(str(reason) for reason in data.get("blocking_reasons", ())),
+            selected_score_name=(
+                None
+                if data.get("selected_score_name") is None
+                else str(data["selected_score_name"])
+            ),
+            metrics=dict(data.get("metrics", {})),
+            thresholds=dict(data.get("thresholds", {})),
+            source=str(data.get("source", "conformal_abstention_report")),
+            candidate_count=(
+                None if data.get("candidate_count") is None else int(data["candidate_count"])
+            ),
+            selected_report=(
+                None
+                if raw_report is None
+                else ConformalAbstentionReport.from_dict(raw_report)
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ConformalAbstentionReleaseGate:
+    """Fail-closed promotion gate for conformal abstention candidates."""
+
+    min_conditional_correctness_lower_bound: float = 0.8
+    max_abstention_rate: float = 0.5
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "min_conditional_correctness_lower_bound",
+            _unit_interval_float(
+                self.min_conditional_correctness_lower_bound,
+                name="min_conditional_correctness_lower_bound",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_abstention_rate",
+            _unit_interval_float(self.max_abstention_rate, name="max_abstention_rate"),
+        )
+
+    def evaluate(
+        self,
+        report: (
+            ConformalAbstentionReport
+            | ConformalAbstentionComparisonCandidate
+            | ConformalAbstentionComparisonReport
+            | Mapping[str, Any]
+        ),
+    ) -> ConformalAbstentionReleaseGateResult:
+        """Evaluate a report, candidate, or comparison report against release thresholds."""
+        selected = _select_abstention_report_for_release_gate(report)
+        if selected is None:
+            thresholds = {
+                "min_conditional_correctness_lower_bound": (
+                    self.min_conditional_correctness_lower_bound
+                ),
+                "max_abstention_rate": self.max_abstention_rate,
+            }
+            return ConformalAbstentionReleaseGateResult(
+                passed=False,
+                blocking_reasons=("abstention comparison report has no candidates",),
+                selected_score_name=None,
+                metrics={},
+                thresholds=thresholds,
+                source="conformal_abstention_comparison_report",
+                candidate_count=0,
+                selected_report=None,
+            )
+        selected_report, source, candidate_count = selected
+        metrics = {
+            "conditional_correctness_lower_bound": (
+                selected_report.conditional_correctness_lower_bound
+            ),
+            "empirical_abstention_rate": selected_report.empirical_abstention_rate,
+            "empirical_participation_rate": selected_report.empirical_participation_rate,
+            "empirical_selective_accuracy": selected_report.empirical_selective_accuracy,
+            "correct_retention_lower_bound": selected_report.correct_retention_lower_bound,
+            "correct_retention_rate": selected_report.correct_retention_rate,
+        }
+        thresholds = {
+            "min_conditional_correctness_lower_bound": (
+                self.min_conditional_correctness_lower_bound
+            ),
+            "max_abstention_rate": self.max_abstention_rate,
+        }
+        blocking_reasons: list[str] = []
+        if (
+            selected_report.conditional_correctness_lower_bound
+            < self.min_conditional_correctness_lower_bound
+        ):
+            blocking_reasons.append(
+                "conditional_correctness_lower_bound "
+                f"{selected_report.conditional_correctness_lower_bound:.6g} "
+                "is below required minimum "
+                f"{self.min_conditional_correctness_lower_bound:.6g}"
+            )
+        if selected_report.empirical_abstention_rate > self.max_abstention_rate:
+            blocking_reasons.append(
+                "empirical_abstention_rate "
+                f"{selected_report.empirical_abstention_rate:.6g} "
+                "exceeds maximum "
+                f"{self.max_abstention_rate:.6g}"
+            )
+
+        return ConformalAbstentionReleaseGateResult(
+            passed=not blocking_reasons,
+            blocking_reasons=tuple(blocking_reasons),
+            selected_score_name=selected_report.score_name,
+            metrics=metrics,
+            thresholds=thresholds,
+            source=source,
+            candidate_count=candidate_count,
+            selected_report=selected_report,
+        )
+
+    def to_dict(self) -> dict[str, float]:
+        """Return release-gate threshold configuration."""
+        return {
+            "min_conditional_correctness_lower_bound": (
+                self.min_conditional_correctness_lower_bound
+            ),
+            "max_abstention_rate": self.max_abstention_rate,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "ConformalAbstentionReleaseGate":
+        """Build release-gate thresholds from JSON-like data."""
+        return cls(
+            min_conditional_correctness_lower_bound=data.get(
+                "min_conditional_correctness_lower_bound",
+                0.8,
+            ),
+            max_abstention_rate=data.get("max_abstention_rate", 0.5),
+        )
+
+
 def conformal_pvalues(calib_scores: ArrayLike, test_scores: ArrayLike) -> Tensor:
     """计算每个测试分数的保守共形 p 值。
     Conservative split-conformal p-value for each test score.
@@ -672,6 +881,29 @@ def conformal_abstention_comparison_report(
     )
 
 
+def conformal_abstention_release_gate(
+    report: (
+        ConformalAbstentionReport
+        | ConformalAbstentionComparisonCandidate
+        | ConformalAbstentionComparisonReport
+        | Mapping[str, Any]
+    ),
+    *,
+    min_conditional_correctness_lower_bound: float = 0.8,
+    max_abstention_rate: float = 0.5,
+) -> ConformalAbstentionReleaseGateResult:
+    """Evaluate a conformal abstention report as a promotion gate.
+
+    The gate is intentionally small and fail-closed: the selected candidate must
+    satisfy both a conservative conditional-correctness lower bound and an upper
+    bound on empirical abstention rate.
+    """
+    return ConformalAbstentionReleaseGate(
+        min_conditional_correctness_lower_bound=min_conditional_correctness_lower_bound,
+        max_abstention_rate=max_abstention_rate,
+    ).evaluate(report)
+
+
 def evaluate_conformal_abstention(
     uncertainty_scores: ArrayLike,
     correctness: Sequence[bool | int | float],
@@ -839,3 +1071,39 @@ def _unit_interval_float(value: object, *, name: str) -> float:
     if not (0.0 <= result <= 1.0):
         raise ValueError(f"{name} must be in [0, 1].")
     return result
+
+
+def _select_abstention_report_for_release_gate(
+    report: (
+        ConformalAbstentionReport
+        | ConformalAbstentionComparisonCandidate
+        | ConformalAbstentionComparisonReport
+        | Mapping[str, Any]
+    ),
+) -> tuple[ConformalAbstentionReport, str, int | None] | None:
+    if isinstance(report, ConformalAbstentionReport):
+        return report, "conformal_abstention_report", None
+    if isinstance(report, ConformalAbstentionComparisonCandidate):
+        return report.report, "conformal_abstention_comparison_candidate", None
+    if isinstance(report, ConformalAbstentionComparisonReport):
+        recommended = report.recommended
+        if recommended is None:
+            return None
+        return (
+            recommended.report,
+            "conformal_abstention_comparison_report",
+            len(report.candidates),
+        )
+    if not isinstance(report, Mapping):
+        raise ValueError("abstention release gate input must be a report or mapping.")
+    if "recommended" in report and "candidates" in report:
+        return _select_abstention_report_for_release_gate(
+            ConformalAbstentionComparisonReport.from_dict(report)
+        )
+    if "report" in report and "score_name" in report:
+        return _select_abstention_report_for_release_gate(
+            ConformalAbstentionComparisonCandidate.from_dict(report)
+        )
+    return _select_abstention_report_for_release_gate(
+        ConformalAbstentionReport.from_dict(report)
+    )

@@ -447,6 +447,14 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal mah
   --abstention-alpha 0.1 \
   --save-abstention-comparison artifacts/gpt2-abstention-comparison.json
 
+# Turn the selected abstention report/comparison candidate into a release gate:
+python benchmarks/eval_conformal.py --scores benchmarks/scores.json --signal maha_last \
+  --abstention-signals maha_last,truth_proj,subspace_resid,inside_eigenscore \
+  --abstention-alpha 0.1 \
+  --save-abstention-release-gate artifacts/gpt2-abstention-release-gate.json \
+  --min-abstention-conditional-correctness-lower-bound 0.8 \
+  --max-abstention-rate 0.5
+
 # Build the 0.2 calibrated-observability closure: layer/score sweep + best artifact:
 python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
   --signals maha_last,truth_proj,subspace_resid,resid_update_norm,eigenscore,inside_eigenscore,inside_semantic_entropy,inside_embedding_entropy,inside_semantic_energy \
@@ -485,6 +493,11 @@ the script emits a `ConformalAbstentionComparisonReport` over `--abstention-sign
 `conditional_correctness_lower_bound`; `--abstention-best-by` can instead rank by
 empirical selective accuracy, participation, correct-retention lower bound, or
 correct-retention rate. JSONL inputs load only the requested comparison columns.
+When `--save-abstention-release-gate` or `--include-abstention-release-gate` is set,
+the script evaluates the selected report or comparison recommendation as a
+fail-closed promotion gate. It requires both
+`--min-abstention-conditional-correctness-lower-bound` and
+`--max-abstention-rate`; a failing gate sets the main payload verdict to `REJECT`.
 When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature from
 a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
 per-record extra, then writes an `adaptive_conformal_report` whose adjusted score

@@ -12,9 +12,12 @@ import torch
 from eigentruth.eval.conformal import (
     AdaptiveScoreTransform,
     ConformalAbstentionComparisonReport,
+    ConformalAbstentionReleaseGate,
+    ConformalAbstentionReleaseGateResult,
     ConformalAbstentionReport,
     adaptive_anomaly_scores,
     conformal_abstention_comparison_report,
+    conformal_abstention_release_gate,
     conformal_abstention_report,
     conformal_pvalues,
     conformal_threshold,
@@ -277,6 +280,83 @@ class TestConformalAbstention:
             conformal_abstention_comparison_report({}, [1], 0.5)
         with pytest.raises(ValueError, match="best_by"):
             conformal_abstention_comparison_report({"u": [1.0]}, [1], 0.5, best_by="bad")
+
+    def test_abstention_release_gate_passes_selected_report(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        gate = conformal_abstention_release_gate(
+            report,
+            min_conditional_correctness_lower_bound=0.5,
+            max_abstention_rate=0.5,
+        )
+        loaded = ConformalAbstentionReleaseGateResult.from_dict(gate.to_dict())
+
+        assert gate.passed is True
+        assert gate.status == "passed"
+        assert gate.blocking_reasons == ()
+        assert gate.selected_score_name == "uncertainty"
+        assert gate.metrics["conditional_correctness_lower_bound"] == pytest.approx(0.5625)
+        assert gate.metrics["empirical_abstention_rate"] == pytest.approx(0.4)
+        assert loaded == gate
+
+    def test_abstention_release_gate_blocks_weak_or_too_expensive_candidate(self):
+        report = conformal_abstention_report(
+            [0.1, 0.2, 0.3, 0.4, 0.9],
+            [1, 1, 1, 0, 0],
+            0.4,
+            score_name="uncertainty",
+        )
+
+        gate = ConformalAbstentionReleaseGate(
+            min_conditional_correctness_lower_bound=0.9,
+            max_abstention_rate=0.3,
+        ).evaluate(report.to_dict())
+
+        assert gate.passed is False
+        assert gate.status == "blocked"
+        assert len(gate.blocking_reasons) == 2
+        assert "conditional_correctness_lower_bound" in gate.blocking_reasons[0]
+        assert "empirical_abstention_rate" in gate.blocking_reasons[1]
+
+    def test_abstention_release_gate_uses_comparison_recommendation(self):
+        comparison = conformal_abstention_comparison_report(
+            {
+                "weak": [0.1, 0.2, 0.8, 0.9, 0.3, 0.4],
+                "strong": [0.1, 0.2, 0.3, 0.4, 0.35, 0.9],
+            },
+            [1, 1, 1, 1, 0, 0],
+            0.5,
+        )
+
+        gate = conformal_abstention_release_gate(
+            comparison.to_dict(),
+            min_conditional_correctness_lower_bound=0.5,
+            max_abstention_rate=0.5,
+        )
+
+        assert gate.passed is True
+        assert gate.source == "conformal_abstention_comparison_report"
+        assert gate.candidate_count == 2
+        assert gate.selected_score_name == "strong"
+
+    def test_abstention_release_gate_blocks_empty_comparison(self):
+        comparison = ConformalAbstentionComparisonReport(
+            alpha=0.5,
+            best_by="conditional_correctness_lower_bound",
+            candidates=(),
+        )
+
+        gate = conformal_abstention_release_gate(comparison)
+
+        assert gate.passed is False
+        assert gate.status == "blocked"
+        assert gate.candidate_count == 0
+        assert gate.blocking_reasons == ("abstention comparison report has no candidates",)
 
 
 class TestAdaptiveConformalScores:

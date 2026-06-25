@@ -48,6 +48,7 @@ from eigentruth.eval.conformal import (  # noqa: E402
     AdaptiveScoreTransform,
     adaptive_anomaly_scores,
     conformal_abstention_comparison_report,
+    conformal_abstention_release_gate,
     conformal_abstention_report,
     directional_conformal_thresholds,
     directional_trigger_rate,
@@ -337,6 +338,7 @@ def _artifact_paths(args) -> dict[str, str | Path | None]:
         "adaptive_calibration_artifact": getattr(args, "save_adaptive_calibration", None),
         "abstention_report": getattr(args, "save_abstention_report", None),
         "abstention_comparison_report": getattr(args, "save_abstention_comparison", None),
+        "abstention_release_gate": getattr(args, "save_abstention_release_gate", None),
         "sweep_report": args.save_sweep_report,
         "best_calibration_artifact": args.save_best_calibration,
     }
@@ -607,6 +609,7 @@ def _write_artifact_manifest(args, payload: dict) -> dict | None:
             "has_adaptive_report": "adaptive_conformal_report" in payload,
             "has_abstention_report": "abstention_report" in payload,
             "has_abstention_comparison_report": "abstention_comparison_report" in payload,
+            "has_abstention_release_gate": "abstention_release_gate" in payload,
         },
     )
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -646,10 +649,24 @@ def run(args) -> dict:
         abstention_signal,
         getattr(args, "abstention_direction", None),
     )
+    wants_abstention_release_gate = bool(
+        getattr(args, "save_abstention_release_gate", None)
+        or getattr(args, "include_abstention_release_gate", False)
+    )
+    wants_abstention_report = bool(
+        getattr(args, "save_abstention_report", None)
+        or getattr(args, "include_abstention_report", False)
+    )
     wants_abstention_comparison = bool(
         getattr(args, "save_abstention_comparison", None)
         or getattr(args, "include_abstention_comparison", False)
+        or (
+            wants_abstention_release_gate
+            and getattr(args, "abstention_signals", None) is not None
+        )
     )
+    if wants_abstention_release_gate and not wants_abstention_comparison:
+        wants_abstention_report = True
     abstention_comparison_signals = _resolve_abstention_comparison_signals(
         args,
         abstention_signal=abstention_signal,
@@ -776,7 +793,10 @@ def run(args) -> dict:
                "component_verdicts": {"base_conformal": base_verdict},
                "verdict": base_verdict}
 
-    if getattr(args, "save_abstention_report", None) or bool(getattr(args, "include_abstention_report", False)):
+    abstention_report = None
+    abstention_comparison_report = None
+
+    if wants_abstention_report:
         if abstention_signal not in score_dump.scores:
             available = tuple(sorted(str(name) for name in score_dump.scores))
             raise ValueError(
@@ -791,7 +811,10 @@ def run(args) -> dict:
             direction=abstention_direction,
             alpha=float(getattr(args, "abstention_alpha", args.artifact_alpha)),
         )
-        payload["abstention_report"] = abstention_report
+        if getattr(args, "save_abstention_report", None) or bool(
+            getattr(args, "include_abstention_report", False)
+        ):
+            payload["abstention_report"] = abstention_report
         save_abstention_report = getattr(args, "save_abstention_report", None)
         if save_abstention_report:
             Path(save_abstention_report).parent.mkdir(parents=True, exist_ok=True)
@@ -840,6 +863,45 @@ def run(args) -> dict:
                 f"value={recommended['selection_value']} "
                 f"candidates={abstention_comparison_report['candidate_count']}"
             )
+
+    if wants_abstention_release_gate:
+        gate_input = (
+            abstention_comparison_report
+            if abstention_comparison_report is not None
+            else abstention_report
+        )
+        if gate_input is None:
+            raise ValueError("abstention release gate requires an abstention report source.")
+        abstention_release_gate = conformal_abstention_release_gate(
+            gate_input,
+            min_conditional_correctness_lower_bound=float(
+                getattr(args, "min_abstention_conditional_correctness_lower_bound", 0.8)
+            ),
+            max_abstention_rate=float(getattr(args, "max_abstention_rate", 0.5)),
+        ).to_dict()
+        payload["abstention_release_gate"] = abstention_release_gate
+        payload.setdefault("component_verdicts", {})["abstention_release_gate"] = (
+            "ACCEPT" if abstention_release_gate["passed"] else "REJECT"
+        )
+        if not abstention_release_gate["passed"]:
+            payload["verdict"] = "REJECT"
+        save_abstention_release_gate = getattr(args, "save_abstention_release_gate", None)
+        if save_abstention_release_gate:
+            Path(save_abstention_release_gate).parent.mkdir(parents=True, exist_ok=True)
+            Path(save_abstention_release_gate).write_text(
+                json.dumps(abstention_release_gate, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            print(f"\nWrote abstention release gate to {save_abstention_release_gate}")
+        print(
+            "\n  Abstention release gate: "
+            f"status={abstention_release_gate['status']} "
+            f"score={abstention_release_gate['selected_score_name']} "
+            f"conditional_lb="
+            f"{abstention_release_gate['metrics'].get('conditional_correctness_lower_bound')} "
+            f"abstention_rate="
+            f"{abstention_release_gate['metrics'].get('empirical_abstention_rate')}"
+        )
 
     if adaptive_feature_names:
         adaptive_feature_values = _load_adaptive_feature_values(
@@ -1009,6 +1071,10 @@ def main():
                    help="optional path to write a multi-signal abstention comparison JSON")
     p.add_argument("--include-abstention-comparison", action="store_true",
                    help="include a multi-signal abstention comparison in the main JSON payload")
+    p.add_argument("--save-abstention-release-gate", default=None,
+                   help="optional path to write an abstention release-gate verdict JSON")
+    p.add_argument("--include-abstention-release-gate", action="store_true",
+                   help="include an abstention release-gate verdict in the main JSON payload")
     p.add_argument("--save-sweep-report", default=None,
                    help="optional path to write a LayerScoreSweepReport JSON")
     p.add_argument("--save-best-calibration", default=None,
@@ -1033,6 +1099,12 @@ def main():
     p.add_argument("--abstention-best-by", choices=ABSTENTION_COMPARISON_METRICS,
                    default="conditional_correctness_lower_bound",
                    help="metric used to rank abstention comparison candidates")
+    p.add_argument("--min-abstention-conditional-correctness-lower-bound",
+                   type=float, default=0.80,
+                   help="minimum conservative conditional-correctness lower bound "
+                        "required by the abstention release gate")
+    p.add_argument("--max-abstention-rate", type=float, default=0.50,
+                   help="maximum empirical abstention rate allowed by the abstention release gate")
     p.add_argument("--direction", choices=("higher", "lower"), default=None,
                    help="optional override for whether higher or lower signal values are more anomalous")
     p.add_argument("--adaptive-feature", action="append", default=None,
