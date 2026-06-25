@@ -48,6 +48,7 @@ class CacheProfileTripletConfig:
     prefix_kv_cache: bool = False
     eval_reps_cache_shard_size: int = 4
     eval_reps_shard_read_cache_size: int = 2
+    repeats: int = 1
     cached_max_total_ratio: float = 1.10
     cache_only_max_total_ratio: float = 0.35
     python_executable: str = sys.executable
@@ -82,6 +83,8 @@ class CacheProfileTripletConfig:
             raise ValueError("eval_reps_cache_shard_size must be >=1.")
         if int(self.eval_reps_shard_read_cache_size) < 1:
             raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        if isinstance(self.repeats, bool) or int(self.repeats) < 1:
+            raise ValueError("repeats must be a positive integer.")
         if float(self.cached_max_total_ratio) < 0:
             raise ValueError("cached_max_total_ratio must be non-negative.")
         if float(self.cache_only_max_total_ratio) < 0:
@@ -99,6 +102,7 @@ class CacheProfileTripletConfig:
         object.__setattr__(self, "max_batch_tokens", int(self.max_batch_tokens))
         object.__setattr__(self, "eval_reps_cache_shard_size", int(self.eval_reps_cache_shard_size))
         object.__setattr__(self, "eval_reps_shard_read_cache_size", int(self.eval_reps_shard_read_cache_size))
+        object.__setattr__(self, "repeats", int(self.repeats))
         object.__setattr__(self, "hidden_state_capture", str(self.hidden_state_capture))
         object.__setattr__(self, "covariance_mode", str(self.covariance_mode))
         object.__setattr__(self, "covariance_low_rank", int(self.covariance_low_rank))
@@ -125,14 +129,23 @@ class CacheProfileTripletConfig:
     def artifact_manifest(self) -> Path:
         return self.output_dir / "artifact-manifest.json"
 
-    def profile_path(self, name: str) -> Path:
-        return self.output_dir / f"profile-{name}.json"
+    def profile_path(self, name: str, repeat_index: int | None = None) -> Path:
+        if repeat_index is None or int(self.repeats) == 1:
+            return self.output_dir / f"profile-{name}.json"
+        return self.output_dir / f"profile-{name}-r{int(repeat_index)}.json"
 
-    def result_path(self, name: str) -> Path:
-        return self.output_dir / f"result-{name}.json"
+    def result_path(self, name: str, repeat_index: int | None = None) -> Path:
+        if repeat_index is None or int(self.repeats) == 1:
+            return self.output_dir / f"result-{name}.json"
+        return self.output_dir / f"result-{name}-r{int(repeat_index)}.json"
 
 
-def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str]:
+def build_eval_command(
+    config: CacheProfileTripletConfig,
+    name: str,
+    *,
+    repeat_index: int | None = None,
+) -> list[str]:
     """Build one eval command for a profile triplet run."""
     base = [
         str(config.python_executable),
@@ -158,9 +171,9 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
         "--progress-every",
         str(config.progress_every),
         "--json",
-        str(config.result_path(name)),
+        str(config.result_path(name, repeat_index)),
         "--profile-json",
-        str(config.profile_path(name)),
+        str(config.profile_path(name, repeat_index)),
     ]
     if config.offline:
         base.append("--offline")
@@ -229,7 +242,17 @@ def build_eval_command(config: CacheProfileTripletConfig, name: str) -> list[str
 
 def build_triplet_commands(config: CacheProfileTripletConfig) -> dict[str, list[str]]:
     """Return commands for configured profile triplet runs in execution order."""
-    return {name: build_eval_command(config, name) for name in config.run_names}
+    if int(config.repeats) == 1:
+        return {name: build_eval_command(config, name) for name in config.run_names}
+    commands = {}
+    for repeat_index in range(1, int(config.repeats) + 1):
+        for name in config.run_names:
+            commands[f"{name}_r{repeat_index}"] = build_eval_command(
+                config,
+                name,
+                repeat_index=repeat_index,
+            )
+    return commands
 
 
 def run_triplet(
@@ -255,7 +278,9 @@ def run_triplet(
             "dry_run": True,
             "output_dir": str(config.output_dir),
             "commands": command_log,
-            "run_names": tuple(command_log),
+            "run_names": tuple(config.run_names),
+            "command_names": tuple(command_log),
+            "repeats": config.repeats,
             "caches": _cache_paths(config),
             "uncached_cache_mode": config.uncached_cache_mode,
         }
@@ -265,9 +290,11 @@ def run_triplet(
             "dry_run": False,
             "output_dir": str(config.output_dir),
             "commands": command_log,
-            "run_names": tuple(command_log),
-            "profiles": {name: str(config.profile_path(name)) for name in command_log},
-            "results": {name: str(config.result_path(name)) for name in command_log},
+            "run_names": tuple(config.run_names),
+            "command_names": tuple(command_log),
+            "repeats": config.repeats,
+            "profiles": _output_paths(config, kind="profile"),
+            "results": _output_paths(config, kind="result"),
             "comparison_report": str(config.comparison_report) if comparison is not None else None,
             "comparison_skipped_reason": None if comparison is not None else "baseline run 'uncached' was not executed",
             "regression_gate": comparison.get("regression_gate") if comparison is not None else None,
@@ -302,7 +329,9 @@ def _normalize_run_names(run_names: Sequence[str]) -> tuple[str, ...]:
 def _build_comparison_if_available(config: CacheProfileTripletConfig) -> dict[str, Any] | None:
     if "uncached" not in config.run_names:
         return None
-    profiles = [(name, config.profile_path(name)) for name in config.run_names]
+    profiles = []
+    for repeat_index in range(1, int(config.repeats) + 1):
+        profiles.extend((name, config.profile_path(name, repeat_index)) for name in config.run_names)
     max_run_total_ratios = {}
     if "cached" in config.run_names:
         max_run_total_ratios["cached"] = config.cached_max_total_ratio
@@ -311,12 +340,31 @@ def _build_comparison_if_available(config: CacheProfileTripletConfig) -> dict[st
     comparison = build_profile_comparison(
         profiles,
         baseline="uncached",
-        notes=["same-machine uncached/cached/cache-only TruthfulQA profile triplet"],
+        notes=[
+            "same-machine uncached/cached/cache-only TruthfulQA profile triplet",
+            f"profile repeats={config.repeats}",
+        ],
+        aggregate_repeats="median" if int(config.repeats) > 1 else None,
         max_run_total_ratios=max_run_total_ratios,
     )
     with open(config.comparison_report, "w", encoding="utf-8") as f:
         json.dump(comparison, f, indent=2)
     return comparison
+
+
+def _output_paths(config: CacheProfileTripletConfig, *, kind: str) -> dict[str, str | list[str]]:
+    if kind not in {"profile", "result"}:
+        raise ValueError("kind must be 'profile' or 'result'.")
+    path_fn = config.profile_path if kind == "profile" else config.result_path
+    if int(config.repeats) == 1:
+        return {name: str(path_fn(name)) for name in config.run_names}
+    return {
+        name: [
+            str(path_fn(name, repeat_index))
+            for repeat_index in range(1, int(config.repeats) + 1)
+        ]
+        for name in config.run_names
+    }
 
 
 def _cache_paths(config: CacheProfileTripletConfig) -> dict[str, str]:
@@ -333,8 +381,12 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
         "comparison_report": payload.get("comparison_report"),
     }
     for group_name in ("profiles", "results", "caches"):
-        for name, path in dict(payload.get(group_name, {})).items():
-            artifacts[f"{group_name}.{name}"] = path
+        for name, path_or_paths in dict(payload.get(group_name, {})).items():
+            if isinstance(path_or_paths, list):
+                for repeat_index, path in enumerate(path_or_paths, start=1):
+                    artifacts[f"{group_name}.{name}.r{repeat_index}"] = path
+            else:
+                artifacts[f"{group_name}.{name}"] = path_or_paths
     manifest = build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -351,6 +403,7 @@ def _write_artifact_manifest(config: CacheProfileTripletConfig, payload: Mapping
             "prefix_kv_cache": config.prefix_kv_cache,
             "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
             "eval_reps_shard_read_cache_size": config.eval_reps_shard_read_cache_size,
+            "repeats": config.repeats,
             "offline": config.offline,
             "run_names": tuple(config.run_names),
             "uncached_cache_mode": config.uncached_cache_mode,
@@ -382,6 +435,7 @@ def _config_from_args(args: argparse.Namespace) -> CacheProfileTripletConfig:
         prefix_kv_cache=args.prefix_kv_cache,
         eval_reps_cache_shard_size=args.eval_reps_cache_shard_size,
         eval_reps_shard_read_cache_size=args.eval_reps_shard_read_cache_size,
+        repeats=args.repeats,
         cached_max_total_ratio=args.cached_max_total_ratio,
         cache_only_max_total_ratio=args.cache_only_max_total_ratio,
         python_executable=args.python,
@@ -438,6 +492,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--eval-reps-cache-shard-size", type=int, default=4)
     parser.add_argument("--eval-reps-shard-read-cache-size", type=int, default=2,
                         help="number of eval-reps cache shards cached by cached/cache-only reader runs")
+    parser.add_argument("--repeats", type=int, default=1,
+                        help="run the configured triplet this many times and compare median profile timings")
     parser.add_argument("--cached-max-total-ratio", type=float, default=1.10,
                         help="max cached/uncached total-time ratio for the comparison gate")
     parser.add_argument("--cache-only-max-total-ratio", type=float, default=0.35,

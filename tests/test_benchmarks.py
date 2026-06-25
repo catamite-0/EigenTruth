@@ -10779,6 +10779,43 @@ def test_run_cache_profile_triplet_can_run_cache_only_subset(tmp_path):
     assert "uncached" not in payload["commands"]
 
 
+def test_run_cache_profile_triplet_builds_repeated_dry_run_commands(tmp_path):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        repeats=2,
+        python_executable="/python",
+    )
+
+    payload = module.run_triplet(config, clean=True, dry_run=True)
+    commands = payload["commands"]
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["repeats"] == 2
+    assert payload["run_names"] == ("uncached", "cached", "cache_only")
+    assert payload["command_names"] == (
+        "uncached_r1",
+        "cached_r1",
+        "cache_only_r1",
+        "uncached_r2",
+        "cached_r2",
+        "cache_only_r2",
+    )
+    assert commands["uncached_r1"][commands["uncached_r1"].index("--profile-json") + 1].endswith(
+        "profile-uncached-r1.json"
+    )
+    assert commands["cache_only_r2"][commands["cache_only_r2"].index("--json") + 1].endswith(
+        "result-cache_only-r2.json"
+    )
+    assert manifest["metadata"]["repeats"] == 2
+
+    with pytest.raises(ValueError, match="repeats"):
+        module.CacheProfileTripletConfig(output_dir=tmp_path / "bad-zero", repeats=0)
+    with pytest.raises(ValueError, match="repeats"):
+        module.CacheProfileTripletConfig(output_dir=tmp_path / "bad-bool", repeats=True)  # type: ignore[arg-type]
+
+
 def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_cache_profile_triplet")
     config = module.CacheProfileTripletConfig(
@@ -10832,6 +10869,71 @@ def test_run_cache_profile_triplet_writes_comparison_report(tmp_path, monkeypatc
         "cache_only": pytest.approx(0.30),
     }
     assert report["fastest"]["name"] == "cache_only"
+
+
+def test_run_cache_profile_triplet_repeats_use_median_comparison(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.run_cache_profile_triplet")
+    config = module.CacheProfileTripletConfig(
+        output_dir=tmp_path,
+        model="tiny-local",
+        python_executable="/python",
+        repeats=3,
+        cached_max_total_ratio=0.70,
+        cache_only_max_total_ratio=0.30,
+    )
+    totals = {
+        "profile-uncached-r1.json": 100.0,
+        "profile-uncached-r2.json": 120.0,
+        "profile-uncached-r3.json": 110.0,
+        "profile-cached-r1.json": 60.0,
+        "profile-cached-r2.json": 72.0,
+        "profile-cached-r3.json": 66.0,
+        "profile-cache_only-r1.json": 20.0,
+        "profile-cache_only-r2.json": 22.0,
+        "profile-cache_only-r3.json": 21.0,
+    }
+
+    def fake_run(command, *, cwd, check):
+        profile_path = Path(command[command.index("--profile-json") + 1])
+        result_path = Path(command[command.index("--json") + 1])
+        total = totals[profile_path.name]
+        profile_path.write_text(
+            json.dumps({
+                "total_seconds": total,
+                "phases": {"forced_answer_forward": total / 2},
+                "summary": {
+                    "bottleneck": "forced_answer_forward",
+                    "groups": {"model_forward": {"seconds": total / 2}},
+                    "throughput": {"end_to_end_eval_records_per_second": 10.0},
+                },
+            }),
+            encoding="utf-8",
+        )
+        result_path.write_text(json.dumps({"profile": {"total_seconds": total, "phases": {}}}), encoding="utf-8")
+
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    payload = module.run_triplet(config, clean=True, dry_run=False)
+    report = json.loads(Path(payload["comparison_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["artifact_manifest"]).read_text(encoding="utf-8"))
+    cached_run = next(run for run in report["runs"] if run["name"] == "cached")
+    cache_only_run = next(run for run in report["runs"] if run["name"] == "cache_only")
+
+    assert payload["repeats"] == 3
+    assert payload["profiles"]["cached"] == [
+        str(tmp_path / "profile-cached-r1.json"),
+        str(tmp_path / "profile-cached-r2.json"),
+        str(tmp_path / "profile-cached-r3.json"),
+    ]
+    assert report["repeat_aggregation"] == "median"
+    assert cached_run["repeat_count"] == 3
+    assert cached_run["total_seconds"] == pytest.approx(66.0)
+    assert cached_run["total_delta"]["ratio_to_baseline"] == pytest.approx(66.0 / 110.0)
+    assert cache_only_run["total_seconds"] == pytest.approx(21.0)
+    assert payload["regression_gate"]["passed"] is True
+    assert manifest["metadata"]["repeats"] == 3
+    assert manifest["artifacts"]["profiles.cached.r2"]["sha256"]
+    assert manifest["artifacts"]["results.cache_only.r3"]["sha256"]
 
 
 def test_run_cache_profile_triplet_cli_can_fail_on_regression(tmp_path, monkeypatch):

@@ -2471,6 +2471,25 @@ download TruthfulQA, but non-cache-only runs still load the configured model and
 may download weights if they are not already in the local Hugging Face cache.
 Treat the result as local runtime evidence only; publish it by promoting a
 minimal report/manifest/registry bundle, not by committing the scratch caches.
+For less noisy runtime claims, add `--repeats 3`; the runner writes
+`profile-*-rN.json` / `result-*-rN.json`, then compares median timings with the
+same run-specific gates used for single triplets:
+
+```bash
+python benchmarks/run_cache_profile_triplet.py \
+  --output-dir /tmp/eigentruth-cache-profile-triplet-median \
+  --model sshleifer/tiny-gpt2 \
+  --limit 4 \
+  --manifold-questions 2 \
+  --layer -1 \
+  --batch-size 2 \
+  --max-length 32 \
+  --eval-reps-cache-shard-size 2 \
+  --eval-reps-shard-read-cache-size 2 \
+  --repeats 3 \
+  --clean \
+  --fail-on-regression
+```
 
 Use `--real-truthfulqa` for representative model/data profile artifacts. Start
 small, then increase `--limit` and `--manifold-questions` once the machine and
