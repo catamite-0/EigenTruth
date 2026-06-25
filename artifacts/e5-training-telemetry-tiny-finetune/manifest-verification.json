@@ -1,0 +1,7 @@
+{
+  "checked": 1,
+  "failures": [],
+  "manifest_path": "artifacts/e5-training-telemetry-tiny-finetune/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

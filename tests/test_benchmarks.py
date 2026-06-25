@@ -2346,6 +2346,40 @@ def test_training_telemetry_sanity_separates_clean_and_corrupt_runs(tmp_path, ca
     assert clean_final["effective_rank"] > corrupt_final["effective_rank"]
 
 
+def test_training_telemetry_tiny_finetune_rank_leads_eval_loss(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.training_telemetry_tiny_finetune")
+    report_path = tmp_path / "tiny-finetune-telemetry.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        train_count=320,
+        eval_count=192,
+        input_dim=8,
+        hidden_dim=12,
+        epochs=20,
+        seed=42,
+        learning_rate=0.03,
+        weight_decay=0.02,
+        covariance_mode="shrinkage",
+        duplicate_anchors_per_class=4,
+        target_layer=-1,
+        min_rank_margin=0.5,
+        min_eval_loss_margin=0.05,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+    summary = payload["summary"]
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert summary["status"] == "pass"
+    assert summary["telemetry_leads_eval_loss"] is True
+    assert summary["rank_first_separation_epoch"] < summary["eval_loss_first_separation_epoch"]
+    assert summary["max_rank_margin"] > 0.5
+    assert summary["clean_final_eval_accuracy"] > summary["duplicate_final_eval_accuracy"]
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
