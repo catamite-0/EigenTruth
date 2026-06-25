@@ -1069,6 +1069,8 @@ def _layer_spectrum_reports(
             ],
             "top_eigenvalue_count": limit,
         })
+        if manifold.covariance_mode == "shrinkage":
+            payload["shrinkage_alpha"] = manifold.covariance_shrinkage_alpha()
         reports[str(layer)] = payload
     return reports
 
@@ -4453,7 +4455,8 @@ def main():
     p.add_argument("--subspace-rank", type=int, default=2,
                    help="rank for TruthSubspace residual scoring")
     p.add_argument("--covariance-mode", default="full", choices=COVARIANCE_MODES,
-                   help="TruthManifold covariance approximation for maha_last: full, diag, or low_rank")
+                   help="TruthManifold covariance approximation for maha_last: "
+                        "full, diag, low_rank, or shrinkage")
     p.add_argument("--covariance-low-rank", type=int, default=16,
                    help="rank used when --covariance-mode low_rank")
     p.add_argument("--include-layer-spectra", action="store_true",

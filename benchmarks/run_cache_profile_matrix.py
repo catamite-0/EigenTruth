@@ -1023,10 +1023,10 @@ def _normalize_covariance_modes(values: Sequence[object] | str) -> tuple[str, ..
     if not raw_values:
         raise ValueError("covariance_modes must not be empty.")
     modes = tuple(str(value).strip() for value in raw_values if str(value).strip())
-    valid = {"full", "diag", "low_rank"}
+    valid = {"full", "diag", "low_rank", "shrinkage"}
     invalid = tuple(mode for mode in modes if mode not in valid)
     if invalid:
-        raise ValueError("covariance_modes values must be one of: full, diag, low_rank.")
+        raise ValueError("covariance_modes values must be one of: full, diag, low_rank, shrinkage.")
     if len(modes) != len(set(modes)):
         raise ValueError("covariance_modes must not contain duplicate modes.")
     return modes
@@ -1192,7 +1192,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--hidden-state-captures", default="outputs",
                         help="comma-list of capture modes, e.g. outputs,hooks")
     parser.add_argument("--covariance-modes", default=None,
-                        help="comma-list of TruthManifold covariance modes to compare: full,diag,low_rank")
+                        help="comma-list of TruthManifold covariance modes to compare: "
+                             "full,diag,low_rank,shrinkage")
     parser.add_argument("--covariance-low-ranks", default=None,
                         help="comma-list of low-rank K values used for low_rank covariance cells")
     parser.add_argument("--limit", type=int, default=None)

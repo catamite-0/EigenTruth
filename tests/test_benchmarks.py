@@ -13310,22 +13310,28 @@ def test_run_cache_profile_matrix_compares_covariance_modes(tmp_path):
         model="tiny-local",
         layers=(-2,),
         batch_sizes=(2,),
-        covariance_modes=("full", "diag", "low_rank"),
+        covariance_modes=("full", "diag", "low_rank", "shrinkage"),
         covariance_low_ranks=(4,),
         python_executable="/python",
     )
 
     report = module.run_matrix(config, clean=True, dry_run=True)
-    full_cell, diag_cell, low_rank_cell = report["cells"]
+    full_cell, diag_cell, low_rank_cell, shrinkage_cell = report["cells"]
     manifest = json.loads(Path(report["artifact_manifest"]).read_text(encoding="utf-8"))
 
     assert [cell["id"] for cell in report["cells"]] == [
         "layer_m2_batch_2_capture_outputs_cov_full",
         "layer_m2_batch_2_capture_outputs_cov_diag",
         "layer_m2_batch_2_capture_outputs_cov_low_rank_4",
+        "layer_m2_batch_2_capture_outputs_cov_shrinkage",
     ]
-    assert [cell["covariance_mode"] for cell in report["cells"]] == ["full", "diag", "low_rank"]
-    assert [cell["covariance_low_rank"] for cell in report["cells"]] == [4, 4, 4]
+    assert [cell["covariance_mode"] for cell in report["cells"]] == [
+        "full",
+        "diag",
+        "low_rank",
+        "shrinkage",
+    ]
+    assert [cell["covariance_low_rank"] for cell in report["cells"]] == [4, 4, 4, 4]
     assert (
         full_cell["triplet"]["commands"]["uncached"][
             full_cell["triplet"]["commands"]["uncached"].index("--covariance-mode") + 1
@@ -13344,20 +13350,36 @@ def test_run_cache_profile_matrix_compares_covariance_modes(tmp_path):
         ]
         == "4"
     )
-    assert full_cell["shared_cache_group"] == diag_cell["shared_cache_group"] == low_rank_cell["shared_cache_group"]
+    assert (
+        shrinkage_cell["triplet"]["commands"]["uncached"][
+            shrinkage_cell["triplet"]["commands"]["uncached"].index("--covariance-mode") + 1
+        ]
+        == "shrinkage"
+    )
+    assert (
+        full_cell["shared_cache_group"]
+        == diag_cell["shared_cache_group"]
+        == low_rank_cell["shared_cache_group"]
+        == shrinkage_cell["shared_cache_group"]
+    )
     assert (
         full_cell["triplet"]["caches"]["eval_reps_cache"]
         == diag_cell["triplet"]["caches"]["eval_reps_cache"]
         == low_rank_cell["triplet"]["caches"]["eval_reps_cache"]
+        == shrinkage_cell["triplet"]["caches"]["eval_reps_cache"]
     )
     assert full_cell["triplet"]["caches"]["layer_stats_cache"] != diag_cell["triplet"]["caches"]["layer_stats_cache"]
     assert (
         diag_cell["triplet"]["caches"]["layer_stats_cache"]
         != low_rank_cell["triplet"]["caches"]["layer_stats_cache"]
     )
-    assert report["config"]["covariance_modes"] == ("full", "diag", "low_rank")
+    assert (
+        low_rank_cell["triplet"]["caches"]["layer_stats_cache"]
+        != shrinkage_cell["triplet"]["caches"]["layer_stats_cache"]
+    )
+    assert report["config"]["covariance_modes"] == ("full", "diag", "low_rank", "shrinkage")
     assert report["config"]["covariance_low_ranks"] == (4,)
-    assert manifest["metadata"]["covariance_modes"] == ["full", "diag", "low_rank"]
+    assert manifest["metadata"]["covariance_modes"] == ["full", "diag", "low_rank", "shrinkage"]
     assert manifest["metadata"]["covariance_low_ranks"] == [4]
 
     with pytest.raises(ValueError, match="covariance_modes"):
@@ -19795,16 +19817,25 @@ def test_eval_truthfulqa_layer_spectrum_reports_are_compact():
         [1.0, 2.0],
         [2.0, 4.0],
     ]))
+    shrinkage = module.TruthManifold(covariance_mode="shrinkage")
+    shrinkage.update_many(torch.tensor([
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [2.0, 1.0, 0.0],
+        [3.0, -1.0, 0.0],
+    ]))
 
-    reports = module._layer_spectrum_reports({-1: full, -2: diag}, top_k=1)
+    reports = module._layer_spectrum_reports({-1: full, -2: diag, -3: shrinkage}, top_k=1)
 
-    assert list(reports) == ["-2", "-1"]
+    assert list(reports) == ["-3", "-2", "-1"]
     assert reports["-1"]["status"] == "ready"
     assert reports["-1"]["top_eigenvalue_count"] == 1
     assert len(reports["-1"]["top_eigenvalues"]) == 1
     assert "eigenvalues" not in reports["-1"]
     assert reports["-2"]["source"] == "diagonal"
     assert reports["-2"]["covariance_mode"] == "diag"
+    assert reports["-3"]["covariance_mode"] == "shrinkage"
+    assert 0.0 <= reports["-3"]["shrinkage_alpha"] <= 1.0
 
 
 def test_eval_truthfulqa_warmup_checkpoint_can_resume_completed_state(tmp_path):

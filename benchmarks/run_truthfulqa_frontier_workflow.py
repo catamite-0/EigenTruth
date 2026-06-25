@@ -185,8 +185,8 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("cache_only cannot refresh caches.")
         if self.hidden_state_capture not in {"outputs", "hooks"}:
             raise ValueError("hidden_state_capture must be one of: outputs, hooks.")
-        if self.covariance_mode not in {"full", "diag", "low_rank"}:
-            raise ValueError("covariance_mode must be one of: full, diag, low_rank.")
+        if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
+            raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if self.dump_scores_format not in {"json", "jsonl"}:
             raise ValueError("dump_scores_format must be one of: json, jsonl.")
         if self.best_by not in {"auroc", "detection"}:
@@ -660,7 +660,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-batch-tokens", type=int, default=0)
     parser.add_argument("--max-length", type=int, default=96)
     parser.add_argument("--hidden-state-capture", choices=("outputs", "hooks"), default="hooks")
-    parser.add_argument("--covariance-mode", choices=("full", "diag", "low_rank"), default="full")
+    parser.add_argument("--covariance-mode", choices=("full", "diag", "low_rank", "shrinkage"),
+                        default="full")
     parser.add_argument("--covariance-low-rank", type=int, default=16)
     parser.add_argument("--progress-every", type=int, default=0)
     parser.add_argument("--no-length-bucketed-batches", action="store_true")

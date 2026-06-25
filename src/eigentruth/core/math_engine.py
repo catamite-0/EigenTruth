@@ -25,7 +25,7 @@ from torch import Tensor
 # 数据结构
 # ---------------------------------------------------------------------------
 
-COVARIANCE_MODES: tuple[str, ...] = ("full", "diag", "low_rank")
+COVARIANCE_MODES: tuple[str, ...] = ("full", "diag", "low_rank", "shrinkage")
 
 
 def _validate_covariance_mode(mode: str) -> str:
@@ -83,6 +83,48 @@ class CovarianceSpectrum:
                 float(value) for value in self.eigenvalues.detach().cpu().tolist()
             ]
         return payload
+
+
+def _oas_shrinkage_intensity(covariance: Tensor, sample_count: int, eps: float) -> Tensor:
+    if int(sample_count) < 2:
+        raise ValueError("sample_count must be >= 2.")
+    if eps <= 0.0:
+        raise ValueError("eps must be > 0.")
+    cov = torch.as_tensor(covariance, dtype=torch.float32)
+    if cov.ndim != 2 or cov.shape[0] != cov.shape[1] or cov.shape[0] < 1:
+        raise ValueError("covariance must be a non-empty square matrix.")
+    if not torch.isfinite(cov).all():
+        raise ValueError("covariance must contain only finite values.")
+    cov = 0.5 * (cov + cov.T)
+    hidden_dim = int(cov.shape[0])
+    mu = torch.trace(cov) / hidden_dim
+    alpha = torch.mean(cov * cov)
+    numerator = alpha + mu * mu
+    denominator = (float(sample_count) + 1.0) * (alpha - (mu * mu) / hidden_dim)
+    if not bool(torch.isfinite(denominator)) or float(denominator.detach().cpu()) <= eps:
+        return torch.tensor(1.0, device=cov.device, dtype=torch.float32)
+    shrinkage = numerator / denominator
+    return torch.clamp(shrinkage.to(torch.float32), min=0.0, max=1.0)
+
+
+def covariance_shrinkage_intensity(
+    covariance: Tensor,
+    *,
+    sample_count: int,
+    eps: float = 1e-12,
+) -> float:
+    """Return Oracle Approximating Shrinkage intensity for a covariance matrix.
+
+    The result is clipped to ``[0, 1]`` and targets the scaled identity matrix.
+    It is dependency-free and intended for small-sample/high-dimensional
+    covariance scoring experiments.
+    """
+
+    return float(
+        _oas_shrinkage_intensity(covariance, sample_count=sample_count, eps=eps)
+        .detach()
+        .cpu()
+    )
 
 
 @dataclass
@@ -170,20 +212,47 @@ class TruthManifold:
             return torch.diag(self._compute_diag_precision())
         if self.covariance_mode == "low_rank":
             return self._compute_low_rank_precision()
+        if self.covariance_mode == "shrinkage":
+            return self._compute_shrinkage_precision()
         return self._compute_full_precision()
+
+    def _normalized_full_covariance(self) -> Tensor:
+        if self._M2 is None:
+            raise RuntimeError("full scatter statistics are required for this covariance mode.")
+        cov = self._M2.to(torch.float32) / (self.n - 1)
+        return 0.5 * (cov + cov.T)
 
     def _compute_full_precision(self) -> Tensor:
         """由散布矩阵计算归一化、ridge 正则化的精度矩阵 (强制 FP32)。"""
-        if self._M2 is None:
-            raise RuntimeError("full covariance precision requires a full scatter matrix.")
         eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
-        cov = (self._M2.to(torch.float32) / (self.n - 1))
-        cov = 0.5 * (cov + cov.T)  # 对称化，消除浮点误差
+        cov = self._normalized_full_covariance()
         # τ = 平均对角方差，作为 ridge 的尺度，使 λ 成为无量纲的相对强度
         # τ = average diagonal variance; makes the ridge λ a dimensionless relative strength
         tau = cov.diagonal().mean().clamp(min=1e-6)
         reg = cov + (self.ridge_lambda * tau) * eye
         return torch.linalg.inv(reg)
+
+    def _shrinkage_covariance(self, *, eps: float = 1e-12) -> tuple[Tensor, Tensor]:
+        cov = self._normalized_full_covariance()
+        alpha = _oas_shrinkage_intensity(cov, sample_count=self.n, eps=eps).to(cov.device)
+        target_scale = cov.diagonal().mean().clamp(min=0.0)
+        eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
+        shrunk = ((1.0 - alpha) * cov) + (alpha * target_scale * eye)
+        return 0.5 * (shrunk + shrunk.T), alpha
+
+    def _compute_shrinkage_precision(self) -> Tensor:
+        cov, _alpha = self._shrinkage_covariance()
+        eye = torch.eye(self.hidden_dim, device=self._device, dtype=torch.float32)
+        tau = cov.diagonal().mean().clamp(min=1e-6)
+        reg = cov + (self.ridge_lambda * tau) * eye
+        return torch.linalg.inv(reg)
+
+    def covariance_shrinkage_alpha(self) -> float:
+        """Return OAS shrinkage intensity for the current full scatter statistics."""
+        if self.mean is None or self.n < 2:
+            raise ValueError("TruthManifold needs at least two samples before shrinkage diagnostics.")
+        cov = self._normalized_full_covariance()
+        return covariance_shrinkage_intensity(cov, sample_count=self.n)
 
     def _normalized_cov_diag(self) -> Tensor:
         if self.n < 2:

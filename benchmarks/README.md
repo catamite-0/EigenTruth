@@ -146,6 +146,10 @@ inverse. The default remains `full` for backward-compatible scores. The
 experimental `--covariance-mode low_rank --covariance-low-rank K` path scores
 with a ridge plus top-K covariance approximation; use it as a profiling
 candidate and recalibrate thresholds because `maha_last` scale changes by mode.
+Use `--covariance-mode shrinkage` to score with an OAS-style covariance estimate
+shrunk toward the scaled identity before the existing ridge regularizer. This is
+intended for small-sample/high-dimensional warmups where the full sample
+covariance is poorly conditioned; calibrate thresholds separately for this mode.
 Use `--include-layer-spectra` with `--json` to add compact
 Marchenko-Pastur/effective-rank covariance diagnostics for each warmed layer.
 The report stores top eigenvalues only (`--layer-spectrum-top-k`, default 16) so
@@ -2851,7 +2855,7 @@ python benchmarks/run_cache_profile_matrix.py \
   --batch-sizes=1,2,4 \
   --max-batch-token-budgets=0,512,1024 \
   --hidden-state-captures=outputs,hooks \
-  --covariance-modes=full,diag,low_rank \
+  --covariance-modes=full,diag,low_rank,shrinkage \
   --covariance-low-ranks=4 \
   --max-workers=2 \
   --dry-run
@@ -2870,7 +2874,7 @@ measure multiple budgets in one matrix, use `--max-batch-token-budgets 0,512`;
 token-budget matrix recommendations are sorted by uncached forced-answer forward
 time because the budget changes forward batching, not cache-only replay
 semantics.
-Use `--covariance-modes full,diag,low_rank` to compare the `maha_last`
+Use `--covariance-modes full,diag,low_rank,shrinkage` to compare the `maha_last`
 TruthManifold covariance approximation as a gated runtime dimension. Shared
 cache runs reuse statement encodings and eval hidden-state caches across
 covariance modes, but keep layer-stats caches separate by covariance mode/rank

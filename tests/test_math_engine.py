@@ -13,6 +13,7 @@ from eigentruth.core.math_engine import (
     CovarianceSpectrum,
     TruthManifold,
     _poincare_distance,
+    covariance_shrinkage_intensity,
     covariance_spectrum,
     hyperbolic_semantic_entropy,
     mahalanobis_distance,
@@ -313,7 +314,15 @@ class TestTruthManifold:
     """真值流形增量构建测试。"""
 
     def test_covariance_modes_are_public(self):
-        assert COVARIANCE_MODES == ("full", "diag", "low_rank")
+        assert COVARIANCE_MODES == ("full", "diag", "low_rank", "shrinkage")
+
+    def test_covariance_shrinkage_intensity_is_bounded_and_isotropic_goes_full(self):
+        cov = torch.diag(torch.tensor([9.0, 1.0, 1.0, 1.0]))
+        alpha = covariance_shrinkage_intensity(cov, sample_count=16)
+        isotropic_alpha = covariance_shrinkage_intensity(torch.eye(4), sample_count=16)
+
+        assert 0.0 <= alpha <= 1.0
+        assert isotropic_alpha == 1.0
 
     def test_covariance_spectrum_reports_mp_spike_and_effective_rank(self):
         """An anisotropic covariance exposes an out-of-bulk spectral spike."""
@@ -602,6 +611,34 @@ class TestTruthManifold:
             dist,
             atol=1e-5,
         )
+
+    def test_shrinkage_covariance_mode_is_finite_reports_alpha_and_roundtrips(self, tmp_path):
+        """shrinkage 模式使用 full scatter 估计 OAS 收缩强度并可序列化。"""
+        torch.manual_seed(505)
+        d = 10
+        samples = torch.randn(8, d)
+        samples[:, 0] *= 4.0
+        m = TruthManifold(covariance_mode="shrinkage")
+        m.update_many(samples)
+
+        alpha = m.covariance_shrinkage_alpha()
+        probe = torch.randn(d)
+        dist = m.mahalanobis_distance(probe)
+
+        assert m.is_ready()
+        assert m._M2 is not None  # noqa: SLF001 - shrinkage needs full scatter statistics.
+        assert 0.0 <= alpha <= 1.0
+        assert torch.isfinite(m.cov_inv).all()
+        assert torch.isfinite(dist).all()
+
+        path = tmp_path / "shrinkage_manifold.pt"
+        m.save(path)
+        loaded = TruthManifold.load(path)
+
+        assert loaded.covariance_mode == "shrinkage"
+        assert loaded._M2 is not None  # noqa: SLF001
+        assert math.isclose(loaded.covariance_shrinkage_alpha(), alpha, rel_tol=0.0, abs_tol=1e-7)
+        assert torch.isclose(loaded.mahalanobis_distance(probe), dist, atol=1e-5)
 
     def test_invalid_covariance_mode_rejected(self):
         import pytest

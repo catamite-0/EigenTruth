@@ -357,7 +357,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 
 | Component | Purpose |
 |---|---|
-| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | Maintains a Welford online mean and covariance, exposed as a ridge-regularized, sample-count-normalized precision matrix; supports `covariance_mode="full"`, `"diag"`, or experimental `"low_rank"` so local benchmarks can trade exact covariance scoring for lower memory/compute cost; `TruthManifold.spectrum()` reports Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number as dependency-free representation-spectrum diagnostics. |
+| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | Maintains a Welford online mean and covariance, exposed as a ridge-regularized, sample-count-normalized precision matrix; supports `covariance_mode="full"`, `"diag"`, experimental `"low_rank"`, and OAS-style `"shrinkage"` so local benchmarks can trade exact covariance scoring for lower memory/compute cost or small-sample conditioning; `TruthManifold.spectrum()` reports Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number as dependency-free representation-spectrum diagnostics. |
 | `mahalanobis_distance` | Measures relative deviation from the warmup manifold. |
 | `poincare_map` | Projects representations into a bounded hyperbolic space. |
 | `hyperbolic_semantic_entropy` | Measures dispersion over a sliding window of projected states. |
@@ -447,7 +447,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 
 | 组件 | 用途 |
 |---|---|
-| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | 用 Welford 维护在线均值与协方差，对外暴露为按样本数归一化、ridge 正则化的精度矩阵；支持 `covariance_mode="full"`、`"diag"` 和实验性 `"low_rank"`，便于本地 benchmark 在精确协方差评分与低内存/低计算成本之间取舍；`TruthManifold.spectrum()` 会输出 Marchenko-Pastur bulk 边界、spike count、effective rank、participation ratio、stable rank 和 condition number，作为无新增依赖的表征谱诊断。 |
+| `TruthManifold` / `CovarianceSpectrum` / `covariance_spectrum` | 用 Welford 维护在线均值与协方差，对外暴露为按样本数归一化、ridge 正则化的精度矩阵；支持 `covariance_mode="full"`、`"diag"`、实验性 `"low_rank"` 和 OAS 风格 `"shrinkage"`，便于本地 benchmark 在精确协方差评分、低内存/低计算成本和小样本病态矩阵稳定性之间取舍；`TruthManifold.spectrum()` 会输出 Marchenko-Pastur bulk 边界、spike count、effective rank、participation ratio、stable rank 和 condition number，作为无新增依赖的表征谱诊断。 |
 | `mahalanobis_distance` | 测量相对于 warmup 流形的相对偏移。 |
 | `poincare_map` | 将表征投影到有界双曲空间。 |
 | `hyperbolic_semantic_entropy` | 测量投影状态滑动窗口内的离散程度。 |

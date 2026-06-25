@@ -60,7 +60,7 @@ class EigenTruthWrapper(nn.Module):
         curvature: 庞加莱球曲率 / Poincaré ball curvature.
         hse_window_size: HSE 滑动窗口大小 / HSE sliding window size.
         covariance_mode: TruthManifold covariance approximation mode:
-            "full" (default), "diag", or "low_rank".
+            "full" (default), "diag", "low_rank", or "shrinkage".
         covariance_low_rank: Rank used when ``covariance_mode="low_rank"``.
         custom_layer_path: 自定义层路径 / Custom layer attribute path.
     """

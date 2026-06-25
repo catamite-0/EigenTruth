@@ -93,8 +93,8 @@ class CacheProfileTripletConfig:
             raise ValueError("uncached_cache_mode must be one of: refresh, warm_start, none.")
         if self.prefix_kv_cache and str(self.hidden_state_capture) != "outputs":
             raise ValueError("prefix_kv_cache requires hidden_state_capture='outputs'.")
-        if str(self.covariance_mode) not in {"full", "diag", "low_rank"}:
-            raise ValueError("covariance_mode must be one of: full, diag, low_rank.")
+        if str(self.covariance_mode) not in {"full", "diag", "low_rank", "shrinkage"}:
+            raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if int(self.covariance_low_rank) < 1:
             raise ValueError("covariance_low_rank must be >=1.")
         run_names = _normalize_run_names(self.run_names)
@@ -484,7 +484,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-length", type=int, default=64)
     parser.add_argument("--hidden-state-capture", default="outputs",
                         help="hidden state capture mode passed to eval_truthfulqa.py")
-    parser.add_argument("--covariance-mode", default="full", choices=("full", "diag", "low_rank"),
+    parser.add_argument("--covariance-mode", default="full",
+                        choices=("full", "diag", "low_rank", "shrinkage"),
                         help="TruthManifold covariance approximation passed to eval_truthfulqa.py")
     parser.add_argument("--covariance-low-rank", type=int, default=16,
                         help="rank passed to eval_truthfulqa.py when --covariance-mode low_rank")

@@ -178,8 +178,8 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("best_by must be one of: auroc, detection.")
         if self.direction not in {None, "higher", "lower"}:
             raise ValueError("direction must be one of: higher, lower.")
-        if self.covariance_mode not in {"full", "diag", "low_rank"}:
-            raise ValueError("covariance_mode must be one of: full, diag, low_rank.")
+        if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
+            raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if self.covariance_low_rank < 1:
             raise ValueError("covariance_low_rank must be >=1.")
         if self.batch_size < 1:
@@ -931,7 +931,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--batch-size", type=int, default=None)
     parser.add_argument("--max-batch-tokens", type=int, default=None)
     parser.add_argument("--hidden-state-capture", default=None, choices=("outputs", "hooks"))
-    parser.add_argument("--covariance-mode", default=None, choices=("full", "diag", "low_rank"))
+    parser.add_argument("--covariance-mode", default=None,
+                        choices=("full", "diag", "low_rank", "shrinkage"))
     parser.add_argument("--covariance-low-rank", type=int, default=None)
     parser.add_argument("--progress-every", type=int, default=None)
     length_group = parser.add_mutually_exclusive_group()
