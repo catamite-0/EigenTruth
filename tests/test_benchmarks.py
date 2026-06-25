@@ -2124,6 +2124,94 @@ def test_build_truthfulqa_corpus_outputs_correct_answer_documents(monkeypatch):
     assert payload["documents"][2]["metadata"]["is_false"] == 0
 
 
+def test_build_retrieval_stress_corpus_exposes_answer_echo_self_support(tmp_path):
+    stress_builder = importlib.import_module("benchmarks.build_retrieval_stress_corpus")
+    evidence_builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "answer-echo-corpus.json"
+    fixture_path = tmp_path / "fixture.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {
+                    "claim_id": "paris",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Paris.",
+                    "text": "The capital of France is Paris.",
+                },
+                {
+                    "claim_id": "sky",
+                    "question": "What color is the sky?",
+                    "answer": "The sky is blue.",
+                    "text": "The sky is blue.",
+                },
+                {
+                    "claim_id": "lyon",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Lyon.",
+                    "text": "The capital of France is Lyon.",
+                },
+                {
+                    "claim_id": "green-sky",
+                    "question": "What color is the sky?",
+                    "answer": "The sky is green.",
+                    "text": "The sky is green.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    corpus = stress_builder.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            output=str(corpus_path),
+            document_field="answer",
+            corpus_name="answer_echo_test",
+            include_label_metadata=False,
+        )
+    )
+    fixture = evidence_builder.build_evidence_fixture(
+        evidence_builder.load_score_dump(scores_path),
+        evidence_builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=0.9,
+        retrieval_limit=1,
+        query_field="answer",
+        include_label_metadata=False,
+    )
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    report = verifier.build_verifier_ensemble_report(
+        [("synthetic", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verifier_min_overlap=0.9,
+        retriever_min_overlap=0.9,
+    )
+    quality = report["runs"][0]["verification_quality"]
+
+    assert corpus["corpus_type"] == "retrieval_stress_answer_echo"
+    assert corpus["label_usage"] == {
+        "labels_used_for_documents": False,
+        "labels_copied_to_document_metadata": False,
+    }
+    assert corpus["summary"]["n_documents"] == 4
+    assert "score_label" not in corpus["documents"][2]["metadata"]
+    assert corpus["documents"][2]["text"] == "The capital of France is Lyon."
+    assert fixture["summary"]["records_with_hits"] == 4
+    assert fixture["records"][2]["retrieval_documents"][0]["source"] == "answer_echo_test:answer:2"
+    assert "score_label" not in fixture["records"][2]["metadata"]
+    assert quality["label_status_matrix"]["false"]["supported"] == 2
+    assert quality["false_supported_rate"] == pytest.approx(1.0)
+
+
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     module = importlib.import_module("benchmarks.compare_manifold_distances")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")

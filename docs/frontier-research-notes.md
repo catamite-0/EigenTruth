@@ -108,6 +108,19 @@ alarm. This is a controlled local-corpus baseline; it should be stress-tested
 with external/domain-shifted retrieval before being treated as open-domain
 evidence.
 
+Added an answer-echo retrieval stress control:
+
+- `build_retrieval_stress_corpus.py` builds a local corpus from the same
+  statement answers being audited, without using labels or copying label
+  metadata by default.
+- `artifacts/truthfulqa-l80-answer-echo-retrieval-stress/` runs that corpus
+  through the same verifier-signal fusion workflow. It retrieves evidence for
+  556/556 records but supports false claims at rate `0.980` and refutes false
+  claims at rate `0.000`.
+- At alpha `0.100`, verified detection collapses to `0.013` for Qwen and
+  `0.010` for SmolLM2. This is the expected self-support failure mode and a
+  required negative control before treating any retrieval setup as grounded.
+
 Added a text/length redline baseline for detector claims:
 
 - `build_text_baseline_score_dump.py` appends answer length, claim length,
@@ -139,6 +152,6 @@ Added the missing direct selfcheck signal bridge:
 
 ## Next Research-to-Code Candidates
 
-1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against the text/length redline artifact.
+1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

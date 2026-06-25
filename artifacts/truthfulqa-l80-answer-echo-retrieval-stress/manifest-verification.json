@@ -1,0 +1,7 @@
+{
+  "checked": 15,
+  "failures": [],
+  "manifest_path": "artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}

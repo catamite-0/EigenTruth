@@ -525,6 +525,58 @@ correct-answer corpus, so the next frontier step is replacing that corpus with
 external or domain-shifted retrieval evidence and adding aligned selfcheck
 samples.
 
+## Answer-Echo Retrieval Stress Control
+
+`benchmarks/build_retrieval_stress_corpus.py` builds the retrieval negative
+control that the local-corpus result needs: a corpus made from the same answers
+being audited. Labels are not used to build documents and are not copied to
+document metadata by default.
+
+```bash
+OUT=artifacts/truthfulqa-l80-answer-echo-retrieval-stress
+
+python benchmarks/build_retrieval_stress_corpus.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --output "$OUT/answer-echo-corpus.json" \
+  --document-field answer \
+  --corpus-name truthfulqa_l80_answer_echo
+
+python benchmarks/run_verifier_signal_fusion_workflow.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus "$OUT/answer-echo-corpus.json" \
+  --output-dir "$OUT" \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --best-alpha 0.10 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_not_supported,verifier_refute_confidence,verifier_uncertainty,verifier_no_retrieval_hit,selfcheck_refute_rate,selfcheck_disagreement \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported,verifier_no_retrieval_hit \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --query-field answer \
+  --retriever-min-overlap 0.95 \
+  --verifier-min-overlap 0.65 \
+  --retrieval-limit 3 \
+  --omit-label-metadata \
+  --compact-json
+```
+
+The manifest verifies 15/15 files. The stress corpus retrieves 706 hits and
+covers 556/556 records, but that coverage is actively bad evidence:
+
+- Qwen and SmolLM2: true-supported rate 0.936, false-supported rate 0.980,
+  false-refuted rate 0.000, decision accuracy 0.438.
+- Alpha 0.100 verified detection collapses to 0.013 for Qwen and 0.010 for
+  SmolLM2, with zero false alarm because the verifier mostly supports both true
+  and false answers.
+
+This is the required negative control for retrieval grounding: evidence derived
+from the model answers can look well-covered while destroying false-claim
+refutation. Future retrieval improvements should beat the correct-answer corpus
+baseline while also failing this answer-echo stress test.
+
 ## Text Baseline Redline
 
 `benchmarks/build_text_baseline_score_dump.py` appends simple text controls to

@@ -2254,6 +2254,27 @@ python benchmarks/build_truthfulqa_corpus.py \
   --output artifacts/truthfulqa_l80_correct_answer_corpus.json
 ```
 
+## `build_retrieval_stress_corpus.py`
+
+Builds an answer-echo retrieval stress corpus from a statement-bearing score
+dump. Every scored answer becomes a local retrieval document. This is a negative
+control: if a verifier succeeds only when retrieval evidence comes from the same
+answers being audited, the result is self-support, not external grounding.
+
+```bash
+python benchmarks/build_retrieval_stress_corpus.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --output artifacts/truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json \
+  --document-field answer
+```
+
+The committed stress artifact at
+`artifacts/truthfulqa-l80-answer-echo-retrieval-stress/` runs this corpus through
+`run_verifier_signal_fusion_workflow.py`. It retrieves hits for 556/556 records
+but drives false-supported rate to `0.980` and false-refuted rate to `0.000`.
+Use it as a fail-fast check against retrieval setups that merely echo the model
+answer corpus.
+
 ## `build_evidence_fixture.py`
 
 Builds a non-oracle claim/evidence fixture from a statement-bearing score dump
@@ -2805,6 +2826,14 @@ geometry-fusion replay selects `noisy_or`: Qwen reaches detection 0.795 at false
 alarm 0.070, and SmolLM2 reaches detection 0.795 at false alarm 0.069. Treat this
 as a reproducible local-corpus baseline, not as evidence that open-domain
 retrieval is solved.
+
+The paired answer-echo stress artifact at
+`artifacts/truthfulqa-l80-answer-echo-retrieval-stress/` uses the same workflow
+but retrieves from a corpus built out of the audited answers themselves. It
+retrieves 706 hits over 556/556 records, but false-supported rate rises to
+0.980 and false-refuted rate is 0.000. At alpha 0.100, verified detection drops
+to 0.013 for Qwen and 0.010 for SmolLM2. This is the expected failure mode and
+should be treated as a required negative control for future retrieval evidence.
 
 The paired cache-only replay
 (`artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/`) reproduces the
