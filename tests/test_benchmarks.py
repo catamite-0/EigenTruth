@@ -20466,6 +20466,117 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     ]
 
 
+def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(tmp_path):
+    module = importlib.import_module("benchmarks.run_verifier_signal_fusion_workflow")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    samples_path = tmp_path / "samples.json"
+    output_dir = tmp_path / "workflow"
+    labels = [0] * 12 + [1] * 8
+    statements = []
+    documents = []
+    sample_rows = []
+    truth_proj = []
+    subspace_resid = []
+    eigenscore = []
+    for idx, label in enumerate(labels):
+        claim = f"Fact item {idx} is correct."
+        statements.append({
+            "claim_id": f"c{idx}",
+            "question": f"Is fact item {idx} correct?",
+            "answer": claim,
+            "text": claim,
+        })
+        if label == 0:
+            documents.append({"text": claim, "source": f"facts:true:{idx}"})
+            sample_rows.append([
+                claim,
+                f"{claim} Verified by the local sample.",
+                f"Source confirms that {claim}",
+            ])
+            truth_proj.append(float(idx % 4))
+            subspace_resid.append(float(idx % 3))
+            eigenscore.append(float(idx % 5))
+        else:
+            documents.append({"text": f"Fact item {idx} is not correct.", "source": f"facts:false:{idx}"})
+            sample_rows.append([
+                f"Fact item {idx} is not correct.",
+                f"Fact item {idx} is wrong.",
+                f"Fact item {idx} is false.",
+            ])
+            truth_proj.append(float(8 + idx % 4))
+            subspace_resid.append(float(6 + idx % 3))
+            eigenscore.append(float(7 + idx % 5))
+
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -4},
+            "labels": labels,
+            "scores": {
+                "truth_proj": truth_proj,
+                "subspace_resid": subspace_resid,
+                "eigenscore": eigenscore,
+            },
+            "statements": statements,
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(json.dumps({"documents": documents}), encoding="utf-8")
+    samples_path.write_text(json.dumps(sample_rows), encoding="utf-8")
+
+    payload = module.run_verifier_signal_fusion_workflow(
+        module.VerifierSignalFusionWorkflowConfig(
+            score_dumps=(("synthetic", scores_path),),
+            output_dir=output_dir,
+            corpus_paths=(corpus_path,),
+            sample_paths=(samples_path,),
+            signal="truth_proj",
+            alphas=(0.2,),
+            repeats=2,
+            seed=0,
+            best_alpha=0.2,
+            fusion_signals=(
+                "truth_proj",
+                "subspace_resid",
+                "verifier_refuted",
+                "verifier_uncertainty",
+                "selfcheck_refute_rate",
+            ),
+            methods=("mean_rank",),
+            geometry_signals=("truth_proj", "subspace_resid"),
+            uncertainty_signals=("verifier_refuted", "selfcheck_refute_rate"),
+            geometry_fusion_methods=("interaction",),
+            query_field="answer",
+            retriever_min_overlap=0.5,
+            verifier_min_overlap=0.6,
+            selfcheck_min_overlap=0.5,
+            selfcheck_support_threshold=0.5,
+            selfcheck_refute_threshold=0.5,
+            include_label_metadata=False,
+        )
+    )
+    enhanced_path = output_dir / "synthetic-enhanced-scores.manifest.json"
+    enhanced = load_score_dump(enhanced_path, required_scores=("verifier_refuted", "selfcheck_refute_rate"))
+    claims = json.loads((output_dir / "verifier-claims.json").read_text(encoding="utf-8"))
+    ensemble_report = json.loads((output_dir / "score-ensemble-report.json").read_text(encoding="utf-8"))
+    verified_records = (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").strip().splitlines()
+
+    assert payload["workflow"] == "verifier_signal_fusion_workflow"
+    assert payload["manifest_verification"]["passed"] is True
+    assert payload["claims_summary"]["records_with_hits"] == len(labels)
+    assert payload["claims_summary"]["records_with_samples"] == len(labels)
+    assert claims["fixture_type"] == "local_retrieval_selfcheck_evidence"
+    assert claims["label_usage"]["labels_copied_to_record_metadata"] is False
+    assert "score_label" not in claims["records"][0]["metadata"]
+    assert len(verified_records) == len(labels)
+    assert enhanced.scores["verifier_refuted"][-1] == pytest.approx(1.0)
+    assert max(enhanced.scores["selfcheck_refute_rate"]) == pytest.approx(1.0)
+    assert ensemble_report["runs"][0]["best_geometry_fusion_at_alpha"] is not None
+    assert (output_dir / "synthetic-geometry-fusion-artifact.json").exists()
+
+
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

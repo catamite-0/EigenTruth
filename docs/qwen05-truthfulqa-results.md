@@ -482,6 +482,49 @@ engineering result is important: verifier/retrieval/selfcheck outputs can now
 be converted into calibrated score-dump signals and saved as deployable
 `GeometryScoreFusionArtifact` files.
 
+The follow-up local retrieval verifier-signal replay uses
+`benchmarks/run_verifier_signal_fusion_workflow.py` to run the same conversion
+and fusion path without model reruns:
+
+```bash
+python benchmarks/run_verifier_signal_fusion_workflow.py \
+  --scores qwen-l80=artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --output-dir artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --best-alpha 0.10 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_not_supported,verifier_refute_confidence,verifier_uncertainty \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_refute_confidence,verifier_not_supported \
+  --geometry-fusion-methods interaction,product,weighted_mean,noisy_or \
+  --query-field answer \
+  --retriever-min-overlap 0.95 \
+  --verifier-min-overlap 0.65 \
+  --retrieval-limit 3 \
+  --omit-label-metadata \
+  --compact-json
+```
+
+The resulting artifact at
+`artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/` verifies its
+manifest and uses 410 local retrieval hits over 274/556 records. At alpha 0.100:
+
+- Qwen: verified detection 0.316 at false alarm 0.016; best geometry fusion
+  selects `noisy_or` and detects 0.795 at false alarm 0.070.
+- SmolLM2: verified detection 0.267 at false alarm 0.016; best geometry fusion
+  selects `noisy_or` and detects 0.795 at false alarm 0.069.
+
+This is a local-corpus non-oracle replay because claim metadata omits labels and
+retrieval uses answer text against the provided corpus. It is still not an
+open-domain retrieval claim; the corpus is the controlled TruthfulQA
+correct-answer corpus, so the next frontier step is replacing that corpus with
+external or domain-shifted retrieval evidence and adding aligned selfcheck
+samples.
+
 ## Frontier Stability Report
 
 `benchmarks/eval_frontier_stability.py` replays saved frontier score dumps across

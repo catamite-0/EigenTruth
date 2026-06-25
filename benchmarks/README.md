@@ -2654,6 +2654,36 @@ python benchmarks/build_verifier_signal_score_dump.py \
   --output-format jsonl
 ```
 
+For non-oracle local evidence experiments, `run_verifier_signal_fusion_workflow.py`
+wraps the same chain into one reproducible artifact bundle. It can build a
+retrieval fixture from local JSON/JSONL/text corpora, merge optional
+self-consistency samples, write the verifier sidecar, convert that sidecar into
+score-dump columns, run geometry fusion, save per-run geometry artifacts, and
+verify the top-level manifest:
+
+```bash
+python benchmarks/run_verifier_signal_fusion_workflow.py \
+  --scores smollm2-l80=artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --output-dir artifacts/smollm2-l80-non-oracle-verifier-signal-fusion \
+  --signal truth_proj \
+  --alphas 0.05,0.1,0.2 \
+  --repeats 20 \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,verifier_refuted,verifier_uncertainty,selfcheck_refute_rate \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals verifier_refuted,verifier_uncertainty,selfcheck_refute_rate \
+  --query-field answer \
+  --omit-label-metadata
+```
+
+Add `--samples path/to/sample-records.json` when a score dump or external
+sampler provides aligned self-consistency responses.
+
+The workflow is intentionally post-hoc and dependency-free. It is the preferred
+entry point when testing whether local retrieval and self-consistency evidence
+improves a calibrated geometry monitor without rerunning model scoring.
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
@@ -2706,6 +2736,19 @@ both `truth_proj` (0.229) and `verifier_refuted` (0.232). This supports the
 product direction: keep `truth_proj` as the internal monitor, but use structured
 verifier/retrieval/selfcheck evidence as the final correction signal rather
 than using `nll_answer`.
+
+The local retrieval verifier-signal replay at
+`artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/` runs the new
+`run_verifier_signal_fusion_workflow.py` entry point over the committed Qwen and
+SmolLM2 l80 score dumps plus the local correct-answer corpus. It does not rerun
+models or copy labels into claim metadata. The verifier stage uses 410 retrieved
+hits across 274/556 records, selects `retrieval_structured_qa` for 238 records,
+and keeps verified false alarm at 0.016 for both models. At alpha 0.100, Qwen
+verified detection is 0.316 and SmolLM2 verified detection is 0.267. The saved
+geometry-fusion replay selects `noisy_or`: Qwen reaches detection 0.795 at false
+alarm 0.070, and SmolLM2 reaches detection 0.795 at false alarm 0.069. Treat this
+as a reproducible local-corpus baseline, not as evidence that open-domain
+retrieval is solved.
 
 The paired cache-only replay
 (`artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/`) reproduces the

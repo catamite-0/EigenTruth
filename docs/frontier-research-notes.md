@@ -90,13 +90,26 @@ Ran the current Qwen/SmolLM2 l80 geometry-fusion replay:
 Added verifier-signal score-dump conversion and replay:
 
 - `build_verifier_signal_score_dump.py` converts `eval_verifier_ensemble.py --verified-records-jsonl` sidecars into standard score columns such as `verifier_refuted`, `verifier_refute_confidence`, `verifier_uncertainty`, and `selfcheck_refute_rate`.
+- `run_verifier_signal_fusion_workflow.py` wraps local retrieval/selfcheck fixture construction, verifier sidecar writing, verifier-signal score-dump conversion, geometry-fusion reporting, geometry artifact export, and manifest verification into one no-model workflow for non-oracle evidence experiments.
 - `artifacts/truthfulqa-l80-staged-qa-verifier-signals/` applies this to the staged structured-QA l80 verifier route and saves per-model `GeometryScoreFusionArtifact` files.
 - At alpha `0.100`, Qwen `verifier_refuted` is the strongest single signal (`0.297` detection, zero false alarm), while geometry fusion reaches `0.285` detection at `0.089` false alarm.
 - At alpha `0.100`, SmolLM2 geometry fusion reaches `0.261` detection at `0.095` false alarm, beating both `truth_proj` (`0.229`) and `verifier_refuted` (`0.232`).
 - Current frontier direction: use LLM-internal geometry as the monitor/trigger, then feed structured verifier, retrieval, and selfcheck outputs back as calibrated final-correction signals.
 
+The first no-model local retrieval workflow artifact is now at
+`artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/`. It uses the
+committed Qwen/SmolLM2 l80 score dumps plus the local correct-answer corpus,
+omits labels from claim metadata, writes verifier sidecars and enhanced score
+dumps, saves per-model geometry-fusion artifacts, and verifies the top-level
+manifest. At alpha `0.100`, the verifier stage keeps false alarm at `0.016` and
+detects `0.316` for Qwen / `0.267` for SmolLM2. The best geometry fusion selects
+`noisy_or` and detects about `0.795` for both models at about `0.070` false
+alarm. This is a controlled local-corpus baseline; it should be stress-tested
+with external/domain-shifted retrieval before being treated as open-domain
+evidence.
+
 ## Next Research-to-Code Candidates
 
-1. Replace the staged structured-QA upper-bound verifier signals with non-oracle retrieval/selfcheck signals, then rerun the same verifier-signal geometry-fusion report.
+1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py`.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.
