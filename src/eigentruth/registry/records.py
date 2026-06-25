@@ -142,6 +142,23 @@ class ArtifactRegistry:
             metadata=metadata,
         )
 
+    def record_concept_artifact(
+        self,
+        *,
+        name: str,
+        path: str | Path,
+        version: str,
+        metadata: Mapping[str, Any] | None = None,
+    ) -> "ArtifactRegistry":
+        """Record a reusable concept manifold artifact."""
+        return self.record_artifact(
+            name=name,
+            artifact_type="concept_artifact",
+            path=path,
+            version=version,
+            metadata=metadata,
+        )
+
     def record_trace(
         self,
         *,

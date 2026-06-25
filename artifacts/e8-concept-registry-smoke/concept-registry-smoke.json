@@ -1,0 +1,54 @@
+{
+  "concept_count": 2,
+  "concept_names": [
+    "factuality",
+    "policy_consistency"
+  ],
+  "diagnostics": {
+    "concept_count": 2,
+    "concepts": {
+      "factuality": {
+        "last_hse": 0.0,
+        "last_mahalanobis_distance": 70.0310287475586,
+        "layer_idx": 0,
+        "metadata": {
+          "axis": "dim0",
+          "concept_version": "e8-smoke",
+          "description": "Synthetic factuality concept for E8 smoke.",
+          "source": "synthetic"
+        },
+        "name": "factuality",
+        "probe_active": true,
+        "steering_lambda": 0.0,
+        "threshold": 1000000.0
+      },
+      "policy_consistency": {
+        "last_hse": 0.0,
+        "last_mahalanobis_distance": 76.40985107421875,
+        "layer_idx": 1,
+        "metadata": {
+          "axis": "dim1",
+          "concept_version": "e8-smoke",
+          "description": "Synthetic policy-consistency concept for E8 smoke.",
+          "source": "synthetic"
+        },
+        "name": "policy_consistency",
+        "probe_active": true,
+        "steering_lambda": 0.0,
+        "threshold": 1000000.0
+      }
+    },
+    "is_active": true
+  },
+  "paths": {
+    "artifact_manifest": "artifacts/e8-concept-registry-smoke/artifact-manifest.json",
+    "concept_artifacts": {
+      "factuality": "artifacts/e8-concept-registry-smoke/factuality.pt",
+      "policy_consistency": "artifacts/e8-concept-registry-smoke/policy_consistency.pt"
+    },
+    "registry": "artifacts/e8-concept-registry-smoke/registry.json",
+    "report": "artifacts/e8-concept-registry-smoke/concept-registry-smoke.json"
+  },
+  "status": "pass",
+  "workflow": "concept_registry_smoke"
+}

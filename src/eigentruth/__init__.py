@@ -42,7 +42,13 @@ from eigentruth.core.trajectory import (
     trajectory_convergence_metrics,
 )
 from eigentruth.intervention.hooks import TruthProbe
+from eigentruth.intervention.multi_probe import (
+    ConceptProbeConfig,
+    ConceptProbeState,
+    MultiConceptMonitor,
+)
 from eigentruth.models.wrapper import EigenTruthWrapper
+from eigentruth.registry import ConceptArtifact, load_concept_artifact
 from eigentruth.training import (
     RepresentationTelemetryRecorder,
     RepresentationTelemetryReport,
@@ -57,8 +63,12 @@ from eigentruth.training import (
 __all__ = [
     "EigenTruthWrapper",
     "TruthProbe",
+    "ConceptProbeConfig",
+    "ConceptProbeState",
+    "MultiConceptMonitor",
     "TruthManifold",
     "TruthSubspace",
+    "ConceptArtifact",
     "TrajectoryConvergenceMetrics",
     "TrajectoryConvergenceReport",
     "TrajectoryMonitor",
@@ -81,6 +91,7 @@ __all__ = [
     "internal_eigenscore",
     "lexical_semantic_energy",
     "lexical_semantic_entropy",
+    "load_concept_artifact",
     "semantic_energy_score",
     "spectral_effective_rank",
     "mahalanobis_distance",
