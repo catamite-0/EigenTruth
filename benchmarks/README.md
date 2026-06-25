@@ -2386,6 +2386,22 @@ such as eval-reps shard cache hit rate / cross-shard read rate when the source
 profile summary includes them. Older profile payloads that only contain
 `total_seconds` and `phases` remain readable, but grouped deltas and cache
 efficiency comparisons are available only when the newer `summary` field exists.
+For stricter performance claims, repeat each candidate run and pass the same
+profile name multiple times with `--aggregate-repeats median`; the report keeps
+each source path plus min/median/max total seconds, then applies the same
+regression gates to the median profile:
+
+```bash
+python benchmarks/compare_profiles.py \
+  --profile baseline=/tmp/eigentruth-profile-baseline-r1.json \
+  --profile baseline=/tmp/eigentruth-profile-baseline-r2.json \
+  --profile candidate=/tmp/eigentruth-profile-candidate-r1.json \
+  --profile candidate=/tmp/eigentruth-profile-candidate-r2.json \
+  --baseline baseline \
+  --aggregate-repeats median \
+  --max-total-ratio 1.10 \
+  --json artifacts/truthfulqa_profile_gate_median.json
+```
 
 For CI or local regression checks, add optional gate thresholds. The command
 exits non-zero and writes `regression_gate.failures` when any non-baseline run

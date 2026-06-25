@@ -2278,6 +2278,93 @@ def test_compare_profiles_accepts_legacy_profile_without_summary(tmp_path):
     assert run["cache_efficiency"] == {}
 
 
+def test_compare_profiles_rejects_duplicate_names_without_repeat_aggregation(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    profile_a = tmp_path / "candidate-a.json"
+    profile_b = tmp_path / "candidate-b.json"
+    for path in (profile_a, profile_b):
+        path.write_text(
+            json.dumps({"total_seconds": 10.0, "phases": {"score_postprocess": 3.0}}),
+            encoding="utf-8",
+        )
+
+    with pytest.raises(ValueError, match="duplicated"):
+        module.build_profile_comparison([
+            ("candidate", profile_a),
+            ("candidate", profile_b),
+        ])
+
+
+def test_compare_profiles_can_aggregate_repeated_runs_by_median(tmp_path):
+    module = importlib.import_module("benchmarks.compare_profiles")
+    baseline_paths = []
+    candidate_paths = []
+    for idx, (baseline_total, candidate_total) in enumerate(((100.0, 54.0), (120.0, 66.0), (110.0, 60.0))):
+        baseline_path = tmp_path / f"baseline-{idx}.json"
+        candidate_path = tmp_path / f"candidate-{idx}.json"
+        baseline_path.write_text(
+            json.dumps({
+                "total_seconds": baseline_total,
+                "phases": {"forced_answer_forward": baseline_total * 0.8},
+                "summary": {
+                    "groups": {"model_forward": {"seconds": baseline_total * 0.8}},
+                    "throughput": {"forced_answer_records_per_second": 10.0 + idx},
+                    "cache_efficiency": {"eval_reps_reader": {"records_per_read": 2.0 + idx}},
+                },
+            }),
+            encoding="utf-8",
+        )
+        candidate_path.write_text(
+            json.dumps({
+                "total_seconds": candidate_total,
+                "phases": {"forced_answer_forward": candidate_total * 0.5, "read_eval_reps_cache_batch": 4.0},
+                "summary": {
+                    "groups": {
+                        "model_forward": {"seconds": candidate_total * 0.5},
+                        "cache_io": {"seconds": 4.0},
+                    },
+                    "throughput": {"forced_answer_records_per_second": 20.0 + idx},
+                    "cache_efficiency": {"eval_reps_reader": {"records_per_read": 5.0 + idx}},
+                },
+            }),
+            encoding="utf-8",
+        )
+        baseline_paths.append(baseline_path)
+        candidate_paths.append(candidate_path)
+
+    payload = module.build_profile_comparison(
+        [
+            ("baseline", baseline_paths[0]),
+            ("candidate", candidate_paths[0]),
+            ("baseline", baseline_paths[1]),
+            ("candidate", candidate_paths[1]),
+            ("baseline", baseline_paths[2]),
+            ("candidate", candidate_paths[2]),
+        ],
+        baseline="baseline",
+        aggregate_repeats="median",
+        max_total_ratio=0.60,
+    )
+    baseline = payload["runs"][0]
+    candidate = payload["runs"][1]
+
+    assert payload["repeat_aggregation"] == "median"
+    assert payload["n_profiles"] == 2
+    assert baseline["repeat_count"] == 3
+    assert candidate["repeat_count"] == 3
+    assert baseline["total_seconds"] == pytest.approx(110.0)
+    assert candidate["total_seconds"] == pytest.approx(60.0)
+    assert candidate["total_delta"]["ratio_to_baseline"] == pytest.approx(60.0 / 110.0)
+    assert candidate["phase_deltas"]["read_eval_reps_cache_batch"]["seconds"] == pytest.approx(4.0)
+    assert candidate["group_deltas"]["cache_io"]["seconds"] == pytest.approx(4.0)
+    assert candidate["throughput_deltas"]["forced_answer_records_per_second"]["value"] == pytest.approx(21.0)
+    assert candidate["cache_efficiency"]["eval_reps_reader.records_per_read"] == pytest.approx(6.0)
+    assert candidate["repeat_total_seconds"]["min"] == pytest.approx(54.0)
+    assert candidate["repeat_total_seconds"]["max"] == pytest.approx(66.0)
+    assert candidate["sources"] == [str(path) for path in candidate_paths]
+    assert payload["regression_gate"]["passed"] is True
+
+
 def test_compare_verifier_routes_builds_leaderboard_and_aggregates(tmp_path):
     module = importlib.import_module("benchmarks.compare_verifier_routes")
     report_a = tmp_path / "report_a.json"

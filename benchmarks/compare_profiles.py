@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import statistics
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -76,6 +77,30 @@ def _minimal_profile_summary(phases: Mapping[str, float], total_seconds: float) 
         "groups": {},
         "throughput": {},
         "cache_efficiency": {},
+    }
+
+
+def _profile_summary_from_parts(
+    *,
+    phases: Mapping[str, float],
+    total_seconds: float,
+    groups: Mapping[str, float] | None = None,
+    throughput: Mapping[str, float] | None = None,
+    cache_efficiency: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    top_phases = [
+        {"name": name, "seconds": seconds, "share": _safe_div(seconds, total_seconds)}
+        for name, seconds in sorted(phases.items(), key=lambda item: item[1], reverse=True)[:5]
+    ]
+    return {
+        "bottleneck": top_phases[0]["name"] if top_phases else None,
+        "top_phases": top_phases,
+        "groups": {
+            name: {"seconds": seconds, "share": _safe_div(seconds, total_seconds)}
+            for name, seconds in sorted(dict(groups or {}).items())
+        },
+        "throughput": dict(sorted(dict(throughput or {}).items())),
+        "cache_efficiency": dict(sorted(dict(cache_efficiency or {}).items())),
     }
 
 
@@ -150,6 +175,72 @@ def _cache_efficiency_values(summary: Mapping[str, Any]) -> dict[str, float]:
         if metric is not None:
             result[str(name)] = metric
     return result
+
+
+def _median(values: Sequence[float]) -> float:
+    if not values:
+        raise ValueError("cannot compute median for an empty sequence.")
+    return float(statistics.median(float(value) for value in values))
+
+
+def _median_mapping(
+    rows: Sequence[Mapping[str, float]],
+    *,
+    missing_as_zero: bool,
+) -> dict[str, float]:
+    keys = sorted({key for row in rows for key in row})
+    result = {}
+    for key in keys:
+        if missing_as_zero:
+            values = [float(row.get(key, 0.0)) for row in rows]
+        else:
+            values = [float(row[key]) for row in rows if key in row]
+        if values:
+            result[key] = _median(values)
+    return result
+
+
+def _aggregate_profile_repeats(name: str, profiles: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    if not profiles:
+        raise ValueError(f"profile repeat group {name!r} is empty.")
+    sources = [str(profile["source"]) for profile in profiles]
+    totals = [float(profile["total_seconds"]) for profile in profiles]
+    total_seconds = _median(totals)
+    phases = _median_mapping([profile["phases"] for profile in profiles], missing_as_zero=True)
+    groups = _median_mapping(
+        [_group_seconds(profile["summary"]) for profile in profiles],
+        missing_as_zero=True,
+    )
+    throughput = _median_mapping(
+        [_throughput_values(profile["summary"]) for profile in profiles],
+        missing_as_zero=False,
+    )
+    cache_efficiency = _median_mapping(
+        [_cache_efficiency_values(profile["summary"]) for profile in profiles],
+        missing_as_zero=False,
+    )
+    payload = {
+        "name": name,
+        "source": sources[0] if len(sources) == 1 else f"median:{name}",
+        "sources": sources,
+        "repeat_count": len(profiles),
+        "repeat_total_seconds": {
+            "median": total_seconds,
+            "min": min(totals),
+            "max": max(totals),
+            "values": totals,
+        },
+        "total_seconds": total_seconds,
+        "phases": phases,
+        "summary": _profile_summary_from_parts(
+            phases=phases,
+            total_seconds=total_seconds,
+            groups=groups,
+            throughput=throughput,
+            cache_efficiency=cache_efficiency,
+        ),
+    }
+    return payload
 
 
 def _numeric_metric_deltas(
@@ -330,6 +421,7 @@ def build_profile_comparison(
     *,
     baseline: str | None = None,
     notes: Sequence[str] = (),
+    aggregate_repeats: str | None = None,
     max_total_ratio: float | None = None,
     max_run_total_ratios: Mapping[str, float] | None = None,
     max_phase_ratios: Mapping[str, float] | None = None,
@@ -337,6 +429,8 @@ def build_profile_comparison(
 ) -> dict[str, Any]:
     if not profiles:
         raise ValueError("at least one profile is required.")
+    if aggregate_repeats is not None and aggregate_repeats != "median":
+        raise ValueError("aggregate_repeats must be 'median' when set.")
     max_run_total_ratios = dict(max_run_total_ratios or {})
     max_phase_ratios = dict(max_phase_ratios or {})
     min_throughput_ratios = dict(min_throughput_ratios or {})
@@ -346,18 +440,26 @@ def build_profile_comparison(
         max_phase_ratios=max_phase_ratios,
         min_throughput_ratios=min_throughput_ratios,
     )
-    loaded = []
-    seen = set()
+    loaded_by_name: dict[str, list[dict[str, Any]]] = {}
+    ordered_names = []
     for name, path in profiles:
-        if name in seen:
+        if aggregate_repeats is None and name in loaded_by_name:
             raise ValueError(f"profile name {name!r} is duplicated.")
-        seen.add(name)
+        if name not in loaded_by_name:
+            ordered_names.append(name)
+            loaded_by_name[name] = []
         profile = _load_profile(path)
-        loaded.append({
+        loaded_by_name[name].append({
             "name": name,
             "source": str(path),
             **profile,
         })
+    loaded = [
+        _aggregate_profile_repeats(name, loaded_by_name[name])
+        if aggregate_repeats == "median"
+        else loaded_by_name[name][0]
+        for name in ordered_names
+    ]
 
     baseline_name = baseline or loaded[0]["name"]
     baseline_profile = next((item for item in loaded if item["name"] == baseline_name), None)
@@ -375,7 +477,7 @@ def build_profile_comparison(
         total_seconds = float(item["total_seconds"])
         summary = item["summary"]
         cache_efficiency = _cache_efficiency_values(summary)
-        runs.append({
+        run = {
             "name": item["name"],
             "source": item["source"],
             "total_seconds": total_seconds,
@@ -387,7 +489,12 @@ def build_profile_comparison(
             "cache_efficiency": cache_efficiency,
             "cache_efficiency_deltas": _numeric_metric_deltas(cache_efficiency, baseline_cache_efficiency),
             "top_phases": summary.get("top_phases", []),
-        })
+        }
+        if "repeat_count" in item:
+            run["repeat_count"] = item["repeat_count"]
+            run["sources"] = item["sources"]
+            run["repeat_total_seconds"] = item["repeat_total_seconds"]
+        runs.append(run)
 
     fastest = min(runs, key=lambda run: float(run["total_seconds"]))
     slowest = max(runs, key=lambda run: float(run["total_seconds"]))
@@ -407,6 +514,8 @@ def build_profile_comparison(
         "runs": runs,
         "notes": list(notes),
     }
+    if aggregate_repeats is not None:
+        payload["repeat_aggregation"] = aggregate_repeats
     gate = _build_regression_gate(
         runs,
         baseline=baseline_name,
@@ -432,6 +541,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         profiles,
         baseline=args.baseline,
         notes=args.note,
+        aggregate_repeats=args.aggregate_repeats,
         max_total_ratio=args.max_total_ratio,
         max_run_total_ratios=max_run_total_ratios,
         max_phase_ratios=max_phase_ratios,
@@ -454,6 +564,8 @@ def main() -> None:
                         help="profile name to use as the baseline; defaults to the first --profile")
     parser.add_argument("--note", action="append", default=[],
                         help="optional note to include in the output report; repeatable")
+    parser.add_argument("--aggregate-repeats", choices=("median",), default=None,
+                        help="allow repeated profile names and aggregate each run by median timing")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--max-total-ratio", type=float, default=None,
                         help="fail when any non-baseline run exceeds this total-time ratio")
