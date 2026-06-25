@@ -14,6 +14,7 @@ import statistics
 import sys
 from collections import Counter
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Mapping, Sequence
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +24,8 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.eval_verifier_ensemble import ALPHAS, build_verifier_ensemble_report  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, build_artifact_manifest  # noqa: E402
+
+VERIFICATION_CACHE_FILENAME = "verifier-ensemble-verified-records.json"
 
 
 def _parse_named_path(value: str) -> tuple[str, Path]:
@@ -147,6 +150,10 @@ def _compact_seed_run(run: Mapping[str, Any], *, seed: int, alpha: float) -> dic
     verified = alpha_result.get("verified", {}) if isinstance(alpha_result.get("verified"), Mapping) else {}
     delta = alpha_result.get("delta", {}) if isinstance(alpha_result.get("delta"), Mapping) else {}
     selected_counts = _selected_route_counts(run)
+    cache_stats = run.get("cache_stats", {})
+    trace_cache = cache_stats.get("trace_cache", {}) if isinstance(cache_stats, Mapping) else {}
+    if not isinstance(trace_cache, Mapping):
+        trace_cache = {}
     staged = run.get("staged_verification", {})
     if not isinstance(staged, Mapping):
         staged = {}
@@ -172,6 +179,10 @@ def _compact_seed_run(run: Mapping[str, Any], *, seed: int, alpha: float) -> dic
         "selected_route_counts": selected_counts,
         "selected_route_signature": _route_signature(selected_counts),
         "route_quality": _compact_route_quality(run),
+        "verification_trace_cache": {
+            "enabled": trace_cache.get("enabled"),
+            "hit": trace_cache.get("hit"),
+        },
         "staged_verification": {
             "enabled": staged.get("enabled"),
             "skip_rate": staged.get("skip_rate"),
@@ -215,6 +226,15 @@ def _route_totals(seed_entries: Sequence[Mapping[str, Any]]) -> dict[str, int]:
     return dict(sorted(totals.items()))
 
 
+def _trace_cache_hit_count(seed_entries: Sequence[Mapping[str, Any]]) -> int:
+    return sum(
+        1
+        for entry in seed_entries
+        if isinstance(entry.get("verification_trace_cache"), Mapping)
+        and entry["verification_trace_cache"].get("hit") is True
+    )
+
+
 def _summarize_seed_entries(seed_entries: Sequence[Mapping[str, Any]], *, alpha: float) -> dict[str, Any]:
     internal_detection = _metric_values(seed_entries, "internal", "detection")
     verified_detection = _metric_values(seed_entries, "verified", "detection")
@@ -239,6 +259,7 @@ def _summarize_seed_entries(seed_entries: Sequence[Mapping[str, Any]], *, alpha:
             for verified, internal in zip(verified_detection, internal_detection, strict=True)
             if verified is not None and internal is not None and verified >= internal
         ),
+        "verification_trace_cache_hit_seed_count": _trace_cache_hit_count(seed_entries),
         "route_signature_counts": _signature_counts(seed_entries),
         "selected_route_totals": _route_totals(seed_entries),
     }
@@ -285,6 +306,109 @@ def build_verifier_stability_report(
     staged_verify_metadata_keys: Sequence[str] = ("requires_verification",),
 ) -> dict[str, Any]:
     """Build a compact stability report from verifier-ensemble runs."""
+    if verification_cache_dir is None:
+        with TemporaryDirectory(prefix="eigentruth-verifier-stability-") as cache_dir:
+            return _build_verifier_stability_report(
+                score_dumps,
+                signal=signal,
+                claims_path=claims_path,
+                qa_corpus_path=qa_corpus_path,
+                state_path=state_path,
+                direction=direction,
+                alphas=alphas,
+                seeds=seeds,
+                repeats=repeats,
+                best_alpha=best_alpha,
+                verifier_min_overlap=verifier_min_overlap,
+                retriever_min_overlap=retriever_min_overlap,
+                retrieval_limit=retrieval_limit,
+                selfcheck_min_samples=selfcheck_min_samples,
+                selfcheck_min_overlap=selfcheck_min_overlap,
+                selfcheck_support_threshold=selfcheck_support_threshold,
+                selfcheck_refute_threshold=selfcheck_refute_threshold,
+                selfcheck_early_stop=selfcheck_early_stop,
+                selfcheck_max_samples=selfcheck_max_samples,
+                verification_cache_dir=Path(cache_dir),
+                verification_cache_scope="run_local",
+                staged_verification=staged_verification,
+                staged_alpha=staged_alpha,
+                staged_verify_risk_levels=staged_verify_risk_levels,
+                staged_verify_actions=staged_verify_actions,
+                staged_verify_feature_flags=staged_verify_feature_flags,
+                staged_verify_metadata_keys=staged_verify_metadata_keys,
+            )
+    return _build_verifier_stability_report(
+        score_dumps,
+        signal=signal,
+        claims_path=claims_path,
+        qa_corpus_path=qa_corpus_path,
+        state_path=state_path,
+        direction=direction,
+        alphas=alphas,
+        seeds=seeds,
+        repeats=repeats,
+        best_alpha=best_alpha,
+        verifier_min_overlap=verifier_min_overlap,
+        retriever_min_overlap=retriever_min_overlap,
+        retrieval_limit=retrieval_limit,
+        selfcheck_min_samples=selfcheck_min_samples,
+        selfcheck_min_overlap=selfcheck_min_overlap,
+        selfcheck_support_threshold=selfcheck_support_threshold,
+        selfcheck_refute_threshold=selfcheck_refute_threshold,
+        selfcheck_early_stop=selfcheck_early_stop,
+        selfcheck_max_samples=selfcheck_max_samples,
+        verification_cache_dir=verification_cache_dir,
+        verification_cache_scope="persistent",
+        staged_verification=staged_verification,
+        staged_alpha=staged_alpha,
+        staged_verify_risk_levels=staged_verify_risk_levels,
+        staged_verify_actions=staged_verify_actions,
+        staged_verify_feature_flags=staged_verify_feature_flags,
+        staged_verify_metadata_keys=staged_verify_metadata_keys,
+    )
+
+
+def _build_verifier_stability_report(
+    score_dumps: Sequence[tuple[str, Path]],
+    *,
+    signal: str,
+    claims_path: Path | None = None,
+    qa_corpus_path: Path | None = None,
+    state_path: Path | None = None,
+    direction: str | None = None,
+    alphas: Sequence[float] = ALPHAS,
+    seeds: Sequence[int] = (0, 1, 2, 3, 4),
+    repeats: int = 20,
+    best_alpha: float = 0.10,
+    verifier_min_overlap: float = 0.65,
+    retriever_min_overlap: float = 0.2,
+    retrieval_limit: int = 5,
+    selfcheck_min_samples: int = 2,
+    selfcheck_min_overlap: float = 0.65,
+    selfcheck_support_threshold: float = 0.60,
+    selfcheck_refute_threshold: float = 0.50,
+    selfcheck_early_stop: bool = False,
+    selfcheck_max_samples: int | None = None,
+    verification_cache_dir: Path,
+    verification_cache_scope: str,
+    staged_verification: bool = False,
+    staged_alpha: float = 0.10,
+    staged_verify_risk_levels: Sequence[str] = ("medium", "high", "unknown"),
+    staged_verify_actions: Sequence[str] = (
+        "retrieve",
+        "rewrite",
+        "steer_regenerate",
+        "execute_tool",
+        "abstain",
+        "clarify",
+    ),
+    staged_verify_feature_flags: Sequence[str] = (
+        "has_number",
+        "has_citation",
+        "is_time_sensitive",
+    ),
+    staged_verify_metadata_keys: Sequence[str] = ("requires_verification",),
+) -> dict[str, Any]:
     if not score_dumps:
         raise ValueError("at least one score dump is required.")
     if not signal:
@@ -373,25 +497,70 @@ def build_verifier_stability_report(
             "seeds": [int(seed) for seed in seeds],
             "repeats": int(repeats),
             "best_alpha": float(best_alpha),
+            "verifier_min_overlap": float(verifier_min_overlap),
+            "retriever_min_overlap": float(retriever_min_overlap),
+            "retrieval_limit": int(retrieval_limit),
+            "selfcheck_min_samples": int(selfcheck_min_samples),
+            "selfcheck_min_overlap": float(selfcheck_min_overlap),
+            "selfcheck_support_threshold": float(selfcheck_support_threshold),
+            "selfcheck_refute_threshold": float(selfcheck_refute_threshold),
+            "selfcheck_early_stop": bool(selfcheck_early_stop),
+            "selfcheck_max_samples": selfcheck_max_samples,
             "staged_verification": bool(staged_verification),
             "staged_alpha": float(staged_alpha),
+            "staged_verify_risk_levels": list(staged_verify_risk_levels),
+            "staged_verify_actions": list(staged_verify_actions),
+            "staged_verify_feature_flags": list(staged_verify_feature_flags),
+            "staged_verify_metadata_keys": list(staged_verify_metadata_keys),
         },
         "inputs": {
             "claims": None if claims_path is None else str(claims_path),
             "qa_corpus": None if qa_corpus_path is None else str(qa_corpus_path),
             "state_source": None if state_path is None else str(state_path),
-            "verification_cache_dir": None if verification_cache_dir is None else str(verification_cache_dir),
+            "verification_cache_dir": (
+                None if verification_cache_scope == "run_local" else str(verification_cache_dir)
+            ),
+        },
+        "verification_cache": {
+            "enabled": True,
+            "scope": verification_cache_scope,
+            "path": None if verification_cache_scope == "run_local" else str(verification_cache_dir),
         },
         "policy": top_level_reference.get("policy", {}),
+        "verifier": top_level_reference.get("verifier", {}),
+        "selfcheck_verifier": top_level_reference.get("selfcheck_verifier", {}),
         "qa_verifier": top_level_reference.get("qa_verifier", {}),
         "retrieval_qa_verifier": top_level_reference.get("retrieval_qa_verifier", {}),
         "state_verifier": top_level_reference.get("state_verifier", {}),
         "transition_verifier": top_level_reference.get("transition_verifier", {}),
         "retriever": top_level_reference.get("retriever", {}),
+        "verification_trace_cache": {
+            "enabled": True,
+            "scope": verification_cache_scope,
+            "path": (
+                None
+                if verification_cache_scope == "run_local"
+                else str(Path(verification_cache_dir) / VERIFICATION_CACHE_FILENAME)
+            ),
+        },
         "staged_verification": top_level_reference.get("staged_verification", {}),
         "seed_reports": seed_reports,
         "runs": runs,
     }
+
+
+def _verification_cache_artifact_path(payload: Mapping[str, Any] | None) -> Path | None:
+    if payload is None:
+        return None
+    cache = payload.get("verification_cache")
+    if not isinstance(cache, Mapping):
+        return None
+    if cache.get("scope") != "persistent":
+        return None
+    cache_dir = cache.get("path")
+    if cache_dir is None:
+        return None
+    return Path(str(cache_dir)) / VERIFICATION_CACHE_FILENAME
 
 
 def _artifact_paths(
@@ -412,6 +581,9 @@ def _artifact_paths(
     for name, path in score_dumps:
         artifacts[f"input_scores.{name}"] = path
     if payload is not None:
+        cache_artifact = _verification_cache_artifact_path(payload)
+        if cache_artifact is not None:
+            artifacts["verification_cache"] = cache_artifact
         for run in payload.get("runs", ()):
             if not isinstance(run, Mapping):
                 continue
@@ -519,6 +691,7 @@ def _record_registry(
             "seeds": tuple(payload.get("config", {}).get("seeds", ())),
             "best_alpha": payload.get("config", {}).get("best_alpha"),
             "staged_verification": payload.get("config", {}).get("staged_verification"),
+            "verification_cache": payload.get("verification_cache"),
             "runs": tuple(run.get("name") for run in payload.get("runs", ())),
             "run_summaries": _registry_run_summaries(payload),
         },

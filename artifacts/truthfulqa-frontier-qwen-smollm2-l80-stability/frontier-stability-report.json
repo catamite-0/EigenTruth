@@ -745,35 +745,35 @@
   ],
   "schema_version": 1,
   "score_dump_cache": {
-    "cache_entries": 10,
+    "cache_entries": 12,
     "enabled": true,
     "fingerprint": {
-      "attempts": 4,
-      "hit_rate": 0.0,
-      "hits": 0,
+      "attempts": 44,
+      "hit_rate": 0.9090909090909091,
+      "hits": 40,
       "misses": 4,
       "writes": 4
     },
     "jsonl_manifest": {
-      "attempts": 4,
-      "hit_rate": 0.5,
-      "hits": 2,
+      "attempts": 44,
+      "hit_rate": 0.9545454545454546,
+      "hits": 42,
       "misses": 2,
       "writes": 2
     },
     "jsonl_summary": {
-      "attempts": 0,
-      "hit_rate": null,
-      "hits": 0,
+      "attempts": 20,
+      "hit_rate": 1.0,
+      "hits": 20,
       "misses": 0,
-      "writes": 4
+      "writes": 6
     },
     "jsonl_view": {
-      "attempts": 2,
-      "hit_rate": 0.0,
-      "hits": 0,
-      "misses": 2,
-      "writes": 2
+      "attempts": 22,
+      "hit_rate": 0.8181818181818182,
+      "hits": 18,
+      "misses": 4,
+      "writes": 4
     }
   },
   "seed_reports": [

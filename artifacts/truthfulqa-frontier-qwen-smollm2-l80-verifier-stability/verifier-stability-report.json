@@ -14,6 +14,8 @@
     "best_alpha": 0.1,
     "direction": null,
     "repeats": 20,
+    "retrieval_limit": 5,
+    "retriever_min_overlap": 0.2,
     "seeds": [
       0,
       1,
@@ -26,15 +28,43 @@
       8,
       9
     ],
+    "selfcheck_early_stop": false,
+    "selfcheck_max_samples": null,
+    "selfcheck_min_overlap": 0.65,
+    "selfcheck_min_samples": 2,
+    "selfcheck_refute_threshold": 0.5,
+    "selfcheck_support_threshold": 0.6,
     "signal": "truth_proj",
     "staged_alpha": 0.1,
-    "staged_verification": true
+    "staged_verification": true,
+    "staged_verify_actions": [
+      "retrieve",
+      "rewrite",
+      "steer_regenerate",
+      "execute_tool",
+      "abstain",
+      "clarify"
+    ],
+    "staged_verify_feature_flags": [
+      "has_number",
+      "has_citation",
+      "is_time_sensitive"
+    ],
+    "staged_verify_metadata_keys": [
+      "requires_verification"
+    ],
+    "staged_verify_risk_levels": [
+      "medium",
+      "high",
+      "unknown"
+    ],
+    "verifier_min_overlap": 0.65
   },
   "inputs": {
     "claims": null,
     "qa_corpus": "artifacts/truthfulqa_l80_correct_answer_corpus.json",
     "state_source": null,
-    "verification_cache_dir": "artifacts/cache/truthfulqa-frontier-qwen-smollm2/verifier-stability"
+    "verification_cache_dir": null
   },
   "paths": {
     "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
@@ -324,6 +354,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": false
+          },
           "verified": {
             "detection": 0.30620915032679735,
             "false_alarm": 0.0076,
@@ -374,6 +408,10 @@
             "skip_rate": 0.7931654676258992,
             "skipped_records": 441,
             "verified_records": 115
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.3049019607843137,
@@ -426,6 +464,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.30539215686274507,
             "false_alarm": 0.0068000000000000005,
@@ -476,6 +518,10 @@
             "skip_rate": 0.7931654676258992,
             "skipped_records": 441,
             "verified_records": 115
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.3060457516339869,
@@ -528,6 +574,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3060457516339869,
             "false_alarm": 0.0068000000000000005,
@@ -578,6 +628,10 @@
             "skip_rate": 0.7931654676258992,
             "skipped_records": 441,
             "verified_records": 115
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.3049019607843137,
@@ -630,6 +684,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -680,6 +738,10 @@
             "skip_rate": 0.7931654676258992,
             "skipped_records": 441,
             "verified_records": 115
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.3044117647058823,
@@ -732,6 +794,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -782,6 +848,10 @@
             "skip_rate": 0.7931654676258992,
             "skipped_records": 441,
             "verified_records": 115
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.3044117647058823,
@@ -844,6 +914,7 @@
           "min": 0.0808,
           "stdev": 0.002800285699709944
         },
+        "verification_trace_cache_hit_seed_count": 9,
         "verified_beats_internal_detection_seed_count": 10,
         "verified_detection": {
           "count": 10,
@@ -1149,6 +1220,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": false
+          },
           "verified": {
             "detection": 0.24379084967320264,
             "false_alarm": 0.01,
@@ -1199,6 +1274,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -1251,6 +1330,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.24379084967320264,
             "false_alarm": 0.01,
@@ -1301,6 +1384,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -1353,6 +1440,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.2439542483660131,
             "false_alarm": 0.0104,
@@ -1403,6 +1494,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -1455,6 +1550,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.2439542483660131,
             "false_alarm": 0.0104,
@@ -1505,6 +1604,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -1557,6 +1660,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.2439542483660131,
             "false_alarm": 0.0104,
@@ -1607,6 +1714,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -1669,6 +1780,7 @@
           "min": 0.09519999999999999,
           "stdev": 0.0011063453348751481
         },
+        "verification_trace_cache_hit_seed_count": 9,
         "verified_beats_internal_detection_seed_count": 10,
         "verified_detection": {
           "count": 10,
@@ -1764,6 +1876,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": false
+          },
           "verified": {
             "detection": 0.30620915032679735,
             "false_alarm": 0.0076,
@@ -1815,6 +1931,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": false
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -1873,6 +1993,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3049019607843137,
             "false_alarm": 0.0064,
@@ -1924,6 +2048,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -1982,6 +2110,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.30539215686274507,
             "false_alarm": 0.0068000000000000005,
@@ -2033,6 +2165,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -2091,6 +2227,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3060457516339869,
             "false_alarm": 0.0068000000000000005,
@@ -2142,6 +2282,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.24379084967320264,
@@ -2200,6 +2344,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3060457516339869,
             "false_alarm": 0.0068000000000000005,
@@ -2251,6 +2399,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -2309,6 +2461,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3049019607843137,
             "false_alarm": 0.0056,
@@ -2360,6 +2516,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -2418,6 +2578,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -2469,6 +2633,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -2527,6 +2695,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -2578,6 +2750,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -2636,6 +2812,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -2687,6 +2867,10 @@
             "skip_rate": 0.829136690647482,
             "skipped_records": 461,
             "verified_records": 95
+          },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
           },
           "verified": {
             "detection": 0.2439542483660131,
@@ -2745,6 +2929,10 @@
             "skipped_records": 441,
             "verified_records": 115
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.3044117647058823,
             "false_alarm": 0.005200000000000001,
@@ -2797,6 +2985,10 @@
             "skipped_records": 461,
             "verified_records": 95
           },
+          "verification_trace_cache": {
+            "enabled": true,
+            "hit": true
+          },
           "verified": {
             "detection": 0.24379084967320264,
             "false_alarm": 0.0104,
@@ -2807,6 +2999,16 @@
       "seed": 9
     }
   ],
+  "selfcheck_verifier": {
+    "early_stop": false,
+    "enabled": false,
+    "max_samples": null,
+    "min_overlap": 0.65,
+    "min_samples": 2,
+    "refute_threshold": 0.5,
+    "support_threshold": 0.6,
+    "type": "SelfConsistencyVerifier"
+  },
   "staged_verification": {
     "alpha": 0.1,
     "decision_source": "conformal_internal_gate",
@@ -2850,6 +3052,20 @@
     "global_transitions": 0,
     "state_path": null,
     "type": "StateTransitionVerifier"
+  },
+  "verification_cache": {
+    "enabled": true,
+    "path": null,
+    "scope": "run_local"
+  },
+  "verification_trace_cache": {
+    "enabled": true,
+    "path": null,
+    "scope": "run_local"
+  },
+  "verifier": {
+    "min_overlap": 0.65,
+    "type": "GroundednessVerifier"
   },
   "workflow": "verifier_stability"
 }

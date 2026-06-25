@@ -209,6 +209,7 @@ def build_ensemble_report(
     repeats: int = 20,
     seed: int = 0,
     best_alpha: float = 0.10,
+    score_dump_cache: MutableMapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     if not score_dumps:
         raise ValueError("at least one score dump is required.")
@@ -220,7 +221,7 @@ def build_ensemble_report(
         raise ValueError("alphas must be in (0, 1).")
 
     runs = []
-    score_dump_metadata_cache = {}
+    score_dump_metadata_cache = {} if score_dump_cache is None else score_dump_cache
     for name, path in score_dumps:
         dump = _load_scores(path, signals=signals, cache=score_dump_metadata_cache)
         labels = dump["labels"]

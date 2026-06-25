@@ -37,8 +37,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "frontier-stability-report.json",
-      "sha256": "a4cc6f6959ce98332b32aba2dcd4e1a5685581f6f741aaa328327a7e79e4da5b",
-      "size_bytes": 33228
+      "sha256": "84a4982d6343b6bee0bc8c4e46ae0c887d13c4fbdbb122b248e9b044a19a7674",
+      "size_bytes": 33280
     }
   },
   "digest_algorithm": "sha256",

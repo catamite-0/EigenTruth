@@ -237,6 +237,7 @@ def build_frontier_stability_report(
             repeats=repeats,
             seed=int(seed),
             best_alpha=best_alpha,
+            score_dump_cache=score_dump_cache,
         )
         compact_runs = []
         for run_payload in seed_payload["runs"]:

@@ -455,7 +455,9 @@ At alpha 0.100 across seeds `0..9`:
 The report is registered as
 `report:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`; the verified
 manifest is registered as
-`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`.
+`benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`. The
+post-hoc replay now shares the score-dump cache across seeds, with 18/22 JSONL
+selected-view lookups served from cache in the current report.
 
 ## Oracle Verifier Ensemble Upper Bound
 

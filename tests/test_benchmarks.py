@@ -1102,6 +1102,7 @@ def test_eval_frontier_stability_builds_seed_summary_and_registry(tmp_path):
     assert payload["status"] == "complete"
     assert payload["config"]["seeds"] == [0, 1, 2]
     assert "score_dump_cache" in payload
+    assert payload["score_dump_cache"]["jsonl_view"]["hits"] >= 1
     assert run["deterministic_sweep_best"]["score_name"] == "truth_proj"
     assert run["deterministic_sweep_best"]["layer"] == -2
     assert run["stability"]["best_single_name_counts"] == {"truth_proj": 3}
@@ -1147,6 +1148,7 @@ def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
     report_path = tmp_path / "verifier-stability" / "verifier-stability-report.json"
     manifest_path = tmp_path / "verifier-stability" / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
+    cache_dir = tmp_path / "verifier-cache"
     scores_path.write_text(
         json.dumps({
             "config": {"model": "synthetic", "layer": -1},
@@ -1193,6 +1195,8 @@ def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
             "0,1,2",
             "--repeats",
             "2",
+            "--verification-cache-dir",
+            str(cache_dir),
             "--json",
             str(report_path),
             "--artifact-manifest",
@@ -1220,15 +1224,70 @@ def test_eval_verifier_stability_builds_seed_summary_and_registry(tmp_path):
 
     assert payload["status"] == "complete"
     assert payload["config"]["seeds"] == [0, 1, 2]
+    assert payload["config"]["verifier_min_overlap"] == pytest.approx(0.65)
+    assert payload["verification_cache"]["scope"] == "persistent"
+    assert payload["verification_trace_cache"]["path"].endswith("verifier-ensemble-verified-records.json")
     assert run["stability"]["verified_detection"]["mean"] == pytest.approx(1.0)
     assert run["stability"]["verified_false_alarm"]["mean"] == pytest.approx(0.0)
     assert run["stability"]["verified_pass_seed_count"] == 3
+    assert run["stability"]["verification_trace_cache_hit_seed_count"] == 2
     assert run["stability"]["route_signature_counts"] == {"structured_qa:6": 3}
     assert run["stability"]["selected_route_totals"] == {"structured_qa": 18}
     assert manifest["artifacts"]["qa_corpus"]["exists"] is True
+    assert manifest["artifacts"]["verification_cache"]["exists"] is True
     assert verification.passed
     assert record.metadata["workflow"] == "eval_verifier_stability"
+    assert record.metadata["verification_cache"]["scope"] == "persistent"
     assert record.metadata["run_summaries"][0]["verified_detection_mean"] == pytest.approx(1.0)
+
+
+def test_eval_verifier_stability_defaults_to_run_local_trace_cache(tmp_path):
+    module = importlib.import_module("benchmarks.eval_verifier_stability")
+    scores_path = tmp_path / "scores.json"
+    qa_path = tmp_path / "qa.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.3, 0.4, 3.0, 3.5]},
+            "statements": [
+                {"question": "Q1?", "answer": "A1", "text": "Q1? A1"},
+                {"question": "Q2?", "answer": "A2", "text": "Q2? A2"},
+                {"question": "Q3?", "answer": "A3", "text": "Q3? A3"},
+                {"question": "Q4?", "answer": "A4", "text": "Q4? A4"},
+                {"question": "Q1?", "answer": "Wrong A1", "text": "Q1? Wrong A1"},
+                {"question": "Q2?", "answer": "Wrong A2", "text": "Q2? Wrong A2"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    qa_path.write_text(
+        json.dumps({
+            "documents": [
+                {"question": "Q1?", "answer": "A1", "source": "qa:q1"},
+                {"question": "Q2?", "answer": "A2", "source": "qa:q2"},
+                {"question": "Q3?", "answer": "A3", "source": "qa:q3"},
+                {"question": "Q4?", "answer": "A4", "source": "qa:q4"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.build_verifier_stability_report(
+        (("synthetic", scores_path),),
+        signal="truth_proj",
+        qa_corpus_path=qa_path,
+        alphas=(0.2,),
+        best_alpha=0.2,
+        seeds=(0, 1, 2),
+        repeats=2,
+    )
+    run = payload["runs"][0]
+
+    assert payload["verification_cache"] == {"enabled": True, "scope": "run_local", "path": None}
+    assert payload["inputs"]["verification_cache_dir"] is None
+    assert payload["verification_trace_cache"]["path"] is None
+    assert run["stability"]["verification_trace_cache_hit_seed_count"] == 2
 
 
 def test_calibrated_observability_limited_sweep_defaults_to_hooks(tmp_path):

@@ -622,6 +622,8 @@ The stability manifest fingerprints both score manifest files and their JSONL
 records sidecars. If the result is used as release evidence, promote the
 verified manifest with `promote_artifact_manifest.py` so the registry contains
 both the report and the manifest verification record.
+The l80 stability report also records score-dump cache reuse: the shared JSONL
+selected-view cache currently hits 18/22 lookups across the multi-seed replay.
 
 ## `eval_verifier_ensemble.py`
 
@@ -691,7 +693,6 @@ python benchmarks/eval_verifier_stability.py \
   --repeats 20 \
   --staged-verification \
   --staged-alpha 0.10 \
-  --verification-cache-dir artifacts/cache/truthfulqa-frontier-qwen-smollm2/verifier-stability \
   --json "$OUT/verifier-stability-report.json" \
   --artifact-manifest "$OUT/artifact-manifest.json" \
   --registry artifacts/local-release-registry.json \
@@ -702,6 +703,15 @@ python benchmarks/verify_artifact_manifest.py \
   --manifest "$OUT/artifact-manifest.json" \
   --recursive \
   --json "$OUT/manifest-verification.json"
+
+python benchmarks/promote_artifact_manifest.py \
+  --manifest "$OUT/artifact-manifest.json" \
+  --registry artifacts/local-release-registry.json \
+  --name truthfulqa-frontier-qwen-smollm2-l80-verifier-stability \
+  --version 0.1 \
+  --verification-report "$OUT/manifest-verification.json" \
+  --metadata workflow=eval_verifier_stability \
+  --metadata evidence=truthfulqa_frontier_qwen_smollm2_l80_verifier_stability
 ```
 
 The current registered frontier l80 verifier-stability report
@@ -714,6 +724,13 @@ and verified detection averages 0.244, also beating internal-only detection in
 10/10 seeds while routing 95/556 records to `structured_qa`. The verified
 manifest is registered as
 `benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-verifier-stability:0.1`.
+The default run-local verifier trace cache avoids rerunning seed-invariant
+verified records after the first seed; both Qwen and SmolLM2 hit it in 9/10
+seed runs.
+When `--verification-cache-dir` is supplied, the runner fingerprints the cache
+file in the artifact manifest, so preserve that cache with the report if it is
+part of release evidence. Without it, verifier stability uses a temporary
+run-local cache to avoid rerunning seed-invariant verifier records.
 
 If the score dump does not contain `statements`, provide a fixture with one
 record per score:

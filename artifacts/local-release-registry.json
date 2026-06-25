@@ -3369,6 +3369,73 @@
       "version": "0.1"
     },
     {
+      "artifact_type": "report",
+      "metadata": {
+        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
+        "best_alpha": 0.1,
+        "run_summaries": [
+          {
+            "delta_detection_mean": 0.02787581699346401,
+            "name": "qwen05-l80",
+            "route_signature_counts": {
+              "staged_skip:441,structured_qa:115": 10
+            },
+            "selected_route_totals": {
+              "staged_skip": 4410,
+              "structured_qa": 1150
+            },
+            "verified_beats_internal_detection_seed_count": 10,
+            "verified_detection_mean": 0.3051143790849673,
+            "verified_false_alarm_mean": 0.00608,
+            "verified_pass_seed_count": 10
+          },
+          {
+            "delta_detection_mean": 0.005375816993464089,
+            "name": "smollm2-l80",
+            "route_signature_counts": {
+              "staged_skip:461,structured_qa:95": 10
+            },
+            "selected_route_totals": {
+              "staged_skip": 4610,
+              "structured_qa": 950
+            },
+            "verified_beats_internal_detection_seed_count": 10,
+            "verified_detection_mean": 0.24387254901960786,
+            "verified_false_alarm_mean": 0.010239999999999999,
+            "verified_pass_seed_count": 10
+          }
+        ],
+        "runs": [
+          "qwen05-l80",
+          "smollm2-l80"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "signal": "truth_proj",
+        "staged_verification": true,
+        "status": "complete",
+        "verification_cache": {
+          "enabled": true,
+          "path": null,
+          "scope": "run_local"
+        },
+        "workflow": "eval_verifier_stability"
+      },
+      "name": "truthfulqa-frontier-qwen-smollm2-l80-verifier-stability",
+      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
+      "version": "0.1"
+    },
+    {
       "artifact_type": "benchmark_manifest",
       "metadata": {
         "artifact_fingerprint_cache_entries": 5,
@@ -3427,68 +3494,6 @@
       },
       "name": "truthfulqa-frontier-qwen-smollm2-l80-stability-verification",
       "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-stability/manifest-verification.json",
-      "version": "0.1"
-    },
-    {
-      "artifact_type": "report",
-      "metadata": {
-        "artifact_manifest": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/artifact-manifest.json",
-        "best_alpha": 0.1,
-        "run_summaries": [
-          {
-            "delta_detection_mean": 0.02787581699346401,
-            "name": "qwen05-l80",
-            "route_signature_counts": {
-              "staged_skip:441,structured_qa:115": 10
-            },
-            "selected_route_totals": {
-              "staged_skip": 4410,
-              "structured_qa": 1150
-            },
-            "verified_beats_internal_detection_seed_count": 10,
-            "verified_detection_mean": 0.3051143790849673,
-            "verified_false_alarm_mean": 0.00608,
-            "verified_pass_seed_count": 10
-          },
-          {
-            "delta_detection_mean": 0.005375816993464089,
-            "name": "smollm2-l80",
-            "route_signature_counts": {
-              "staged_skip:461,structured_qa:95": 10
-            },
-            "selected_route_totals": {
-              "staged_skip": 4610,
-              "structured_qa": 950
-            },
-            "verified_beats_internal_detection_seed_count": 10,
-            "verified_detection_mean": 0.24387254901960786,
-            "verified_false_alarm_mean": 0.010239999999999999,
-            "verified_pass_seed_count": 10
-          }
-        ],
-        "runs": [
-          "qwen05-l80",
-          "smollm2-l80"
-        ],
-        "seeds": [
-          0,
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "signal": "truth_proj",
-        "staged_verification": true,
-        "status": "complete",
-        "workflow": "eval_verifier_stability"
-      },
-      "name": "truthfulqa-frontier-qwen-smollm2-l80-verifier-stability",
-      "path": "artifacts/truthfulqa-frontier-qwen-smollm2-l80-verifier-stability/verifier-stability-report.json",
       "version": "0.1"
     },
     {

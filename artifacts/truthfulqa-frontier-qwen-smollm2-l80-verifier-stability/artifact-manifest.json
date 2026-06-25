@@ -45,8 +45,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "verifier-stability-report.json",
-      "sha256": "5a23b340585cbf0e58689c420325d8d19e0abc00b1fb56230ef0f99b66cd9074",
-      "size_bytes": 91290
+      "sha256": "101aa8cb130c024a42772477abdb8bc8c320c1e9e8d964a33c82b97e02853489",
+      "size_bytes": 96839
     }
   },
   "digest_algorithm": "sha256",
