@@ -24,6 +24,12 @@ from eigentruth.verify.coherence import (
     ClaimDependency,
     apply_claim_coherence,
 )
+from eigentruth.verify.planning import (
+    DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS,
+    DEFAULT_VERIFY_CLAIM_METADATA_KEYS,
+    ClaimVerificationPlan,
+    ClaimVerificationPlanner,
+)
 from eigentruth.verify.protocols import Claim, VerificationResult, VerificationStatus, Verifier
 
 
@@ -80,6 +86,7 @@ class VerificationLoopResult:
     final_verification_results: Sequence[VerificationResult | Mapping[str, Any]]
     final_decision: RiskDecision
     trace: ProductTrace
+    claim_verification_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
     verification_stage_decision: VerificationStageDecision | Mapping[str, Any] | None = None
     initial_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
     final_coherence_report: ClaimCoherenceReport | Mapping[str, Any] | None = None
@@ -105,6 +112,7 @@ class VerificationLoopResult:
             ),
             "final_decision": self.final_decision.to_dict(),
             "trace": self.trace.to_dict(),
+            "claim_verification_plan": _claim_verification_plan_to_dict(self.claim_verification_plan),
             "verification_stage_decision": _stage_decision_to_dict(self.verification_stage_decision),
             "initial_coherence_report": _coherence_report_to_dict(self.initial_coherence_report),
             "final_coherence_report": _coherence_report_to_dict(self.final_coherence_report),
@@ -388,11 +396,18 @@ def run_verification_loop(
         final_decision = initial_decision
         final_coherence_report = initial_coherence_report
 
+    claim_verification_plan = _build_claim_verification_plan(
+        claims=claims,
+        stage_policy=stage_policy,
+        stage_decision=stage_decision,
+        claim_dependencies=claim_dependencies,
+    )
     runtime_trace = _build_runtime_trace(runtime_phases, loop_started_at)
     trace = ProductTrace(
         request_id=request_id,
         diagnostics=diagnostics,
         claims=claims,
+        verification_plan=claim_verification_plan,
         verification_results=final_results,
         risk_decision=final_decision,
         actions=action_requests,
@@ -438,6 +453,22 @@ def run_verification_loop(
             ),
             TraceEvent("initial_risk_decision", initial_decision.to_dict()),
             TraceEvent(
+                "claim_verification_plan",
+                {
+                    "run_verifier": claim_verification_plan.run_verifier,
+                    "verification_scope": claim_verification_plan.verification_scope,
+                    "verify_claim_ids": claim_verification_plan.verify_claim_ids,
+                    "skipped_claim_ids": claim_verification_plan.skipped_claim_ids,
+                    "triggered_claim_ids": claim_verification_plan.triggered_claim_ids,
+                    "route_count": len(claim_verification_plan.route_hints),
+                    "retrieval_query_count": len(claim_verification_plan.retrieval_queries),
+                    "calculation_check_count": len(claim_verification_plan.calculation_checks),
+                    "state_check_count": len(claim_verification_plan.state_checks),
+                    "world_model_check_count": len(claim_verification_plan.world_model_checks),
+                    "dependency_count": len(claim_verification_plan.dependencies),
+                },
+            ),
+            TraceEvent(
                 "actions_planned",
                 {
                     "n_actions": len(action_requests),
@@ -470,6 +501,15 @@ def run_verification_loop(
         metadata={
             "loop_version": "0.4",
             "source": "eigentruth.control.run_verification_loop",
+            "claim_verification_plan": {
+                "run_verifier": claim_verification_plan.run_verifier,
+                "verification_scope": claim_verification_plan.verification_scope,
+                "verify_claim_count": len(claim_verification_plan.verify_claim_ids),
+                "skipped_claim_count": len(claim_verification_plan.skipped_claim_ids),
+                "triggered_claim_count": len(claim_verification_plan.triggered_claim_ids),
+                "route_count": len(claim_verification_plan.route_hints),
+                "dependency_count": len(claim_verification_plan.dependencies),
+            },
             "staged_verification": None if stage_policy is None else stage_policy.to_dict(),
             "claim_coherence": None if not coherence_enabled else _claim_coherence_metadata(
                 initial_coherence_report,
@@ -489,9 +529,84 @@ def run_verification_loop(
         final_verification_results=final_results,
         final_decision=final_decision,
         trace=trace,
+        claim_verification_plan=claim_verification_plan,
         verification_stage_decision=stage_decision,
         initial_coherence_report=initial_coherence_report,
         final_coherence_report=final_coherence_report,
+    )
+
+
+def _build_claim_verification_plan(
+    *,
+    claims: Sequence[Claim],
+    stage_policy: StagedVerificationPolicy | None,
+    stage_decision: VerificationStageDecision | None,
+    claim_dependencies: Sequence[ClaimDependency | Mapping[str, Any]] | None,
+) -> ClaimVerificationPlan:
+    planner = ClaimVerificationPlanner(
+        verify_all_by_default=False,
+        verify_claim_feature_flags=(
+            DEFAULT_VERIFY_CLAIM_FEATURE_FLAGS
+            if stage_policy is None
+            else stage_policy.verify_claim_feature_flags
+        ),
+        verify_claim_metadata_keys=(
+            DEFAULT_VERIFY_CLAIM_METADATA_KEYS
+            if stage_policy is None
+            else stage_policy.verify_claim_metadata_keys
+        ),
+        verify_triggered_claims_only=(
+            False
+            if stage_policy is None
+            else stage_policy.verify_triggered_claims_only
+        ),
+        infer_dependencies=claim_dependencies is None,
+    )
+    route_plan = planner.plan(tuple(claims))
+    claim_ids = _claim_ids(claims)
+    if stage_decision is None:
+        run_verifier = bool(claim_ids)
+        return ClaimVerificationPlan(
+            run_verifier=run_verifier,
+            reason="verification is not staged; all claims are selected" if run_verifier else "no claims to verify",
+            verification_scope="all" if run_verifier else "none",
+            claims=claims,
+            verify_claim_ids=claim_ids if run_verifier else (),
+            skipped_claim_ids=(),
+            triggered_claim_ids=route_plan.triggered_claim_ids,
+            triggered_features=route_plan.triggered_features,
+            triggered_metadata=route_plan.triggered_metadata,
+            route_hints=route_plan.route_hints,
+            retrieval_queries=route_plan.retrieval_queries,
+            calculation_checks=route_plan.calculation_checks,
+            state_checks=route_plan.state_checks,
+            world_model_checks=route_plan.world_model_checks,
+            dependencies=(
+                route_plan.dependencies
+                if claim_dependencies is None
+                else tuple(claim_dependencies)
+            ),
+        )
+    return ClaimVerificationPlan(
+        run_verifier=stage_decision.run_verifier,
+        reason=stage_decision.reason,
+        verification_scope=stage_decision.verification_scope,
+        claims=claims,
+        verify_claim_ids=stage_decision.verify_claim_ids,
+        skipped_claim_ids=stage_decision.skipped_claim_ids,
+        triggered_claim_ids=stage_decision.triggered_claim_ids,
+        triggered_features=stage_decision.triggered_features,
+        triggered_metadata=stage_decision.triggered_metadata,
+        route_hints=route_plan.route_hints,
+        retrieval_queries=route_plan.retrieval_queries,
+        calculation_checks=route_plan.calculation_checks,
+        state_checks=route_plan.state_checks,
+        world_model_checks=route_plan.world_model_checks,
+        dependencies=(
+            route_plan.dependencies
+            if claim_dependencies is None
+            else tuple(claim_dependencies)
+        ),
     )
 
 
@@ -831,6 +946,16 @@ def _stage_decision_to_dict(
     if isinstance(decision, VerificationStageDecision):
         return decision.to_dict()
     return dict(_jsonable(decision))
+
+
+def _claim_verification_plan_to_dict(
+    plan: ClaimVerificationPlan | Mapping[str, Any] | None,
+) -> dict[str, Any] | None:
+    if plan is None:
+        return None
+    if isinstance(plan, ClaimVerificationPlan):
+        return plan.to_dict()
+    return dict(_jsonable(plan))
 
 
 def _coherence_report_to_dict(

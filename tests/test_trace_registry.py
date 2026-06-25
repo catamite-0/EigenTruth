@@ -50,6 +50,7 @@ from eigentruth.registry import (
     save_json_cache,
 )
 from eigentruth.verify import (
+    ClaimVerificationPlanner,
     InMemoryVerifier,
     VerificationResult,
     VerificationStatus,
@@ -106,6 +107,32 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert payload["action_results"][0]["status"] == "dry_run"
     assert payload["action_results"][0]["output"]["would_execute"] == "retriever"
     json.dumps(payload)
+
+
+def test_product_trace_serializes_claim_verification_plan_and_bounded_summary():
+    claims = extract_claims("As of 2026, AlphaCorp has 10 offices. 2 plus 2 is 5.")
+    plan = ClaimVerificationPlanner().plan(claims)
+    trace = ProductTrace(
+        request_id="req-plan",
+        claims=claims,
+        verification_plan=plan,
+        metadata={"large_unselected_metadata": tuple(range(100))},
+    )
+
+    payload = trace.to_dict()
+    bounded = trace.to_bounded_dict(max_nested_items=2)
+
+    assert payload["verification_plan"]["run_verifier"] is True
+    assert payload["verification_plan"]["verification_scope"] == "all"
+    assert payload["verification_plan"]["route_hints"][0]["routes"] == ("retrieval", "groundedness")
+    assert payload["verification_plan"]["calculation_checks"][0]["expression"] == "2 + 2"
+    assert bounded["summaries"]["verification_plan"]["available"] is True
+    assert bounded["summaries"]["verification_plan"]["claim_count"] == 2
+    assert bounded["summaries"]["verification_plan"]["route_counts"]["retrieval"] == 2
+    assert bounded["summaries"]["verification_plan"]["tool_payload_counts"]["calculation_checks"] == 1
+    assert "verification_plan" not in bounded
+    json.dumps(payload)
+    json.dumps(bounded)
 
 
 def test_product_trace_feedback_and_registry_normalize_strict_json_values(tmp_path):

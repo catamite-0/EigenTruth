@@ -9,6 +9,7 @@ from typing import Any, Mapping, Optional, Sequence
 from eigentruth.control.actions import ActionRequest, ActionResult
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.planning import ClaimVerificationPlan
 from eigentruth.verify.protocols import Claim, VerificationResult
 
 
@@ -154,6 +155,7 @@ class ProductTrace:
     request_id: Optional[str] = None
     diagnostics: Mapping[str, Any] = field(default_factory=dict)
     claims: Sequence[Claim | Mapping[str, Any]] = ()
+    verification_plan: ClaimVerificationPlan | Mapping[str, Any] | None = None
     verification_results: Sequence[VerificationResult | Mapping[str, Any]] = ()
     risk_decision: RiskDecision | Mapping[str, Any] | None = None
     actions: Sequence[ActionRequest | ControlAction | str | Mapping[str, Any]] = ()
@@ -168,6 +170,7 @@ class ProductTrace:
             "request_id": self.request_id,
             "diagnostics": _to_jsonable(self.diagnostics),
             "claims": [_claim_to_dict(claim) for claim in self.claims],
+            "verification_plan": _verification_plan_to_dict(self.verification_plan),
             "verification_results": [
                 _verification_result_to_dict(result) for result in self.verification_results
             ],
@@ -257,6 +260,7 @@ class ProductTrace:
                 claim_count=len(prepared.claims),
                 verification_result_count=len(prepared.verification_results),
             ),
+            "verification_plan": _verification_plan_summary(prepared.verification_plan),
         }
         payload = {
             "schema_version": 1,
@@ -341,6 +345,7 @@ class ProductTrace:
 class _PreparedTracePayload:
     diagnostics: Any
     claims: tuple[dict[str, Any], ...]
+    verification_plan: dict[str, Any] | None
     verification_results: tuple[dict[str, Any], ...]
     risk_decision: dict[str, Any] | None
     actions: tuple[Any, ...]
@@ -354,6 +359,7 @@ def _prepare_trace_payload(trace: ProductTrace) -> _PreparedTracePayload:
     return _PreparedTracePayload(
         diagnostics=_to_jsonable(trace.diagnostics),
         claims=tuple(_claim_to_dict(claim) for claim in trace.claims),
+        verification_plan=_verification_plan_to_dict(trace.verification_plan),
         verification_results=tuple(
             _verification_result_to_dict(result)
             for result in trace.verification_results
@@ -554,6 +560,47 @@ def _verification_stage_summary_from_payload(
     }
 
 
+def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]:
+    if plan is None:
+        return {
+            "available": False,
+            "run_verifier": None,
+            "verification_scope": None,
+            "claim_count": 0,
+            "verify_claim_count": 0,
+            "skipped_claim_count": 0,
+            "triggered_claim_count": 0,
+            "route_counts": {},
+            "tool_payload_counts": {},
+            "dependency_count": 0,
+        }
+    route_counts: dict[str, int] = {}
+    for hint in _as_sequence(plan.get("route_hints", ())):
+        if not isinstance(hint, Mapping):
+            continue
+        for route in _as_sequence(hint.get("routes", ())):
+            route_name = str(route)
+            route_counts[route_name] = route_counts.get(route_name, 0) + 1
+    return {
+        "available": True,
+        "run_verifier": _optional_bool(plan.get("run_verifier")),
+        "verification_scope": plan.get("verification_scope"),
+        "reason": plan.get("reason"),
+        "claim_count": len(_as_sequence(plan.get("claims", ()))),
+        "verify_claim_count": len(_as_sequence(plan.get("verify_claim_ids", ()))),
+        "skipped_claim_count": len(_as_sequence(plan.get("skipped_claim_ids", ()))),
+        "triggered_claim_count": len(_as_sequence(plan.get("triggered_claim_ids", ()))),
+        "route_counts": route_counts,
+        "tool_payload_counts": {
+            "retrieval_queries": len(_as_sequence(plan.get("retrieval_queries", ()))),
+            "calculation_checks": len(_as_sequence(plan.get("calculation_checks", ()))),
+            "state_checks": len(_as_sequence(plan.get("state_checks", ()))),
+            "world_model_checks": len(_as_sequence(plan.get("world_model_checks", ()))),
+        },
+        "dependency_count": len(_as_sequence(plan.get("dependencies", ()))),
+    }
+
+
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
         return {
@@ -563,6 +610,16 @@ def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
             "metadata": _to_jsonable(claim.metadata),
         }
     return dict(_to_jsonable(claim))
+
+
+def _verification_plan_to_dict(plan: ClaimVerificationPlan | Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if plan is None:
+        return None
+    if isinstance(plan, ClaimVerificationPlan):
+        return plan.to_dict()
+    if isinstance(plan, Mapping):
+        return dict(_to_jsonable(plan))
+    raise ValueError("verification_plan must be a ClaimVerificationPlan, mapping, or None.")
 
 
 def _verification_result_to_dict(result: VerificationResult | Mapping[str, Any]) -> dict[str, Any]:

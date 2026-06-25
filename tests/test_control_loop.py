@@ -387,6 +387,54 @@ def test_staged_verification_loop_can_verify_only_triggered_claims():
     assert summary["skipped_claim_ids"] == ("c1", "c3")
 
 
+def test_verification_loop_records_claim_verification_plan():
+    claims = (
+        Claim("Paris is a city.", claim_id="c1"),
+        Claim(
+            "AlphaCorp has 10 offices.",
+            claim_id="c2",
+            metadata={
+                "features": {"has_number": True},
+                "retrieval_query": "AlphaCorp offices official count",
+            },
+        ),
+        Claim(
+            "2 plus 2 is 5.",
+            claim_id="c3",
+            metadata={"calculation": {"expression": "2 + 2", "expected": 5}},
+        ),
+    )
+
+    result = run_verification_loop(
+        request_id="req-plan-loop",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=_CountingVerifier(status=VerificationStatus.INSUFFICIENT_EVIDENCE),
+        controller=RiskController(_artifact()),
+        stage_policy=StagedVerificationPolicy(
+            verify_claim_feature_flags=("has_number",),
+            verify_triggered_claims_only=True,
+        ),
+    )
+
+    plan = result.claim_verification_plan
+    assert plan is not None
+    assert plan.verification_scope == "triggered"
+    assert plan.verify_claim_ids == ("c2",)
+    assert plan.skipped_claim_ids == ("c1", "c3")
+    assert plan.triggered_claim_ids == ("c2",)
+    assert plan.retrieval_queries[0]["query"] == "AlphaCorp offices official count"
+    assert plan.calculation_checks[0]["expression"] == "2 + 2"
+
+    trace_payload = result.trace.to_dict()
+    assert trace_payload["verification_plan"]["verification_scope"] == "triggered"
+    assert trace_payload["verification_plan"]["verify_claim_ids"] == ("c2",)
+    assert trace_payload["metadata"]["claim_verification_plan"]["verify_claim_count"] == 1
+    assert trace_payload["events"][0]["event_type"] == "diagnostic_risk_decision"
+    assert any(event["event_type"] == "claim_verification_plan" for event in trace_payload["events"])
+    assert result.to_dict()["claim_verification_plan"]["skipped_claim_ids"] == ("c1", "c3")
+
+
 def test_verification_loop_can_enforce_claim_coherence_for_triggered_subset():
     claims = (
         Claim("The trial was randomized.", claim_id="c1"),
