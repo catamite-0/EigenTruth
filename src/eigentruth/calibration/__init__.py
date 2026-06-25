@@ -10,6 +10,8 @@ from __future__ import annotations
 from eigentruth.calibration.artifacts import CalibrationArtifact, CalibrationScore, SteeringPolicyConfig
 from eigentruth.calibration.calibrator import AdaptiveConformalCalibrator, ConformalCalibrator
 from eigentruth.calibration.fusion import (
+    GeometryScoreFusionArtifact,
+    GeometryScoreFusionCalibrator,
     RankScoreFusionArtifact,
     RankScoreFusionCalibrator,
     ScoreFusionSignal,
@@ -28,6 +30,8 @@ __all__ = [
     "CalibrationScore",
     "ConformalCalibrator",
     "DEFAULT_SCORE_DIRECTIONS",
+    "GeometryScoreFusionArtifact",
+    "GeometryScoreFusionCalibrator",
     "LayerScoreSweepCalibrator",
     "LayerScoreSweepReport",
     "LayerScoreSweepResult",

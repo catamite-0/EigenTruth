@@ -64,9 +64,12 @@ from eigentruth.eval.score_dump import (
     write_score_dump_jsonl_mapping,
 )
 from eigentruth.eval.score_fusion import (
+    GEOMETRY_UNCERTAINTY_FUSION_METHODS,
     RANK_SCORE_FUSION_METHODS,
+    combine_geometry_uncertainty_scores,
     combine_rank_anomaly_scores,
     directional_rank_anomaly_scores,
+    geometry_calibrated_anomaly_scores,
     native_anomaly_scores,
 )
 
@@ -99,10 +102,13 @@ __all__ = [
     "directional_conformal_threshold",
     "directional_conformal_thresholds",
     "directional_trigger_rate",
+    "GEOMETRY_UNCERTAINTY_FUSION_METHODS",
     "RANK_SCORE_FUSION_METHODS",
     "native_anomaly_scores",
     "directional_rank_anomaly_scores",
     "combine_rank_anomaly_scores",
+    "combine_geometry_uncertainty_scores",
+    "geometry_calibrated_anomaly_scores",
     "ScoreDump",
     "ScoreDumpColumns",
     "ScoreDumpIdentity",

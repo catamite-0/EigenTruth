@@ -74,8 +74,14 @@ Added dependency-free fact-level claim metadata:
 - `ClaimVerificationPlanner(include_extracted_triples=True)` routes those extracted triples into the existing `triple_evidence` path, so local fact-level audits can be planned before a stronger extractor is available.
 - The API keeps stronger extraction optional through the existing claim and triple extractor protocols.
 
+Added a geometry-calibrated score primitive:
+
+- `geometry_calibrated_anomaly_scores(...)` rank-calibrates representation geometry signals and uncertainty/confidence proxies against normal calibration records, then fuses them with an explicit interaction term.
+- `GeometryScoreFusionArtifact` and `GeometryScoreFusionCalibrator` make that score deployable as a conformal artifact without changing score-dump schemas or adding dependencies.
+- The next empirical step is wiring this artifact into `eval_score_ensemble.py` or a dedicated score-fusion report, then comparing it against single `truth_proj`, naive rank fusion, and staged verifier evidence on the existing Qwen/SmolLM2 score dumps.
+
 ## Next Research-to-Code Candidates
 
-1. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
+1. Wire geometry-calibrated fusion into benchmark reports and release evidence, then compare it against `truth_proj`, naive rank fusion, and staged verifier routing.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
 3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.

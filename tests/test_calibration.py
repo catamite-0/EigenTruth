@@ -11,11 +11,17 @@ from eigentruth.calibration import (
     CalibrationArtifact,
     CalibrationScore,
     ConformalCalibrator,
+    GeometryScoreFusionArtifact,
+    GeometryScoreFusionCalibrator,
     RankScoreFusionArtifact,
     RankScoreFusionCalibrator,
     SteeringPolicyConfig,
 )
-from eigentruth.eval import AdaptiveScoreTransform
+from eigentruth.eval import (
+    AdaptiveScoreTransform,
+    combine_geometry_uncertainty_scores,
+    geometry_calibrated_anomaly_scores,
+)
 
 
 def test_artifact_json_roundtrip(tmp_path):
@@ -195,3 +201,97 @@ def test_rank_score_fusion_rejects_fractional_and_bool_labels():
         calibrator.calibrate(labels=[0.0, 0.9, 1.0], scores={"maha": [0.0, 0.1, 1.0]})
     with pytest.raises(ValueError, match="bool"):
         calibrator.calibrate(labels=[False, 0, 1], scores={"maha": [0.0, 0.1, 1.0]})
+
+
+def test_geometry_uncertainty_fusion_scores_joint_anomaly_higher():
+    geometry = [0.9, 0.9, 0.2]
+    uncertainty = [0.1, 0.9, 0.9]
+
+    interaction = combine_geometry_uncertainty_scores(
+        geometry,
+        uncertainty,
+        method="interaction",
+        interaction_weight=2.0,
+    )
+    product = combine_geometry_uncertainty_scores(geometry, uncertainty, method="product")
+
+    assert interaction[1] > interaction[0]
+    assert interaction[1] > interaction[2]
+    assert product.tolist() == pytest.approx([0.09, 0.81, 0.18])
+
+
+def test_geometry_calibrated_anomaly_scores_uses_directional_rank_groups():
+    calibration_scores = {
+        "subspace_resid": [0.0, 1.0, 2.0, 3.0],
+        "support_confidence": [10.0, 9.0, 8.0, 7.0],
+    }
+    scores = {
+        "subspace_resid": [0.0, 3.5],
+        "support_confidence": [10.0, 0.0],
+    }
+
+    fused = geometry_calibrated_anomaly_scores(
+        calibration_scores=calibration_scores,
+        scores=scores,
+        geometry_signals=("subspace_resid",),
+        uncertainty_signals=("support_confidence",),
+        directions={"subspace_resid": "higher", "support_confidence": "lower"},
+    )
+
+    assert fused[1] > fused[0]
+    assert fused.tolist() == pytest.approx([0.1875, 1.0])
+
+
+def test_geometry_score_fusion_artifact_roundtrip_and_flags(tmp_path):
+    labels = [0, 0, 0, 0, 1, 1]
+    scores = {
+        "subspace_resid": [0.0, 1.0, 2.0, 3.0, 6.0, 4.0],
+        "support_confidence": [10.0, 9.0, 8.0, 7.0, 2.0, 0.0],
+    }
+    calibrator = GeometryScoreFusionCalibrator(alpha=0.4, interaction_weight=2.0)
+    artifact = calibrator.calibrate(
+        labels=labels,
+        scores=scores,
+        geometry_signals=("subspace_resid",),
+        uncertainty_signals=("support_confidence",),
+        directions={"subspace_resid": "higher", "support_confidence": "lower"},
+        model_id="synthetic",
+        target_layer=-2,
+        score_dump_metadata={"sha256": "geometry"},
+    )
+
+    path = tmp_path / "geometry-fusion.json"
+    artifact.save_json(path)
+    loaded = GeometryScoreFusionArtifact.load_json(path)
+    fused = loaded.score(scores)
+    flags = loaded.flags(scores)
+    evaluation = calibrator.evaluate(
+        labels=labels,
+        scores=scores,
+        geometry_signals=("subspace_resid",),
+        uncertainty_signals=("support_confidence",),
+        directions={"subspace_resid": "higher", "support_confidence": "lower"},
+    )
+
+    assert loaded == artifact
+    assert loaded.signal_names() == ("subspace_resid", "support_confidence")
+    assert loaded.threshold == pytest.approx(0.65625)
+    assert flags.tolist() == [False, False, False, True, True, True]
+    assert fused[-1] > fused[0]
+    assert evaluation["false_alarm"] == pytest.approx(0.25)
+    assert evaluation["detection"] == pytest.approx(1.0)
+    assert evaluation["auroc"] > 0.5
+
+
+def test_geometry_score_fusion_rejects_overlapping_groups_and_bad_weights():
+    calibrator = GeometryScoreFusionCalibrator(alpha=0.4)
+
+    with pytest.raises(ValueError, match="overlap"):
+        calibrator.calibrate(
+            labels=[0, 1],
+            scores={"score": [0.0, 1.0]},
+            geometry_signals=("score",),
+            uncertainty_signals=("score",),
+        )
+    with pytest.raises(ValueError, match="geometry_weight"):
+        GeometryScoreFusionCalibrator(geometry_weight=-1.0)
