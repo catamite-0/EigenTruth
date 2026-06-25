@@ -99,6 +99,11 @@ representation-observability toolkit spanning **training and inference**.
 - **Accept:** at least one telemetry curve cleanly separates the two runs before eval loss does.
 - **Deliverable:** `eigentruth.training` module + demo notebook/script + tests.
 - **Cost:** medium. Depends on: E2 (rank), E3 (distance) preferred but not required.
+  **Status:** `eigentruth.training` foundation landed as a dependency-free
+  telemetry recorder. Synthetic clean-vs-corrupt hidden-state trajectories are
+  separated by distance-to-baseline growth and effective-rank collapse. This
+  accepts the telemetry primitive and synthetic sanity gate; the real tiny-model
+  fine-tune comparison remains pending.
 
 ### E6. Model-collapse early warning (synthetic-data loop)
 - **Question:** Does representation diversity (eff-rank / ID) decay monotonically when a
@@ -148,7 +153,7 @@ representation-observability toolkit spanning **training and inference**.
 | E2 | 2026-06-25 | **ACCEPT shrinkage**: spectrum diagnostics and OAS-style shrinkage mode landed; tiny offline matrix smoke passes; l80 cache-only covariance gate promotes `shrinkage` for both Qwen and SmolLM2. Qwen also accepts `low_rank_16`; SmolLM2 rejects `low_rank_16` at the 0.01 `maha_last` AUROC-drop gate; both reject `diag`. | `TruthManifold.spectrum()` / `covariance_spectrum()` / `covariance_shrinkage_intensity()` unit tests; `eval_truthfulqa.py --include-layer-spectra` tests; `artifacts/tiny_covariance_shrinkage_matrix/cache-profile-matrix-report.json`; `artifacts/truthfulqa-frontier-covariance-gate-l80/covariance-mode-gate-report.json` |
 | E3 | 2026-06-25 | **ACCEPT initial locality**: dependency-free Gaussian 2-Wasserstein/Bures distance added for tensor Gaussians and `TruthManifold` objects; synthetic metric-property tests pass. Cached l80 Qwen/SmolLM2 reports show adjacent monitored layers closer than distant layers for both `full` and `shrinkage` covariance, with nearest-adjacent fraction 1.0. Treat as accepted for coarse layer/checkpoint drift inspection; run a denser layer matrix before using it as a fine-grained training diagnostic. | `gaussian_wasserstein_distance()` / `manifold_distance()` / `manifold_wasserstein_distance()` unit tests; `benchmarks/compare_manifold_distances.py`; `artifacts/e3-manifold-distance-sanity/e3-manifold-distance-sanity-summary.json` |
 | E4 | 2026-06-25 | **ACCEPT top-3 layer-band predictor**: `eigentruth.eval.intrinsic_dimension` implements dependency-free TwoNN ID without `torch.cdist`; synthetic 1D/2D/5D ordering tests pass. Cached l80 Qwen and SmolLM2 factual warmup profiles both rise then fall and peak at `-14`. The ID peak lands in the TruthfulQA `truth_proj` AUROC top-3 for both l80 runs (`peak_in_top_k_rate=1.0`); exact best-layer rate is 0.0, so this is a coarse layer-band selector, not an exact layer oracle. | `twonn_intrinsic_dimension()` / `intrinsic_dimension_profile()` unit tests; `benchmarks/eval_intrinsic_dimension.py`; `benchmarks/compare_intrinsic_dimension_layers.py`; `artifacts/e4-intrinsic-dimension-l80/intrinsic-dimension-report.json`; `artifacts/e4-intrinsic-dimension-l80/intrinsic-layer-prediction-report.json` |
-| E5 | | pending | |
+| E5 | 2026-06-25 | **FOUNDATION ACCEPT / REAL FINE-TUNE PENDING**: `eigentruth.training` adds a dependency-free `RepresentationTelemetryRecorder` with per-layer mean norm, variance trace, spectrum rank diagnostics, and Gaussian 2-Wasserstein/Bures distance to an initialization baseline. Synthetic clean-vs-corrupt trajectories pass the sanity gate: corrupt final distance 1.920 vs clean 0.086, effective rank 7.865 vs 11.327. Real tiny-model clean/corrupt fine-tune telemetry remains the next validation. | `RepresentationTelemetryRecorder` / `representation_telemetry_snapshot()` unit tests; `benchmarks/training_telemetry_sanity.py`; `artifacts/e5-training-telemetry-sanity/training-telemetry-sanity-report.json` |
 | E6 | | pending | |
 | E7 | | pending | |
 | E8 | | pending | |

@@ -37,12 +37,24 @@ from eigentruth.core.math_engine import (
 from eigentruth.core.subspace import TruthSubspace
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.models.wrapper import EigenTruthWrapper
+from eigentruth.training import (
+    RepresentationTelemetryRecorder,
+    RepresentationTelemetryReport,
+    RepresentationTelemetrySnapshot,
+    build_representation_manifold,
+    representation_telemetry_snapshot,
+)
 
 __all__ = [
     "EigenTruthWrapper",
     "TruthProbe",
     "TruthManifold",
     "TruthSubspace",
+    "RepresentationTelemetryRecorder",
+    "RepresentationTelemetryReport",
+    "RepresentationTelemetrySnapshot",
+    "build_representation_manifold",
+    "representation_telemetry_snapshot",
     "COVARIANCE_MODES",
     "CovarianceSpectrum",
     "covariance_shrinkage_intensity",

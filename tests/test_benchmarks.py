@@ -2313,6 +2313,39 @@ def test_compare_intrinsic_dimension_layers_marks_missing_sweep(tmp_path):
     assert "no sweep report matched" in payload["runs"][0]["missing_reason"]
 
 
+def test_training_telemetry_sanity_separates_clean_and_corrupt_runs(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.training_telemetry_sanity")
+    report_path = tmp_path / "training-telemetry.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        sample_count=96,
+        hidden_dim=10,
+        layers=(-2, -1),
+        steps=5,
+        seed=123,
+        covariance_mode="shrinkage",
+        target_layer=-1,
+        min_distance_margin=1.0,
+        min_rank_margin=1.0,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+    summary = payload["summary"]
+    clean_final = payload["runs"]["clean"]["summary"]["final_by_layer"]["-1"]
+    corrupt_final = payload["runs"]["corrupt"]["summary"]["final_by_layer"]["-1"]
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert summary["status"] == "pass"
+    assert summary["separated"] is True
+    assert summary["corrupt_final_distance"] > summary["clean_final_distance"]
+    assert summary["clean_final_effective_rank"] > summary["corrupt_final_effective_rank"]
+    assert corrupt_final["distance_to_baseline"] > clean_final["distance_to_baseline"]
+    assert clean_final["effective_rank"] > corrupt_final["effective_rank"]
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
