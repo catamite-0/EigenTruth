@@ -1011,6 +1011,28 @@ python benchmarks/eval_verifier_ensemble.py \
   --json artifacts/tiny_selfcheck_verifier_ensemble_report.json
 ```
 
+When the question is whether sampled responses are useful as calibrated
+diagnostic signals by themselves, `build_selfcheck_signal_score_dump.py` skips
+the verifier sidecar and appends direct self-consistency columns to the score
+dump:
+
+```bash
+python benchmarks/build_selfcheck_signal_score_dump.py \
+  --scores artifacts/tiny_scores_with_samples.json \
+  --samples artifacts/external_sampled_generations.json \
+  --keep-signals truth_proj,maha_last,subspace_resid,eigenscore,nll_answer \
+  --output artifacts/tiny_selfcheck_signal_scores.manifest.json \
+  --output-format jsonl \
+  --json artifacts/tiny_selfcheck_signal_report.json
+
+python benchmarks/eval_score_ensemble.py \
+  --scores tiny=artifacts/tiny_selfcheck_signal_scores.manifest.json \
+  --signals truth_proj,selfcheck_support_rate,selfcheck_refute_rate,selfcheck_disagreement,selfcheck_not_applicable,selfcheck_best_overlap \
+  --methods max_rank,mean_rank \
+  --alphas 0.05,0.1,0.2 \
+  --json artifacts/tiny_selfcheck_signal_ensemble_report.json
+```
+
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops
 judging samples once the finite sample budget can no longer change the final

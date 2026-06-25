@@ -1053,6 +1053,7 @@ evidence, not as the default low-latency path.
    database, calculator, and world-model evidence under the same conformal
    false-alarm budgets. Use `benchmarks/build_evidence_fixture.py` with a local
    corpus as the reproducible non-oracle baseline before networked retrieval,
+   convert aligned sampled responses with `build_selfcheck_signal_score_dump.py`,
    and compare every new signal against the text/length redline artifact.
 8. Use `CalculatorVerifier` for arithmetic claims once extraction or upstream
    tools provide structured `expression` / `expected` metadata; it is a

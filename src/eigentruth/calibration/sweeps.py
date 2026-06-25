@@ -47,9 +47,13 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "verifier_refute_confidence": "higher",
     "verifier_uncertainty": "higher",
     "verifier_no_retrieval_hit": "higher",
+    "selfcheck_support_rate": "lower",
     "selfcheck_refute_rate": "higher",
     "selfcheck_disagreement": "higher",
     "selfcheck_insufficient": "higher",
+    "selfcheck_not_applicable": "higher",
+    "selfcheck_sample_count": "lower",
+    "selfcheck_best_overlap": "lower",
 }
 
 

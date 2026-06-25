@@ -125,6 +125,18 @@ Added a text/length redline baseline for detector claims:
   requiring future verifier/retrieval/selfcheck features to beat simple text
   artifacts under the same false-alarm budget.
 
+Added the missing direct selfcheck signal bridge:
+
+- `build_selfcheck_signal_score_dump.py` turns aligned sampled responses into
+  `selfcheck_support_rate`, `selfcheck_refute_rate`, `selfcheck_disagreement`,
+  coverage, and overlap score columns using the existing dependency-free
+  `SelfConsistencyVerifier`.
+- This lets future `eval_truthfulqa.py --dump-inside-samples` or external sample
+  artifacts be evaluated as standalone conformal signals, compared against the
+  text/length redline, and then optionally fused with representation geometry.
+- Current committed l80 artifacts do not contain sampled response text, so this
+  is an implementation bridge rather than a new l80 performance claim.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against the text/length redline artifact.

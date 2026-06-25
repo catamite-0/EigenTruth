@@ -51,12 +51,15 @@ DEFAULT_FUSION_SIGNALS = (
     "verifier_refute_confidence",
     "verifier_uncertainty",
     "selfcheck_refute_rate",
+    "selfcheck_disagreement",
 )
 DEFAULT_GEOMETRY_SIGNALS = ("truth_proj", "subspace_resid", "eigenscore")
 DEFAULT_UNCERTAINTY_SIGNALS = (
     "verifier_refuted",
     "verifier_refute_confidence",
     "verifier_not_supported",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
 )
 
 

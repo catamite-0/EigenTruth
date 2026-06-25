@@ -2961,6 +2961,78 @@ def test_build_selfcheck_fixture_aligns_external_samples(tmp_path):
     assert fixture["records"][1]["metadata"]["selfcheck"]["meets_min_samples"] is True
 
 
+def test_build_selfcheck_signal_score_dump_from_aligned_samples(tmp_path):
+    module = importlib.import_module("benchmarks.build_selfcheck_signal_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
+    from eigentruth.eval.score_dump import load_score_dump
+
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    output_path = tmp_path / "selfcheck-signals.manifest.json"
+    report_path = tmp_path / "selfcheck-signal-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.8, 0.6]},
+            "statements": [
+                {"text": "Paris is the capital of France.", "claim_id": "paris"},
+                {"text": "Lyon is the capital of France in 2024.", "claim_id": "lyon"},
+                {"text": "Water boils at 100 degrees Celsius.", "claim_id": "water"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(
+        json.dumps({
+            "paris": [
+                "Paris is the capital of France.",
+                "Paris is the capital of France and a city.",
+            ],
+            "lyon": [
+                "Lyon is not the capital of France in 2024.",
+                "No, Lyon is not the capital of France in 2024.",
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    report = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            samples=[str(samples_path)],
+            output=str(output_path),
+            output_format="jsonl",
+            keep_signals="truth_proj",
+            selfcheck_signals=None,
+            min_samples=2,
+            min_overlap=0.50,
+            support_threshold=0.60,
+            refute_threshold=0.50,
+            early_stop=False,
+            max_samples=None,
+            json=str(report_path),
+        )
+    )
+    enhanced = load_score_dump(
+        output_path,
+        required_scores=("selfcheck_support_rate", "selfcheck_refute_rate", "selfcheck_not_applicable"),
+    )
+    saved_report = json.loads(report_path.read_text(encoding="utf-8"))
+
+    assert report["n_total"] == 3
+    assert saved_report["selfcheck_signals"] == list(module.DEFAULT_SELFCHECK_SIGNALS)
+    assert enhanced.scores["selfcheck_support_rate"] == pytest.approx((1.0, 0.0, 0.0))
+    assert enhanced.scores["selfcheck_refute_rate"] == pytest.approx((0.0, 1.0, 0.0))
+    assert enhanced.scores["selfcheck_not_applicable"] == pytest.approx((0.0, 0.0, 1.0))
+    assert enhanced.scores["selfcheck_sample_count"] == pytest.approx((2.0, 2.0, 0.0))
+    assert enhanced.scores["selfcheck_best_overlap"][0] == pytest.approx(1.0)
+    assert enhanced.config["selfcheck_signal_score_dump"]["sample_paths"] == [str(samples_path)]
+    assert enhanced.extras["selfcheck_signal_metadata"]["fixture_summary"]["records_meeting_min_samples"] == 2
+    assert DEFAULT_SCORE_DIRECTIONS["selfcheck_support_rate"] == "lower"
+    assert DEFAULT_SCORE_DIRECTIONS["selfcheck_sample_count"] == "lower"
+
+
 def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
