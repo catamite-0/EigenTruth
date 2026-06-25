@@ -8186,6 +8186,10 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         blocked_route="retrieval_groundedness",
         routes=("structured_qa", "structured_state", "state_transition", "retrieval_groundedness"),
     )
+    missing_audit_matrix_path = _write_adapter_family_matrix(
+        tmp_path / "missing-audit-adapter-family-matrix.json",
+        routes=("structured_qa", "structured_state", "state_transition"),
+    )
 
     promoted = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -8198,6 +8202,17 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         adapter_family_matrix_path=matrix_path,
         required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
     )
+    profiled = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        adapter_family_matrix_path=matrix_path,
+        adapter_family_profile="strict_audit",
+    )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         min_best_quality_auroc=0.70,
@@ -8208,6 +8223,17 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         min_false_refuted_rate=0.99,
         adapter_family_matrix_path=blocked_matrix_path,
         required_adapter_routes=("retrieval_groundedness",),
+    )
+    blocked_profile = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        adapter_family_matrix_path=missing_audit_matrix_path,
+        adapter_family_profile="strict-audit",
     )
 
     assert promoted["decision"]["status"] == "promote"
@@ -8222,6 +8248,18 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     assert promoted["release_candidate"]["adapter_family_matrix"]["matrix_path"] == str(matrix_path)
     assert promoted["release_candidate"]["adapter_family_matrix"]["audit_routes"] == ("triple_evidence",)
     assert promoted["release_candidate"]["manifests"]["adapter_family_matrix_report"] == str(matrix_path)
+    assert profiled["decision"]["status"] == "promote"
+    assert profiled["config"]["adapter_family_profile"] == "strict_audit"
+    assert profiled["config"]["adapter_family_profile_required_routes"] == [
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    ]
+    assert profiled["decision"]["required_adapter_routes"] == (
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    )
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
     assert blocked["decision"]["blocking_reasons"][0]["gate"] == "adapter_family_matrix"
@@ -8229,6 +8267,22 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         "required adapter route 'retrieval_groundedness' status is 'blocked'" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
     )
+    assert blocked_profile["decision"]["status"] == "blocked"
+    assert any(
+        "required adapter route 'triple_evidence' is missing from matrix" in reason
+        for reason in blocked_profile["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    with pytest.raises(ValueError, match="adapter_family_profile requires adapter_family_matrix_path"):
+        module.compare_release_candidates(
+            readiness_registry_path=registry_path,
+            adapter_family_profile="strict_audit",
+            min_best_quality_auroc=0.70,
+            max_uncached_forward_seconds=20.0,
+            min_selected=4,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+        )
 
 
 def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
@@ -9256,9 +9310,11 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         name="unit-release",
         version="0.1",
         manifest_fingerprint_workers="2",
+        adapter_family_profile="strict-audit",
     )
 
     assert config.manifest_fingerprint_workers == 2
+    assert config.adapter_family_profile == "strict_audit"
 
     with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
         module.ReleaseCandidateRegistryWorkflowConfig(
@@ -9275,6 +9331,14 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
             name="unit-release",
             version="0.1",
             manifest_fingerprint_workers=True,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValueError, match="adapter_family_profile"):
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            adapter_family_profile="unknown",
         )
 
 
@@ -9315,14 +9379,17 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             verification_report_path=tmp_path / "verification.json",
             manifest_fingerprint_workers=3,
             recursive=False,
+            adapter_family_profile="strict_audit",
         )
     )
 
     assert captured["recursive"] is False
     assert captured["manifest_fingerprint_workers"] == 3
     assert compare_captured["manifest_fingerprint_workers"] == 3
+    assert compare_captured["adapter_family_profile"] == "strict_audit"
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
+    assert payload["config"]["adapter_family_profile"] == "strict_audit"
     assert payload["decision"]["status"] == "promote"
 
 

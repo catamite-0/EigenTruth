@@ -1573,8 +1573,7 @@ python benchmarks/compare_release_candidates.py \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
-  --required-adapter-route structured_state \
-  --required-adapter-route state_transition \
+  --adapter-family-profile strict_audit \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -1700,9 +1699,10 @@ Add `--adapter-family-matrix` when release should also require a promoted
 adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
 `--required-adapter-route` for routes that must be present and promoted in that
 matrix, such as `structured_state`, `state_transition`, or
-`retrieval_groundedness`. This keeps retrieval/database/world-model adapter work
-inside the same fail-closed release gate instead of treating it as a separate
-benchmark note.
+`retrieval_groundedness`, or use `--adapter-family-profile strict_audit` to
+require `structured_state`, `state_transition`, and `triple_evidence` together.
+This keeps retrieval/database/world-model/audit adapter work inside the same
+fail-closed release gate instead of treating it as a separate benchmark note.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.
@@ -1773,8 +1773,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
-  --required-adapter-route structured_state \
-  --required-adapter-route state_transition \
+  --adapter-family-profile strict_audit \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \

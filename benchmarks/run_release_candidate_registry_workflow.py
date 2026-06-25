@@ -16,7 +16,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from benchmarks.compare_release_candidates import compare_release_candidates  # noqa: E402
+from benchmarks.compare_release_candidates import (  # noqa: E402
+    ADAPTER_FAMILY_PROFILE_NAMES,
+    compare_release_candidates,
+)
 from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
@@ -60,6 +63,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     feedback_policy_min_safety_coverage: float | None = None
     feedback_policy_max_unknown_safety_issue_rate: float | None = None
     adapter_family_matrix_path: Path | None = None
+    adapter_family_profile: str | None = None
     required_adapter_routes: Sequence[str] = ()
     require_performance_score_dump_cache: bool = False
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
@@ -200,6 +204,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
         if self.runtime_profile is not None:
             profile = get_runtime_profile(self.runtime_profile)
             object.__setattr__(self, "runtime_profile", profile.name)
+        if self.adapter_family_profile is not None:
+            profile = str(self.adapter_family_profile).strip().lower().replace("-", "_")
+            if profile not in ADAPTER_FAMILY_PROFILE_NAMES:
+                choices = ", ".join(ADAPTER_FAMILY_PROFILE_NAMES)
+                raise ValueError(f"adapter_family_profile must be one of: {choices}")
+            object.__setattr__(self, "adapter_family_profile", profile)
         if self.inside_trigger_budget_policy is not None:
             policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
             if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
@@ -280,6 +290,7 @@ def run_release_candidate_registry_workflow(
         feedback_policy_min_safety_coverage=config.feedback_policy_min_safety_coverage,
         feedback_policy_max_unknown_safety_issue_rate=config.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=config.adapter_family_matrix_path,
+        adapter_family_profile=config.adapter_family_profile,
         required_adapter_routes=config.required_adapter_routes,
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
@@ -458,6 +469,7 @@ def run_release_candidate_registry_workflow(
                 if config.adapter_family_matrix_path is None
                 else str(config.adapter_family_matrix_path)
             ),
+            "adapter_family_profile": config.adapter_family_profile,
             "required_adapter_routes": tuple(config.required_adapter_routes),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
@@ -947,6 +959,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             "unknown_safety_issue_rate"
         ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
+        "adapter_family_profile": config.get("adapter_family_profile"),
+        "adapter_family_profile_required_routes": config.get("adapter_family_profile_required_routes"),
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_retrieval_routes": adapter_family.get("retrieval_routes"),
         "adapter_family_audit_routes": adapter_family.get("audit_routes"),
@@ -1137,6 +1151,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         feedback_policy_min_safety_coverage=args.feedback_policy_min_safety_coverage,
         feedback_policy_max_unknown_safety_issue_rate=args.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
+        adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
@@ -1289,6 +1304,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional maximum unknown safety issue rate forwarded to the feedback-policy gate")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
+    parser.add_argument("--adapter-family-profile", default=None,
+                        choices=ADAPTER_FAMILY_PROFILE_NAMES,
+                        help="optional adapter-family route profile; strict_audit requires structured_state, "
+                             "state_transition, and triple_evidence routes")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",

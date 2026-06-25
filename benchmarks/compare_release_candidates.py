@@ -30,6 +30,11 @@ from eigentruth.registry import (  # noqa: E402
     ArtifactVerificationContext,
 )
 
+ADAPTER_FAMILY_PROFILES: Mapping[str, tuple[str, ...]] = {
+    "strict_audit": ("structured_state", "state_transition", "triple_evidence"),
+}
+ADAPTER_FAMILY_PROFILE_NAMES = tuple(sorted(ADAPTER_FAMILY_PROFILES))
+
 
 def compare_release_candidates(
     *,
@@ -56,6 +61,7 @@ def compare_release_candidates(
     feedback_policy_min_safety_coverage: float | None = None,
     feedback_policy_max_unknown_safety_issue_rate: float | None = None,
     adapter_family_matrix_path: str | Path | None = None,
+    adapter_family_profile: str | None = None,
     required_adapter_routes: Sequence[str] = (),
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
@@ -209,6 +215,10 @@ def compare_release_candidates(
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(
         inside_trigger_budget_policy
     )
+    adapter_profile_name, adapter_profile_routes = _adapter_family_profile_routes(adapter_family_profile)
+    required_adapter_routes = _merge_routes(adapter_profile_routes, required_adapter_routes)
+    if adapter_profile_name is not None and adapter_family_matrix_path is None:
+        raise ValueError("adapter_family_profile requires adapter_family_matrix_path.")
     product_trace_replay_workflow_source = _resolve_product_trace_replay_workflow_source(
         product_trace_replay_workflow_path=product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=(
@@ -486,6 +496,8 @@ def compare_release_candidates(
             "feedback_policy_min_safety_coverage": feedback_policy_min_safety_coverage,
             "feedback_policy_max_unknown_safety_issue_rate": feedback_policy_max_unknown_safety_issue_rate,
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
+            "adapter_family_profile": adapter_profile_name,
+            "adapter_family_profile_required_routes": list(adapter_profile_routes),
             "required_adapter_routes": list(required_adapter_routes),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
@@ -2980,6 +2992,29 @@ def _apply_runtime_profile(
     return profile, merged, applied
 
 
+def _adapter_family_profile_routes(profile: str | None) -> tuple[str | None, tuple[str, ...]]:
+    if profile is None:
+        return None, ()
+    normalized = str(profile).strip().lower().replace("-", "_")
+    if normalized not in ADAPTER_FAMILY_PROFILES:
+        choices = ", ".join(ADAPTER_FAMILY_PROFILE_NAMES)
+        raise ValueError(f"adapter_family_profile must be one of: {choices}")
+    return normalized, ADAPTER_FAMILY_PROFILES[normalized]
+
+
+def _merge_routes(*route_groups: Sequence[str]) -> tuple[str, ...]:
+    routes = []
+    seen = set()
+    for group in route_groups:
+        for route in group:
+            route_text = str(route).strip()
+            if not route_text or route_text in seen:
+                continue
+            routes.append(route_text)
+            seen.add(route_text)
+    return tuple(routes)
+
+
 def _normalize_inside_trigger_budget_policy(policy: str | None) -> str | None:
     if policy is None:
         return None
@@ -3044,6 +3079,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         feedback_policy_min_safety_coverage=args.feedback_policy_min_safety_coverage,
         feedback_policy_max_unknown_safety_issue_rate=args.feedback_policy_max_unknown_safety_issue_rate,
         adapter_family_matrix_path=args.adapter_family_matrix,
+        adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
@@ -3196,6 +3232,10 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional maximum unknown safety issue rate for the feedback-policy workflow gate")
     parser.add_argument("--adapter-family-matrix", default=None,
                         help="optional adapter-family matrix JSON report that must promote before release")
+    parser.add_argument("--adapter-family-profile", default=None,
+                        choices=ADAPTER_FAMILY_PROFILE_NAMES,
+                        help="optional adapter-family route profile; strict_audit requires structured_state, "
+                             "state_transition, and triple_evidence routes")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
