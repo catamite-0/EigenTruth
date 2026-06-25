@@ -10785,6 +10785,25 @@ def test_performance_baseline_smoke_writes_registered_baseline(tmp_path):
     ] == "promote"
 
 
+def test_release_candidate_registry_smoke_writes_promoted_and_blocked_reports(tmp_path):
+    module = importlib.import_module("benchmarks.release_candidate_registry_smoke")
+    registry_module = importlib.import_module("eigentruth.registry")
+
+    payload = module.build_release_candidate_registry_smoke(tmp_path)
+    registry = registry_module.ArtifactRegistry.load_json(tmp_path / "release-registry.json")
+
+    assert (tmp_path / "release_candidate_registry_promoted_workflow.json").exists()
+    assert (tmp_path / "release_candidate_registry_blocked_workflow.json").exists()
+    assert payload["promoted_report"]["decision"]["status"] == "promote"
+    assert payload["blocked_report"]["decision"]["status"] == "blocked"
+    assert payload["blocked_report"]["decision"]["manifest_promoted"] is False
+    assert registry.get("benchmark_manifest:release-candidate-smoke:0.1").metadata[
+        "workflow"
+    ] == "run_release_candidate_registry_workflow"
+    with pytest.raises(KeyError):
+        registry.get("benchmark_manifest:release-candidate-smoke-blocked:0.1")
+
+
 def test_performance_baseline_smoke_cli_defaults_to_tempdir(monkeypatch):
     module = importlib.import_module("benchmarks.performance_baseline_smoke")
     output_dirs = []
