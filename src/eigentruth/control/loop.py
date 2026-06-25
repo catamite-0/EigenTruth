@@ -192,7 +192,12 @@ def run_verification_loop(
     coherence_enabled = bool(enforce_claim_coherence or claim_dependencies is not None)
     if stage_policy is None:
         phase_started_at = _start_runtime_phase(profile_runtime)
-        initial_results = tuple(verifier.verify_many(initial_verification_claims, context=base_context))
+        initial_results = _verify_many_fail_closed(
+            verifier,
+            initial_verification_claims,
+            context=base_context,
+            phase="initial_verification",
+        )
         _record_runtime_phase(
             runtime_phases,
             "initial_verification",
@@ -249,7 +254,12 @@ def run_verification_loop(
             initial_skipped_claim_ids = tuple(stage_decision.skipped_claim_ids)
             initial_verification_scope = str(stage_decision.verification_scope)
             phase_started_at = _start_runtime_phase(profile_runtime)
-            initial_results = tuple(verifier.verify_many(initial_verification_claims, context=base_context))
+            initial_results = _verify_many_fail_closed(
+                verifier,
+                initial_verification_claims,
+                context=base_context,
+                phase="initial_verification",
+            )
             _record_runtime_phase(
                 runtime_phases,
                 "initial_verification",
@@ -477,6 +487,213 @@ def run_verification_loop(
     )
 
 
+def _verify_many_fail_closed(
+    verifier: Verifier,
+    claims: Sequence[Claim],
+    *,
+    context: Mapping[str, Any],
+    phase: str,
+) -> tuple[VerificationResult, ...]:
+    claims_tuple = tuple(claims)
+    try:
+        raw_results = tuple(verifier.verify_many(claims_tuple, context=context))
+    except Exception as exc:  # pragma: no cover - exact verifier failures are adapter-defined.
+        return tuple(
+            _verification_error_result(
+                claim,
+                claim_index=index,
+                phase=phase,
+                error=exc,
+            )
+            for index, claim in enumerate(claims_tuple)
+        )
+    return _normalize_verification_results(
+        raw_results,
+        claims_tuple,
+        phase=phase,
+    )
+
+
+def _verify_one_fail_closed(
+    verifier: Verifier,
+    claim: Claim,
+    *,
+    context: Mapping[str, Any],
+    phase: str,
+    claim_index: int,
+) -> VerificationResult:
+    try:
+        raw_result = verifier.verify(claim, context=context)
+    except Exception as exc:  # pragma: no cover - exact verifier failures are adapter-defined.
+        return _verification_error_result(
+            claim,
+            claim_index=claim_index,
+            phase=phase,
+            error=exc,
+        )
+    return _coerce_verification_result(raw_result, claim, claim_index=claim_index, phase=phase)
+
+
+def _normalize_verification_results(
+    raw_results: Sequence[VerificationResult | Mapping[str, Any]],
+    claims: Sequence[Claim],
+    *,
+    phase: str,
+) -> tuple[VerificationResult, ...]:
+    expected = len(claims)
+    raw_tuple = tuple(raw_results)
+    normalized = [
+        _coerce_verification_result(result, claim, claim_index=index, phase=phase)
+        for index, (claim, result) in enumerate(zip(claims, raw_tuple))
+    ]
+    if len(raw_tuple) > expected and normalized:
+        extra_count = len(raw_tuple) - expected
+        normalized[-1] = _with_result_metadata(
+            normalized[-1],
+            {
+                "verifier_result_mismatch": True,
+                "dropped_extra_result_count": extra_count,
+                "expected_result_count": expected,
+                "actual_result_count": len(raw_tuple),
+                "phase": phase,
+            },
+        )
+    if len(raw_tuple) < expected:
+        for index in range(len(raw_tuple), expected):
+            normalized.append(
+                _verification_missing_result(
+                    claims[index],
+                    claim_index=index,
+                    phase=phase,
+                    expected_result_count=expected,
+                    actual_result_count=len(raw_tuple),
+                )
+            )
+    return tuple(normalized)
+
+
+def _coerce_verification_result(
+    result: VerificationResult | Mapping[str, Any],
+    claim: Claim,
+    *,
+    claim_index: int,
+    phase: str,
+) -> VerificationResult:
+    if isinstance(result, VerificationResult):
+        return result
+    if not isinstance(result, Mapping):
+        return _invalid_verification_result(
+            claim,
+            claim_index=claim_index,
+            phase=phase,
+            reason=f"verifier returned {type(result).__name__}",
+        )
+    try:
+        raw_status = result.get("status", VerificationStatus.ERROR.value)
+        status = raw_status if isinstance(raw_status, VerificationStatus) else VerificationStatus(str(raw_status))
+        evidence = result.get("evidence", ())
+        if isinstance(evidence, str):
+            evidence_tuple = (evidence,)
+        elif isinstance(evidence, Sequence) and not isinstance(evidence, (bytes, bytearray)):
+            evidence_tuple = tuple(str(item) for item in evidence)
+        else:
+            evidence_tuple = ()
+        metadata = result.get("metadata", {})
+        return VerificationResult(
+            status=status,
+            confidence=float(result.get("confidence", 0.0)),
+            evidence=evidence_tuple,
+            explanation=str(result.get("explanation", "")),
+            metadata=dict(metadata) if isinstance(metadata, Mapping) else {},
+        )
+    except Exception as exc:
+        return _invalid_verification_result(
+            claim,
+            claim_index=claim_index,
+            phase=phase,
+            reason=f"could not parse verifier result: {type(exc).__name__}: {exc}",
+        )
+
+
+def _verification_error_result(
+    claim: Claim,
+    *,
+    claim_index: int,
+    phase: str,
+    error: Exception,
+) -> VerificationResult:
+    error_type = type(error).__name__
+    error_text = str(error)
+    return VerificationResult(
+        status=VerificationStatus.ERROR,
+        confidence=1.0,
+        explanation=f"verifier failed during {phase}: {error_type}: {error_text}",
+        metadata={
+            "verifier_error": True,
+            "phase": phase,
+            "claim_id": _claim_id_for_index(claim, claim_index),
+            "error_type": error_type,
+            "error": error_text,
+        },
+    )
+
+
+def _verification_missing_result(
+    claim: Claim,
+    *,
+    claim_index: int,
+    phase: str,
+    expected_result_count: int,
+    actual_result_count: int,
+) -> VerificationResult:
+    return VerificationResult(
+        status=VerificationStatus.ERROR,
+        confidence=1.0,
+        explanation=f"verifier returned fewer results than claims during {phase}",
+        metadata={
+            "verifier_result_missing": True,
+            "verifier_result_mismatch": True,
+            "phase": phase,
+            "claim_id": _claim_id_for_index(claim, claim_index),
+            "expected_result_count": expected_result_count,
+            "actual_result_count": actual_result_count,
+        },
+    )
+
+
+def _invalid_verification_result(
+    claim: Claim,
+    *,
+    claim_index: int,
+    phase: str,
+    reason: str,
+) -> VerificationResult:
+    return VerificationResult(
+        status=VerificationStatus.ERROR,
+        confidence=1.0,
+        explanation=f"invalid verifier result during {phase}: {reason}",
+        metadata={
+            "invalid_verification_result": True,
+            "phase": phase,
+            "claim_id": _claim_id_for_index(claim, claim_index),
+            "reason": reason,
+        },
+    )
+
+
+def _with_result_metadata(
+    result: VerificationResult,
+    metadata: Mapping[str, Any],
+) -> VerificationResult:
+    return VerificationResult(
+        status=result.status,
+        confidence=result.confidence,
+        evidence=tuple(result.evidence),
+        explanation=result.explanation,
+        metadata={**dict(result.metadata), **dict(metadata)},
+    )
+
+
 def _start_runtime_phase(enabled: bool) -> float | None:
     return time.perf_counter() if enabled else None
 
@@ -525,7 +742,15 @@ def _verify_with_retrieved_evidence(
             base_context,
             evidence_bundle.to_context(claim_id),
         )
-        results.append(verifier.verify(claim, context=claim_context))
+        results.append(
+            _verify_one_fail_closed(
+                verifier,
+                claim,
+                context=claim_context,
+                phase="final_verification",
+                claim_index=index,
+            )
+        )
     return tuple(results)
 
 

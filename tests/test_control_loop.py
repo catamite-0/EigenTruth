@@ -121,6 +121,72 @@ def test_verification_loop_keeps_retrieve_decision_when_no_hits_are_found():
     assert result.trace.to_dict()["risk_decision"]["action"] == "retrieve"
 
 
+def test_verification_loop_fails_closed_when_initial_verifier_raises():
+    claims = extract_claims("Paris is the capital of France.")
+
+    result = run_verification_loop(
+        request_id="req-initial-error",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=_FailingVerifyManyVerifier(),
+        controller=RiskController(_artifact()),
+    )
+
+    assert result.initial_verification_results[0].status is VerificationStatus.ERROR
+    assert result.initial_verification_results[0].metadata["verifier_error"] is True
+    assert result.initial_decision.action is ControlAction.CLARIFY
+    assert result.initial_decision.risk_level is RiskLevel.UNKNOWN
+    assert result.final_decision.action is ControlAction.CLARIFY
+    trace = result.trace.to_dict()
+    assert trace["verification_results"][0]["status"] == "error"
+    assert trace["verification_results"][0]["metadata"]["phase"] == "initial_verification"
+
+
+def test_verification_loop_fails_closed_when_final_verifier_raises():
+    claims = extract_claims("Paris is the capital of France.")
+    registry = _registry_with_retrieval(("Paris is the capital of France.",))
+
+    result = run_verification_loop(
+        request_id="req-final-error",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=_FailingFinalVerifier(),
+        controller=RiskController(_artifact()),
+        executor_registry=registry,
+    )
+
+    assert result.initial_verification_results[0].status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.retrieval_evidence.has_evidence()
+    assert result.final_verification_results[0].status is VerificationStatus.ERROR
+    assert result.final_verification_results[0].metadata["verifier_error"] is True
+    assert result.final_verification_results[0].metadata["phase"] == "final_verification"
+    assert result.final_decision.action is ControlAction.CLARIFY
+    assert result.final_decision.risk_level is RiskLevel.UNKNOWN
+    assert result.trace.to_dict()["events"][-1]["payload"]["action"] == "clarify"
+
+
+def test_verification_loop_fails_closed_when_verify_many_returns_too_few_results():
+    claims = (
+        Claim("Paris is the capital of France.", claim_id="c1"),
+        Claim("Berlin is the capital of Germany.", claim_id="c2"),
+    )
+
+    result = run_verification_loop(
+        request_id="req-missing-result",
+        diagnostics={"maha_last": 1.0},
+        claims=claims,
+        verifier=_ShortVerifyManyVerifier(),
+        controller=RiskController(_artifact()),
+    )
+
+    assert len(result.initial_verification_results) == 2
+    assert result.initial_verification_results[0].status is VerificationStatus.SUPPORTED
+    assert result.initial_verification_results[1].status is VerificationStatus.ERROR
+    assert result.initial_verification_results[1].metadata["verifier_result_missing"] is True
+    assert result.initial_verification_results[1].metadata["claim_id"] == "c2"
+    assert result.final_decision.action is ControlAction.CLARIFY
+
+
 def test_verification_loop_can_disable_runtime_trace():
     claims = extract_claims("Paris is the capital of France.")
     verifier = GroundednessVerifier(evidence=("Paris is the capital of France.",), min_overlap=0.7)
@@ -524,3 +590,49 @@ class _CountingVerifier:
     def verify_many(self, claims, context=None):
         self.verify_many_calls += 1
         return tuple(self.verify(claim, context=context) for claim in claims)
+
+
+class _FailingVerifyManyVerifier:
+    def verify(self, claim, context=None):
+        del claim, context
+        return VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9)
+
+    def verify_many(self, claims, context=None):
+        del claims, context
+        raise RuntimeError("initial verifier unavailable")
+
+
+class _FailingFinalVerifier:
+    def verify(self, claim, context=None):
+        del claim, context
+        raise RuntimeError("final verifier unavailable")
+
+    def verify_many(self, claims, context=None):
+        del context
+        return tuple(
+            VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.8,
+                explanation="needs retrieval",
+            )
+            for _claim in claims
+        )
+
+
+class _ShortVerifyManyVerifier:
+    def verify(self, claim, context=None):
+        del claim, context
+        return VerificationResult(status=VerificationStatus.SUPPORTED, confidence=0.9)
+
+    def verify_many(self, claims, context=None):
+        del context
+        claims = tuple(claims)
+        if not claims:
+            return ()
+        return (
+            VerificationResult(
+                status=VerificationStatus.SUPPORTED,
+                confidence=0.9,
+                explanation="first claim only",
+            ),
+        )
