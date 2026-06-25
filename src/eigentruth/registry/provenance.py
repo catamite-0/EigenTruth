@@ -20,6 +20,13 @@ _FILE_CACHE_SAMPLE_BYTES = 4096
 
 
 @dataclass(frozen=True)
+class _DirectoryFingerprintEntry:
+    path: Path
+    relative_path: str
+    size_bytes: int
+
+
+@dataclass(frozen=True)
 class ArtifactFingerprint:
     """Stable local metadata for a file, directory, or missing artifact."""
 
@@ -274,10 +281,11 @@ def fingerprint_path(
         )
         return fingerprint
     if artifact_path.is_dir():
+        directory_signature, directory_entries = _scan_directory_for_fingerprint(artifact_path)
         cache_key = _fingerprint_cache_key(
             artifact_path,
             kind="directory",
-            signature=_directory_cache_signature(artifact_path),
+            signature=directory_signature,
         )
         cached = _load_fingerprint_cache_entry(
             fingerprint_cache,
@@ -288,7 +296,7 @@ def fingerprint_path(
         )
         if cached is not None:
             return cached
-        digest, size_bytes, file_count = _sha256_directory(artifact_path)
+        digest, size_bytes, file_count = _sha256_directory_entries(directory_entries)
         fingerprint = ArtifactFingerprint(
             path=display_path,
             exists=True,
@@ -826,10 +834,17 @@ def _fingerprint_cache_key(path: Path, *, kind: str, signature: str = "") -> str
 
 
 def _directory_cache_signature(path: Path) -> str:
+    signature, _entries = _scan_directory_for_fingerprint(path)
+    return signature
+
+
+def _scan_directory_for_fingerprint(path: Path) -> tuple[str, tuple[_DirectoryFingerprintEntry, ...]]:
     digest = hashlib.sha256()
+    entries: list[_DirectoryFingerprintEntry] = []
     for child in sorted(item for item in path.rglob("*") if item.is_file()):
         relative_path = child.relative_to(path).as_posix()
         stat = child.stat()
+        sample_digest = _file_cache_sample_digest(child, size_bytes=stat.st_size)
         digest.update(relative_path.encode("utf-8"))
         digest.update(b"\0")
         digest.update(str(stat.st_size).encode("ascii"))
@@ -838,9 +853,16 @@ def _directory_cache_signature(path: Path) -> str:
         digest.update(b"\0")
         digest.update(str(stat.st_ctime_ns).encode("ascii"))
         digest.update(b"\0")
-        digest.update(_file_cache_sample_digest(child, size_bytes=stat.st_size).encode("ascii"))
+        digest.update(sample_digest.encode("ascii"))
         digest.update(b"\0")
-    return digest.hexdigest()
+        entries.append(
+            _DirectoryFingerprintEntry(
+                path=child,
+                relative_path=relative_path,
+                size_bytes=stat.st_size,
+            )
+        )
+    return digest.hexdigest(), tuple(entries)
 
 
 def _file_cache_signature(path: Path, *, stat: os.stat_result) -> str:
@@ -1050,20 +1072,23 @@ def _sha256_file(path: Path) -> str:
 
 
 def _sha256_directory(path: Path) -> tuple[str, int, int]:
+    _signature, entries = _scan_directory_for_fingerprint(path)
+    return _sha256_directory_entries(entries)
+
+
+def _sha256_directory_entries(entries: Sequence[_DirectoryFingerprintEntry]) -> tuple[str, int, int]:
     digest = hashlib.sha256()
     size_bytes = 0
     file_count = 0
-    for child in sorted(item for item in path.rglob("*") if item.is_file()):
-        relative_path = child.relative_to(path).as_posix()
-        child_digest = _sha256_file(child)
-        child_size = child.stat().st_size
+    for entry in entries:
+        child_digest = _sha256_file(entry.path)
         digest.update(b"file\0")
-        digest.update(relative_path.encode("utf-8"))
+        digest.update(entry.relative_path.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(str(child_size).encode("ascii"))
+        digest.update(str(entry.size_bytes).encode("ascii"))
         digest.update(b"\0")
         digest.update(child_digest.encode("ascii"))
         digest.update(b"\0")
-        size_bytes += child_size
+        size_bytes += entry.size_bytes
         file_count += 1
     return digest.hexdigest(), size_bytes, file_count

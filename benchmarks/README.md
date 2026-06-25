@@ -3465,7 +3465,9 @@ outputs. The manifest records SHA-256 fingerprints for command logs, profile
 JSON, result JSON, comparison reports, and cache paths. Directory fingerprints
 are deterministic over relative file names, sizes, and content hashes. This is
 intended for local reproducibility and artifact registry handoff; on very large
-eval-reps cache directories it adds one linear read pass after the run.
+eval-reps cache directories it adds one linear content-hash pass after the run.
+Directory cache signatures and full content hashes reuse one file-list scan, so
+cache misses do not enumerate the same directory twice.
 
 Use `verify_artifact_manifest.py` to validate that local artifacts still match
 the saved fingerprints. Add `--recursive` for matrix reports so each cell's

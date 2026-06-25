@@ -343,6 +343,30 @@ def test_artifact_fingerprint_hashes_files_and_directories(tmp_path):
     assert fingerprint_path(cache_dir, root=tmp_path).to_dict()["sha256"] != before
 
 
+def test_directory_fingerprint_reuses_single_directory_scan(tmp_path, monkeypatch):
+    cache_dir = tmp_path / "cache"
+    nested_dir = cache_dir / "nested"
+    nested_dir.mkdir(parents=True)
+    (cache_dir / "manifest.json").write_text('{"records": 2}\n', encoding="utf-8")
+    (nested_dir / "records-00000.pt").write_bytes(b"tensor-bytes")
+    original_rglob = Path.rglob
+    scan_count = 0
+
+    def counted_rglob(self, pattern):
+        nonlocal scan_count
+        if self == cache_dir:
+            scan_count += 1
+        return original_rglob(self, pattern)
+
+    monkeypatch.setattr(Path, "rglob", counted_rglob)
+
+    fingerprint = fingerprint_path(cache_dir, root=tmp_path).to_dict()
+
+    assert fingerprint["kind"] == "directory"
+    assert fingerprint["file_count"] == 2
+    assert scan_count == 1
+
+
 def test_artifact_manifest_verification_detects_drift_and_nested_drift(tmp_path):
     data_path = tmp_path / "result.json"
     data_path.write_text('{"score": 1}\n', encoding="utf-8")
