@@ -452,6 +452,71 @@ def _extract_layer_hidden(output):
     return hidden
 
 
+def _hidden_state_backbone_candidates(model) -> list:
+    candidates = []
+    seen_ids = {id(model)}
+    get_decoder = getattr(model, "get_decoder", None)
+    if callable(get_decoder):
+        try:
+            decoder = get_decoder()
+        except (AttributeError, TypeError, NotImplementedError):
+            decoder = None
+        if decoder is not None and id(decoder) not in seen_ids:
+            candidates.append(decoder)
+            seen_ids.add(id(decoder))
+    for attr in ("base_model", "model", "transformer", "gpt_neox", "decoder"):
+        candidate = getattr(model, attr, None)
+        if candidate is None or id(candidate) in seen_ids:
+            continue
+        candidates.append(candidate)
+        seen_ids.add(id(candidate))
+    return candidates
+
+
+def _call_forward_for_hidden_states(
+    module,
+    *,
+    input_ids: torch.Tensor,
+    attention_mask: torch.Tensor,
+    output_hidden_states: bool,
+):
+    return module(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        output_hidden_states=output_hidden_states,
+        use_cache=False,
+    )
+
+
+def _forward_for_hidden_states(
+    model,
+    *,
+    input_ids: torch.Tensor,
+    attention_mask: torch.Tensor,
+    output_hidden_states: bool,
+    need_logits: bool,
+):
+    if not need_logits:
+        for candidate in _hidden_state_backbone_candidates(model):
+            try:
+                out = _call_forward_for_hidden_states(
+                    candidate,
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    output_hidden_states=output_hidden_states,
+                )
+            except (AttributeError, TypeError, NotImplementedError):
+                continue
+            if not output_hidden_states or getattr(out, "hidden_states", None) is not None:
+                return out, True
+    return _call_forward_for_hidden_states(
+        model,
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        output_hidden_states=output_hidden_states,
+    ), False
+
+
 def _forward_with_selected_hidden_states(
     model,
     *,
@@ -459,16 +524,18 @@ def _forward_with_selected_hidden_states(
     attention_mask: torch.Tensor,
     layers: Sequence[int],
     hidden_state_capture: str,
+    need_logits: bool = True,
 ):
     if hidden_state_capture not in HIDDEN_STATE_CAPTURE_METHODS:
         raise ValueError(f"hidden_state_capture must be one of {HIDDEN_STATE_CAPTURE_METHODS}.")
 
     if hidden_state_capture == "outputs":
-        out = model(
+        out, _used_backbone = _forward_for_hidden_states(
+            model,
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=True,
-            use_cache=False,
+            need_logits=need_logits,
         )
         return out, {int(layer): out.hidden_states[int(layer)] for layer in layers}
 
@@ -483,17 +550,38 @@ def _forward_with_selected_hidden_states(
         handles.append(transformer_layers[module_idx].register_forward_hook(_capture))
 
     try:
-        out = model(
+        out, used_backbone = _forward_for_hidden_states(
+            model,
             input_ids=input_ids,
             attention_mask=attention_mask,
             output_hidden_states=False,
-            use_cache=False,
+            need_logits=need_logits,
         )
     finally:
         for handle in handles:
             handle.remove()
 
     missing = [layer for layer in layers if int(layer) not in captured]
+    if missing and used_backbone:
+        captured = {}
+        handles = []
+        for requested_layer, module_idx in layer_to_module.items():
+            def _capture(_module, _input, output, *, layer=requested_layer):
+                captured[layer] = _extract_layer_hidden(output)
+
+            handles.append(transformer_layers[module_idx].register_forward_hook(_capture))
+        try:
+            out, _used_backbone = _forward_for_hidden_states(
+                model,
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=False,
+                need_logits=True,
+            )
+        finally:
+            for handle in handles:
+                handle.remove()
+        missing = [layer for layer in layers if int(layer) not in captured]
     if missing:
         raise ValueError(f"hook hidden-state capture missed layer(s): {missing}.")
     return out, captured
@@ -2195,6 +2283,7 @@ def batched_statement_reps(
         attention_mask=attention_mask,
         layers=layers,
         hidden_state_capture=hidden_state_capture,
+        need_logits=compute_answer_metrics,
     )
     for row, (original_idx, ids, n_ans) in enumerate(encoded):
         seq_len = len(ids)
@@ -2505,6 +2594,7 @@ def sampled_response_diagnostics_batch(
         attention_mask=generated_attention,
         layers=layers,
         hidden_state_capture=hidden_state_capture,
+        need_logits=False,
     )
     sample_texts = _decode_sampled_continuations(
         tokenizer,

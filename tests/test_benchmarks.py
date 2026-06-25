@@ -19516,6 +19516,138 @@ def test_eval_truthfulqa_batched_statement_reps_can_use_precomputed_encodings():
     assert reps[0]["nll"] == pytest.approx(torch.log(torch.tensor(64.0)).item())
 
 
+def test_eval_truthfulqa_batched_statement_reps_skips_lm_head_when_metrics_disabled():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class HiddenBackbone(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.calls = 0
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            self.calls += 1
+            state = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            return SimpleNamespace(hidden_states=(state,) if output_hidden_states else None)
+
+    class CausalModelWithBackbone(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = HiddenBackbone()
+            self.full_forward_calls = 0
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **kwargs):
+            self.full_forward_calls += 1
+            out = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=output_hidden_states,
+                **kwargs,
+            )
+            logits = torch.zeros((*input_ids.shape, 64), dtype=torch.float32)
+            return SimpleNamespace(logits=logits, hidden_states=out.hidden_states)
+
+    model = CausalModelWithBackbone()
+    reps = module.batched_statement_reps(
+        model,
+        NoCallTokenizer(),
+        [module.Statement("Q?", "A.", 0)],
+        [0],
+        torch.device("cpu"),
+        8,
+        compute_answer_metrics=False,
+        encoded_statements=[module.StatementEncoding((1, 5, 6), 2)],
+    )
+
+    assert model.full_forward_calls == 0
+    assert model.model.calls == 1
+    assert set(reps[0]) == {"last"}
+    assert torch.allclose(reps[0]["last"][0], torch.tensor([6.0, 6.0, 6.0, 6.0]))
+
+
+def test_eval_truthfulqa_sampled_response_diagnostics_skips_lm_head_after_generate():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class TinyTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+        padding_side = "right"
+
+        def __call__(self, prompts, **_kwargs):
+            batch = len(prompts)
+            input_ids = torch.tensor([[1, 3, 2], [1, 4, 2]][:batch], dtype=torch.long)
+            attention_mask = torch.ones_like(input_ids)
+            return SimpleNamespace(input_ids=input_ids, attention_mask=attention_mask)
+
+        def batch_decode(self, token_rows, skip_special_tokens=True):
+            del skip_special_tokens
+            return [" ".join(str(int(token)) for token in row) for row in token_rows]
+
+    class HiddenBackbone(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.calls = 0
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            self.calls += 1
+            state = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            return SimpleNamespace(hidden_states=(state,) if output_hidden_states else None)
+
+    class CausalModelWithBackbone(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.model = HiddenBackbone()
+            self.full_forward_calls = 0
+            self.generate_calls = 0
+
+        def generate(self, input_ids=None, num_return_sequences=1, max_new_tokens=1, **_kwargs):
+            self.generate_calls += 1
+            repeated = input_ids.repeat_interleave(int(num_return_sequences), dim=0)
+            continuation = torch.arange(10, 10 + int(max_new_tokens), dtype=torch.long).repeat(repeated.shape[0], 1)
+            return torch.cat([repeated, continuation], dim=1)
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **kwargs):
+            self.full_forward_calls += 1
+            out = self.model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                output_hidden_states=output_hidden_states,
+                **kwargs,
+            )
+            logits = torch.zeros((*input_ids.shape, 64), dtype=torch.float32)
+            return SimpleNamespace(logits=logits, hidden_states=out.hidden_states)
+
+    model = CausalModelWithBackbone()
+    diagnostics = module.sampled_response_diagnostics_batch(
+        model,
+        TinyTokenizer(),
+        [module.Statement("Q?", "A.", 0), module.Statement("Q?", "B.", 1)],
+        [0],
+        torch.device("cpu"),
+        8,
+        n_samples=2,
+        max_new_tokens=2,
+        temperature=0.7,
+        top_p=0.9,
+        pooling="last",
+        seed=0,
+    )
+
+    assert model.generate_calls == 1
+    assert model.full_forward_calls == 0
+    assert model.model.calls == 1
+    assert [item.sample_texts for item in diagnostics] == [("10 11", "10 11"), ("10 11", "10 11")]
+    assert diagnostics[0].embeddings_by_layer[0].shape == (2, 4)
+
+
 def test_eval_truthfulqa_answer_nll_only_normalizes_answer_window():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
     torch.manual_seed(0)
