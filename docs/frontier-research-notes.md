@@ -55,9 +55,15 @@ Added post-hoc stability replay for participation gates:
 - Each seed calibrates abstention thresholds on a stratified split of correct records, evaluates held-out participation metrics, ranks candidate signals, and applies the abstention release gate.
 - The report records recommended-signal counts, metric variance, release-gate pass/block counts, artifact manifests, and optional registry metadata for frontier l80-style evidence.
 
+Ran and registered the current Qwen/SmolLM2 l80 abstention-stability replay:
+
+- `report:truthfulqa-frontier-qwen-smollm2-l80-abstention-stability:0.1` evaluates 8 candidate signals across seeds `0..9` using the existing JSONL score dumps.
+- `truth_proj` is the stable recommended abstention signal for both runs in 10/10 seeds.
+- The promotion gate correctly blocks both runs in 10/10 seeds because conservative conditional-correctness lower bounds stay near `0.498` for Qwen and `0.485` for SmolLM2, below the required `0.8`.
+- The verified manifest is `benchmark_manifest:truthfulqa-frontier-qwen-smollm2-l80-abstention-stability:0.1`.
+
 ## Next Research-to-Code Candidates
 
 1. Add fact-level self-check metadata using claim triples, staying dependency-free first, then optionally integrating a stronger extractor behind a protocol.
 2. Add a geometry-calibrated score that combines representation residual/subspace distance with output confidence or sampled semantic energy.
-3. Promote release-gate outputs into the broader release-candidate registry workflow once stability evidence is available.
-4. Run and register the abstention-stability replay on the current Qwen/SmolLM2 l80 score dumps.
+3. Promote release-gate outputs into the broader release-candidate registry workflow with both positive verifier-stability evidence and negative abstention-stability evidence.

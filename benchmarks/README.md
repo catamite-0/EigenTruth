@@ -679,7 +679,7 @@ OUT=artifacts/truthfulqa-frontier-qwen-smollm2-l80-abstention-stability
 python benchmarks/eval_abstention_stability.py \
   --scores qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/qwen05-l80/scores.manifest.json \
   --scores smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80/smollm2-l80/scores.manifest.json \
-  --signals maha_last,truth_proj,subspace_resid,inside_eigenscore,inside_semantic_energy \
+  --signals maha_last,truth_proj,subspace_resid,disp_euclid,disp_hse,nll_answer,eigenscore,resid_update_norm \
   --alpha 0.10 \
   --best-by conditional_correctness_lower_bound \
   --seeds 0,1,2,3,4,5,6,7,8,9 \
