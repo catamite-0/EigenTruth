@@ -2384,6 +2384,14 @@ with AUROC 0.764, and SmolLM2 peaks at `truth_proj` layer `-16` with AUROC
 0.782. Treat this as a negative result for naive score fusion, not as evidence
 against richer verifier/retrieval ensembles.
 
+The paired cache-only replay
+(`artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/`) reproduces the
+same score records and best sweep choices from the per-cell cache root. End-to-end
+frontier wall-clock drops from 1140.245s to 24.028s. Per-cell replay drops Qwen
+from 784.040s to 3.496s and SmolLM2 from 336.829s to 2.797s. This makes l80
+multi-seed, layer/score resweeps, and post-hoc calibration experiments practical
+without re-running model forward passes.
+
 ## `eval_calibration_transfer.py`
 
 Applies saved `CalibrationArtifact` thresholds to saved score dumps from other
