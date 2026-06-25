@@ -14,8 +14,8 @@ from eigentruth.eval.conformal import directional_conformal_threshold
 from eigentruth.eval.metrics import roc_auc
 from eigentruth.eval.score_fusion import (
     RANK_SCORE_FUSION_METHODS,
+    _directional_rank_anomaly_scores_from_sorted,
     combine_rank_anomaly_scores,
-    directional_rank_anomaly_scores,
 )
 from eigentruth.json_utils import strict_json_dumps
 
@@ -118,6 +118,7 @@ class RankScoreFusionArtifact:
     created_at: str | None = None
     commit_sha: str | None = None
     schema_version: int = 1
+    _sorted_calibration_scores: tuple[torch.Tensor, ...] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not self.signals:
@@ -141,6 +142,14 @@ class RankScoreFusionArtifact:
             if not (0.0 < conformal_alpha < 1.0):
                 raise ValueError("conformal_alpha must be in (0, 1).")
             object.__setattr__(self, "conformal_alpha", conformal_alpha)
+        object.__setattr__(
+            self,
+            "_sorted_calibration_scores",
+            tuple(
+                torch.sort(torch.as_tensor(signal.calibration_scores, dtype=torch.float64).flatten()).values
+                for signal in self.signals
+            ),
+        )
 
     def signal_names(self) -> tuple[str, ...]:
         """Return signal names in artifact order."""
@@ -157,7 +166,7 @@ class RankScoreFusionArtifact:
         """Return fused anomaly scores in [0, 1] for one or more records."""
         rank_scores = []
         expected_length: int | None = None
-        for signal in self.signals:
+        for signal, sorted_calibration in zip(self.signals, self._sorted_calibration_scores, strict=True):
             if signal.name not in scores:
                 raise KeyError(signal.name)
             values = torch.as_tensor(scores[signal.name], dtype=torch.float64).flatten()
@@ -166,8 +175,8 @@ class RankScoreFusionArtifact:
             elif values.numel() != expected_length:
                 raise ValueError("all score inputs must have the same length.")
             rank_scores.append(
-                directional_rank_anomaly_scores(
-                    signal.calibration_scores,
+                _directional_rank_anomaly_scores_from_sorted(
+                    sorted_calibration,
                     values,
                     direction=signal.direction,
                 )

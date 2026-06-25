@@ -2,6 +2,7 @@
 
 import json
 import math
+from unittest.mock import patch
 
 import pytest
 
@@ -167,7 +168,10 @@ def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):
     path = tmp_path / "fusion.json"
     artifact.save_json(path)
     loaded = RankScoreFusionArtifact.load_json(path)
-    flags = loaded.flags(scores)
+    expected_fused = artifact.score(scores)
+    with patch("eigentruth.eval.score_fusion.torch.sort", side_effect=AssertionError("unexpected runtime sort")):
+        fused = loaded.score(scores)
+        flags = loaded.flags(scores)
     evaluation = calibrator.evaluate(
         labels=labels,
         scores=scores,
@@ -176,6 +180,7 @@ def test_rank_score_fusion_artifact_roundtrip_and_directional_flags(tmp_path):
 
     assert loaded == artifact
     assert loaded.signal_names() == ("truth_proj", "support_score")
+    assert fused.tolist() == pytest.approx(expected_fused.tolist())
     assert loaded.threshold == pytest.approx(0.75)
     assert flags.tolist() == [False, False, False, True, True]
     assert evaluation["false_alarm"] == pytest.approx(0.25)

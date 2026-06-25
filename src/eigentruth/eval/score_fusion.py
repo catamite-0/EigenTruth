@@ -43,12 +43,35 @@ def directional_rank_anomaly_scores(
         raise ValueError("scores must be finite.")
 
     sorted_calibration, _ = torch.sort(calibration)
-    n = float(calibration.numel())
+    return _directional_rank_anomaly_scores_from_sorted(
+        sorted_calibration,
+        scored,
+        direction=direction,
+    )
+
+
+def _directional_rank_anomaly_scores_from_sorted(
+    sorted_calibration_scores: ArrayLike,
+    scores: ArrayLike,
+    *,
+    direction: str,
+) -> Tensor:
+    """Map scores to empirical anomaly ranks using pre-sorted calibration scores."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    sorted_calibration = torch.as_tensor(sorted_calibration_scores, dtype=torch.float64).flatten()
+    scored = torch.as_tensor(scores, dtype=torch.float64).flatten()
+    if sorted_calibration.numel() == 0:
+        raise ValueError("calibration scores must be non-empty.")
+    if not torch.isfinite(sorted_calibration).all() or not torch.isfinite(scored).all():
+        raise ValueError("scores must be finite.")
+
+    n = float(sorted_calibration.numel())
     if direction == "higher":
         counts = torch.searchsorted(sorted_calibration, scored, right=True).to(torch.float64)
     else:
         counts = (
-            calibration.numel() - torch.searchsorted(sorted_calibration, scored, right=False)
+            sorted_calibration.numel() - torch.searchsorted(sorted_calibration, scored, right=False)
         ).to(torch.float64)
     return counts / n
 
