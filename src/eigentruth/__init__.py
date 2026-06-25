@@ -9,7 +9,7 @@ Usage::
     outputs = monitor.generate(**inputs, max_new_tokens=100)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from eigentruth.core.inside import (
     cluster_assignment_entropy,

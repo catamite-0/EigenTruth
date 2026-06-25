@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eigentruth"
-version = "0.1.0"
+version = "0.2.0"
 description = "Alpha research-preview PyTorch toolkit for LLM representation monitoring, geometric drift diagnostics, and experimental activation steering / 面向大模型表征监测、几何漂移诊断与实验性激活引导的 PyTorch 研究预览工具库"
 readme = "README.md"
 requires-python = ">=3.10"

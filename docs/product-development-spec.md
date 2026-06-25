@@ -6,6 +6,10 @@ EigenTruth 的产品定位是：面向 LLM 系统的表征观测与事实性控�
 
 ## Current State
 
+The current packaged baseline is the `0.2.0` research release. The release
+writeup in [`docs/release-0.2.0.md`](release-0.2.0.md) summarizes the evidence,
+negative results, validation commands, and known non-claims for this baseline.
+
 Implemented today:
 
 - `TruthManifold` / `RepresentationManifold`: online hidden-state mean/covariance, ridge-regularized precision, save/load support, dependency-free covariance-spectrum diagnostics with Marchenko-Pastur bulk edges, spike count, effective rank, participation ratio, stable rank, and condition number, plus closed-form Gaussian 2-Wasserstein/Bures manifold distance for comparing layers, checkpoints, or runs.

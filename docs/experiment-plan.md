@@ -173,6 +173,9 @@ representation-observability toolkit spanning **training and inference**.
 
 ### E10. Release 0.2.0 + honest writeup
 - Package, publish, and write up every experiment **including negative results**.
+  **Status:** package metadata, public version, release notes, roadmap links, and
+  experiment decision log are aligned around the 0.2.0 research baseline. This
+  remains an alpha research release, not a production hallucination detector.
 
 ## Decision log
 
@@ -189,3 +192,4 @@ representation-observability toolkit spanning **training and inference**.
 | E7 | 2026-06-25 | **ACCEPT synthetic trajectory sanity**: `TrajectoryMonitor` computes step-distance decay, Koopman-style rate, path efficiency, and convergence scores from per-token hidden-state trajectories. Synthetic trajectory sanity passes with Spearman(convergence, quality)=0.924, Spearman(convergence, NLL proxy)=-0.921, and quality AUROC=0.937. Treat this as a monitor primitive plus synthetic correlation gate; gpt2/TruthfulQA trajectory replication remains pending before claiming a real open-generation detector. | `TrajectoryMonitor` / `trajectory_convergence_metrics()` unit tests; `spearman_correlation()` unit tests; `benchmarks/trajectory_convergence_sanity.py`; `artifacts/e7-trajectory-convergence-sanity/trajectory-convergence-sanity-report.json` |
 | E8 | 2026-06-25 | **ACCEPT platform glue**: versioned concept artifacts, local registry records, and multi-probe attachment landed with no new mandatory dependencies. The smoke path saves two synthetic concepts, monitors both simultaneously on a toy model, and records diagnostics plus manifest provenance. This accepts the BYO-concept API shape; real concept quality still depends on downstream warmup data and calibration. | `ConceptArtifact` / `MultiConceptMonitor` unit tests; `benchmarks/concept_registry_smoke.py`; `artifacts/e8-concept-registry-smoke/concept-registry-smoke.json` |
 | E9 | 2026-06-25 | **ACCEPT compatible consolidation**: HSE was demoted from default hook/wrapper work to explicit `track_hse=True` ablations, reflecting the earlier no-lift result. Generic `Representation*` aliases now expose the broader representation-observability API while keeping all `Truth*` names as stable backwards-compatible aliases. | `TruthProbe(track_hse=False/True)` tests; `EigenTruthWrapper.track_hse` tests; `RepresentationManifold` / `RepresentationProbe` / `RepresentationMonitor` alias contract tests; README and methodology updates |
+| E10 | 2026-06-25 | **ACCEPT 0.2.0 research baseline**: package metadata and public version now identify the 0.2.0 release; the release writeup documents accepted components, negative results, evidence boundaries, and reproduction commands without claiming production readiness. | `docs/release-0.2.0.md`; `make check`; `make release-check` |
