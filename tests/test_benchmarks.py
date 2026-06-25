@@ -282,6 +282,65 @@ def test_eval_conformal_run_builds_adaptive_report_from_jsonl_record_extras(tmp_
     assert adaptive_metadata["n_calibration"] == 4
 
 
+def test_eval_conformal_jsonl_adaptive_record_extras_use_selected_loader(tmp_path, monkeypatch):
+    module = importlib.import_module("benchmarks.eval_conformal")
+    from eigentruth.eval.score_dump import ScoreDump, write_score_dump_jsonl
+
+    dump = ScoreDump.from_mapping({
+        "config": {"model": "tiny", "layer": -1},
+        "labels": [0, 0, 0, 0, 1, 1],
+        "scores": {"maha_last": [0.0, 0.5, 1.0, 1.5, 2.0, 4.0]},
+        "inside_sample_counts": [0, 0, 1, 1, 1, 2],
+    })
+    scores_path = tmp_path / "scores.manifest.json"
+    write_score_dump_jsonl(
+        dump,
+        scores_path,
+        record_extra_names=("inside_sample_counts",),
+    )
+
+    def fail_fallback_reader(*args, **kwargs):
+        raise AssertionError("adaptive JSONL extras should come from the selected loader")
+
+    monkeypatch.setattr(module, "iter_score_dump_jsonl_records", fail_fallback_reader)
+    args = SimpleNamespace(
+        scores=str(scores_path),
+        signal="maha_last",
+        signals=None,
+        repeats=1,
+        seed=0,
+        json=None,
+        save_calibration=None,
+        save_adaptive_calibration=None,
+        save_sweep_report=None,
+        save_best_calibration=None,
+        best_by="auroc",
+        sweep_workers=1,
+        artifact_alpha=0.20,
+        direction=None,
+        adaptive_feature=("inside_sample_counts",),
+        adaptive_feature_weight=("inside_sample_counts=0.5",),
+        adaptive_intercept=0.25,
+        adaptive_score_name="maha_inside_adaptive",
+        confidence_signal="nll_answer",
+        confidence_direction=None,
+        confidence_top_fraction=0.25,
+        disable_confidence_audit=True,
+        model_id=None,
+        model_revision=None,
+        target_layer=None,
+        created_at=None,
+        commit_sha=None,
+        artifact_manifest=None,
+    )
+
+    payload = module.run(args)
+
+    assert payload["adaptive_conformal_report"]["config"]["feature_names"] == (
+        "inside_sample_counts",
+    )
+
+
 def test_eval_conformal_adaptive_reject_sets_top_level_verdict(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"

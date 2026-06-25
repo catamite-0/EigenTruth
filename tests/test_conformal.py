@@ -15,6 +15,7 @@ from eigentruth.eval.conformal import (
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
+    directional_conformal_thresholds,
     directional_trigger_rate,
 )
 
@@ -125,9 +126,24 @@ class TestConformalThreshold:
         assert threshold == pytest.approx(10.0)
         assert rate == pytest.approx(1.0 / 3.0)
 
+    def test_directional_thresholds_match_single_alpha_helper(self):
+        calib = torch.tensor([10.0, 11.0, 12.0, 13.0])
+
+        for direction in ("higher", "lower"):
+            thresholds = directional_conformal_thresholds(calib, (0.25, 0.5), direction)
+
+            assert thresholds[0.25] == pytest.approx(
+                directional_conformal_threshold(calib, 0.25, direction)
+            )
+            assert thresholds[0.5] == pytest.approx(
+                directional_conformal_threshold(calib, 0.5, direction)
+            )
+
     def test_directional_helpers_reject_invalid_direction(self):
         with pytest.raises(ValueError, match="direction"):
             directional_conformal_threshold(torch.tensor([1.0]), 0.1, "sideways")
+        with pytest.raises(ValueError, match="direction"):
+            directional_conformal_thresholds(torch.tensor([1.0]), (0.1,), "sideways")
         with pytest.raises(ValueError, match="direction"):
             directional_trigger_rate(torch.tensor([1.0]), 0.0, "sideways")
 

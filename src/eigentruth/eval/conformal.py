@@ -161,6 +161,36 @@ def directional_conformal_threshold(calib_scores: ArrayLike, alpha: float, direc
     raise ValueError("direction must be 'higher' or 'lower'.")
 
 
+def directional_conformal_thresholds(
+    calib_scores: ArrayLike,
+    alphas: Sequence[float],
+    direction: str,
+) -> dict[float, float]:
+    """Return native-unit thresholds for several alphas using one calibration sort."""
+    if direction not in {"higher", "lower"}:
+        raise ValueError("direction must be 'higher' or 'lower'.")
+    calib = _finite_flat_tensor(calib_scores, name="calibration scores")
+    n = calib.numel()
+    if n == 0:
+        raise ValueError("calibration scores must be non-empty.")
+
+    oriented = calib if direction == "higher" else -calib
+    oriented_sorted, _ = torch.sort(oriented)
+    thresholds: dict[float, float] = {}
+    for alpha in alphas:
+        if not (0.0 < alpha < 1.0):
+            raise ValueError(f"alpha must be in (0, 1), got {alpha}.")
+        rank = math.ceil((n + 1) * (1.0 - alpha))
+        if rank > n:
+            oriented_threshold = float("inf")
+        else:
+            oriented_threshold = float(oriented_sorted[rank - 1].item())
+        thresholds[float(alpha)] = (
+            oriented_threshold if direction == "higher" else -oriented_threshold
+        )
+    return thresholds
+
+
 def directional_trigger_rate(scores: ArrayLike, threshold: float, direction: str) -> float:
     """Return the fraction of scores flagged by a directional conformal threshold."""
     if direction not in {"higher", "lower"}:

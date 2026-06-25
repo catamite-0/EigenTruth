@@ -25,6 +25,7 @@ from eigentruth.eval.score_dump import (
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
+    load_score_dump_columns_with_extras,
     load_score_dump_layer_scores,
     load_score_dump_statement_scores,
     score_dump_cache_summary,
@@ -532,6 +533,41 @@ class TestScoreDump:
         assert columns.labels == (0, 1)
         assert columns.scores == {"maha_last": (0.1, 0.9)}
         assert columns.summary["score_names"] == ("maha_last", "unused")
+        assert columns.source_format == "eigentruth.score_dump.jsonl"
+
+    def test_load_score_dump_columns_with_extras_reads_selected_jsonl_record_extras(
+        self,
+        tmp_path,
+        monkeypatch,
+    ):
+        dump = ScoreDump.from_mapping({
+            "labels": [0, 1],
+            "scores": {
+                "maha_last": [0.1, 0.9],
+                "unused": [99.0, 100.0],
+            },
+            "inside_sample_counts": [0, 2],
+        })
+        manifest_path = tmp_path / "scores.manifest.json"
+        write_score_dump_jsonl(
+            dump,
+            manifest_path,
+            record_extra_names=("inside_sample_counts",),
+        )
+
+        def fail_from_mapping(*args, **kwargs):
+            raise AssertionError("JSONL selected extra loading should not materialize ScoreDump")
+
+        monkeypatch.setattr(ScoreDump, "from_mapping", fail_from_mapping)
+        columns = load_score_dump_columns_with_extras(
+            manifest_path,
+            ("maha_last",),
+            ("inside_sample_counts",),
+        )
+
+        assert columns.labels == (0, 1)
+        assert columns.scores == {"maha_last": (0.1, 0.9)}
+        assert columns.extras == {"inside_sample_counts": (0, 2)}
         assert columns.source_format == "eigentruth.score_dump.jsonl"
 
     def test_load_score_dump_columns_ignores_unselected_jsonl_scores(self, tmp_path):

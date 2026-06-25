@@ -15,6 +15,7 @@ from eigentruth.eval.conformal import (
     conformal_pvalues,
     conformal_threshold,
     directional_conformal_threshold,
+    directional_conformal_thresholds,
     directional_trigger_rate,
 )
 from eigentruth.eval.metrics import (
@@ -35,6 +36,7 @@ from eigentruth.eval.score_dump import (
     iter_score_dump_jsonl_records,
     load_score_dump,
     load_score_dump_columns,
+    load_score_dump_columns_with_extras,
     load_score_dump_layer_scores,
     load_score_dump_statement_scores,
     score_dump_cache_summary,
@@ -60,6 +62,7 @@ __all__ = [
     "conformal_pvalues",
     "conformal_threshold",
     "directional_conformal_threshold",
+    "directional_conformal_thresholds",
     "directional_trigger_rate",
     "RANK_SCORE_FUSION_METHODS",
     "native_anomaly_scores",
@@ -75,6 +78,7 @@ __all__ = [
     "iter_score_dump_jsonl_records",
     "load_score_dump",
     "load_score_dump_columns",
+    "load_score_dump_columns_with_extras",
     "load_score_dump_layer_scores",
     "load_score_dump_statement_scores",
     "score_dump_cache_summary",

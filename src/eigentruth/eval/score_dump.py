@@ -206,6 +206,7 @@ class ScoreDumpColumns:
 
     labels: tuple[int, ...]
     scores: Mapping[str, tuple[float, ...]]
+    extras: Mapping[str, Any] = field(default_factory=dict)
     config: Mapping[str, Any] = field(default_factory=dict)
     summary: Mapping[str, Any] = field(default_factory=dict)
     source_format: str = "json"
@@ -515,6 +516,63 @@ def load_score_dump_columns(
     return ScoreDumpColumns(
         labels=dump.labels,
         scores={name: dump.scores[name] for name in requested},
+        extras={},
+        config=dict(dump.config),
+        summary=dump.summary(),
+    )
+
+
+def load_score_dump_columns_with_extras(
+    path: str | Path,
+    score_names: Sequence[str],
+    extra_names: Sequence[str],
+    *,
+    allow_empty: bool = False,
+    cache: MutableMapping[str, Any] | None = None,
+) -> ScoreDumpColumns:
+    """Load selected primary score columns plus selected dump extras."""
+    score_path = Path(path)
+    requested_scores = tuple(str(name) for name in score_names)
+    requested_extras = tuple(dict.fromkeys(str(name) for name in extra_names))
+    if not requested_scores:
+        raise ValueError("at least one score name is required.")
+    if not requested_extras:
+        return load_score_dump_columns(
+            score_path,
+            requested_scores,
+            allow_empty=allow_empty,
+            cache=cache,
+        )
+    payload, manifest = _load_json_or_cached_jsonl_manifest(score_path, cache)
+    if manifest is not None:
+        cache_key = _jsonl_view_cache_key(
+            score_path,
+            manifest,
+            view="columns_extras",
+            options=(requested_scores, requested_extras, allow_empty),
+        )
+        cached = _score_dump_view_cache_get(cache, cache_key, ScoreDumpColumns)
+        if cached is not None:
+            return cached
+        columns = _load_score_dump_jsonl_columns_with_extras(
+            score_path,
+            manifest,
+            score_names=requested_scores,
+            extra_names=requested_extras,
+            allow_empty=allow_empty,
+            cache=cache,
+        )
+        _score_dump_view_cache_set(cache, cache_key, columns)
+        _score_dump_jsonl_summary_cache_set(cache, score_path, manifest, columns.summary)
+        return columns
+    assert payload is not None
+    dump = ScoreDump.from_mapping(payload, allow_empty=allow_empty)
+    dump.require_scores(requested_scores)
+    extras = {name: dump.extras[name] for name in requested_extras if name in dump.extras}
+    return ScoreDumpColumns(
+        labels=dump.labels,
+        scores={name: dump.scores[name] for name in requested_scores},
+        extras=extras,
         config=dict(dump.config),
         summary=dump.summary(),
     )
@@ -1130,6 +1188,63 @@ def _load_score_dump_jsonl_columns(
     return ScoreDumpColumns(
         labels=label_tuple,
         scores={name: tuple(values) for name, values in scores.items()},
+        extras={},
+        config=dict(manifest.config),
+        summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
+        source_format=JSONL_FORMAT,
+    )
+
+
+def _load_score_dump_jsonl_columns_with_extras(
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    *,
+    score_names: Sequence[str],
+    extra_names: Sequence[str],
+    allow_empty: bool,
+    cache: MutableMapping[str, Any] | None,
+) -> ScoreDumpColumns:
+    missing = [name for name in score_names if name not in manifest.score_names]
+    if missing:
+        raise ValueError(f"score dump is missing requested score(s): {missing}.")
+
+    labels: list[int] = []
+    scores = {name: [] for name in score_names}
+    extras: dict[str, Any] = {
+        name: manifest.extras[name]
+        for name in extra_names
+        if name in manifest.extras
+    }
+    record_extra_names = tuple(name for name in extra_names if name not in extras)
+    record_extras = {name: [] for name in record_extra_names}
+    missing_record_extra = {name: False for name in record_extra_names}
+
+    for label, record_scores, record_extra_values in _iter_score_dump_jsonl_selected_records_with_extras(
+        manifest_path=manifest_path,
+        manifest=manifest,
+        score_names=score_names,
+        extra_names=record_extra_names,
+        cache=cache,
+    ):
+        labels.append(label)
+        for name in score_names:
+            scores[name].append(record_scores[name])
+        for name in record_extra_names:
+            if name in record_extra_values:
+                record_extras[name].append(record_extra_values[name])
+            else:
+                missing_record_extra[name] = True
+
+    if not labels and not allow_empty:
+        raise ValueError("score dump labels must be non-empty.")
+    for name, values in record_extras.items():
+        if not missing_record_extra[name] and len(values) == len(labels):
+            extras[name] = tuple(values)
+    label_tuple = tuple(labels)
+    return ScoreDumpColumns(
+        labels=label_tuple,
+        scores={name: tuple(values) for name, values in scores.items()},
+        extras=extras,
         config=dict(manifest.config),
         summary=_jsonl_manifest_summary(manifest, labels=label_tuple),
         source_format=JSONL_FORMAT,
@@ -1655,6 +1770,51 @@ def _iter_score_dump_jsonl_selected_records(
     _finish_stream_fingerprint_cache_write(records_file, cache, stream_fingerprint)
 
 
+def _iter_score_dump_jsonl_selected_records_with_extras(
+    *,
+    manifest_path: Path,
+    manifest: ScoreDumpJsonlManifest,
+    score_names: Sequence[str],
+    extra_names: Sequence[str],
+    cache: MutableMapping[str, Any] | None,
+) -> Iterator[tuple[int, dict[str, float], dict[str, Any]]]:
+    records_file = manifest.records_file(manifest_path)
+    selected_score_names = tuple(str(name) for name in score_names)
+    selected_extra_names = tuple(str(name) for name in extra_names)
+    count = 0
+    stream_fingerprint = _start_stream_fingerprint_cache_write(records_file, cache)
+    with records_file.open("rb") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            _update_stream_fingerprint(stream_fingerprint, line)
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError("record must be a JSON object.")
+                label = _coerce_record_label(payload.get("label"))
+                scores = _selected_record_scores(
+                    payload.get("scores"),
+                    score_names=selected_score_names,
+                )
+                extras = _selected_record_extras(
+                    payload,
+                    extra_names=selected_extra_names,
+                )
+            except Exception as exc:
+                raise ValueError(
+                    f"invalid score dump JSONL record at {records_file}:{line_number}: {exc}"
+                ) from exc
+            count += 1
+            yield label, scores, extras
+    if manifest.n_total is not None and count != manifest.n_total:
+        raise ValueError(
+            f"score dump JSONL record count does not match manifest "
+            f"({count} records vs {manifest.n_total} expected)."
+        )
+    _finish_stream_fingerprint_cache_write(records_file, cache, stream_fingerprint)
+
+
 def _iter_score_dump_jsonl_selected_statement_records(
     *,
     manifest_path: Path,
@@ -1820,6 +1980,31 @@ def _selected_record_sweep_scores(
                 f"{sorted(missing_scores)}."
             )
         selected[layer_key] = selected_layer
+    return selected
+
+
+def _selected_record_extras(
+    value: Any,
+    *,
+    extra_names: Sequence[str],
+) -> dict[str, Any]:
+    if not extra_names:
+        return {}
+    raw_payload = _required_mapping(value, "record")
+    raw_extras: dict[str, Any] = {}
+    nested_extras = raw_payload.get("extras")
+    if nested_extras is not None:
+        raw_extras.update(dict(_required_mapping(nested_extras, "extras")))
+    raw_extras.update({
+        str(key): raw_value
+        for key, raw_value in raw_payload.items()
+        if key not in {"label", "scores", "sweep_scores", "statement", "extras"}
+    })
+    selected: dict[str, Any] = {}
+    for name in extra_names:
+        found, raw_value = _mapping_get_str_key(raw_extras, str(name))
+        if found:
+            selected[str(name)] = raw_value
     return selected
 
 

@@ -46,7 +46,7 @@ from eigentruth.calibration import (  # noqa: E402
 from eigentruth.eval.conformal import (  # noqa: E402
     AdaptiveScoreTransform,
     adaptive_anomaly_scores,
-    directional_conformal_threshold,
+    directional_conformal_thresholds,
     directional_trigger_rate,
 )
 from eigentruth.eval.metrics import confidence_error_report, selective_classification_report  # noqa: E402
@@ -57,6 +57,7 @@ from eigentruth.eval.score_dump import (  # noqa: E402
     ScoreDumpJsonlManifest,
     iter_score_dump_jsonl_records,
     load_score_dump_columns,
+    load_score_dump_columns_with_extras,
     score_dump_cache_summary,
     score_dump_file_metadata,
 )
@@ -187,7 +188,16 @@ def _load_primary_score_dump_view(
             *(name for name in (confidence_signal,) if name is not None and name in available),
             *(name for name in additional_signals if name in available),
         )))
-        columns = load_score_dump_columns(path, requested, cache=cache)
+        extra_names = tuple(name for name in additional_signals if name not in available)
+        if extra_names:
+            columns = load_score_dump_columns_with_extras(
+                path,
+                requested,
+                extra_names,
+                cache=cache,
+            )
+        else:
+            columns = load_score_dump_columns(path, requested, cache=cache)
         metadata = score_dump_file_metadata(path, cache=cache)
         metadata.update({
             "summary": dict(columns.summary),
@@ -293,6 +303,8 @@ def _load_adaptive_feature_values(
     for name in feature_names:
         if name in score_dump.scores:
             features[name] = _coerce_feature_values(score_dump.scores[name], name=name, n_total=n_total)
+        elif name in score_dump.extras:
+            features[name] = _coerce_feature_values(score_dump.extras[name], name=name, n_total=n_total)
         elif full_score_dump is not None and name in full_score_dump.extras:
             features[name] = _coerce_feature_values(full_score_dump.extras[name], name=name, n_total=n_total)
         else:
@@ -343,19 +355,21 @@ def _run_adaptive_conformal_report(
         half = n_true // 2
         calib = true_scores[perm[:half]]
         test_true = true_scores[perm[half:]]
+        thresholds = directional_conformal_thresholds(calib, ALPHAS, "higher")
         for alpha in ALPHAS:
-            threshold = directional_conformal_threshold(calib, alpha, "higher")
+            threshold = thresholds[alpha]
             fa_sum[alpha] += directional_trigger_rate(test_true, threshold, "higher")
             det_sum[alpha] += directional_trigger_rate(false_scores, threshold, "higher")
 
     results = {}
     all_pass = True
+    full_thresholds = directional_conformal_thresholds(true_scores, ALPHAS, "higher")
     for alpha in ALPHAS:
         false_alarm = fa_sum[alpha] / repeats
         detection = det_sum[alpha] / repeats
         ok = abs(false_alarm - alpha) <= TOLERANCE
         all_pass &= ok
-        threshold = directional_conformal_threshold(true_scores, alpha, "higher")
+        threshold = full_thresholds[alpha]
         results[str(alpha)] = {
             "false_alarm": false_alarm,
             "coverage": 1.0 - false_alarm,
@@ -487,8 +501,9 @@ def run(args) -> dict:
         half = n_true // 2
         calib = true_scores[perm[:half]]
         test_true = true_scores[perm[half:]]
+        thresholds = directional_conformal_thresholds(calib, ALPHAS, direction)
         for a in ALPHAS:
-            t = directional_conformal_threshold(calib, a, direction)
+            t = thresholds[a]
             fa_sum[a] += directional_trigger_rate(test_true, t, direction)
             det_sum[a] += directional_trigger_rate(false_scores, t, direction)
 
@@ -497,12 +512,13 @@ def run(args) -> dict:
     print("  " + "-" * 66)
     results = {}
     all_pass = True
+    full_thresholds = directional_conformal_thresholds(true_scores, ALPHAS, direction)
     for a in ALPHAS:
         fa = fa_sum[a] / args.repeats
         det = det_sum[a] / args.repeats
         ok = abs(fa - a) <= TOLERANCE
         all_pass &= ok
-        full_threshold = directional_conformal_threshold(true_scores, a, direction)
+        full_threshold = full_thresholds[a]
         selective_report = selective_classification_report(
             scores, labels, full_threshold, direction=direction
         )

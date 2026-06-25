@@ -442,7 +442,8 @@ python benchmarks/eval_conformal.py --scores benchmarks/scores.json \
 same α = 0.2 false-alarm budget, `truth_proj` detects **46.9%** of false statements vs
 34.1% for `maha_last` (committed as `results_conformal_*.json`). The low-level
 calibration functions live in `eigentruth.eval.conformal` (`conformal_pvalues`,
-`conformal_threshold`, `directional_conformal_threshold`, `directional_trigger_rate`).
+`conformal_threshold`, `directional_conformal_threshold`,
+`directional_conformal_thresholds`, `directional_trigger_rate`).
 Reusable single-signal artifacts are built with `eigentruth.calibration.ConformalCalibrator`;
 layer/score reports and best artifacts are built with
 `eigentruth.calibration.LayerScoreSweepCalibrator`. Large layer/score sweeps can
@@ -456,7 +457,9 @@ When `--adaptive-feature` is provided, `eval_conformal.py` loads the feature fro
 a selected primary score, JSON dump extra array, JSONL manifest extra, or JSONL
 per-record extra, then writes an `adaptive_conformal_report` whose adjusted score
 is always higher-is-more-anomalous. `--save-adaptive-calibration` stores that
-adjusted score as a standard `CalibrationArtifact` with transform metadata.
+adjusted score as a standard `CalibrationArtifact` with transform metadata. For
+JSONL dumps, selected primary scores and requested adaptive record extras are
+loaded through one selected streaming view.
 When a primary confidence proxy such as `nll_answer` is present, `eval_conformal.py`
 also adds a `confidence_error_report` under each alpha result. By default it treats
 the lowest 25% `nll_answer` rows as the high-confidence region and reports how many
