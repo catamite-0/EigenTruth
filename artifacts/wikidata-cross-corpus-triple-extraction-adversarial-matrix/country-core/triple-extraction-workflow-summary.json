@@ -14,6 +14,18 @@
         "record_count": 359,
         "zero_expected_record_count": 359
       },
+      "non_assertive_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
       "positive": {
         "exact_match_count": 1077,
         "expected_triple_count": 1436,
@@ -24,6 +36,18 @@
         "precision": 0.75,
         "recall": 0.75,
         "record_count": 1436,
+        "zero_expected_record_count": 0
+      },
+      "predicate_confusion": {
+        "exact_match_count": 359,
+        "expected_triple_count": 359,
+        "extracted_triple_count": 359,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 359,
         "zero_expected_record_count": 0
       }
     },
@@ -98,7 +122,7 @@
             "subject": "afghani"
           }
         ],
-        "index": 8,
+        "index": 10,
         "missing": [
           {
             "object": "afghani",
@@ -138,7 +162,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 13,
+        "index": 17,
         "missing": [
           {
             "object": "arabic",
@@ -178,7 +202,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 18,
+        "index": 24,
         "missing": [
           {
             "object": "balochi",
@@ -218,7 +242,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 23,
+        "index": 31,
         "missing": [
           {
             "object": "dari",
@@ -258,7 +282,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 28,
+        "index": 38,
         "missing": [
           {
             "object": "nuristani",
@@ -298,7 +322,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 33,
+        "index": 45,
         "missing": [
           {
             "object": "pamir",
@@ -338,7 +362,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 38,
+        "index": 52,
         "missing": [
           {
             "object": "pashayi",
@@ -378,7 +402,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 43,
+        "index": 59,
         "missing": [
           {
             "object": "pashto",
@@ -418,7 +442,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 48,
+        "index": 66,
         "missing": [
           {
             "object": "turkmen",
@@ -458,7 +482,7 @@
             "subject": "The official language spoken in Afghanistan"
           }
         ],
-        "index": 53,
+        "index": 73,
         "missing": [
           {
             "object": "uzbek",
@@ -498,7 +522,7 @@
             "subject": "Albania"
           }
         ],
-        "index": 58,
+        "index": 80,
         "missing": [
           {
             "object": "tirana",
@@ -538,7 +562,7 @@
             "subject": "Albanian lek"
           }
         ],
-        "index": 63,
+        "index": 87,
         "missing": [
           {
             "object": "albanian lek",
@@ -578,7 +602,7 @@
             "subject": "The official language spoken in Albania"
           }
         ],
-        "index": 68,
+        "index": 94,
         "missing": [
           {
             "object": "albanian",
@@ -618,7 +642,7 @@
             "subject": "Algeria"
           }
         ],
-        "index": 73,
+        "index": 101,
         "missing": [
           {
             "object": "algiers",
@@ -658,7 +682,7 @@
             "subject": "Algerian dinar"
           }
         ],
-        "index": 78,
+        "index": 108,
         "missing": [
           {
             "object": "algerian dinar",
@@ -698,7 +722,7 @@
             "subject": "The official language spoken in Algeria"
           }
         ],
-        "index": 83,
+        "index": 115,
         "missing": [
           {
             "object": "arabic",
@@ -738,7 +762,7 @@
             "subject": "The official language spoken in Algeria"
           }
         ],
-        "index": 88,
+        "index": 122,
         "missing": [
           {
             "object": "standard algerian berber",
@@ -778,7 +802,7 @@
             "subject": "Andorra"
           }
         ],
-        "index": 93,
+        "index": 129,
         "missing": [
           {
             "object": "andorra la vella",
@@ -818,7 +842,7 @@
             "subject": "euro"
           }
         ],
-        "index": 98,
+        "index": 136,
         "missing": [
           {
             "object": "euro",
@@ -829,27 +853,69 @@
         "text": "euro is Andorra's currency."
       }
     ],
-    "exact_match_count": 1077,
-    "expected_triple_count": 1436,
-    "extracted_triple_count": 1436,
-    "f1": 0.75,
+    "exact_match_count": 1436,
+    "expected_triple_count": 1795,
+    "extracted_triple_count": 1795,
+    "f1": 0.8000000000000002,
     "false_positive_rate": 0.0,
     "false_positive_record_count": 0,
-    "precision": 0.75,
-    "recall": 0.75,
-    "record_count": 1795,
-    "zero_expected_record_count": 359
+    "precision": 0.8,
+    "recall": 0.8,
+    "record_count": 2513,
+    "zero_expected_record_count": 718
   },
   "best_adversarial_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
     "false_positive_rate": 0.0,
     "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
     "record_count": 359,
     "zero_expected_record_count": 359
   },
   "best_extractor": "regex_rule_based",
+  "best_non_assertive_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 359,
+    "zero_expected_record_count": 359
+  },
+  "best_predicate_confusion_report": {
+    "exact_match_count": 359,
+    "expected_triple_count": 359,
+    "extracted_triple_count": 359,
+    "f1": 1.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "record_count": 359,
+    "zero_expected_record_count": 0
+  },
   "best_report": {
     "by_record_type": {
       "adversarial_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "non_assertive_negative": {
         "exact_match_count": 0,
         "expected_triple_count": 0,
         "extracted_triple_count": 0,
@@ -872,21 +938,33 @@
         "recall": 1.0,
         "record_count": 1436,
         "zero_expected_record_count": 0
+      },
+      "predicate_confusion": {
+        "exact_match_count": 359,
+        "expected_triple_count": 359,
+        "extracted_triple_count": 359,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 359,
+        "zero_expected_record_count": 0
       }
     },
     "error_examples": [],
-    "exact_match_count": 1436,
-    "expected_triple_count": 1436,
-    "extracted_triple_count": 1436,
+    "exact_match_count": 1795,
+    "expected_triple_count": 1795,
+    "extracted_triple_count": 1795,
     "f1": 1.0,
     "false_positive_rate": 0.0,
     "false_positive_record_count": 0,
     "precision": 1.0,
     "recall": 1.0,
-    "record_count": 1795,
-    "zero_expected_record_count": 359
+    "record_count": 2513,
+    "zero_expected_record_count": 718
   },
-  "f1_lift": 0.25,
+  "f1_lift": 0.19999999999999984,
   "fact_corpus_paths": [
     "artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl"
   ],
@@ -894,20 +972,22 @@
     "by_predicate": {
       "capital_of": {
         "fact_count": 103,
-        "record_count": 515
+        "record_count": 773
       },
       "currency_of": {
         "fact_count": 101,
-        "record_count": 505
+        "record_count": 709
       },
       "official_language_of": {
         "fact_count": 155,
-        "record_count": 775
+        "record_count": 1031
       }
     },
     "n_adversarial_negative_records": 359,
     "n_facts": 359,
-    "n_records": 1795,
+    "n_non_assertive_negative_records": 359,
+    "n_predicate_confusion_records": 359,
+    "n_records": 2513,
     "n_source_records": 359,
     "skipped": {
       "duplicate_record": 0,
@@ -921,7 +1001,11 @@
     "adversarial_negatives_per_fact": 1,
     "failures": [],
     "max_adversarial_false_positive_rate": 0.0,
+    "max_non_assertive_false_positive_rate": 0.0,
     "min_augmented_f1": 1.0,
+    "min_predicate_confusion_f1": 1.0,
+    "non_assertive_negatives_per_fact": 1,
+    "predicate_confusions_per_fact": 1,
     "require_f1_lift": true
   },
   "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/triple-extraction-records.json",
@@ -945,34 +1029,7 @@
           "record_count": 359,
           "zero_expected_record_count": 359
         },
-        "positive": {
-          "exact_match_count": 1436,
-          "expected_triple_count": 1436,
-          "extracted_triple_count": 1436,
-          "f1": 1.0,
-          "false_positive_rate": 0.0,
-          "false_positive_record_count": 0,
-          "precision": 1.0,
-          "recall": 1.0,
-          "record_count": 1436,
-          "zero_expected_record_count": 0
-        }
-      },
-      "error_examples": [],
-      "exact_match_count": 1436,
-      "expected_triple_count": 1436,
-      "extracted_triple_count": 1436,
-      "f1": 1.0,
-      "false_positive_rate": 0.0,
-      "false_positive_record_count": 0,
-      "precision": 1.0,
-      "recall": 1.0,
-      "record_count": 1795,
-      "zero_expected_record_count": 359
-    },
-    "regex_rule_based": {
-      "by_record_type": {
-        "adversarial_negative": {
+        "non_assertive_negative": {
           "exact_match_count": 0,
           "expected_triple_count": 0,
           "extracted_triple_count": 0,
@@ -995,23 +1052,110 @@
           "recall": 1.0,
           "record_count": 1436,
           "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
         }
       },
       "error_examples": [],
-      "exact_match_count": 1436,
-      "expected_triple_count": 1436,
-      "extracted_triple_count": 1436,
+      "exact_match_count": 1795,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
       "f1": 1.0,
       "false_positive_rate": 0.0,
       "false_positive_record_count": 0,
       "precision": 1.0,
       "recall": 1.0,
-      "record_count": 1795,
-      "zero_expected_record_count": 359
+      "record_count": 2513,
+      "zero_expected_record_count": 718
+    },
+    "regex_rule_based": {
+      "by_record_type": {
+        "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "positive": {
+          "exact_match_count": 1436,
+          "expected_triple_count": 1436,
+          "extracted_triple_count": 1436,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
+          "zero_expected_record_count": 0
+        }
+      },
+      "error_examples": [],
+      "exact_match_count": 1795,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "false_positive_record_count": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "record_count": 2513,
+      "zero_expected_record_count": 718
     },
     "rule_based": {
       "by_record_type": {
         "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 359,
+          "zero_expected_record_count": 359
+        },
+        "non_assertive_negative": {
           "exact_match_count": 0,
           "expected_triple_count": 0,
           "extracted_triple_count": 0,
@@ -1033,6 +1177,18 @@
           "precision": 0.75,
           "recall": 0.75,
           "record_count": 1436,
+          "zero_expected_record_count": 0
+        },
+        "predicate_confusion": {
+          "exact_match_count": 359,
+          "expected_triple_count": 359,
+          "extracted_triple_count": 359,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "record_count": 359,
           "zero_expected_record_count": 0
         }
       },
@@ -1107,7 +1263,7 @@
               "subject": "afghani"
             }
           ],
-          "index": 8,
+          "index": 10,
           "missing": [
             {
               "object": "afghani",
@@ -1147,7 +1303,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 13,
+          "index": 17,
           "missing": [
             {
               "object": "arabic",
@@ -1187,7 +1343,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 18,
+          "index": 24,
           "missing": [
             {
               "object": "balochi",
@@ -1227,7 +1383,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 23,
+          "index": 31,
           "missing": [
             {
               "object": "dari",
@@ -1267,7 +1423,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 28,
+          "index": 38,
           "missing": [
             {
               "object": "nuristani",
@@ -1307,7 +1463,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 33,
+          "index": 45,
           "missing": [
             {
               "object": "pamir",
@@ -1347,7 +1503,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 38,
+          "index": 52,
           "missing": [
             {
               "object": "pashayi",
@@ -1387,7 +1543,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 43,
+          "index": 59,
           "missing": [
             {
               "object": "pashto",
@@ -1427,7 +1583,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 48,
+          "index": 66,
           "missing": [
             {
               "object": "turkmen",
@@ -1467,7 +1623,7 @@
               "subject": "The official language spoken in Afghanistan"
             }
           ],
-          "index": 53,
+          "index": 73,
           "missing": [
             {
               "object": "uzbek",
@@ -1507,7 +1663,7 @@
               "subject": "Albania"
             }
           ],
-          "index": 58,
+          "index": 80,
           "missing": [
             {
               "object": "tirana",
@@ -1547,7 +1703,7 @@
               "subject": "Albanian lek"
             }
           ],
-          "index": 63,
+          "index": 87,
           "missing": [
             {
               "object": "albanian lek",
@@ -1587,7 +1743,7 @@
               "subject": "The official language spoken in Albania"
             }
           ],
-          "index": 68,
+          "index": 94,
           "missing": [
             {
               "object": "albanian",
@@ -1627,7 +1783,7 @@
               "subject": "Algeria"
             }
           ],
-          "index": 73,
+          "index": 101,
           "missing": [
             {
               "object": "algiers",
@@ -1667,7 +1823,7 @@
               "subject": "Algerian dinar"
             }
           ],
-          "index": 78,
+          "index": 108,
           "missing": [
             {
               "object": "algerian dinar",
@@ -1707,7 +1863,7 @@
               "subject": "The official language spoken in Algeria"
             }
           ],
-          "index": 83,
+          "index": 115,
           "missing": [
             {
               "object": "arabic",
@@ -1747,7 +1903,7 @@
               "subject": "The official language spoken in Algeria"
             }
           ],
-          "index": 88,
+          "index": 122,
           "missing": [
             {
               "object": "standard algerian berber",
@@ -1787,7 +1943,7 @@
               "subject": "Andorra"
             }
           ],
-          "index": 93,
+          "index": 129,
           "missing": [
             {
               "object": "andorra la vella",
@@ -1827,7 +1983,7 @@
               "subject": "euro"
             }
           ],
-          "index": 98,
+          "index": 136,
           "missing": [
             {
               "object": "euro",
@@ -1838,16 +1994,16 @@
           "text": "euro is Andorra's currency."
         }
       ],
-      "exact_match_count": 1077,
-      "expected_triple_count": 1436,
-      "extracted_triple_count": 1436,
-      "f1": 0.75,
+      "exact_match_count": 1436,
+      "expected_triple_count": 1795,
+      "extracted_triple_count": 1795,
+      "f1": 0.8000000000000002,
       "false_positive_rate": 0.0,
       "false_positive_record_count": 0,
-      "precision": 0.75,
-      "recall": 0.75,
-      "record_count": 1795,
-      "zero_expected_record_count": 359
+      "precision": 0.8,
+      "recall": 0.8,
+      "record_count": 2513,
+      "zero_expected_record_count": 718
     }
   },
   "status": "promote",

@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/artifact-manifest.json",
-      "sha256": "68dbc2f6715779e9edd10f778e0458a306dc2f62985111ccaa3296153c29d868",
-      "size_bytes": 2523
+      "sha256": "fac685b3fc71b279f126f8c29e40879b6378564ea7a441aaf47c0f1d1ad12e53",
+      "size_bytes": 2730
     },
     "corpus.country-core.source.1.wikidata-country-core-facts-source": {
       "exists": true,
@@ -21,16 +21,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/triple-extraction-workflow-summary.json",
-      "sha256": "219f122661afaae8cd22900bbd33928a4f151d953e465204f032951893262edb",
-      "size_bytes": 57206
+      "sha256": "de0dfe2f7760975a7b7c8dd5d9491cde8519891521c5f4a76eec3fe8d31e8cfc",
+      "size_bytes": 62117
     },
     "corpus.organization-product.artifact_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/artifact-manifest.json",
-      "sha256": "235aba9af78bfb8732ef9e6ab32247bada4ce79960e27ddc3403d30289d70008",
-      "size_bytes": 2514
+      "sha256": "7de97e5434af3cc707c2038f3d3b91c721372e2f70fe94082d4acc3fad1a0696",
+      "size_bytes": 2689
     },
     "corpus.organization-product.source.1.wikidata-organization-product-source": {
       "exists": true,
@@ -45,26 +45,30 @@
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/triple-extraction-workflow-summary.json",
-      "sha256": "dd562cbf3bc0d184f5b3620068a52ae997703413a4b5cd3646b780378dad751c",
-      "size_bytes": 57483
+      "sha256": "3b1a52922904f5aacfdf5327a5e9a8d065af1c9186b8d21613bffd970f01580a",
+      "size_bytes": 62877
     },
     "matrix_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-fixture-matrix.json",
-      "sha256": "cdc97e936f6d757fab72a1d59e79c66c4fab4fa8321ee030bfc5803ebe5f0767",
-      "size_bytes": 3244
+      "sha256": "2ce7e8b164aff40bfe1bffea53875d6e51922bfad7e6ea75707ec3cf0086b187",
+      "size_bytes": 4350
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "distinct_predicate_count": 6,
     "max_best_adversarial_false_positive_rate": 0.0,
-    "mean_baseline_f1": 0.375,
+    "max_best_non_assertive_false_positive_rate": 0.0,
+    "mean_baseline_f1": 0.4000000000000001,
     "mean_best_adversarial_false_positive_rate": 0.0,
     "mean_best_f1": 1.0,
-    "mean_f1_lift": 0.625,
+    "mean_best_non_assertive_false_positive_rate": 0.0,
+    "mean_best_predicate_confusion_f1": 1.0,
+    "mean_f1_lift": 0.5999999999999999,
+    "min_best_predicate_confusion_f1": 1.0,
     "min_distinct_predicates": 6,
     "n_corpora": 2,
     "promoted_corpora": 2,

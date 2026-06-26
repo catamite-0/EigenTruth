@@ -21,40 +21,40 @@
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-records.json",
-      "sha256": "53f4a787ef5392d2eab4b71ee88c8e46937b29687807c545f10b38f52fb0d303",
-      "size_bytes": 80806
+      "sha256": "6211303c31726882a6bc7666842ae3058c8f22bd1c965c1f5176b14265d91f29",
+      "size_bytes": 113888
     },
     "report.composite": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "composite-triple-extraction-report.json",
-      "sha256": "ce2451f971e98fbe541783ef1e6706014bcca203b424877a596a9a1ca09ad055",
-      "size_bytes": 1453
+      "sha256": "60199cf1373371c0d8020a171242850190fbf92738973939d12eed9c2950c031",
+      "size_bytes": 2173
     },
     "report.regex_rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "regex_rule_based-triple-extraction-report.json",
-      "sha256": "23e3b75e2fe7cd14f10f559fb7913079bbd32f35dc3e5f6962b0150100c435ed",
-      "size_bytes": 1460
+      "sha256": "f28bc14640090fa635208290ab0b90e96ef0feeef8cd607310e1cfe77af54fad",
+      "size_bytes": 2180
     },
     "report.rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "rule_based-triple-extraction-report.json",
-      "sha256": "4dba64744546ebdf87b514868cefced1518f88f8439fc4e088524d29011217ee",
-      "size_bytes": 25454
+      "sha256": "0549ddbb4ae338c08a70b9688f07dbec8b9520a982334e7960e3554579adb33f",
+      "size_bytes": 26478
     },
     "workflow_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-workflow-summary.json",
-      "sha256": "dd562cbf3bc0d184f5b3620068a52ae997703413a4b5cd3646b780378dad751c",
-      "size_bytes": 57483
+      "sha256": "3b1a52922904f5aacfdf5327a5e9a8d065af1c9186b8d21613bffd970f01580a",
+      "size_bytes": 62877
     }
   },
   "digest_algorithm": "sha256",
@@ -63,9 +63,13 @@
     "best_adversarial_false_positive_rate": 0.0,
     "best_extractor": "regex_rule_based",
     "best_f1": 1.0,
+    "best_non_assertive_false_positive_rate": 0.0,
+    "best_predicate_confusion_f1": 1.0,
     "f1_lift": 1.0,
     "n_adversarial_negative_records": 8,
-    "n_records": 40,
+    "n_non_assertive_negative_records": 8,
+    "n_predicate_confusion_records": 8,
+    "n_records": 56,
     "pattern_count": 15,
     "promotes_augmented_extractor": true,
     "status": "promote",

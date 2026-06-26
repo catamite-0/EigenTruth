@@ -134,6 +134,8 @@ def build_triple_extraction_fixture(
     *,
     max_facts: int | None = None,
     adversarial_negatives_per_fact: int = 0,
+    predicate_confusions_per_fact: int = 0,
+    non_assertive_negatives_per_fact: int = 0,
 ) -> dict[str, Any]:
     """Build labeled extraction records from structured fact-like mappings."""
     if max_facts is not None and max_facts <= 0:
@@ -141,12 +143,20 @@ def build_triple_extraction_fixture(
     if int(adversarial_negatives_per_fact) < 0:
         raise ValueError("adversarial_negatives_per_fact must be non-negative.")
     adversarial_negatives_per_fact = int(adversarial_negatives_per_fact)
+    if int(predicate_confusions_per_fact) < 0:
+        raise ValueError("predicate_confusions_per_fact must be non-negative.")
+    predicate_confusions_per_fact = int(predicate_confusions_per_fact)
+    if int(non_assertive_negatives_per_fact) < 0:
+        raise ValueError("non_assertive_negatives_per_fact must be non-negative.")
+    non_assertive_negatives_per_fact = int(non_assertive_negatives_per_fact)
     facts, skipped = _coerce_structured_facts(source_records)
     if max_facts is not None:
         facts = facts[:max_facts]
     records = []
     by_predicate: dict[str, dict[str, int]] = {}
     adversarial_negative_count = 0
+    predicate_confusion_count = 0
+    non_assertive_negative_count = 0
     seen: set[tuple[str, str, str, str]] = set()
     for index, fact in enumerate(facts):
         predicate = _output_predicate(fact.predicate)
@@ -209,6 +219,66 @@ def build_triple_extraction_fixture(
                     "source_fact": fact.to_dict(),
                 },
             })
+        for template_id, text, expected_predicate, expected_object in _predicate_confusion_templates_for_fact(
+            fact,
+            predicate=predicate,
+            limit=predicate_confusions_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), expected_predicate, _normalize(expected_object))
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(expected_predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[expected_predicate]["record_count"] += 1
+            predicate_confusion_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-predicate-confusion-{template_id}",
+                "text": text,
+                "expected_triples": [
+                    {
+                        "subject": fact.subject,
+                        "predicate": expected_predicate,
+                        "object": expected_object,
+                    }
+                ],
+                "metadata": {
+                    "record_type": "predicate_confusion",
+                    "source_fact_index": index,
+                    "template_id": template_id,
+                    "predicate": expected_predicate,
+                    "source_predicate": predicate,
+                    "adversarial_family": "wrong_predicate_claim",
+                    "source_fact": fact.to_dict(),
+                },
+            })
+        for template_id, text in _non_assertive_negative_templates_for_fact(
+            fact,
+            predicate=predicate,
+            positive_templates=templates,
+            limit=non_assertive_negatives_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), predicate, "")
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[predicate]["record_count"] += 1
+            non_assertive_negative_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-non-assertive-negative-{template_id}",
+                "text": text,
+                "expected_triples": [],
+                "metadata": {
+                    "record_type": "non_assertive_negative",
+                    "source_fact_index": index,
+                    "template_id": template_id,
+                    "predicate": predicate,
+                    "adversarial_family": "quoted_or_questioned_fact",
+                    "source_fact": fact.to_dict(),
+                },
+            })
         by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
         by_predicate[predicate]["fact_count"] += 1
     if not records:
@@ -225,6 +295,8 @@ def build_triple_extraction_fixture(
             "n_facts": len(facts),
             "n_records": len(records),
             "n_adversarial_negative_records": adversarial_negative_count,
+            "n_predicate_confusion_records": predicate_confusion_count,
+            "n_non_assertive_negative_records": non_assertive_negative_count,
             "by_predicate": by_predicate,
             "skipped": skipped,
         },
@@ -273,6 +345,8 @@ def build_input_provenance(
     *,
     max_facts: int | None,
     adversarial_negatives_per_fact: int = 0,
+    predicate_confusions_per_fact: int = 0,
+    non_assertive_negatives_per_fact: int = 0,
 ) -> dict[str, Any]:
     """Return source fingerprints and builder settings."""
     return {
@@ -282,6 +356,8 @@ def build_input_provenance(
         "config": {
             "max_facts": max_facts,
             "adversarial_negatives_per_fact": int(adversarial_negatives_per_fact),
+            "predicate_confusions_per_fact": int(predicate_confusions_per_fact),
+            "non_assertive_negatives_per_fact": int(non_assertive_negatives_per_fact),
         },
     }
 
@@ -291,15 +367,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     source_paths = tuple(Path(path) for path in args.fact_corpus)
     records = load_fact_records(source_paths)
     adversarial_negatives_per_fact = int(getattr(args, "adversarial_negatives_per_fact", 0))
+    predicate_confusions_per_fact = int(getattr(args, "predicate_confusions_per_fact", 0))
+    non_assertive_negatives_per_fact = int(getattr(args, "non_assertive_negatives_per_fact", 0))
     fixture = build_triple_extraction_fixture(
         records,
         max_facts=args.max_facts,
         adversarial_negatives_per_fact=adversarial_negatives_per_fact,
+        predicate_confusions_per_fact=predicate_confusions_per_fact,
+        non_assertive_negatives_per_fact=non_assertive_negatives_per_fact,
     )
     fixture["input_provenance"] = build_input_provenance(
         source_paths,
         max_facts=args.max_facts,
         adversarial_negatives_per_fact=adversarial_negatives_per_fact,
+        predicate_confusions_per_fact=predicate_confusions_per_fact,
+        non_assertive_negatives_per_fact=non_assertive_negatives_per_fact,
     )
 
     output_records = Path(args.output_records)
@@ -329,6 +411,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "n_records": fixture["summary"]["n_records"],
                 "n_facts": fixture["summary"]["n_facts"],
                 "n_adversarial_negative_records": fixture["summary"]["n_adversarial_negative_records"],
+                "n_predicate_confusion_records": fixture["summary"]["n_predicate_confusion_records"],
+                "n_non_assertive_negative_records": fixture["summary"]["n_non_assertive_negative_records"],
                 "pattern_count": 0 if pattern_payload is None else len(pattern_payload["patterns"]),
             },
         )
@@ -339,6 +423,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"facts={fixture['summary']['n_facts']} "
         f"records={fixture['summary']['n_records']} "
         f"adversarial_negatives={fixture['summary']['n_adversarial_negative_records']} "
+        f"predicate_confusions={fixture['summary']['n_predicate_confusion_records']} "
+        f"non_assertive_negatives={fixture['summary']['n_non_assertive_negative_records']} "
         f"output={output_records}"
     )
     return fixture
@@ -471,6 +557,100 @@ def _adversarial_negative_templates_for_fact(
     return templates[:limit]
 
 
+def _predicate_confusion_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    limit: int,
+) -> tuple[tuple[str, str, str, str], ...]:
+    if limit <= 0:
+        return ()
+    subject = fact.subject
+    object_value = fact.object
+    templates: tuple[tuple[str, str, str, str], ...]
+    if predicate == "capital_of":
+        templates = (
+            ("capital-as-currency", f"The currency of {subject} is {object_value}.", "currency_of", object_value),
+            (
+                "capital-as-official-language",
+                f"The official language of {subject} is {object_value}.",
+                "official_language_of",
+                object_value,
+            ),
+        )
+    elif predicate == "official_language_of":
+        templates = (
+            ("language-as-capital", f"The capital of {subject} is {object_value}.", "capital_of", object_value),
+            ("language-as-currency", f"The currency of {subject} is {object_value}.", "currency_of", object_value),
+        )
+    elif predicate == "currency_of":
+        templates = (
+            (
+                "currency-as-official-language",
+                f"The official language of {subject} is {object_value}.",
+                "official_language_of",
+                object_value,
+            ),
+            ("currency-as-capital", f"The capital of {subject} is {object_value}.", "capital_of", object_value),
+        )
+    elif predicate == "headquarters_location_of":
+        templates = (
+            (
+                "headquarters-as-manufacturer",
+                f"{subject} is manufactured by {object_value}.",
+                "manufacturer_of",
+                object_value,
+            ),
+            ("headquarters-as-inception", f"{subject} was founded in {object_value}.", "inception_of", object_value),
+        )
+    elif predicate == "manufacturer_of":
+        templates = (
+            (
+                "manufacturer-as-headquarters",
+                f"The headquarters of {subject} are in {object_value}.",
+                "headquarters_location_of",
+                object_value,
+            ),
+            ("manufacturer-as-inception", f"{subject} was founded in {object_value}.", "inception_of", object_value),
+        )
+    elif predicate == "inception_of":
+        templates = (
+            (
+                "inception-as-headquarters",
+                f"{subject} is headquartered in {object_value}.",
+                "headquarters_location_of",
+                object_value,
+            ),
+            (
+                "inception-as-manufacturer",
+                f"{subject} is manufactured by {object_value}.",
+                "manufacturer_of",
+                object_value,
+            ),
+        )
+    else:
+        templates = ()
+    return templates[:limit]
+
+
+def _non_assertive_negative_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    positive_templates: Sequence[tuple[str, str, str]],
+    limit: int,
+) -> tuple[tuple[str, str], ...]:
+    if limit <= 0 or not positive_templates:
+        return ()
+    _template_id, positive_text, _expected_object = positive_templates[0]
+    claim_text = positive_text.rstrip(".")
+    templates = (
+        ("quoted-claim-reviewed", f'The claim "{claim_text}" was reviewed.'),
+        ("question-asks-whether", f"A question asks whether {claim_text}."),
+    )
+    return templates[:limit]
+
+
 def _output_predicate(value: Any) -> str | None:
     text = _normalize_predicate(value)
     return PREDICATE_OUTPUTS.get(text)
@@ -527,6 +707,18 @@ def main() -> None:
         type=int,
         default=0,
         help="optional near-miss negated records with no expected triples per fact",
+    )
+    parser.add_argument(
+        "--predicate-confusions-per-fact",
+        type=int,
+        default=0,
+        help="optional wrong-predicate assertion records per fact",
+    )
+    parser.add_argument(
+        "--non-assertive-negatives-per-fact",
+        type=int,
+        default=0,
+        help="optional quoted/questioned records with no expected triples per fact",
     )
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
     run(parser.parse_args())

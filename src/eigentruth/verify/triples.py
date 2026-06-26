@@ -191,7 +191,7 @@ class RuleBasedTripleExtractor:
         text = _clean_sentence(claim.text)
         if not text:
             return ()
-        if _contains_explicit_negation(text):
+        if _contains_explicit_negation(text) or _contains_non_assertive_context(text):
             return ()
 
         capital = _CAPITAL_OF_RE.match(text)
@@ -466,6 +466,9 @@ class RegexTripleExtractor:
             metadata_triples = _metadata_triples(claim)
             if metadata_triples:
                 return metadata_triples
+        text = _clean_sentence(claim.text)
+        if not text or _contains_explicit_negation(text) or _contains_non_assertive_context(text):
+            return ()
         triples: list[ClaimTriple] = []
         seen: set[tuple[str, str, str]] = set()
         for pattern in self.patterns:
@@ -1305,6 +1308,26 @@ def _clean_sentence(value: str) -> str:
 def _contains_explicit_negation(value: str) -> bool:
     tokens = set(_tokens(value))
     return "not" in tokens or "never" in tokens
+
+
+def _contains_non_assertive_context(value: str) -> bool:
+    tokens = set(_tokens(value))
+    return bool(
+        tokens
+        & {
+            "asks",
+            "asked",
+            "claim",
+            "claims",
+            "mentions",
+            "phrase",
+            "question",
+            "questions",
+            "quoted",
+            "reviewed",
+            "whether",
+        }
+    )
 
 
 def _clean_slot(value: Any) -> str:

@@ -62,6 +62,10 @@ class TripleExtractionFixtureMatrixConfig:
     require_f1_lift: bool = True
     adversarial_negatives_per_fact: int = 0
     max_adversarial_false_positive_rate: float = 0.0
+    predicate_confusions_per_fact: int = 0
+    min_predicate_confusion_f1: float = 1.0
+    non_assertive_negatives_per_fact: int = 0
+    max_non_assertive_false_positive_rate: float = 0.0
     min_corpora: int = 2
     min_distinct_predicates: int = 4
     compact_json: bool = False
@@ -95,6 +99,32 @@ class TripleExtractionFixtureMatrixConfig:
             self,
             "max_adversarial_false_positive_rate",
             max_adversarial_false_positive_rate,
+        )
+        if int(self.predicate_confusions_per_fact) < 0:
+            raise ValueError("predicate_confusions_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "predicate_confusions_per_fact",
+            int(self.predicate_confusions_per_fact),
+        )
+        min_predicate_confusion_f1 = float(self.min_predicate_confusion_f1)
+        if not (0.0 <= min_predicate_confusion_f1 <= 1.0):
+            raise ValueError("min_predicate_confusion_f1 must be in [0, 1].")
+        object.__setattr__(self, "min_predicate_confusion_f1", min_predicate_confusion_f1)
+        if int(self.non_assertive_negatives_per_fact) < 0:
+            raise ValueError("non_assertive_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "non_assertive_negatives_per_fact",
+            int(self.non_assertive_negatives_per_fact),
+        )
+        max_non_assertive_false_positive_rate = float(self.max_non_assertive_false_positive_rate)
+        if not (0.0 <= max_non_assertive_false_positive_rate <= 1.0):
+            raise ValueError("max_non_assertive_false_positive_rate must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "max_non_assertive_false_positive_rate",
+            max_non_assertive_false_positive_rate,
         )
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
@@ -136,6 +166,10 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
                 require_f1_lift=config.require_f1_lift,
                 adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
                 max_adversarial_false_positive_rate=config.max_adversarial_false_positive_rate,
+                predicate_confusions_per_fact=config.predicate_confusions_per_fact,
+                min_predicate_confusion_f1=config.min_predicate_confusion_f1,
+                non_assertive_negatives_per_fact=config.non_assertive_negatives_per_fact,
+                max_non_assertive_false_positive_rate=config.max_non_assertive_false_positive_rate,
                 compact_json=config.compact_json,
             )
         )
@@ -163,6 +197,14 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
             "max_best_adversarial_false_positive_rate": matrix[
                 "max_best_adversarial_false_positive_rate"
             ],
+            "mean_best_predicate_confusion_f1": matrix["mean_best_predicate_confusion_f1"],
+            "min_best_predicate_confusion_f1": matrix["min_best_predicate_confusion_f1"],
+            "mean_best_non_assertive_false_positive_rate": matrix[
+                "mean_best_non_assertive_false_positive_rate"
+            ],
+            "max_best_non_assertive_false_positive_rate": matrix[
+                "max_best_non_assertive_false_positive_rate"
+            ],
             "promotes_cross_corpus_extractor": matrix["status"] == "promote",
         },
     )
@@ -187,6 +229,8 @@ def _corpus_result(
     fixture_summary = _mapping(summary.get("fixture_summary"))
     by_predicate = _mapping(fixture_summary.get("by_predicate"))
     best_adversarial_report = _mapping(summary.get("best_adversarial_report"))
+    best_predicate_confusion_report = _mapping(summary.get("best_predicate_confusion_report"))
+    best_non_assertive_report = _mapping(summary.get("best_non_assertive_report"))
     return {
         "name": corpus.name,
         "slug": corpus.slug,
@@ -209,6 +253,20 @@ def _corpus_result(
         ),
         "best_adversarial_false_positive_record_count": int(
             best_adversarial_report.get("false_positive_record_count", 0)
+        ),
+        "n_predicate_confusion_records": int(fixture_summary.get("n_predicate_confusion_records", 0)),
+        "best_predicate_confusion_f1": float(best_predicate_confusion_report.get("f1", 0.0)),
+        "best_predicate_confusion_exact_match_count": int(
+            best_predicate_confusion_report.get("exact_match_count", 0)
+        ),
+        "n_non_assertive_negative_records": int(
+            fixture_summary.get("n_non_assertive_negative_records", 0)
+        ),
+        "best_non_assertive_false_positive_rate": float(
+            best_non_assertive_report.get("false_positive_rate", 0.0)
+        ),
+        "best_non_assertive_false_positive_record_count": int(
+            best_non_assertive_report.get("false_positive_record_count", 0)
         ),
     }
 
@@ -260,6 +318,12 @@ def _matrix_summary(
             "min_distinct_predicates": config.min_distinct_predicates,
             "min_augmented_f1": config.min_augmented_f1,
             "require_f1_lift": config.require_f1_lift,
+            "adversarial_negatives_per_fact": config.adversarial_negatives_per_fact,
+            "max_adversarial_false_positive_rate": config.max_adversarial_false_positive_rate,
+            "predicate_confusions_per_fact": config.predicate_confusions_per_fact,
+            "min_predicate_confusion_f1": config.min_predicate_confusion_f1,
+            "non_assertive_negatives_per_fact": config.non_assertive_negatives_per_fact,
+            "max_non_assertive_false_positive_rate": config.max_non_assertive_false_positive_rate,
             "failures": tuple(failures),
         },
         "n_corpora": len(corpus_results),
@@ -275,6 +339,22 @@ def _matrix_summary(
         ),
         "max_best_adversarial_false_positive_rate": max(
             (float(item["best_adversarial_false_positive_rate"]) for item in corpus_results),
+            default=0.0,
+        ),
+        "mean_best_predicate_confusion_f1": _mean(
+            float(item["best_predicate_confusion_f1"])
+            for item in corpus_results
+        ),
+        "min_best_predicate_confusion_f1": min(
+            (float(item["best_predicate_confusion_f1"]) for item in corpus_results),
+            default=0.0,
+        ),
+        "mean_best_non_assertive_false_positive_rate": _mean(
+            float(item["best_non_assertive_false_positive_rate"])
+            for item in corpus_results
+        ),
+        "max_best_non_assertive_false_positive_rate": max(
+            (float(item["best_non_assertive_false_positive_rate"]) for item in corpus_results),
             default=0.0,
         ),
         "corpora": tuple(dict(item) for item in corpus_results),
@@ -365,6 +445,10 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureMatrix
         require_f1_lift=not bool(args.allow_no_lift),
         adversarial_negatives_per_fact=args.adversarial_negatives_per_fact,
         max_adversarial_false_positive_rate=args.max_adversarial_false_positive_rate,
+        predicate_confusions_per_fact=args.predicate_confusions_per_fact,
+        min_predicate_confusion_f1=args.min_predicate_confusion_f1,
+        non_assertive_negatives_per_fact=args.non_assertive_negatives_per_fact,
+        max_non_assertive_false_positive_rate=args.max_non_assertive_false_positive_rate,
         min_corpora=args.min_corpora,
         min_distinct_predicates=args.min_distinct_predicates,
         compact_json=bool(args.compact_json),
@@ -386,6 +470,10 @@ def main() -> None:
     parser.add_argument("--allow-no-lift", action="store_true")
     parser.add_argument("--adversarial-negatives-per-fact", type=int, default=0)
     parser.add_argument("--max-adversarial-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--predicate-confusions-per-fact", type=int, default=0)
+    parser.add_argument("--min-predicate-confusion-f1", type=float, default=1.0)
+    parser.add_argument("--non-assertive-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-non-assertive-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--min-corpora", type=int, default=2)
     parser.add_argument("--min-distinct-predicates", type=int, default=4)
     parser.add_argument("--compact-json", action="store_true")
