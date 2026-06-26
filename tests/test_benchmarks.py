@@ -2882,6 +2882,129 @@ def test_fetch_wikidata_reference_docs_feeds_external_corpus_gate(tmp_path):
     assert report["gate"]["external_domain_shift_ready"] is True
 
 
+def test_fetch_wikidata_reference_docs_builds_multi_property_source_docs(tmp_path):
+    wikidata = importlib.import_module("benchmarks.fetch_wikidata_reference_docs")
+    external_builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
+    qa_builder = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
+    sparql_path = tmp_path / "wikidata-core-facts-sparql.json"
+    source_path = tmp_path / "wikidata-core-facts.jsonl"
+    external_path = tmp_path / "wikidata-core-facts-corpus.json"
+    qa_path = tmp_path / "wikidata-core-facts-qa.json"
+    template_path = tmp_path / "wikidata-core-facts-templates.json"
+    sparql_path.write_text(
+        json.dumps({
+            "results": {
+                "bindings": [
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q142"},
+                        "countryLabel": {"type": "literal", "value": "France"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P36"},
+                        "propertyLabel": {"type": "literal", "value": "capital"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q90"},
+                        "valueLabel": {"type": "literal", "value": "Paris"},
+                    },
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q142"},
+                        "countryLabel": {"type": "literal", "value": "France"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P37"},
+                        "propertyLabel": {"type": "literal", "value": "official language"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q150"},
+                        "valueLabel": {"type": "literal", "value": "French"},
+                    },
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q17"},
+                        "countryLabel": {"type": "literal", "value": "Japan"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P38"},
+                        "propertyLabel": {"type": "literal", "value": "currency"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q8146"},
+                        "valueLabel": {"type": "literal", "value": "Japanese yen"},
+                    },
+                ]
+            }
+        }),
+        encoding="utf-8",
+    )
+    template_path.write_text(
+        json.dumps({
+            "templates": [
+                {
+                    "statement_property": "P36",
+                    "statement_property_label": "capital",
+                    "question_template": "What is the capital of {country}?",
+                    "answer_field": "capital",
+                },
+                {
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                    "question_template": "What is an official language of {country}?",
+                    "answer_field": "language",
+                },
+                {
+                    "statement_property": "P38",
+                    "statement_property_label": "currency",
+                    "question_template": "What currency does {country} use?",
+                    "answer_field": "currency",
+                },
+            ]
+        }),
+        encoding="utf-8",
+    )
+
+    documents = wikidata.run(
+        SimpleNamespace(
+            output=str(source_path),
+            limit=20,
+            query_preset="country_core_facts",
+            property=["P36", "P37", "P38"],
+            endpoint="https://query.wikidata.org/sparql",
+            timeout=1.0,
+            user_agent="EigenTruth test",
+            input_json=str(sparql_path),
+            fetched_at="2026-06-26T00:00:00+00:00",
+            artifact_manifest=str(tmp_path / "wikidata-core-facts.manifest.json"),
+        )
+    )
+    external = external_builder.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(external_path),
+            corpus_name="wikidata_country_core_facts",
+            source_kind="wikidata_sparql_jsonl",
+            min_chars=10,
+            allow_missing_source=False,
+            trusted_source=["wikidata.org"],
+            default_timestamp=None,
+            artifact_manifest=None,
+        )
+    )
+    qa_corpus = qa_builder.run(
+        SimpleNamespace(
+            source=[str(external_path)],
+            output=str(qa_path),
+            template_json=str(template_path),
+            statement_property="P36",
+            statement_property_label="capital",
+            question_template="What is the capital of {country}?",
+            answer_field="capital",
+            qid_label_field=None,
+            keep_qid_labels=False,
+            artifact_manifest=None,
+        )
+    )
+    by_source = {document["source"]: document for document in documents}
+    by_question = {document["question"]: document for document in qa_corpus["documents"]}
+
+    assert len(documents) == 3
+    assert by_source["wikidata:Q142:P37:Q150"]["metadata"]["language"] == "French"
+    assert by_source["wikidata:Q17:P38:Q8146"]["metadata"]["currency"] == "Japanese yen"
+    assert all(document["metadata"]["query_preset"] == "country_core_facts" for document in documents)
+    assert external["corpus_type"] == "external_evidence_candidate"
+    assert external["summary"]["n_documents"] == 3
+    assert qa_corpus["summary"]["n_documents"] == 3
+    assert by_question["What is an official language of France?"]["answer"] == "French"
+    assert by_question["What currency does Japan use?"]["answer"] == "Japanese yen"
+
+
 def test_build_wikidata_qa_corpus_feeds_retrieval_structured_qa(tmp_path):
     wikidata = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
     builder = importlib.import_module("benchmarks.build_evidence_fixture")

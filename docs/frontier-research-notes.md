@@ -135,7 +135,9 @@ Added a retrieval corpus provenance audit gate:
   copies or labels is no longer enough to mark a local text dump as external
   evidence.
 - `fetch_wikidata_reference_docs.py` materializes real Wikidata CC0
-  country-capital SPARQL records as JSONL source docs. The artifact at
+  country-capital SPARQL records as JSONL source docs, and now also supports a
+  `country_core_facts` preset for template-ready properties such as `P36`
+  capital, `P37` official language, and `P38` currency. The artifact at
   `artifacts/wikidata-country-capitals-external-corpus/` fetches 120 records,
   normalizes them through the external corpus builder, passes grounding
   provenance audit, and recursively verifies the manifest. It is source/provenance
