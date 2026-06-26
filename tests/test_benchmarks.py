@@ -2406,6 +2406,7 @@ def test_build_truthfulqa_corpus_outputs_correct_answer_documents(monkeypatch):
 
 def test_build_retrieval_stress_corpus_exposes_answer_echo_self_support(tmp_path):
     stress_builder = importlib.import_module("benchmarks.build_retrieval_stress_corpus")
+    provenance_audit = importlib.import_module("benchmarks.audit_retrieval_corpus_provenance")
     evidence_builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -2490,6 +2491,152 @@ def test_build_retrieval_stress_corpus_exposes_answer_echo_self_support(tmp_path
     assert "score_label" not in fixture["records"][2]["metadata"]
     assert quality["label_status_matrix"]["false"]["supported"] == 2
     assert quality["false_supported_rate"] == pytest.approx(1.0)
+
+    grounding_audit = provenance_audit.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(corpus_path)],
+            output=str(tmp_path / "answer-echo-grounding-audit.json"),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+    stress_audit = provenance_audit.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(corpus_path)],
+            output=str(tmp_path / "answer-echo-stress-audit.json"),
+            audit_role="stress_control",
+            max_exact_answer_copy_rate=1.0,
+            max_claim_id_link_rate=1.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+
+    assert grounding_audit["status"] == "fail"
+    assert grounding_audit["evidence_class"] == "answer_echo_stress_control"
+    assert "expected 'external_candidate'" in " ".join(grounding_audit["gate"]["blocking_reasons"])
+    assert stress_audit["status"] == "pass"
+    assert stress_audit["gate"]["external_domain_shift_ready"] is False
+
+
+def test_audit_retrieval_corpus_provenance_classifies_external_and_controlled_corpora(tmp_path):
+    module = importlib.import_module("benchmarks.audit_retrieval_corpus_provenance")
+    scores_path = tmp_path / "scores.json"
+    external_corpus_path = tmp_path / "external-corpus.json"
+    controlled_corpus_path = tmp_path / "controlled-corpus.json"
+    external_report_path = tmp_path / "external-report.json"
+    external_manifest_path = tmp_path / "external-manifest.json"
+    controlled_report_path = tmp_path / "controlled-report.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [
+                {
+                    "claim_id": "paris",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Paris.",
+                    "text": "The capital of France is Paris.",
+                },
+                {
+                    "claim_id": "lyon",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Lyon.",
+                    "text": "The capital of France is Lyon.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    external_corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "France's national government is seated in Paris according to a reference source.",
+                    "source": "reference:france-capital",
+                    "metadata": {"publisher": "synthetic-reference"},
+                },
+                {
+                    "text": "Lyon is a major city in France, distinct from the national capital.",
+                    "source": "reference:lyon",
+                    "metadata": {"publisher": "synthetic-reference"},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    controlled_corpus_path.write_text(
+        json.dumps({
+            "corpus_type": "truthfulqa_correct_answer_evidence",
+            "label_usage": {
+                "labels_used_for_documents": False,
+                "labels_copied_to_document_metadata": False,
+            },
+            "documents": [
+                {
+                    "text": "What is the capital of France? The capital of France is Paris.",
+                    "source": "truthfulqa:eval:1",
+                    "metadata": {"dataset": "TruthfulQA", "split": "eval", "row_index": 0},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    external = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(external_corpus_path)],
+            output=str(external_report_path),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=str(external_manifest_path),
+        )
+    )
+    controlled_grounding = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(controlled_corpus_path)],
+            output=str(controlled_report_path),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+    controlled_baseline = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(controlled_corpus_path)],
+            output=str(tmp_path / "controlled-baseline-report.json"),
+            audit_role="controlled_baseline",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+    manifest = json.loads(external_manifest_path.read_text(encoding="utf-8"))
+
+    assert external["status"] == "pass"
+    assert external["evidence_class"] == "external_candidate"
+    assert external["gate"]["external_domain_shift_ready"] is True
+    assert manifest["artifacts"]["provenance_report"]["exists"] is True
+    assert manifest["artifacts"]["corpus.1.external-corpus"]["exists"] is True
+    assert controlled_grounding["status"] == "fail"
+    assert controlled_grounding["evidence_class"] == "controlled_dataset_baseline"
+    assert controlled_grounding["gate"]["external_domain_shift_ready"] is False
+    assert controlled_baseline["status"] == "pass"
+    assert controlled_baseline["gate"]["external_domain_shift_ready"] is False
 
 
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):

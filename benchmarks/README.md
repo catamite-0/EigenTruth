@@ -2435,6 +2435,30 @@ answer corpus. `compare_route_baselines.py --require-retrieval-stress-control`
 and `compare_release_candidates.py --required-route-require-retrieval-stress-control`
 turn this negative control into a fail-closed route/release gate.
 
+## `audit_retrieval_corpus_provenance.py`
+
+Audits whether a retrieval corpus can be treated as external grounding evidence,
+only as a controlled dataset-derived baseline, or only as an answer-echo stress
+control. The audit scans corpus metadata, label-use flags, source-record links,
+claim-id links, answer-copy rates, and writes a manifest-friendly JSON report.
+
+```bash
+python benchmarks/audit_retrieval_corpus_provenance.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
+  --audit-role grounding \
+  --output artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/correct-answer-grounding-audit.json
+```
+
+The current provenance matrix at
+`artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies four
+roles. The local correct-answer corpus fails the `grounding` role but passes
+`controlled_baseline`: it is dataset-derived, with exact answer copy rate
+`0.514`, so it remains a reproducible local baseline rather than open-domain
+retrieval evidence. The answer-echo corpus fails `grounding` with exact answer
+copy rate `0.996` and claim-id link rate `1.000`, but passes `stress_control`.
+No current local corpus is marked `external_domain_shift_ready`.
+
 ## `build_evidence_fixture.py`
 
 Builds a non-oracle claim/evidence fixture from a statement-bearing score dump

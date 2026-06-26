@@ -121,6 +121,19 @@ Added an answer-echo retrieval stress control:
   `0.010` for SmolLM2. This is the expected self-support failure mode and a
   required negative control before treating any retrieval setup as grounded.
 
+Added a retrieval corpus provenance audit gate:
+
+- `audit_retrieval_corpus_provenance.py` scans statement-bearing score dumps
+  against local corpus files and separates `external_candidate`,
+  `controlled_dataset_baseline`, and `answer_echo_stress_control` evidence.
+- The l80 provenance matrix at
+  `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
+  current local corpora. The correct-answer corpus fails the `grounding` role
+  but passes `controlled_baseline`; its exact answer copy rate is `0.514`, so it
+  remains a controlled local baseline. The answer-echo corpus fails `grounding`
+  with exact answer copy rate `0.996` and claim-id link rate `1.000`, but passes
+  `stress_control`. No current local corpus is external/domain-shift ready.
+
 Added a text/length redline baseline for detector claims:
 
 - `build_text_baseline_score_dump.py` appends answer length, claim length,
