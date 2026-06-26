@@ -166,7 +166,10 @@ python examples/calibrated_control_demo.py \
   --promotion-contract-registry artifacts/local-release-registry.json \
   --verify-promotion-contract-manifest \
   --verify-selfcheck-signal-fusion-manifest \
-  --include-selfcheck-signal-fusion-record
+  --include-selfcheck-signal-fusion-record \
+  --require-selfcheck-signal-fusion-evidence \
+  --require-selfcheck-signal-fusion-manifest-verification \
+  --require-selfcheck-signal-fusion-record
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
@@ -194,7 +197,11 @@ optionally attach manifest verification plus local registry provenance with
 When the contract carries selfcheck-signal-fusion evidence, the demo can also
 verify that child workflow manifest and attach its registry record with
 `--verify-selfcheck-signal-fusion-manifest` and
-`--include-selfcheck-signal-fusion-record`.
+`--include-selfcheck-signal-fusion-record`. Add
+`--require-selfcheck-signal-fusion-evidence` to write a fail-closed
+`metadata.selfcheck_signal_fusion_evidence_gate`; the manifest-verification and
+registry-record require flags make those child evidence checks mandatory and
+automatically fetch the needed metadata.
 Staged-verification runs also emit
 `verification_stage_summary`, so low-risk fast-path savings can be gated with
 `--min-verification-skip-rate` and `--max-verified-claim-count`. The latency

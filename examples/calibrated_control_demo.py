@@ -326,6 +326,163 @@ def runtime_budget_policy_from_args(args: argparse.Namespace) -> ProductRuntimeB
     )
 
 
+def selfcheck_signal_fusion_evidence_gate(
+    metadata: Mapping[str, Any],
+    *,
+    require_manifest_verification: bool = False,
+    require_registry_record: bool = False,
+) -> dict[str, Any]:
+    """Evaluate release selfcheck-signal-fusion evidence recorded in trace metadata."""
+    policy = {
+        "require_status": "promote",
+        "require_sample_quality_passed": True,
+        "require_report_path": True,
+        "require_manifest_path": True,
+        "min_fusion_run_count": 1,
+        "require_manifest_verification": require_manifest_verification,
+        "require_registry_record": require_registry_record,
+    }
+    checks = [
+        _gate_equals_check(
+            metadata,
+            metric="selfcheck_signal_fusion_workflow_status",
+            limit="promote",
+        ),
+        _gate_equals_check(
+            metadata,
+            metric="selfcheck_signal_fusion_workflow_sample_quality_passed",
+            limit=True,
+        ),
+        _gate_present_check(
+            metadata,
+            metric="selfcheck_signal_fusion_workflow_report",
+        ),
+        _gate_present_check(
+            metadata,
+            metric="selfcheck_signal_fusion_workflow_manifest",
+        ),
+        _gate_min_count_check(
+            metadata,
+            metric="selfcheck_signal_fusion_workflow_fusion_run_count",
+            limit=1,
+        ),
+    ]
+    if require_manifest_verification:
+        verification = metadata.get(
+            "selfcheck_signal_fusion_workflow_manifest_verification"
+        )
+        checks.append({
+            "metric": "selfcheck_signal_fusion_workflow_manifest_verification",
+            "limit_type": "required",
+            "limit": {"passed": True},
+            "value": _mapping_passed(verification),
+            "raw_value": None if verification is None else repr(verification),
+            "passed": _mapping_passed(verification) is True,
+        })
+    if require_registry_record:
+        record = metadata.get("selfcheck_signal_fusion_workflow_registry_record")
+        checks.append({
+            "metric": "selfcheck_signal_fusion_workflow_registry_record",
+            "limit_type": "required",
+            "limit": True,
+            "value": isinstance(record, Mapping) and bool(record),
+            "raw_value": None if record is None else repr(record),
+            "passed": isinstance(record, Mapping) and bool(record),
+        })
+    failures = [_gate_failure_from_check(check) for check in checks if not check["passed"]]
+    return {
+        "enabled": True,
+        "passed": not failures,
+        "policy": policy,
+        "checks": checks,
+        "failures": failures,
+    }
+
+
+def _gate_equals_check(
+    metadata: Mapping[str, Any],
+    *,
+    metric: str,
+    limit: Any,
+) -> dict[str, Any]:
+    value = metadata.get(metric)
+    return {
+        "metric": metric,
+        "limit_type": "equals",
+        "limit": limit,
+        "value": value,
+        "raw_value": None if value is None else repr(value),
+        "passed": value == limit,
+    }
+
+
+def _gate_present_check(metadata: Mapping[str, Any], *, metric: str) -> dict[str, Any]:
+    value = metadata.get(metric)
+    passed = value is not None and str(value).strip() != ""
+    return {
+        "metric": metric,
+        "limit_type": "required",
+        "limit": True,
+        "value": value,
+        "raw_value": None if value is None else repr(value),
+        "passed": passed,
+    }
+
+
+def _gate_min_count_check(
+    metadata: Mapping[str, Any],
+    *,
+    metric: str,
+    limit: int,
+) -> dict[str, Any]:
+    value = metadata.get(metric)
+    observed = _optional_int(value)
+    return {
+        "metric": metric,
+        "limit_type": "min",
+        "limit": limit,
+        "value": observed,
+        "raw_value": None if value is None else repr(value),
+        "passed": observed is not None and observed >= limit,
+    }
+
+
+def _gate_failure_from_check(check: Mapping[str, Any]) -> dict[str, Any]:
+    reason = "missing"
+    if check.get("raw_value") is not None:
+        if check.get("limit_type") == "min":
+            reason = f"below {check['limit']}"
+        else:
+            reason = f"expected {check['limit']!r}"
+    return {
+        "metric": check.get("metric"),
+        "limit_type": check.get("limit_type"),
+        "limit": check.get("limit"),
+        "value": check.get("value"),
+        "raw_value": check.get("raw_value"),
+        "reason": reason,
+    }
+
+
+def _optional_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if isinstance(value, str) and value.strip() not in {str(parsed), f"{parsed}.0"}:
+        return None
+    return parsed
+
+
+def _mapping_passed(value: Any) -> bool | None:
+    if not isinstance(value, Mapping):
+        return None
+    passed = value.get("passed")
+    return passed if isinstance(passed, bool) else None
+
+
 def low_diagnostics_for_artifact(artifact: CalibrationArtifact) -> dict[str, float]:
     """Return diagnostics that stay below each finite artifact threshold."""
     diagnostics = {}
@@ -683,6 +840,25 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         registry_key=getattr(args, "promotion_contract_registry_key", None),
     )
     promotion_contract = None if runtime_evidence_bundle is None else runtime_evidence_bundle.contract
+    require_selfcheck_signal_fusion_manifest_verification = bool(
+        getattr(args, "require_selfcheck_signal_fusion_manifest_verification", False)
+    )
+    require_selfcheck_signal_fusion_record = bool(
+        getattr(args, "require_selfcheck_signal_fusion_record", False)
+    )
+    require_selfcheck_signal_fusion_evidence = (
+        bool(getattr(args, "require_selfcheck_signal_fusion_evidence", False))
+        or require_selfcheck_signal_fusion_manifest_verification
+        or require_selfcheck_signal_fusion_record
+    )
+    verify_selfcheck_signal_fusion_manifest = (
+        bool(getattr(args, "verify_selfcheck_signal_fusion_manifest", False))
+        or require_selfcheck_signal_fusion_manifest_verification
+    )
+    include_selfcheck_signal_fusion_record = (
+        bool(getattr(args, "include_selfcheck_signal_fusion_record", False))
+        or require_selfcheck_signal_fusion_record
+    )
     promotion_contract_metadata = (
         product_promotion_contract_metadata(
             None,
@@ -693,12 +869,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else runtime_evidence_bundle.runtime_metadata(
             budget_enabled=explicit_promotion_contract,
             verify_manifest=bool(getattr(args, "verify_promotion_contract_manifest", False)),
-            verify_selfcheck_signal_fusion_manifest=bool(
-                getattr(args, "verify_selfcheck_signal_fusion_manifest", False)
-            ),
-            include_selfcheck_signal_fusion_record=bool(
-                getattr(args, "include_selfcheck_signal_fusion_record", False)
-            ),
+            verify_selfcheck_signal_fusion_manifest=verify_selfcheck_signal_fusion_manifest,
+            include_selfcheck_signal_fusion_record=include_selfcheck_signal_fusion_record,
         )
     )
     setattr(args, "_promotion_contract", promotion_contract)
@@ -891,6 +1063,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     if runtime_budget is not None:
         payload["metadata"]["runtime_budget"] = runtime_budget
+    selfcheck_evidence_gate = None
+    if require_selfcheck_signal_fusion_evidence:
+        selfcheck_evidence_gate = selfcheck_signal_fusion_evidence_gate(
+            payload["metadata"],
+            require_manifest_verification=(
+                require_selfcheck_signal_fusion_manifest_verification
+            ),
+            require_registry_record=require_selfcheck_signal_fusion_record,
+        )
+        payload["metadata"]["selfcheck_signal_fusion_evidence_gate"] = (
+            selfcheck_evidence_gate
+        )
     output_path = Path(args.output) if args.output else None
     if args.registry and output_path is None:
         output_path = Path(args.registry).with_name(f"{args.request_id}_trace.json")
@@ -935,6 +1119,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "verification_stage_summary": verification_stage_summary,
                 "final_answer_summary": final_answer_summary,
                 "runtime_budget": runtime_budget,
+                "selfcheck_signal_fusion_evidence_gate": selfcheck_evidence_gate,
                 "verifier_type": type(verifier).__name__,
             },
         ).save_json()
@@ -993,6 +1178,12 @@ def main() -> None:
                         help="verify the selfcheck-signal-fusion workflow manifest from the promotion contract")
     parser.add_argument("--include-selfcheck-signal-fusion-record", action="store_true",
                         help="attach the selfcheck-signal-fusion registry record referenced by the promotion contract")
+    parser.add_argument("--require-selfcheck-signal-fusion-evidence", action="store_true",
+                        help="record a fail-closed gate for promoted selfcheck-signal-fusion evidence")
+    parser.add_argument("--require-selfcheck-signal-fusion-manifest-verification", action="store_true",
+                        help="require the selfcheck-signal-fusion manifest verification to pass")
+    parser.add_argument("--require-selfcheck-signal-fusion-record", action="store_true",
+                        help="require the selfcheck-signal-fusion registry record to be available")
     parser.add_argument("--cache-verifier", action="store_true",
                         help="wrap the selected verifier in request-local CachedVerifier and report cache stats")
     parser.add_argument("--cache-retriever", action="store_true",

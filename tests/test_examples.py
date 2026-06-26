@@ -711,6 +711,8 @@ def test_calibrated_control_demo_records_selfcheck_promotion_evidence(tmp_path):
             promotion_contract=str(contract_path),
             verify_selfcheck_signal_fusion_manifest=True,
             include_selfcheck_signal_fusion_record=True,
+            require_selfcheck_signal_fusion_manifest_verification=True,
+            require_selfcheck_signal_fusion_record=True,
             request_id="test-selfcheck-promotion-evidence",
             output=None,
             registry=None,
@@ -735,6 +737,67 @@ def test_calibrated_control_demo_records_selfcheck_promotion_evidence(tmp_path):
     }
     assert metadata["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
     assert metadata["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+    gate = metadata["selfcheck_signal_fusion_evidence_gate"]
+    assert gate["enabled"] is True
+    assert gate["passed"] is True
+    assert gate["policy"]["require_manifest_verification"] is True
+    assert gate["policy"]["require_registry_record"] is True
+    assert gate["failures"] == []
+
+
+def test_calibrated_control_demo_fails_selfcheck_evidence_gate(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract
+
+    contract_path = tmp_path / "promotion-contract.json"
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        source_status="promote",
+        selfcheck_signal_fusion_workflow={
+            "status": "blocked",
+            "sample_quality_status": "fail",
+            "sample_quality_passed": False,
+            "fusion_run_count": 0,
+        },
+    ).save_json(contract_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=str(contract_path),
+            require_selfcheck_signal_fusion_evidence=True,
+            request_id="test-selfcheck-evidence-gate-fail",
+            output=None,
+            registry=None,
+        )
+    )
+
+    gate = payload["metadata"]["selfcheck_signal_fusion_evidence_gate"]
+    failure_metrics = {failure["metric"] for failure in gate["failures"]}
+
+    assert gate["enabled"] is True
+    assert gate["passed"] is False
+    assert failure_metrics == {
+        "selfcheck_signal_fusion_workflow_status",
+        "selfcheck_signal_fusion_workflow_sample_quality_passed",
+        "selfcheck_signal_fusion_workflow_report",
+        "selfcheck_signal_fusion_workflow_manifest",
+        "selfcheck_signal_fusion_workflow_fusion_run_count",
+    }
+    assert gate["checks"][0]["value"] == "blocked"
 
 
 def test_calibrated_control_demo_applies_promotion_contract_control_defaults(tmp_path):
