@@ -1324,6 +1324,99 @@
       "name": "smollm2-l8-read-cache-worker-sweep-score-fusion-readiness-verification",
       "path": "artifacts/smollm2_l8_read_cache_worker_sweep_score_fusion_readiness_manifest_verification.json",
       "version": "0.2"
+    },
+    {
+      "artifact_type": "performance_baseline",
+      "metadata": {
+        "artifact_fingerprint_cache_entries": 39,
+        "artifact_json_cache": {
+          "entries": 6,
+          "errors": 0,
+          "hit_rate": 0.4,
+          "hits": 4,
+          "misses": 6,
+          "requests": 10
+        },
+        "artifact_manifest": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/artifact-manifest.json",
+        "manifest_verification_checked": 9,
+        "manifest_verification_failure_count": 0,
+        "manifest_verification_report": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/manifest-verification.json",
+        "manifest_verified": true,
+        "performance_cache_tuning_status": "ok",
+        "performance_evidence_bundle_release_ready": true,
+        "performance_evidence_bundle_status": "promote",
+        "recommended_batch_size": 4,
+        "recommended_best_quality_signal": "truth_proj",
+        "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+        "recommended_layer": -12,
+        "recommended_max_workers": 2,
+        "recommended_score_fusion": {
+          "alpha": 0.1,
+          "artifact": {},
+          "auroc": 0.6789917647058823,
+          "conformal_gate_passed": true,
+          "coverage": 0.91024,
+          "detection": 0.19640522875816996,
+          "false_alarm": 0.08975999999999999,
+          "method": "mean_rank",
+          "report": "artifacts/truthfulqa_score_ensemble_report.json",
+          "run_name": "smollm2-l80",
+          "signal_name": "score_fusion_mean_rank",
+          "status": "promote"
+        },
+        "recommended_score_fusion_auroc": 0.6789917647058823,
+        "recommended_score_fusion_conformal_gate_passed": true,
+        "recommended_score_fusion_signal": "score_fusion_mean_rank",
+        "recommended_score_fusion_status": "promote",
+        "recommended_selected_fusion_artifact": {
+          "alpha": 0.1,
+          "artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+          "auroc": 0.6923519736842105,
+          "coverage": 0.9706896551724138,
+          "detection": 0.22421875,
+          "false_alarm": 0.029310344827586203,
+          "method": "mean_rank",
+          "report": "artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json",
+          "run_name": "smollm2",
+          "selected_candidate": "geometry:mean_rank",
+          "selected_signals": [
+            "truth_proj",
+            "subspace_resid",
+            "eigenscore",
+            "maha_last"
+          ],
+          "selection_status": "complete",
+          "signal_name": "selected_fusion_mean_rank",
+          "status": "promote",
+          "tracked_signal": "trajectory_convergence",
+          "tracked_signal_enabled": false,
+          "workflow": "selected_fusion_artifact_build"
+        },
+        "recommended_selected_fusion_artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+        "recommended_selected_fusion_auroc": 0.6923519736842105,
+        "recommended_selected_fusion_run": "smollm2",
+        "recommended_selected_fusion_signal": "selected_fusion_mean_rank",
+        "recommended_selected_fusion_status": "promote",
+        "runtime_recommendation": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/runtime-recommendation.json",
+        "runtime_recommendation_status": "promote",
+        "status": "promote",
+        "workflow": "run_performance_baseline_workflow"
+      },
+      "name": "smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline",
+      "path": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/performance-baseline-workflow.json",
+      "version": "0.3"
+    },
+    {
+      "artifact_type": "manifest_verification",
+      "metadata": {
+        "manifest_name": "smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline",
+        "manifest_path": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/artifact-manifest.json",
+        "passed": true,
+        "recursive": true
+      },
+      "name": "smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline-verification",
+      "path": "artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/manifest-verification.json",
+      "version": "0.3"
     }
   ],
   "schema_version": 1

@@ -179,6 +179,13 @@ representation-observability toolkit spanning **training and inference**.
   the geometry-only bundle. `build_selected_fusion_artifacts.py` converts those
   selected bundles into per-run `RankScoreFusionArtifact` files, keeping the
   policy conditional while making the result loadable by product experiments.
+  The selected-fusion artifact is now wired through a local SmolLM2 l8
+  performance-baseline handoff:
+  `performance_baseline:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline:0.3`
+  records the `smollm2` `geometry:mean_rank` selected artifact as promoted
+  auxiliary evidence (`selected_fusion_mean_rank` AUROC 0.692, false alarm
+  0.029, detection 0.224) while leaving `truth_proj` as the best runtime quality
+  signal.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be

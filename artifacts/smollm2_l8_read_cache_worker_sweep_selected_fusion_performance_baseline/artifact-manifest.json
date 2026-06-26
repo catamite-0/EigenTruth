@@ -1,0 +1,179 @@
+{
+  "artifacts": {
+    "matrix_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/artifact-manifest.json",
+      "sha256": "5b84916b2f697886a9c1479411cd390c2f404df0acc5ccc05b0b7833de9f17bb",
+      "size_bytes": 2301
+    },
+    "matrix_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json",
+      "sha256": "6fd00d9ab64ee9a1437959196e7a1c4588d4099b82fdace3e6a4608e6c62a2b9",
+      "size_bytes": 53040
+    },
+    "performance_baseline_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "performance-baseline-workflow.json",
+      "sha256": "56b5f014b08fb420550dda2774a9cc93957eb4662abab498bb3cc6df222350af",
+      "size_bytes": 16696
+    },
+    "runtime_recommendation": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "runtime-recommendation.json",
+      "sha256": "079023bb91da802776c7e02f9e139e808da6df5cb90c5280852d54a1fecbb210",
+      "size_bytes": 7012
+    },
+    "score_ensemble_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa_score_ensemble_report.json",
+      "sha256": "0d654b2ccc0e91f6c9a806d6a036d1fd4085549a4a2b9bd03fa549351e7d7d88",
+      "size_bytes": 15177
+    },
+    "selected_fusion_artifact": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+      "sha256": "a99787abc740841efa644f06a9221d0957b717bd8f74ccabc8e78ac80cd96a79",
+      "size_bytes": 12759
+    },
+    "selected_fusion_artifact_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json",
+      "sha256": "86d8cd7e3938ca0f137d075b19c7a1215b9fd3a3c2fe7f26c7d02ebb7c304442",
+      "size_bytes": 3623
+    },
+    "worker_sweep_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/artifact-manifest.json",
+      "sha256": "734057ca7d0a8379123777e5d61b1d74f63b5a6004166a5c8fd9975a0662dc10",
+      "size_bytes": 1559
+    },
+    "worker_sweep_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json",
+      "sha256": "83b05c348b1373769ca4db325f7f0fba99fdd40c9089f508f033a4130c0461eb",
+      "size_bytes": 3386
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "batch_sizes": [
+      4
+    ],
+    "dry_run": false,
+    "dtype": "float32",
+    "eval_reps_cache_shard_size": 4,
+    "eval_reps_shard_read_cache_size": 1,
+    "eval_reps_shard_read_cache_sizes": [
+      1,
+      2,
+      4
+    ],
+    "hidden_state_captures": [
+      "outputs"
+    ],
+    "inside_sampling_enabled": false,
+    "inside_trigger_budget_policy": "quality_balanced",
+    "inside_trigger_budget_sweep_enabled": false,
+    "layers": [
+      -12
+    ],
+    "matrix_report_reused": true,
+    "max_batch_token_budgets": [
+      512
+    ],
+    "max_batch_tokens": 512,
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "offline": false,
+    "prefix_kv_cache": false,
+    "prefix_kv_cache_modes": [
+      false
+    ],
+    "recommended_batch_size": 4,
+    "recommended_best_quality_signal": "truth_proj",
+    "recommended_cell": "layer_m12_batch_4_capture_outputs_read_cache_2",
+    "recommended_layer": -12,
+    "recommended_max_workers": 2,
+    "recommended_score_fusion": {
+      "alpha": 0.1,
+      "artifact": {},
+      "auroc": 0.6789917647058823,
+      "conformal_gate_passed": true,
+      "coverage": 0.91024,
+      "detection": 0.19640522875816996,
+      "false_alarm": 0.08975999999999999,
+      "method": "mean_rank",
+      "report": "artifacts/truthfulqa_score_ensemble_report.json",
+      "run_name": "smollm2-l80",
+      "signal_name": "score_fusion_mean_rank",
+      "status": "promote"
+    },
+    "recommended_score_fusion_auroc": 0.6789917647058823,
+    "recommended_score_fusion_conformal_gate_passed": true,
+    "recommended_score_fusion_signal": "score_fusion_mean_rank",
+    "recommended_score_fusion_status": "promote",
+    "recommended_selected_fusion_artifact": {
+      "alpha": 0.1,
+      "artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+      "auroc": 0.6923519736842105,
+      "coverage": 0.9706896551724138,
+      "detection": 0.22421875,
+      "false_alarm": 0.029310344827586203,
+      "method": "mean_rank",
+      "report": "artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json",
+      "run_name": "smollm2",
+      "selected_candidate": "geometry:mean_rank",
+      "selected_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last"
+      ],
+      "selection_status": "complete",
+      "signal_name": "selected_fusion_mean_rank",
+      "status": "promote",
+      "tracked_signal": "trajectory_convergence",
+      "tracked_signal_enabled": false,
+      "workflow": "selected_fusion_artifact_build"
+    },
+    "recommended_selected_fusion_artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+    "recommended_selected_fusion_auroc": 0.6923519736842105,
+    "recommended_selected_fusion_run": "smollm2",
+    "recommended_selected_fusion_signal": "selected_fusion_mean_rank",
+    "recommended_selected_fusion_status": "promote",
+    "runner": "run_performance_baseline_workflow",
+    "runtime_recommendation_status": "promote",
+    "score_ensemble_report": "artifacts/truthfulqa_score_ensemble_report.json",
+    "score_ensemble_report_enabled": true,
+    "selected_fusion_artifact_report": "artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json",
+    "selected_fusion_artifact_report_enabled": true,
+    "selected_fusion_run": "smollm2",
+    "status": "promote",
+    "worker_sweep_enabled": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 9,
+    "directory_count": 0,
+    "file_count": 9,
+    "missing_count": 0
+  }
+}

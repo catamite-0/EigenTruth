@@ -262,6 +262,12 @@ it keeps the read-cache sweep winner at size 2, selects `max_workers=2`,
 lowers matrix wall-clock from 184.467s to 141.385s on this machine, preserves
 `truth_proj` AUROC 0.830, and carries a conformal-gated
 `score_fusion_mean_rank` auxiliary signal from the l80 score-ensemble report.
+The follow-up selected-fusion handoff registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline:0.3`;
+it reuses the same runtime cell and worker/cache evidence, explicitly selects
+the SmolLM2 selected-fusion run, records `selected_fusion_mean_rank` as promoted
+auxiliary evidence (`AUROC=0.692`, false alarm `0.029`, detection `0.224`), and
+keeps `truth_proj` as the best quality signal.
 The same evidence now promotes
 `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
 through the staged structured-QA release gate; its release manifest and registry

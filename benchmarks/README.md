@@ -3775,6 +3775,31 @@ When reusing selected fusion artifacts, add
 the selected report, selected artifact path, selected run, selected candidate,
 and promoted `selected_fusion_*` signal in the runtime recommendation,
 performance evidence bundle, artifact manifest metadata, and registry record.
+The current local SmolLM2 l8 selected-fusion handoff uses:
+
+```bash
+python benchmarks/run_performance_baseline_workflow.py \
+  --output-dir artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline \
+  --registry artifacts/local-readiness-registry.json \
+  --name smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline \
+  --version 0.3 \
+  --matrix-report artifacts/smollm2_l8_read_cache_worker_sweep/workers_2/cache-profile-matrix-report.json \
+  --worker-sweep-report artifacts/smollm2_l8_read_cache_worker_sweep/cache-worker-sweep-report.json \
+  --score-ensemble-report artifacts/truthfulqa_score_ensemble_report.json \
+  --selected-fusion-artifact-report artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json \
+  --selected-fusion-run smollm2 \
+  --verify-manifest \
+  --fail-on-blocked
+```
+
+It registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline:0.3`
+and
+`manifest_verification:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline-verification:0.3`.
+The selected-fusion evidence is promoted as `selected_fusion_mean_rank`
+(`AUROC=0.692`, false alarm `0.029`, detection `0.224`, `alpha=0.1`) from the
+SmolLM2 `geometry:mean_rank` selected artifact, while `truth_proj` remains the
+best quality signal for the runtime recommendation.
 
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
@@ -4294,6 +4319,18 @@ It keeps `truth_proj` as the best quality signal while adding promoted
 `score_fusion_mean_rank` evidence (`AUROC=0.679`, false alarm `0.090`,
 detection `0.196`, `alpha=0.1`) to the runtime recommendation and performance
 evidence bundle.
+The selected-fusion handoff baseline at
+`artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_performance_baseline/`
+reuses the same worker-sweep matrix plus
+`artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json`,
+selects the `smollm2` run explicitly, registers
+`performance_baseline:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline:0.3`,
+and records
+`manifest_verification:smollm2-l8-read-cache-worker-sweep-selected-fusion-performance-baseline-verification:0.3`.
+It keeps the same recommended runtime cell and `truth_proj` best quality signal
+while adding promoted `selected_fusion_mean_rank` evidence (`AUROC=0.692`,
+false alarm `0.029`, detection `0.224`, `alpha=0.1`) from the SmolLM2
+`geometry:mean_rank` selected artifact.
 The corresponding staged structured-QA release candidate is registered as
 `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
 with
