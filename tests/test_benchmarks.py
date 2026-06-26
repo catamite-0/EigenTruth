@@ -11520,6 +11520,7 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         tmp_path / "runtime-drift",
         status="promote",
         blocked_metric_count=0,
+        promotion_evidence=True,
     )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
@@ -11554,6 +11555,16 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert payload["product_runtime_drift_gate"]["gate"]["passed"] is True
     candidate = payload["release_candidate"]
     assert candidate["product_runtime_drift"]["summary"]["blocked_metric_count"] == 0
+    assert candidate["product_runtime_drift"]["summary"]["promotion_evidence_blocked_metric_count"] == 0
+    assert candidate["product_runtime_drift"]["summary"]["promotion_contract_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert candidate["product_runtime_drift"]["summary"]["triple_extraction_fixture_matrix_mean_best_f1_current"] == (
+        pytest.approx(0.88)
+    )
+    assert candidate["product_runtime_drift"]["summary"]["triple_extraction_fixture_matrix_mean_best_f1_status"] == (
+        "pass"
+    )
     assert candidate["product_runtime_drift"]["baseline"]["path"].endswith("baseline.json")
     assert candidate["product_runtime_drift"]["current"]["path"].endswith("current.json")
     assert candidate["manifests"]["product_runtime_drift_manifest"].endswith("artifact-manifest.json")
@@ -13777,6 +13788,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         tmp_path / "product-runtime-drift",
         status="promote",
         blocked_metric_count=0,
+        promotion_evidence=True,
     )
     release_efficiency_report = _write_release_efficiency_report(
         tmp_path / "release-efficiency",
@@ -14051,8 +14063,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert manifest["metadata"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
-    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 2
+    assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 6
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert manifest["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == (
+        pytest.approx(1.0)
+    )
+    assert manifest["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
+        pytest.approx(0.88)
+    )
+    assert manifest["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
+        "pass"
+    )
     assert manifest["metadata"]["release_efficiency_report"] == str(release_efficiency_report)
     assert manifest["metadata"]["release_efficiency_recommended_profile"] == "balanced"
     assert manifest["metadata"]["release_efficiency_score"] == pytest.approx(2.0)
@@ -14340,6 +14362,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
+        pytest.approx(0.88)
+    )
+    assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
+        "pass"
+    )
     assert record.metadata["release_efficiency_status"] == "promote"
     assert record.metadata["release_efficiency_report"] == str(release_efficiency_report)
     assert record.metadata["release_efficiency_recommended_profile"] == "balanced"
@@ -15134,6 +15163,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "gate_enabled": True,
                         "compared_metric_count": 9,
                         "blocked_metric_count": 0,
+                        "promotion_evidence_blocked_metric_count": 0,
+                        "promotion_contract_coverage_rate_current": 1.0,
+                        "promotion_contract_coverage_rate_status": "pass",
+                        "triple_extraction_fixture_matrix_mean_best_f1_current": 0.88,
+                        "triple_extraction_fixture_matrix_mean_best_f1_status": "pass",
                     },
                     "current": {
                         "optimization": {
@@ -15403,6 +15437,15 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
+    assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
+    assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_status"] == "pass"
+    assert contract["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
+        0.88
+    )
+    assert contract["metadata"]["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_status"] == (
+        "pass"
+    )
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
     assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
@@ -16248,7 +16291,13 @@ def _write_selector_replay_report(
     return report_path
 
 
-def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_count):
+def _write_product_runtime_drift_report(
+    output_dir,
+    *,
+    status,
+    blocked_metric_count,
+    promotion_evidence=False,
+):
     from eigentruth.registry import build_artifact_manifest
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -16298,6 +16347,51 @@ def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_co
             "reason": None,
         },
     ]
+    if promotion_evidence:
+        metrics.extend([
+            {
+                "metric": "promotion_contract.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+                "status": "pass",
+                "comparison": "min_current",
+                "baseline": 1.0,
+                "current": 1.0,
+                "absolute_delta": 0.0,
+                "threshold": 1.0,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.90,
+                "current": 0.88,
+                "absolute_delta": -0.02,
+                "absolute_drop": 0.02,
+                "threshold": 0.10,
+                "reason": None,
+            },
+            {
+                "metric": "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+                "status": "pass",
+                "comparison": "max_drop",
+                "baseline": 0.40,
+                "current": 0.39,
+                "absolute_delta": -0.01,
+                "absolute_drop": 0.01,
+                "threshold": 0.10,
+                "reason": None,
+            },
+        ])
     report_payload = {
         "schema_version": 1,
         "workflow": "product_runtime_drift_comparison",
@@ -16308,7 +16402,7 @@ def _write_product_runtime_drift_report(output_dir, *, status, blocked_metric_co
         },
         "summary": {
             "gate_enabled": True,
-            "compared_metric_count": 2,
+            "compared_metric_count": len(metrics),
             "blocked_metric_count": blocked_metric_count,
             "observed_metric_count": 0,
         },

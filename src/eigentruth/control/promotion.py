@@ -17,6 +17,13 @@ from eigentruth.registry import (
     load_and_verify_artifact_manifest,
 )
 
+_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "promotion_contract_coverage_rate",
+    "triple_extraction_fixture_matrix_coverage_rate",
+    "triple_extraction_fixture_matrix_mean_best_f1",
+    "triple_extraction_fixture_matrix_mean_f1_lift",
+)
+
 
 @dataclass(frozen=True)
 class ProductPromotionContract:
@@ -613,6 +620,7 @@ class ProductPromotionContract:
                 "product_runtime_drift_blocked_metric_count": (
                     product_runtime_drift_summary.get("blocked_metric_count")
                 ),
+                **_product_runtime_drift_promotion_metadata(product_runtime_drift_summary),
                 "runtime_profile": config.get("runtime_profile"),
                 "inside_trigger_budget_policy": config.get("inside_trigger_budget_policy"),
                 "runtime_profile_applied_defaults": config.get(
@@ -685,6 +693,18 @@ class LoadedProductPromotionContract:
             source=self.source,
             budget_enabled=budget_enabled,
         )
+
+
+def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = {
+        "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
+            "promotion_evidence_blocked_metric_count"
+        ),
+    }
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    return metadata
 
 
 def first_existing_product_promotion_contract_path(

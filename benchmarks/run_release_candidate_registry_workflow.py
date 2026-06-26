@@ -39,6 +39,13 @@ from eigentruth.registry import (  # noqa: E402
     save_json_cache,
 )
 
+_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "promotion_contract_coverage_rate",
+    "triple_extraction_fixture_matrix_coverage_rate",
+    "triple_extraction_fixture_matrix_mean_best_f1",
+    "triple_extraction_fixture_matrix_mean_f1_lift",
+)
+
 
 def _apply_release_policy_profile_to_config(
     config: "ReleaseCandidateRegistryWorkflowConfig",
@@ -1303,6 +1310,7 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_blocked_metric_count": product_runtime_drift_summary.get(
             "blocked_metric_count"
         ),
+        **_product_runtime_drift_promotion_metadata(product_runtime_drift_summary),
         "release_efficiency_report": release_efficiency.get("report_path"),
         "release_efficiency_recommended_profile": release_efficiency.get("recommended_profile"),
         "release_efficiency_score": release_efficiency.get("recommended_efficiency_score"),
@@ -1514,6 +1522,18 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_manifest": manifests.get("adapter_family_matrix_report"),
     }
+
+
+def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dict[str, Any]:
+    metadata = {
+        "product_runtime_drift_promotion_evidence_blocked_metric_count": summary.get(
+            "promotion_evidence_blocked_metric_count"
+        ),
+    }
+    for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    return metadata
 
 
 def _structured_fact_robustness_metadata(

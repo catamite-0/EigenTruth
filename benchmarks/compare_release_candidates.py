@@ -43,6 +43,21 @@ ADAPTER_FAMILY_PROFILE_NAMES = tuple(sorted(ADAPTER_FAMILY_PROFILES))
 ADAPTER_FAMILY_PROFILES_REQUIRING_STATE_TRANSITION_WORLD_MODEL: frozenset[str] = frozenset({
     "strict_audit",
 })
+_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_FIELDS: tuple[tuple[str, str], ...] = (
+    ("promotion_contract.coverage_rate", "promotion_contract_coverage_rate"),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+        "triple_extraction_fixture_matrix_coverage_rate",
+    ),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "triple_extraction_fixture_matrix_mean_best_f1",
+    ),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+        "triple_extraction_fixture_matrix_mean_f1_lift",
+    ),
+)
 
 
 def compare_release_candidates(
@@ -2854,6 +2869,7 @@ def _product_runtime_drift_gate(
         allow_unverified=allow_unverified,
     )
     summary = _mapping(report.get("summary"))
+    metrics = _product_runtime_drift_metric_summary(report)
     return {
         "schema_version": 1,
         "status": "promote" if gate["passed"] else "blocked",
@@ -2869,8 +2885,9 @@ def _product_runtime_drift_gate(
             "compared_metric_count": summary.get("compared_metric_count"),
             "blocked_metric_count": summary.get("blocked_metric_count"),
             "observed_metric_count": summary.get("observed_metric_count"),
+            **_product_runtime_drift_promotion_evidence_summary(metrics),
         },
-        "metrics": _product_runtime_drift_metric_summary(report),
+        "metrics": metrics,
         "verification": verification,
         "gate": gate,
     }
@@ -2947,6 +2964,25 @@ def _product_runtime_drift_metric_summary(report: Mapping[str, Any]) -> tuple[di
             "reason": metric.get("reason"),
         })
     return tuple(rows)
+
+
+def _product_runtime_drift_promotion_evidence_summary(
+    metrics: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    metrics_by_name = {
+        str(metric["metric"]): metric
+        for metric in metrics
+        if isinstance(metric, Mapping) and isinstance(metric.get("metric"), str)
+    }
+    summary: dict[str, Any] = {"promotion_evidence_blocked_metric_count": 0}
+    for metric_name, prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_FIELDS:
+        metric = metrics_by_name.get(metric_name)
+        summary[f"{prefix}_baseline"] = None if metric is None else metric.get("baseline")
+        summary[f"{prefix}_current"] = None if metric is None else metric.get("current")
+        summary[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            summary["promotion_evidence_blocked_metric_count"] += 1
+    return summary
 
 
 def _release_efficiency_gate(
