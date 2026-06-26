@@ -190,6 +190,18 @@ Added a conservative layer-band selector audit:
   not promote spectrum or intrinsic dimension as a standalone calibrated risk
   signal or exact deployment-layer oracle.
 
+Wired the layer-band prior into the calibrated-observability workflow:
+
+- `run_calibrated_observability_workflow.py --sweep-layers-from-band-report`
+  reads a `compare_layer_band_selectors.py` report, selects the recommended
+  strategy by default, matches the run by `--model` or explicit
+  `--sweep-band-run`, and forwards the candidate layers to
+  `eval_truthfulqa.py --sweep-layers`.
+- The workflow report and artifact manifest now record the source report,
+  selected strategy/run, candidate layers, best-layer-in-band status, and AUROC
+  regret. This makes the layer-band prior reusable while preserving calibrated
+  sweep and conformal artifact generation as the decision point.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.

@@ -1125,6 +1125,126 @@ def test_calibrated_observability_workflow_quick_preset_bounds_dry_run(tmp_path)
     assert manifest["metadata"]["runtime_preset"] == "quick"
 
 
+def test_calibrated_observability_derives_sweep_layers_from_band_report(tmp_path):
+    band_report = tmp_path / "layer-band-comparison.json"
+    band_report.write_text(
+        json.dumps({
+            "workflow": "compare_layer_band_selectors",
+            "recommended_strategy": {
+                "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+                "status": "pass",
+            },
+            "runs": [
+                {
+                    "name": "other-run",
+                    "model": "other/model",
+                    "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-16, -14],
+                    "candidate_layer_count": 2,
+                    "candidate_layer_fraction": 0.4,
+                    "best_layer": -16,
+                    "best_layer_in_band": True,
+                    "band_best_layer": -16,
+                    "band_best_rank": 1,
+                    "auroc_regret": 0.0,
+                },
+                {
+                    "name": "synthetic-run",
+                    "model": "synthetic/model",
+                    "strategy": "spectrum_max_top_eigenvalue_to_mp_upper_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-10, -8],
+                    "candidate_layer_count": 2,
+                    "candidate_layer_fraction": 0.4,
+                    "best_layer": -10,
+                    "best_layer_in_band": True,
+                    "band_best_layer": -10,
+                    "band_best_rank": 1,
+                    "auroc_regret": 0.0,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--model",
+            "synthetic/model",
+            "--sweep-layers-from-band-report",
+            str(band_report),
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+    source = payload["config"]["sweep_layers_source"]
+
+    assert payload["config"]["sweep_layers"] == [-10, -8]
+    assert payload["config"]["hidden_state_capture"] == "hooks"
+    assert payload["evidence_bundle"]["runtime"]["sweep_layers"] == [-10, -8]
+    assert source["run_name"] == "synthetic-run"
+    assert source["strategy"] == "spectrum_max_top_eigenvalue_to_mp_upper_radius_1"
+    assert source["candidate_layers"] == [-10, -8]
+    assert "--sweep-layers=-10,-8" in truthfulqa_command
+    assert truthfulqa_command[truthfulqa_command.index("--hidden-state-capture") + 1] == "hooks"
+    assert manifest["artifacts"]["sweep_layer_band_report"]["exists"] is True
+    assert manifest["metadata"]["sweep_layers_source"]["run_name"] == "synthetic-run"
+
+
+def test_calibrated_observability_rejects_ambiguous_band_report_without_run(tmp_path):
+    module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
+    band_report = tmp_path / "layer-band-comparison.json"
+    band_report.write_text(
+        json.dumps({
+            "recommended_strategy": {"strategy": "intrinsic_radius_1"},
+            "runs": [
+                {
+                    "name": "run-a",
+                    "model": "other/a",
+                    "strategy": "intrinsic_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-2],
+                },
+                {
+                    "name": "run-b",
+                    "model": "other/b",
+                    "strategy": "intrinsic_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-3],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="ambiguous"):
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            model="unmatched/model",
+            sweep_layers_from_band_report=band_report,
+            dry_run=True,
+        )
+
+    with pytest.raises(ValueError, match="cannot be set with explicit sweep_layers"):
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            model="other/a",
+            sweep_layers=(-2,),
+            sweep_layers_from_band_report=band_report,
+            dry_run=True,
+        )
+
+
 def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     result = subprocess.run(
         [

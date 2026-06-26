@@ -20,7 +20,7 @@ import shutil
 import subprocess
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -102,6 +102,9 @@ class CalibratedObservabilityWorkflowConfig:
     layer: int = -1
     sweep: bool = True
     sweep_layers: Sequence[int] = ()
+    sweep_layers_from_band_report: Path | None = None
+    sweep_band_strategy: str | None = None
+    sweep_band_run: str | None = None
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
@@ -138,6 +141,7 @@ class CalibratedObservabilityWorkflowConfig:
     clean: bool = False
     dry_run: bool = False
     runtime_preset: str = "custom"
+    sweep_layers_source: Mapping[str, Any] | None = field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "output_dir", Path(self.output_dir))
@@ -149,6 +153,7 @@ class CalibratedObservabilityWorkflowConfig:
             "layer_stats_cache",
             "warmup_checkpoint",
             "eval_reps_cache",
+            "sweep_layers_from_band_report",
         ):
             value = getattr(self, field_name)
             if value is not None:
@@ -178,6 +183,23 @@ class CalibratedObservabilityWorkflowConfig:
             raise ValueError("best_by must be one of: auroc, detection.")
         if self.direction not in {None, "higher", "lower"}:
             raise ValueError("direction must be one of: higher, lower.")
+        if self.sweep_band_strategy is not None:
+            object.__setattr__(self, "sweep_band_strategy", str(self.sweep_band_strategy))
+        if self.sweep_band_run is not None:
+            object.__setattr__(self, "sweep_band_run", str(self.sweep_band_run))
+        if self.sweep_layers and self.sweep_layers_from_band_report is not None:
+            raise ValueError("sweep_layers_from_band_report cannot be set with explicit sweep_layers.")
+        if self.sweep_layers_from_band_report is not None:
+            if not self.sweep:
+                raise ValueError("sweep_layers_from_band_report requires sweep to be enabled.")
+            source = _select_layer_band_source(
+                self.sweep_layers_from_band_report,
+                model=self.model,
+                strategy=self.sweep_band_strategy,
+                run_name=self.sweep_band_run,
+            )
+            object.__setattr__(self, "sweep_layers", tuple(source["candidate_layers"]))
+            object.__setattr__(self, "sweep_layers_source", source)
         if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
             raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
         if self.covariance_low_rank < 1:
@@ -526,6 +548,8 @@ def _evidence_bundle_summary(
             "model": config.model,
             "dtype": config.dtype,
             "layer": config.layer,
+            "sweep_layers": tuple(config.sweep_layers),
+            "sweep_layers_source": _json_ready_mapping(config.sweep_layers_source),
             "offline": config.offline,
             "max_batch_tokens": config.max_batch_tokens,
             "auto_batch_size": config.auto_batch_size,
@@ -599,6 +623,9 @@ def _paths_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, s
         "conformal_artifact_manifest": str(config.conformal_artifact_manifest_path),
         "workflow_report": str(config.resolved_report_path),
         "artifact_manifest": str(config.artifact_manifest_path),
+        "sweep_layer_band_report": (
+            None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
+        ),
     }
 
 
@@ -610,6 +637,12 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         "layer": config.layer,
         "sweep": config.sweep,
         "sweep_layers": tuple(config.sweep_layers),
+        "sweep_layers_from_band_report": (
+            None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
+        ),
+        "sweep_band_strategy": config.sweep_band_strategy,
+        "sweep_band_run": config.sweep_band_run,
+        "sweep_layers_source": _json_ready_mapping(config.sweep_layers_source),
         "limit": config.limit,
         "manifold_questions": config.manifold_questions,
         "max_length": config.max_length,
@@ -657,6 +690,8 @@ def _artifact_paths(
         artifacts["layer_stats_cache"] = config.layer_stats_cache
     if config.eval_reps_cache is not None:
         artifacts["eval_reps_cache"] = config.eval_reps_cache
+    if config.sweep_layers_from_band_report is not None:
+        artifacts["sweep_layer_band_report"] = config.sweep_layers_from_band_report
     if not score_dump_reused:
         artifacts["truthfulqa_report"] = config.truthfulqa_report_path
         artifacts["truthfulqa_profile"] = config.truthfulqa_profile_path
@@ -700,6 +735,7 @@ def _write_artifact_manifest(
             "artifact_alpha": config.artifact_alpha,
             "best_by": config.best_by,
             "cache_only": config.cache_only,
+            "sweep_layers_source": _json_ready_mapping(config.sweep_layers_source),
         },
     )
     config.artifact_manifest_path.write_text(
@@ -777,6 +813,12 @@ def _load_json(path: str | Path) -> dict[str, Any]:
     return payload
 
 
+def _json_ready_mapping(payload: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if payload is None:
+        return None
+    return json.loads(json.dumps(dict(payload)))
+
+
 def _parse_int_tuple(value: str | None) -> tuple[int, ...]:
     if value is None or not value.strip():
         return ()
@@ -787,6 +829,71 @@ def _parse_str_tuple(value: str | None) -> tuple[str, ...]:
     if value is None or not value.strip():
         return ()
     return tuple(part.strip() for part in value.split(",") if part.strip())
+
+
+def _select_layer_band_source(
+    path: str | Path,
+    *,
+    model: str,
+    strategy: str | None,
+    run_name: str | None,
+) -> dict[str, Any]:
+    payload = _load_json(path)
+    recommended_strategy = _nested(payload, "recommended_strategy", "strategy")
+    selected_strategy = str(strategy or recommended_strategy or "")
+    if not selected_strategy:
+        raise ValueError("layer-band report has no recommended strategy; pass sweep_band_strategy explicitly.")
+    raw_runs = payload.get("runs")
+    if not isinstance(raw_runs, list):
+        raise ValueError("layer-band report must contain a runs list.")
+    candidate_runs = []
+    for raw_run in raw_runs:
+        if not isinstance(raw_run, Mapping):
+            continue
+        if str(raw_run.get("strategy")) != selected_strategy:
+            continue
+        if raw_run.get("matched") is not True:
+            continue
+        raw_layers = raw_run.get("candidate_layers")
+        if not isinstance(raw_layers, Sequence) or isinstance(raw_layers, (str, bytes)) or not raw_layers:
+            continue
+        candidate_runs.append(raw_run)
+    if not candidate_runs:
+        raise ValueError(f"layer-band report has no matched candidate run for strategy {selected_strategy!r}.")
+    if run_name is not None:
+        matched = [run for run in candidate_runs if str(run.get("name")) == str(run_name)]
+        if not matched:
+            raise ValueError(f"layer-band report has no matched run named {run_name!r}.")
+    else:
+        model_matches = [run for run in candidate_runs if str(run.get("model")) == str(model)]
+        if len(model_matches) == 1:
+            matched = model_matches
+        elif len(candidate_runs) == 1:
+            matched = candidate_runs
+        else:
+            names = ", ".join(str(run.get("name")) for run in candidate_runs)
+            raise ValueError(
+                "layer-band report is ambiguous for this model; pass --sweep-band-run. "
+                f"Candidate runs: {names}"
+            )
+    selected = matched[0]
+    candidate_layers = tuple(int(layer) for layer in selected["candidate_layers"])
+    return {
+        "type": "layer_band_selector_report",
+        "path": str(path),
+        "strategy": selected_strategy,
+        "recommended_strategy": recommended_strategy,
+        "run_name": selected.get("name"),
+        "model": selected.get("model"),
+        "candidate_layers": candidate_layers,
+        "candidate_layer_count": selected.get("candidate_layer_count"),
+        "candidate_layer_fraction": selected.get("candidate_layer_fraction"),
+        "best_layer": selected.get("best_layer"),
+        "best_layer_in_band": selected.get("best_layer_in_band"),
+        "band_best_layer": selected.get("band_best_layer"),
+        "band_best_rank": selected.get("band_best_rank"),
+        "auroc_regret": selected.get("auroc_regret"),
+    }
 
 
 def _runtime_preset_defaults(runtime_preset: str) -> dict[str, Any]:
@@ -807,25 +914,28 @@ def _hidden_state_capture_from_args(
     defaults: Mapping[str, Any],
     *,
     sweep_layers: Sequence[int],
+    has_band_report: bool = False,
 ) -> str:
     if args.hidden_state_capture is not None:
         return str(args.hidden_state_capture)
     default_capture = defaults.get("hidden_state_capture")
     if default_capture is not None:
         return str(default_capture)
-    if sweep_layers:
+    if sweep_layers or has_band_report:
         return "hooks"
     return "outputs"
 
 
 def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkflowConfig:
     preset_defaults = _runtime_preset_defaults(args.runtime_preset)
+    band_report = getattr(args, "sweep_layers_from_band_report", None)
     sweep = bool(_arg_or_preset(args, preset_defaults, "sweep", True))
-    sweep_layers = (
-        _parse_int_tuple(args.sweep_layers)
-        if args.sweep_layers is not None
-        else tuple(preset_defaults.get("sweep_layers", ()))
-    )
+    if args.sweep_layers is not None:
+        sweep_layers = _parse_int_tuple(args.sweep_layers)
+    elif band_report:
+        sweep_layers = ()
+    else:
+        sweep_layers = tuple(preset_defaults.get("sweep_layers", ()))
     if not sweep:
         sweep_layers = ()
     signals = (
@@ -846,6 +956,9 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
         layer=_arg_or_preset(args, preset_defaults, "layer", -1),
         sweep=sweep,
         sweep_layers=sweep_layers,
+        sweep_layers_from_band_report=Path(band_report) if band_report else None,
+        sweep_band_strategy=getattr(args, "sweep_band_strategy", None),
+        sweep_band_run=getattr(args, "sweep_band_run", None),
         limit=_arg_or_preset(args, preset_defaults, "limit", None),
         manifold_questions=_arg_or_preset(args, preset_defaults, "manifold_questions", None),
         max_length=_arg_or_preset(args, preset_defaults, "max_length", 64),
@@ -855,6 +968,7 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
             args,
             preset_defaults,
             sweep_layers=sweep_layers,
+            has_band_report=bool(band_report and sweep),
         ),
         covariance_mode=_arg_or_preset(args, preset_defaults, "covariance_mode", "full"),
         covariance_low_rank=_arg_or_preset(args, preset_defaults, "covariance_low_rank", 16),
@@ -925,6 +1039,24 @@ def main(argv: Sequence[str] | None = None) -> None:
     sweep_group.add_argument("--sweep", dest="sweep", action="store_true", default=None)
     sweep_group.add_argument("--no-sweep", dest="sweep", action="store_false", help="do not pass --sweep")
     parser.add_argument("--sweep-layers", default=None, help="comma-list passed to eval_truthfulqa.py --sweep-layers")
+    parser.add_argument(
+        "--sweep-layers-from-band-report",
+        default=None,
+        help=(
+            "derive --sweep-layers from a compare_layer_band_selectors.py report when --sweep-layers "
+            "is not set"
+        ),
+    )
+    parser.add_argument(
+        "--sweep-band-strategy",
+        default=None,
+        help="strategy name from the layer-band report; defaults to the report recommended_strategy",
+    )
+    parser.add_argument(
+        "--sweep-band-run",
+        default=None,
+        help="run name from the layer-band report when model matching is ambiguous",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)
     parser.add_argument("--max-length", type=int, default=None)

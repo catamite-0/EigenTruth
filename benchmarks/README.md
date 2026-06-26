@@ -628,6 +628,28 @@ will skip `eval_truthfulqa.py`, rerun only conformal calibration, and keep the
 top-level manifest focused on the reused score dump plus generated calibration
 artifacts.
 
+When a `compare_layer_band_selectors.py` report has already promoted a candidate
+band, pass it through the workflow to derive `eval_truthfulqa.py --sweep-layers`
+without copying layer lists by hand:
+
+```bash
+python benchmarks/run_calibrated_observability_workflow.py \
+  --output-dir artifacts/qwen05-band-calibrated-observability \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 \
+  --sweep-layers-from-band-report artifacts/truthfulqa-frontier-layer-band-selection/layer-band-comparison.json \
+  --sweep-band-run qwen05-l80 \
+  --layer-stats-cache artifacts/cache/qwen05-layer-stats.pt \
+  --eval-reps-cache artifacts/cache/qwen05-eval-reps.pt \
+  --cache-only
+```
+
+If the report contains exactly one run matching `--model`, the workflow selects
+it automatically. Otherwise pass `--sweep-band-run`. The selected report is
+fingerprinted in the top-level manifest as `sweep_layer_band_report`, and the
+workflow report records the selected strategy, run, candidate layers, and AUROC
+regret. Explicit `--sweep-layers` remains the highest-priority layer selection.
+
 For larger real-model runs, pass the TruthfulQA caches through this workflow:
 `--statement-encoding-cache`, `--layer-stats-cache`, and `--eval-reps-cache`
 reuse tokenization, warmup manifolds, and forced-answer hidden states across
