@@ -410,7 +410,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
 | `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims, simple symbolic equations, and calculation metadata extracted from limited arithmetic text. |
 | `QuestionAnswerVerifier` | Provides a dependency-free structured QA/domain-state verifier adapter for exact question and candidate-answer facts. |
-| `StructuredFactVerifier` | Verifies natural-language claims against structured subject-predicate-object facts, supporting matching KG-covered claims and refuting object mismatches for known subject/predicate pairs. |
+| `StructuredFactVerifier` | Verifies natural-language claims against structured subject-predicate-object facts, supporting common KG-covered paraphrases, aliases, multi-object lists, and object-mismatch refutation for known subject/predicate pairs. |
 | `StructuredStateVerifier` / `StateCheck` | Provides a dependency-free structured state and business-rule verifier for database, policy, and domain-state checks. |
 | `SQLiteStateSource` / `SQLiteStateQuery` | Loads read-only SQLite query results into structured verifier state without adding non-stdlib dependencies. |
 | `ToolOutputStateSource` / `ToolOutputMapping` | Maps local tool or action execution outputs into structured verifier state for post-tool checks. |
@@ -536,7 +536,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
 | `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim、简单符号等式，以及从有限算术文本中抽取出的 calculation metadata。 |
 | `QuestionAnswerVerifier` | 提供无依赖结构化 QA/领域状态 verifier adapter，用于精确问题与候选答案事实。 |
-| `StructuredFactVerifier` | 用结构化 subject-predicate-object facts 校验自然语言 claim：KG 覆盖内匹配则 supported，已知 subject/predicate 但 object 不匹配则 refuted。 |
+| `StructuredFactVerifier` | 用结构化 subject-predicate-object facts 校验自然语言 claim：支持 KG 覆盖内常见改写、别名、多对象列表匹配；已知 subject/predicate 但 object 不匹配则 refuted。 |
 | `StructuredStateVerifier` / `StateCheck` | 提供无依赖结构化状态与业务规则 verifier，用于数据库、策略和领域状态校验。 |
 | `SQLiteStateSource` / `SQLiteStateQuery` | 将只读 SQLite 查询结果加载为 verifier 可消费的结构化状态，不增加非标准库依赖。 |
 | `ToolOutputStateSource` / `ToolOutputMapping` | 将本地工具或 action 执行输出映射成结构化 verifier state，用于工具调用后的校验。 |

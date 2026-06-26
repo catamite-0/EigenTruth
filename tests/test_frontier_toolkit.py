@@ -740,6 +740,46 @@ def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
     assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
 
 
+def test_structured_fact_verifier_handles_fact_paraphrases_and_object_lists():
+    verifier = StructuredFactVerifier.from_corpus({
+        "facts": [
+            {
+                "subject": "France",
+                "predicate": "P36",
+                "object": "Paris",
+                "metadata": {"subject_aliases": ["French Republic"]},
+            },
+            {"subject": "Belgium", "predicate": "P37", "object": "Dutch"},
+            {"subject": "Belgium", "predicate": "P37", "object": "French"},
+            {
+                "subject": "Japan",
+                "predicate": "P38",
+                "object": "Japanese yen",
+                "metadata": {"object_aliases": ["yen"]},
+            },
+        ],
+    })
+
+    possessive_capital = verifier.verify(Claim("France's capital is Paris."))
+    subject_first_capital = verifier.verify(Claim("The capital of the French Republic is Paris."))
+    language_list = verifier.verify(Claim("The official languages of Belgium include Dutch and French."))
+    possessive_language_list = verifier.verify(Claim("Belgium's official languages are Dutch and French."))
+    refuted_language_list = verifier.verify(Claim("The official languages of Belgium include Dutch and German."))
+    possessive_currency = verifier.verify(Claim("Japan's currency is yen."))
+    uses_currency = verifier.verify(Claim("Japan uses the Japanese yen as its currency."))
+
+    assert possessive_capital.status is VerificationStatus.SUPPORTED
+    assert subject_first_capital.status is VerificationStatus.SUPPORTED
+    assert language_list.status is VerificationStatus.SUPPORTED
+    assert language_list.metadata["all_triple_results"][0]["metadata"]["decision_rule"] == "all_list_objects_match"
+    assert possessive_language_list.status is VerificationStatus.SUPPORTED
+    assert refuted_language_list.status is VerificationStatus.REFUTED
+    assert refuted_language_list.metadata["decision_rule"] == "object_list_mismatch"
+    assert refuted_language_list.metadata["unmatched_objects"] == ("German",)
+    assert possessive_currency.status is VerificationStatus.SUPPORTED
+    assert uses_currency.status is VerificationStatus.SUPPORTED
+
+
 def test_claim_triple_audit_uses_metadata_triples_and_context_evidence():
     claim = Claim(
         "Revenue grew.",

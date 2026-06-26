@@ -986,8 +986,9 @@ python benchmarks/eval_verifier_ensemble.py \
 
 For natural-language claims backed by subject-predicate-object facts, pass
 `--fact-corpus`. `StructuredFactVerifier` extracts simple claim triples, supports
-matching known facts, and refutes object mismatches when the subject/predicate
-pair is covered by the fact corpus:
+common paraphrases such as possessive and subject-first fact statements, matches
+aliases and multi-object lists, and refutes object mismatches when the
+subject/predicate pair is covered by the fact corpus:
 
 ```bash
 python benchmarks/eval_verifier_ensemble.py \

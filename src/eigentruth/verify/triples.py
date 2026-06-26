@@ -16,12 +16,45 @@ _CAPITAL_OF_RE = re.compile(
     r"^(?P<object>.+?)\s+(?:is|was)\s+(?:the\s+)?capital\s+of\s+(?P<subject>.+)$",
     re.IGNORECASE,
 )
+_CAPITAL_SUBJECT_RE = re.compile(
+    r"^(?:the\s+)?capital\s+of\s+(?P<subject>.+?)\s+(?:is|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_POSSESSIVE_CAPITAL_RE = re.compile(
+    r"^(?P<subject>.+?)(?:'s|’s)\s+capital\s+(?:is|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
 _OFFICIAL_LANGUAGE_OF_RE = re.compile(
     r"^(?P<object>.+?)\s+(?:is|are|was|were)\s+(?:an?\s+|the\s+)?official\s+language\s+of\s+(?P<subject>.+)$",
     re.IGNORECASE,
 )
+_OFFICIAL_LANGUAGE_SUBJECT_RE = re.compile(
+    r"^(?:the\s+)?official\s+languages?\s+of\s+(?P<subject>.+?)\s+"
+    r"(?:include|includes|are|is|were|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_POSSESSIVE_OFFICIAL_LANGUAGE_RE = re.compile(
+    r"^(?P<subject>.+?)(?:'s|’s)\s+official\s+languages?\s+"
+    r"(?:include|includes|are|is|were|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
 _CURRENCY_OF_RE = re.compile(
     r"^(?P<object>.+?)\s+(?:is|are|was|were)\s+(?:a\s+|the\s+)?currency\s+of\s+(?P<subject>.+)$",
+    re.IGNORECASE,
+)
+_CURRENCY_SUBJECT_RE = re.compile(
+    r"^(?:the\s+)?currenc(?:y|ies)\s+of\s+(?P<subject>.+?)\s+"
+    r"(?:include|includes|are|is|were|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_POSSESSIVE_CURRENCY_RE = re.compile(
+    r"^(?P<subject>.+?)(?:'s|’s)\s+currenc(?:y|ies)\s+"
+    r"(?:include|includes|are|is|were|was)\s+(?P<object>.+)$",
+    re.IGNORECASE,
+)
+_USES_CURRENCY_RE = re.compile(
+    r"^(?P<subject>.+?)\s+(?:uses|use|used)\s+(?P<object>.+?)\s+as\s+"
+    r"(?:its\s+|their\s+|the\s+)?currenc(?:y|ies)$",
     re.IGNORECASE,
 )
 _LOCATED_IN_RE = re.compile(
@@ -166,6 +199,26 @@ class RuleBasedTripleExtractor:
                 source="capital_of_rule",
             ),)
 
+        capital_subject = _CAPITAL_SUBJECT_RE.match(text)
+        if capital_subject is not None:
+            return (_triple(
+                claim,
+                subject=capital_subject.group("subject"),
+                predicate="capital_of",
+                object_value=capital_subject.group("object"),
+                source="capital_subject_rule",
+            ),)
+
+        possessive_capital = _POSSESSIVE_CAPITAL_RE.match(text)
+        if possessive_capital is not None:
+            return (_triple(
+                claim,
+                subject=possessive_capital.group("subject"),
+                predicate="capital_of",
+                object_value=possessive_capital.group("object"),
+                source="possessive_capital_rule",
+            ),)
+
         official_language = _OFFICIAL_LANGUAGE_OF_RE.match(text)
         if official_language is not None:
             return (_triple(
@@ -176,6 +229,26 @@ class RuleBasedTripleExtractor:
                 source="official_language_of_rule",
             ),)
 
+        official_language_subject = _OFFICIAL_LANGUAGE_SUBJECT_RE.match(text)
+        if official_language_subject is not None:
+            return (_triple(
+                claim,
+                subject=official_language_subject.group("subject"),
+                predicate="official_language_of",
+                object_value=official_language_subject.group("object"),
+                source="official_language_subject_rule",
+            ),)
+
+        possessive_official_language = _POSSESSIVE_OFFICIAL_LANGUAGE_RE.match(text)
+        if possessive_official_language is not None:
+            return (_triple(
+                claim,
+                subject=possessive_official_language.group("subject"),
+                predicate="official_language_of",
+                object_value=possessive_official_language.group("object"),
+                source="possessive_official_language_rule",
+            ),)
+
         currency = _CURRENCY_OF_RE.match(text)
         if currency is not None:
             return (_triple(
@@ -184,6 +257,36 @@ class RuleBasedTripleExtractor:
                 predicate="currency_of",
                 object_value=currency.group("object"),
                 source="currency_of_rule",
+            ),)
+
+        currency_subject = _CURRENCY_SUBJECT_RE.match(text)
+        if currency_subject is not None:
+            return (_triple(
+                claim,
+                subject=currency_subject.group("subject"),
+                predicate="currency_of",
+                object_value=currency_subject.group("object"),
+                source="currency_subject_rule",
+            ),)
+
+        possessive_currency = _POSSESSIVE_CURRENCY_RE.match(text)
+        if possessive_currency is not None:
+            return (_triple(
+                claim,
+                subject=possessive_currency.group("subject"),
+                predicate="currency_of",
+                object_value=possessive_currency.group("object"),
+                source="possessive_currency_rule",
+            ),)
+
+        uses_currency = _USES_CURRENCY_RE.match(text)
+        if uses_currency is not None:
+            return (_triple(
+                claim,
+                subject=uses_currency.group("subject"),
+                predicate="currency_of",
+                object_value=uses_currency.group("object"),
+                source="uses_currency_rule",
             ),)
 
         located = _LOCATED_IN_RE.match(text)

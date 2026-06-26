@@ -11,6 +11,7 @@ from eigentruth.verify.triples import ClaimTriple
 
 _BOUNDARY_CHARS = " \t\r\n.,;:!?()[]{}\"'`“”‘’。！？"
 _LEADING_ARTICLE_RE = re.compile(r"^(?:a|an|the)\s+", re.IGNORECASE)
+_OBJECT_LIST_SEPARATOR_RE = re.compile(r"\s*(?:[,;]|\band\b|\bas well as\b)\s*", re.IGNORECASE)
 _PREDICATE_ALIASES = {
     "p36": "capital",
     "capital": "capital",
@@ -54,6 +55,9 @@ class StructuredFact:
     def from_mapping(cls, data: Mapping[str, Any]) -> "StructuredFact":
         """Build a fact from a JSON-like mapping or QA-corpus document."""
         metadata = dict(data.get("metadata", {}))
+        for key in ("subject_aliases", "entity_aliases", "country_aliases", "object_aliases", "answer_aliases"):
+            if data.get(key) is not None and key not in metadata:
+                metadata[key] = data[key]
         subject = _first_present(
             data,
             metadata,
@@ -116,8 +120,11 @@ class StructuredFactVerifier:
             raise ValueError("StructuredFactVerifier requires at least one fact.")
         index: dict[tuple[str, str], tuple[StructuredFact, ...]] = {}
         for fact in facts:
-            key = (_normalize_entity(fact.subject), _normalize_predicate(fact.predicate))
-            index[key] = (*index.get(key, ()), fact)
+            predicate_key = _normalize_predicate(fact.predicate)
+            for subject_key in _fact_subject_keys(fact):
+                key = (subject_key, predicate_key)
+                if fact not in index.get(key, ()):
+                    index[key] = (*index.get(key, ()), fact)
         object.__setattr__(self, "facts", facts)
         object.__setattr__(self, "_index", index)
 
@@ -226,7 +233,7 @@ class StructuredFactVerifier:
 
         object_key = _normalize_entity(triple.object)
         for fact in candidates:
-            if _normalize_entity(fact.object) == object_key:
+            if object_key in _fact_object_keys(fact):
                 return VerificationResult(
                     status=VerificationStatus.SUPPORTED,
                     confidence=0.95,
@@ -241,6 +248,60 @@ class StructuredFactVerifier:
                         "triple": triple_payload,
                     },
                 )
+
+        object_values = _split_object_values(triple.object)
+        if len(object_values) > 1:
+            matched_evidence = []
+            matched_objects = []
+            unmatched_objects = []
+            for object_value in object_values:
+                value_key = _normalize_entity(object_value)
+                match = next(
+                    (
+                        fact
+                        for fact in candidates
+                        if value_key in _fact_object_keys(fact)
+                    ),
+                    None,
+                )
+                if match is None:
+                    unmatched_objects.append(object_value)
+                else:
+                    matched_objects.append(object_value)
+                    matched_evidence.append(match.to_evidence())
+            if not unmatched_objects:
+                return VerificationResult(
+                    status=VerificationStatus.SUPPORTED,
+                    confidence=0.9,
+                    evidence=_unique_evidence(matched_evidence),
+                    explanation="all listed claim objects match structured source facts",
+                    metadata={
+                        "verifier": "structured_fact",
+                        "decision_rule": "all_list_objects_match",
+                        "subject_key": subject_key,
+                        "predicate_key": predicate_key,
+                        "n_known_objects": len(candidates),
+                        "matched_objects": tuple(matched_objects),
+                        "triple": triple_payload,
+                    },
+                )
+            evidence = tuple(fact.to_evidence() for fact in candidates)
+            return VerificationResult(
+                status=VerificationStatus.REFUTED,
+                confidence=0.9,
+                evidence=evidence,
+                explanation="one or more listed claim objects do not match structured source fact(s)",
+                metadata={
+                    "verifier": "structured_fact",
+                    "decision_rule": "object_list_mismatch",
+                    "subject_key": subject_key,
+                    "predicate_key": predicate_key,
+                    "n_known_objects": len(candidates),
+                    "matched_objects": tuple(matched_objects),
+                    "unmatched_objects": tuple(unmatched_objects),
+                    "triple": triple_payload,
+                },
+            )
 
         evidence = tuple(fact.to_evidence() for fact in candidates)
         return VerificationResult(
@@ -301,6 +362,53 @@ def _normalize_predicate(value: Any) -> str:
     text = normalize_claim_text(_clean_slot(value))
     text = re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "_", text).strip("_")
     return _PREDICATE_ALIASES.get(text, text)
+
+
+def _fact_subject_keys(fact: StructuredFact) -> tuple[str, ...]:
+    return _unique_keys(
+        (fact.subject,)
+        + _metadata_text_sequence(fact.metadata, "subject_aliases")
+        + _metadata_text_sequence(fact.metadata, "entity_aliases")
+        + _metadata_text_sequence(fact.metadata, "country_aliases")
+    )
+
+
+def _fact_object_keys(fact: StructuredFact) -> tuple[str, ...]:
+    return _unique_keys(
+        (fact.object,)
+        + _metadata_text_sequence(fact.metadata, "object_aliases")
+        + _metadata_text_sequence(fact.metadata, "answer_aliases")
+    )
+
+
+def _metadata_text_sequence(metadata: Mapping[str, Any], key: str) -> tuple[str, ...]:
+    value = metadata.get(key)
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        return tuple(str(item) for item in value if str(item).strip())
+    return (str(value),)
+
+
+def _unique_keys(values: Sequence[str]) -> tuple[str, ...]:
+    keys = []
+    seen = set()
+    for value in values:
+        key = _normalize_entity(value)
+        if key and key not in seen:
+            keys.append(key)
+            seen.add(key)
+    return tuple(keys)
+
+
+def _split_object_values(value: Any) -> tuple[str, ...]:
+    text = _clean_slot(value)
+    if not _OBJECT_LIST_SEPARATOR_RE.search(text):
+        return (text,)
+    values = tuple(part for part in (_clean_slot(item) for item in _OBJECT_LIST_SEPARATOR_RE.split(text)) if part)
+    return values if len(values) > 1 else (text,)
 
 
 def _clean_slot(value: Any) -> str:
