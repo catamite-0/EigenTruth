@@ -11,6 +11,7 @@ from eigentruth.adapters import (
     CachedRetriever,
     CachedStateSource,
     CalculatorVerifier,
+    EnsembleWorldModelAdapter,
     InMemoryRetriever,
     InMemoryWorldModelAdapter,
     QuestionAnswerFact,
@@ -1885,6 +1886,104 @@ def test_in_memory_world_model_adapter_verifies_and_predicts_state():
     assert nested_prediction.state["inventory"]["sku_123"]["available"] == 7
     assert nested_prediction.state["quota"]["used"] == 3
     assert "Inventory" in adapter.explain(claim)
+
+
+def test_ensemble_world_model_adapter_confirms_consensus_predictions():
+    adapter_a = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    adapter_b = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    ensemble = EnsembleWorldModelAdapter((adapter_a, adapter_b), min_agreement=1.0)
+    verifier = StateTransitionVerifier(
+        world_model=ensemble,
+        state={"inventory": {"sku_123": {"available": 10}}},
+    )
+
+    prediction = ensemble.predict(
+        {"inventory": {"sku_123": {"available": 10}}},
+        {"decrement": {"inventory.sku_123.available": 3}},
+    )
+    result = verifier.verify(
+        Claim(
+            "The reservation leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert prediction.confidence == pytest.approx(1.0)
+    assert prediction.metadata["agreement_rate"] == pytest.approx(1.0)
+    assert prediction.metadata["below_min_agreement"] is False
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["world_model"] == "EnsembleWorldModelAdapter"
+    assert result.metadata["prediction_metadata"]["agreement_count"] == 2
+
+
+def test_ensemble_world_model_adapter_fails_closed_on_prediction_disagreement():
+    class DivergentWorldModel:
+        def verify(self, claim, context=None):
+            return VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2)
+
+        def predict(self, state, action):
+            next_state = dict(state)
+            next_state["inventory"] = {"sku_123": {"available": 8}}
+            return WorldModelPrediction(
+                state=next_state,
+                confidence=0.9,
+                explanation="divergent transition",
+            )
+
+        def explain(self, claim):
+            return "divergent world model"
+
+    base_adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+    ensemble = EnsembleWorldModelAdapter(
+        (base_adapter, DivergentWorldModel()),
+        min_agreement=1.0,
+    )
+    verifier = StateTransitionVerifier(
+        world_model=ensemble,
+        state={"inventory": {"sku_123": {"available": 10}}},
+    )
+
+    prediction = ensemble.predict(
+        {"inventory": {"sku_123": {"available": 10}}},
+        {"decrement": {"inventory.sku_123.available": 3}},
+    )
+    result = verifier.verify(
+        Claim(
+            "The reservation leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"decrement": {"inventory.sku_123.available": 3}},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.confidence == pytest.approx(0.0)
+    assert prediction.metadata["below_min_agreement"] is True
+    assert prediction.metadata["agreement_rate"] == pytest.approx(0.5)
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "prediction_agreement_below_threshold"
+    assert result.metadata["prediction_metadata"]["below_min_agreement"] is True
+
+    with pytest.raises(ValueError, match="world_models"):
+        EnsembleWorldModelAdapter(())
+    with pytest.raises(ValueError, match="min_agreement"):
+        EnsembleWorldModelAdapter((base_adapter,), min_agreement=0.0)
 
 
 def test_state_transition_verifier_checks_predicted_postconditions():

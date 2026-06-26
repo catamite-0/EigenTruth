@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.adapters.state import StateCheck, StructuredStateVerifier
-from eigentruth.verify import Claim, VerificationResult, VerificationStatus
+from eigentruth.verify import Claim, VerificationResult, VerificationStatus, stable_cache_key
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,23 @@ class StateTransitionVerifier:
                 explanation=f"world model prediction failed: {exc}",
                 metadata={"verifier": "state_transition", "decision_rule": "prediction_error"},
             )
+        if prediction.metadata.get("below_min_agreement") is True:
+            return VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=prediction.confidence,
+                explanation="world model prediction agreement below threshold",
+                metadata={
+                    "verifier": "state_transition",
+                    "decision_rule": "prediction_agreement_below_threshold",
+                    "world_model": type(self.world_model).__name__,
+                    "action": dict(transition.action),
+                    "prediction_confidence": prediction.confidence,
+                    "min_prediction_confidence": self.min_prediction_confidence,
+                    "prediction_explanation": prediction.explanation,
+                    "prediction_metadata": dict(prediction.metadata),
+                    "source": transition.source,
+                },
+            )
         if prediction.confidence < self.min_prediction_confidence:
             return VerificationResult(
                 status=VerificationStatus.INSUFFICIENT_EVIDENCE,
@@ -141,6 +159,7 @@ class StateTransitionVerifier:
                     "prediction_confidence": prediction.confidence,
                     "min_prediction_confidence": self.min_prediction_confidence,
                     "prediction_explanation": prediction.explanation,
+                    "prediction_metadata": dict(prediction.metadata),
                     "source": transition.source,
                 },
             )
@@ -160,6 +179,7 @@ class StateTransitionVerifier:
             "action": dict(transition.action),
             "prediction_confidence": prediction.confidence,
             "prediction_explanation": prediction.explanation,
+            "prediction_metadata": dict(prediction.metadata),
             "source": transition.source,
         }
         if state_result.status is VerificationStatus.SUPPORTED:
@@ -225,6 +245,207 @@ class InMemoryWorldModelAdapter:
 
     def explain(self, claim: Claim) -> str:
         return f"in-memory world model checked claim: {claim.text}"
+
+
+@dataclass(frozen=True)
+class EnsembleWorldModelAdapter:
+    """Aggregate multiple world-model adapters with disagreement-aware confidence.
+
+    The adapter selects the majority predicted state by stable JSON fingerprint,
+    degrades confidence by agreement rate, and marks predictions as
+    `below_min_agreement` when too few members agree. `StateTransitionVerifier`
+    treats that marker as insufficient evidence.
+    """
+
+    world_models: Sequence[WorldModelAdapter]
+    min_agreement: float = 1.0
+
+    def __post_init__(self) -> None:
+        world_models = tuple(self.world_models)
+        if not world_models:
+            raise ValueError("world_models must contain at least one adapter.")
+        if not (0.0 < self.min_agreement <= 1.0):
+            raise ValueError("min_agreement must be in (0, 1].")
+        object.__setattr__(self, "world_models", world_models)
+
+    def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
+        results: list[tuple[int, WorldModelAdapter, VerificationResult]] = []
+        errors: list[dict[str, Any]] = []
+        for idx, world_model in enumerate(self.world_models):
+            try:
+                results.append((idx, world_model, world_model.verify(claim, context=context)))
+            except Exception as exc:  # pragma: no cover - defensive adapter boundary
+                errors.append({
+                    "index": idx,
+                    "world_model": type(world_model).__name__,
+                    "error": str(exc),
+                })
+        if not results:
+            return VerificationResult(
+                status=VerificationStatus.ERROR,
+                confidence=0.0,
+                explanation="all world-model ensemble verifiers failed",
+                metadata={
+                    "verifier": "world_model_ensemble",
+                    "decision_rule": "all_members_failed",
+                    "member_count": len(self.world_models),
+                    "errors": errors,
+                },
+            )
+
+        status_counts = Counter(result.status for _, _, result in results)
+        max_count = max(status_counts.values())
+        winners = sorted(
+            (status for status, count in status_counts.items() if count == max_count),
+            key=lambda status: status.value,
+        )
+        member_count = len(self.world_models)
+        agreement_rate = max_count / member_count
+        metadata = {
+            "verifier": "world_model_ensemble",
+            "member_count": member_count,
+            "result_count": len(results),
+            "error_count": len(errors),
+            "agreement_count": max_count,
+            "agreement_rate": agreement_rate,
+            "min_agreement": self.min_agreement,
+            "member_statuses": [result.status.value for _, _, result in results],
+            "member_confidences": [result.confidence for _, _, result in results],
+            "member_world_models": [type(world_model).__name__ for _, world_model, _ in results],
+            "errors": errors,
+        }
+        if len(winners) > 1:
+            return VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=0.0,
+                explanation="world-model ensemble verifier status tie",
+                metadata={
+                    **metadata,
+                    "decision_rule": "status_tie",
+                    "below_min_agreement": True,
+                },
+            )
+
+        status = winners[0]
+        agreeing = [result for _, _, result in results if result.status is status]
+        mean_confidence = sum(result.confidence for result in agreeing) / len(agreeing)
+        below_min_agreement = agreement_rate < self.min_agreement
+        confidence = 0.0 if below_min_agreement else mean_confidence * agreement_rate
+        if below_min_agreement:
+            return VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=confidence,
+                explanation="world-model ensemble verifier agreement below threshold",
+                metadata={
+                    **metadata,
+                    "decision_rule": "status_agreement_below_threshold",
+                    "below_min_agreement": True,
+                    "consensus_status": status.value,
+                },
+            )
+
+        evidence = tuple(item for result in agreeing for item in result.evidence)
+        return VerificationResult(
+            status=status,
+            confidence=confidence,
+            evidence=evidence,
+            explanation="world-model ensemble verifier consensus",
+            metadata={
+                **metadata,
+                "decision_rule": "status_consensus",
+                "below_min_agreement": False,
+                "consensus_status": status.value,
+            },
+        )
+
+    def predict(
+        self,
+        state: Mapping[str, Any],
+        action: Mapping[str, Any],
+    ) -> WorldModelPrediction:
+        predictions: list[tuple[int, WorldModelAdapter, WorldModelPrediction]] = []
+        errors: list[dict[str, Any]] = []
+        for idx, world_model in enumerate(self.world_models):
+            try:
+                predictions.append((idx, world_model, world_model.predict(state, action)))
+            except Exception as exc:  # pragma: no cover - defensive adapter boundary
+                errors.append({
+                    "index": idx,
+                    "world_model": type(world_model).__name__,
+                    "error": str(exc),
+                })
+        member_count = len(self.world_models)
+        if not predictions:
+            return WorldModelPrediction(
+                state=_deep_copy_mapping(state),
+                confidence=0.0,
+                explanation="all world-model ensemble predictions failed",
+                metadata={
+                    "world_model": "EnsembleWorldModelAdapter",
+                    "decision_rule": "all_members_failed",
+                    "member_count": member_count,
+                    "prediction_count": 0,
+                    "error_count": len(errors),
+                    "errors": errors,
+                    "agreement_count": 0,
+                    "agreement_rate": 0.0,
+                    "min_agreement": self.min_agreement,
+                    "below_min_agreement": True,
+                },
+            )
+
+        groups: dict[str, list[tuple[int, WorldModelAdapter, WorldModelPrediction]]] = {}
+        for item in predictions:
+            _, _, prediction = item
+            groups.setdefault(stable_cache_key(prediction.state), []).append(item)
+        ranked_groups = sorted(
+            groups.items(),
+            key=lambda pair: (
+                -len(pair[1]),
+                -sum(prediction.confidence for _, _, prediction in pair[1]) / len(pair[1]),
+                pair[0],
+            ),
+        )
+        consensus_key, consensus_group = ranked_groups[0]
+        agreement_count = len(consensus_group)
+        agreement_rate = agreement_count / member_count
+        mean_confidence = sum(prediction.confidence for _, _, prediction in consensus_group) / agreement_count
+        below_min_agreement = agreement_rate < self.min_agreement
+        confidence = 0.0 if below_min_agreement else mean_confidence * agreement_rate
+        consensus_prediction = consensus_group[0][2]
+        metadata = {
+            "world_model": "EnsembleWorldModelAdapter",
+            "decision_rule": (
+                "prediction_agreement_below_threshold"
+                if below_min_agreement
+                else "prediction_consensus"
+            ),
+            "member_count": member_count,
+            "prediction_count": len(predictions),
+            "error_count": len(errors),
+            "agreement_count": agreement_count,
+            "agreement_rate": agreement_rate,
+            "min_agreement": self.min_agreement,
+            "below_min_agreement": below_min_agreement,
+            "disagreement": agreement_count < member_count,
+            "consensus_state_fingerprint": consensus_key,
+            "member_confidences": [prediction.confidence for _, _, prediction in predictions],
+            "member_world_models": [type(world_model).__name__ for _, world_model, _ in predictions],
+            "errors": errors,
+        }
+        return WorldModelPrediction(
+            state=_deep_copy_mapping(consensus_prediction.state),
+            confidence=confidence,
+            explanation=(
+                "world-model ensemble agreement below threshold"
+                if below_min_agreement
+                else "world-model ensemble consensus"
+            ),
+            metadata=metadata,
+        )
+
+    def explain(self, claim: Claim) -> str:
+        return f"world-model ensemble checked claim with {len(self.world_models)} members: {claim.text}"
 
 
 def _transition_check_source(

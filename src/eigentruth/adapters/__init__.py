@@ -27,6 +27,7 @@ from eigentruth.adapters.state import (
     ToolOutputStateSource,
 )
 from eigentruth.adapters.world_model import (
+    EnsembleWorldModelAdapter,
     InMemoryWorldModelAdapter,
     StateTransitionCheck,
     StateTransitionVerifier,
@@ -55,6 +56,7 @@ __all__ = [
     "StructuredStateVerifier",
     "ToolOutputMapping",
     "ToolOutputStateSource",
+    "EnsembleWorldModelAdapter",
     "InMemoryWorldModelAdapter",
     "StateTransitionCheck",
     "StateTransitionVerifier",
