@@ -1005,6 +1005,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_score_fusion_conformal_gate_passed": (
             performance_evidence_recommendation.get("score_fusion_conformal_gate_passed")
         ),
+        "performance_selected_fusion_artifact_report": performance_evidence.get(
+            "selected_fusion_artifact_report"
+        ),
+        "recommended_selected_fusion_status": performance_evidence_recommendation.get(
+            "selected_fusion_status"
+        ),
+        "recommended_selected_fusion_run": performance_evidence_recommendation.get(
+            "selected_fusion_run"
+        ),
+        "recommended_selected_fusion_candidate": performance_evidence_recommendation.get(
+            "selected_fusion_candidate"
+        ),
+        "recommended_selected_fusion_signal": performance_evidence_recommendation.get(
+            "selected_fusion_signal"
+        ),
+        "recommended_selected_fusion_auroc": performance_evidence_recommendation.get(
+            "selected_fusion_auroc"
+        ),
+        "recommended_selected_fusion_artifact_path": performance_evidence_recommendation.get(
+            "selected_fusion_artifact_path"
+        ),
         "performance_uncached_total_seconds": performance_evidence_cost.get(
             "uncached_total_seconds"
         ),

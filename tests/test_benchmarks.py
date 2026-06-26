@@ -12997,6 +12997,16 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         json.dumps({"schema_version": 1, "status": "promote"}, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    selected_fusion_report_path = tmp_path / "selected-fusion-artifact-build-report.json"
+    selected_fusion_report_path.write_text(
+        json.dumps(
+            {"schema_version": 1, "workflow": "selected_fusion_artifact_build", "status": "complete"},
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     _write_performance_baseline_record(
         tmp_path / "performance",
         registry_path=baseline_registry_path,
@@ -13014,6 +13024,13 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         score_fusion_signal="score_fusion_mean_rank",
         score_fusion_auroc=0.88,
         score_fusion_conformal_gate_passed=True,
+        selected_fusion_artifact_report=str(selected_fusion_report_path),
+        selected_fusion_status="promote",
+        selected_fusion_run="gpt2",
+        selected_fusion_candidate="geometry_trajectory:mean_rank",
+        selected_fusion_signal="selected_fusion_mean_rank",
+        selected_fusion_auroc=0.84,
+        selected_fusion_artifact_path="gpt2-selected-fusion-artifact.json",
         covariance_tradeoff={
             "status": "quality_preserved",
             "baseline_cell": "full-cell",
@@ -13205,6 +13222,17 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_score_fusion_signal"] == "score_fusion_mean_rank"
     assert manifest["metadata"]["recommended_score_fusion_auroc"] == pytest.approx(0.88)
     assert manifest["metadata"]["recommended_score_fusion_conformal_gate_passed"] is True
+    assert manifest["metadata"]["performance_selected_fusion_artifact_report"] == str(
+        selected_fusion_report_path
+    )
+    assert manifest["metadata"]["recommended_selected_fusion_status"] == "promote"
+    assert manifest["metadata"]["recommended_selected_fusion_run"] == "gpt2"
+    assert manifest["metadata"]["recommended_selected_fusion_candidate"] == "geometry_trajectory:mean_rank"
+    assert manifest["metadata"]["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert manifest["metadata"]["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
+    assert manifest["metadata"]["recommended_selected_fusion_artifact_path"] == (
+        "gpt2-selected-fusion-artifact.json"
+    )
     assert manifest["metadata"]["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert manifest["metadata"]["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert manifest["metadata"]["performance_cache_only_total_ratio"] == pytest.approx(0.02)
@@ -13488,6 +13516,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_score_fusion_signal"] == "score_fusion_mean_rank"
     assert record.metadata["recommended_score_fusion_auroc"] == pytest.approx(0.88)
     assert record.metadata["recommended_score_fusion_conformal_gate_passed"] is True
+    assert record.metadata["performance_selected_fusion_artifact_report"] == str(selected_fusion_report_path)
+    assert record.metadata["recommended_selected_fusion_status"] == "promote"
+    assert record.metadata["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert record.metadata["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
     assert record.metadata["performance_uncached_total_seconds"] == pytest.approx(10.0)
     assert record.metadata["performance_cached_total_ratio"] == pytest.approx(0.5)
     assert record.metadata["performance_cache_only_total_ratio"] == pytest.approx(0.02)
@@ -14936,6 +14968,13 @@ def _write_performance_baseline_record(
     score_fusion_signal=None,
     score_fusion_auroc=None,
     score_fusion_conformal_gate_passed=None,
+    selected_fusion_artifact_report=None,
+    selected_fusion_status=None,
+    selected_fusion_run=None,
+    selected_fusion_candidate=None,
+    selected_fusion_signal=None,
+    selected_fusion_auroc=None,
+    selected_fusion_artifact_path=None,
 ):
     from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
 
@@ -15030,6 +15069,12 @@ def _write_performance_baseline_record(
             "score_fusion_signal": score_fusion_signal,
             "score_fusion_auroc": score_fusion_auroc,
             "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
+            "selected_fusion_status": selected_fusion_status,
+            "selected_fusion_run": selected_fusion_run,
+            "selected_fusion_candidate": selected_fusion_candidate,
+            "selected_fusion_signal": selected_fusion_signal,
+            "selected_fusion_auroc": selected_fusion_auroc,
+            "selected_fusion_artifact_path": selected_fusion_artifact_path,
         },
         "cost": {
             "uncached_total_seconds": uncached_total_seconds,
@@ -15047,6 +15092,13 @@ def _write_performance_baseline_record(
             "score_fusion_signal": score_fusion_signal,
             "score_fusion_auroc": score_fusion_auroc,
             "score_fusion_conformal_gate_passed": score_fusion_conformal_gate_passed,
+            "selected_fusion_artifact_report": selected_fusion_artifact_report,
+            "selected_fusion_status": selected_fusion_status,
+            "selected_fusion_run": selected_fusion_run,
+            "selected_fusion_candidate": selected_fusion_candidate,
+            "selected_fusion_signal": selected_fusion_signal,
+            "selected_fusion_auroc": selected_fusion_auroc,
+            "selected_fusion_artifact_path": selected_fusion_artifact_path,
         },
         "score_dump_cache": {
             "enabled": True,
@@ -20216,6 +20268,152 @@ def test_run_performance_baseline_workflow_reuses_reports_and_registers(tmp_path
     assert fingerprint_calls_by_path[str(score_ensemble_report_path.resolve())] == 1
     assert fingerprint_calls_by_path[str(fusion_artifact_path.resolve())] == 1
     assert fingerprint_calls_by_path[str(Path(payload["paths"]["runtime_recommendation"]).resolve())] == 1
+
+
+def test_run_performance_baseline_workflow_records_selected_fusion_artifact(tmp_path):
+    module = importlib.import_module("benchmarks.run_performance_baseline_workflow")
+    registry_module = importlib.import_module("eigentruth.registry")
+    matrix_report_path = tmp_path / "cache-profile-matrix-report.json"
+    selected_report_path = tmp_path / "selected-fusion-artifact-build-report.json"
+    selected_artifact_path = tmp_path / "gpt2-selected-fusion-artifact.json"
+    workflow_report_path = tmp_path / "workflow.json"
+    verification_report_path = tmp_path / "manifest-verification.json"
+    registry_path = tmp_path / "registry.json"
+    selected_artifact_path.write_text(
+        json.dumps({"artifact_type": "rank_score_fusion", "method": "mean_rank"}),
+        encoding="utf-8",
+    )
+    selected_report_path.write_text(
+        json.dumps({
+            "workflow": "selected_fusion_artifact_build",
+            "selection_status": "complete",
+            "runs": [
+                {
+                    "run_name": "gpt2",
+                    "artifact_path": str(selected_artifact_path),
+                    "selected_candidate": "geometry_trajectory:mean_rank",
+                    "selected_signals": [
+                        "truth_proj",
+                        "subspace_resid",
+                        "trajectory_convergence",
+                    ],
+                    "selected_method": "mean_rank",
+                    "artifact_method": "mean_rank",
+                    "tracked_signal": "trajectory_convergence",
+                    "tracked_signal_enabled": True,
+                    "selected_metrics": {
+                        "alpha": 0.1,
+                        "auroc": 0.84,
+                        "false_alarm": 0.04,
+                        "detection": 0.71,
+                        "coverage": 0.96,
+                    },
+                },
+                {
+                    "run_name": "smollm2",
+                    "artifact_path": str(tmp_path / "smollm2-selected-fusion-artifact.json"),
+                    "selected_candidate": "geometry:mean_rank",
+                    "selected_method": "mean_rank",
+                    "artifact_method": "mean_rank",
+                    "selected_metrics": {"alpha": 0.1, "auroc": 0.73},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    matrix_report_path.write_text(
+        json.dumps({
+            "report_path": str(matrix_report_path),
+            "config": {
+                "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+                "dtype": "float32",
+                "layers": [-12],
+                "batch_sizes": [2],
+                "hidden_state_captures": ["outputs"],
+                "max_batch_tokens": 128,
+                "prefix_kv_cache": False,
+                "eval_reps_cache_shard_size": 4,
+                "eval_reps_shard_read_cache_size": 2,
+                "offline": False,
+                "length_bucketed_batches": True,
+                "matrix_mode": "triplet",
+                "max_workers": 1,
+            },
+            "matrix_decision": {
+                "status": "promote",
+                "recommended_cell": "layer_m12_batch_2_capture_outputs",
+                "recommendation_metric": "cache_only_total_seconds",
+                "blocking_reasons": (),
+                "recommended": {
+                    "id": "layer_m12_batch_2_capture_outputs",
+                    "layer": -12,
+                    "batch_size": 2,
+                    "hidden_state_capture": "outputs",
+                    "max_batch_tokens": 128,
+                    "prefix_kv_cache": False,
+                    "cache_only_total_seconds": 0.2,
+                    "truth_proj_auroc": 0.72,
+                },
+            },
+            "cells": [],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run_performance_baseline_workflow(
+        module.PerformanceBaselineWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            report_path=workflow_report_path,
+            registry_path=registry_path,
+            name="selected-fusion-performance",
+            version="0.1",
+            matrix_report_path=matrix_report_path,
+            selected_fusion_artifact_report_path=selected_report_path,
+            selected_fusion_run="gpt2",
+            verify_manifest=True,
+            verification_report_path=verification_report_path,
+        )
+    )
+
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "performance_baseline:selected-fusion-performance:0.1"
+    )
+
+    assert payload["status"] == "promote"
+    assert payload["decision"]["recommended_best_quality_signal"] == "selected_fusion_mean_rank"
+    assert payload["runtime_recommendation"]["recommendation"]["best_quality_signal"] == {
+        "name": "selected_fusion_mean_rank",
+        "auroc": pytest.approx(0.84),
+    }
+    selected = payload["runtime_recommendation"]["recommendation"]["selected_fusion_artifact"]
+    assert selected["status"] == "promote"
+    assert selected["run_name"] == "gpt2"
+    assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
+    assert selected["artifact_path"] == str(selected_artifact_path)
+    assert payload["paths"]["selected_fusion_artifact_report"] == str(selected_report_path)
+    assert payload["config"]["selected_fusion_artifact_report"] == str(selected_report_path)
+    assert payload["config"]["selected_fusion_run"] == "gpt2"
+    assert payload["performance_evidence_bundle"]["recommendation"]["selected_fusion_status"] == "promote"
+    assert payload["performance_evidence_bundle"]["recommendation"]["selected_fusion_signal"] == (
+        "selected_fusion_mean_rank"
+    )
+    assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_artifact_report"] == (
+        str(selected_report_path)
+    )
+    assert payload["performance_evidence_bundle"]["evidence"]["selected_fusion_false_alarm"] == (
+        pytest.approx(0.04)
+    )
+    assert manifest["artifacts"]["selected_fusion_artifact_report"]["exists"] is True
+    assert manifest["artifacts"]["selected_fusion_artifact"]["exists"] is True
+    assert manifest["metadata"]["selected_fusion_artifact_report_enabled"] is True
+    assert manifest["metadata"]["selected_fusion_run"] == "gpt2"
+    assert manifest["metadata"]["recommended_selected_fusion_status"] == "promote"
+    assert manifest["metadata"]["recommended_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert record.metadata["recommended_best_quality_signal"] == "selected_fusion_mean_rank"
+    assert record.metadata["recommended_selected_fusion_status"] == "promote"
+    assert record.metadata["recommended_selected_fusion_auroc"] == pytest.approx(0.84)
+    assert record.metadata["recommended_selected_fusion_artifact_path"] == str(selected_artifact_path)
 
 
 def test_run_performance_baseline_workflow_dry_run_needs_evidence(tmp_path):

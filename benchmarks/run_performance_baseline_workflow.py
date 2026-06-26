@@ -100,6 +100,8 @@ class PerformanceBaselineWorkflowConfig:
     inside_trigger_budget_sweep_report_path: Path | None = None
     run_inside_trigger_budget_sweep: bool = False
     score_ensemble_report_path: Path | None = None
+    selected_fusion_artifact_report_path: Path | None = None
+    selected_fusion_run: str | None = None
     inside_trigger_budget_policy: str = "quality_balanced"
     inside_samples: int = 5
     inside_batch_size: int = 1
@@ -149,6 +151,7 @@ class PerformanceBaselineWorkflowConfig:
             "inside_sampling_report_path",
             "inside_trigger_budget_sweep_report_path",
             "score_ensemble_report_path",
+            "selected_fusion_artifact_report_path",
             "inside_reference_report_path",
             "verification_report_path",
         ):
@@ -230,6 +233,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
     inside_sampling_report, inside_sampling_report_path = _inside_sampling_report(config)
     trigger_sweep_report, trigger_sweep_report_path = _inside_trigger_budget_sweep_report(config)
     score_ensemble_report, score_ensemble_report_path = _score_ensemble_report(config)
+    selected_fusion_artifact_report, selected_fusion_artifact_report_path = (
+        _selected_fusion_artifact_report(config)
+    )
 
     runtime_recommendation = build_runtime_recommendation(
         matrix_report,
@@ -237,12 +243,15 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         inside_sampling_report=inside_sampling_report,
         inside_trigger_budget_sweep_report=trigger_sweep_report,
         score_ensemble_report=score_ensemble_report,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
         inside_trigger_budget_policy=config.inside_trigger_budget_policy,
+        selected_fusion_run=config.selected_fusion_run,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=trigger_sweep_report_path,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
     )
     score_dump_cache_evidence = _score_dump_cache_evidence_summary(
         matrix_report=matrix_report,
@@ -268,6 +277,8 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         trigger_sweep_report_path=trigger_sweep_report_path,
         score_ensemble_report=score_ensemble_report,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
     )
     artifact_manifest_summary = planned_artifact_manifest_summary(
         artifacts,
@@ -292,6 +303,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
             "score_ensemble_report": None
             if score_ensemble_report_path is None
             else str(score_ensemble_report_path),
+            "selected_fusion_artifact_report": None
+            if selected_fusion_artifact_report_path is None
+            else str(selected_fusion_artifact_report_path),
             "manifest_verification": (
                 str(config.resolved_verification_report_path) if config.verify_manifest else None
             ),
@@ -306,6 +320,9 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
                 config.inside_trigger_budget_sweep_report_path is not None
             ),
             "score_ensemble_report_reused": config.score_ensemble_report_path is not None,
+            "selected_fusion_artifact_report_reused": (
+                config.selected_fusion_artifact_report_path is not None
+            ),
         },
         "artifact_manifest_summary": artifact_manifest_summary,
     }
@@ -337,6 +354,8 @@ def run_performance_baseline_workflow(config: PerformanceBaselineWorkflowConfig)
         trigger_sweep_report_path=trigger_sweep_report_path,
         score_ensemble_report=score_ensemble_report,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
         report=report,
         runtime_config=runtime_config,
         verification_context=verification_context,
@@ -521,6 +540,14 @@ def _score_ensemble_report(
     return _load_json(config.score_ensemble_report_path), config.score_ensemble_report_path
 
 
+def _selected_fusion_artifact_report(
+    config: PerformanceBaselineWorkflowConfig,
+) -> tuple[dict[str, Any] | None, Path | None]:
+    if config.selected_fusion_artifact_report_path is None:
+        return None, None
+    return _load_json(config.selected_fusion_artifact_report_path), config.selected_fusion_artifact_report_path
+
+
 def _inside_sampling_config(
     config: PerformanceBaselineWorkflowConfig,
     *,
@@ -610,6 +637,8 @@ def _write_artifact_manifest(
     trigger_sweep_report_path: Path | None,
     score_ensemble_report: Mapping[str, Any] | None,
     score_ensemble_report_path: Path | None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None,
+    selected_fusion_artifact_report_path: Path | None,
     report: Mapping[str, Any],
     runtime_config: Mapping[str, Any],
     verification_context: ArtifactVerificationContext,
@@ -626,9 +655,12 @@ def _write_artifact_manifest(
         trigger_sweep_report_path=trigger_sweep_report_path,
         score_ensemble_report=score_ensemble_report,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
     )
     recommendation = _mapping(_mapping(report.get("runtime_recommendation")).get("recommendation"))
     score_fusion = _mapping(recommendation.get("score_fusion"))
+    selected_fusion = _mapping(recommendation.get("selected_fusion_artifact"))
     manifest = verification_context.build_artifact_manifest(
         artifacts,
         root=config.output_dir,
@@ -658,11 +690,22 @@ def _write_artifact_manifest(
             if score_ensemble_report_path is None
             else str(score_ensemble_report_path),
             "score_ensemble_report_enabled": bool(score_ensemble_report_path),
+            "selected_fusion_artifact_report": None
+            if selected_fusion_artifact_report_path is None
+            else str(selected_fusion_artifact_report_path),
+            "selected_fusion_artifact_report_enabled": bool(selected_fusion_artifact_report_path),
+            "selected_fusion_run": config.selected_fusion_run,
             "recommended_score_fusion": score_fusion or None,
             "recommended_score_fusion_status": score_fusion.get("status"),
             "recommended_score_fusion_signal": score_fusion.get("signal_name"),
             "recommended_score_fusion_auroc": score_fusion.get("auroc"),
             "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "recommended_selected_fusion_artifact": selected_fusion or None,
+            "recommended_selected_fusion_status": selected_fusion.get("status"),
+            "recommended_selected_fusion_run": selected_fusion.get("run_name"),
+            "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
+            "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
+            "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
             "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
             "recommended_cell": dict(report.get("decision") or {}).get("recommended_cell"),
             "recommended_layer": dict(report.get("decision") or {}).get("recommended_layer"),
@@ -693,6 +736,8 @@ def _artifact_paths(
     trigger_sweep_report_path: Path | None,
     score_ensemble_report: Mapping[str, Any] | None,
     score_ensemble_report_path: Path | None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None,
+    selected_fusion_artifact_report_path: Path | None,
 ) -> dict[str, str | Path | None]:
     return {
         "performance_baseline_report": config.resolved_report_path,
@@ -713,7 +758,33 @@ def _artifact_paths(
         "score_fusion_artifact": None
         if score_ensemble_report is None
         else _nested(score_ensemble_report, "runs", 0, "best_fusion_artifact", "path"),
+        "selected_fusion_artifact_report": selected_fusion_artifact_report_path,
+        "selected_fusion_artifact": _selected_fusion_artifact_path(
+            selected_fusion_artifact_report,
+            selected_fusion_run=config.selected_fusion_run,
+        ),
     }
+
+
+def _selected_fusion_artifact_path(
+    report: Mapping[str, Any] | None,
+    *,
+    selected_fusion_run: str | None,
+) -> str | Path | None:
+    if report is None:
+        return None
+    runs = report.get("runs")
+    if not isinstance(runs, Sequence) or isinstance(runs, str):
+        return None
+    run_items = [_mapping(run) for run in runs if _mapping(run)]
+    if selected_fusion_run:
+        matches = [run for run in run_items if run.get("run_name") == selected_fusion_run]
+        if len(matches) != 1:
+            return None
+        return matches[0].get("artifact_path")
+    if len(run_items) == 1:
+        return run_items[0].get("artifact_path")
+    return None
 
 
 def _performance_evidence_bundle_summary(
@@ -733,6 +804,7 @@ def _performance_evidence_bundle_summary(
     inside_sampling = _mapping(recommendation.get("inside_sampling"))
     inside_trigger_budget = _mapping(recommendation.get("inside_trigger_budget_sweep"))
     score_fusion = _mapping(recommendation.get("score_fusion"))
+    selected_fusion = _mapping(recommendation.get("selected_fusion_artifact"))
     missing_count = _int_or_zero(artifact_manifest_summary.get("missing_count"))
     release_ready = status == "promote" and recommendation_status == "promote" and missing_count == 0
     uncached_total = _float_or_none(recommendation.get("uncached_total_seconds"))
@@ -782,6 +854,12 @@ def _performance_evidence_bundle_summary(
             "score_fusion_signal": score_fusion.get("signal_name"),
             "score_fusion_auroc": score_fusion.get("auroc"),
             "score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "selected_fusion_status": selected_fusion.get("status"),
+            "selected_fusion_run": selected_fusion.get("run_name"),
+            "selected_fusion_candidate": selected_fusion.get("selected_candidate"),
+            "selected_fusion_signal": selected_fusion.get("signal_name"),
+            "selected_fusion_auroc": selected_fusion.get("auroc"),
+            "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
             "cache_tuning_status": cache_tuning.get("status"),
             "inside_sampling_run": inside_sampling.get("recommended_run"),
             "inside_trigger_budget_id": inside_trigger_budget.get("recommended_budget_id"),
@@ -817,6 +895,17 @@ def _performance_evidence_bundle_summary(
             "score_fusion_signal": evidence.get("score_fusion_signal"),
             "score_fusion_auroc": evidence.get("score_fusion_auroc"),
             "score_fusion_conformal_gate_passed": evidence.get("score_fusion_conformal_gate_passed"),
+            "selected_fusion_artifact_report": evidence.get("selected_fusion_artifact_report"),
+            "selected_fusion_requested_run": evidence.get("selected_fusion_requested_run"),
+            "selected_fusion_status": evidence.get("selected_fusion_status"),
+            "selected_fusion_run": evidence.get("selected_fusion_run"),
+            "selected_fusion_candidate": evidence.get("selected_fusion_candidate"),
+            "selected_fusion_signal": evidence.get("selected_fusion_signal"),
+            "selected_fusion_auroc": evidence.get("selected_fusion_auroc"),
+            "selected_fusion_false_alarm": evidence.get("selected_fusion_false_alarm"),
+            "selected_fusion_detection": evidence.get("selected_fusion_detection"),
+            "selected_fusion_alpha": evidence.get("selected_fusion_alpha"),
+            "selected_fusion_artifact_path": evidence.get("selected_fusion_artifact_path"),
         },
         "score_dump_cache": dict(score_dump_cache_evidence),
         "artifacts": {
@@ -840,6 +929,7 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
     verification_report = manifest_verification.get("path")
     recommendation = _mapping(_mapping(report.get("runtime_recommendation")).get("recommendation"))
     score_fusion = _mapping(recommendation.get("score_fusion"))
+    selected_fusion = _mapping(recommendation.get("selected_fusion_artifact"))
     registry.record_performance_baseline(
         name=str(config.name),
         path=config.resolved_report_path,
@@ -862,6 +952,12 @@ def _record_registry(config: PerformanceBaselineWorkflowConfig, report: Mapping[
             "recommended_score_fusion_signal": score_fusion.get("signal_name"),
             "recommended_score_fusion_auroc": score_fusion.get("auroc"),
             "recommended_score_fusion_conformal_gate_passed": score_fusion.get("conformal_gate_passed"),
+            "recommended_selected_fusion_artifact": selected_fusion or None,
+            "recommended_selected_fusion_status": selected_fusion.get("status"),
+            "recommended_selected_fusion_run": selected_fusion.get("run_name"),
+            "recommended_selected_fusion_signal": selected_fusion.get("signal_name"),
+            "recommended_selected_fusion_auroc": selected_fusion.get("auroc"),
+            "recommended_selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
             "performance_evidence_bundle_status": _nested(
                 report,
                 "performance_evidence_bundle",
@@ -1137,6 +1233,10 @@ def _config_payload(
         "score_ensemble_report": None
         if config.score_ensemble_report_path is None
         else str(config.score_ensemble_report_path),
+        "selected_fusion_artifact_report": None
+        if config.selected_fusion_artifact_report_path is None
+        else str(config.selected_fusion_artifact_report_path),
+        "selected_fusion_run": config.selected_fusion_run,
         "inside_trigger_budget_policy": config.inside_trigger_budget_policy,
         "inside_trigger_signal": config.inside_trigger_signal,
         "inside_trigger_budgets": [
@@ -1296,6 +1396,12 @@ def _config_from_args(args: argparse.Namespace) -> PerformanceBaselineWorkflowCo
         ),
         derive_trigger_from_max_budget=args.derive_trigger_from_max_budget,
         score_ensemble_report_path=Path(args.score_ensemble_report) if args.score_ensemble_report else None,
+        selected_fusion_artifact_report_path=(
+            Path(args.selected_fusion_artifact_report)
+            if args.selected_fusion_artifact_report
+            else None
+        ),
+        selected_fusion_run=args.selected_fusion_run,
         refresh_shared_caches=args.refresh_shared_caches,
         clean=args.clean,
         dry_run=args.dry_run,
@@ -1358,6 +1464,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--run-inside-trigger-budget-sweep", action="store_true")
     parser.add_argument("--score-ensemble-report", default=None,
                         help="optional eval_score_ensemble.py report for runtime recommendation evidence")
+    parser.add_argument("--selected-fusion-artifact-report", default=None,
+                        help="optional build_selected_fusion_artifacts.py report for runtime recommendation "
+                             "evidence")
+    parser.add_argument("--selected-fusion-run", default=None,
+                        help="run_name to select when --selected-fusion-artifact-report has multiple runs")
     parser.add_argument(
         "--inside-trigger-budget-policy",
         default="quality_balanced",

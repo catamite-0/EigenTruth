@@ -3740,11 +3740,12 @@ worker-sweep, sampling-profile, or trigger-budget-sweep decision.
 
 Use `run_performance_baseline_workflow.py` when the handoff itself should be a
 registered, fingerprinted artifact bundle. It can run the cache-profile matrix
-directly or reuse existing matrix/worker/INSIDE/score-ensemble reports, then writes
+directly or reuse existing matrix/worker/INSIDE/score-ensemble/selected-fusion
+reports, then writes
 `performance-baseline-workflow.json`, `runtime-recommendation.json`, an artifact
 manifest, a top-level `performance_evidence_bundle` summary with recommendation
 cost ratios / evidence status / artifact readiness / score-dump cache evidence /
-score-fusion status, and an optional
+score-fusion / selected-fusion status, and an optional
 `performance_baseline:*:*` registry record. When it reuses an existing matrix
 report, the top-level config, performance evidence runtime block, and artifact
 manifest metadata inherit the matrix report's effective runtime settings. Add
@@ -3767,6 +3768,13 @@ python benchmarks/run_performance_baseline_workflow.py \
   --verify-manifest \
   --fail-on-blocked
 ```
+
+When reusing selected fusion artifacts, add
+`--selected-fusion-artifact-report <build-report.json>` and pass
+`--selected-fusion-run <run_name>` for multi-run reports. The workflow records
+the selected report, selected artifact path, selected run, selected candidate,
+and promoted `selected_fusion_*` signal in the runtime recommendation,
+performance evidence bundle, artifact manifest metadata, and registry record.
 
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
