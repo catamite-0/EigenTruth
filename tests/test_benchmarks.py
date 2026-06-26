@@ -17069,6 +17069,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "runtime_profile": "balanced",
                 "max_covariance_maha_last_auroc_drop": 0.05,
                 "require_product_runtime_drift_promotion_evidence": True,
+                "require_structured_fact_robustness": True,
+                "structured_fact_canonical_route_key": (
+                    "benchmark_manifest:structured-fact-canonical-route:0.1"
+                ),
+                "structured_fact_paraphrase_route_key": (
+                    "benchmark_manifest:structured-fact-paraphrase-route:0.1"
+                ),
             },
             "decision": {
                 "status": "promote",
@@ -17110,7 +17117,39 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                         "selected_maha_last_delta_vs_baseline": -0.01,
                     },
                 },
-                "verifier_route": {"route": "structured_qa"},
+                "verifier_route": {
+                    "route": "structured_qa",
+                    "covered_fact_property_count": 3,
+                    "covered_fact_properties": ["P36", "P37", "P38"],
+                },
+                "required_route_baselines": {
+                    "records": [
+                        "benchmark_manifest:structured-fact-canonical-route:0.1",
+                        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+                    ],
+                    "routes": ["structured_fact", "structured_fact"],
+                    "manifest_paths": [
+                        "artifacts/structured-fact/canonical-manifest.json",
+                        "artifacts/structured-fact/paraphrase-manifest.json",
+                    ],
+                    "registry": "artifacts/structured-fact-registry.json",
+                    "covered_fact_property_counts": {
+                        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+                        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+                    },
+                    "covered_fact_properties": {
+                        "benchmark_manifest:structured-fact-canonical-route:0.1": [
+                            "P36",
+                            "P37",
+                            "P38",
+                        ],
+                        "benchmark_manifest:structured-fact-paraphrase-route:0.1": [
+                            "P36",
+                            "P37",
+                            "P38",
+                        ],
+                    },
+                },
                 "performance_baseline_record": (
                     "performance_baseline:smollm2-l8-selected-fusion:0.3"
                 ),
@@ -17346,6 +17385,29 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert contract["control_policy_config"]["unsupported_action"] == "clarify"
     assert contract["control_policy_config"]["compound_verification_escalates"] is False
+    assert contract["verifier_route"]["covered_fact_properties"] == ["P36", "P37", "P38"]
+    assert contract["metadata"]["recommended_route_covered_fact_property_count"] == 3
+    assert contract["metadata"]["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert contract["metadata"]["required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert contract["metadata"]["structured_fact_robustness_properties"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": [
+            "P36",
+            "P37",
+            "P38",
+        ],
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": [
+            "P36",
+            "P37",
+            "P38",
+        ],
+    }
     assert payload["contract"]["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert payload["contract"]["control_policy_config"]["unsupported_action"] == "clarify"
     assert contract["product_trace_replay_workflow"]["record_key"] == (
@@ -17470,12 +17532,43 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
     )
     assert manifest["metadata"]["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert manifest["metadata"]["recommended_route_covered_fact_property_count"] == 3
+    assert manifest["metadata"]["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert manifest["metadata"]["structured_fact_robustness_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
     assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
     assert record.metadata["control_policy_config"]["unsupported_action"] == "clarify"
     assert record.metadata["control_default_max_verifier_route_attempts"] == 2
     assert record.metadata["recommended_route"] == "structured_qa"
+    assert record.metadata["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert record.metadata["required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert record.metadata["structured_fact_robustness_properties"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": [
+            "P36",
+            "P37",
+            "P38",
+        ],
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": [
+            "P36",
+            "P37",
+            "P38",
+        ],
+    }
     assert record.metadata["product_trace_replay_workflow_source"] == "registry"
     assert record.metadata["product_trace_replay_workflow_record"] == (
         "report:trace-replay-workflow:0.1"

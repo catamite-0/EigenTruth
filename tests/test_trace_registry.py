@@ -1486,6 +1486,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "required_route_retrieval_stress_manifest": "artifacts/retrieval-stress/artifact-manifest.json",
             "required_route_min_stress_false_supported_rate": 0.90,
             "required_route_max_stress_false_refuted_rate": 0.05,
+            "require_structured_fact_robustness": True,
+            "structured_fact_canonical_route_key": (
+                "benchmark_manifest:retrieval-structured-qa:0.5"
+            ),
             "require_performance_score_dump_cache": True,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
@@ -1747,12 +1751,29 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "max_duration_seconds": 0.03,
                 "mean_attempted_route_count": 1.0,
                 "retrieval_use_rate": 0.0,
+                "covered_fact_property_count": 3,
+                "covered_fact_properties": ["P36", "P37", "P38"],
+                "covered_fact_property_metrics": {
+                    "P36": {"decision_accuracy": 1.0, "n_records": 16},
+                    "P37": {"decision_accuracy": 1.0, "n_records": 12},
+                    "P38": {"decision_accuracy": 1.0, "n_records": 9},
+                },
             },
             "required_route_baselines": {
                 "records": ["benchmark_manifest:retrieval-structured-qa:0.5"],
                 "routes": ["retrieval_structured_qa"],
                 "manifest_paths": ["artifacts/retrieval/audit-manifest.json"],
                 "registry": "artifacts/staged-route-registry.json",
+                "covered_fact_property_counts": {
+                    "benchmark_manifest:retrieval-structured-qa:0.5": 3
+                },
+                "covered_fact_properties": {
+                    "benchmark_manifest:retrieval-structured-qa:0.5": [
+                        "P36",
+                        "P37",
+                        "P38",
+                    ]
+                },
             },
             "manifests": {
                 "readiness_manifest": "artifacts/readiness/artifact-manifest.json",
@@ -1814,6 +1835,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     )
     assert contract.runtime["layer"] == -12
     assert contract.verifier_route["route"] == "structured_state"
+    assert contract.verifier_route["covered_fact_properties"] == ["P36", "P37", "P38"]
     assert contract.metadata["runtime_profile"] == "balanced"
     assert contract.metadata["recommended_performance_baseline_record"] == "performance_baseline:runtime:0.9"
     assert contract.metadata["performance_baseline_record"] == "performance_baseline:runtime:0.9"
@@ -1851,6 +1873,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
     assert contract.metadata["performance_manifest"] == "artifacts/performance/artifact-manifest.json"
     assert contract.metadata["recommended_selector_replay_candidate"] == "default"
+    assert contract.metadata["recommended_route_covered_fact_property_count"] == 3
+    assert contract.metadata["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert contract.metadata["required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": 3
+    }
+    assert contract.metadata["required_route_baseline_covered_fact_properties"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": ["P36", "P37", "P38"]
+    }
+    assert contract.metadata["structured_fact_robustness_property_counts"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": 3
+    }
+    assert contract.metadata["structured_fact_robustness_properties"] == {
+        "benchmark_manifest:retrieval-structured-qa:0.5": ["P36", "P37", "P38"]
+    }
     assert contract.metadata["recommended_product_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )

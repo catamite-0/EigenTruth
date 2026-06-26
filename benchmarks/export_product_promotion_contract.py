@@ -62,6 +62,7 @@ def export_product_promotion_contract(
             triple_extraction_fixture_matrix
         )
     )
+    covered_fact_property_metadata = _covered_fact_property_flat_metadata(contract)
     export_metadata = dict(metadata or {})
     _write_json(output, payload, compact=compact_json)
 
@@ -80,6 +81,7 @@ def export_product_promotion_contract(
                 "runner": "export_product_promotion_contract",
                 "source": str(source),
                 "compact_json": compact_json,
+                **covered_fact_property_metadata,
                 **release_efficiency_metadata,
                 **triple_extraction_fixture_matrix_metadata,
                 **export_metadata,
@@ -106,6 +108,7 @@ def export_product_promotion_contract(
                     "max_verifier_route_attempts"
                 ),
                 "recommended_route": contract.metadata.get("recommended_route"),
+                **covered_fact_property_metadata,
                 "recommended_selector_replay_candidate": contract.metadata.get(
                     "recommended_selector_replay_candidate"
                 ),
@@ -480,6 +483,35 @@ def _triple_extraction_fixture_matrix_flat_metadata(
         ),
         "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
         "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
+    })
+
+
+def _covered_fact_property_flat_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    metadata = dict(contract.metadata)
+    verifier_route = dict(contract.verifier_route)
+    return _drop_none_values({
+        "recommended_route_covered_fact_property_count": _first_present(
+            metadata.get("recommended_route_covered_fact_property_count"),
+            verifier_route.get("covered_fact_property_count"),
+        ),
+        "recommended_route_covered_fact_properties": _first_present(
+            metadata.get("recommended_route_covered_fact_properties"),
+            verifier_route.get("covered_fact_properties"),
+        ),
+        "required_route_baseline_covered_fact_property_counts": metadata.get(
+            "required_route_baseline_covered_fact_property_counts"
+        ),
+        "required_route_baseline_covered_fact_properties": metadata.get(
+            "required_route_baseline_covered_fact_properties"
+        ),
+        "structured_fact_robustness_property_counts": metadata.get(
+            "structured_fact_robustness_property_counts"
+        ),
+        "structured_fact_robustness_properties": metadata.get(
+            "structured_fact_robustness_properties"
+        ),
     })
 
 

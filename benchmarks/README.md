@@ -2407,6 +2407,11 @@ write the smaller product handoff artifact consumed by demos and control-plane
 jobs. It converts either a release-candidate comparison or registry-workflow JSON
 into a `ProductPromotionContract`, writes a manifest, and can register a
 `product_promotion_contract:*:*` record. When the release candidate was gated by
+a structured-fact route audit, the compact contract, manifest, and registry
+metadata keep the recommended route's covered Wikidata property ids plus
+required-route record-to-property coverage summaries, so deployment-side traces
+can state the exact KG predicate scope behind the verifier route. When the
+release candidate was gated by
 a product trace replay workflow, the compact contract and registry metadata keep
 the workflow report/manifest plus its selector-replay and runtime-drift child
 report paths for deployment-side provenance. Runtime-drift reports also carry

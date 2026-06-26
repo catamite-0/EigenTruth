@@ -217,12 +217,23 @@ class ProductPromotionContract:
         )
         quality = _mapping(candidate.get("quality"))
         readiness_covariance_gate = _mapping(quality.get("covariance_tradeoff_gate"))
+        verifier_route = _mapping(candidate.get("verifier_route"))
+        required_route_property_counts = _mapping(
+            required_route_baselines.get("covered_fact_property_counts")
+        )
+        required_route_property_sets = _mapping(
+            required_route_baselines.get("covered_fact_properties")
+        )
+        structured_fact_robustness = _structured_fact_robustness_metadata(
+            config,
+            required_route_baselines,
+        )
         return cls(
             source_workflow=_optional_str(comparison.get("workflow")),
             source_status=status,
             model_id=_optional_str(candidate.get("model")),
             runtime=_mapping(candidate.get("runtime")),
-            verifier_route=_mapping(candidate.get("verifier_route")),
+            verifier_route=verifier_route,
             runtime_budget_policy=product_runtime_budget_policy_from_release_candidate(
                 comparison
             ),
@@ -258,6 +269,12 @@ class ProductPromotionContract:
                 ),
                 "recommended_selector_replay_candidate": decision.get(
                     "recommended_selector_replay_candidate"
+                ),
+                "recommended_route_covered_fact_property_count": (
+                    verifier_route.get("covered_fact_property_count")
+                ),
+                "recommended_route_covered_fact_properties": (
+                    verifier_route.get("covered_fact_properties")
                 ),
                 "recommended_product_runtime_drift_report": decision.get(
                     "recommended_product_runtime_drift_report"
@@ -646,6 +663,36 @@ class ProductPromotionContract:
                 "required_route_baseline_routes": required_route_baselines.get("routes"),
                 "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
                 "required_route_baseline_registry": required_route_baselines.get("registry"),
+                "required_route_baseline_covered_fact_property_counts": (
+                    required_route_property_counts
+                ),
+                "required_route_baseline_covered_fact_properties": (
+                    required_route_property_sets
+                ),
+                "structured_fact_robustness_required": structured_fact_robustness[
+                    "required"
+                ],
+                "structured_fact_robustness_canonical_route_key": (
+                    structured_fact_robustness["canonical_route_key"]
+                ),
+                "structured_fact_robustness_paraphrase_route_key": (
+                    structured_fact_robustness["paraphrase_route_key"]
+                ),
+                "structured_fact_robustness_records": structured_fact_robustness[
+                    "records"
+                ],
+                "structured_fact_robustness_routes": structured_fact_robustness[
+                    "routes"
+                ],
+                "structured_fact_robustness_manifests": structured_fact_robustness[
+                    "manifests"
+                ],
+                "structured_fact_robustness_property_counts": (
+                    structured_fact_robustness["property_counts"]
+                ),
+                "structured_fact_robustness_properties": (
+                    structured_fact_robustness["properties"]
+                ),
                 "required_route_budget_policy": _required_route_budget_policy(config),
             },
         )
@@ -708,6 +755,63 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
+
+
+def _structured_fact_robustness_metadata(
+    config: Mapping[str, Any],
+    required_route_baselines: Mapping[str, Any],
+) -> dict[str, Any]:
+    canonical_key = config.get("structured_fact_canonical_route_key")
+    paraphrase_key = config.get("structured_fact_paraphrase_route_key")
+    target_keys = tuple(
+        str(key)
+        for key in (canonical_key, paraphrase_key)
+        if key is not None
+    )
+    records = list(required_route_baselines.get("records") or ())
+    routes = list(required_route_baselines.get("routes") or ())
+    manifests = list(required_route_baselines.get("manifest_paths") or ())
+    property_counts_by_record = _mapping(
+        required_route_baselines.get("covered_fact_property_counts")
+    )
+    properties_by_record = _mapping(
+        required_route_baselines.get("covered_fact_properties")
+    )
+    by_record: dict[str, dict[str, Any]] = {}
+    for idx, record in enumerate(records):
+        key = str(record)
+        by_record[key] = {
+            "route": routes[idx] if idx < len(routes) else None,
+            "manifest": manifests[idx] if idx < len(manifests) else None,
+            "property_count": property_counts_by_record.get(key),
+            "properties": properties_by_record.get(key),
+        }
+
+    selected_records: list[str] = []
+    selected_routes: list[Any] = []
+    selected_manifests: list[Any] = []
+    selected_property_counts: dict[str, Any] = {}
+    selected_properties: dict[str, Any] = {}
+    for key in target_keys:
+        entry = by_record.get(key)
+        if entry is None:
+            continue
+        selected_records.append(key)
+        selected_routes.append(entry["route"])
+        selected_manifests.append(entry["manifest"])
+        selected_property_counts[key] = entry["property_count"]
+        selected_properties[key] = entry["properties"]
+
+    return {
+        "required": bool(config.get("require_structured_fact_robustness")),
+        "canonical_route_key": canonical_key,
+        "paraphrase_route_key": paraphrase_key,
+        "records": selected_records,
+        "routes": selected_routes,
+        "manifests": selected_manifests,
+        "property_counts": selected_property_counts,
+        "properties": selected_properties,
+    }
 
 
 def first_existing_product_promotion_contract_path(
