@@ -18,6 +18,7 @@ from eigentruth.adapters import (
     QuestionAnswerVerifier,
     RetrievalActionExecutor,
     RetrievalQuery,
+    RuleBasedWorldModelAdapter,
     SQLiteFTSRetriever,
     SQLiteStateQuery,
     SQLiteStateSource,
@@ -30,6 +31,7 @@ from eigentruth.adapters import (
     ToolOutputMapping,
     ToolOutputStateSource,
     WorldModelPrediction,
+    WorldModelRule,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
@@ -1994,6 +1996,104 @@ def test_in_memory_world_model_adapter_verifies_and_predicts_state():
     assert nested_prediction.state["inventory"]["sku_123"]["available"] == 7
     assert nested_prediction.state["quota"]["used"] == 3
     assert "Inventory" in adapter.explain(claim)
+
+
+def test_rule_based_world_model_adapter_applies_auditable_domain_rules():
+    adapter = RuleBasedWorldModelAdapter(
+        rules=(
+            WorldModelRule(
+                name="ship_order_when_inventory_available",
+                action_match={"type": "ship_order", "sku": "sku_123"},
+                conditions=(
+                    {"path": "inventory.sku_123.available", "operator": "gte", "value": 3},
+                    {"path": "orders.ord_1.status", "operator": "eq", "value": "pending"},
+                ),
+                decrement_values={"inventory.sku_123.available": 3},
+                set_values={"orders.ord_1.status": "shipped"},
+                confidence=0.92,
+                explanation="shipping consumes reserved inventory and marks order shipped",
+            ),
+        )
+    )
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={
+            "inventory": {"sku_123": {"available": 10}},
+            "orders": {"ord_1": {"status": "pending"}},
+        },
+        min_prediction_confidence=0.8,
+    )
+
+    prediction = adapter.predict(
+        {
+            "inventory": {"sku_123": {"available": 10}},
+            "orders": {"ord_1": {"status": "pending"}},
+        },
+        {"type": "ship_order", "sku": "sku_123"},
+    )
+    result = verifier.verify(
+        Claim(
+            "Shipping the order leaves 7 units available.",
+            metadata={
+                "state_transition": {
+                    "action": {"type": "ship_order", "sku": "sku_123"},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "eq",
+                        "value": 7,
+                    },
+                }
+            },
+        )
+    )
+
+    assert prediction.state["inventory"]["sku_123"]["available"] == 7
+    assert prediction.state["orders"]["ord_1"]["status"] == "shipped"
+    assert prediction.confidence == pytest.approx(0.92)
+    assert prediction.metadata["matched_rules"][0]["rule"] == "ship_order_when_inventory_available"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["world_model"] == "RuleBasedWorldModelAdapter"
+    assert result.metadata["prediction_metadata"]["decision_rule"] == "rule_transition_applied"
+
+
+def test_rule_based_world_model_adapter_fails_closed_when_no_rule_matches():
+    adapter = RuleBasedWorldModelAdapter(
+        rules=(
+            {
+                "name": "ship_order_when_inventory_available",
+                "action": {"type": "ship_order"},
+                "when": {"path": "inventory.sku_123.available", "operator": "gte", "value": 3},
+                "decrement": {"inventory.sku_123.available": 3},
+            },
+        )
+    )
+    verifier = StateTransitionVerifier(
+        world_model=adapter,
+        state={"inventory": {"sku_123": {"available": 1}}},
+    )
+    result = verifier.verify(
+        Claim(
+            "Shipping the order leaves negative inventory.",
+            metadata={
+                "state_transition": {
+                    "action": {"type": "ship_order"},
+                    "postcondition": {
+                        "path": "inventory.sku_123.available",
+                        "operator": "lt",
+                        "value": 0,
+                    },
+                }
+            },
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["decision_rule"] == "prediction_no_matching_rule"
+    assert result.metadata["prediction_metadata"]["no_rule_matched"] is True
+    assert result.metadata["prediction_metadata"]["skipped_rules"][0]["reason"] == "condition_failed"
+
+    with pytest.raises(ValueError, match="at least one rule"):
+        RuleBasedWorldModelAdapter(())
 
 
 def test_ensemble_world_model_adapter_confirms_consensus_predictions():

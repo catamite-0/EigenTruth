@@ -37,6 +37,7 @@ Implemented today:
 - `eigentruth.adapters.RetrievalActionExecutor` / `InMemoryRetriever`: dependency-free retrieval executor shell for unsupported-claim evidence gathering.
 - `eigentruth.adapters.ToolOutputStateSource` / `ToolOutputMapping`: maps local tool/action execution outputs into structured verifier state for post-tool checks.
 - `eigentruth.adapters.InMemoryWorldModelAdapter`: deterministic world-model adapter for tests and domain-rule prototypes.
+- `eigentruth.adapters.RuleBasedWorldModelAdapter` / `WorldModelRule`: auditable dependency-free domain/world-model adapter that matches explicit action fields, checks structured-state preconditions, applies deterministic state updates, and marks no-rule transitions so downstream control fails closed.
 - `eigentruth.adapters.EnsembleWorldModelAdapter`: dependency-free disagreement-aware world-model ensemble wrapper for combining domain simulators, rule models, or learned world models behind the same transition verifier.
 - `eigentruth.adapters.StateTransitionVerifier`: dependency-free action-conditioned postcondition verifier that predicts next state through a world-model adapter, then reuses structured state checks.
 - `eigentruth.registry.ArtifactRegistry`: local JSON registry for calibration reports, calibration artifacts, traces, reports, action results, reusable concept artifacts, and saved concept metadata.
@@ -275,7 +276,7 @@ For product features:
 - `SQLiteStateSource` / `SQLiteStateQuery` load read-only SQLite query results into nested verifier state, giving the structured-state path a real database integration without new mandatory dependencies.
 - `ToolOutputStateSource` / `ToolOutputMapping` map local action or tool execution outputs into nested verifier state, giving post-tool checks a structured path without requiring a new tool runtime.
 - `EnsembleWorldModelAdapter` combines multiple world-model adapters, reports agreement/disagreement metadata, degrades consensus confidence by agreement rate, and marks low-agreement predictions so `StateTransitionVerifier` returns insufficient evidence instead of trusting one uncertain transition.
-- `StateTransitionVerifier` / `StateTransitionCheck` verify claims about action consequences by predicting next state through a world-model adapter and checking structured postconditions; `min_prediction_confidence` can fail closed on low-confidence predictions, and `InMemoryWorldModelAdapter` supports nested and dotted-path `set`/`increment`/`decrement` actions for deterministic domain-rule tests.
+- `StateTransitionVerifier` / `StateTransitionCheck` verify claims about action consequences by predicting next state through a world-model adapter and checking structured postconditions; `min_prediction_confidence` can fail closed on low-confidence predictions, `RuleBasedWorldModelAdapter` fails closed when no transition rule matches, and `InMemoryWorldModelAdapter` supports nested and dotted-path `set`/`increment`/`decrement` actions for deterministic domain-rule tests.
 - `sqlite_state_control_demo.py` seeds an order/inventory/account SQLite fixture and emits a final `ProductTrace` where database state drives a dry-run abstain action despite low internal diagnostics.
 - `state_transition_control_demo.py` emits a final `ProductTrace` where a world-model predicted postcondition refutes a claim about action consequences despite low internal diagnostics.
 - `production_tool_loop_demo.py` emits one product-style trace that combines SQLite pre-tool checks, guarded side-effecting local `execute_tool`, optional JSON/SQLite idempotency replay, mapped `ActionResult.output`, post-tool structured verification, action execution summary, action audit metadata, and runtime route summary metadata.
@@ -371,7 +372,7 @@ For product features:
 - Replace label-derived oracle evidence with real retrieval/database/calculator evidence and rerun verifier/retrieval ensemble reports on Qwen/SmolLM2.
 - Use local corpus fixtures from `build_evidence_fixture.py` as the reproducible baseline before adding networked retrieval extras.
 - Add optional retrieval/database/calculator verifier adapters behind extras, keeping core dependencies unchanged.
-- Add concrete domain/world-model adapters beyond the in-memory test double.
+- Extend concrete domain/world-model adapters from the current rule-based transition adapter toward production simulators and learned/external world-model adapters.
 - Add semantic-entropy sampling probes, RAG groundedness adapters, and optional SAE/ReFT integrations behind extras.
 - Add benchmark/demo domain examples where facts depend on state transitions, physical constraints, or business rules.
 - Compare real verifier/retrieval ensembles against the current `truth_proj` baseline under the same conformal false-alarm budget.

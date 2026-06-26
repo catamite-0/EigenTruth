@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, Sequence, runtime_checkable
 
 from eigentruth.adapters.state import StateCheck, StructuredStateVerifier
+from eigentruth.json_utils import to_jsonable
 from eigentruth.verify import Claim, VerificationResult, VerificationStatus, stable_cache_key
 
 
@@ -69,6 +70,128 @@ class StateTransitionCheck:
             source=None if data.get("source") is None else str(data.get("source")),
             metadata=dict(data.get("metadata", {})),
         )
+
+
+@dataclass(frozen=True)
+class WorldModelRule:
+    """One deterministic domain/world-model transition rule.
+
+    Rules match explicit action fields, optionally require structured state
+    preconditions, then apply JSON-path `set` / `increment` / `decrement`
+    updates. This keeps domain-specific world models auditable and dependency
+    free while leaving learned or external simulators behind the same protocol.
+    """
+
+    name: str
+    action_match: Mapping[str, Any] = field(default_factory=dict)
+    conditions: Sequence[StateCheck | Mapping[str, Any]] = ()
+    set_values: Mapping[str, Any] = field(default_factory=dict)
+    increment_values: Mapping[str, Any] = field(default_factory=dict)
+    decrement_values: Mapping[str, Any] = field(default_factory=dict)
+    confidence: float = 1.0
+    explanation: str = ""
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        name = str(self.name).strip()
+        if not name:
+            raise ValueError("world model rule name must be non-empty.")
+        conditions = tuple(
+            condition if isinstance(condition, StateCheck) else StateCheck.from_mapping(condition)
+            for condition in self.conditions
+        )
+        if not (0.0 <= self.confidence <= 1.0):
+            raise ValueError("world model rule confidence must be in [0, 1].")
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "action_match", dict(self.action_match))
+        object.__setattr__(self, "conditions", conditions)
+        object.__setattr__(self, "set_values", dict(self.set_values))
+        object.__setattr__(self, "increment_values", dict(self.increment_values))
+        object.__setattr__(self, "decrement_values", dict(self.decrement_values))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "WorldModelRule":
+        """Build a rule from a JSON-like mapping."""
+        raw_name = data.get("name", data.get("rule", data.get("id")))
+        if raw_name is None:
+            raise ValueError("world model rule mapping must contain name, rule, or id.")
+        raw_action_match = data.get("action_match", data.get("action", data.get("match", {})))
+        if not isinstance(raw_action_match, Mapping):
+            raise ValueError("world model rule action/action_match must be an object.")
+        raw_conditions = data.get("conditions", data.get("when", data.get("state_checks", ())))
+        if isinstance(raw_conditions, Mapping):
+            raw_conditions = (raw_conditions,)
+        if not isinstance(raw_conditions, Sequence) or isinstance(raw_conditions, (str, bytes)):
+            raise ValueError("world model rule conditions must be a sequence or object.")
+        raw_set = data.get("set", data.get("updates", data.get("update", {})))
+        raw_increment = data.get("increment", {})
+        raw_decrement = data.get("decrement", {})
+        if not isinstance(raw_set, Mapping):
+            raise ValueError("world model rule set/updates must be an object.")
+        if not isinstance(raw_increment, Mapping):
+            raise ValueError("world model rule increment must be an object.")
+        if not isinstance(raw_decrement, Mapping):
+            raise ValueError("world model rule decrement must be an object.")
+        return cls(
+            name=str(raw_name),
+            action_match=dict(raw_action_match),
+            conditions=tuple(raw_conditions),
+            set_values=dict(raw_set),
+            increment_values=dict(raw_increment),
+            decrement_values=dict(raw_decrement),
+            confidence=float(data.get("confidence", 1.0)),
+            explanation=str(data.get("explanation", "")),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    def matches_action(self, action: Mapping[str, Any]) -> bool:
+        """Return whether this rule applies to an action mapping."""
+        for path, expected in self.action_match.items():
+            found, actual = _get_path(action, str(path))
+            if not found or actual != expected:
+                return False
+        return True
+
+    def condition_results(self, state: Mapping[str, Any]) -> tuple[VerificationResult, ...]:
+        """Evaluate all state preconditions against the current state."""
+        verifier = StructuredStateVerifier(state=state)
+        return tuple(
+            verifier.verify(
+                Claim(
+                    text=f"world model rule {self.name} condition {index + 1}",
+                    metadata={"state_check": condition},
+                )
+            )
+            for index, condition in enumerate(self.conditions)
+        )
+
+    def conditions_pass(self, state: Mapping[str, Any]) -> bool:
+        """Return whether every state precondition is supported."""
+        return all(result.status is VerificationStatus.SUPPORTED for result in self.condition_results(state))
+
+    def apply(self, state: dict[str, Any]) -> None:
+        """Apply this rule's state updates in place."""
+        if self.set_values:
+            _apply_updates(state, self.set_values)
+        if self.increment_values:
+            _apply_delta_updates(state, self.increment_values, sign=1.0)
+        if self.decrement_values:
+            _apply_delta_updates(state, self.decrement_values, sign=-1.0)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready rule summary."""
+        return {
+            "name": self.name,
+            "action_match": to_jsonable(dict(self.action_match)),
+            "conditions": tuple(_state_check_to_dict(condition) for condition in self.conditions),
+            "set": to_jsonable(dict(self.set_values)),
+            "increment": to_jsonable(dict(self.increment_values)),
+            "decrement": to_jsonable(dict(self.decrement_values)),
+            "confidence": self.confidence,
+            "explanation": self.explanation,
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
 
 
 @dataclass(frozen=True)
@@ -137,6 +260,23 @@ class StateTransitionVerifier:
                 metadata={
                     "verifier": "state_transition",
                     "decision_rule": "prediction_agreement_below_threshold",
+                    "world_model": type(self.world_model).__name__,
+                    "action": dict(transition.action),
+                    "prediction_confidence": prediction.confidence,
+                    "min_prediction_confidence": self.min_prediction_confidence,
+                    "prediction_explanation": prediction.explanation,
+                    "prediction_metadata": dict(prediction.metadata),
+                    "source": transition.source,
+                },
+            )
+        if prediction.metadata.get("no_rule_matched") is True:
+            return VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=prediction.confidence,
+                explanation="world model found no matching transition rule",
+                metadata={
+                    "verifier": "state_transition",
+                    "decision_rule": "prediction_no_matching_rule",
                     "world_model": type(self.world_model).__name__,
                     "action": dict(transition.action),
                     "prediction_confidence": prediction.confidence,
@@ -245,6 +385,124 @@ class InMemoryWorldModelAdapter:
 
     def explain(self, claim: Claim) -> str:
         return f"in-memory world model checked claim: {claim.text}"
+
+
+@dataclass(frozen=True)
+class RuleBasedWorldModelAdapter:
+    """Auditable rule-based world model for domain transition checks."""
+
+    rules: Sequence[WorldModelRule | Mapping[str, Any]]
+    state: Mapping[str, Any] = field(default_factory=dict)
+    verifier: Any | None = None
+
+    def __post_init__(self) -> None:
+        rules = tuple(
+            rule if isinstance(rule, WorldModelRule) else WorldModelRule.from_mapping(rule)
+            for rule in self.rules
+        )
+        if not rules:
+            raise ValueError("rule-based world model requires at least one rule.")
+        object.__setattr__(self, "rules", rules)
+        object.__setattr__(self, "state", _deep_copy_mapping(self.state))
+
+    def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
+        """Verify a direct structured-state claim using the configured state."""
+        if self.verifier is not None:
+            return self.verifier.verify(claim, context=context)
+        return StructuredStateVerifier(state=self.state).verify(claim, context=context)
+
+    def predict(
+        self,
+        state: Mapping[str, Any],
+        action: Mapping[str, Any],
+    ) -> WorldModelPrediction:
+        """Apply all matching transition rules to a copy of the input state."""
+        next_state = _deep_copy_mapping(state)
+        matched: list[dict[str, Any]] = []
+        skipped: list[dict[str, Any]] = []
+        confidences: list[float] = []
+
+        for rule in self.rules:
+            if not rule.matches_action(action):
+                skipped.append({"rule": rule.name, "reason": "action_mismatch"})
+                continue
+            condition_results = rule.condition_results(next_state)
+            failed_conditions = tuple(
+                _condition_result_summary(result, index=index)
+                for index, result in enumerate(condition_results)
+                if result.status is not VerificationStatus.SUPPORTED
+            )
+            if failed_conditions:
+                skipped.append({
+                    "rule": rule.name,
+                    "reason": "condition_failed",
+                    "conditions": failed_conditions,
+                })
+                continue
+            rule.apply(next_state)
+            confidences.append(rule.confidence)
+            matched.append({
+                "rule": rule.name,
+                "confidence": rule.confidence,
+                "explanation": rule.explanation,
+                "metadata": dict(rule.metadata),
+            })
+
+        if not matched:
+            return WorldModelPrediction(
+                state=next_state,
+                confidence=0.0,
+                explanation="no rule-based world model transition matched action",
+                metadata={
+                    "world_model": type(self).__name__,
+                    "decision_rule": "no_rule_matched",
+                    "rule_count": len(self.rules),
+                    "matched_rules": (),
+                    "skipped_rules": tuple(skipped),
+                    "no_rule_matched": True,
+                },
+            )
+
+        confidence = min(confidences)
+        return WorldModelPrediction(
+            state=next_state,
+            confidence=confidence,
+            explanation=f"rule-based world model applied {len(matched)} transition rule(s)",
+            metadata={
+                "world_model": type(self).__name__,
+                "decision_rule": "rule_transition_applied",
+                "rule_count": len(self.rules),
+                "matched_rules": tuple(matched),
+                "skipped_rules": tuple(skipped),
+                "no_rule_matched": False,
+            },
+        )
+
+    def explain(self, claim: Claim) -> str:
+        return f"rule-based world model checked claim with {len(self.rules)} rules: {claim.text}"
+
+
+def _state_check_to_dict(check: StateCheck) -> dict[str, Any]:
+    return {
+        "path": check.path,
+        "operator": check.operator,
+        "value": to_jsonable(check.value),
+        "source": check.source,
+        "metadata": to_jsonable(dict(check.metadata)),
+    }
+
+
+def _condition_result_summary(result: VerificationResult, *, index: int) -> dict[str, Any]:
+    return {
+        "index": index,
+        "status": result.status.value,
+        "confidence": result.confidence,
+        "decision_rule": result.metadata.get("decision_rule"),
+        "path": result.metadata.get("path"),
+        "operator": result.metadata.get("operator"),
+        "expected": result.metadata.get("expected"),
+        "actual": result.metadata.get("actual"),
+    }
 
 
 @dataclass(frozen=True)

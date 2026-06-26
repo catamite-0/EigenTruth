@@ -30,10 +30,12 @@ from eigentruth.adapters.state import (
 from eigentruth.adapters.world_model import (
     EnsembleWorldModelAdapter,
     InMemoryWorldModelAdapter,
+    RuleBasedWorldModelAdapter,
     StateTransitionCheck,
     StateTransitionVerifier,
     WorldModelAdapter,
     WorldModelPrediction,
+    WorldModelRule,
 )
 
 __all__ = [
@@ -61,9 +63,11 @@ __all__ = [
     "ToolOutputStateSource",
     "EnsembleWorldModelAdapter",
     "InMemoryWorldModelAdapter",
+    "RuleBasedWorldModelAdapter",
     "StateTransitionCheck",
     "StateTransitionVerifier",
     "WorldModelAdapter",
     "WorldModelPrediction",
+    "WorldModelRule",
     "combine_cache_stats",
 ]
