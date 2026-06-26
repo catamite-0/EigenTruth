@@ -4505,6 +4505,23 @@ python benchmarks/eval_trajectory_truthfulqa.py \
   --quiet
 ```
 
+## `compare_trajectory_sweeps.py`
+
+Compares one or more `eval_trajectory_truthfulqa.py --layers` reports and
+applies a fail-closed trajectory evidence gate. Defaults require at least two
+reports, two model families, 100 evaluated examples per report, and AUROC >=
+0.60. A single gpt2 limit-64 mechanism check should therefore remain blocked
+until it is replicated on larger samples and another model family.
+
+```bash
+python benchmarks/compare_trajectory_sweeps.py \
+  --report gpt2=artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-sweep-report.json \
+  --json artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate.json \
+  --artifact-manifest artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest.json \
+  --verification-report artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest-verification.json \
+  --quiet
+```
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use

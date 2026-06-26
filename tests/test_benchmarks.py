@@ -4423,6 +4423,124 @@ def test_eval_trajectory_truthfulqa_layer_sweep_reports_best_layer(tmp_path, cap
     assert payload["records"][0]["trajectories"]["0"]["metadata"]["resolved_layer"] == 0
 
 
+def _write_trajectory_sweep_report(
+    path: Path,
+    *,
+    model: str,
+    n_evaluated: int,
+    n_skipped: int = 0,
+    n_true: int | None = None,
+    n_false: int | None = None,
+    best_auroc: float = 0.66,
+    best_layer: int = -1,
+) -> None:
+    if n_true is None:
+        n_true = n_evaluated // 2
+    if n_false is None:
+        n_false = n_evaluated - n_true
+    payload = {
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep",
+        "config": {"layers": [-1, -6]},
+        "summary": {
+            "status": "pass",
+            "n_total": n_evaluated + n_skipped,
+            "n_evaluated": n_evaluated,
+            "n_skipped": n_skipped,
+            "n_true": n_true,
+            "n_false": n_false,
+            "best_layer": best_layer,
+            "best_resolved_layer": 12 if best_layer == -1 else 7,
+            "layer_count": 2,
+            "trajectory_score_best_auroc": best_auroc,
+            "trajectory_score_direction_for_false": "lower",
+            "spearman_convergence_false_label": -0.22,
+            "nll_answer_higher_is_false_auroc": 0.35,
+        },
+        "layer_summaries": [
+            {
+                "layer": best_layer,
+                "resolved_layer": 12 if best_layer == -1 else 7,
+                "n_total": n_evaluated + n_skipped,
+                "n_evaluated": n_evaluated,
+                "n_skipped": n_skipped,
+                "n_true": n_true,
+                "n_false": n_false,
+                "trajectory_score_best_auroc": best_auroc,
+                "trajectory_score_direction_for_false": "lower",
+            }
+        ],
+        "records": [],
+        "skipped_records": [],
+        "metadata": {"model": model, "source_scores": {"path": "scores.json"}},
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def test_compare_trajectory_sweeps_promotes_multimodel_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.compare_trajectory_sweeps")
+    qwen_path = tmp_path / "qwen-trajectory.json"
+    smol_path = tmp_path / "smollm2-trajectory.json"
+    _write_trajectory_sweep_report(qwen_path, model="Qwen/Qwen2.5-0.5B-Instruct", n_evaluated=128, best_auroc=0.64)
+    _write_trajectory_sweep_report(
+        smol_path,
+        model="HuggingFaceTB/SmolLM2-135M-Instruct",
+        n_evaluated=120,
+        best_auroc=0.62,
+    )
+
+    payload = module.compare_trajectory_sweeps((
+        ("qwen", qwen_path),
+        ("smollm2", smol_path),
+    ))
+
+    assert payload["workflow"] == "trajectory_sweep_evidence_comparison"
+    assert payload["decision"]["status"] == "promote"
+    assert payload["evidence_summary"]["model_count"] == 2
+    assert payload["evidence_summary"]["promoted_report_count"] == 2
+    assert payload["evidence_summary"]["recommended_run"]["name"] == "qwen"
+
+
+def test_compare_trajectory_sweeps_blocks_small_single_model_and_writes_manifest(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.compare_trajectory_sweeps")
+    report_path = tmp_path / "gpt2-trajectory.json"
+    output_path = tmp_path / "trajectory-evidence.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+    verification_path = tmp_path / "manifest-verification.json"
+    _write_trajectory_sweep_report(report_path, model="gpt2", n_evaluated=60, n_true=29, n_false=31, best_auroc=0.603)
+
+    payload = module.run(SimpleNamespace(
+        report=[f"gpt2={report_path}"],
+        json=str(output_path),
+        artifact_manifest=str(manifest_path),
+        verification_report=str(verification_path),
+        registry=None,
+        name=None,
+        version=None,
+        min_reports=2,
+        min_model_count=2,
+        min_n_evaluated=100,
+        min_best_auroc=0.60,
+        min_class_count=20,
+        max_skip_rate=0.20,
+        manifest_fingerprint_workers=1,
+        no_recursive=False,
+        note=[],
+        quiet=True,
+    ))
+    captured = capsys.readouterr()
+    reasons = payload["decision"]["blocking_reasons"]
+
+    assert captured.out == ""
+    assert output_path.exists()
+    assert manifest_path.exists()
+    assert verification_path.exists()
+    assert payload["decision"]["status"] == "blocked"
+    assert any("trajectory report count 1" in reason for reason in reasons)
+    assert any("trajectory model count 1" in reason for reason in reasons)
+    assert any("gpt2.n_evaluated 60" in reason for reason in reasons)
+    assert payload["manifest_verification"]["passed"] is True
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
