@@ -593,6 +593,9 @@ def run_release_candidate_registry_workflow(
                 else str(config.adapter_family_matrix_path)
             ),
             "adapter_family_profile": config.adapter_family_profile,
+            "adapter_family_profile_requires_state_transition_world_model": (
+                adapter_family_profile_requires_state_transition_world_model(config.adapter_family_profile)
+            ),
             "required_adapter_routes": tuple(config.required_adapter_routes),
             "require_state_transition_world_model": bool(config.require_state_transition_world_model),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
@@ -736,6 +739,12 @@ def _comparison_with_registry_config(
         "require_structured_fact_robustness": config.require_structured_fact_robustness,
         "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
         "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
+        "adapter_family_profile": config.adapter_family_profile,
+        "adapter_family_profile_requires_state_transition_world_model": (
+            adapter_family_profile_requires_state_transition_world_model(config.adapter_family_profile)
+        ),
+        "required_adapter_routes": list(config.required_adapter_routes),
+        "require_state_transition_world_model": bool(config.require_state_transition_world_model),
     })
     payload["config"] = comparison_config
     return payload
@@ -1153,6 +1162,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "adapter_family_matrix_report": adapter_family.get("matrix_path"),
         "adapter_family_profile": config.get("adapter_family_profile"),
+        "adapter_family_profile_requires_state_transition_world_model": config.get(
+            "adapter_family_profile_requires_state_transition_world_model"
+        ),
         "adapter_family_profile_required_routes": config.get("adapter_family_profile_required_routes"),
         "adapter_family_routes": adapter_family.get("routes"),
         "adapter_family_retrieval_routes": adapter_family.get("retrieval_routes"),

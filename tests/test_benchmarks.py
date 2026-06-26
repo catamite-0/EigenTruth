@@ -12362,7 +12362,11 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
+    assert payload["config"]["adapter_family_profile_requires_state_transition_world_model"] is True
     assert payload["config"]["require_state_transition_world_model"] is True
+    assert payload["release_candidate_comparison"]["config"][
+        "adapter_family_profile_requires_state_transition_world_model"
+    ] is True
     assert payload["decision"]["status"] == "promote"
 
 
@@ -12701,6 +12705,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
         required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
         adapter_family_matrix_path=adapter_family_matrix_path,
+        adapter_family_profile="strict_audit",
         required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
         require_state_transition_world_model=True,
         runtime_profile="balanced",
@@ -12882,6 +12887,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "feedback-policy-workflow/artifact-manifest.json"
     )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
+    assert manifest["metadata"]["adapter_family_profile"] == "strict_audit"
+    assert manifest["metadata"]["adapter_family_profile_requires_state_transition_world_model"] is True
     assert manifest["metadata"]["adapter_family_required_routes"] == [
         "structured_state",
         "state_transition",
@@ -12941,6 +12948,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
     assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
     assert payload["config"]["adapter_family_matrix"] == str(adapter_family_matrix_path)
+    assert payload["config"]["adapter_family_profile"] == "strict_audit"
+    assert payload["config"]["adapter_family_profile_requires_state_transition_world_model"] is True
     assert payload["config"]["required_adapter_routes"] == (
         "structured_state",
         "state_transition",
@@ -12997,6 +13006,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"][
         "required_route_max_stress_false_refuted_rate"
     ] == pytest.approx(0.05)
+    assert payload["release_candidate_comparison"]["config"]["adapter_family_profile"] == "strict_audit"
+    assert payload["release_candidate_comparison"]["config"][
+        "adapter_family_profile_requires_state_transition_world_model"
+    ] is True
     stress_audit = payload["release_candidate_comparison"]["required_route_baseline_gate"]["rows"][0][
         "retrieval_stress_audit"
     ]
@@ -13078,6 +13091,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
+    assert record.metadata["adapter_family_profile"] == "strict_audit"
+    assert record.metadata["adapter_family_profile_requires_state_transition_world_model"] is True
     assert record.metadata["required_route_baseline_records"] == [
         "benchmark_manifest:retrieval-route:0.7"
     ]
