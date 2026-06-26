@@ -606,6 +606,20 @@ class ProductRuntimeEvidenceBundle:
         compare=False,
         repr=False,
     )
+    _selfcheck_signal_fusion_manifest_verification: ArtifactManifestVerification | None = (
+        field(
+            default=None,
+            init=False,
+            compare=False,
+            repr=False,
+        )
+    )
+    _selfcheck_signal_fusion_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
 
     @property
     def contract(self) -> ProductPromotionContract:
@@ -682,12 +696,133 @@ class ProductRuntimeEvidenceBundle:
             ),
         }
 
+    @property
+    def selfcheck_signal_fusion_workflow(self) -> Mapping[str, Any]:
+        """Return the selfcheck signal-fusion workflow contract, if present."""
+        return self.contract.selfcheck_signal_fusion_workflow
+
+    @property
+    def selfcheck_signal_fusion_report_path(self) -> Path | None:
+        """Return the selfcheck signal-fusion workflow report path."""
+        return _resolve_contract_metadata_path(
+            self.selfcheck_signal_fusion_workflow.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def selfcheck_signal_fusion_manifest_path(self) -> Path | None:
+        """Return the selfcheck signal-fusion workflow manifest path."""
+        return _resolve_contract_metadata_path(
+            self.selfcheck_signal_fusion_workflow.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def selfcheck_signal_fusion_registry_path(self) -> Path | None:
+        """Return the selfcheck signal-fusion workflow registry path."""
+        return _resolve_contract_metadata_path(
+            self.selfcheck_signal_fusion_workflow.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_selfcheck_signal_fusion_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional selfcheck signal-fusion workflow manifest."""
+        manifest_path = self.selfcheck_signal_fusion_manifest_path
+        if manifest_path is None:
+            return None
+        if self._selfcheck_signal_fusion_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_selfcheck_signal_fusion_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._selfcheck_signal_fusion_manifest_verification
+
+    def selfcheck_signal_fusion_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional selfcheck signal-fusion workflow registry record."""
+        registry_path = self.selfcheck_signal_fusion_registry_path
+        record_key = self.selfcheck_signal_fusion_workflow.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._selfcheck_signal_fusion_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_selfcheck_signal_fusion_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._selfcheck_signal_fusion_registry_record
+
+    def selfcheck_signal_fusion_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready selfcheck signal-fusion provenance metadata."""
+        workflow = self.selfcheck_signal_fusion_workflow
+        report_path = self.selfcheck_signal_fusion_report_path
+        manifest_path = self.selfcheck_signal_fusion_manifest_path
+        registry_path = self.selfcheck_signal_fusion_registry_path
+        manifest_verification = (
+            self.verify_selfcheck_signal_fusion_manifest() if verify_manifest else None
+        )
+        record_key = workflow.get("record_key")
+        registry_record = (
+            self.selfcheck_signal_fusion_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "selfcheck_signal_fusion_workflow_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "selfcheck_signal_fusion_workflow_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "selfcheck_signal_fusion_workflow_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "selfcheck_signal_fusion_workflow_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "selfcheck_signal_fusion_workflow_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "selfcheck_signal_fusion_workflow_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "selfcheck_signal_fusion_workflow_status": workflow.get("status"),
+            "selfcheck_signal_fusion_workflow_sample_quality_status": workflow.get(
+                "sample_quality_status"
+            ),
+            "selfcheck_signal_fusion_workflow_sample_quality_passed": workflow.get(
+                "sample_quality_passed"
+            ),
+            "selfcheck_signal_fusion_workflow_fusion_run_count": workflow.get(
+                "fusion_run_count"
+            ),
+            "selfcheck_signal_fusion_workflow_geometry_artifact_count": workflow.get(
+                "geometry_fusion_artifact_count"
+            ),
+            "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": workflow.get(
+                "enhanced_score_dump_count"
+            ),
+        }
+
     def runtime_metadata(
         self,
         *,
         budget_enabled: bool,
         verify_manifest: bool = False,
         include_registry_record: bool = True,
+        verify_selfcheck_signal_fusion_manifest: bool = False,
+        include_selfcheck_signal_fusion_record: bool = False,
     ) -> dict[str, Any]:
         """Return ProductTrace metadata for contract and provenance evidence."""
         return {
@@ -695,6 +830,10 @@ class ProductRuntimeEvidenceBundle:
             **self.evidence_metadata(
                 verify_manifest=verify_manifest,
                 include_registry_record=include_registry_record,
+            ),
+            **self.selfcheck_signal_fusion_evidence_metadata(
+                verify_manifest=verify_selfcheck_signal_fusion_manifest,
+                include_registry_record=include_selfcheck_signal_fusion_record,
             ),
         }
 
@@ -1071,6 +1210,22 @@ def _resolve_product_promotion_contract_manifest_path(
     if sibling_manifest.exists():
         return sibling_manifest
     return None
+
+
+def _resolve_contract_metadata_path(
+    value: Any,
+    *,
+    contract_path: Path | None,
+) -> Path | None:
+    if value is None:
+        return None
+    path = Path(str(value))
+    if path.is_absolute() or path.exists() or contract_path is None:
+        return path
+    contract_relative = contract_path.parent / path
+    if contract_relative.exists():
+        return contract_relative
+    return path
 
 
 def _find_product_promotion_contract_record(

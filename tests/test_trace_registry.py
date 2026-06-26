@@ -1976,6 +1976,36 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     contract_path = tmp_path / "product-promotion-contract.json"
     manifest_path = tmp_path / "artifact-manifest.json"
     registry_path = tmp_path / "registry.json"
+    selfcheck_dir = tmp_path / "selfcheck"
+    selfcheck_dir.mkdir()
+    selfcheck_report_path = selfcheck_dir / "workflow.json"
+    selfcheck_manifest_path = selfcheck_dir / "artifact-manifest.json"
+    selfcheck_registry_path = selfcheck_dir / "registry.json"
+    selfcheck_report_path.write_text(
+        json.dumps({
+            "workflow": "selfcheck_signal_fusion_workflow",
+            "status": "promote",
+            "sample_quality": {"status": "pass", "passed": True},
+            "fusion_summary": {"runs": [{"name": "tiny", "auroc": 0.7}]},
+        }),
+        encoding="utf-8",
+    )
+    selfcheck_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"selfcheck_signal_fusion_workflow": selfcheck_report_path},
+                root=selfcheck_dir,
+                metadata={"workflow": "selfcheck_signal_fusion_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(selfcheck_registry_path).record_report(
+        name="selfcheck-signal-fusion-workflow",
+        path=selfcheck_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(selfcheck_manifest_path)},
+    ).save_json()
     ProductPromotionContract(
         model_id="demo-model",
         runtime={"layer": -2},
@@ -1987,6 +2017,18 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "report_path": "trace-replay-workflow.json",
             "selector_replay_report_path": "selector-replay.json",
             "product_runtime_drift_report_path": "runtime-drift.json",
+        },
+        selfcheck_signal_fusion_workflow={
+            "report_path": "selfcheck/workflow.json",
+            "manifest_path": "selfcheck/artifact-manifest.json",
+            "registry": "selfcheck/registry.json",
+            "record_key": "report:selfcheck-signal-fusion-workflow:0.1",
+            "status": "promote",
+            "sample_quality_status": "pass",
+            "sample_quality_passed": True,
+            "fusion_run_count": 1,
+            "geometry_fusion_artifact_count": 1,
+            "enhanced_score_dump_count": 1,
         },
         metadata={"product_runtime_drift_status": "promote"},
     ).save_json(contract_path)
@@ -2028,6 +2070,34 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         "selector_replay_report_path": "selector-replay.json",
         "product_runtime_drift_report_path": "runtime-drift.json",
     }
+    assert metadata_without_verification["selfcheck_signal_fusion_workflow_report"] == str(
+        selfcheck_report_path
+    )
+    assert metadata_without_verification["selfcheck_signal_fusion_workflow_manifest"] == str(
+        selfcheck_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "selfcheck_signal_fusion_workflow_manifest_verification"
+        ]
+        is None
+    )
+    assert (
+        metadata_without_verification["selfcheck_signal_fusion_workflow_registry"]
+        == str(selfcheck_registry_path)
+    )
+    assert (
+        metadata_without_verification["selfcheck_signal_fusion_workflow_registry_key"]
+        == "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert metadata_without_verification["selfcheck_signal_fusion_workflow_registry_record"] is None
+    assert (
+        metadata_without_verification[
+            "selfcheck_signal_fusion_workflow_sample_quality_passed"
+        ]
+        is True
+    )
+    assert metadata_without_verification["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
 
     metadata_with_verification = bundle.runtime_metadata(
         budget_enabled=True,
@@ -2035,6 +2105,37 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     )
     assert metadata_with_verification["promotion_contract_manifest_verification"]["passed"] is True
     assert metadata_with_verification["promotion_contract_manifest_verification"]["checked"] == 1
+    assert (
+        metadata_with_verification[
+            "selfcheck_signal_fusion_workflow_manifest_verification"
+        ]
+        is None
+    )
+
+    metadata_with_selfcheck_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_selfcheck_signal_fusion_manifest=True,
+        include_selfcheck_signal_fusion_record=True,
+    )
+    assert (
+        metadata_with_selfcheck_verification[
+            "selfcheck_signal_fusion_workflow_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_selfcheck_verification[
+            "selfcheck_signal_fusion_workflow_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_selfcheck_verification["selfcheck_signal_fusion_workflow_registry_key"]
+        == "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert metadata_with_selfcheck_verification[
+        "selfcheck_signal_fusion_workflow_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(selfcheck_manifest_path)}
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
