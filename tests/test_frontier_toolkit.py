@@ -85,6 +85,7 @@ from eigentruth.verify import (
     RuleBasedTripleExtractor,
     SelfConsistencyVerifier,
     TripleEvidenceVerifier,
+    TripleSlotEvidence,
     VerificationResult,
     VerificationRouteHint,
     VerificationStatus,
@@ -671,10 +672,18 @@ def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
         "predicate",
         "object",
     )
+    assert results[0].metadata["audit_report"]["covered_slot_count"] == 3
+    assert results[0].metadata["audit_report"]["missing_slot_count"] == 0
     assert results[0].evidence == ("atlas: France's capital is Paris.",)
     assert results[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert results[1].metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
     assert results[1].metadata["audit_report"]["audits"][0]["slot_coverage"]["object"] < 1.0
+    failed_audit = results[1].metadata["audit_report"]["audits"][0]
+    object_slot = next(item for item in failed_audit["slot_evidence"] if item["slot"] == "object")
+    assert object_slot["expected"] == "10 offices in Europe"
+    assert object_slot["source"] == "annual-report"
+    assert object_slot["covered"] is False
+    assert object_slot["missing_tokens"] == ("10",)
 
 
 def test_triple_evidence_audit_can_combine_slots_across_documents():
@@ -712,6 +721,13 @@ def test_triple_evidence_audit_can_combine_slots_across_documents():
         "predicate": "company-profile",
         "object": "annual-report",
     }
+    slot_sources = {item["slot"]: item["source"] for item in audit["slot_evidence"]}
+    assert slot_sources == {
+        "subject": "company-profile",
+        "predicate": "company-profile",
+        "object": "annual-report",
+    }
+    assert result.metadata["audit_report"]["slot_summary"]["object"]["sources"] == ("annual-report",)
 
 
 def test_triple_evidence_audit_rejects_unlinked_cross_document_slots():
@@ -867,6 +883,10 @@ def test_claim_triple_audit_uses_metadata_triples_and_context_evidence():
     assert missing.to_dict()["audits"][0]["missing_slots"] == ("subject", "predicate", "object")
     assert report.passed is True
     assert report.to_dict()["audits"][0]["metadata"]["best_source"] == "filing"
+    payload = report.to_dict()
+    assert payload["slot_summary"]["subject"]["covered_count"] == 1
+    assert payload["slot_summary"]["object"]["mean_coverage"] == pytest.approx(1.0)
+    assert TripleSlotEvidence(**payload["audits"][0]["slot_evidence"][0]).covered is True
 
 
 def test_triple_evidence_verifier_reports_not_applicable_for_unparsed_claim():

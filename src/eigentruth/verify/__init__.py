@@ -45,6 +45,7 @@ from eigentruth.verify.triples import (
     TripleEvidenceAudit,
     TripleEvidenceAuditReport,
     TripleEvidenceVerifier,
+    TripleSlotEvidence,
     audit_claim_triples,
     extract_claim_triples,
 )
@@ -72,6 +73,7 @@ __all__ = [
     "TripleEvidenceAudit",
     "TripleEvidenceAuditReport",
     "TripleEvidenceVerifier",
+    "TripleSlotEvidence",
     "VerificationResult",
     "VerificationStatus",
     "VerifierCacheStats",

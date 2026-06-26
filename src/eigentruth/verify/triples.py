@@ -335,6 +335,46 @@ class RuleBasedTripleExtractor:
 
 
 @dataclass(frozen=True)
+class TripleSlotEvidence:
+    """Evidence detail for one subject, predicate, or object slot."""
+
+    slot: str
+    expected: str
+    coverage: float
+    covered: bool
+    evidence: str | None = None
+    source: str | None = None
+    matched_tokens: Sequence[str] = ()
+    missing_tokens: Sequence[str] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "slot", _valid_slot_name(self.slot))
+        object.__setattr__(self, "expected", str(self.expected))
+        object.__setattr__(self, "coverage", _coerce_probability(self.coverage, name=f"{self.slot} coverage"))
+        object.__setattr__(self, "covered", bool(self.covered))
+        object.__setattr__(self, "evidence", None if self.evidence is None else str(self.evidence))
+        object.__setattr__(self, "source", None if self.source is None else str(self.source))
+        object.__setattr__(self, "matched_tokens", tuple(str(token) for token in self.matched_tokens))
+        object.__setattr__(self, "missing_tokens", tuple(str(token) for token in self.missing_tokens))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready representation."""
+        return {
+            "slot": self.slot,
+            "expected": self.expected,
+            "coverage": self.coverage,
+            "covered": self.covered,
+            "evidence": self.evidence,
+            "source": self.source,
+            "matched_tokens": tuple(self.matched_tokens),
+            "missing_tokens": tuple(self.missing_tokens),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+
+@dataclass(frozen=True)
 class TripleEvidenceAudit:
     """Slot-level evidence coverage for one extracted triple."""
 
@@ -344,6 +384,7 @@ class TripleEvidenceAudit:
     covered_slots: tuple[str, ...] = ()
     missing_slots: tuple[str, ...] = ()
     slot_coverage: Mapping[str, float] = field(default_factory=dict)
+    slot_evidence: Sequence[TripleSlotEvidence | Mapping[str, Any]] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -354,12 +395,14 @@ class TripleEvidenceAudit:
             str(key): _coerce_probability(value, name=f"{key} coverage")
             for key, value in self.slot_coverage.items()
         }
+        slot_evidence = tuple(_coerce_slot_evidence(item) for item in self.slot_evidence)
         object.__setattr__(self, "triple", triple)
         object.__setattr__(self, "passed", bool(self.passed))
         object.__setattr__(self, "evidence", tuple(str(item) for item in self.evidence))
         object.__setattr__(self, "covered_slots", covered_slots)
         object.__setattr__(self, "missing_slots", missing_slots)
         object.__setattr__(self, "slot_coverage", slot_coverage)
+        object.__setattr__(self, "slot_evidence", slot_evidence)
         object.__setattr__(self, "metadata", dict(self.metadata))
 
     def to_dict(self) -> dict[str, Any]:
@@ -371,6 +414,7 @@ class TripleEvidenceAudit:
             "covered_slots": tuple(self.covered_slots),
             "missing_slots": tuple(self.missing_slots),
             "slot_coverage": dict(self.slot_coverage),
+            "slot_evidence": tuple(item.to_dict() for item in self.slot_evidence),
             "metadata": to_jsonable(dict(self.metadata)),
         }
 
@@ -404,9 +448,24 @@ class TripleEvidenceAuditReport:
         return self.triple_count - self.passed_count
 
     @property
+    def covered_slot_count(self) -> int:
+        """Return the number of covered slots across all audited triples."""
+        return sum(len(audit.covered_slots) for audit in self.audits)
+
+    @property
+    def missing_slot_count(self) -> int:
+        """Return the number of missing slots across all audited triples."""
+        return sum(len(audit.missing_slots) for audit in self.audits)
+
+    @property
     def passed(self) -> bool:
         """Return true when at least one triple exists and all triples passed."""
         return self.triple_count > 0 and self.failed_count == 0
+
+    @property
+    def slot_summary(self) -> Mapping[str, Mapping[str, Any]]:
+        """Return claim-level slot coverage statistics."""
+        return _slot_summary(self.audits)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-ready representation."""
@@ -415,7 +474,10 @@ class TripleEvidenceAuditReport:
             "triple_count": self.triple_count,
             "passed_count": self.passed_count,
             "failed_count": self.failed_count,
+            "covered_slot_count": self.covered_slot_count,
+            "missing_slot_count": self.missing_slot_count,
             "passed": self.passed,
+            "slot_summary": to_jsonable(dict(self.slot_summary)),
             "audits": tuple(audit.to_dict() for audit in self.audits),
         }
 
@@ -577,6 +639,12 @@ def _audit_triple(
             covered_slots=(),
             missing_slots=("subject", "predicate", "object"),
             slot_coverage={"subject": 0.0, "predicate": 0.0, "object": 0.0},
+            slot_evidence=_slot_evidence_items(
+                triple,
+                {"subject": 0.0, "predicate": 0.0, "object": 0.0},
+                {},
+                min_slot_coverage=min_slot_coverage,
+            ),
             metadata={"decision_rule": "no_evidence"},
         )
     scored = [_score_document(triple, document, min_slot_coverage=min_slot_coverage) for document in documents]
@@ -584,12 +652,14 @@ def _audit_triple(
     aggregate = _aggregate_scored_documents(scored, min_slot_coverage=min_slot_coverage)
     if _aggregate_is_better(aggregate, best):
         return aggregate
-    return _audit_from_scored_document(triple, best)
+    return _audit_from_scored_document(triple, best, min_slot_coverage=min_slot_coverage)
 
 
 def _audit_from_scored_document(
     triple: ClaimTriple,
     scored: "_ScoredDocument",
+    *,
+    min_slot_coverage: float,
 ) -> TripleEvidenceAudit:
     return TripleEvidenceAudit(
         triple=triple,
@@ -598,6 +668,12 @@ def _audit_from_scored_document(
         covered_slots=scored.covered_slots,
         missing_slots=scored.missing_slots,
         slot_coverage=scored.slot_coverage,
+        slot_evidence=_slot_evidence_items(
+            triple,
+            scored.slot_coverage,
+            {slot: scored.document for slot in ("subject", "predicate", "object")},
+            min_slot_coverage=min_slot_coverage,
+        ),
         metadata={
             "decision_rule": "single_document_slot_coverage",
             "best_source": scored.document.source,
@@ -646,6 +722,12 @@ def _aggregate_scored_documents(
         covered_slots=covered,
         missing_slots=missing,
         slot_coverage=slot_coverage,
+        slot_evidence=_slot_evidence_items(
+            scored[0].triple,
+            slot_coverage,
+            slot_documents,
+            min_slot_coverage=min_slot_coverage,
+        ),
         metadata={
             "decision_rule": (
                 "multi_document_slot_coverage"
@@ -818,6 +900,80 @@ def _metadata_key(value: Any) -> str:
     return " ".join(_tokens(str(value)))
 
 
+def _slot_evidence_items(
+    triple: ClaimTriple,
+    slot_coverage: Mapping[str, float],
+    slot_documents: Mapping[str, EvidenceDocument],
+    *,
+    min_slot_coverage: float,
+) -> tuple[TripleSlotEvidence, ...]:
+    items = []
+    for slot in ("subject", "predicate", "object"):
+        coverage = slot_coverage.get(slot, 0.0)
+        document = slot_documents.get(slot)
+        evidence_tokens = set(_tokens(document.text)) if document is not None else set()
+        expected_tokens = _expected_slot_tokens(triple, slot)
+        matched_tokens = tuple(token for token in expected_tokens if token in evidence_tokens)
+        missing_tokens = tuple(token for token in expected_tokens if token not in evidence_tokens)
+        items.append(
+            TripleSlotEvidence(
+                slot=slot,
+                expected=_expected_slot_value(triple, slot),
+                coverage=coverage,
+                covered=coverage >= min_slot_coverage,
+                evidence=None if document is None else _evidence_label(document),
+                source=None if document is None else document.source,
+                matched_tokens=matched_tokens,
+                missing_tokens=missing_tokens,
+            )
+        )
+    return tuple(items)
+
+
+def _slot_summary(audits: Sequence[TripleEvidenceAudit]) -> dict[str, dict[str, Any]]:
+    summary: dict[str, dict[str, Any]] = {}
+    for slot in ("subject", "predicate", "object"):
+        values = [audit.slot_coverage.get(slot, 0.0) for audit in audits]
+        slot_evidence = [
+            item
+            for audit in audits
+            for item in audit.slot_evidence
+            if item.slot == slot
+        ]
+        sources = tuple(
+            sorted({
+                item.source
+                for item in slot_evidence
+                if item.source is not None and str(item.source).strip()
+            })
+        )
+        summary[slot] = {
+            "mean_coverage": 0.0 if not values else sum(values) / len(values),
+            "min_coverage": None if not values else min(values),
+            "max_coverage": None if not values else max(values),
+            "covered_count": sum(1 for audit in audits if slot in audit.covered_slots),
+            "missing_count": sum(1 for audit in audits if slot in audit.missing_slots),
+            "sources": sources,
+        }
+    return summary
+
+
+def _expected_slot_value(triple: ClaimTriple, slot: str) -> str:
+    if slot == "subject":
+        return triple.subject
+    if slot == "predicate":
+        return triple.predicate
+    if slot == "object":
+        return triple.object
+    raise ValueError("slot must be subject, predicate, or object.")
+
+
+def _expected_slot_tokens(triple: ClaimTriple, slot: str) -> tuple[str, ...]:
+    if slot == "predicate":
+        return _predicate_tokens(triple.predicate)
+    return _slot_tokens(_expected_slot_value(triple, slot))
+
+
 def _score_document(
     triple: ClaimTriple,
     document: EvidenceDocument,
@@ -869,6 +1025,25 @@ def _coerce_audit(value: TripleEvidenceAudit | Mapping[str, Any]) -> TripleEvide
         covered_slots=tuple(str(item) for item in _as_sequence(value.get("covered_slots", ()))),
         missing_slots=tuple(str(item) for item in _as_sequence(value.get("missing_slots", ()))),
         slot_coverage=dict(value.get("slot_coverage", {})),
+        slot_evidence=tuple(_as_sequence(value.get("slot_evidence", ()))),
+        metadata=dict(value.get("metadata", {})),
+    )
+
+
+def _coerce_slot_evidence(value: TripleSlotEvidence | Mapping[str, Any]) -> TripleSlotEvidence:
+    if isinstance(value, TripleSlotEvidence):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("slot evidence must be a mapping.")
+    return TripleSlotEvidence(
+        slot=str(value.get("slot", "")),
+        expected=str(value.get("expected", "")),
+        coverage=value.get("coverage", 0.0),
+        covered=bool(value.get("covered", False)),
+        evidence=None if value.get("evidence") is None else str(value.get("evidence")),
+        source=None if value.get("source") is None else str(value.get("source")),
+        matched_tokens=tuple(str(item) for item in _as_sequence(value.get("matched_tokens", ()))),
+        missing_tokens=tuple(str(item) for item in _as_sequence(value.get("missing_tokens", ()))),
         metadata=dict(value.get("metadata", {})),
     )
 

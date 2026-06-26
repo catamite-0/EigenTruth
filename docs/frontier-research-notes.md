@@ -334,6 +334,16 @@ Wired the same layer-band prior into the multi-model frontier workflow:
   with dense sweep `[-11,-10,-9,-8,-7]`, and SmolLM2 to target layer `-16`
   with dense sweep `[-17,-16,-15,-14,-13]`.
 
+Added stricter triple-evidence audit observability:
+
+- `TripleSlotEvidence` now records the expected slot value, matched/missing
+  tokens, source, and evidence label for each subject, predicate, and object
+  slot checked by `TripleEvidenceVerifier`.
+- `TripleEvidenceAuditReport` now carries claim-level covered/missing slot
+  counts and per-slot coverage summaries. This does not promote a stronger
+  extractor by itself; it makes structured-fact, retrieval, and world-model
+  route failures easier to audit before adding heavier extraction dependencies.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
