@@ -146,10 +146,14 @@ representation-observability toolkit spanning **training and inference**.
   as dependency-free generation-trajectory diagnostics. The synthetic E7 sanity
   benchmark generates convergent vs wandering hidden-state trajectories with
   quality/NLL proxies; convergence score correlates with quality at Spearman
-  0.924 and separates high-quality trajectories with AUROC 0.937. This accepts
-  the monitor primitive and synthetic correlation gate. The original gpt2 /
-  TruthfulQA hidden-state trajectory replication remains the next evidence item
-  before treating this as a real open-generation hallucination signal.
+  0.924 and separates high-quality trajectories with AUROC 0.937. The follow-up
+  `eval_trajectory_truthfulqa.py` benchmark now replays statement-bearing score
+  dumps through a causal LM, extracts forced-answer hidden-state trajectories at
+  answer-token prediction positions, and reports trajectory/NLL correlation plus
+  AUROC against TruthfulQA true/false labels. This closes the missing benchmark
+  harness, but real gpt2/Qwen/SmolLM2 trajectory artifacts still need to be run
+  before treating the signal as an accepted open-generation hallucination
+  detector.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be

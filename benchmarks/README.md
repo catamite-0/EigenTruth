@@ -4468,6 +4468,34 @@ or measure machine speed. Use real `eval_truthfulqa.py --profile-json`
 artifacts, `run_cache_profile_triplet.py`, or `run_inside_sampling_profile.py`
 before making actual runtime or sampling-cost claims.
 
+## `eval_trajectory_truthfulqa.py`
+
+Replays statement-bearing TruthfulQA score dumps through a causal LM and scores
+the hidden-state trajectory over forced-answer prediction positions. This is a
+bridge between the synthetic `TrajectoryMonitor` sanity check and real
+TruthfulQA artifacts: it reports trajectory-score Spearman/AUROC against the
+score-dump true/false labels plus an NLL baseline, but it is still a
+forced-answer proxy rather than open-generation evidence.
+
+```bash
+python benchmarks/eval_trajectory_truthfulqa.py \
+  --scores artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -12 \
+  --limit 64 \
+  --json artifacts/qwen-l80-trajectory-report.json \
+  --artifact-manifest artifacts/qwen-l80-trajectory-manifest.json
+```
+
+Use the deterministic no-download smoke path for local wiring checks:
+
+```bash
+python benchmarks/eval_trajectory_truthfulqa.py \
+  --offline \
+  --json artifacts/trajectory-offline-smoke.json \
+  --artifact-manifest artifacts/trajectory-offline-manifest.json
+```
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use

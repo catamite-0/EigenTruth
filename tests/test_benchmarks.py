@@ -4347,6 +4347,40 @@ def test_trajectory_convergence_sanity_correlates_with_quality(tmp_path, capsys)
     )
 
 
+def test_eval_trajectory_truthfulqa_offline_reports_forced_answer_signal(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.eval_trajectory_truthfulqa")
+    report_path = tmp_path / "trajectory-truthfulqa.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        scores=None,
+        model=None,
+        offline=True,
+        device="cpu",
+        layer=-1,
+        limit=None,
+        min_answer_tokens=3,
+        max_answer_tokens=None,
+        min_abs_spearman=0.3,
+        min_auroc=0.55,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+    summary = payload["summary"]
+
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert payload["workflow"] == "truthfulqa_forced_answer_trajectory"
+    assert summary["status"] == "pass"
+    assert summary["n_evaluated"] == 8
+    assert summary["n_skipped"] == 0
+    assert summary["trajectory_score_direction_for_false"] == "lower"
+    assert summary["trajectory_score_best_auroc"] == pytest.approx(1.0)
+    assert summary["mean_true_convergence_score"] > summary["mean_false_convergence_score"]
+    assert payload["records"][0]["trajectory"]["metadata"]["resolved_layer"] == 1
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
