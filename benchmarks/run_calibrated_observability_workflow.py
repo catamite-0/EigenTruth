@@ -105,6 +105,8 @@ class CalibratedObservabilityWorkflowConfig:
     sweep_layers_from_band_report: Path | None = None
     sweep_band_strategy: str | None = None
     sweep_band_run: str | None = None
+    sweep_band_expand_radius: int = 0
+    sweep_band_target_layer: str | None = None
     limit: int | None = None
     manifold_questions: int | None = None
     max_length: int = 64
@@ -187,6 +189,13 @@ class CalibratedObservabilityWorkflowConfig:
             object.__setattr__(self, "sweep_band_strategy", str(self.sweep_band_strategy))
         if self.sweep_band_run is not None:
             object.__setattr__(self, "sweep_band_run", str(self.sweep_band_run))
+        object.__setattr__(self, "sweep_band_expand_radius", int(self.sweep_band_expand_radius))
+        if self.sweep_band_expand_radius < 0:
+            raise ValueError("sweep_band_expand_radius must be >=0.")
+        if self.sweep_band_target_layer is not None:
+            object.__setattr__(self, "sweep_band_target_layer", str(self.sweep_band_target_layer))
+        if self.sweep_band_target_layer not in {None, "best", "band_best", "first"}:
+            raise ValueError("sweep_band_target_layer must be one of: best, band_best, first.")
         if self.sweep_layers and self.sweep_layers_from_band_report is not None:
             raise ValueError("sweep_layers_from_band_report cannot be set with explicit sweep_layers.")
         if self.sweep_layers_from_band_report is not None:
@@ -198,7 +207,14 @@ class CalibratedObservabilityWorkflowConfig:
                 strategy=self.sweep_band_strategy,
                 run_name=self.sweep_band_run,
             )
+            source = _apply_layer_band_options(
+                source,
+                expand_radius=self.sweep_band_expand_radius,
+                target_layer_policy=self.sweep_band_target_layer,
+            )
             object.__setattr__(self, "sweep_layers", tuple(source["candidate_layers"]))
+            if self.sweep_band_target_layer is not None:
+                object.__setattr__(self, "layer", int(source["selected_target_layer"]))
             object.__setattr__(self, "sweep_layers_source", source)
         if self.covariance_mode not in {"full", "diag", "low_rank", "shrinkage"}:
             raise ValueError("covariance_mode must be one of: full, diag, low_rank, shrinkage.")
@@ -642,6 +658,8 @@ def _config_payload(config: CalibratedObservabilityWorkflowConfig) -> dict[str, 
         ),
         "sweep_band_strategy": config.sweep_band_strategy,
         "sweep_band_run": config.sweep_band_run,
+        "sweep_band_expand_radius": config.sweep_band_expand_radius,
+        "sweep_band_target_layer": config.sweep_band_target_layer,
         "sweep_layers_source": _json_ready_mapping(config.sweep_layers_source),
         "limit": config.limit,
         "manifold_questions": config.manifold_questions,
@@ -896,6 +914,49 @@ def _select_layer_band_source(
     }
 
 
+def _apply_layer_band_options(
+    source: Mapping[str, Any],
+    *,
+    expand_radius: int,
+    target_layer_policy: str | None,
+) -> dict[str, Any]:
+    payload = dict(source)
+    report_layers = tuple(int(layer) for layer in payload["candidate_layers"])
+    payload["report_candidate_layers"] = report_layers
+    payload["sweep_band_expand_radius"] = int(expand_radius)
+    if expand_radius > 0:
+        payload["candidate_layers"] = _expand_layer_band(report_layers, radius=int(expand_radius))
+    else:
+        payload["candidate_layers"] = report_layers
+    payload["sweep_band_target_layer"] = target_layer_policy
+    if target_layer_policy is not None:
+        payload["selected_target_layer"] = _target_layer_from_band_source(payload, target_layer_policy)
+    return payload
+
+
+def _expand_layer_band(layers: Sequence[int], *, radius: int) -> tuple[int, ...]:
+    expanded: set[int] = set()
+    for raw_layer in layers:
+        layer = int(raw_layer)
+        for offset in range(-int(radius), int(radius) + 1):
+            expanded.add(layer + offset)
+    return tuple(sorted(expanded))
+
+
+def _target_layer_from_band_source(source: Mapping[str, Any], policy: str) -> int:
+    if policy == "best":
+        value = source.get("best_layer")
+    elif policy == "band_best":
+        value = source.get("band_best_layer")
+    elif policy == "first":
+        value = tuple(source["candidate_layers"])[0]
+    else:
+        raise ValueError("sweep_band_target_layer must be one of: best, band_best, first.")
+    if value is None:
+        raise ValueError(f"layer-band report cannot provide target layer policy {policy!r}.")
+    return int(value)
+
+
 def _runtime_preset_defaults(runtime_preset: str) -> dict[str, Any]:
     if runtime_preset not in RUNTIME_PRESETS:
         raise ValueError(f"runtime_preset must be one of: {', '.join(RUNTIME_PRESETS)}.")
@@ -959,6 +1020,8 @@ def _config_from_args(args: argparse.Namespace) -> CalibratedObservabilityWorkfl
         sweep_layers_from_band_report=Path(band_report) if band_report else None,
         sweep_band_strategy=getattr(args, "sweep_band_strategy", None),
         sweep_band_run=getattr(args, "sweep_band_run", None),
+        sweep_band_expand_radius=getattr(args, "sweep_band_expand_radius", 0),
+        sweep_band_target_layer=getattr(args, "sweep_band_target_layer", None),
         limit=_arg_or_preset(args, preset_defaults, "limit", None),
         manifold_questions=_arg_or_preset(args, preset_defaults, "manifold_questions", None),
         max_length=_arg_or_preset(args, preset_defaults, "max_length", 64),
@@ -1056,6 +1119,18 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--sweep-band-run",
         default=None,
         help="run name from the layer-band report when model matching is ambiguous",
+    )
+    parser.add_argument(
+        "--sweep-band-expand-radius",
+        type=int,
+        default=0,
+        help="expand each report candidate layer by +/- this many hidden-state indexes",
+    )
+    parser.add_argument(
+        "--sweep-band-target-layer",
+        choices=("best", "band_best", "first"),
+        default=None,
+        help="set --layer from the selected band report run before running eval_truthfulqa.py",
     )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--manifold-questions", type=int, default=None)

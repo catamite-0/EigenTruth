@@ -639,6 +639,7 @@ python benchmarks/run_calibrated_observability_workflow.py \
   --layer -12 \
   --sweep-layers-from-band-report artifacts/truthfulqa-frontier-layer-band-selection/layer-band-comparison.json \
   --sweep-band-run qwen05-l80 \
+  --sweep-band-target-layer best \
   --layer-stats-cache artifacts/cache/qwen05-layer-stats.pt \
   --eval-reps-cache artifacts/cache/qwen05-eval-reps.pt \
   --cache-only
@@ -649,6 +650,11 @@ it automatically. Otherwise pass `--sweep-band-run`. The selected report is
 fingerprinted in the top-level manifest as `sweep_layer_band_report`, and the
 workflow report records the selected strategy, run, candidate layers, and AUROC
 regret. Explicit `--sweep-layers` remains the highest-priority layer selection.
+Use `--sweep-band-target-layer best|band_best|first` to set the primary
+`--layer` from the selected report, avoiding an extra target layer outside the
+candidate band. Use `--sweep-band-expand-radius N` to turn a sparse selected
+band into a denser local grid; for example the current Qwen l80 band `[-10,-8]`
+with radius 1 becomes `[-11,-10,-9,-8,-7]`.
 
 For larger real-model runs, pass the TruthfulQA caches through this workflow:
 `--statement-encoding-cache`, `--layer-stats-cache`, and `--eval-reps-cache`

@@ -1201,6 +1201,69 @@ def test_calibrated_observability_derives_sweep_layers_from_band_report(tmp_path
     assert manifest["metadata"]["sweep_layers_source"]["run_name"] == "synthetic-run"
 
 
+def test_calibrated_observability_expands_band_report_and_sets_target_layer(tmp_path):
+    band_report = tmp_path / "layer-band-comparison.json"
+    band_report.write_text(
+        json.dumps({
+            "workflow": "compare_layer_band_selectors",
+            "recommended_strategy": {"strategy": "spectrum_radius_1"},
+            "runs": [
+                {
+                    "name": "synthetic-run",
+                    "model": "synthetic/model",
+                    "strategy": "spectrum_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-10, -8],
+                    "candidate_layer_count": 2,
+                    "candidate_layer_fraction": 0.4,
+                    "best_layer": -10,
+                    "best_layer_in_band": True,
+                    "band_best_layer": -10,
+                    "band_best_rank": 1,
+                    "auroc_regret": 0.0,
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_calibrated_observability_workflow.py",
+            "--output-dir",
+            str(tmp_path / "workflow"),
+            "--model",
+            "synthetic/model",
+            "--layer",
+            "-12",
+            "--sweep-layers-from-band-report",
+            str(band_report),
+            "--sweep-band-expand-radius",
+            "1",
+            "--sweep-band-target-layer",
+            "best",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    truthfulqa_command = payload["execution"]["truthfulqa_command"]
+    source = payload["config"]["sweep_layers_source"]
+
+    assert payload["config"]["layer"] == -10
+    assert payload["config"]["sweep_layers"] == [-11, -10, -9, -8, -7]
+    assert source["report_candidate_layers"] == [-10, -8]
+    assert source["candidate_layers"] == [-11, -10, -9, -8, -7]
+    assert source["sweep_band_expand_radius"] == 1
+    assert source["sweep_band_target_layer"] == "best"
+    assert source["selected_target_layer"] == -10
+    assert truthfulqa_command[truthfulqa_command.index("--layer") + 1] == "-10"
+    assert "--sweep-layers=-11,-10,-9,-8,-7" in truthfulqa_command
+
+
 def test_calibrated_observability_rejects_ambiguous_band_report_without_run(tmp_path):
     module = importlib.import_module("benchmarks.run_calibrated_observability_workflow")
     band_report = tmp_path / "layer-band-comparison.json"
@@ -1241,6 +1304,15 @@ def test_calibrated_observability_rejects_ambiguous_band_report_without_run(tmp_
             model="other/a",
             sweep_layers=(-2,),
             sweep_layers_from_band_report=band_report,
+            dry_run=True,
+        )
+
+    with pytest.raises(ValueError, match="sweep_band_expand_radius"):
+        module.CalibratedObservabilityWorkflowConfig(
+            output_dir=tmp_path / "workflow",
+            model="other/a",
+            sweep_layers_from_band_report=band_report,
+            sweep_band_expand_radius=-1,
             dry_run=True,
         )
 

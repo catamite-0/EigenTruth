@@ -197,6 +197,12 @@ Wired the layer-band prior into the calibrated-observability workflow:
   strategy by default, matches the run by `--model` or explicit
   `--sweep-band-run`, and forwards the candidate layers to
   `eval_truthfulqa.py --sweep-layers`.
+- `--sweep-band-target-layer best|band_best|first` can set the primary
+  `eval_truthfulqa.py --layer` from the selected report, so the workflow does
+  not accidentally keep a target layer outside the selected band.
+- `--sweep-band-expand-radius` expands sparse candidate bands into denser local
+  grids for the next replication pass; on the current Qwen l80 report,
+  `[-10,-8]` with radius 1 becomes `[-11,-10,-9,-8,-7]`.
 - The workflow report and artifact manifest now record the source report,
   selected strategy/run, candidate layers, best-layer-in-band status, and AUROC
   regret. This makes the layer-band prior reusable while preserving calibrated
