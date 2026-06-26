@@ -1027,6 +1027,16 @@ python benchmarks/build_triple_extraction_fixture.py \
   --artifact-manifest artifacts/triple_extraction_fixture_manifest.json
 ```
 
+Use `run_triple_extraction_fixture_workflow.py` when the generated fixture should
+become release evidence. It writes the generated records, default regex
+patterns, per-extractor reports, a promotion summary, and an artifact manifest:
+
+```bash
+python benchmarks/run_triple_extraction_fixture_workflow.py \
+  --fact-corpus artifacts/wikidata-country-core-facts-qa-corpus.json \
+  --output-dir artifacts/triple-extraction-fixture-workflow
+```
+
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented
 paths improve exact F1 before the benchmark gates pass:

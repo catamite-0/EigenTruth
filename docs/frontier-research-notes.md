@@ -365,9 +365,14 @@ Added dependency-free triple extractor plug-ins and eval harness:
   corpora into larger labeled extraction fixtures and default regex templates,
   so KG-covered Wikidata/property corpora can scale the extractor benchmark
   without introducing a learned extractor dependency.
+- `benchmarks/run_triple_extraction_fixture_workflow.py` wraps that builder into
+  a release-evidence workflow: it writes generated records, pattern payloads,
+  rule-based/regex/composite reports, a promotion summary, and an artifact
+  manifest. This makes the extractor slot auditable as a benchmarked route
+  component rather than a hand-tested parser hook.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Use `build_triple_extraction_fixture.py` on the country-core Wikidata corpus and at least one domain-specific fact corpus, then compare the generated regex/composite reports against the default rule-based extractor before adding heavier extraction dependencies.
+2. Use `run_triple_extraction_fixture_workflow.py` on the country-core Wikidata corpus and at least one domain-specific fact corpus, then compare generated regex/composite reports against the default rule-based extractor before adding heavier extraction dependencies.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

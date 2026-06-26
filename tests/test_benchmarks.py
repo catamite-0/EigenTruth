@@ -181,6 +181,55 @@ def test_build_triple_extraction_fixture_from_structured_facts(tmp_path):
     assert regex["report"]["f1"] > rule_based["report"]["f1"]
 
 
+def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_workflow")
+    fact_corpus = tmp_path / "facts.json"
+    fact_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+                {
+                    "answer": "Portuguese",
+                    "metadata": {
+                        "country": "Brazil",
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                    },
+                },
+                {
+                    "answer": "yen",
+                    "metadata": {
+                        "country": "Japan",
+                        "statement_property": "P38",
+                        "statement_property_label": "currency",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    config = module.TripleExtractionFixtureWorkflowConfig(
+        fact_corpus_paths=(fact_corpus,),
+        output_dir=tmp_path / "workflow",
+    )
+
+    summary = module.run_triple_extraction_fixture_workflow(config)
+
+    assert summary["status"] == "promote"
+    assert summary["fixture_summary"]["n_records"] == 12
+    assert summary["baseline_report"]["f1"] < 1.0
+    assert summary["best_report"]["f1"] == pytest.approx(1.0)
+    assert summary["f1_lift"] > 0.0
+    assert (tmp_path / "workflow" / "artifact-manifest.json").exists()
+
+
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"
