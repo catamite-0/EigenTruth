@@ -2042,10 +2042,12 @@ To write, verify, and register that release candidate as its own manifest, use
 `--product-trace-replay-workflow`, `--feedback-policy-workflow-key`,
 `--feedback-policy-workflow`, `--feedback-policy-workflow-registry`,
 feedback-policy threshold options, `--selector-replay-report`,
-`--product-runtime-drift-report`, and `--release-efficiency-report` options and
-includes those route/workflow/feedback-policy/selector/drift/efficiency manifests in the final release-candidate manifest
-when the gate promotes. Required-route budget settings are also copied into
-manifest metadata as `required_route_budget_policy`, including
+`--product-runtime-drift-report`, `--release-efficiency-report`,
+`--adapter-family-matrix`, and `--triple-extraction-fixture-matrix` options and
+includes those route/workflow/feedback-policy/selector/drift/efficiency/adapter
+and extractor manifests in the final release-candidate manifest when the gate
+promotes. Required-route budget settings are also copied into manifest metadata
+as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
 label-free local retrieval claims.
 Use `--require-structured-fact-robustness` with
@@ -2104,6 +2106,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --adapter-family-profile strict_audit \
+  --triple-extraction-fixture-matrix artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json \
+  --min-triple-extraction-corpora 2 \
+  --min-triple-extraction-distinct-predicates 6 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \

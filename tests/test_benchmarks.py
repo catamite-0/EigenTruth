@@ -13833,6 +13833,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
         state_transition_world_model=True,
     )
+    triple_extraction_fixture_matrix_path = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "triple-extraction-fixture-matrix",
+    )
     original_sha256_file = provenance_module._sha256_file
     fingerprint_calls_by_path: dict[str, int] = {}
 
@@ -13878,6 +13881,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         adapter_family_profile="strict_audit",
         required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
         require_state_transition_world_model=True,
+        triple_extraction_fixture_matrix_path=triple_extraction_fixture_matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
         runtime_profile="balanced",
         inside_trigger_budget_policy="cost_first",
         min_best_quality_auroc=0.70,
@@ -13917,6 +13923,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "route_manifest",
         "selector_replay_manifest",
         "selfcheck_signal_fusion_workflow_manifest",
+        "triple_extraction_fixture_matrix_manifest",
+        "triple_extraction_fixture_matrix_report",
         "world_model_signal_workflow_manifest",
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
@@ -13931,6 +13939,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
     assert manifest["metadata"]["release_world_model_signal_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
+    assert manifest["metadata"]["release_triple_extraction_fixture_matrix_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
         "max_mean_attempted_route_count": 1.5,
@@ -14005,6 +14014,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert manifest["metadata"]["recommended_world_model_signal_workflow_report"] == str(
         world_model_signal_workflow_report
+    )
+    assert manifest["metadata"]["recommended_triple_extraction_fixture_matrix_report"] == str(
+        triple_extraction_fixture_matrix_path
     )
     assert manifest["metadata"]["recommended_feedback_policy_candidate_control_policy"].endswith(
         "candidate-control-policy.json"
@@ -14121,6 +14133,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert manifest["metadata"]["adapter_family_state_transition_world_model_rule_count"] == 8
     assert manifest["metadata"]["adapter_family_audit_routes"] == ["triple_evidence"]
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == str(
+        triple_extraction_fixture_matrix_path
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_manifest"].endswith(
+        "triple-extraction-fixture-matrix/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_n_corpora"] == 2
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_promoted_corpora"] == 2
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_best_f1"] == pytest.approx(1.0)
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_f1_lift"] == pytest.approx(0.5)
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_min_corpora"] == 2
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_min_distinct_predicates"] == 6
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
     assert manifest["metadata"]["required_route_baseline_manifests"] == [str(retrieval_manifest)]
     assert manifest["metadata"]["required_route_budget_policy"]["required_route_max_runtime_total_seconds"] == (
@@ -14179,6 +14205,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "state_transition",
         "triple_evidence",
     )
+    assert payload["config"]["triple_extraction_fixture_matrix"] == str(
+        triple_extraction_fixture_matrix_path
+    )
+    assert payload["config"]["min_triple_extraction_corpora"] == 2
+    assert payload["config"]["min_triple_extraction_distinct_predicates"] == 6
     assert payload["release_candidate_comparison"]["config"]["runtime_profile"] == "balanced"
     assert payload["release_candidate_comparison"]["config"]["required_route_baseline_keys"] == [
         "benchmark_manifest:retrieval-route:0.7"
@@ -14246,6 +14277,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"][
         "adapter_family_profile_requires_state_transition_world_model"
     ] is True
+    assert payload["release_candidate_comparison"]["config"]["triple_extraction_fixture_matrix"] == str(
+        triple_extraction_fixture_matrix_path
+    )
+    assert payload["release_candidate_comparison"]["config"]["min_triple_extraction_corpora"] == 2
+    assert payload["release_candidate_comparison"]["config"]["min_triple_extraction_distinct_predicates"] == 6
+    assert payload["release_candidate_comparison"]["triple_extraction_fixture_matrix_gate"][
+        "gate"
+    ]["passed"] is True
     stress_audit = payload["release_candidate_comparison"]["required_route_baseline_gate"]["rows"][0][
         "retrieval_stress_audit"
     ]
@@ -14312,6 +14351,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
     assert record.metadata["release_world_model_signal_workflow_status"] == "promote"
+    assert record.metadata["release_triple_extraction_fixture_matrix_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
     )
@@ -14358,6 +14398,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
+    assert record.metadata["triple_extraction_fixture_matrix_report"] == str(
+        triple_extraction_fixture_matrix_path
+    )
+    assert record.metadata["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert record.metadata["triple_extraction_fixture_matrix_min_distinct_predicates"] == 6
     assert record.metadata["adapter_family_profile"] == "strict_audit"
     assert record.metadata["adapter_family_profile_requires_state_transition_world_model"] is True
     assert record.metadata["required_route_baseline_records"] == [

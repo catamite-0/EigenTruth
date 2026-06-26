@@ -377,14 +377,16 @@ Added dependency-free triple extractor plug-ins and eval harness:
   promotion unless enough corpora promote and the combined fixtures meet a
   predicate-diversity floor. This is the release-evidence bridge from a local
   parser improvement to a cross-domain extractor slot.
-- `benchmarks/compare_release_candidates.py` can now require that matrix with
-  `--triple-extraction-fixture-matrix`, plus optional corpus and predicate
-  diversity floors. This moves extractor evidence from a standalone benchmark
-  into the same fail-closed release candidate gate as readiness, route,
-  selfcheck, world-model, feedback, and adapter-family evidence.
+- `benchmarks/compare_release_candidates.py` and
+  `benchmarks/run_release_candidate_registry_workflow.py` can now require that
+  matrix with `--triple-extraction-fixture-matrix`, plus optional corpus and
+  predicate diversity floors. This moves extractor evidence from a standalone
+  benchmark into the same fail-closed release candidate and registered manifest
+  gates as readiness, route, selfcheck, world-model, feedback, and
+  adapter-family evidence.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Run `run_triple_extraction_fixture_matrix.py` on the country-core Wikidata corpus and at least one non-country external fact corpus, then require that artifact in `compare_release_candidates.py` before adding those predicate aliases to structured-fact verifier routes.
+2. Run `run_triple_extraction_fixture_matrix.py` on the country-core Wikidata corpus and at least one non-country external fact corpus, then require that artifact in `run_release_candidate_registry_workflow.py` before adding those predicate aliases to structured-fact verifier routes.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

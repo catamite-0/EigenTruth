@@ -110,6 +110,11 @@ class ReleaseCandidateRegistryWorkflowConfig:
     adapter_family_profile: str | None = None
     required_adapter_routes: Sequence[str] = ()
     require_state_transition_world_model: bool = False
+    triple_extraction_fixture_matrix_path: Path | None = None
+    triple_extraction_fixture_matrix_registry_path: Path | None = None
+    triple_extraction_fixture_matrix_key: str | None = None
+    min_triple_extraction_corpora: int | None = None
+    min_triple_extraction_distinct_predicates: int | None = None
     require_performance_score_dump_cache: bool = False
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
     performance_drift_baseline_key: str | None = None
@@ -268,6 +273,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
             )
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
+        if self.triple_extraction_fixture_matrix_path is not None:
+            object.__setattr__(
+                self,
+                "triple_extraction_fixture_matrix_path",
+                Path(self.triple_extraction_fixture_matrix_path),
+            )
+        if self.triple_extraction_fixture_matrix_registry_path is not None:
+            object.__setattr__(
+                self,
+                "triple_extraction_fixture_matrix_registry_path",
+                Path(self.triple_extraction_fixture_matrix_registry_path),
+            )
         if self.retrieval_stress_manifest_path is not None:
             object.__setattr__(
                 self,
@@ -431,6 +448,15 @@ def run_release_candidate_registry_workflow(
         adapter_family_profile=config.adapter_family_profile,
         required_adapter_routes=config.required_adapter_routes,
         require_state_transition_world_model=bool(config.require_state_transition_world_model),
+        triple_extraction_fixture_matrix_path=config.triple_extraction_fixture_matrix_path,
+        triple_extraction_fixture_matrix_registry_path=(
+            config.triple_extraction_fixture_matrix_registry_path
+        ),
+        triple_extraction_fixture_matrix_key=config.triple_extraction_fixture_matrix_key,
+        min_triple_extraction_corpora=config.min_triple_extraction_corpora,
+        min_triple_extraction_distinct_predicates=(
+            config.min_triple_extraction_distinct_predicates
+        ),
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -658,6 +684,21 @@ def run_release_candidate_registry_workflow(
             ),
             "required_adapter_routes": tuple(config.required_adapter_routes),
             "require_state_transition_world_model": bool(config.require_state_transition_world_model),
+            "triple_extraction_fixture_matrix": (
+                None
+                if config.triple_extraction_fixture_matrix_path is None
+                else str(config.triple_extraction_fixture_matrix_path)
+            ),
+            "triple_extraction_fixture_matrix_registry": (
+                None
+                if config.triple_extraction_fixture_matrix_registry_path is None
+                else str(config.triple_extraction_fixture_matrix_registry_path)
+            ),
+            "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+            "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
+            "min_triple_extraction_distinct_predicates": (
+                config.min_triple_extraction_distinct_predicates
+            ),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -816,6 +857,21 @@ def _comparison_with_registry_config(
             else str(config.world_model_signal_workflow_registry_path)
         ),
         "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
+        "triple_extraction_fixture_matrix": (
+            comparison_config.get("triple_extraction_fixture_matrix")
+            if config.triple_extraction_fixture_matrix_path is None
+            else str(config.triple_extraction_fixture_matrix_path)
+        ),
+        "triple_extraction_fixture_matrix_registry": (
+            comparison_config.get("triple_extraction_fixture_matrix_registry")
+            if config.triple_extraction_fixture_matrix_registry_path is None
+            else str(config.triple_extraction_fixture_matrix_registry_path)
+        ),
+        "triple_extraction_fixture_matrix_key": config.triple_extraction_fixture_matrix_key,
+        "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
+        "min_triple_extraction_distinct_predicates": (
+            config.min_triple_extraction_distinct_predicates
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -854,6 +910,12 @@ def _write_artifact_manifest(
         or _nested(comparison, "selfcheck_signal_fusion_workflow_gate", "manifest_path"),
         "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
+        "triple_extraction_fixture_matrix_report": manifests.get(
+            "triple_extraction_fixture_matrix_report"
+        ),
+        "triple_extraction_fixture_matrix_manifest": manifests.get(
+            "triple_extraction_fixture_matrix_manifest"
+        ),
     }
     artifacts.update({
         str(name): path
@@ -930,6 +992,11 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     verifier_route = dict(candidate.get("verifier_route") or {})
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
+    triple_extraction_fixture_matrix = dict(candidate.get("triple_extraction_fixture_matrix") or {})
+    if not triple_extraction_fixture_matrix:
+        triple_extraction_fixture_matrix = dict(
+            comparison.get("triple_extraction_fixture_matrix_gate") or {}
+        )
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
     structured_fact_robustness = _structured_fact_robustness_metadata(
         config,
@@ -981,6 +1048,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             "world_model_signal_workflow_status"
         ),
         "release_adapter_family_status": decision.get("adapter_family_status"),
+        "release_triple_extraction_fixture_matrix_status": decision.get(
+            "triple_extraction_fixture_matrix_status"
+        ),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
         "release_product_trace_replay_workflow_status": decision.get(
             "product_trace_replay_workflow_status"
@@ -1008,6 +1078,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "recommended_world_model_signal_workflow_report": decision.get(
             "recommended_world_model_signal_workflow_report"
+        ),
+        "recommended_triple_extraction_fixture_matrix_report": decision.get(
+            "recommended_triple_extraction_fixture_matrix_report"
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
             "recommended_selfcheck_signal_fusion_workflow_report"
@@ -1335,6 +1408,40 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "adapter_family_state_transition_world_model_rule_count": adapter_family.get(
             "state_transition_world_model_rule_count"
         ),
+        "triple_extraction_fixture_matrix_report": triple_extraction_fixture_matrix.get("report_path"),
+        "triple_extraction_fixture_matrix_manifest": (
+            manifests.get("triple_extraction_fixture_matrix_manifest")
+            or triple_extraction_fixture_matrix.get("manifest_path")
+        ),
+        "triple_extraction_fixture_matrix_source": triple_extraction_fixture_matrix.get("source"),
+        "triple_extraction_fixture_matrix_registry": triple_extraction_fixture_matrix.get("registry"),
+        "triple_extraction_fixture_matrix_record": triple_extraction_fixture_matrix.get("record_key"),
+        "triple_extraction_fixture_matrix_status": triple_extraction_fixture_matrix.get("status")
+        or triple_extraction_fixture_matrix.get("report_status"),
+        "triple_extraction_fixture_matrix_n_corpora": (
+            triple_extraction_fixture_matrix.get("n_corpora")
+        ),
+        "triple_extraction_fixture_matrix_promoted_corpora": (
+            triple_extraction_fixture_matrix.get("promoted_corpora")
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicate_count": (
+            triple_extraction_fixture_matrix.get("distinct_predicate_count")
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicates": (
+            triple_extraction_fixture_matrix.get("distinct_predicates")
+        ),
+        "triple_extraction_fixture_matrix_mean_best_f1": (
+            triple_extraction_fixture_matrix.get("mean_best_f1")
+        ),
+        "triple_extraction_fixture_matrix_mean_f1_lift": (
+            triple_extraction_fixture_matrix.get("mean_f1_lift")
+        ),
+        "triple_extraction_fixture_matrix_min_corpora": config.get(
+            "min_triple_extraction_corpora"
+        ),
+        "triple_extraction_fixture_matrix_min_distinct_predicates": config.get(
+            "min_triple_extraction_distinct_predicates"
+        ),
         "required_route_baseline_registry": required_route_baselines.get("registry"),
         "required_route_baseline_routes": required_route_baselines.get("routes"),
         "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
@@ -1614,6 +1721,19 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_state_transition_world_model=bool(args.require_state_transition_world_model),
+        triple_extraction_fixture_matrix_path=(
+            None
+            if args.triple_extraction_fixture_matrix is None
+            else Path(args.triple_extraction_fixture_matrix)
+        ),
+        triple_extraction_fixture_matrix_registry_path=(
+            None
+            if args.triple_extraction_fixture_matrix_registry is None
+            else Path(args.triple_extraction_fixture_matrix_registry)
+        ),
+        triple_extraction_fixture_matrix_key=args.triple_extraction_fixture_matrix_key,
+        min_triple_extraction_corpora=args.min_triple_extraction_corpora,
+        min_triple_extraction_distinct_predicates=args.min_triple_extraction_distinct_predicates,
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1821,6 +1941,25 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-state-transition-world-model", action="store_true",
                         help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
                              "with at least one rule; enabled automatically by strict_audit")
+    parser.add_argument("--triple-extraction-fixture-matrix", default=None,
+                        help="optional triple-extraction fixture matrix report that must promote and verify")
+    parser.add_argument("--triple-extraction-fixture-matrix-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--triple-extraction-fixture-matrix-key; defaults to --readiness-registry")
+    parser.add_argument("--triple-extraction-fixture-matrix-key", default=None,
+                        help="optional report:<name>:<version> registry key for a triple-extraction matrix")
+    parser.add_argument("--min-triple-extraction-corpora", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-triple-extraction-corpora",
+    ), default=None,
+                        help="optional minimum corpus count and promoted corpus count for the "
+                             "triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-distinct-predicates",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-distinct-predicates",
+                        ), default=None,
+                        help="optional minimum distinct predicate count for the triple-extraction fixture matrix")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")
