@@ -919,6 +919,50 @@ def test_calibrated_control_demo_applies_promotion_contract_control_policy(tmp_p
     ] == "promote_candidate_policy"
 
 
+def test_calibrated_control_demo_can_enforce_claim_coherence():
+    demo = importlib.import_module("examples.calibrated_control_demo")
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="The trial was randomized. Therefore the treatment is proven effective.",
+            facts='{"Therefore the treatment is proven effective": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile="audit",
+            staged_verification=None,
+            runtime_trace=True,
+            enforce_claim_coherence=True,
+            request_id="test-claim-coherence-demo",
+            output=None,
+            registry=None,
+        )
+    )
+
+    coherence = payload["metadata"]["claim_coherence"]
+    event_types = {event["event_type"] for event in payload["events"]}
+
+    assert payload["metadata"]["claim_coherence_requested"] is True
+    assert coherence["enabled"] is True
+    assert coherence["dependency_count"] == 1
+    assert coherence["blocked_claim_ids"] == ("c2",)
+    assert payload["verification_results"][1]["status"] == "insufficient_evidence"
+    assert payload["verification_results"][1]["metadata"]["claim_coherence"] == {
+        "blocked": True,
+        "original_status": "supported",
+        "parent_id": "c1",
+        "parent_status": "insufficient_evidence",
+        "relation": "discourse_marker",
+    }
+    assert payload["risk_decision"]["action"] == "retrieve"
+    assert payload["final_answer"]["status"] == "needs_retrieval"
+    assert "initial_claim_coherence" in event_types
+
+
 def test_calibrated_control_demo_can_use_default_structured_retrieval_audit_contract_budget():
     demo = importlib.import_module("examples.calibrated_control_demo")
     contract_path = demo.default_promotion_contract_path()

@@ -129,6 +129,10 @@ the default runtime profile; the trace records this as
 If the same contract carries feedback-policy evidence, the demo also passes its
 validated `control_policy_config` into `RiskController` and records
 `metadata.control_policy_source` plus `metadata.effective_control_policy_config`.
+Pass `--enforce-claim-coherence` when generated conclusions should remain
+unsupported unless inferred or metadata-declared parent claims are also
+supported; the trace records `metadata.claim_coherence` and
+`initial_claim_coherence` events.
 
 By default, `ProductTrace.runtime_trace` also records request phase timings for
 diagnostics, verification, action planning/execution, retrieval evidence
@@ -149,6 +153,11 @@ and cache hit rates:
 python examples/calibrated_control_demo.py --runtime-profile balanced
 python examples/calibrated_control_demo.py --bounded-trace --compact-json
 python examples/calibrated_control_demo.py --runtime-profile audit
+python examples/calibrated_control_demo.py \
+  --runtime-profile audit \
+  --enforce-claim-coherence \
+  --text "The trial was randomized. Therefore the treatment is proven effective." \
+  --facts '{"Therefore the treatment is proven effective": "supported"}'
 python examples/calibrated_control_demo.py \
   --max-runtime-total-seconds 1.0 \
   --max-runtime-phase-seconds '{"initial_verification": 0.5}'

@@ -983,6 +983,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         context=calculator_context,
         stage_policy=stage_policy,
         profile_runtime=getattr(args, "runtime_trace", True),
+        enforce_claim_coherence=bool(getattr(args, "enforce_claim_coherence", False)),
         metadata={
             "artifact_model_id": artifact.model_id,
             "artifact_source": artifact_source(args.artifact),
@@ -1008,6 +1009,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 None if control_policy_config is None else control_policy_config.to_dict()
             ),
             "control_policy_source": control_policy_source,
+            "claim_coherence_requested": bool(getattr(args, "enforce_claim_coherence", False)),
             "effective_control_defaults": runtime_control_defaults,
             "max_verifier_route_attempts": max_verifier_route_attempts,
             "verifier_type": type(verifier).__name__,
@@ -1110,6 +1112,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                     None if control_policy_config is None else control_policy_config.to_dict()
                 ),
                 "control_policy_source": control_policy_source,
+                "claim_coherence_requested": bool(getattr(args, "enforce_claim_coherence", False)),
+                "claim_coherence": payload["metadata"].get("claim_coherence"),
                 "effective_control_defaults": runtime_control_defaults,
                 "max_verifier_route_attempts": max_verifier_route_attempts,
                 "action_execution_summary": trace.action_execution_summary(),
@@ -1161,6 +1165,8 @@ def main() -> None:
                         help="force staged verification even without a runtime profile")
     parser.add_argument("--no-staged-verification", dest="staged_verification", action="store_false",
                         help="force full initial verification even when a runtime profile enables staging")
+    parser.add_argument("--enforce-claim-coherence", action="store_true",
+                        help="downgrade supported child claims when dependency claims are missing or unsupported")
     parser.add_argument("--no-runtime-trace", dest="runtime_trace", action="store_false",
                         default=True,
                         help="omit runtime phase timings from ProductTrace output")
