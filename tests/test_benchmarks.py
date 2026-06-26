@@ -3273,6 +3273,123 @@ def test_build_wikidata_qa_corpus_supports_multiple_property_templates(tmp_path)
     assert corpus["input_provenance"]["config"]["templates"][2]["answer_field"] == "currency"
 
 
+def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
+    module = importlib.import_module("benchmarks.run_wikidata_structured_qa_route_workflow")
+    qa_path = tmp_path / "wikidata-qa-corpus.json"
+    output_dir = tmp_path / "workflow"
+    qa_path.write_text(
+        json.dumps({
+            "corpus_type": "structured_qa_external_evidence",
+            "source": {"provider": "wikidata"},
+            "documents": [
+                {
+                    "question": "What is the capital of France?",
+                    "answer": "Paris",
+                    "source": "wikidata:Q142:P36:Q90",
+                    "metadata": {
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                        "country": "France",
+                    },
+                },
+                {
+                    "question": "What is the capital of Japan?",
+                    "answer": "Tokyo",
+                    "source": "wikidata:Q17:P36:Q1490",
+                    "metadata": {
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                        "country": "Japan",
+                    },
+                },
+                {
+                    "question": "What is an official language of Belgium?",
+                    "answer": "Dutch",
+                    "source": "wikidata:Q31:P37:Q7411",
+                    "metadata": {
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                        "country": "Belgium",
+                    },
+                },
+                {
+                    "question": "What is an official language of Belgium?",
+                    "answer": "French",
+                    "source": "wikidata:Q31:P37:Q150",
+                    "metadata": {
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                        "country": "Belgium",
+                    },
+                },
+                {
+                    "question": "What is an official language of Germany?",
+                    "answer": "German",
+                    "source": "wikidata:Q183:P37:Q188",
+                    "metadata": {
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                        "country": "Germany",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    summary = module.run(
+        SimpleNamespace(
+            qa_corpus=str(qa_path),
+            output_dir=str(output_dir),
+            score_name="wikidata-covered-facts",
+            signal="truth_proj",
+            alpha=0.2,
+            seed=0,
+            limit=None,
+            score_dump_json=None,
+            verifier_report_json=None,
+            verified_records_jsonl=None,
+            artifact_manifest=None,
+            json=None,
+            compact_json=False,
+        )
+    )
+    score_dump = json.loads((output_dir / "covered-facts-scores.json").read_text(encoding="utf-8"))
+    report = json.loads((output_dir / "structured-qa-verifier-report.json").read_text(encoding="utf-8"))
+    manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    belgium_known = {
+        statement["answer"]
+        for statement in score_dump["statements"]
+        if statement["question"] == "What is an official language of Belgium?"
+        and statement["metadata"]["label_generation"] == "wikidata_known_answer"
+    }
+    belgium_false = [
+        statement["answer"]
+        for statement in score_dump["statements"]
+        if statement["question"] == "What is an official language of Belgium?"
+        and statement["metadata"]["label_generation"] == "wikidata_known_answer_mismatch"
+    ]
+
+    assert summary["status"] == "promote"
+    assert summary["selected_route_counts"] == {"structured_qa": 10}
+    assert summary["structured_qa_metrics"]["decision_accuracy"] == pytest.approx(1.0)
+    assert summary["structured_qa_metrics"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert summary["structured_qa_metrics"]["false_supported_rate"] == pytest.approx(0.0)
+    assert score_dump["summary"] == {
+        "n_false": 5,
+        "n_records": 10,
+        "n_skipped_false_answer": 0,
+        "n_source_documents": 5,
+        "n_true": 5,
+    }
+    assert belgium_known == {"Dutch", "French"}
+    assert belgium_false
+    assert all(answer not in belgium_known for answer in belgium_false)
+    assert report["qa_verifier"]["enabled"] is True
+    assert manifest["metadata"]["promotes_covered_facts_route"] is True
+    assert (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").count("\n") == 10
+
+
 def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):
     builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
     source_path = tmp_path / "bad-reference.json"

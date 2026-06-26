@@ -172,6 +172,13 @@ Added a retrieval corpus provenance audit gate:
   This lets covered statements be supported or refuted by exact structured
   values through the existing `retrieval_structured_qa` route, while preserving
   the earlier blocked result for open-domain TruthfulQA coverage.
+- `run_wikidata_structured_qa_route_workflow.py` turns that QA corpus into a
+  covered-facts route benchmark. The current `P36`/`P37`/`P38` artifact builds a
+  balanced `718`-row true/false score dump, selects `structured_qa` for all
+  rows, supports all `359` true facts, refutes all `359` swapped-answer false
+  facts, and records decision accuracy `1.0` with false-supported rate `0.0`.
+  This promotes structured QA as the correction route for KG-covered facts, not
+  as evidence of broad open-domain retrieval coverage.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

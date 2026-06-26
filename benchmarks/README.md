@@ -2567,6 +2567,32 @@ is a structured knowledge-graph bridge: it can support correct values and refute
 wrong values for covered properties, but it does not broaden the Wikidata source
 coverage by itself.
 
+## `run_wikidata_structured_qa_route_workflow.py`
+
+Builds a covered-facts structured QA route benchmark from a Wikidata QA corpus.
+The workflow creates a balanced score dump with one true row per known
+question/answer and one false row per question by swapping in an answer from a
+different question while avoiding known same-question answers. It then runs the
+existing verifier ensemble with `--qa-corpus`, writes per-record verifier traces,
+and emits a route summary plus artifact manifest.
+
+```bash
+python benchmarks/run_wikidata_structured_qa_route_workflow.py \
+  --qa-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
+  --output-dir artifacts/wikidata-country-core-facts-structured-qa-route \
+  --score-name wikidata-country-core-facts-structured-qa \
+  --alpha 0.10 \
+  --compact-json
+```
+
+The current covered-facts artifact promotes the structured QA route for exactly
+the properties present in the source corpus: `718` rows from `359` Wikidata
+`P36`/`P37`/`P38` facts, selected route `structured_qa` for all rows, `359`
+supported true facts, `359` refuted swapped-answer false facts, decision accuracy
+`1.0`, and false-supported rate `0.0`. The scope is intentionally narrow:
+structured QA is the property-level correction path for covered facts, while
+lexical retrieval remains gated separately for broad open-domain coverage.
+
 ## `analyze_retrieval_route_gaps.py`
 
 Explains blocked retrieval routes from `eval_verifier_ensemble.py
