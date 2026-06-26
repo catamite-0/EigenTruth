@@ -208,6 +208,19 @@ Wired the layer-band prior into the calibrated-observability workflow:
   regret. This makes the layer-band prior reusable while preserving calibrated
   sweep and conformal artifact generation as the decision point.
 
+Wired the same layer-band prior into the multi-model frontier workflow:
+
+- `run_truthfulqa_frontier_workflow.py --sweep-layers-from-band-report` now
+  passes the selector report to each calibrated-observability cell, with
+  `--sweep-band-run-template` defaulting to `{cell}` so rows like `qwen05-l80`
+  and `smollm2-l80` resolve independently.
+- `--sweep-band-scales` keeps a report scoped to the intended scale, and
+  `--sweep-band-expand-radius` / `--sweep-band-target-layer` are forwarded to
+  every selected cell.
+- A dry-run against the current l80 artifact resolves Qwen to target layer `-10`
+  with dense sweep `[-11,-10,-9,-8,-7]`, and SmolLM2 to target layer `-16`
+  with dense sweep `[-17,-16,-15,-14,-13]`.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.

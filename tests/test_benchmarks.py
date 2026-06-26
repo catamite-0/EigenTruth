@@ -1388,6 +1388,94 @@ def test_truthfulqa_frontier_workflow_dry_run_writes_multicell_plan(tmp_path):
     assert manifest["summary"]["missing_count"] > 0
 
 
+def test_truthfulqa_frontier_workflow_uses_layer_band_report_per_cell(tmp_path):
+    band_report = tmp_path / "layer-band-comparison.json"
+    band_report.write_text(
+        json.dumps({
+            "workflow": "compare_layer_band_selectors",
+            "recommended_strategy": {"strategy": "spectrum_radius_1"},
+            "runs": [
+                {
+                    "name": "qwen-l4",
+                    "model": "synthetic/qwen",
+                    "strategy": "spectrum_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-10, -8],
+                    "best_layer": -10,
+                    "best_layer_in_band": True,
+                    "band_best_layer": -10,
+                    "band_best_rank": 1,
+                    "auroc_regret": 0.0,
+                },
+                {
+                    "name": "smol-l4",
+                    "model": "synthetic/smol",
+                    "strategy": "spectrum_radius_1",
+                    "matched": True,
+                    "candidate_layers": [-16, -14],
+                    "best_layer": -16,
+                    "best_layer_in_band": True,
+                    "band_best_layer": -16,
+                    "band_best_rank": 1,
+                    "auroc_regret": 0.0,
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            "benchmarks/run_truthfulqa_frontier_workflow.py",
+            "--output-dir",
+            str(tmp_path / "frontier"),
+            "--model",
+            "qwen=synthetic/qwen",
+            "--model",
+            "smol=synthetic/smol",
+            "--scale",
+            "l4=4:2:-12:-12,-10,-8",
+            "--sweep-layers-from-band-report",
+            str(band_report),
+            "--sweep-band-expand-radius",
+            "1",
+            "--sweep-band-target-layer",
+            "best",
+            "--signals",
+            "truth_proj,maha_last",
+            "--conformal-signal",
+            "truth_proj",
+            "--conformal-repeats",
+            "1",
+            "--ensemble-repeats",
+            "1",
+            "--dry-run",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    payload = json.loads(result.stdout)
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    cells = {cell["name"]: cell for cell in payload["cells"]}
+    qwen_workflow = json.loads(Path(cells["qwen-l4"]["workflow_report"]).read_text(encoding="utf-8"))
+    smol_workflow = json.loads(Path(cells["smol-l4"]["workflow_report"]).read_text(encoding="utf-8"))
+
+    assert payload["config"]["sweep_layers_from_band_report"] == str(band_report)
+    assert payload["config"]["sweep_band_run_template"] == "{cell}"
+    assert cells["qwen-l4"]["scale"]["resolved_layer"] == -10
+    assert cells["qwen-l4"]["scale"]["resolved_sweep_layers"] == [-11, -10, -9, -8, -7]
+    assert cells["qwen-l4"]["scale"]["sweep_layers_source"]["run_name"] == "qwen-l4"
+    assert cells["smol-l4"]["scale"]["resolved_layer"] == -16
+    assert cells["smol-l4"]["scale"]["resolved_sweep_layers"] == [-17, -16, -15, -14, -13]
+    assert cells["smol-l4"]["scale"]["sweep_layers_source"]["run_name"] == "smol-l4"
+    assert "--sweep-layers=-11,-10,-9,-8,-7" in qwen_workflow["execution"]["truthfulqa_command"]
+    assert "--sweep-layers=-17,-16,-15,-14,-13" in smol_workflow["execution"]["truthfulqa_command"]
+    assert manifest["artifacts"]["sweep_layer_band_report"]["exists"] is True
+    assert manifest["metadata"]["sweep_band_expand_radius"] == 1
+    assert manifest["metadata"]["sweep_band_target_layer"] == "best"
+
+
 def test_truthfulqa_frontier_workflow_rejects_refresh_caches_without_cache_dir(tmp_path):
     module = importlib.import_module("benchmarks.run_truthfulqa_frontier_workflow")
 

@@ -702,6 +702,30 @@ stable per-cell `statement-encodings.json`, `layer-stats.pt`, `eval-reps-cache`,
 and warmup checkpoint paths; use `--refresh-caches` only for the first cache
 build or when changing cache-defining model/data/layer parameters.
 
+When a layer-band selector report should drive several frontier cells, pass the
+same report to the frontier workflow and let each cell match its own run name:
+
+```bash
+python benchmarks/run_truthfulqa_frontier_workflow.py \
+  --output-dir artifacts/truthfulqa-frontier-qwen-smollm2-l80-dense-band \
+  --model qwen05=Qwen/Qwen2.5-0.5B-Instruct \
+  --model smollm2=HuggingFaceTB/SmolLM2-135M-Instruct \
+  --scale l80=80:80:-12:-16,-14,-12,-10,-8 \
+  --sweep-layers-from-band-report artifacts/truthfulqa-frontier-layer-band-selection/layer-band-comparison.json \
+  --sweep-band-scales l80 \
+  --sweep-band-expand-radius 1 \
+  --sweep-band-target-layer best \
+  --cache-dir artifacts/cache/truthfulqa-frontier-qwen-smollm2 \
+  --signals truth_proj,maha_last,subspace_resid,resid_update_norm,eigenscore
+```
+
+The default band-report run template is `{cell}`, so `qwen05-l80` and
+`smollm2-l80` select their corresponding report rows. Use
+`--sweep-band-run-template` when the report uses another naming convention, and
+use `--sweep-band-scales` when only selected scales should consume the band
+report. The top-level report records each cell's resolved target layer,
+resolved dense sweep layers, and source report run.
+
 ## `eval_frontier_stability.py`
 
 Replays existing frontier score dumps across several split-conformal seeds

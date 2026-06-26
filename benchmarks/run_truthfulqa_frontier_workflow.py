@@ -111,6 +111,12 @@ class TruthfulQAFrontierWorkflowConfig:
     name: str | None = None
     version: str | None = None
     cache_dir: Path | None = None
+    sweep_layers_from_band_report: Path | None = None
+    sweep_band_strategy: str | None = None
+    sweep_band_expand_radius: int = 0
+    sweep_band_target_layer: str | None = None
+    sweep_band_run_template: str = "{cell}"
+    sweep_band_scales: Sequence[str] = ()
     dtype: str = "float32"
     batch_size: int = 4
     max_batch_tokens: int = 0
@@ -149,6 +155,8 @@ class TruthfulQAFrontierWorkflowConfig:
             object.__setattr__(self, "registry_path", Path(self.registry_path))
         if self.cache_dir is not None:
             object.__setattr__(self, "cache_dir", Path(self.cache_dir))
+        if self.sweep_layers_from_band_report is not None:
+            object.__setattr__(self, "sweep_layers_from_band_report", Path(self.sweep_layers_from_band_report))
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
         models = tuple(self.models)
@@ -175,6 +183,8 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("eval_reps_cache_shard_size must be >=0.")
         if int(self.eval_reps_shard_read_cache_size) < 1:
             raise ValueError("eval_reps_shard_read_cache_size must be >=1.")
+        if int(self.sweep_band_expand_radius) < 0:
+            raise ValueError("sweep_band_expand_radius must be >=0.")
         if int(self.conformal_repeats) < 1 or int(self.ensemble_repeats) < 1:
             raise ValueError("repeats must be >=1.")
         if self.cache_only and self.cache_dir is None:
@@ -191,7 +201,14 @@ class TruthfulQAFrontierWorkflowConfig:
             raise ValueError("dump_scores_format must be one of: json, jsonl.")
         if self.best_by not in {"auroc", "detection"}:
             raise ValueError("best_by must be one of: auroc, detection.")
+        if self.sweep_band_target_layer not in {None, "best", "band_best", "first"}:
+            raise ValueError("sweep_band_target_layer must be one of: best, band_best, first.")
         signals = tuple(str(signal).strip() for signal in self.signals if str(signal).strip())
+        sweep_band_scales = tuple(str(scale).strip() for scale in self.sweep_band_scales if str(scale).strip())
+        if self.sweep_layers_from_band_report is not None:
+            missing_scales = sorted(set(sweep_band_scales) - {scale.name for scale in scales})
+            if missing_scales:
+                raise ValueError(f"sweep_band_scales contains unknown scale names: {', '.join(missing_scales)}")
         conformal_signal = str(self.conformal_signal).strip()
         methods = tuple(str(method) for method in self.ensemble_methods if str(method))
         alphas = tuple(float(alpha) for alpha in self.alphas)
@@ -208,6 +225,13 @@ class TruthfulQAFrontierWorkflowConfig:
         object.__setattr__(self, "models", models)
         object.__setattr__(self, "scales", scales)
         object.__setattr__(self, "signals", signals)
+        object.__setattr__(self, "sweep_band_scales", sweep_band_scales)
+        object.__setattr__(self, "sweep_band_expand_radius", int(self.sweep_band_expand_radius))
+        if self.sweep_band_strategy is not None:
+            object.__setattr__(self, "sweep_band_strategy", str(self.sweep_band_strategy))
+        if self.sweep_band_target_layer is not None:
+            object.__setattr__(self, "sweep_band_target_layer", str(self.sweep_band_target_layer))
+        object.__setattr__(self, "sweep_band_run_template", str(self.sweep_band_run_template))
         object.__setattr__(self, "conformal_signal", conformal_signal)
         object.__setattr__(self, "ensemble_methods", methods)
         object.__setattr__(self, "alphas", alphas)
@@ -309,13 +333,22 @@ def _cell_config(
     scale: ScaleSpec,
     cell_dir: Path,
 ) -> CalibratedObservabilityWorkflowConfig:
+    cell_name = f"{model.name}-{scale.name}"
+    band_report = config.sweep_layers_from_band_report if _cell_uses_band_report(config, scale=scale) else None
     return CalibratedObservabilityWorkflowConfig(
         output_dir=cell_dir,
         model=model.model_id,
         dtype=config.dtype,
         layer=scale.layer,
         sweep=True,
-        sweep_layers=scale.sweep_layers,
+        sweep_layers=() if band_report is not None else scale.sweep_layers,
+        sweep_layers_from_band_report=band_report,
+        sweep_band_strategy=config.sweep_band_strategy,
+        sweep_band_run=(
+            None if band_report is None else _format_sweep_band_run_template(config, model=model, scale=scale)
+        ),
+        sweep_band_expand_radius=config.sweep_band_expand_radius,
+        sweep_band_target_layer=config.sweep_band_target_layer,
         limit=scale.limit,
         manifold_questions=scale.manifold_questions,
         max_length=config.max_length,
@@ -329,7 +362,7 @@ def _cell_config(
         offline=config.offline,
         auto_batch_size=config.auto_batch_size,
         cache_only=config.cache_only,
-        **_cell_cache_config(config, cell_name=f"{model.name}-{scale.name}"),
+        **_cell_cache_config(config, cell_name=cell_name),
         dump_scores_format=config.dump_scores_format,
         refresh_scores=config.refresh_scores,
         signals=config.signals,
@@ -361,6 +394,9 @@ def _cell_summary(
             "manifold_questions": scale.manifold_questions,
             "layer": scale.layer,
             "sweep_layers": tuple(scale.sweep_layers),
+            "resolved_layer": _nested(report, "config", "layer"),
+            "resolved_sweep_layers": _nested(report, "config", "sweep_layers"),
+            "sweep_layers_source": _nested(report, "config", "sweep_layers_source"),
         },
         "status": report.get("status"),
         "workflow_report": _nested(report, "paths", "workflow_report"),
@@ -374,6 +410,32 @@ def _cell_summary(
             "detection": calibration.get("best_detection"),
         },
     }
+
+
+def _cell_uses_band_report(config: TruthfulQAFrontierWorkflowConfig, *, scale: ScaleSpec) -> bool:
+    if config.sweep_layers_from_band_report is None:
+        return False
+    if not config.sweep_band_scales:
+        return True
+    return scale.name in set(config.sweep_band_scales)
+
+
+def _format_sweep_band_run_template(
+    config: TruthfulQAFrontierWorkflowConfig,
+    *,
+    model: ModelSpec,
+    scale: ScaleSpec,
+) -> str:
+    cell_name = f"{model.name}-{scale.name}"
+    try:
+        return config.sweep_band_run_template.format(
+            cell=cell_name,
+            model=model.name,
+            model_id=model.model_id,
+            scale=scale.name,
+        )
+    except KeyError as exc:
+        raise ValueError(f"unknown sweep band run template key: {exc.args[0]}") from exc
 
 
 def _workflow_status(
@@ -419,6 +481,8 @@ def _artifact_paths(
         "workflow_report": config.report_path,
         "score_ensemble_report": config.ensemble_report_path,
     }
+    if config.sweep_layers_from_band_report is not None:
+        artifacts["sweep_layer_band_report"] = config.sweep_layers_from_band_report
     for cell in cell_reports:
         name = str(cell["name"])
         artifacts[f"cells.{name}.workflow_report"] = cell.get("workflow_report")
@@ -444,6 +508,12 @@ def _write_artifact_manifest(
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
             "ensemble_methods": tuple(config.ensemble_methods),
+            "sweep_layers_from_band_report": (
+                None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
+            ),
+            "sweep_band_scales": tuple(config.sweep_band_scales),
+            "sweep_band_expand_radius": config.sweep_band_expand_radius,
+            "sweep_band_target_layer": config.sweep_band_target_layer,
         },
     )
     config.artifact_manifest_path.write_text(
@@ -469,6 +539,10 @@ def _record_registry(config: TruthfulQAFrontierWorkflowConfig, report: Mapping[s
             "models": tuple(model.name for model in config.models),
             "scales": tuple(scale.name for scale in config.scales),
             "signals": tuple(config.signals),
+            "sweep_layers_from_band_report": (
+                None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
+            ),
+            "sweep_band_scales": tuple(config.sweep_band_scales),
         },
     )
     registry.save_json()
@@ -497,6 +571,14 @@ def _config_payload(config: TruthfulQAFrontierWorkflowConfig) -> dict[str, Any]:
         "auto_batch_size": config.auto_batch_size,
         "cache_only": config.cache_only,
         "cache_dir": None if config.cache_dir is None else str(config.cache_dir),
+        "sweep_layers_from_band_report": (
+            None if config.sweep_layers_from_band_report is None else str(config.sweep_layers_from_band_report)
+        ),
+        "sweep_band_strategy": config.sweep_band_strategy,
+        "sweep_band_expand_radius": config.sweep_band_expand_radius,
+        "sweep_band_target_layer": config.sweep_band_target_layer,
+        "sweep_band_run_template": config.sweep_band_run_template,
+        "sweep_band_scales": tuple(config.sweep_band_scales),
         "refresh_caches": config.refresh_caches,
         "warmup_checkpoint_every": config.warmup_checkpoint_every,
         "eval_reps_cache_shard_size": config.eval_reps_cache_shard_size,
@@ -597,6 +679,16 @@ def _config_from_args(args: argparse.Namespace) -> TruthfulQAFrontierWorkflowCon
         name=args.name,
         version=args.version,
         cache_dir=Path(args.cache_dir) if args.cache_dir else None,
+        sweep_layers_from_band_report=(
+            Path(args.sweep_layers_from_band_report) if args.sweep_layers_from_band_report else None
+        ),
+        sweep_band_strategy=args.sweep_band_strategy,
+        sweep_band_expand_radius=args.sweep_band_expand_radius,
+        sweep_band_target_layer=args.sweep_band_target_layer,
+        sweep_band_run_template=args.sweep_band_run_template,
+        sweep_band_scales=_parse_csv(args.sweep_band_scales, name="--sweep-band-scales")
+        if args.sweep_band_scales
+        else (),
         dtype=args.dtype,
         batch_size=args.batch_size,
         max_batch_tokens=args.max_batch_tokens,
@@ -655,6 +747,38 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--version", default=None)
     parser.add_argument("--cache-dir", default=None,
                         help="optional root for per-cell statement/layer/eval cache artifacts")
+    parser.add_argument(
+        "--sweep-layers-from-band-report",
+        default=None,
+        help="optional compare_layer_band_selectors.py report used to derive per-cell sweep layers",
+    )
+    parser.add_argument(
+        "--sweep-band-strategy",
+        default=None,
+        help="strategy name from the layer-band report; defaults to the report recommended_strategy",
+    )
+    parser.add_argument(
+        "--sweep-band-expand-radius",
+        type=int,
+        default=0,
+        help="expand each selected candidate layer by +/- this many hidden-state indexes",
+    )
+    parser.add_argument(
+        "--sweep-band-target-layer",
+        choices=("best", "band_best", "first"),
+        default=None,
+        help="set each cell target --layer from the selected layer-band report run",
+    )
+    parser.add_argument(
+        "--sweep-band-run-template",
+        default="{cell}",
+        help="format string for matching report run names; keys: cell, model, model_id, scale",
+    )
+    parser.add_argument(
+        "--sweep-band-scales",
+        default=None,
+        help="comma-list of scale names that should use the layer-band report; default applies to all scales",
+    )
     parser.add_argument("--dtype", default="float32")
     parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--max-batch-tokens", type=int, default=0)
