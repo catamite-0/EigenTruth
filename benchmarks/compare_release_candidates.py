@@ -141,6 +141,10 @@ def compare_release_candidates(
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
+    require_retrieval_provenance_filter: bool = False,
+    required_retrieval_source_prefixes: Sequence[str] = (),
+    required_retrieval_metadata: Mapping[str, Any] | None = None,
+    min_retrieval_filter_score: float | None = None,
     require_retrieval_stress_control: bool = False,
     retrieval_stress_manifest: str | Path | None = None,
     min_stress_false_supported_rate: float | None = None,
@@ -161,6 +165,10 @@ def compare_release_candidates(
     required_route_min_claims_cache_hit_rate: float | None = None,
     required_route_min_verifier_trace_cache_hit_rate: float | None = None,
     required_route_require_non_oracle_evidence: bool = False,
+    required_route_require_retrieval_provenance_filter: bool = False,
+    required_route_required_retrieval_source_prefixes: Sequence[str] = (),
+    required_route_required_retrieval_metadata: Mapping[str, Any] | None = None,
+    required_route_min_retrieval_filter_score: float | None = None,
     required_route_require_retrieval_stress_control: bool = False,
     required_route_retrieval_stress_manifest: str | Path | None = None,
     required_route_min_stress_false_supported_rate: float | None = None,
@@ -468,6 +476,10 @@ def compare_release_candidates(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
+        require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+        required_retrieval_source_prefixes=required_retrieval_source_prefixes,
+        required_retrieval_metadata=required_retrieval_metadata,
+        min_retrieval_filter_score=min_retrieval_filter_score,
         require_retrieval_stress_control=require_retrieval_stress_control,
         retrieval_stress_manifest=retrieval_stress_manifest,
         min_stress_false_supported_rate=min_stress_false_supported_rate,
@@ -499,6 +511,10 @@ def compare_release_candidates(
         min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=required_route_require_non_oracle_evidence,
+        require_retrieval_provenance_filter=required_route_require_retrieval_provenance_filter,
+        required_retrieval_source_prefixes=required_route_required_retrieval_source_prefixes,
+        required_retrieval_metadata=required_route_required_retrieval_metadata,
+        min_retrieval_filter_score=required_route_min_retrieval_filter_score,
         require_retrieval_stress_control=required_route_require_retrieval_stress_control,
         retrieval_stress_manifest=required_route_retrieval_stress_manifest,
         min_stress_false_supported_rate=required_route_min_stress_false_supported_rate,
@@ -815,6 +831,10 @@ def compare_release_candidates(
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
+            "require_retrieval_provenance_filter": require_retrieval_provenance_filter,
+            "required_retrieval_source_prefixes": list(required_retrieval_source_prefixes),
+            "required_retrieval_metadata": dict(required_retrieval_metadata or {}),
+            "min_retrieval_filter_score": min_retrieval_filter_score,
             "require_retrieval_stress_control": require_retrieval_stress_control,
             "retrieval_stress_manifest": None if retrieval_stress_manifest is None else str(retrieval_stress_manifest),
             "min_stress_false_supported_rate": min_stress_false_supported_rate,
@@ -835,6 +855,16 @@ def compare_release_candidates(
             "required_route_min_claims_cache_hit_rate": required_route_min_claims_cache_hit_rate,
             "required_route_min_verifier_trace_cache_hit_rate": required_route_min_verifier_trace_cache_hit_rate,
             "required_route_require_non_oracle_evidence": required_route_require_non_oracle_evidence,
+            "required_route_require_retrieval_provenance_filter": (
+                required_route_require_retrieval_provenance_filter
+            ),
+            "required_route_required_retrieval_source_prefixes": list(
+                required_route_required_retrieval_source_prefixes
+            ),
+            "required_route_required_retrieval_metadata": dict(
+                required_route_required_retrieval_metadata or {}
+            ),
+            "required_route_min_retrieval_filter_score": required_route_min_retrieval_filter_score,
             "required_route_require_retrieval_stress_control": required_route_require_retrieval_stress_control,
             "required_route_retrieval_stress_manifest": (
                 None
@@ -1307,6 +1337,10 @@ def _required_route_baseline_gate(
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
     require_non_oracle_evidence: bool,
+    require_retrieval_provenance_filter: bool,
+    required_retrieval_source_prefixes: Sequence[str],
+    required_retrieval_metadata: Mapping[str, Any] | None,
+    min_retrieval_filter_score: float | None,
     require_retrieval_stress_control: bool,
     retrieval_stress_manifest: str | Path | None,
     min_stress_false_supported_rate: float | None,
@@ -1339,6 +1373,10 @@ def _required_route_baseline_gate(
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
+        require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+        required_retrieval_source_prefixes=required_retrieval_source_prefixes,
+        required_retrieval_metadata=required_retrieval_metadata,
+        min_retrieval_filter_score=min_retrieval_filter_score,
         require_retrieval_stress_control=require_retrieval_stress_control,
         retrieval_stress_manifest=retrieval_stress_manifest,
         min_stress_false_supported_rate=min_stress_false_supported_rate,
@@ -4228,6 +4266,34 @@ def _parse_unit_float(value: str, *, flag: str) -> float:
     return numeric
 
 
+def _parse_csv(values: Sequence[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    parsed: list[str] = []
+    for value in values:
+        parsed.extend(part.strip() for part in str(value).split(",") if part.strip())
+    return tuple(parsed)
+
+
+def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    if not values:
+        return parsed
+    for value in values:
+        for part in str(value).split(","):
+            item = part.strip()
+            if not item:
+                continue
+            if "=" not in item:
+                raise ValueError(f"metadata requirement {item!r} must use key=value format.")
+            key, raw = item.split("=", 1)
+            key = key.strip()
+            if not key:
+                raise ValueError("metadata requirement key must be non-empty.")
+            parsed[key] = raw.strip()
+    return parsed
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     payload = compare_release_candidates(
@@ -4328,6 +4394,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
+        require_retrieval_provenance_filter=bool(args.require_retrieval_provenance_filter),
+        required_retrieval_source_prefixes=_parse_csv(args.required_retrieval_source_prefix),
+        required_retrieval_metadata=_parse_key_values(args.required_retrieval_metadata),
+        min_retrieval_filter_score=args.min_retrieval_filter_score,
         require_retrieval_stress_control=bool(args.require_retrieval_stress_control),
         retrieval_stress_manifest=args.retrieval_stress_manifest,
         min_stress_false_supported_rate=args.min_stress_false_supported_rate,
@@ -4348,6 +4418,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
+        required_route_require_retrieval_provenance_filter=bool(
+            args.required_route_require_retrieval_provenance_filter
+        ),
+        required_route_required_retrieval_source_prefixes=_parse_csv(
+            args.required_route_required_retrieval_source_prefix
+        ),
+        required_route_required_retrieval_metadata=_parse_key_values(
+            args.required_route_required_retrieval_metadata
+        ),
+        required_route_min_retrieval_filter_score=args.required_route_min_retrieval_filter_score,
         required_route_require_retrieval_stress_control=bool(
             args.required_route_require_retrieval_stress_control
         ),
@@ -4640,6 +4720,33 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="require selected route claims to omit labels and include input provenance",
     )
     parser.add_argument(
+        "--require-retrieval-provenance-filter",
+        action="store_true",
+        help="require selected route evidence to record a source-requiring retrieval provenance filter",
+    )
+    parser.add_argument(
+        "--required-retrieval-source-prefix",
+        action="append",
+        default=None,
+        help="source prefix that must appear in the selected route provenance-filter allow-list; "
+             "comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--required-retrieval-metadata",
+        action="append",
+        default=None,
+        help="required selected-route provenance-filter metadata key=value; comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--min-retrieval-filter-score",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--min-retrieval-filter-score",
+        ),
+        default=None,
+        help="minimum min_score required in the selected route retrieval provenance filter",
+    )
+    parser.add_argument(
         "--require-retrieval-stress-control",
         action="store_true",
         help="require an answer-echo retrieval stress control for selected route baselines",
@@ -4778,6 +4885,33 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--required-route-require-non-oracle-evidence",
         action="store_true",
         help="require required route claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
+        "--required-route-require-retrieval-provenance-filter",
+        action="store_true",
+        help="require required route evidence to record a source-requiring retrieval provenance filter",
+    )
+    parser.add_argument(
+        "--required-route-required-retrieval-source-prefix",
+        action="append",
+        default=None,
+        help="source prefix that must appear in the required route provenance-filter allow-list; "
+             "comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--required-route-required-retrieval-metadata",
+        action="append",
+        default=None,
+        help="required required-route provenance-filter metadata key=value; comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--required-route-min-retrieval-filter-score",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--required-route-min-retrieval-filter-score",
+        ),
+        default=None,
+        help="minimum min_score required in the required route retrieval provenance filter",
     )
     parser.add_argument(
         "--required-route-require-retrieval-stress-control",

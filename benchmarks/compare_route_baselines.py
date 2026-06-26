@@ -56,6 +56,10 @@ def compare_route_baselines(
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
+    require_retrieval_provenance_filter: bool = False,
+    required_retrieval_source_prefixes: Sequence[str] = (),
+    required_retrieval_metadata: Mapping[str, Any] | None = None,
+    min_retrieval_filter_score: float | None = None,
     require_retrieval_stress_control: bool = False,
     retrieval_stress_manifest: str | Path | None = None,
     min_stress_false_supported_rate: float | None = None,
@@ -97,6 +101,10 @@ def compare_route_baselines(
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
             require_non_oracle_evidence=require_non_oracle_evidence,
+            require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+            required_retrieval_source_prefixes=required_retrieval_source_prefixes,
+            required_retrieval_metadata=required_retrieval_metadata,
+            min_retrieval_filter_score=min_retrieval_filter_score,
             require_retrieval_stress_control=require_retrieval_stress_control,
             retrieval_stress_manifest=retrieval_stress_manifest,
             min_stress_false_supported_rate=min_stress_false_supported_rate,
@@ -134,6 +142,10 @@ def compare_route_baselines(
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
+            "require_retrieval_provenance_filter": require_retrieval_provenance_filter,
+            "required_retrieval_source_prefixes": list(required_retrieval_source_prefixes),
+            "required_retrieval_metadata": dict(required_retrieval_metadata or {}),
+            "min_retrieval_filter_score": min_retrieval_filter_score,
             "require_retrieval_stress_control": require_retrieval_stress_control,
             "retrieval_stress_manifest": None if retrieval_stress_manifest is None else str(retrieval_stress_manifest),
             "min_stress_false_supported_rate": _resolved_min_stress_false_supported_rate(
@@ -212,6 +224,10 @@ def _route_baseline_row(
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
     require_non_oracle_evidence: bool,
+    require_retrieval_provenance_filter: bool,
+    required_retrieval_source_prefixes: Sequence[str],
+    required_retrieval_metadata: Mapping[str, Any] | None,
+    min_retrieval_filter_score: float | None,
     require_retrieval_stress_control: bool,
     retrieval_stress_manifest: str | Path | None,
     min_stress_false_supported_rate: float | None,
@@ -272,7 +288,12 @@ def _route_baseline_row(
     )
     claims_fixture: dict[str, Any] = {}
     claims_error = None
-    if require_non_oracle_evidence:
+    if require_non_oracle_evidence or _retrieval_provenance_gate_enabled(
+        require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+        required_retrieval_source_prefixes=required_retrieval_source_prefixes,
+        required_retrieval_metadata=required_retrieval_metadata,
+        min_retrieval_filter_score=min_retrieval_filter_score,
+    ):
         claims_fixture, claims_error = (
             ({}, "retrieval_claims artifact missing")
             if claims_path is None
@@ -345,6 +366,15 @@ def _route_baseline_row(
             claims_error=claims_error,
             require_non_oracle_evidence=require_non_oracle_evidence,
         ),
+        retrieval_provenance_audit=_retrieval_provenance_audit(
+            manifest_metadata,
+            claims_fixture,
+            claims_error=claims_error,
+            require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+            required_retrieval_source_prefixes=required_retrieval_source_prefixes,
+            required_retrieval_metadata=required_retrieval_metadata,
+            min_retrieval_filter_score=min_retrieval_filter_score,
+        ),
         retrieval_stress_audit=retrieval_stress_audit,
     )
     runtime_metrics = dict(runtime_budget.get("metrics") or {})
@@ -379,6 +409,7 @@ def _route_baseline_row(
         "verifier_trace_cache_hit_rate": _float_or_none(runtime_metrics.get("verifier_trace_cache_hit_rate")),
         "runtime_budget": runtime_budget,
         "evidence_audit": gate["evidence_audit"],
+        "retrieval_provenance_audit": gate["retrieval_provenance_audit"],
         "retrieval_stress_audit": gate["retrieval_stress_audit"],
     }
 
@@ -470,6 +501,7 @@ def _gate(
     max_retrieval_use_rate: float | None,
     runtime_budget: Mapping[str, Any],
     evidence_audit: Mapping[str, Any],
+    retrieval_provenance_audit: Mapping[str, Any],
     retrieval_stress_audit: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures = []
@@ -550,6 +582,11 @@ def _gate(
         failures.extend(_runtime_budget_reasons(runtime_budget))
     if evidence_audit.get("enabled") and not evidence_audit.get("passed"):
         failures.extend(f"evidence_audit: {reason}" for reason in evidence_audit.get("blocking_reasons", ()))
+    if retrieval_provenance_audit.get("enabled") and not retrieval_provenance_audit.get("passed"):
+        failures.extend(
+            f"retrieval_provenance_audit: {reason}"
+            for reason in retrieval_provenance_audit.get("blocking_reasons", ())
+        )
     if retrieval_stress_audit.get("enabled") and not retrieval_stress_audit.get("passed"):
         failures.extend(
             f"retrieval_stress_audit: {reason}"
@@ -559,6 +596,7 @@ def _gate(
         "passed": not failures,
         "blocking_reasons": failures,
         "evidence_audit": dict(evidence_audit),
+        "retrieval_provenance_audit": dict(retrieval_provenance_audit),
         "retrieval_stress_audit": dict(retrieval_stress_audit),
     }
 
@@ -613,6 +651,132 @@ def _evidence_audit(
         "score_dump_provenance_present": bool(score_dump),
         "corpus_fingerprint_count": len(corpus_fingerprints),
     }
+
+
+def _retrieval_provenance_gate_enabled(
+    *,
+    require_retrieval_provenance_filter: bool,
+    required_retrieval_source_prefixes: Sequence[str],
+    required_retrieval_metadata: Mapping[str, Any] | None,
+    min_retrieval_filter_score: float | None,
+) -> bool:
+    return bool(
+        require_retrieval_provenance_filter
+        or tuple(required_retrieval_source_prefixes)
+        or dict(required_retrieval_metadata or {})
+        or min_retrieval_filter_score is not None
+    )
+
+
+def _retrieval_provenance_audit(
+    manifest_metadata: Mapping[str, Any],
+    claims_fixture: Mapping[str, Any],
+    *,
+    claims_error: str | None,
+    require_retrieval_provenance_filter: bool,
+    required_retrieval_source_prefixes: Sequence[str],
+    required_retrieval_metadata: Mapping[str, Any] | None,
+    min_retrieval_filter_score: float | None,
+) -> dict[str, Any]:
+    required_prefixes = _clean_string_tuple(required_retrieval_source_prefixes)
+    required_metadata = {
+        str(key): value
+        for key, value in dict(required_retrieval_metadata or {}).items()
+        if str(key)
+    }
+    enabled = _retrieval_provenance_gate_enabled(
+        require_retrieval_provenance_filter=require_retrieval_provenance_filter,
+        required_retrieval_source_prefixes=required_prefixes,
+        required_retrieval_metadata=required_metadata,
+        min_retrieval_filter_score=min_retrieval_filter_score,
+    )
+    config, source = _resolve_retrieval_provenance_filter(
+        manifest_metadata,
+        claims_fixture,
+    )
+    failures: list[str] = []
+    normalized = _normalize_retrieval_provenance_filter(config)
+    if enabled:
+        if claims_error is not None and not normalized:
+            failures.append(f"retrieval claims fixture could not be loaded: {claims_error}")
+        if not normalized:
+            failures.append("retrieval provenance filter config is missing")
+        if require_retrieval_provenance_filter and normalized.get("require_source") is not True:
+            failures.append("retrieval provenance filter require_source must be true")
+        allowed_prefixes = tuple(normalized.get("allowed_source_prefixes") or ())
+        for prefix in required_prefixes:
+            if prefix not in allowed_prefixes:
+                failures.append(
+                    f"retrieval provenance filter allowed_source_prefixes missing required prefix {prefix!r}"
+                )
+        configured_metadata = _mapping(normalized.get("required_metadata"))
+        for key, expected in required_metadata.items():
+            actual = configured_metadata.get(key)
+            if actual != expected:
+                failures.append(
+                    f"retrieval provenance filter required_metadata.{key} is {actual!r}, expected {expected!r}"
+                )
+        if min_retrieval_filter_score is not None:
+            configured_score = _float_or_none(normalized.get("min_score"))
+            if configured_score is None or configured_score < min_retrieval_filter_score:
+                failures.append(
+                    f"retrieval provenance filter min_score below {min_retrieval_filter_score}"
+                )
+    return {
+        "enabled": enabled,
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "claims_loaded": claims_error is None and bool(claims_fixture),
+        "claims_error": claims_error,
+        "source": source,
+        "filter": normalized,
+        "require_retrieval_provenance_filter": require_retrieval_provenance_filter,
+        "required_retrieval_source_prefixes": required_prefixes,
+        "required_retrieval_metadata": required_metadata,
+        "min_retrieval_filter_score": min_retrieval_filter_score,
+    }
+
+
+def _resolve_retrieval_provenance_filter(
+    manifest_metadata: Mapping[str, Any],
+    claims_fixture: Mapping[str, Any],
+) -> tuple[dict[str, Any], str | None]:
+    manifest_filter = _mapping(manifest_metadata.get("retrieval_provenance_filter"))
+    if manifest_filter:
+        return manifest_filter, "manifest_metadata"
+    provenance = _mapping(claims_fixture.get("input_provenance"))
+    provenance_config = _mapping(provenance.get("config"))
+    input_filter = _mapping(provenance_config.get("provenance_filter"))
+    if input_filter:
+        return input_filter, "claims_input_provenance"
+    retriever = _mapping(claims_fixture.get("retriever"))
+    retriever_filter = _mapping(retriever.get("provenance_filter"))
+    if retriever_filter:
+        return retriever_filter, "claims_retriever"
+    return {}, None
+
+
+def _normalize_retrieval_provenance_filter(config: Mapping[str, Any]) -> dict[str, Any]:
+    if not config:
+        return {}
+    normalized = dict(config)
+    normalized["require_source"] = bool(config.get("require_source"))
+    normalized["allowed_source_prefixes"] = _clean_string_tuple(config.get("allowed_source_prefixes", ()))
+    normalized["denied_source_prefixes"] = _clean_string_tuple(config.get("denied_source_prefixes", ()))
+    normalized["required_metadata"] = _mapping(config.get("required_metadata"))
+    normalized["min_score"] = _float_or_none(config.get("min_score"))
+    normalized["max_hits_per_source"] = _int_or_none(config.get("max_hits_per_source"))
+    return normalized
+
+
+def _clean_string_tuple(values: Any) -> tuple[str, ...]:
+    if values is None:
+        return ()
+    if isinstance(values, str):
+        values = (values,)
+    if not isinstance(values, Sequence):
+        return ()
+    return tuple(str(value).strip() for value in values if str(value).strip())
 
 
 def _retrieval_stress_audit(
@@ -1028,6 +1192,34 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_csv(values: Sequence[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    parsed: list[str] = []
+    for value in values:
+        parsed.extend(part.strip() for part in str(value).split(",") if part.strip())
+    return tuple(parsed)
+
+
+def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    if not values:
+        return parsed
+    for value in values:
+        for part in str(value).split(","):
+            item = part.strip()
+            if not item:
+                continue
+            if "=" not in item:
+                raise ValueError(f"metadata requirement {item!r} must use key=value format.")
+            key, raw = item.split("=", 1)
+            key = key.strip()
+            if not key:
+                raise ValueError("metadata requirement key must be non-empty.")
+            parsed[key] = raw.strip()
+    return parsed
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
     payload = compare_route_baselines(
@@ -1051,6 +1243,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
+        require_retrieval_provenance_filter=bool(args.require_retrieval_provenance_filter),
+        required_retrieval_source_prefixes=_parse_csv(args.required_retrieval_source_prefix),
+        required_retrieval_metadata=_parse_key_values(args.required_retrieval_metadata),
+        min_retrieval_filter_score=args.min_retrieval_filter_score,
         require_retrieval_stress_control=bool(args.require_retrieval_stress_control),
         retrieval_stress_manifest=args.retrieval_stress_manifest,
         min_stress_false_supported_rate=args.min_stress_false_supported_rate,
@@ -1151,6 +1347,33 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--require-non-oracle-evidence",
         action="store_true",
         help="require local retrieval claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
+        "--require-retrieval-provenance-filter",
+        action="store_true",
+        help="require route manifests or retrieval claims to record a source-requiring provenance filter",
+    )
+    parser.add_argument(
+        "--required-retrieval-source-prefix",
+        action="append",
+        default=None,
+        help="source prefix that must appear in the retrieval provenance filter allow-list; "
+             "comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--required-retrieval-metadata",
+        action="append",
+        default=None,
+        help="required provenance-filter metadata key=value; comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--min-retrieval-filter-score",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--min-retrieval-filter-score",
+        ),
+        default=None,
+        help="minimum min_score required in the retrieval provenance filter",
     )
     parser.add_argument(
         "--require-retrieval-stress-control",

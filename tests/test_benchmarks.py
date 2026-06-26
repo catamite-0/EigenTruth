@@ -9270,6 +9270,7 @@ def _write_route_baseline_manifest(
     verifier_trace_cache_run_count: int | None = None,
     claims_payload: dict[str, Any] | None = None,
     stress_manifest_path: Path | None = None,
+    retrieval_provenance_filter: dict[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -9321,6 +9322,7 @@ def _write_route_baseline_manifest(
         "verifier_trace_cache_enabled": verifier_trace_cache_enabled,
         "verifier_trace_cache_hit_count": verifier_trace_cache_hit_count,
         "verifier_trace_cache_run_count": verifier_trace_cache_run_count,
+        "retrieval_provenance_filter": retrieval_provenance_filter,
     }
     metadata.update({
         key: value
@@ -9693,6 +9695,7 @@ def _local_retrieval_claims_payload(
     *,
     labels_copied_to_record_metadata: bool,
     include_provenance: bool = True,
+    provenance_filter: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "schema_version": 1,
@@ -9705,12 +9708,21 @@ def _local_retrieval_claims_payload(
         "records": [],
     }
     if include_provenance:
+        config = {"include_label_metadata": not labels_copied_to_record_metadata}
+        if provenance_filter is not None:
+            config["provenance_filter"] = provenance_filter
         payload["input_provenance"] = {
             "schema_version": 1,
             "builder": "build_evidence_fixture",
             "score_dump": {"path": "scores.json", "exists": True, "sha256": "score-sha"},
             "corpora": [{"path": "corpus.json", "exists": True, "sha256": "corpus-sha"}],
-            "config": {"include_label_metadata": not labels_copied_to_record_metadata},
+            "config": config,
+        }
+    if provenance_filter is not None:
+        payload["retriever"] = {
+            "type": "ProvenanceFilteredRetriever",
+            "wrapped_type": "InMemoryRetriever",
+            "provenance_filter": provenance_filter,
         }
     return payload
 
@@ -9975,6 +9987,100 @@ def test_compare_route_baselines_can_require_non_oracle_evidence(tmp_path):
         "evidence_audit: input_provenance.corpora must include at least one corpus fingerprint" in reason
         for reason in unfingerprinted["decision"]["blocking_reasons"]
     )
+
+
+def test_compare_route_baselines_can_require_retrieval_provenance_filter(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    trusted_filter = {
+        "require_source": True,
+        "allowed_source_prefixes": ["external:wiki"],
+        "denied_source_prefixes": ["answer_echo:"],
+        "min_score": 0.8,
+        "required_metadata": {"corpus_role": "grounding"},
+        "max_hits_per_source": 1,
+    }
+    weak_filter = {
+        "require_source": False,
+        "allowed_source_prefixes": ["answer_echo:"],
+        "min_score": 0.1,
+        "required_metadata": {"corpus_role": "stress_control"},
+    }
+    trusted_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="trusted-provenance-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(
+            labels_copied_to_record_metadata=False,
+            provenance_filter=trusted_filter,
+        ),
+        retrieval_provenance_filter=trusted_filter,
+    )
+    weak_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="weak-provenance-retrieval",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(
+            labels_copied_to_record_metadata=False,
+            provenance_filter=weak_filter,
+        ),
+        retrieval_provenance_filter=weak_filter,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="trusted-provenance-route",
+        path=trusted_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).record_benchmark_manifest(
+        name="weak-provenance-route",
+        path=weak_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+
+    trusted = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:trusted-provenance-route:0.1",),
+        require_non_oracle_evidence=True,
+        require_retrieval_provenance_filter=True,
+        required_retrieval_source_prefixes=("external:wiki",),
+        required_retrieval_metadata={"corpus_role": "grounding"},
+        min_retrieval_filter_score=0.8,
+    )
+    weak = module.compare_route_baselines(
+        registry_path=registry_path,
+        baseline_keys=("benchmark_manifest:weak-provenance-route:0.1",),
+        require_non_oracle_evidence=True,
+        require_retrieval_provenance_filter=True,
+        required_retrieval_source_prefixes=("external:wiki",),
+        required_retrieval_metadata={"corpus_role": "grounding"},
+        min_retrieval_filter_score=0.8,
+    )
+
+    audit = trusted["leaderboard"][0]["retrieval_provenance_audit"]
+    assert trusted["decision"]["status"] == "promote"
+    assert audit["passed"] is True
+    assert audit["source"] == "manifest_metadata"
+    assert audit["filter"]["allowed_source_prefixes"] == ("external:wiki",)
+    assert audit["filter"]["min_score"] == pytest.approx(0.8)
+    assert weak["decision"]["status"] == "blocked"
+    reasons = weak["decision"]["blocking_reasons"]
+    assert any("retrieval provenance filter require_source must be true" in reason for reason in reasons)
+    assert any("allowed_source_prefixes missing required prefix 'external:wiki'" in reason for reason in reasons)
+    assert any("required_metadata.corpus_role is 'stress_control'" in reason for reason in reasons)
+    assert any("retrieval provenance filter min_score below 0.8" in reason for reason in reasons)
 
 
 def test_compare_route_baselines_requires_answer_echo_retrieval_stress_control(tmp_path):
@@ -12994,6 +13100,14 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         runtime_total_seconds=0.8,
         runtime_n_retrieval_hits=0,
     )
+    trusted_filter = {
+        "require_source": True,
+        "allowed_source_prefixes": ["external:wiki"],
+        "denied_source_prefixes": ["answer_echo:"],
+        "min_score": 0.8,
+        "required_metadata": {"corpus_role": "grounding"},
+        "max_hits_per_source": 1,
+    }
     stress_manifest = _write_retrieval_stress_manifest(tmp_path, name="required-route-stress")
     retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -13008,8 +13122,12 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         retrieval_use_rate=1.0,
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
-        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        claims_payload=_local_retrieval_claims_payload(
+            labels_copied_to_record_metadata=False,
+            provenance_filter=trusted_filter,
+        ),
         stress_manifest_path=stress_manifest,
+        retrieval_provenance_filter=trusted_filter,
     )
     leaky_retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
@@ -13063,6 +13181,10 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         required_route_max_retrieval_hit_count=30,
         required_route_max_retrieval_use_rate=1.0,
         required_route_require_non_oracle_evidence=True,
+        required_route_require_retrieval_provenance_filter=True,
+        required_route_required_retrieval_source_prefixes=("external:wiki",),
+        required_route_required_retrieval_metadata={"corpus_role": "grounding"},
+        required_route_min_retrieval_filter_score=0.8,
         required_route_require_retrieval_stress_control=True,
         required_route_min_stress_false_supported_rate=0.90,
         required_route_max_stress_false_refuted_rate=0.05,
@@ -13098,6 +13220,23 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         required_route_max_retrieval_use_rate=1.0,
         required_route_require_non_oracle_evidence=True,
     )
+    blocked_provenance = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        required_route_baseline_keys=("benchmark_manifest:leaky-retrieval-route:0.7",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.95,
+        max_false_supported_rate=0.05,
+        min_false_refuted_rate=0.50,
+        max_retrieval_use_rate=0.0,
+        max_runtime_total_seconds=1.0,
+        required_route_require_retrieval_provenance_filter=True,
+        required_route_required_retrieval_source_prefixes=("external:wiki",),
+        required_route_required_retrieval_metadata={"corpus_role": "grounding"},
+        required_route_min_retrieval_filter_score=0.8,
+    )
 
     assert promoted["decision"]["status"] == "promote"
     assert promoted["summary"]["artifact_json_cache"]["requests"] >= 5
@@ -13128,6 +13267,21 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
         promoted["required_route_baseline_gate"]["comparison"]["config"]["require_retrieval_stress_control"]
         is True
     )
+    assert (
+        promoted["required_route_baseline_gate"]["comparison"]["config"][
+            "require_retrieval_provenance_filter"
+        ]
+        is True
+    )
+    assert promoted["required_route_baseline_gate"]["comparison"]["config"][
+        "required_retrieval_source_prefixes"
+    ] == ["external:wiki"]
+    assert promoted["required_route_baseline_gate"]["comparison"]["config"][
+        "required_retrieval_metadata"
+    ] == {"corpus_role": "grounding"}
+    provenance_audit = promoted["required_route_baseline_gate"]["rows"][0]["retrieval_provenance_audit"]
+    assert provenance_audit["passed"] is True
+    assert provenance_audit["filter"]["required_metadata"] == {"corpus_role": "grounding"}
     stress_audit = promoted["required_route_baseline_gate"]["rows"][0]["retrieval_stress_audit"]
     assert stress_audit["passed"] is True
     assert stress_audit["min_false_supported_rate"] == pytest.approx(0.98)
@@ -13144,6 +13298,12 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     assert any(
         "evidence_audit: labels_copied_to_record_metadata must be false" in reason
         for reason in blocked_oracle["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert blocked_provenance["decision"]["status"] == "blocked"
+    assert blocked_provenance["decision"]["blocking_reasons"][0]["gate"] == "required_route_baselines"
+    assert any(
+        "retrieval_provenance_audit: retrieval provenance filter config is missing" in reason
+        for reason in blocked_provenance["decision"]["blocking_reasons"][0]["reasons"]
     )
 
 
@@ -14480,6 +14640,14 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         p99_duration_seconds=0.02,
     )
     stress_manifest = _write_retrieval_stress_manifest(tmp_path, name="registry-workflow-stress")
+    trusted_filter = {
+        "require_source": True,
+        "allowed_source_prefixes": ["external:wiki"],
+        "denied_source_prefixes": ["answer_echo:"],
+        "min_score": 0.8,
+        "required_metadata": {"corpus_role": "grounding"},
+        "max_hits_per_source": 1,
+    }
     retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
         name="retrieval",
@@ -14493,8 +14661,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         retrieval_use_rate=1.0,
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
-        claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        claims_payload=_local_retrieval_claims_payload(
+            labels_copied_to_record_metadata=False,
+            provenance_filter=trusted_filter,
+        ),
         stress_manifest_path=stress_manifest,
+        retrieval_provenance_filter=trusted_filter,
     )
     ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
         name="structured-route",
@@ -14717,6 +14889,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         required_route_max_retrieval_hit_count=30,
         required_route_max_retrieval_use_rate=1.0,
         required_route_require_non_oracle_evidence=True,
+        required_route_require_retrieval_provenance_filter=True,
+        required_route_required_retrieval_source_prefixes=("external:wiki",),
+        required_route_required_retrieval_metadata={"corpus_role": "grounding"},
+        required_route_min_retrieval_filter_score=0.8,
         required_route_require_retrieval_stress_control=True,
         required_route_min_stress_false_supported_rate=0.90,
         required_route_max_stress_false_refuted_rate=0.05,
@@ -14986,6 +15162,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "required_route_require_non_oracle_evidence"
     ] is True
     assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_require_retrieval_provenance_filter"
+    ] is True
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_required_retrieval_source_prefixes"
+    ] == ["external:wiki"]
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_required_retrieval_metadata"
+    ] == {"corpus_role": "grounding"}
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_min_retrieval_filter_score"
+    ] == pytest.approx(0.8)
+    assert manifest["metadata"]["required_route_budget_policy"][
         "required_route_require_retrieval_stress_control"
     ] is True
     assert manifest["metadata"]["required_route_budget_policy"][
@@ -14999,6 +15187,10 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["required_route_require_non_oracle_evidence"] is True
+    assert payload["config"]["required_route_require_retrieval_provenance_filter"] is True
+    assert payload["config"]["required_route_required_retrieval_source_prefixes"] == ["external:wiki"]
+    assert payload["config"]["required_route_required_retrieval_metadata"] == {"corpus_role": "grounding"}
+    assert payload["config"]["required_route_min_retrieval_filter_score"] == pytest.approx(0.8)
     assert payload["config"]["required_route_require_retrieval_stress_control"] is True
     assert payload["config"]["required_route_min_stress_false_supported_rate"] == pytest.approx(0.90)
     assert payload["config"]["required_route_max_stress_false_refuted_rate"] == pytest.approx(0.05)
@@ -15093,6 +15285,21 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         release_efficiency_report
     )
     assert payload["release_candidate_comparison"]["config"]["required_route_require_non_oracle_evidence"] is True
+    assert (
+        payload["release_candidate_comparison"]["config"][
+            "required_route_require_retrieval_provenance_filter"
+        ]
+        is True
+    )
+    assert payload["release_candidate_comparison"]["config"][
+        "required_route_required_retrieval_source_prefixes"
+    ] == ["external:wiki"]
+    assert payload["release_candidate_comparison"]["config"][
+        "required_route_required_retrieval_metadata"
+    ] == {"corpus_role": "grounding"}
+    assert payload["release_candidate_comparison"]["config"][
+        "required_route_min_retrieval_filter_score"
+    ] == pytest.approx(0.8)
     assert (
         payload["release_candidate_comparison"]["config"]["required_route_require_retrieval_stress_control"]
         is True

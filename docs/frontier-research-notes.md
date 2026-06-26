@@ -447,6 +447,12 @@ Added the first stdlib-only external retrieval service shell:
   manifests, claims-cache keys, and registry metadata. This moves the filter
   from an adapter-only primitive into the reproducible route/fusion evidence
   path needed for external or domain-shifted retrieval experiments.
+- `compare_route_baselines.py`, `compare_release_candidates.py`, and
+  `run_release_candidate_registry_workflow.py` can now require that a selected
+  or required retrieval route records a source-requiring provenance filter with
+  expected allowed source prefixes, required metadata tags, and minimum
+  retrieval score. This turns external evidence trust policy into a fail-closed
+  route/release gate instead of only descriptive metadata.
 
 ## Next Research-to-Code Candidates
 

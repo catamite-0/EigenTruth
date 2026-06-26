@@ -1667,6 +1667,11 @@ python benchmarks/compare_route_baselines.py \
   --max-retrieval-hit-count 1000 \
   --min-claims-cache-hit-rate 0.9 \
   --min-verifier-trace-cache-hit-rate 0.9 \
+  --require-non-oracle-evidence \
+  --require-retrieval-provenance-filter \
+  --required-retrieval-source-prefix external: \
+  --required-retrieval-metadata corpus_role=grounding \
+  --min-retrieval-filter-score 0.5 \
   --require-retrieval-stress-control \
   --retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
   --min-stress-false-supported-rate 0.90 \
@@ -1684,6 +1689,12 @@ quality/cost ordering. Optional runtime-budget flags read
 `runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
 verifier-trace-cache metadata from the route manifest or registry record; when a
 threshold is configured, missing or non-finite evidence blocks that baseline.
+Use `--require-retrieval-provenance-filter` when a retrieval route should prove
+that untrusted hits were gated before verifier handoff. Optional
+`--required-retrieval-source-prefix`, `--required-retrieval-metadata`, and
+`--min-retrieval-filter-score` checks compare the recorded manifest or claims
+fixture provenance filter against the expected source, metadata, and score
+policy. Missing filter metadata blocks the baseline.
 Use `--require-retrieval-stress-control` for retrieval-grounding baselines. It
 requires an answer-echo stress artifact manifest, verifies that manifest, checks
 the corpus type is `retrieval_stress_answer_echo`, and fails closed unless the
@@ -1954,6 +1965,10 @@ python benchmarks/compare_release_candidates.py \
   --required-route-max-retrieval-hit-count 5000 \
   --required-route-max-retrieval-use-rate 1.0 \
   --required-route-require-non-oracle-evidence \
+  --required-route-require-retrieval-provenance-filter \
+  --required-route-required-retrieval-source-prefix external: \
+  --required-route-required-retrieval-metadata corpus_role=grounding \
+  --required-route-min-retrieval-filter-score 0.5 \
   --required-route-require-retrieval-stress-control \
   --required-route-retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
   --required-route-min-stress-false-supported-rate 0.90 \
@@ -1979,10 +1994,15 @@ is promoted and recursively valid. Add `--required-route-*` thresholds when the
 audit route needs its own quality, latency, retrieval-hit, or cache-reuse budget;
 add `--required-route-require-non-oracle-evidence` when that required route must
 also prove labels stayed only in the score dump and local input provenance is
-present. Add `--required-route-require-retrieval-stress-control` when the route
-must also prove the answer-echo negative control fails as expected. Otherwise the
-release only checks the route's already-registered promotion status and manifest
-validity. This keeps selected product-route budgets such as
+present. Add `--required-route-require-retrieval-provenance-filter`,
+`--required-route-required-retrieval-source-prefix`,
+`--required-route-required-retrieval-metadata`, and
+`--required-route-min-retrieval-filter-score` when the required retrieval route
+must prove a specific source/metadata/score filter policy before evidence can
+enter verifier claims. Add `--required-route-require-retrieval-stress-control`
+when the route must also prove the answer-echo negative control fails as
+expected. Otherwise the release only checks the route's already-registered
+promotion status and manifest validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
 retrieval or world-model adapters. For `structured_fact`, use two required route
 keys, or `--release-policy-profile strict_structured_fact` with
@@ -2134,8 +2154,10 @@ includes those route/workflow/feedback-policy/selector/drift/efficiency/adapter
 and extractor manifests in the final release-candidate manifest when the gate
 promotes. Required-route budget settings are also copied into manifest metadata
 as `required_route_budget_policy`, including
-`--required-route-require-non-oracle-evidence` when the audit route must prove
-label-free local retrieval claims.
+`--required-route-require-non-oracle-evidence` and
+`--required-route-require-retrieval-provenance-filter` when the audit route must
+prove label-free local retrieval claims and a recorded evidence provenance
+filter.
 Triple-extraction external-prediction gates are copied into the comparison,
 manifest, and registry metadata when configured.
 Use `--require-structured-fact-robustness` with
