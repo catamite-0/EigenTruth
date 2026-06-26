@@ -59,6 +59,56 @@ def test_eval_conformal_run_respects_lower_direction(tmp_path):
     assert report["detection"] == pytest.approx(1.0)
 
 
+def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
+    module = importlib.import_module("benchmarks.eval_triple_extraction")
+    records_path = tmp_path / "triple-records.json"
+    patterns_path = tmp_path / "patterns.json"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "text": "Paris is the capital of France.",
+                    "expected_triples": [
+                        {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+                    ],
+                },
+                {
+                    "text": "France has its capital at Paris.",
+                    "expected_triples": [
+                        {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    patterns_path.write_text(
+        json.dumps({
+            "patterns": [
+                {
+                    "pattern": r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+                    "predicate": "capital_of",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    rule_based = module.run_triple_extraction_eval(records_path, extractor_name="rule_based")
+    regex = module.run_triple_extraction_eval(
+        records_path,
+        extractor_name="regex_rule_based",
+        patterns_path=patterns_path,
+    )
+
+    assert rule_based["report"]["precision"] == pytest.approx(0.5)
+    assert rule_based["report"]["recall"] == pytest.approx(0.5)
+    assert regex["pattern_count"] == 1
+    assert regex["report"]["precision"] == pytest.approx(1.0)
+    assert regex["report"]["recall"] == pytest.approx(1.0)
+    assert regex["report"]["f1"] == pytest.approx(1.0)
+
+
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"

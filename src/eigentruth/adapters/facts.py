@@ -6,8 +6,13 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Sequence
 
-from eigentruth.verify import Claim, VerificationResult, VerificationStatus, extract_claim_triples, normalize_claim_text
-from eigentruth.verify.triples import ClaimTriple
+from eigentruth.verify import Claim, VerificationResult, VerificationStatus, normalize_claim_text
+from eigentruth.verify.triples import (
+    ClaimTriple,
+    ClaimTripleExtractor,
+    RuleBasedTripleExtractor,
+    extract_claim_triples,
+)
 
 _BOUNDARY_CHARS = " \t\r\n.,;:!?()[]{}\"'`“”‘’。！？"
 _LEADING_ARTICLE_RE = re.compile(r"^(?:a|an|the)\s+", re.IGNORECASE)
@@ -113,6 +118,7 @@ class StructuredFactVerifier:
     """
 
     facts: Sequence[StructuredFact | Mapping[str, Any]]
+    extractor: ClaimTripleExtractor = field(default_factory=RuleBasedTripleExtractor)
 
     def __post_init__(self) -> None:
         facts = tuple(_coerce_fact(item) for item in self.facts)
@@ -148,7 +154,7 @@ class StructuredFactVerifier:
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against structured facts."""
-        triples = _claim_triples(claim, context)
+        triples = _claim_triples(claim, context, extractor=self.extractor)
         if not triples:
             return VerificationResult(
                 status=VerificationStatus.NOT_APPLICABLE,
@@ -326,17 +332,25 @@ def _coerce_fact(value: StructuredFact | Mapping[str, Any]) -> StructuredFact:
     return StructuredFact.from_mapping(value)
 
 
-def _claim_triples(claim: Claim, context: Mapping[str, Any] | None) -> tuple[ClaimTriple, ...]:
+def _claim_triples(
+    claim: Claim,
+    context: Mapping[str, Any] | None,
+    *,
+    extractor: ClaimTripleExtractor,
+) -> tuple[ClaimTriple, ...]:
     if isinstance(claim.metadata, Mapping) and (
         claim.metadata.get("triples") is not None
         or claim.metadata.get("claim_triples") is not None
     ):
-        return extract_claim_triples(claim)
+        return extract_claim_triples(claim, extractor=extractor)
     if context is not None and isinstance(context.get("triples"), Sequence):
         payload = dict(claim.metadata) if isinstance(claim.metadata, Mapping) else {}
         payload["claim_triples"] = tuple(context["triples"])
-        return extract_claim_triples(Claim(claim.text, claim_id=claim.claim_id, span=claim.span, metadata=payload))
-    return extract_claim_triples(claim)
+        return extract_claim_triples(
+            Claim(claim.text, claim_id=claim.claim_id, span=claim.span, metadata=payload),
+            extractor=extractor,
+        )
+    return extract_claim_triples(claim, extractor=extractor)
 
 
 def _first_present(

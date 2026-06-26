@@ -335,6 +335,196 @@ class RuleBasedTripleExtractor:
 
 
 @dataclass(frozen=True)
+class RegexTriplePattern:
+    """One dependency-free regex pattern for extracting a claim triple."""
+
+    pattern: str
+    predicate: str | None = None
+    subject_group: str = "subject"
+    predicate_group: str = "predicate"
+    object_group: str = "object"
+    confidence: float = 0.65
+    source: str = "regex_triple_pattern"
+    ignore_case: bool = True
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        pattern = str(self.pattern)
+        if not pattern.strip():
+            raise ValueError("regex triple pattern must be non-empty.")
+        ignore_case = _coerce_bool(self.ignore_case, name="ignore_case")
+        try:
+            re.compile(pattern, re.IGNORECASE if ignore_case else 0)
+        except re.error as exc:
+            raise ValueError(f"invalid regex triple pattern: {exc}") from exc
+        predicate = None if self.predicate is None else _clean_predicate(self.predicate)
+        subject_group = str(self.subject_group).strip()
+        predicate_group = str(self.predicate_group).strip()
+        object_group = str(self.object_group).strip()
+        if not subject_group:
+            raise ValueError("subject_group must be non-empty.")
+        if predicate is None and not predicate_group:
+            raise ValueError("predicate_group must be non-empty when predicate is not set.")
+        if not object_group:
+            raise ValueError("object_group must be non-empty.")
+        object.__setattr__(self, "pattern", pattern)
+        object.__setattr__(self, "predicate", predicate)
+        object.__setattr__(self, "subject_group", subject_group)
+        object.__setattr__(self, "predicate_group", predicate_group)
+        object.__setattr__(self, "object_group", object_group)
+        object.__setattr__(self, "confidence", _coerce_probability(self.confidence, name="confidence"))
+        object.__setattr__(self, "source", str(self.source).strip() or "regex_triple_pattern")
+        object.__setattr__(self, "ignore_case", ignore_case)
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> "RegexTriplePattern":
+        """Build a regex triple pattern from JSON-like data."""
+        return cls(
+            pattern=str(data.get("pattern", "")),
+            predicate=None if data.get("predicate") is None else str(data.get("predicate")),
+            subject_group=str(data.get("subject_group", "subject")),
+            predicate_group=str(data.get("predicate_group", "predicate")),
+            object_group=str(data.get("object_group", "object")),
+            confidence=data.get("confidence", 0.65),
+            source=str(data.get("source", "regex_triple_pattern")),
+            ignore_case=data.get("ignore_case", True),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready representation."""
+        return {
+            "pattern": self.pattern,
+            "predicate": self.predicate,
+            "subject_group": self.subject_group,
+            "predicate_group": self.predicate_group,
+            "object_group": self.object_group,
+            "confidence": self.confidence,
+            "source": self.source,
+            "ignore_case": self.ignore_case,
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+    def extract(self, claim: Claim) -> ClaimTriple | None:
+        """Extract one triple from a claim if this pattern matches."""
+        flags = re.IGNORECASE if self.ignore_case else 0
+        match = re.match(self.pattern, _clean_sentence(claim.text), flags)
+        if match is None:
+            return None
+        try:
+            subject = match.group(self.subject_group)
+            object_value = match.group(self.object_group)
+            predicate = self.predicate if self.predicate is not None else match.group(self.predicate_group)
+        except IndexError as exc:
+            raise ValueError("regex triple pattern group was not present in match.") from exc
+        metadata = {
+            "extractor": "regex_triple_extractor",
+            "source": self.source,
+            "pattern": self.pattern,
+            **dict(self.metadata),
+        }
+        return ClaimTriple(
+            subject=subject,
+            predicate=predicate,
+            object=object_value,
+            claim_id=claim.claim_id,
+            source_text=claim.text,
+            confidence=self.confidence,
+            metadata=metadata,
+        )
+
+
+@dataclass(frozen=True)
+class RegexTripleExtractor:
+    """Configurable regex-based triple extractor with optional fallback."""
+
+    patterns: Sequence[RegexTriplePattern | Mapping[str, Any]]
+    fallback: ClaimTripleExtractor | None = None
+    stop_on_first: bool = True
+    preserve_metadata_triples: bool = True
+    extractor_name: str = "regex_triple_extractor"
+
+    def __post_init__(self) -> None:
+        patterns = tuple(_coerce_regex_pattern(pattern) for pattern in self.patterns)
+        if not patterns:
+            raise ValueError("RegexTripleExtractor requires at least one pattern.")
+        object.__setattr__(self, "patterns", patterns)
+        object.__setattr__(self, "stop_on_first", _coerce_bool(self.stop_on_first, name="stop_on_first"))
+        object.__setattr__(
+            self,
+            "preserve_metadata_triples",
+            _coerce_bool(self.preserve_metadata_triples, name="preserve_metadata_triples"),
+        )
+        object.__setattr__(self, "extractor_name", str(self.extractor_name).strip() or "regex_triple_extractor")
+
+    def extract(self, claim: Claim) -> tuple[ClaimTriple, ...]:
+        """Extract triples from regex patterns, falling back when configured."""
+        if self.preserve_metadata_triples:
+            metadata_triples = _metadata_triples(claim)
+            if metadata_triples:
+                return metadata_triples
+        triples: list[ClaimTriple] = []
+        seen: set[tuple[str, str, str]] = set()
+        for pattern in self.patterns:
+            triple = pattern.extract(claim)
+            if triple is None:
+                continue
+            key = _triple_key(triple)
+            if key not in seen:
+                triples.append(triple)
+                seen.add(key)
+            if self.stop_on_first:
+                return tuple(triples)
+        if triples:
+            return tuple(triples)
+        if self.fallback is None:
+            return ()
+        return tuple(self.fallback.extract(claim))
+
+
+@dataclass(frozen=True)
+class CompositeTripleExtractor:
+    """Combine multiple claim triple extractors in order."""
+
+    extractors: Sequence[ClaimTripleExtractor]
+    stop_on_first_non_empty: bool = True
+    dedupe: bool = True
+    extractor_name: str = "composite_triple_extractor"
+
+    def __post_init__(self) -> None:
+        extractors = tuple(self.extractors)
+        if not extractors:
+            raise ValueError("CompositeTripleExtractor requires at least one extractor.")
+        object.__setattr__(self, "extractors", extractors)
+        object.__setattr__(
+            self,
+            "stop_on_first_non_empty",
+            _coerce_bool(self.stop_on_first_non_empty, name="stop_on_first_non_empty"),
+        )
+        object.__setattr__(self, "dedupe", _coerce_bool(self.dedupe, name="dedupe"))
+        object.__setattr__(self, "extractor_name", str(self.extractor_name).strip() or "composite_triple_extractor")
+
+    def extract(self, claim: Claim) -> tuple[ClaimTriple, ...]:
+        """Extract triples by trying each configured extractor."""
+        triples: list[ClaimTriple] = []
+        seen: set[tuple[str, str, str]] = set()
+        for extractor in self.extractors:
+            extracted = tuple(extractor.extract(claim))
+            if not extracted:
+                continue
+            for triple in extracted:
+                key = _triple_key(triple)
+                if self.dedupe and key in seen:
+                    continue
+                triples.append(triple)
+                seen.add(key)
+            if self.stop_on_first_non_empty:
+                break
+        return tuple(triples)
+
+
+@dataclass(frozen=True)
 class TripleSlotEvidence:
     """Evidence detail for one subject, predicate, or object slot."""
 
@@ -900,6 +1090,22 @@ def _metadata_key(value: Any) -> str:
     return " ".join(_tokens(str(value)))
 
 
+def _coerce_regex_pattern(value: RegexTriplePattern | Mapping[str, Any]) -> RegexTriplePattern:
+    if isinstance(value, RegexTriplePattern):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("regex triple patterns must be RegexTriplePattern or mapping values.")
+    return RegexTriplePattern.from_dict(value)
+
+
+def _triple_key(triple: ClaimTriple) -> tuple[str, str, str]:
+    return (
+        " ".join(_slot_tokens(triple.subject)),
+        _clean_predicate(triple.predicate),
+        " ".join(_slot_tokens(triple.object)),
+    )
+
+
 def _slot_evidence_items(
     triple: ClaimTriple,
     slot_coverage: Mapping[str, float],
@@ -1121,6 +1327,18 @@ def _coerce_probability(value: Any, *, name: str) -> float:
     if not math.isfinite(parsed) or not (0.0 <= parsed <= 1.0):
         raise ValueError(f"{name} must be a finite number in [0, 1].")
     return parsed
+
+
+def _coerce_bool(value: Any, *, name: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        text = value.strip().casefold()
+        if text in {"true", "1", "yes", "on"}:
+            return True
+        if text in {"false", "0", "no", "off"}:
+            return False
+    raise ValueError(f"{name} must be a boolean.")
 
 
 def _as_mapping(value: Any, *, name: str) -> Mapping[str, Any]:

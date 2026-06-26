@@ -75,12 +75,15 @@ from eigentruth.verify import (
     ClaimDependency,
     ClaimTriple,
     ClaimVerificationPlan,
+    CompositeTripleExtractor,
     CompositeVerifier,
     EvidenceDocument,
     EvidenceQualityPolicy,
     GroundednessVerifier,
     InMemoryVerifier,
     JsonTraceCache,
+    RegexTripleExtractor,
+    RegexTriplePattern,
     RoutedVerifier,
     RuleBasedTripleExtractor,
     SelfConsistencyVerifier,
@@ -897,6 +900,57 @@ def test_triple_evidence_verifier_reports_not_applicable_for_unparsed_claim():
     assert result.status is VerificationStatus.NOT_APPLICABLE
     assert result.metadata["audit_report"]["triple_count"] == 0
     assert isinstance(RuleBasedTripleExtractor(), RuleBasedTripleExtractor)
+
+
+def test_regex_triple_extractor_extends_rule_based_extraction():
+    claim = Claim("France has its capital at Paris.", claim_id="capital")
+    pattern = RegexTriplePattern(
+        pattern=r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+        predicate="capital_of",
+        source="capital_at_template",
+    )
+    extractor = RegexTripleExtractor(patterns=(pattern,), fallback=RuleBasedTripleExtractor())
+
+    default_triple = extract_claim_triples(claim)[0]
+    extracted = extractor.extract(claim)
+
+    assert default_triple.predicate == "has"
+    assert extracted == (
+        ClaimTriple(
+            subject="France",
+            predicate="capital_of",
+            object="Paris",
+            claim_id="capital",
+            source_text="France has its capital at Paris.",
+            confidence=0.65,
+            metadata={
+                "extractor": "regex_triple_extractor",
+                "source": "capital_at_template",
+                "pattern": r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+            },
+        ),
+    )
+
+
+def test_structured_fact_verifier_accepts_injected_triple_extractor():
+    claim = Claim("France has its capital at Paris.", claim_id="capital")
+    facts = (StructuredFact(subject="France", predicate="capital", object="Paris", source="wikidata:P36"),)
+    regex = RegexTripleExtractor(
+        patterns=(
+            {
+                "pattern": r"^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+                "predicate": "capital_of",
+            },
+        )
+    )
+    composite = CompositeTripleExtractor((regex, RuleBasedTripleExtractor()))
+
+    default_result = StructuredFactVerifier(facts).verify(claim)
+    injected_result = StructuredFactVerifier(facts, extractor=composite).verify(claim)
+
+    assert default_result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert injected_result.status is VerificationStatus.SUPPORTED
+    assert injected_result.metadata["all_triple_results"][0]["metadata"]["triple"]["predicate"] == "capital_of"
 
 
 def test_claim_coherence_infers_metadata_and_discourse_dependencies():

@@ -344,8 +344,20 @@ Added stricter triple-evidence audit observability:
   extractor by itself; it makes structured-fact, retrieval, and world-model
   route failures easier to audit before adding heavier extraction dependencies.
 
+Added dependency-free triple extractor plug-ins and eval harness:
+
+- `RegexTriplePattern`, `RegexTripleExtractor`, and `CompositeTripleExtractor`
+  add a configurable extraction slot between the default rule-based parser and
+  future learned or external fact extractors.
+- `StructuredFactVerifier` can now receive an injected extractor, so new
+  extraction templates can be evaluated behind the same KG-covered correction
+  route without changing route semantics.
+- `benchmarks/eval_triple_extraction.py` compares rule-based, regex,
+  regex-with-rule-based fallback, and composite extractors on labeled triples
+  with exact precision, recall, F1, and bounded error examples.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
+2. Populate `eval_triple_extraction.py` with a larger labeled extractor fixture from KG-covered facts and compare regex/composite templates against the default rule-based extractor before adding a heavier extractor dependency.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

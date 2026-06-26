@@ -992,7 +992,9 @@ For natural-language claims backed by subject-predicate-object facts, pass
 `--fact-corpus`. `StructuredFactVerifier` extracts simple claim triples, supports
 common paraphrases such as possessive and subject-first fact statements, matches
 aliases and multi-object lists, and refutes object mismatches when the
-subject/predicate pair is covered by the fact corpus:
+subject/predicate pair is covered by the fact corpus. The verifier can also be
+constructed with a custom `ClaimTripleExtractor`, so stronger regex/template or
+future learned extractors can be evaluated behind the same route contract:
 
 ```bash
 python benchmarks/eval_verifier_ensemble.py \
@@ -1000,6 +1002,17 @@ python benchmarks/eval_verifier_ensemble.py \
   --fact-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
   --signal truth_proj \
   --json artifacts/wikidata-country-core-facts-structured-fact-route/structured-fact-verifier-report.json
+```
+
+Before promoting a new extractor into a verifier route, use
+`eval_triple_extraction.py` on labeled extraction fixtures:
+
+```bash
+python benchmarks/eval_triple_extraction.py \
+  --records artifacts/triple_extraction_fixture.json \
+  --extractor regex_rule_based \
+  --patterns artifacts/triple_regex_patterns.json \
+  --json artifacts/triple_extraction_eval.json
 ```
 
 For structured state, business rules, policy checks, or tool-output checks,
