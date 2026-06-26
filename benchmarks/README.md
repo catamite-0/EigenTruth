@@ -3243,9 +3243,11 @@ python benchmarks/build_verifier_signal_score_dump.py \
 When verified records include state-transition prediction metadata or direct
 world-model ensemble agreement metadata, the same converter also emits
 world-model uncertainty columns such as `world_model_disagreement`,
-`world_model_agreement_gap`, and `world_model_low_agreement`, so
-simulator/model disagreement can be swept or fused under the same conformal
-calibration path.
+`world_model_agreement_gap`, and `world_model_low_agreement`. When transition
+metadata includes explicit postcondition conflicts, it also emits
+`world_model_conflict`, `world_model_conflict_delta`, and the audit-oriented
+`world_model_trace_gap`, so simulator/model disagreement and expected-vs-actual
+world conflicts can be swept or fused under the same conformal calibration path.
 
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is
@@ -3340,7 +3342,10 @@ outcome, such as `verifier_refuted`. With `--world-model-ensemble`, the workflow
 produces nonzero `world_model_disagreement`, `world_model_agreement_gap`, and
 `world_model_low_agreement` columns from controlled member disagreement. Use
 `--world-model-ensemble-strategy policy_replay` when testing strategy-driven
-disagreement that is not directly label-shaped.
+disagreement that is not directly label-shaped. The default workflow fusion
+signals also include `world_model_conflict` and `world_model_conflict_delta`,
+so non-ensemble transition contradictions remain calibratable even when
+agreement-gap columns are zero.
 Direct ensemble agreement metadata from external multi-world-model adapters is
 also preserved by `build_verifier_signal_score_dump.py` when present in
 sidecars.

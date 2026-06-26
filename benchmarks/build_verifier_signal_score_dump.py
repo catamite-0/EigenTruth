@@ -23,6 +23,9 @@ DEFAULT_VERIFIER_SIGNALS = (
     "world_model_disagreement",
     "world_model_agreement_gap",
     "world_model_low_agreement",
+    "world_model_conflict",
+    "world_model_conflict_delta",
+    "world_model_trace_gap",
 )
 
 
@@ -189,6 +192,13 @@ def verifier_signal_definitions() -> dict[str, str]:
         "world_model_disagreement": "1 when world-model prediction metadata reports disagreement, else 0.",
         "world_model_agreement_gap": "1 - world-model agreement_rate when reported, else 0.",
         "world_model_low_agreement": "1 when world-model prediction agreement falls below its threshold, else 0.",
+        "world_model_conflict": "1 when state-transition metadata reports a world-model postcondition conflict.",
+        "world_model_conflict_delta": (
+            "absolute numeric expected-vs-actual delta for world-model conflicts, else 0."
+        ),
+        "world_model_trace_gap": (
+            "1 when a state-transition verifier record lacks world_model_reference or world_model_view metadata."
+        ),
     }
 
 
@@ -281,27 +291,76 @@ def _world_model_signal_features(
     record: Mapping[str, Any],
     final: Mapping[str, Any],
 ) -> dict[str, float]:
+    features = _empty_world_model_features()
+    transition = _mapping(record.get("transition"))
+    transition_present = bool(transition)
     metadata_candidates = [
-        _mapping(_mapping(record.get("transition")).get("metadata")),
+        _mapping(transition.get("metadata")),
         _mapping(final.get("metadata")),
     ]
     for metadata in metadata_candidates:
+        if not metadata:
+            continue
+        features.update(
+            _world_model_trace_features(
+                metadata,
+                transition_present=transition_present,
+            )
+        )
         prediction_metadata = _mapping(metadata.get("prediction_metadata"))
         if prediction_metadata:
-            return _world_model_metadata_features(
-                prediction_metadata,
-                name_prefix="world_model.prediction",
+            features.update(
+                _world_model_metadata_features(
+                    prediction_metadata,
+                    name_prefix="world_model.prediction",
+                )
             )
+            return features
         if _is_direct_world_model_metadata(metadata):
-            return _world_model_metadata_features(
-                metadata,
-                name_prefix="world_model",
+            features.update(
+                _world_model_metadata_features(
+                    metadata,
+                    name_prefix="world_model",
+                )
             )
+            return features
+    return features
+
+
+def _empty_world_model_features() -> dict[str, float]:
     return {
         "world_model_disagreement": 0.0,
         "world_model_agreement_gap": 0.0,
         "world_model_low_agreement": 0.0,
+        "world_model_conflict": 0.0,
+        "world_model_conflict_delta": 0.0,
+        "world_model_trace_gap": 0.0,
     }
+
+
+def _world_model_trace_features(
+    metadata: Mapping[str, Any],
+    *,
+    transition_present: bool,
+) -> dict[str, float]:
+    conflict = _mapping(metadata.get("world_model_conflict"))
+    reference = _mapping(metadata.get("world_model_reference"))
+    view = _mapping(metadata.get("world_model_view"))
+    return {
+        "world_model_conflict": 1.0 if conflict else 0.0,
+        "world_model_conflict_delta": _world_model_conflict_delta(conflict),
+        "world_model_trace_gap": 1.0 if transition_present and (not reference or not view) else 0.0,
+    }
+
+
+def _world_model_conflict_delta(conflict: Mapping[str, Any]) -> float:
+    if not conflict:
+        return 0.0
+    expected = _optional_finite_float(conflict.get("expected"))
+    actual = _optional_finite_float(conflict.get("actual"))
+    if expected is None or actual is None:
+        return 0.0
+    return abs(actual - expected)
 
 
 def _is_direct_world_model_metadata(metadata: Mapping[str, Any]) -> bool:
@@ -418,6 +477,16 @@ def _finite_float(value: Any, *, name: str) -> float:
     if not math.isfinite(numeric):
         raise ValueError(f"{name} must be finite.")
     return numeric
+
+
+def _optional_finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
 
 
 def _unit_interval(value: Any, *, name: str) -> float:

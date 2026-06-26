@@ -25121,6 +25121,12 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
                     "status": "supported",
                     "confidence": 0.9,
                     "metadata": {
+                        "world_model_reference": {"reference_id": "orders", "adapter": "RuleBasedWorldModelAdapter"},
+                        "world_model_view": {
+                            "postcondition": {"path": "inventory.sku.available", "operator": "eq", "value": 7},
+                            "base_state_fingerprint": "base-a",
+                            "predicted_state_fingerprint": "pred-a",
+                        },
                         "prediction_metadata": {
                             "agreement_rate": 1.0,
                             "below_min_agreement": False,
@@ -25142,6 +25148,19 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
                     "status": "refuted",
                     "confidence": 0.8,
                     "metadata": {
+                        "world_model_reference": {"reference_id": "orders", "adapter": "RuleBasedWorldModelAdapter"},
+                        "world_model_view": {
+                            "postcondition": {"path": "inventory.sku.available", "operator": "eq", "value": 10},
+                            "base_state_fingerprint": "base-b",
+                            "predicted_state_fingerprint": "pred-b",
+                        },
+                        "world_model_conflict": {
+                            "reference_id": "orders",
+                            "path": "inventory.sku.available",
+                            "operator": "eq",
+                            "expected": 10,
+                            "actual": 7,
+                        },
                         "prediction_metadata": {
                             "agreement_rate": 0.75,
                             "below_min_agreement": False,
@@ -25169,6 +25188,12 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
                     "confidence": 0.0,
                     "metadata": {
                         "decision_rule": "prediction_agreement_below_threshold",
+                        "world_model_reference": {"reference_id": "orders", "adapter": "EnsembleWorldModelAdapter"},
+                        "world_model_view": {
+                            "postcondition": {"path": "inventory.sku.available", "operator": "eq", "value": 7},
+                            "base_state_fingerprint": "base-c",
+                            "predicted_state_fingerprint": "pred-c",
+                        },
                         "prediction_metadata": {
                             "agreement_rate": 0.5,
                             "below_min_agreement": True,
@@ -25197,7 +25222,8 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             keep_signals="truth_proj,subspace_resid",
             verifier_signals=(
                 "verifier_refuted,verifier_uncertainty,selfcheck_refute_rate,selfcheck_disagreement,"
-                "world_model_disagreement,world_model_agreement_gap,world_model_low_agreement"
+                "world_model_disagreement,world_model_agreement_gap,world_model_low_agreement,"
+                "world_model_conflict,world_model_conflict_delta,world_model_trace_gap"
             ),
             output=str(output_path),
             output_format="jsonl",
@@ -25218,6 +25244,9 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert enhanced.scores["world_model_disagreement"] == pytest.approx((0.0, 1.0, 1.0))
     assert enhanced.scores["world_model_agreement_gap"] == pytest.approx((0.0, 0.25, 0.5))
     assert enhanced.scores["world_model_low_agreement"] == pytest.approx((0.0, 0.0, 1.0))
+    assert enhanced.scores["world_model_conflict"] == pytest.approx((0.0, 1.0, 0.0))
+    assert enhanced.scores["world_model_conflict_delta"] == pytest.approx((0.0, 3.0, 0.0))
+    assert enhanced.scores["world_model_trace_gap"] == pytest.approx((0.0, 0.0, 0.0))
     assert enhanced.config["verifier_signal_score_dump"]["run_name"] == "synthetic"
     assert enhanced.extras["verifier_signal_metadata"]["signals"] == [
         "verifier_refuted",
@@ -25227,10 +25256,16 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
         "world_model_disagreement",
         "world_model_agreement_gap",
         "world_model_low_agreement",
+        "world_model_conflict",
+        "world_model_conflict_delta",
+        "world_model_trace_gap",
     ]
     assert DEFAULT_SCORE_DIRECTIONS["world_model_disagreement"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["world_model_agreement_gap"] == "higher"
     assert DEFAULT_SCORE_DIRECTIONS["world_model_low_agreement"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_conflict"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_conflict_delta"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_trace_gap"] == "higher"
 
 
 def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():
@@ -25267,13 +25302,33 @@ def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata()
             }
         }
     })
+    missing_trace_features = module.verifier_signal_features({
+        "record": {
+            "final": {"status": "supported", "confidence": 0.8},
+            "transition": {
+                "status": "supported",
+                "confidence": 0.8,
+                "metadata": {
+                    "prediction_metadata": {
+                        "agreement_rate": 1.0,
+                        "below_min_agreement": False,
+                        "disagreement": False,
+                    }
+                },
+            },
+        }
+    })
 
     assert consensus_features["world_model_disagreement"] == pytest.approx(1.0)
     assert consensus_features["world_model_agreement_gap"] == pytest.approx(0.25)
     assert consensus_features["world_model_low_agreement"] == pytest.approx(0.0)
+    assert consensus_features["world_model_conflict"] == pytest.approx(0.0)
+    assert consensus_features["world_model_conflict_delta"] == pytest.approx(0.0)
+    assert consensus_features["world_model_trace_gap"] == pytest.approx(0.0)
     assert low_agreement_features["world_model_disagreement"] == pytest.approx(1.0)
     assert low_agreement_features["world_model_agreement_gap"] == pytest.approx(2 / 3)
     assert low_agreement_features["world_model_low_agreement"] == pytest.approx(1.0)
+    assert missing_trace_features["world_model_trace_gap"] == pytest.approx(1.0)
 
 
 def test_build_text_baseline_score_dump_from_statement_metadata(tmp_path):
@@ -25472,6 +25527,9 @@ def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tm
             "world_model_disagreement",
             "world_model_agreement_gap",
             "world_model_low_agreement",
+            "world_model_conflict",
+            "world_model_conflict_delta",
+            "world_model_trace_gap",
         ),
     )
     registry = ArtifactRegistry.load_json(registry_path)
@@ -25489,6 +25547,9 @@ def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tm
     assert max(enhanced.scores["world_model_disagreement"]) == pytest.approx(0.0)
     assert max(enhanced.scores["world_model_agreement_gap"]) == pytest.approx(0.0)
     assert max(enhanced.scores["world_model_low_agreement"]) == pytest.approx(0.0)
+    assert enhanced.scores["world_model_conflict"] == pytest.approx(tuple(float(label) for label in enhanced.labels))
+    assert max(enhanced.scores["world_model_conflict_delta"]) == pytest.approx(1.0)
+    assert max(enhanced.scores["world_model_trace_gap"]) == pytest.approx(0.0)
     assert (output_dir / "verifier-signal-fusion" / "synthetic-world-model-geometry-fusion-artifact.json").exists()
 
 
@@ -25520,6 +25581,8 @@ def test_world_model_signal_calibration_workflow_can_emit_ensemble_agreement_sig
             "world_model_disagreement",
             "world_model_agreement_gap",
             "world_model_low_agreement",
+            "world_model_conflict",
+            "world_model_trace_gap",
         ),
     )
 
@@ -25534,6 +25597,8 @@ def test_world_model_signal_calibration_workflow_can_emit_ensemble_agreement_sig
         tuple((1 / 3) if label else 0.0 for label in enhanced.labels)
     )
     assert enhanced.scores["world_model_low_agreement"] == pytest.approx(expected_labels)
+    assert max(enhanced.scores["world_model_conflict"]) == pytest.approx(0.0)
+    assert max(enhanced.scores["world_model_trace_gap"]) == pytest.approx(0.0)
 
 
 def test_world_model_signal_calibration_workflow_can_emit_policy_replay_agreement_signals(tmp_path):
@@ -25565,9 +25630,15 @@ def test_world_model_signal_calibration_workflow_can_emit_policy_replay_agreemen
             "world_model_disagreement",
             "world_model_agreement_gap",
             "world_model_low_agreement",
+            "world_model_conflict",
+            "world_model_trace_gap",
         ),
     )
     expected_policy_disagreement = tuple(1.0 if (index % 3) == 2 else 0.0 for index in range(12))
+    expected_policy_conflict = tuple(
+        1.0 if label and not expected_policy_disagreement[index] else 0.0
+        for index, label in enumerate(enhanced.labels)
+    )
 
     assert payload["world_model_summary"]["adapter"] == "EnsembleWorldModelAdapter"
     assert payload["world_model_summary"]["strategy"] == "policy_replay"
@@ -25577,6 +25648,8 @@ def test_world_model_signal_calibration_workflow_can_emit_policy_replay_agreemen
         tuple(value / 3 for value in expected_policy_disagreement)
     )
     assert enhanced.scores["world_model_low_agreement"] == pytest.approx(expected_policy_disagreement)
+    assert enhanced.scores["world_model_conflict"] == pytest.approx(expected_policy_conflict)
+    assert max(enhanced.scores["world_model_trace_gap"]) == pytest.approx(0.0)
     assert enhanced.scores["world_model_disagreement"] != pytest.approx(
         tuple(float(label) for label in enhanced.labels)
     )

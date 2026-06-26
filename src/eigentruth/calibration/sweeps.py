@@ -57,6 +57,9 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "world_model_disagreement": "higher",
     "world_model_agreement_gap": "higher",
     "world_model_low_agreement": "higher",
+    "world_model_conflict": "higher",
+    "world_model_conflict_delta": "higher",
+    "world_model_trace_gap": "higher",
 }
 
 

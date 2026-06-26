@@ -39,12 +39,15 @@ DEFAULT_WORLD_MODEL_FUSION_SIGNALS = (
     "world_model_disagreement",
     "world_model_agreement_gap",
     "world_model_low_agreement",
+    "world_model_conflict",
+    "world_model_conflict_delta",
 )
 DEFAULT_WORLD_MODEL_UNCERTAINTY_SIGNALS = (
     "verifier_refuted",
     "world_model_disagreement",
     "world_model_agreement_gap",
     "world_model_low_agreement",
+    "world_model_conflict",
 )
 
 
