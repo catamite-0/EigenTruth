@@ -2444,7 +2444,9 @@ URL metadata, and a retrieval timestamp. The `country_core_facts` preset fetches
 template-ready country facts for selected properties, defaulting to `P36`
 capital, `P37` official language, and `P38` currency. The script uses only the
 standard library and supports `--input-json` for offline replay of saved SPARQL
-results.
+results. Rows whose natural-language labels are bare Wikidata `Q...` or `P...`
+ids are skipped by default to avoid turning unresolved entities into retrieval
+evidence; pass `--keep-qid-labels` only when debugging raw SPARQL coverage.
 
 ```bash
 python benchmarks/fetch_wikidata_reference_docs.py \
@@ -2459,9 +2461,9 @@ python benchmarks/fetch_wikidata_reference_docs.py \
   --property P36 \
   --property P37 \
   --property P38 \
-  --limit 240 \
-  --output artifacts/wikidata-country-core-facts/wikidata-country-core-facts-source.jsonl \
-  --artifact-manifest artifacts/wikidata-country-core-facts/wikidata-source-manifest.json
+  --limit 360 \
+  --output artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl \
+  --artifact-manifest artifacts/wikidata-country-core-facts-external-corpus/wikidata-source-manifest.json
 ```
 
 The committed evidence-source gate at
@@ -2502,6 +2504,21 @@ records, but the retrieval-backed route has verified false alarm `0.149`,
 above the `0.05` gate, with verified detection `0.286`. This makes the current
 Wikidata country-capital corpus a useful external-source smoke gate, not a
 deployable TruthfulQA verifier route.
+
+The broader committed source gate at
+`artifacts/wikidata-country-core-facts-external-corpus/` fetches `359`
+template-ready `P36`/`P37`/`P38` rows after QID-label filtering, builds both a
+`359`-document external retrieval corpus and a `359`-document structured QA
+corpus, passes grounding provenance audit, and recursively verifies the
+manifest. Its route-quality follow-up at
+`artifacts/wikidata-country-core-facts-external-route-audit-qwen05-l80/` is also
+correctly blocked: coverage rises to `275/556` (`0.495`) and hits rise to
+`1125`, split across `P36=510`, `P37=303`, and `P38=312`, but
+`retrieval_groundedness` still fails the false-alarm gate (`0.155` > `0.05`)
+despite detection `0.316`. The measured improvement over country capitals is
+real but insufficient for route promotion; the next useful path is structured
+QA/triple-style Wikidata verification rather than lexical retrieval tuning
+alone.
 
 ## `build_wikidata_qa_corpus.py`
 

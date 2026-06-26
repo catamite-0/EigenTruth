@@ -1,0 +1,626 @@
+{
+  "alphas": [
+    0.1
+  ],
+  "direction": null,
+  "policy": {
+    "name": "refute_or_internal_unless_supported",
+    "otherwise": "preserve_internal_trigger",
+    "refuted": "trigger",
+    "supported": "suppress_internal_trigger",
+    "tolerance": 0.03
+  },
+  "qa_verifier": {
+    "corpus_path": null,
+    "enabled": false,
+    "type": "QuestionAnswerVerifier"
+  },
+  "repeats": 1,
+  "retrieval_qa_verifier": {
+    "enabled": false,
+    "source": "retrieval_hits",
+    "type": "QuestionAnswerVerifier"
+  },
+  "retriever": {
+    "limit": 5,
+    "min_overlap": 0.15,
+    "type": "InMemoryRetriever"
+  },
+  "runs": [
+    {
+      "alphas": {
+        "0.1": {
+          "alpha": 0.1,
+          "delta": {
+            "detection": 0.0,
+            "false_alarm": 0.0,
+            "rescued_detection_rate": 0.0,
+            "suppressed_false_alarm_rate": 0.0
+          },
+          "internal": {
+            "coverage": 0.864,
+            "detection": 0.3235294117647059,
+            "false_alarm": 0.136,
+            "pass": false
+          },
+          "repeats": 1,
+          "route_control_impact": {
+            "groundedness": {
+              "delta": {
+                "detection": 0.0,
+                "false_alarm": 0.0,
+                "rescued_detection_rate": 0.0,
+                "suppressed_false_alarm_rate": 0.0
+              },
+              "internal": {
+                "detection": 0.33112582781456956,
+                "false_alarm": 0.1111111111111111
+              },
+              "n_false": 151,
+              "n_selected": 281,
+              "n_true": 130,
+              "verified": {
+                "detection": 0.33112582781456956,
+                "false_alarm": 0.1111111111111111
+              }
+            },
+            "retrieval_groundedness": {
+              "delta": {
+                "detection": 0.0,
+                "false_alarm": 0.0,
+                "rescued_detection_rate": 0.0,
+                "suppressed_false_alarm_rate": 0.0
+              },
+              "internal": {
+                "detection": 0.3161290322580645,
+                "false_alarm": 0.15492957746478872
+              },
+              "n_false": 155,
+              "n_selected": 275,
+              "n_true": 120,
+              "verified": {
+                "detection": 0.3161290322580645,
+                "false_alarm": 0.15492957746478872
+              }
+            }
+          },
+          "verified": {
+            "coverage": 0.864,
+            "detection": 0.3235294117647059,
+            "false_alarm": 0.136,
+            "pass": false
+          }
+        }
+      },
+      "cache_stats": {
+        "groundedness_verifiers": {
+          "hit_rate": 0.0,
+          "hits": 0,
+          "instances": 187,
+          "misses": 831,
+          "requests": 831,
+          "size": 831
+        },
+        "qa_verifier": {},
+        "retrieval_qa_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "retrievers": {
+          "hit_rate": 0.0,
+          "hits": 0,
+          "instances": 186,
+          "misses": 275,
+          "requests": 275,
+          "size": 275
+        },
+        "selfcheck_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        },
+        "state_verifier": {},
+        "total": {
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 1106,
+          "requests": 1106,
+          "size": 1106
+        },
+        "trace_cache": {
+          "enabled": false,
+          "hit": false,
+          "key": null,
+          "path": null,
+          "records": null
+        },
+        "transition_verifier": {},
+        "triple_evidence_verifiers": {
+          "hit_rate": null,
+          "hits": 0,
+          "instances": 0,
+          "misses": 0,
+          "requests": 0,
+          "size": 0
+        }
+      },
+      "config": {
+        "batch_size": 4,
+        "cache_only": false,
+        "eigenscore_alpha": 0.001,
+        "eval_reps_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/eval-reps-cache",
+        "eval_reps_cache_shard_size": 128,
+        "hidden_dim": 896,
+        "inside_batch_size": 1,
+        "inside_max_new_tokens": 12,
+        "inside_pooling": "last",
+        "inside_samples": 0,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_trigger_signal": null,
+        "inside_trigger_threshold": null,
+        "inside_trigger_top_fraction": null,
+        "layer": -12,
+        "layer_stats_cache": "/tmp/eigentruth-qwen-l80.8gzqXO/layer-stats.pt",
+        "length_bucketed_batches": true,
+        "manifold_n": 266,
+        "model": "Qwen/Qwen2.5-0.5B-Instruct",
+        "n_manifold_false": 338,
+        "n_neg": 250,
+        "n_pos": 306,
+        "offline": false,
+        "refresh_eval_reps_cache": false,
+        "refresh_layer_stats_cache": false,
+        "seed": 0,
+        "subspace_rank": 2,
+        "sweep_layers": [
+          -12,
+          -16,
+          -14,
+          -10,
+          -8
+        ]
+      },
+      "direction": "higher",
+      "n_false": 306,
+      "n_total": 556,
+      "n_true": 250,
+      "name": "qwen05-l80-wikidata-country-core-facts",
+      "qa": {
+        "decided_records": 0,
+        "enabled": false
+      },
+      "retrieval": {
+        "records_with_hits": 275,
+        "retrieval_limit": 5,
+        "total_hits": 1125
+      },
+      "retrieval_qa": {
+        "decided_records": 0,
+        "enabled": false
+      },
+      "route_quality": {
+        "groundedness": {
+          "attempted_route_count_observations": 281,
+          "decision_accuracy": null,
+          "decision_error_rate": null,
+          "duration_observations": 281,
+          "false_refuted_rate": 0.0,
+          "false_supported_rate": 0.0,
+          "insufficient_evidence_rate": 1.0,
+          "label_status_matrix": {
+            "false": {
+              "error": 0,
+              "insufficient_evidence": 151,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 0
+            },
+            "true": {
+              "error": 0,
+              "insufficient_evidence": 130,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 0
+            }
+          },
+          "max_duration_seconds": 0.00011225199705222622,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 5.238806415395645e-05,
+          "mean_retrieval_hits": 0.0,
+          "mean_selected_route_duration_seconds": 5.238806415395645e-05,
+          "n_decided_supported_or_refuted": 0,
+          "n_false": 151,
+          "n_true": 130,
+          "p95_duration_seconds": 6.482900062110275e-05,
+          "p95_selected_route_duration_seconds": 6.482900062110275e-05,
+          "p99_duration_seconds": 8.273879793705418e-05,
+          "p99_selected_route_duration_seconds": 8.273879793705418e-05,
+          "retrieval_hit_count": 0,
+          "retrieval_use_rate": 0.0,
+          "selected": 281,
+          "selected_route_duration_observations": 281,
+          "selection_rate": 0.5053956834532374,
+          "total_attempted_route_count": 281.0,
+          "total_duration_seconds": 0.014721046027261764,
+          "total_selected_route_duration_seconds": 0.014721046027261764,
+          "true_refuted_rate": 0.0,
+          "true_supported_rate": 0.0,
+          "used_retrieval_count": 0
+        },
+        "retrieval_groundedness": {
+          "attempted_route_count_observations": 275,
+          "decision_accuracy": 1.0,
+          "decision_error_rate": 0.0,
+          "duration_observations": 275,
+          "false_refuted_rate": 0.0,
+          "false_supported_rate": 0.0,
+          "insufficient_evidence_rate": 0.9963636363636363,
+          "label_status_matrix": {
+            "false": {
+              "error": 0,
+              "insufficient_evidence": 155,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 0
+            },
+            "true": {
+              "error": 0,
+              "insufficient_evidence": 119,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 1
+            }
+          },
+          "max_duration_seconds": 0.00041505799163132906,
+          "mean_attempted_route_count": 2.0,
+          "mean_duration_seconds": 0.00023528874198249964,
+          "mean_retrieval_hits": 4.090909090909091,
+          "mean_selected_route_duration_seconds": 0.00017967835277721115,
+          "n_decided_supported_or_refuted": 1,
+          "n_false": 155,
+          "n_true": 120,
+          "p95_duration_seconds": 0.0002877660968806595,
+          "p95_selected_route_duration_seconds": 0.00022181270469445735,
+          "p99_duration_seconds": 0.0003064221411477774,
+          "p99_selected_route_duration_seconds": 0.00023854988015955308,
+          "retrieval_hit_count": 1125,
+          "retrieval_use_rate": 1.0,
+          "selected": 275,
+          "selected_route_duration_observations": 275,
+          "selection_rate": 0.49460431654676257,
+          "total_attempted_route_count": 550.0,
+          "total_duration_seconds": 0.0647044040451874,
+          "total_selected_route_duration_seconds": 0.04941154701373307,
+          "true_refuted_rate": 0.0,
+          "true_supported_rate": 0.008333333333333333,
+          "used_retrieval_count": 275
+        }
+      },
+      "route_summary": {
+        "attempted_counts": {
+          "groundedness": 556,
+          "retrieval_groundedness": 275
+        },
+        "by_route": {
+          "groundedness": {
+            "attempted_route_count_observations": 281,
+            "duration_observations": 281,
+            "labels": {
+              "false": 151,
+              "true": 130
+            },
+            "max_duration_seconds": 0.00011225199705222622,
+            "mean_attempted_route_count": 1.0,
+            "mean_duration_seconds": 5.238806415395645e-05,
+            "mean_retrieval_hits": 0.0,
+            "mean_selected_route_duration_seconds": 5.238806415395645e-05,
+            "p95_duration_seconds": 6.482900062110275e-05,
+            "p95_selected_route_duration_seconds": 6.482900062110275e-05,
+            "p99_duration_seconds": 8.273879793705418e-05,
+            "p99_selected_route_duration_seconds": 8.273879793705418e-05,
+            "rates": {
+              "error": 0.0,
+              "insufficient_evidence": 1.0,
+              "refuted": 0.0,
+              "supported": 0.0
+            },
+            "retrieval_hit_count": 0,
+            "retrieval_use_rate": 0.0,
+            "selected": 281,
+            "selected_route_duration_observations": 281,
+            "statuses": {
+              "error": 0,
+              "insufficient_evidence": 281,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 0
+            },
+            "total_attempted_route_count": 281.0,
+            "total_duration_seconds": 0.014721046027261764,
+            "total_selected_route_duration_seconds": 0.014721046027261764,
+            "used_retrieval": 0,
+            "used_retrieval_count": 0
+          },
+          "retrieval_groundedness": {
+            "attempted_route_count_observations": 275,
+            "duration_observations": 275,
+            "labels": {
+              "false": 155,
+              "true": 120
+            },
+            "max_duration_seconds": 0.00041505799163132906,
+            "mean_attempted_route_count": 2.0,
+            "mean_duration_seconds": 0.00023528874198249964,
+            "mean_retrieval_hits": 4.090909090909091,
+            "mean_selected_route_duration_seconds": 0.00017967835277721115,
+            "p95_duration_seconds": 0.0002877660968806595,
+            "p95_selected_route_duration_seconds": 0.00022181270469445735,
+            "p99_duration_seconds": 0.0003064221411477774,
+            "p99_selected_route_duration_seconds": 0.00023854988015955308,
+            "rates": {
+              "error": 0.0,
+              "insufficient_evidence": 0.9963636363636363,
+              "refuted": 0.0,
+              "supported": 0.0036363636363636364
+            },
+            "retrieval_hit_count": 1125,
+            "retrieval_use_rate": 1.0,
+            "selected": 275,
+            "selected_route_duration_observations": 275,
+            "statuses": {
+              "error": 0,
+              "insufficient_evidence": 274,
+              "not_applicable": 0,
+              "refuted": 0,
+              "supported": 1
+            },
+            "total_attempted_route_count": 550.0,
+            "total_duration_seconds": 0.0647044040451874,
+            "total_selected_route_duration_seconds": 0.04941154701373307,
+            "used_retrieval": 275,
+            "used_retrieval_count": 275
+          }
+        },
+        "selected_counts": {
+          "groundedness": 281,
+          "retrieval_groundedness": 275
+        }
+      },
+      "score_dump": {
+        "exists": true,
+        "kind": "file",
+        "path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json",
+        "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+        "size_bytes": 572479,
+        "source_format": "json",
+        "summary": {
+          "all_signal_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "has_statements": true,
+          "layer": -12,
+          "model": "Qwen/Qwen2.5-0.5B-Instruct",
+          "n_false": 306,
+          "n_total": 556,
+          "n_true": 250,
+          "score_count": 7,
+          "score_names": [
+            "disp_euclid",
+            "disp_hse",
+            "eigenscore",
+            "maha_last",
+            "nll_answer",
+            "subspace_resid",
+            "truth_proj"
+          ],
+          "statement_count": 556,
+          "sweep_layer_count": 5,
+          "sweep_layers": [
+            "-16",
+            "-14",
+            "-12",
+            "-10",
+            "-8"
+          ],
+          "sweep_score_count": 20,
+          "sweep_score_names": [
+            "eigenscore",
+            "maha_last",
+            "subspace_resid",
+            "truth_proj"
+          ]
+        }
+      },
+      "scores_path": "artifacts/qwen05_truthfulqa_l80_scores_with_statements.json",
+      "selfcheck_verifier": {
+        "available_samples": 0,
+        "considered_samples": 0,
+        "decided_records": 0,
+        "early_stop": false,
+        "early_stopped_records": 0,
+        "enabled": false,
+        "executed_records": 0,
+        "max_samples": null,
+        "processed_samples": 0,
+        "processing_rate": null,
+        "records_with_samples": 0,
+        "skipped_samples": 0
+      },
+      "signal": "truth_proj",
+      "staged_verification": {
+        "action_counts": {},
+        "alpha": 0.1,
+        "enabled": false,
+        "policy": null,
+        "reason_counts": {},
+        "risk_level_counts": {},
+        "skip_rate": null,
+        "skipped_records": 0,
+        "threshold": null,
+        "total_records": 556,
+        "triggered_claim_count": 0,
+        "triggered_feature_counts": {},
+        "triggered_metadata_counts": {},
+        "verified_records": 0
+      },
+      "state_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "global_checks": 0
+      },
+      "transition_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "global_transitions": 0,
+        "min_prediction_confidence": 0.0
+      },
+      "triple_evidence_verifier": {
+        "decided_records": 0,
+        "enabled": false,
+        "min_slot_coverage": 1.0,
+        "records_with_triple_route": 0,
+        "type": "TripleEvidenceVerifier"
+      },
+      "verification_quality": {
+        "decision_accuracy": 1.0,
+        "decision_error_rate": 0.0,
+        "false_refuted_rate": 0.0,
+        "false_supported_rate": 0.0,
+        "insufficient_evidence_rate": 0.9982014388489209,
+        "label_status_matrix": {
+          "false": {
+            "error": 0,
+            "insufficient_evidence": 306,
+            "not_applicable": 0,
+            "refuted": 0,
+            "supported": 0
+          },
+          "true": {
+            "error": 0,
+            "insufficient_evidence": 249,
+            "not_applicable": 0,
+            "refuted": 0,
+            "supported": 1
+          }
+        },
+        "n_decided_supported_or_refuted": 1,
+        "true_refuted_rate": 0.0,
+        "true_supported_rate": 0.004
+      },
+      "verification_status_counts": {
+        "error": 0,
+        "insufficient_evidence": 555,
+        "not_applicable": 0,
+        "refuted": 0,
+        "supported": 1
+      },
+      "verified_records": {
+        "count": 556,
+        "path": null,
+        "storage": "summary_only"
+      }
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 1,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 1,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 1,
+      "writes": 1
+    },
+    "jsonl_manifest": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    },
+    "jsonl_summary": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    },
+    "jsonl_view": {
+      "attempts": 0,
+      "hit_rate": null,
+      "hits": 0,
+      "misses": 0,
+      "writes": 0
+    }
+  },
+  "seed": 0,
+  "selfcheck_verifier": {
+    "early_stop": false,
+    "enabled": false,
+    "max_samples": null,
+    "min_overlap": 0.65,
+    "min_samples": 2,
+    "refute_threshold": 0.5,
+    "support_threshold": 0.6,
+    "type": "SelfConsistencyVerifier"
+  },
+  "signal": "truth_proj",
+  "staged_verification": {
+    "alpha": 0.1,
+    "decision_source": "conformal_internal_gate",
+    "enabled": false,
+    "policy": null
+  },
+  "state_verifier": {
+    "enabled": false,
+    "fixture_has_state": false,
+    "global_checks": 0,
+    "state_path": null,
+    "type": "StructuredStateVerifier"
+  },
+  "transition_verifier": {
+    "enabled": false,
+    "fixture_has_state": false,
+    "global_transitions": 0,
+    "min_prediction_confidence": 0.0,
+    "state_path": null,
+    "type": "StateTransitionVerifier"
+  },
+  "triple_evidence_verifier": {
+    "enabled": false,
+    "min_slot_coverage": 1.0,
+    "requested": false,
+    "type": "TripleEvidenceVerifier"
+  },
+  "verification_trace_cache": {
+    "enabled": false,
+    "path": null
+  },
+  "verified_records": {
+    "count": 556,
+    "path": null,
+    "run_counts": {
+      "qwen05-l80-wikidata-country-core-facts": 556
+    },
+    "storage": "summary_only"
+  },
+  "verifier": {
+    "min_overlap": 0.55,
+    "type": "GroundednessVerifier"
+  }
+}

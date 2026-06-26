@@ -2919,6 +2919,14 @@ def test_fetch_wikidata_reference_docs_builds_multi_property_source_docs(tmp_pat
                         "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q8146"},
                         "valueLabel": {"type": "literal", "value": "Japanese yen"},
                     },
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q999"},
+                        "countryLabel": {"type": "literal", "value": "Q999"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P37"},
+                        "propertyLabel": {"type": "literal", "value": "official language"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q150"},
+                        "valueLabel": {"type": "literal", "value": "French"},
+                    },
                 ]
             }
         }),
@@ -2964,6 +2972,12 @@ def test_fetch_wikidata_reference_docs_builds_multi_property_source_docs(tmp_pat
             artifact_manifest=str(tmp_path / "wikidata-core-facts.manifest.json"),
         )
     )
+    unfiltered_documents = wikidata.build_reference_documents_from_sparql(
+        json.loads(sparql_path.read_text(encoding="utf-8")),
+        fetched_at="2026-06-26T00:00:00+00:00",
+        query_preset="country_core_facts",
+        skip_qid_labels=False,
+    )
     external = external_builder.run(
         SimpleNamespace(
             source=[str(source_path)],
@@ -2995,6 +3009,7 @@ def test_fetch_wikidata_reference_docs_builds_multi_property_source_docs(tmp_pat
     by_question = {document["question"]: document for document in qa_corpus["documents"]}
 
     assert len(documents) == 3
+    assert len(unfiltered_documents) == 4
     assert by_source["wikidata:Q142:P37:Q150"]["metadata"]["language"] == "French"
     assert by_source["wikidata:Q17:P38:Q8146"]["metadata"]["currency"] == "Japanese yen"
     assert all(document["metadata"]["query_preset"] == "country_core_facts" for document in documents)

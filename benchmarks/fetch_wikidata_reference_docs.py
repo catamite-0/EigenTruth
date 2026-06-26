@@ -39,6 +39,7 @@ PROPERTY_FIELD_MAP = {
     "P37": ("language", "official language"),
     "P38": ("currency", "currency"),
 }
+_BARE_WIKIDATA_ID_RE = re.compile(r"^[QP][1-9][0-9]*$")
 
 
 def wikidata_country_capitals_query(*, limit: int = 120) -> str:
@@ -112,6 +113,7 @@ def build_reference_documents_from_sparql(
     endpoint: str = DEFAULT_ENDPOINT,
     query: str | None = None,
     query_preset: str = "country_capitals",
+    skip_qid_labels: bool = True,
 ) -> tuple[dict[str, Any], ...]:
     """Convert Wikidata SPARQL JSON bindings into JSONL source documents."""
     bindings = payload.get("results", {}).get("bindings", ())
@@ -128,6 +130,7 @@ def build_reference_documents_from_sparql(
             endpoint=endpoint,
             query=query,
             query_preset=query_preset,
+            skip_qid_labels=skip_qid_labels,
         )
         if document is None:
             continue
@@ -172,6 +175,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
         endpoint=args.endpoint,
         query=query,
         query_preset=query_preset,
+        skip_qid_labels=not bool(getattr(args, "keep_qid_labels", False)),
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -197,6 +201,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
                 "endpoint": args.endpoint,
                 "fetched_at": fetched_at,
                 "n_documents": len(documents),
+                "skip_qid_labels": not bool(getattr(args, "keep_qid_labels", False)),
             },
         )
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -219,11 +224,14 @@ def _document_from_binding(
     endpoint: str,
     query: str | None,
     query_preset: str,
+    skip_qid_labels: bool,
 ) -> dict[str, Any] | None:
     country_label = _binding_value(binding, "countryLabel")
     country_uri = _binding_value(binding, "country")
     country_qid = _entity_id(country_uri)
     if not country_label:
+        return None
+    if skip_qid_labels and _is_bare_wikidata_id(country_label):
         return None
     if _binding_value(binding, "property") or _binding_value(binding, "value"):
         return _generic_country_fact_document(
@@ -234,6 +242,7 @@ def _document_from_binding(
             endpoint=endpoint,
             query=query,
             query_preset=query_preset,
+            skip_qid_labels=skip_qid_labels,
         )
     return _country_capital_document(
         binding,
@@ -243,6 +252,7 @@ def _document_from_binding(
         endpoint=endpoint,
         query=query,
         query_preset=query_preset,
+        skip_qid_labels=skip_qid_labels,
     )
 
 
@@ -255,10 +265,13 @@ def _country_capital_document(
     endpoint: str,
     query: str | None,
     query_preset: str,
+    skip_qid_labels: bool,
 ) -> dict[str, Any] | None:
     capital_label = _binding_value(binding, "capitalLabel")
     capital_uri = _binding_value(binding, "capital")
     if not capital_label:
+        return None
+    if skip_qid_labels and _is_bare_wikidata_id(capital_label):
         return None
     capital_qid = _entity_id(capital_uri)
     country_ref = country_qid or country_label
@@ -295,6 +308,7 @@ def _generic_country_fact_document(
     endpoint: str,
     query: str | None,
     query_preset: str,
+    skip_qid_labels: bool,
 ) -> dict[str, Any] | None:
     value_label = _binding_value(binding, "valueLabel")
     value_uri = _binding_value(binding, "value")
@@ -302,9 +316,14 @@ def _generic_country_fact_document(
     property_id = _entity_id(property_uri)
     if not value_label or not property_id:
         return None
+    if skip_qid_labels and _is_bare_wikidata_id(value_label):
+        return None
     value_qid = _entity_id(value_uri)
     field_name, fallback_label = PROPERTY_FIELD_MAP.get(property_id, ("value", property_id))
-    property_label = _binding_value(binding, "propertyLabel") or fallback_label
+    property_label = _binding_value(binding, "propertyLabel")
+    if skip_qid_labels and property_label is not None and _is_bare_wikidata_id(property_label):
+        property_label = None
+    property_label = property_label or fallback_label
     country_ref = country_qid or country_label
     value_ref = value_qid or value_label
     metadata = _base_metadata(
@@ -371,6 +390,10 @@ def _entity_id(uri: str | None) -> str | None:
     return None
 
 
+def _is_bare_wikidata_id(value: str) -> bool:
+    return bool(_BARE_WIKIDATA_ID_RE.fullmatch(value.strip()))
+
+
 def _normalize_property_id(value: str) -> str:
     text = str(value).strip()
     if text.startswith("wd:"):
@@ -401,6 +424,8 @@ def main() -> None:
     parser.add_argument("--input-json", default=None, help="optional saved SPARQL JSON payload for offline runs")
     parser.add_argument("--fetched-at", default=None, help="override retrieved timestamp for reproducible fixtures")
     parser.add_argument("--artifact-manifest", default=None, help="optional manifest for generated source JSONL")
+    parser.add_argument("--keep-qid-labels", action="store_true",
+                        help="keep rows whose human labels are bare Wikidata Q/P ids")
     run(parser.parse_args())
 
 

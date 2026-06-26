@@ -1,0 +1,61 @@
+{
+  "artifacts": {
+    "gap_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-gap-analysis.json",
+      "sha256": "1716d1f4ac748f30c064a37b4ced90542ca25ac4e3d616cd15e1bb323772064c",
+      "size_bytes": 15081
+    },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "d685f7e06f4b72a16f2c03599c2808ac9467e774bb8c4ca8b35ef530f57644b6",
+      "size_bytes": 3047303
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "summary": {
+      "average_hits_per_record": 2.023381294964029,
+      "decision_rule_counts": {
+        "low_overlap": 274,
+        "no_evidence": 281,
+        "token_overlap": 1
+      },
+      "false_negative_count": 306,
+      "false_negative_rate": 1.0,
+      "false_positive_count": 0,
+      "false_positive_rate": 0.0,
+      "final_status_counts": {
+        "insufficient_evidence": 555,
+        "supported": 1
+      },
+      "label_counts": {
+        "false": 306,
+        "true": 250
+      },
+      "n_records": 556,
+      "records_using_retrieval": 275,
+      "records_using_retrieval_rate": 0.49460431654676257,
+      "records_with_retrieval_hit_rate": 0.49460431654676257,
+      "records_with_retrieval_hits": 275,
+      "selected_route_counts": {
+        "groundedness": 281,
+        "retrieval_groundedness": 275
+      },
+      "total_retrieval_hits": 1125
+    },
+    "workflow": "retrieval_route_gap_analysis"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

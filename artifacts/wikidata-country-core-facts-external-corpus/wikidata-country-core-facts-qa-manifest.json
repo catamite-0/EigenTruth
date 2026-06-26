@@ -1,0 +1,71 @@
+{
+  "artifacts": {
+    "qa_corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-qa-corpus.json",
+      "sha256": "7fe6ef66b23620304327894ef8fb5feb3b4ec0c62e012f1c7f3961dd805bb98c",
+      "size_bytes": 417766
+    },
+    "source.1.wikidata-country-core-facts-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-core-facts-source.jsonl",
+      "sha256": "4e542340473cf9582b85a86c59284852e3a5fb5650e9248a77b5c2e2464d7cd3",
+      "size_bytes": 388639
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "n_documents": 359,
+    "provider": "wikidata",
+    "skip_qid_labels": true,
+    "statement_properties": [
+      "P36",
+      "P37",
+      "P38"
+    ],
+    "templates": [
+      {
+        "answer_field": "capital",
+        "qid_label_fields": [
+          "country",
+          "capital"
+        ],
+        "question_template": "What is the capital of {country}?",
+        "statement_property": "P36",
+        "statement_property_label": "capital"
+      },
+      {
+        "answer_field": "language",
+        "qid_label_fields": [
+          "country",
+          "language"
+        ],
+        "question_template": "What is an official language of {country}?",
+        "statement_property": "P37",
+        "statement_property_label": "official language"
+      },
+      {
+        "answer_field": "currency",
+        "qid_label_fields": [
+          "country",
+          "currency"
+        ],
+        "question_template": "What is a currency of {country}?",
+        "statement_property": "P38",
+        "statement_property_label": "currency"
+      }
+    ],
+    "workflow": "build_wikidata_qa_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

@@ -137,12 +137,24 @@ Added a retrieval corpus provenance audit gate:
 - `fetch_wikidata_reference_docs.py` materializes real Wikidata CC0
   country-capital SPARQL records as JSONL source docs, and now also supports a
   `country_core_facts` preset for template-ready properties such as `P36`
-  capital, `P37` official language, and `P38` currency. The artifact at
+  capital, `P37` official language, and `P38` currency. It filters bare
+  Wikidata Q/P id labels by default so unresolved label-service rows do not
+  become noisy natural-language evidence. The artifact at
   `artifacts/wikidata-country-capitals-external-corpus/` fetches 120 records,
   normalizes them through the external corpus builder, passes grounding
   provenance audit, and recursively verifies the manifest. It is source/provenance
   evidence only (`promotes_verifier_route=false`), not a broad TruthfulQA
   grounding route.
+- `artifacts/wikidata-country-core-facts-external-corpus/` is the broader
+  multi-predicate source gate: 359 `P36`/`P37`/`P38` facts after QID-label
+  filtering, a 359-document external corpus, a 359-document structured QA
+  corpus, and a passing recursive manifest verification. Its route audit at
+  `artifacts/wikidata-country-core-facts-external-route-audit-qwen05-l80/`
+  improves coverage from 254/556 to 275/556 records and distributes 1125 hits
+  across `P36=510`, `P37=303`, and `P38=312`, but still blocks promotion because
+  `retrieval_groundedness` false alarm is 0.155 against the 0.05 gate. This
+  narrows the next frontier step to structured Wikidata QA/triple verification,
+  not more lexical threshold tuning.
 - `artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/`
   measures that source against the Qwen l80 statement dump. Retrieval covers
   254/556 records, but `retrieval_groundedness` verified false alarm is `0.149`
