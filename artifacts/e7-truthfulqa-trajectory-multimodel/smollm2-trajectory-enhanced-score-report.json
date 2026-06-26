@@ -1,0 +1,32 @@
+{
+  "directions": {
+    "trajectory_convergence": "lower"
+  },
+  "input_scores": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+  "layer": -1,
+  "layer_key": "-1",
+  "n_false": 64,
+  "n_total": 121,
+  "n_true": 57,
+  "output": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json",
+  "output_format": "jsonl",
+  "resolved_layer": 30,
+  "schema_version": 1,
+  "signals": [
+    "truth_proj",
+    "subspace_resid",
+    "eigenscore",
+    "maha_last",
+    "nll_answer",
+    "answer_token_count",
+    "question_answer_token_overlap",
+    "trajectory_convergence"
+  ],
+  "status": "complete",
+  "trajectory_report": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-qwen-l80-limit128-layer-sweep-report.json",
+  "trajectory_score_best_auroc": 0.5603070175438597,
+  "trajectory_signals": [
+    "trajectory_convergence"
+  ],
+  "workflow": "trajectory_signal_score_dump_build"
+}

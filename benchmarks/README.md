@@ -4580,6 +4580,13 @@ python benchmarks/run_fusion_ablation_matrix.py \
   --quiet
 ```
 
+The committed limit-128 gpt2/SmolLM2 ablation artifacts use the same path with
+expanded geometry and uncertainty controls. They show a model-dependent outcome:
+gpt2 selects `geometry_trajectory:mean_rank` at alpha 0.1 (AUROC 0.701,
+detection 0.229, false alarm 0.053), while SmolLM2 selects `geometry:mean_rank`
+(AUROC 0.692, detection 0.224, false alarm 0.029). This keeps trajectory as a
+conditional fusion/routing candidate rather than a default-added signal.
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use

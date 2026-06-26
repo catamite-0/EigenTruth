@@ -1,0 +1,75 @@
+{
+  "artifacts": {
+    "gpt2_trajectory_enhanced_score_manifest": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../gpt2-trajectory-enhanced-scores.manifest.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "gpt2_trajectory_enhanced_score_records": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../gpt2-trajectory-enhanced-scores.manifest.records.jsonl",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "gpt2_trajectory_enhanced_score_report": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../gpt2-trajectory-enhanced-score-report.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "smollm2_trajectory_enhanced_score_manifest": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../smollm2-trajectory-enhanced-scores.manifest.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "smollm2_trajectory_enhanced_score_records": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../smollm2-trajectory-enhanced-scores.manifest.records.jsonl",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "smollm2_trajectory_enhanced_score_report": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../smollm2-trajectory-enhanced-score-report.json",
+      "sha256": null,
+      "size_bytes": null
+    },
+    "trajectory_fusion_ablation_matrix": {
+      "exists": false,
+      "file_count": null,
+      "kind": "missing",
+      "path": "../../trajectory-fusion-ablation-matrix.json",
+      "sha256": null,
+      "size_bytes": null
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "input_evidence_gate": "trajectory-sweep-evidence-gate.json",
+    "release_gate_effect": "none",
+    "source": "benchmarks/run_fusion_ablation_matrix.py",
+    "status": "analysis_only",
+    "workflow": "trajectory_fusion_ablation_matrix"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 0,
+    "missing_count": 7
+  }
+}
