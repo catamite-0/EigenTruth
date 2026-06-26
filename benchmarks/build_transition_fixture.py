@@ -21,6 +21,7 @@ def build_order_transition_fixture(
     rule_based_world_model: bool = False,
     world_model_ensemble: bool = False,
     world_model_ensemble_min_agreement: float = 0.75,
+    world_model_ensemble_strategy: str = "label_stress",
 ) -> dict[str, Any]:
     """Return score, claim, and state payloads for order-reservation transitions."""
     if n_records < 2:
@@ -30,6 +31,9 @@ def build_order_transition_fixture(
         raise ValueError("signal must be non-empty.")
     if not (0.0 < float(world_model_ensemble_min_agreement) <= 1.0):
         raise ValueError("world_model_ensemble_min_agreement must be in (0, 1].")
+    world_model_ensemble_strategy = world_model_ensemble_strategy.strip()
+    if world_model_ensemble_strategy not in {"label_stress", "policy_replay"}:
+        raise ValueError("world_model_ensemble_strategy must be 'label_stress' or 'policy_replay'.")
 
     state: dict[str, Any] = {"orders": {}, "inventory": {}}
     labels: list[int] = []
@@ -97,7 +101,12 @@ def build_order_transition_fixture(
             if world_model_ensemble:
                 ensemble_members[0]["world_model_rules"].append(dict(base_rule))
                 ensemble_members[1]["world_model_rules"].append(dict(base_rule))
-                stress_quantity = max(0, quantity - 1) if is_false else quantity
+                should_stress = _should_stress_world_model_member(
+                    strategy=world_model_ensemble_strategy,
+                    quantity=quantity,
+                    is_false=is_false,
+                )
+                stress_quantity = max(0, quantity - 1) if should_stress else quantity
                 ensemble_members[2]["world_model_rules"].append(
                     _reservation_rule(
                         order_id=order_id,
@@ -105,10 +114,9 @@ def build_order_transition_fixture(
                         quantity=stress_quantity,
                         action=action,
                         member="stress",
-                        explanation=(
-                            "stress member under-reserves false-labeled fixture records"
-                            if is_false
-                            else "stress member agrees on true-labeled fixture records"
+                        explanation=_stress_member_explanation(
+                            strategy=world_model_ensemble_strategy,
+                            stressed=should_stress,
                         ),
                     )
                 )
@@ -184,7 +192,8 @@ def build_order_transition_fixture(
             ],
             "metadata": {
                 "fixture": "order_reservation_transition",
-                "divergence_pattern": "stress_member_under_reserves_false_records",
+                "strategy": world_model_ensemble_strategy,
+                "divergence_pattern": _ensemble_divergence_pattern(world_model_ensemble_strategy),
             },
         }
     world_model_rule_count = (
@@ -230,6 +239,7 @@ def build_order_transition_fixture(
                 "n_false": labels.count(1),
                 "n_world_model_rules": world_model_rule_count,
                 "n_world_model_ensemble_members": len(ensemble_members) if world_model_ensemble else 0,
+                "world_model_ensemble_strategy": world_model_ensemble_strategy if world_model_ensemble else None,
                 "world_model_ensemble_min_agreement": (
                     float(world_model_ensemble_min_agreement) if world_model_ensemble else None
                 ),
@@ -246,12 +256,42 @@ def build_order_transition_fixture(
                 "n_inventory_items": len(state["inventory"]),
                 "n_world_model_rules": world_model_rule_count,
                 "n_world_model_ensemble_members": len(ensemble_members) if world_model_ensemble else 0,
+                "world_model_ensemble_strategy": world_model_ensemble_strategy if world_model_ensemble else None,
                 "world_model_ensemble_min_agreement": (
                     float(world_model_ensemble_min_agreement) if world_model_ensemble else None
                 ),
             },
         },
     }
+
+
+def _should_stress_world_model_member(
+    *,
+    strategy: str,
+    quantity: int,
+    is_false: bool,
+) -> bool:
+    if strategy == "label_stress":
+        return bool(is_false)
+    if strategy == "policy_replay":
+        return int(quantity) >= 3
+    raise ValueError("unknown world-model ensemble strategy.")
+
+
+def _stress_member_explanation(*, strategy: str, stressed: bool) -> str:
+    if not stressed:
+        return "stress member agrees with baseline transition policy"
+    if strategy == "label_stress":
+        return "stress member under-reserves false-labeled fixture records"
+    return "stress member applies conservative high-quantity reservation policy"
+
+
+def _ensemble_divergence_pattern(strategy: str) -> str:
+    if strategy == "label_stress":
+        return "stress_member_under_reserves_false_records"
+    if strategy == "policy_replay":
+        return "stress_member_under_reserves_high_quantity_records"
+    raise ValueError("unknown world-model ensemble strategy.")
 
 
 def _reservation_rule(
@@ -303,6 +343,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         world_model_ensemble=bool(getattr(args, "world_model_ensemble", False)),
         world_model_ensemble_min_agreement=float(
             getattr(args, "world_model_ensemble_min_agreement", 0.75)
+        ),
+        world_model_ensemble_strategy=str(
+            getattr(args, "world_model_ensemble_strategy", "label_stress")
         ),
     )
     _write_json(Path(args.scores_output), payload["scores"])
@@ -364,6 +407,12 @@ def main() -> None:
         type=float,
         default=0.75,
         help="minimum ensemble agreement required before transition verification can decide",
+    )
+    parser.add_argument(
+        "--world-model-ensemble-strategy",
+        choices=("label_stress", "policy_replay"),
+        default="label_stress",
+        help="controlled ensemble disagreement strategy",
     )
     run(parser.parse_args())
 

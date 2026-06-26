@@ -59,6 +59,7 @@ class WorldModelSignalCalibrationWorkflowConfig:
     rule_based_world_model: bool = True
     world_model_ensemble: bool = False
     world_model_ensemble_min_agreement: float = 0.75
+    world_model_ensemble_strategy: str = "label_stress"
     alphas: Sequence[float] = (0.10,)
     repeats: int = 20
     seed: int = 0
@@ -101,6 +102,11 @@ class WorldModelSignalCalibrationWorkflowConfig:
             raise ValueError("n_records must be >= 4.")
         if not (0.0 < float(self.world_model_ensemble_min_agreement) <= 1.0):
             raise ValueError("world_model_ensemble_min_agreement must be in (0, 1].")
+        object.__setattr__(
+            self,
+            "world_model_ensemble_strategy",
+            _world_model_ensemble_strategy(self.world_model_ensemble_strategy),
+        )
         if int(self.repeats) < 1:
             raise ValueError("repeats must be >= 1.")
         if any(not (0.0 < float(alpha) < 1.0) for alpha in self.alphas):
@@ -162,6 +168,7 @@ def run_world_model_signal_calibration_workflow(
             rule_based_world_model=bool(config.rule_based_world_model),
             world_model_ensemble=bool(config.world_model_ensemble),
             world_model_ensemble_min_agreement=float(config.world_model_ensemble_min_agreement),
+            world_model_ensemble_strategy=config.world_model_ensemble_strategy,
         )
         _write_json(config.scores_path, fixture["scores"], compact=config.compact_json)
         _write_json(config.claims_path, fixture["claims"], compact=config.compact_json)
@@ -245,6 +252,9 @@ def run_world_model_signal_calibration_workflow(
                     "world_model_ensemble_member_count": fixture["state"]["summary"][
                         "n_world_model_ensemble_members"
                     ],
+                    "world_model_ensemble_strategy": fixture["state"]["summary"][
+                        "world_model_ensemble_strategy"
+                    ],
                     "world_model_ensemble_min_agreement": fixture["state"]["summary"][
                         "world_model_ensemble_min_agreement"
                     ],
@@ -286,6 +296,7 @@ def run_world_model_signal_calibration_workflow(
             ),
             "rule_count": fixture["state"]["summary"]["n_world_model_rules"],
             "member_count": fixture["state"]["summary"]["n_world_model_ensemble_members"],
+            "strategy": fixture["state"]["summary"]["world_model_ensemble_strategy"],
             "min_agreement": fixture["state"]["summary"]["world_model_ensemble_min_agreement"],
             "signals": list(config.fusion_signals),
             "uncertainty_signals": list(config.uncertainty_signals),
@@ -336,6 +347,7 @@ def _manifest_metadata(
         "rule_based_world_model": bool(config.rule_based_world_model),
         "world_model_ensemble": bool(config.world_model_ensemble),
         "world_model_ensemble_min_agreement": float(config.world_model_ensemble_min_agreement),
+        "world_model_ensemble_strategy": config.world_model_ensemble_strategy,
         "world_model_rule_count": fixture["state"]["summary"]["n_world_model_rules"],
         "world_model_ensemble_member_count": fixture["state"]["summary"]["n_world_model_ensemble_members"],
         "fixture_summary": dict(fixture["claims"].get("summary", {})),
@@ -356,6 +368,7 @@ def _config_payload(config: WorldModelSignalCalibrationWorkflowConfig) -> dict[s
         "rule_based_world_model": bool(config.rule_based_world_model),
         "world_model_ensemble": bool(config.world_model_ensemble),
         "world_model_ensemble_min_agreement": float(config.world_model_ensemble_min_agreement),
+        "world_model_ensemble_strategy": config.world_model_ensemble_strategy,
         "alphas": [float(alpha) for alpha in config.alphas],
         "repeats": int(config.repeats),
         "seed": int(config.seed),
@@ -416,6 +429,13 @@ def _non_empty_string(value: Any, *, name: str) -> str:
     return text
 
 
+def _world_model_ensemble_strategy(value: Any) -> str:
+    strategy = str(value).strip()
+    if strategy not in {"label_stress", "policy_replay"}:
+        raise ValueError("world_model_ensemble_strategy must be 'label_stress' or 'policy_replay'.")
+    return strategy
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from CLI-style parsed arguments."""
     config = WorldModelSignalCalibrationWorkflowConfig(
@@ -426,6 +446,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         rule_based_world_model=not bool(args.direct_action_world_model),
         world_model_ensemble=bool(args.world_model_ensemble),
         world_model_ensemble_min_agreement=args.world_model_ensemble_min_agreement,
+        world_model_ensemble_strategy=args.world_model_ensemble_strategy,
         alphas=_parse_float_csv(args.alphas, name="alphas"),
         repeats=args.repeats,
         seed=args.seed,
@@ -480,6 +501,12 @@ def main() -> None:
         type=float,
         default=0.75,
         help="minimum ensemble prediction agreement required before transition verification can decide",
+    )
+    parser.add_argument(
+        "--world-model-ensemble-strategy",
+        choices=("label_stress", "policy_replay"),
+        default="label_stress",
+        help="controlled ensemble disagreement strategy",
     )
     parser.add_argument("--alphas", default="0.1")
     parser.add_argument("--repeats", type=int, default=20)

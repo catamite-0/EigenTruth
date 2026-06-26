@@ -1106,8 +1106,14 @@ python benchmarks/build_transition_fixture.py \
   --state-output artifacts/order_transition_ensemble_state.json \
   --n-records 12 \
   --world-model-ensemble \
-  --world-model-ensemble-min-agreement 0.75
+  --world-model-ensemble-min-agreement 0.75 \
+  --world-model-ensemble-strategy policy_replay
 ```
+
+The default `label_stress` strategy preserves the original controlled
+false-record stress pattern. `policy_replay` instead makes the stress member
+apply a conservative high-quantity reservation policy, producing disagreement
+on quantity-driven records that include both true and false labels.
 
 This fixture checks action-consequence verification: true labels match the
 predicted inventory after reservation, while false labels assert an off-by-one
@@ -3313,6 +3319,7 @@ python benchmarks/run_world_model_signal_calibration_workflow.py \
   --n-records 24 \
   --world-model-ensemble \
   --world-model-ensemble-min-agreement 0.75 \
+  --world-model-ensemble-strategy policy_replay \
   --alphas 0.05,0.1,0.2 \
   --best-alpha 0.1 \
   --repeats 20 \
@@ -3326,7 +3333,9 @@ Without `--world-model-ensemble`, the default fixture uses a single
 and the calibrated correction signal is the world-model route's final verifier
 outcome, such as `verifier_refuted`. With `--world-model-ensemble`, the workflow
 produces nonzero `world_model_disagreement`, `world_model_agreement_gap`, and
-`world_model_low_agreement` columns from controlled member disagreement.
+`world_model_low_agreement` columns from controlled member disagreement. Use
+`--world-model-ensemble-strategy policy_replay` when testing strategy-driven
+disagreement that is not directly label-shaped.
 Direct ensemble agreement metadata from external multi-world-model adapters is
 also preserved by `build_verifier_signal_score_dump.py` when present in
 sidecars.

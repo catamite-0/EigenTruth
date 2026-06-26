@@ -509,7 +509,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_release_gate_overhead_baseline.py` | Aggregates one or more release-candidate registry workflow JSON reports into a release-gate overhead baseline with total/phase timing summaries, artifact fingerprint/JSON cache hit-rate summaries, hotspot recommendations, optional timing/cache gates, and optional `report:*:*` registry recording. |
 | `export_product_promotion_contract.py` | Exports a compact, deployable `ProductPromotionContract` JSON from a promoted release candidate, including selfcheck-signal-fusion provenance and any feedback-derived `ControlPolicyConfig`, writes a manifest, and can register a `product_promotion_contract:*:*` handoff artifact. |
 | `build_domain_state_fixture.py` | Builds deterministic order-fulfillment score/claim/state fixtures plus optional SQLite state-source specs for structured-state verifier benchmarks. |
-| `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks, including optional controlled world-model ensemble disagreement. |
+| `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks, including optional controlled or policy-replay world-model ensemble disagreement. |
 | `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
 | `build_retrieval_stress_corpus.py` | Builds answer-echo retrieval stress corpora from statement-bearing score dumps, exposing self-support failure modes when retrieval evidence comes from the same answers being audited. |
 | `fetch_wikidata_reference_docs.py` | Fetches or replays Wikidata country-capital or country-core-fact SPARQL results into JSONL source docs for external evidence smoke gates; the core-facts audit artifact remains blocked for lexical route promotion. |
@@ -641,7 +641,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_release_gate_overhead_baseline.py` | 将一个或多个 release-candidate registry workflow JSON 汇总成 release-gate overhead baseline，输出总耗时/phase timing、artifact fingerprint/JSON cache 命中率、热点建议、可选 timing/cache gate，并可登记 `report:*:*` registry record。 |
 | `export_product_promotion_contract.py` | 从 promoted release candidate 导出紧凑的可部署 `ProductPromotionContract` JSON，包含 selfcheck-signal-fusion provenance 和可选反馈派生 `ControlPolicyConfig`，写入 manifest，并可登记 `product_promotion_contract:*:*` handoff artifact。 |
 | `build_domain_state_fixture.py` | 构建确定性的订单履约 score/claim/state fixture，并可输出 SQLite state-source spec，用于结构化状态 verifier benchmark。 |
-| `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark，并可生成受控 world-model ensemble disagreement。 |
+| `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark，并可生成受控或 policy-replay world-model ensemble disagreement。 |
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |
 | `build_retrieval_stress_corpus.py` | 从带 statement metadata 的 score dump 构建 answer-echo retrieval stress corpus，用来暴露检索证据来自待审答案本身时的自证失败模式。 |
 | `fetch_wikidata_reference_docs.py` | 拉取或重放 Wikidata country-capital / country-core-fact SPARQL 结果，输出外部证据 smoke gate 可用的 JSONL source docs；core-facts route audit 仍阻止 lexical route promotion。 |

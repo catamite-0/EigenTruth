@@ -6331,6 +6331,62 @@ def test_build_transition_fixture_can_use_world_model_ensemble(tmp_path):
     assert enhanced["scores"]["world_model_low_agreement"] == pytest.approx([0.0, 1.0] * 4)
 
 
+def test_build_transition_fixture_world_model_ensemble_policy_replay(tmp_path):
+    builder = importlib.import_module("benchmarks.build_transition_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    scores_path = tmp_path / "transition_scores.json"
+    claims_path = tmp_path / "transition_claims.json"
+    state_path = tmp_path / "transition_state.json"
+    verified_records_path = tmp_path / "verified_records.jsonl"
+    enhanced_path = tmp_path / "enhanced_scores.json"
+
+    payload = builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+        world_model_ensemble=True,
+        world_model_ensemble_min_agreement=0.75,
+        world_model_ensemble_strategy="policy_replay",
+    ))
+    ensemble = payload["state"]["world_model_ensemble"]
+
+    assert payload["state"]["summary"]["world_model_ensemble_strategy"] == "policy_replay"
+    assert ensemble["metadata"]["divergence_pattern"] == "stress_member_under_reserves_high_quantity_records"
+
+    verifier.build_verifier_ensemble_report(
+        [("transitions", scores_path)],
+        signal="truth_proj",
+        claims_path=claims_path,
+        state_path=state_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verified_records_path=verified_records_path,
+    )
+    signal_builder.run(SimpleNamespace(
+        scores=str(scores_path),
+        verified_records_jsonl=str(verified_records_path),
+        output=str(enhanced_path),
+        output_format="json",
+        run_name="transitions",
+        keep_signals="truth_proj",
+        verifier_signals="world_model_disagreement,world_model_agreement_gap,world_model_low_agreement",
+        json=None,
+    ))
+    enhanced = json.loads(enhanced_path.read_text(encoding="utf-8"))
+
+    expected_policy_disagreement = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+    assert enhanced["labels"] == [0, 1, 0, 1, 0, 1, 0, 1]
+    assert enhanced["scores"]["world_model_disagreement"] == pytest.approx(expected_policy_disagreement)
+    assert enhanced["scores"]["world_model_agreement_gap"] == pytest.approx(
+        [value / 3 for value in expected_policy_disagreement]
+    )
+    assert enhanced["scores"]["world_model_low_agreement"] == pytest.approx(expected_policy_disagreement)
+
+
 def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -25472,6 +25528,52 @@ def test_world_model_signal_calibration_workflow_can_emit_ensemble_agreement_sig
         tuple((1 / 3) if label else 0.0 for label in enhanced.labels)
     )
     assert enhanced.scores["world_model_low_agreement"] == pytest.approx(expected_labels)
+
+
+def test_world_model_signal_calibration_workflow_can_emit_policy_replay_agreement_signals(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_signal_calibration_workflow")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    output_dir = tmp_path / "world-model-policy-replay-workflow"
+
+    payload = module.run_world_model_signal_calibration_workflow(
+        module.WorldModelSignalCalibrationWorkflowConfig(
+            output_dir=output_dir,
+            run_name="synthetic-world-model-policy-replay",
+            n_records=12,
+            world_model_ensemble=True,
+            world_model_ensemble_min_agreement=0.75,
+            world_model_ensemble_strategy="policy_replay",
+            alphas=(0.2,),
+            repeats=2,
+            seed=0,
+            best_alpha=0.2,
+            compact_json=True,
+        )
+    )
+    enhanced = load_score_dump(
+        output_dir
+        / "verifier-signal-fusion"
+        / "synthetic-world-model-policy-replay-enhanced-scores.manifest.json",
+        required_scores=(
+            "world_model_disagreement",
+            "world_model_agreement_gap",
+            "world_model_low_agreement",
+        ),
+    )
+    expected_policy_disagreement = tuple(1.0 if (index % 3) == 2 else 0.0 for index in range(12))
+
+    assert payload["world_model_summary"]["adapter"] == "EnsembleWorldModelAdapter"
+    assert payload["world_model_summary"]["strategy"] == "policy_replay"
+    assert payload["manifest_verification"]["passed"] is True
+    assert enhanced.scores["world_model_disagreement"] == pytest.approx(expected_policy_disagreement)
+    assert enhanced.scores["world_model_agreement_gap"] == pytest.approx(
+        tuple(value / 3 for value in expected_policy_disagreement)
+    )
+    assert enhanced.scores["world_model_low_agreement"] == pytest.approx(expected_policy_disagreement)
+    assert enhanced.scores["world_model_disagreement"] != pytest.approx(
+        tuple(float(label) for label in enhanced.labels)
+    )
 
 
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
