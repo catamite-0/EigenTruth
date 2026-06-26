@@ -143,6 +143,12 @@ def compare_release_candidates(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    min_covered_fact_properties: int | None = None,
+    min_covered_fact_property_records: int | None = None,
+    min_covered_fact_property_source_documents: int | None = None,
+    min_covered_fact_property_decision_accuracy: float | None = None,
+    max_covered_fact_property_false_supported_rate: float | None = None,
+    min_covered_fact_property_false_refuted_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
     require_retrieval_provenance_filter: bool = False,
     required_retrieval_source_prefixes: Sequence[str] = (),
@@ -167,6 +173,12 @@ def compare_release_candidates(
     required_route_max_retrieval_hit_count: float | None = None,
     required_route_min_claims_cache_hit_rate: float | None = None,
     required_route_min_verifier_trace_cache_hit_rate: float | None = None,
+    required_route_min_covered_fact_properties: int | None = None,
+    required_route_min_covered_fact_property_records: int | None = None,
+    required_route_min_covered_fact_property_source_documents: int | None = None,
+    required_route_min_covered_fact_property_decision_accuracy: float | None = None,
+    required_route_max_covered_fact_property_false_supported_rate: float | None = None,
+    required_route_min_covered_fact_property_false_refuted_rate: float | None = None,
     required_route_require_non_oracle_evidence: bool = False,
     required_route_require_retrieval_provenance_filter: bool = False,
     required_route_required_retrieval_source_prefixes: Sequence[str] = (),
@@ -197,6 +209,22 @@ def compare_release_candidates(
                 "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
                 "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
                 "required_route_min_false_refuted_rate": required_route_min_false_refuted_rate,
+                "required_route_min_covered_fact_properties": required_route_min_covered_fact_properties,
+                "required_route_min_covered_fact_property_records": (
+                    required_route_min_covered_fact_property_records
+                ),
+                "required_route_min_covered_fact_property_source_documents": (
+                    required_route_min_covered_fact_property_source_documents
+                ),
+                "required_route_min_covered_fact_property_decision_accuracy": (
+                    required_route_min_covered_fact_property_decision_accuracy
+                ),
+                "required_route_max_covered_fact_property_false_supported_rate": (
+                    required_route_max_covered_fact_property_false_supported_rate
+                ),
+                "required_route_min_covered_fact_property_false_refuted_rate": (
+                    required_route_min_covered_fact_property_false_refuted_rate
+                ),
                 "adapter_family_profile": adapter_family_profile,
                 "require_state_transition_world_model": require_state_transition_world_model,
                 "require_product_runtime_drift_promotion_evidence": (
@@ -218,6 +246,22 @@ def compare_release_candidates(
     required_route_min_decision_accuracy = release_policy_values["required_route_min_decision_accuracy"]
     required_route_max_false_supported_rate = release_policy_values["required_route_max_false_supported_rate"]
     required_route_min_false_refuted_rate = release_policy_values["required_route_min_false_refuted_rate"]
+    required_route_min_covered_fact_properties = release_policy_values["required_route_min_covered_fact_properties"]
+    required_route_min_covered_fact_property_records = release_policy_values[
+        "required_route_min_covered_fact_property_records"
+    ]
+    required_route_min_covered_fact_property_source_documents = release_policy_values[
+        "required_route_min_covered_fact_property_source_documents"
+    ]
+    required_route_min_covered_fact_property_decision_accuracy = release_policy_values[
+        "required_route_min_covered_fact_property_decision_accuracy"
+    ]
+    required_route_max_covered_fact_property_false_supported_rate = release_policy_values[
+        "required_route_max_covered_fact_property_false_supported_rate"
+    ]
+    required_route_min_covered_fact_property_false_refuted_rate = release_policy_values[
+        "required_route_min_covered_fact_property_false_refuted_rate"
+    ]
     adapter_family_profile = release_policy_values["adapter_family_profile"]
     require_state_transition_world_model = bool(
         release_policy_values["require_state_transition_world_model"]
@@ -478,6 +522,12 @@ def compare_release_candidates(
         max_retrieval_hit_count=max_retrieval_hit_count,
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        min_covered_fact_properties=min_covered_fact_properties,
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
         require_retrieval_provenance_filter=require_retrieval_provenance_filter,
         required_retrieval_source_prefixes=required_retrieval_source_prefixes,
@@ -513,6 +563,14 @@ def compare_release_candidates(
         max_retrieval_hit_count=required_route_max_retrieval_hit_count,
         min_claims_cache_hit_rate=required_route_min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=required_route_min_verifier_trace_cache_hit_rate,
+        min_covered_fact_properties=required_route_min_covered_fact_properties,
+        min_covered_fact_property_records=required_route_min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=required_route_min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=required_route_min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=(
+            required_route_max_covered_fact_property_false_supported_rate
+        ),
+        min_covered_fact_property_false_refuted_rate=required_route_min_covered_fact_property_false_refuted_rate,
         require_non_oracle_evidence=required_route_require_non_oracle_evidence,
         require_retrieval_provenance_filter=required_route_require_retrieval_provenance_filter,
         required_retrieval_source_prefixes=required_route_required_retrieval_source_prefixes,
@@ -862,6 +920,12 @@ def compare_release_candidates(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "min_covered_fact_properties": min_covered_fact_properties,
+            "min_covered_fact_property_records": min_covered_fact_property_records,
+            "min_covered_fact_property_source_documents": min_covered_fact_property_source_documents,
+            "min_covered_fact_property_decision_accuracy": min_covered_fact_property_decision_accuracy,
+            "max_covered_fact_property_false_supported_rate": max_covered_fact_property_false_supported_rate,
+            "min_covered_fact_property_false_refuted_rate": min_covered_fact_property_false_refuted_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
             "require_retrieval_provenance_filter": require_retrieval_provenance_filter,
             "required_retrieval_source_prefixes": list(required_retrieval_source_prefixes),
@@ -886,6 +950,20 @@ def compare_release_candidates(
             "required_route_max_retrieval_hit_count": required_route_max_retrieval_hit_count,
             "required_route_min_claims_cache_hit_rate": required_route_min_claims_cache_hit_rate,
             "required_route_min_verifier_trace_cache_hit_rate": required_route_min_verifier_trace_cache_hit_rate,
+            "required_route_min_covered_fact_properties": required_route_min_covered_fact_properties,
+            "required_route_min_covered_fact_property_records": required_route_min_covered_fact_property_records,
+            "required_route_min_covered_fact_property_source_documents": (
+                required_route_min_covered_fact_property_source_documents
+            ),
+            "required_route_min_covered_fact_property_decision_accuracy": (
+                required_route_min_covered_fact_property_decision_accuracy
+            ),
+            "required_route_max_covered_fact_property_false_supported_rate": (
+                required_route_max_covered_fact_property_false_supported_rate
+            ),
+            "required_route_min_covered_fact_property_false_refuted_rate": (
+                required_route_min_covered_fact_property_false_refuted_rate
+            ),
             "required_route_require_non_oracle_evidence": required_route_require_non_oracle_evidence,
             "required_route_require_retrieval_provenance_filter": (
                 required_route_require_retrieval_provenance_filter
@@ -1398,6 +1476,12 @@ def _required_route_baseline_gate(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    min_covered_fact_properties: int | None,
+    min_covered_fact_property_records: int | None,
+    min_covered_fact_property_source_documents: int | None,
+    min_covered_fact_property_decision_accuracy: float | None,
+    max_covered_fact_property_false_supported_rate: float | None,
+    min_covered_fact_property_false_refuted_rate: float | None,
     require_non_oracle_evidence: bool,
     require_retrieval_provenance_filter: bool,
     required_retrieval_source_prefixes: Sequence[str],
@@ -1434,6 +1518,12 @@ def _required_route_baseline_gate(
         max_retrieval_hit_count=max_retrieval_hit_count,
         min_claims_cache_hit_rate=min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+        min_covered_fact_properties=min_covered_fact_properties,
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
         require_non_oracle_evidence=require_non_oracle_evidence,
         require_retrieval_provenance_filter=require_retrieval_provenance_filter,
         required_retrieval_source_prefixes=required_retrieval_source_prefixes,
@@ -4593,6 +4683,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        min_covered_fact_properties=args.min_covered_fact_properties,
+        min_covered_fact_property_records=args.min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=args.min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=args.min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=args.max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=args.min_covered_fact_property_false_refuted_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
         require_retrieval_provenance_filter=bool(args.require_retrieval_provenance_filter),
         required_retrieval_source_prefixes=_parse_csv(args.required_retrieval_source_prefix),
@@ -4617,6 +4713,20 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_min_covered_fact_properties=args.required_route_min_covered_fact_properties,
+        required_route_min_covered_fact_property_records=args.required_route_min_covered_fact_property_records,
+        required_route_min_covered_fact_property_source_documents=(
+            args.required_route_min_covered_fact_property_source_documents
+        ),
+        required_route_min_covered_fact_property_decision_accuracy=(
+            args.required_route_min_covered_fact_property_decision_accuracy
+        ),
+        required_route_max_covered_fact_property_false_supported_rate=(
+            args.required_route_max_covered_fact_property_false_supported_rate
+        ),
+        required_route_min_covered_fact_property_false_refuted_rate=(
+            args.required_route_min_covered_fact_property_false_refuted_rate
+        ),
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         required_route_require_retrieval_provenance_filter=bool(
             args.required_route_require_retrieval_provenance_filter
@@ -4924,6 +5034,30 @@ def main(argv: Sequence[str] | None = None) -> None:
         value,
         flag="--min-verifier-trace-cache-hit-rate",
     ), default=None)
+    parser.add_argument("--min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-properties",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-records", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-records",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-source-documents", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-source-documents",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-decision-accuracy", type=lambda value: _parse_unit_float(
+        value,
+        flag="--min-covered-fact-property-decision-accuracy",
+    ), default=None)
+    parser.add_argument("--max-covered-fact-property-false-supported-rate", type=lambda value: _parse_unit_float(
+        value,
+        flag="--max-covered-fact-property-false-supported-rate",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-false-refuted-rate", type=lambda value: _parse_unit_float(
+        value,
+        flag="--min-covered-fact-property-false-refuted-rate",
+    ), default=None)
     parser.add_argument(
         "--require-non-oracle-evidence",
         action="store_true",
@@ -5091,6 +5225,40 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
         default=None,
     )
+    parser.add_argument("--required-route-min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--required-route-min-covered-fact-properties",
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--required-route-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-source-documents", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--required-route-min-covered-fact-property-source-documents",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-decision-accuracy", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-min-covered-fact-property-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-max-covered-fact-property-false-supported-rate", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-max-covered-fact-property-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-false-refuted-rate", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-min-covered-fact-property-false-refuted-rate",
+        )
+    ), default=None)
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

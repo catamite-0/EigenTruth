@@ -55,6 +55,12 @@ def compare_route_baselines(
     max_retrieval_hit_count: float | None = None,
     min_claims_cache_hit_rate: float | None = None,
     min_verifier_trace_cache_hit_rate: float | None = None,
+    min_covered_fact_properties: int | None = None,
+    min_covered_fact_property_records: int | None = None,
+    min_covered_fact_property_source_documents: int | None = None,
+    min_covered_fact_property_decision_accuracy: float | None = None,
+    max_covered_fact_property_false_supported_rate: float | None = None,
+    min_covered_fact_property_false_refuted_rate: float | None = None,
     require_non_oracle_evidence: bool = False,
     require_retrieval_provenance_filter: bool = False,
     required_retrieval_source_prefixes: Sequence[str] = (),
@@ -100,6 +106,12 @@ def compare_route_baselines(
             max_retrieval_hit_count=max_retrieval_hit_count,
             min_claims_cache_hit_rate=min_claims_cache_hit_rate,
             min_verifier_trace_cache_hit_rate=min_verifier_trace_cache_hit_rate,
+            min_covered_fact_properties=min_covered_fact_properties,
+            min_covered_fact_property_records=min_covered_fact_property_records,
+            min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+            min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+            max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+            min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
             require_non_oracle_evidence=require_non_oracle_evidence,
             require_retrieval_provenance_filter=require_retrieval_provenance_filter,
             required_retrieval_source_prefixes=required_retrieval_source_prefixes,
@@ -141,6 +153,12 @@ def compare_route_baselines(
             "max_retrieval_hit_count": max_retrieval_hit_count,
             "min_claims_cache_hit_rate": min_claims_cache_hit_rate,
             "min_verifier_trace_cache_hit_rate": min_verifier_trace_cache_hit_rate,
+            "min_covered_fact_properties": min_covered_fact_properties,
+            "min_covered_fact_property_records": min_covered_fact_property_records,
+            "min_covered_fact_property_source_documents": min_covered_fact_property_source_documents,
+            "min_covered_fact_property_decision_accuracy": min_covered_fact_property_decision_accuracy,
+            "max_covered_fact_property_false_supported_rate": max_covered_fact_property_false_supported_rate,
+            "min_covered_fact_property_false_refuted_rate": min_covered_fact_property_false_refuted_rate,
             "require_non_oracle_evidence": require_non_oracle_evidence,
             "require_retrieval_provenance_filter": require_retrieval_provenance_filter,
             "required_retrieval_source_prefixes": list(required_retrieval_source_prefixes),
@@ -223,6 +241,12 @@ def _route_baseline_row(
     max_retrieval_hit_count: float | None,
     min_claims_cache_hit_rate: float | None,
     min_verifier_trace_cache_hit_rate: float | None,
+    min_covered_fact_properties: int | None,
+    min_covered_fact_property_records: int | None,
+    min_covered_fact_property_source_documents: int | None,
+    min_covered_fact_property_decision_accuracy: float | None,
+    max_covered_fact_property_false_supported_rate: float | None,
+    min_covered_fact_property_false_refuted_rate: float | None,
     require_non_oracle_evidence: bool,
     require_retrieval_provenance_filter: bool,
     required_retrieval_source_prefixes: Sequence[str],
@@ -260,15 +284,19 @@ def _route_baseline_row(
         manifest,
         artifact_name="route_summary",
     )
+    route_summary: dict[str, Any] = {}
+    route_summary_error = None
+    if route_summary_path is not None:
+        route_summary, route_summary_error = _load_optional_json(
+            route_summary_path,
+            json_cache=json_cache,
+            json_cache_stats=json_cache_stats,
+        )
     if route_report_path is None:
-        route_summary, route_report_error = (
-            ({}, "route_comparison_report and route_summary artifacts missing")
+        route_report_error = (
+            "route_comparison_report and route_summary artifacts missing"
             if route_summary_path is None
-            else _load_optional_json(
-                route_summary_path,
-                json_cache=json_cache,
-                json_cache_stats=json_cache_stats,
-            )
+            else route_summary_error
         )
         route_comparison = (
             {}
@@ -313,6 +341,10 @@ def _route_baseline_row(
         manifest_metadata,
         recommended_route=None if recommended_route is None else str(recommended_route),
     )
+    covered_fact_property_metrics = _mapping(route_summary.get("property_metrics"))
+    covered_fact_property_count = _int_or_none(route_summary.get("property_count"))
+    if covered_fact_property_count is None and covered_fact_property_metrics:
+        covered_fact_property_count = len(covered_fact_property_metrics)
     route_status = (
         route_decision.get("status")
         or manifest_metadata.get("route_promotion_status")
@@ -359,6 +391,14 @@ def _route_baseline_row(
         max_max_duration_seconds=max_max_duration_seconds,
         max_mean_attempted_route_count=max_mean_attempted_route_count,
         max_retrieval_use_rate=max_retrieval_use_rate,
+        covered_fact_property_count=covered_fact_property_count,
+        covered_fact_property_metrics=covered_fact_property_metrics,
+        min_covered_fact_properties=min_covered_fact_properties,
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
         runtime_budget=runtime_budget,
         evidence_audit=_evidence_audit(
             manifest_metadata,
@@ -407,6 +447,8 @@ def _route_baseline_row(
         "runtime_retrieval_hit_count": _float_or_none(runtime_metrics.get("retrieval_hit_count")),
         "claims_cache_hit_rate": _float_or_none(runtime_metrics.get("claims_cache_hit_rate")),
         "verifier_trace_cache_hit_rate": _float_or_none(runtime_metrics.get("verifier_trace_cache_hit_rate")),
+        "covered_fact_property_count": covered_fact_property_count,
+        "covered_fact_property_metrics": dict(covered_fact_property_metrics),
         "runtime_budget": runtime_budget,
         "evidence_audit": gate["evidence_audit"],
         "retrieval_provenance_audit": gate["retrieval_provenance_audit"],
@@ -499,6 +541,14 @@ def _gate(
     max_max_duration_seconds: float | None,
     max_mean_attempted_route_count: float | None,
     max_retrieval_use_rate: float | None,
+    covered_fact_property_count: int | None,
+    covered_fact_property_metrics: Mapping[str, Any],
+    min_covered_fact_properties: int | None,
+    min_covered_fact_property_records: int | None,
+    min_covered_fact_property_source_documents: int | None,
+    min_covered_fact_property_decision_accuracy: float | None,
+    max_covered_fact_property_false_supported_rate: float | None,
+    min_covered_fact_property_false_refuted_rate: float | None,
     runtime_budget: Mapping[str, Any],
     evidence_audit: Mapping[str, Any],
     retrieval_provenance_audit: Mapping[str, Any],
@@ -578,6 +628,55 @@ def _gate(
         _float_or_none(metrics.get("retrieval_use_rate")),
         max_retrieval_use_rate,
     )
+    if _covered_fact_property_gate_enabled(
+        min_covered_fact_properties=min_covered_fact_properties,
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
+    ):
+        if not covered_fact_property_metrics:
+            failures.append("covered-facts property metrics are missing")
+        _check_min(
+            failures,
+            "covered_fact_properties",
+            covered_fact_property_count,
+            min_covered_fact_properties,
+        )
+        for property_id, property_metrics in sorted(covered_fact_property_metrics.items()):
+            metric_payload = _mapping(property_metrics)
+            prefix = f"covered_fact_property[{property_id}]"
+            _check_min(
+                failures,
+                f"{prefix}.records",
+                _int_or_none(metric_payload.get("n_records")),
+                min_covered_fact_property_records,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.source_documents",
+                _int_or_none(metric_payload.get("n_source_documents")),
+                min_covered_fact_property_source_documents,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.decision_accuracy",
+                _float_or_none(metric_payload.get("decision_accuracy")),
+                min_covered_fact_property_decision_accuracy,
+            )
+            _check_max(
+                failures,
+                f"{prefix}.false_supported_rate",
+                _float_or_none(metric_payload.get("false_supported_rate")),
+                max_covered_fact_property_false_supported_rate,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.false_refuted_rate",
+                _float_or_none(metric_payload.get("false_refuted_rate")),
+                min_covered_fact_property_false_refuted_rate,
+            )
     if runtime_budget.get("enabled") and not runtime_budget.get("passed"):
         failures.extend(_runtime_budget_reasons(runtime_budget))
     if evidence_audit.get("enabled") and not evidence_audit.get("passed"):
@@ -599,6 +698,28 @@ def _gate(
         "retrieval_provenance_audit": dict(retrieval_provenance_audit),
         "retrieval_stress_audit": dict(retrieval_stress_audit),
     }
+
+
+def _covered_fact_property_gate_enabled(
+    *,
+    min_covered_fact_properties: int | None,
+    min_covered_fact_property_records: int | None,
+    min_covered_fact_property_source_documents: int | None,
+    min_covered_fact_property_decision_accuracy: float | None,
+    max_covered_fact_property_false_supported_rate: float | None,
+    min_covered_fact_property_false_refuted_rate: float | None,
+) -> bool:
+    return any(
+        value is not None
+        for value in (
+            min_covered_fact_properties,
+            min_covered_fact_property_records,
+            min_covered_fact_property_source_documents,
+            min_covered_fact_property_decision_accuracy,
+            max_covered_fact_property_false_supported_rate,
+            min_covered_fact_property_false_refuted_rate,
+        )
+    )
 
 
 def _evidence_audit(
@@ -1242,6 +1363,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_hit_count=args.max_retrieval_hit_count,
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
+        min_covered_fact_properties=args.min_covered_fact_properties,
+        min_covered_fact_property_records=args.min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=args.min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=args.min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=args.max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=args.min_covered_fact_property_false_refuted_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
         require_retrieval_provenance_filter=bool(args.require_retrieval_provenance_filter),
         required_retrieval_source_prefixes=_parse_csv(args.required_retrieval_source_prefix),
@@ -1342,6 +1469,36 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-verifier-trace-cache-hit-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--min-verifier-trace-cache-hit-rate",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-properties",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-records", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-records",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-source-documents", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-source-documents",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-decision-accuracy", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--min-covered-fact-property-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--max-covered-fact-property-false-supported-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--max-covered-fact-property-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-false-refuted-rate", type=lambda value: (
+        _parse_non_negative_float(
+            value,
+            flag="--min-covered-fact-property-false-refuted-rate",
+        )
     ), default=None)
     parser.add_argument(
         "--require-non-oracle-evidence",

@@ -23,6 +23,12 @@ _STRICT_STRUCTURED_FACT_DEFAULTS: Mapping[str, Any] = {
     "required_route_min_decision_accuracy": 0.99,
     "required_route_max_false_supported_rate": 0.0,
     "required_route_min_false_refuted_rate": 0.99,
+    "required_route_min_covered_fact_properties": 3,
+    "required_route_min_covered_fact_property_records": 2,
+    "required_route_min_covered_fact_property_source_documents": 1,
+    "required_route_min_covered_fact_property_decision_accuracy": 0.99,
+    "required_route_max_covered_fact_property_false_supported_rate": 0.0,
+    "required_route_min_covered_fact_property_false_refuted_rate": 0.99,
 }
 
 RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {

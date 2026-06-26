@@ -64,6 +64,22 @@ def _apply_release_policy_profile_to_config(
             "required_route_min_decision_accuracy": config.required_route_min_decision_accuracy,
             "required_route_max_false_supported_rate": config.required_route_max_false_supported_rate,
             "required_route_min_false_refuted_rate": config.required_route_min_false_refuted_rate,
+            "required_route_min_covered_fact_properties": config.required_route_min_covered_fact_properties,
+            "required_route_min_covered_fact_property_records": (
+                config.required_route_min_covered_fact_property_records
+            ),
+            "required_route_min_covered_fact_property_source_documents": (
+                config.required_route_min_covered_fact_property_source_documents
+            ),
+            "required_route_min_covered_fact_property_decision_accuracy": (
+                config.required_route_min_covered_fact_property_decision_accuracy
+            ),
+            "required_route_max_covered_fact_property_false_supported_rate": (
+                config.required_route_max_covered_fact_property_false_supported_rate
+            ),
+            "required_route_min_covered_fact_property_false_refuted_rate": (
+                config.required_route_min_covered_fact_property_false_refuted_rate
+            ),
             "adapter_family_profile": config.adapter_family_profile,
             "require_state_transition_world_model": config.require_state_transition_world_model,
             "require_product_runtime_drift_promotion_evidence": (
@@ -195,6 +211,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
     required_route_max_retrieval_hit_count: float | None = None
     required_route_min_claims_cache_hit_rate: float | None = None
     required_route_min_verifier_trace_cache_hit_rate: float | None = None
+    required_route_min_covered_fact_properties: int | None = None
+    required_route_min_covered_fact_property_records: int | None = None
+    required_route_min_covered_fact_property_source_documents: int | None = None
+    required_route_min_covered_fact_property_decision_accuracy: float | None = None
+    required_route_max_covered_fact_property_false_supported_rate: float | None = None
+    required_route_min_covered_fact_property_false_refuted_rate: float | None = None
     required_route_require_non_oracle_evidence: bool = False
     required_route_require_retrieval_provenance_filter: bool = False
     required_route_required_retrieval_source_prefixes: Sequence[str] = ()
@@ -601,6 +623,22 @@ def run_release_candidate_registry_workflow(
         required_route_max_retrieval_hit_count=config.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=config.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=config.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_min_covered_fact_properties=config.required_route_min_covered_fact_properties,
+        required_route_min_covered_fact_property_records=(
+            config.required_route_min_covered_fact_property_records
+        ),
+        required_route_min_covered_fact_property_source_documents=(
+            config.required_route_min_covered_fact_property_source_documents
+        ),
+        required_route_min_covered_fact_property_decision_accuracy=(
+            config.required_route_min_covered_fact_property_decision_accuracy
+        ),
+        required_route_max_covered_fact_property_false_supported_rate=(
+            config.required_route_max_covered_fact_property_false_supported_rate
+        ),
+        required_route_min_covered_fact_property_false_refuted_rate=(
+            config.required_route_min_covered_fact_property_false_refuted_rate
+        ),
         required_route_require_non_oracle_evidence=config.required_route_require_non_oracle_evidence,
         required_route_require_retrieval_provenance_filter=(
             config.required_route_require_retrieval_provenance_filter
@@ -867,6 +905,22 @@ def run_release_candidate_registry_workflow(
             "required_route_min_claims_cache_hit_rate": config.required_route_min_claims_cache_hit_rate,
             "required_route_min_verifier_trace_cache_hit_rate": (
                 config.required_route_min_verifier_trace_cache_hit_rate
+            ),
+            "required_route_min_covered_fact_properties": config.required_route_min_covered_fact_properties,
+            "required_route_min_covered_fact_property_records": (
+                config.required_route_min_covered_fact_property_records
+            ),
+            "required_route_min_covered_fact_property_source_documents": (
+                config.required_route_min_covered_fact_property_source_documents
+            ),
+            "required_route_min_covered_fact_property_decision_accuracy": (
+                config.required_route_min_covered_fact_property_decision_accuracy
+            ),
+            "required_route_max_covered_fact_property_false_supported_rate": (
+                config.required_route_max_covered_fact_property_false_supported_rate
+            ),
+            "required_route_min_covered_fact_property_false_refuted_rate": (
+                config.required_route_min_covered_fact_property_false_refuted_rate
             ),
             "require_non_oracle_evidence": config.require_non_oracle_evidence,
             "require_retrieval_provenance_filter": config.require_retrieval_provenance_filter,
@@ -1695,6 +1749,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_max_retrieval_hit_count",
                 "required_route_min_claims_cache_hit_rate",
                 "required_route_min_verifier_trace_cache_hit_rate",
+                "required_route_min_covered_fact_properties",
+                "required_route_min_covered_fact_property_records",
+                "required_route_min_covered_fact_property_source_documents",
+                "required_route_min_covered_fact_property_decision_accuracy",
+                "required_route_max_covered_fact_property_false_supported_rate",
+                "required_route_min_covered_fact_property_false_refuted_rate",
                 "required_route_require_non_oracle_evidence",
                 "required_route_require_retrieval_provenance_filter",
                 "required_route_required_retrieval_source_prefixes",
@@ -2110,6 +2170,20 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         required_route_max_retrieval_hit_count=args.required_route_max_retrieval_hit_count,
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
+        required_route_min_covered_fact_properties=args.required_route_min_covered_fact_properties,
+        required_route_min_covered_fact_property_records=args.required_route_min_covered_fact_property_records,
+        required_route_min_covered_fact_property_source_documents=(
+            args.required_route_min_covered_fact_property_source_documents
+        ),
+        required_route_min_covered_fact_property_decision_accuracy=(
+            args.required_route_min_covered_fact_property_decision_accuracy
+        ),
+        required_route_max_covered_fact_property_false_supported_rate=(
+            args.required_route_max_covered_fact_property_false_supported_rate
+        ),
+        required_route_min_covered_fact_property_false_refuted_rate=(
+            args.required_route_min_covered_fact_property_false_refuted_rate
+        ),
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
         required_route_require_retrieval_provenance_filter=bool(
             args.required_route_require_retrieval_provenance_filter
@@ -2587,6 +2661,40 @@ def main(argv: Sequence[str] | None = None) -> None:
         ),
         default=None,
     )
+    parser.add_argument("--required-route-min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--required-route-min-covered-fact-properties",
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-records", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--required-route-min-covered-fact-property-records",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-source-documents", type=lambda value: (
+        _parse_non_negative_int(
+            value,
+            flag="--required-route-min-covered-fact-property-source-documents",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-decision-accuracy", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-min-covered-fact-property-decision-accuracy",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-max-covered-fact-property-false-supported-rate", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-max-covered-fact-property-false-supported-rate",
+        )
+    ), default=None)
+    parser.add_argument("--required-route-min-covered-fact-property-false-refuted-rate", type=lambda value: (
+        _parse_unit_float(
+            value,
+            flag="--required-route-min-covered-fact-property-false-refuted-rate",
+        )
+    ), default=None)
     parser.add_argument(
         "--required-route-require-non-oracle-evidence",
         action="store_true",

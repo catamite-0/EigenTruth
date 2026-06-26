@@ -2090,7 +2090,13 @@ keys, or `--release-policy-profile strict_structured_fact` with
 `--structured-fact-canonical-route-key` and
 `--structured-fact-paraphrase-route-key`, to require both the canonical
 covered-facts route and the paraphrase robustness replay before a release can
-promote. Available release policy profiles are `research_smoke`,
+promote. Covered-fact route gates can also require per-property evidence with
+`--required-route-min-covered-fact-properties`,
+`--required-route-min-covered-fact-property-records`,
+`--required-route-min-covered-fact-property-source-documents`,
+`--required-route-min-covered-fact-property-decision-accuracy`,
+`--required-route-max-covered-fact-property-false-supported-rate`, and
+`--required-route-min-covered-fact-property-false-refuted-rate`. Available release policy profiles are `research_smoke`,
 `candidate_release`, `strict_structured_fact`, and `frontier_audit`; profile
 defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
@@ -2261,7 +2267,8 @@ named defaults while registering the promoted manifest. `strict_structured_fact`
 enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
 and adds stricter route/required-route quality thresholds for covered-fact
-release evidence. `frontier_audit` adds the same structured-fact defaults and
+release evidence, including fail-closed per-property count and support/refutation
+quality gates over the route summary `property_metrics`. `frontier_audit` adds the same structured-fact defaults and
 also defaults `adapter_family_profile=strict_audit` and
 `require_product_runtime_drift_promotion_evidence=true`, so the release must
 carry the strict adapter-family matrix, rule-based state-transition world-model
