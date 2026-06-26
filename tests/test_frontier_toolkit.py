@@ -82,6 +82,7 @@ from eigentruth.verify import (
     GroundednessVerifier,
     InMemoryVerifier,
     JsonTraceCache,
+    LookupTripleExtractor,
     RegexTripleExtractor,
     RegexTriplePattern,
     RoutedVerifier,
@@ -955,6 +956,48 @@ def test_regex_triple_extractor_extends_rule_based_extraction():
             },
         ),
     )
+
+
+def test_lookup_triple_extractor_replays_external_predictions_by_id_and_text():
+    id_claim = Claim("France has its capital at Paris.", claim_id="capital")
+    text_claim = Claim("OpenAI is headquartered in San Francisco.", claim_id="hq")
+    extractor = LookupTripleExtractor(
+        predictions={
+            "claim_id:capital": (
+                {
+                    "subject": "France",
+                    "predicate": "capital_of",
+                    "object": "Paris",
+                    "confidence": 0.91,
+                },
+            ),
+            "text_norm:openai is headquartered in san francisco": (
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ),
+        },
+        extractor_name="external_smoke",
+    )
+
+    id_triple = extractor.extract(id_claim)[0]
+    text_triple = extractor.extract(text_claim)[0]
+
+    assert id_triple == ClaimTriple(
+        subject="France",
+        predicate="capital_of",
+        object="Paris",
+        claim_id="capital",
+        source_text="France has its capital at Paris.",
+        confidence=0.91,
+        metadata={"extractor": "external_smoke", "source": "lookup_prediction"},
+    )
+    assert text_triple.subject == "OpenAI"
+    assert text_triple.predicate == "headquarters_location_of"
+    assert text_triple.object == "San Francisco"
+    assert extractor.extract(Claim("No prediction here.", claim_id="missing")) == ()
 
 
 def test_regex_triple_extractor_rejects_blocked_contexts():

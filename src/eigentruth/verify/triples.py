@@ -177,6 +177,51 @@ class ClaimTriple:
 
 
 @dataclass(frozen=True)
+class LookupTripleExtractor:
+    """Replay externally predicted triples from a claim-id/text lookup table."""
+
+    predictions: Mapping[str, Sequence[ClaimTriple | Mapping[str, Any]]]
+    extractor_name: str = "lookup_triple_extractor"
+    prediction_source: str = "lookup_prediction"
+    missing_policy: str = "empty"
+
+    def __post_init__(self) -> None:
+        predictions: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        for key, triples in self.predictions.items():
+            lookup_key = str(key).strip()
+            if not lookup_key:
+                raise ValueError("lookup triple prediction keys must be non-empty.")
+            predictions[lookup_key] = _coerce_prediction_triple_payloads(triples)
+        extractor_name = str(self.extractor_name).strip() or "lookup_triple_extractor"
+        prediction_source = str(self.prediction_source).strip() or "lookup_prediction"
+        missing_policy = str(self.missing_policy).strip().casefold().replace("-", "_")
+        if missing_policy not in {"empty", "error"}:
+            raise ValueError("missing_policy must be 'empty' or 'error'.")
+        object.__setattr__(self, "predictions", predictions)
+        object.__setattr__(self, "extractor_name", extractor_name)
+        object.__setattr__(self, "prediction_source", prediction_source)
+        object.__setattr__(self, "missing_policy", missing_policy)
+
+    def extract(self, claim: Claim) -> tuple[ClaimTriple, ...]:
+        """Return externally supplied triples for this claim when present."""
+        for key in _lookup_keys_for_claim(claim):
+            raw_triples = self.predictions.get(key)
+            if raw_triples is not None:
+                return tuple(
+                    _prediction_triple_for_claim(
+                        item,
+                        claim,
+                        extractor_name=self.extractor_name,
+                        prediction_source=self.prediction_source,
+                    )
+                    for item in raw_triples
+                )
+        if self.missing_policy == "error":
+            raise KeyError(f"no predicted triples found for claim {claim.claim_id!r}")
+        return ()
+
+
+@dataclass(frozen=True)
 class RuleBasedTripleExtractor:
     """Small rule-based triple extractor for audit fixtures and local gates."""
 
@@ -800,6 +845,80 @@ def _metadata_triples(claim: Claim) -> tuple[ClaimTriple, ...]:
         else:
             raise ValueError("claim metadata triples must contain mappings.")
     return tuple(triples)
+
+
+def _coerce_prediction_triple_payloads(
+    triples: Sequence[ClaimTriple | Mapping[str, Any]] | Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    if isinstance(triples, ClaimTriple):
+        return (triples.to_dict(),)
+    if isinstance(triples, Mapping):
+        if _looks_like_triple_payload(triples):
+            return (dict(triples),)
+        raw = (
+            triples.get("triples")
+            or triples.get("claim_triples")
+            or triples.get("predicted_triples")
+            or triples.get("prediction_triples")
+        )
+        if raw is None:
+            return ()
+        return _coerce_prediction_triple_payloads(raw)
+    if isinstance(triples, Sequence) and not isinstance(triples, (str, bytes, bytearray)):
+        payloads = []
+        for item in triples:
+            if isinstance(item, ClaimTriple):
+                payloads.append(item.to_dict())
+            elif isinstance(item, Mapping):
+                if not _looks_like_triple_payload(item):
+                    raise ValueError("predicted triple mappings must contain subject, predicate, and object.")
+                payloads.append(dict(item))
+            else:
+                raise ValueError("predicted triples must contain mappings.")
+        return tuple(payloads)
+    raise ValueError("predicted triples must be a mapping or sequence of mappings.")
+
+
+def _looks_like_triple_payload(value: Mapping[str, Any]) -> bool:
+    return (
+        value.get("subject") is not None
+        and value.get("predicate") is not None
+        and (value.get("object") is not None or value.get("object_text") is not None)
+    )
+
+
+def _prediction_triple_for_claim(
+    payload: Mapping[str, Any],
+    claim: Claim,
+    *,
+    extractor_name: str,
+    prediction_source: str,
+) -> ClaimTriple:
+    data = dict(payload)
+    data.setdefault("claim_id", claim.claim_id)
+    data.setdefault("source_text", claim.text)
+    metadata = dict(data.get("metadata", {}))
+    metadata.setdefault("extractor", extractor_name)
+    metadata.setdefault("source", prediction_source)
+    data["metadata"] = metadata
+    return ClaimTriple.from_dict(data)
+
+
+def _lookup_keys_for_claim(claim: Claim) -> tuple[str, ...]:
+    keys: list[str] = []
+    if claim.claim_id is not None and str(claim.claim_id).strip():
+        claim_id = str(claim.claim_id).strip()
+        keys.extend((f"claim_id:{claim_id}", claim_id))
+    text = _clean_sentence(claim.text)
+    if text:
+        keys.extend((f"text:{text}", f"text_norm:{_clean_slot(text).casefold()}", text))
+    seen: set[str] = set()
+    unique = []
+    for key in keys:
+        if key not in seen:
+            unique.append(key)
+            seen.add(key)
+    return tuple(unique)
 
 
 def _triple(

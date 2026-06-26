@@ -23,10 +23,13 @@ from eigentruth.verify import (  # noqa: E402
     ClaimTriple,
     ClaimTripleExtractor,
     CompositeTripleExtractor,
+    LookupTripleExtractor,
     RegexTripleExtractor,
     RegexTriplePattern,
     RuleBasedTripleExtractor,
 )
+
+_BOUNDARY_CHARS = " \t\r\n.,;:!?()[]{}\"'`“”‘’。！？"
 
 
 def evaluate_triple_extractor(
@@ -111,6 +114,7 @@ def build_triple_extractor(
     extractor_name: str,
     *,
     patterns: Sequence[RegexTriplePattern | Mapping[str, Any]] = (),
+    predictions: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> ClaimTripleExtractor:
     """Build a named extractor for benchmark use."""
     name = extractor_name.strip().casefold().replace("-", "_")
@@ -126,8 +130,17 @@ def build_triple_extractor(
             RegexTripleExtractor(patterns=patterns),
             rule_based,
         ))
+    if name in {"lookup", "lookup_predictions", "prediction_lookup", "external_predictions"}:
+        if predictions is None:
+            raise ValueError("prediction lookup extractor requires --predictions.")
+        return LookupTripleExtractor(
+            predictions=predictions,
+            extractor_name=name,
+            prediction_source="external_prediction_file",
+        )
     raise ValueError(
-        "extractor must be one of rule_based, regex, regex_rule_based, or composite."
+        "extractor must be one of rule_based, regex, regex_rule_based, composite, "
+        "lookup, prediction_lookup, or external_predictions."
     )
 
 
@@ -173,24 +186,64 @@ def load_regex_patterns(path: str | Path | None) -> tuple[RegexTriplePattern, ..
     )
 
 
+def load_triple_predictions(path: str | Path | None) -> dict[str, tuple[Mapping[str, Any], ...]]:
+    """Load externally predicted triples from JSON or JSONL."""
+    if path is None:
+        return {}
+    path = Path(path)
+    if path.suffix.lower() == ".jsonl":
+        predictions: dict[str, tuple[Mapping[str, Any], ...]] = {}
+        for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            if not isinstance(payload, Mapping):
+                raise ValueError(f"{path}:{line_no} must contain a JSON object.")
+            _add_prediction_record(predictions, payload, source=f"{path}:{line_no}")
+        return predictions
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    predictions = {}
+    if isinstance(payload, Mapping) and isinstance(payload.get("predictions"), Sequence):
+        for index, item in enumerate(payload["predictions"]):
+            _add_prediction_record(predictions, _as_mapping(item, index=index), source=f"{path}:{index}")
+        return predictions
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        for index, item in enumerate(payload):
+            _add_prediction_record(predictions, _as_mapping(item, index=index), source=f"{path}:{index}")
+        return predictions
+    if isinstance(payload, Mapping):
+        for key, value in payload.items():
+            triples = _prediction_triples_from_value(value, source=f"{path}:{key}")
+            lookup_key = str(key).strip()
+            if not lookup_key:
+                raise ValueError("prediction mapping keys must be non-empty.")
+            predictions[lookup_key] = triples
+        return predictions
+    raise ValueError("triple predictions must be a mapping, list, or contain a predictions list.")
+
+
 def run_triple_extraction_eval(
     records_path: str | Path,
     *,
     extractor_name: str,
     patterns_path: str | Path | None = None,
+    predictions_path: str | Path | None = None,
     max_examples: int = 20,
 ) -> dict[str, Any]:
     """Run a triple extraction evaluation and return a JSON-ready payload."""
     records = load_triple_extraction_records(records_path)
     patterns = load_regex_patterns(patterns_path)
-    extractor = build_triple_extractor(extractor_name, patterns=patterns)
+    predictions = load_triple_predictions(predictions_path)
+    extractor = build_triple_extractor(extractor_name, patterns=patterns, predictions=predictions or None)
     report = evaluate_triple_extractor(records, extractor, max_examples=max_examples)
     return {
         "workflow": "triple_extraction_eval",
         "records_path": str(records_path),
         "patterns_path": None if patterns_path is None else str(patterns_path),
+        "predictions_path": None if predictions_path is None else str(predictions_path),
         "extractor": extractor_name,
         "pattern_count": len(patterns),
+        "prediction_key_count": len(predictions),
         "report": report,
     }
 
@@ -284,6 +337,82 @@ def _as_mapping(value: Any, *, index: int) -> Mapping[str, Any]:
     return value
 
 
+def _add_prediction_record(
+    predictions: dict[str, tuple[Mapping[str, Any], ...]],
+    record: Mapping[str, Any],
+    *,
+    source: str,
+) -> None:
+    triples = _prediction_triples_from_value(record, source=source)
+    keys = _prediction_record_keys(record)
+    if not keys:
+        raise ValueError(f"{source} must contain claim_id, id, text, claim, statement, or key.")
+    for key in keys:
+        if key in predictions:
+            raise ValueError(f"duplicate prediction key {key!r} in {source}.")
+        predictions[key] = triples
+
+
+def _prediction_triples_from_value(value: Any, *, source: str) -> tuple[Mapping[str, Any], ...]:
+    raw = value
+    if isinstance(value, Mapping):
+        raw = (
+            value.get("triples")
+            or value.get("claim_triples")
+            or value.get("predicted_triples")
+            or value.get("prediction_triples")
+            or value
+        )
+    if isinstance(raw, Mapping):
+        items = (raw,)
+    elif isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, bytearray)):
+        items = tuple(raw)
+    else:
+        raise ValueError(f"{source} predictions must contain triple mappings.")
+    triples = []
+    for index, item in enumerate(items):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{source} prediction {index} must be a mapping.")
+        if not _looks_like_triple(item):
+            raise ValueError(f"{source} prediction {index} must contain subject, predicate, and object.")
+        triples.append(dict(item))
+    return tuple(triples)
+
+
+def _prediction_record_keys(record: Mapping[str, Any]) -> tuple[str, ...]:
+    keys = []
+    explicit_key = record.get("key")
+    if explicit_key is not None and str(explicit_key).strip():
+        keys.append(str(explicit_key).strip())
+    claim_id = record.get("claim_id", record.get("id"))
+    if claim_id is not None and str(claim_id).strip():
+        claim_id_text = str(claim_id).strip()
+        keys.extend((f"claim_id:{claim_id_text}", claim_id_text))
+    text = record.get("text", record.get("claim", record.get("statement")))
+    if text is not None and str(text).strip():
+        text_value = _clean_prediction_text(str(text))
+        keys.extend((f"text:{text_value}", f"text_norm:{_normalize_slot(text_value)}", text_value))
+    seen: set[str] = set()
+    unique = []
+    for key in keys:
+        if key not in seen:
+            unique.append(key)
+            seen.add(key)
+    return tuple(unique)
+
+
+def _looks_like_triple(value: Mapping[str, Any]) -> bool:
+    return (
+        value.get("subject") is not None
+        and value.get("predicate") is not None
+        and (value.get("object") is not None or value.get("object_text") is not None)
+    )
+
+
+def _clean_prediction_text(value: str) -> str:
+    return " ".join(value.strip(_BOUNDARY_CHARS).split())
+
+
 def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     indent = None if compact else 2
@@ -296,9 +425,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--extractor",
         default="rule_based",
-        help="rule_based, regex, regex_rule_based, or composite",
+        help="rule_based, regex, regex_rule_based, composite, lookup, prediction_lookup, or external_predictions",
     )
     parser.add_argument("--patterns", default=None, help="optional JSON regex pattern list")
+    parser.add_argument("--predictions", default=None, help="optional JSON/JSONL external triple predictions")
     parser.add_argument("--json", required=True, help="output JSON report path")
     parser.add_argument("--max-examples", type=int, default=20)
     parser.add_argument("--compact-json", action="store_true")
@@ -308,6 +438,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.records,
         extractor_name=args.extractor,
         patterns_path=args.patterns,
+        predictions_path=args.predictions,
         max_examples=args.max_examples,
     )
     _write_json(Path(args.json), payload, compact=bool(args.compact_json))

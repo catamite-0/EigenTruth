@@ -109,6 +109,68 @@ def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
     assert regex["report"]["f1"] == pytest.approx(1.0)
 
 
+def test_eval_triple_extraction_uses_external_prediction_lookup(tmp_path):
+    module = importlib.import_module("benchmarks.eval_triple_extraction")
+    records_path = tmp_path / "triple-records.json"
+    predictions_path = tmp_path / "predictions.jsonl"
+    records_path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "id": "capital",
+                    "text": "France has its capital at Paris.",
+                    "expected_triples": [
+                        {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+                    ],
+                },
+                {
+                    "id": "hq",
+                    "text": "OpenAI is headquartered in San Francisco.",
+                    "expected_triples": [
+                        {
+                            "subject": "OpenAI",
+                            "predicate": "headquarters_location_of",
+                            "object": "San Francisco",
+                        },
+                    ],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    predictions_path.write_text(
+        "\n".join((
+            json.dumps({
+                "claim_id": "capital",
+                "triples": [{"subject": "France", "predicate": "capital_of", "object": "Paris"}],
+            }),
+            json.dumps({
+                "text": "OpenAI is headquartered in San Francisco.",
+                "triples": [
+                    {
+                        "subject": "OpenAI",
+                        "predicate": "headquarters_location_of",
+                        "object": "San Francisco",
+                    }
+                ],
+            }),
+        ))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = module.run_triple_extraction_eval(
+        records_path,
+        extractor_name="external_predictions",
+        predictions_path=predictions_path,
+    )
+
+    assert report["prediction_key_count"] == 5
+    assert report["report"]["precision"] == pytest.approx(1.0)
+    assert report["report"]["recall"] == pytest.approx(1.0)
+    assert report["report"]["f1"] == pytest.approx(1.0)
+
+
 def test_triple_extraction_smoke_uses_versioned_fixture(tmp_path):
     module = importlib.import_module("benchmarks.triple_extraction_smoke")
 
@@ -329,6 +391,61 @@ def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_pat
     assert summary["best_report"]["f1"] == pytest.approx(1.0)
     assert summary["f1_lift"] > 0.0
     assert (tmp_path / "workflow" / "artifact-manifest.json").exists()
+
+
+def test_triple_extraction_fixture_workflow_records_external_prediction_report(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_workflow")
+    fact_corpus = tmp_path / "facts.json"
+    predictions_path = tmp_path / "external-predictions.json"
+    fact_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    predictions_path.write_text(
+        json.dumps({
+            "claim_id:0001-capital_of-capital-object-first": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-subject-first": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-possessive": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-has-at": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    config = module.TripleExtractionFixtureWorkflowConfig(
+        fact_corpus_paths=(fact_corpus,),
+        output_dir=tmp_path / "workflow",
+        external_prediction_paths={"learned_smoke": predictions_path},
+    )
+
+    summary = module.run_triple_extraction_fixture_workflow(config)
+    manifest = json.loads((tmp_path / "workflow" / "artifact-manifest.json").read_text(encoding="utf-8"))
+    external_report = json.loads(Path(summary["report_paths"]["external_learned_smoke"]).read_text(encoding="utf-8"))
+
+    assert summary["status"] == "promote"
+    assert summary["external_prediction_paths"] == {"learned_smoke": str(predictions_path)}
+    assert summary["reports"]["external_learned_smoke"]["f1"] == pytest.approx(1.0)
+    assert external_report["prediction_key_count"] == 4
+    assert external_report["report"]["f1"] == pytest.approx(1.0)
+    assert manifest["metadata"]["external_prediction_count"] == 1
+    assert manifest["artifacts"]["external_predictions.learned_smoke"]["exists"] is True
 
 
 def test_triple_extraction_fixture_workflow_promotes_when_adversarial_negatives_are_rejected(tmp_path):

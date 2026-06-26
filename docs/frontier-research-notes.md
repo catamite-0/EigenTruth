@@ -353,15 +353,19 @@ Added stricter triple-evidence audit observability:
 
 Added dependency-free triple extractor plug-ins and eval harness:
 
-- `RegexTriplePattern`, `RegexTripleExtractor`, and `CompositeTripleExtractor`
-  add a configurable extraction slot between the default rule-based parser and
-  future learned or external fact extractors.
+- `RegexTriplePattern`, `RegexTripleExtractor`, `LookupTripleExtractor`, and
+  `CompositeTripleExtractor` add configurable extraction slots between the
+  default rule-based parser and future learned or external fact extractors.
+  `LookupTripleExtractor` replays offline prediction files by claim id or text,
+  so GLiNER/OpenIE/LLM-json extractors can be evaluated without becoming core
+  dependencies.
 - `StructuredFactVerifier` can now receive an injected extractor, so new
   extraction templates can be evaluated behind the same KG-covered correction
   route without changing route semantics.
 - `benchmarks/eval_triple_extraction.py` compares rule-based, regex,
-  regex-with-rule-based fallback, and composite extractors on labeled triples
-  with exact precision, recall, F1, and bounded error examples.
+  regex-with-rule-based fallback, composite, and offline external-prediction
+  lookup extractors on labeled triples with exact precision, recall, F1, and
+  bounded error examples.
 - `benchmarks/fixtures/triple_extraction_records.json`,
   `benchmarks/fixtures/triple_extraction_regex_patterns.json`, and
   `benchmarks/triple_extraction_smoke.py` add a versioned extractor fixture and
@@ -374,9 +378,10 @@ Added dependency-free triple extractor plug-ins and eval harness:
   without introducing a learned extractor dependency.
 - `benchmarks/run_triple_extraction_fixture_workflow.py` wraps that builder into
   a release-evidence workflow: it writes generated records, pattern payloads,
-  rule-based/regex/composite reports, a promotion summary, and an artifact
-  manifest. This makes the extractor slot auditable as a benchmarked route
-  component rather than a hand-tested parser hook.
+  rule-based/regex/composite reports, optional external-prediction reports, a
+  promotion summary, and an artifact manifest. This makes the extractor slot
+  auditable as a benchmarked route component rather than a hand-tested parser
+  hook.
 - The fixture builder now covers a small second predicate family beyond
   country-core facts: headquarters location (`P159`), manufacturer (`P176`),
   and inception/founding date (`P571`). `benchmarks/run_triple_extraction_fixture_matrix.py`
@@ -419,4 +424,4 @@ Added dependency-free triple extractor plug-ins and eval harness:
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Evaluate a learned or external triple extractor adapter on the same Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

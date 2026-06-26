@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -53,6 +53,7 @@ class TripleExtractionFixtureWorkflowConfig:
     max_temporal_false_positive_rate: float = 0.0
     metalinguistic_negatives_per_fact: int = 0
     max_metalinguistic_false_positive_rate: float = 0.0
+    external_prediction_paths: Mapping[str, str | Path] = field(default_factory=dict)
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -145,6 +146,10 @@ class TripleExtractionFixtureWorkflowConfig:
             "max_metalinguistic_false_positive_rate",
             max_metalinguistic_false_positive_rate,
         )
+        external_prediction_paths = {}
+        for name, path in self.external_prediction_paths.items():
+            external_prediction_paths[_safe_external_name(name)] = Path(path)
+        object.__setattr__(self, "external_prediction_paths", external_prediction_paths)
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
             raise ValueError("min_augmented_f1 must be in [0, 1].")
@@ -213,6 +218,19 @@ def run_triple_extraction_fixture_workflow(
         )
         _write_json(report_path, reports[extractor], compact=config.compact_json)
         report_paths[extractor] = str(report_path)
+    for name, predictions_path in config.external_prediction_paths.items():
+        extractor_key = f"external_{name}"
+        report_path = output_dir / f"{extractor_key}-triple-extraction-report.json"
+        reports[extractor_key] = run_triple_extraction_eval(
+            config.records_path,
+            extractor_name="external_predictions",
+            predictions_path=predictions_path,
+            max_examples=config.max_examples,
+        )
+        reports[extractor_key]["extractor"] = extractor_key
+        reports[extractor_key]["external_predictions_path"] = str(predictions_path)
+        _write_json(report_path, reports[extractor_key], compact=config.compact_json)
+        report_paths[extractor_key] = str(report_path)
 
     summary = _workflow_summary(
         config=config,
@@ -229,6 +247,10 @@ def run_triple_extraction_fixture_workflow(
             "patterns": config.patterns_path,
             "workflow_summary": config.summary_path,
             **{f"report.{name}": Path(path) for name, path in report_paths.items()},
+            **{
+                f"external_predictions.{name}": path
+                for name, path in config.external_prediction_paths.items()
+            },
             **{f"fact_corpus.{idx}.{path.stem}": path for idx, path in enumerate(config.fact_corpus_paths, start=1)},
         },
         root=config.artifact_manifest_path.parent,
@@ -263,6 +285,7 @@ def run_triple_extraction_fixture_workflow(
             "best_metalinguistic_false_positive_rate": summary["best_metalinguistic_report"][
                 "false_positive_rate"
             ],
+            "external_prediction_count": len(config.external_prediction_paths),
             "promotes_augmented_extractor": summary["status"] == "promote",
         },
     )
@@ -420,6 +443,9 @@ def _workflow_summary(
         "patterns_path": str(config.patterns_path),
         "report_paths": dict(report_paths),
         "fact_corpus_paths": tuple(str(path) for path in config.fact_corpus_paths),
+        "external_prediction_paths": {
+            name: str(path) for name, path in config.external_prediction_paths.items()
+        },
         "fixture_summary": dict(fixture["summary"]),
         "pattern_count": len(pattern_payload["patterns"]),
         "baseline_extractor": "rule_based",
@@ -458,6 +484,22 @@ def _record_type_report(report: Mapping[str, Any], record_type: str) -> dict[str
     }
 
 
+def _safe_external_name(value: Any) -> str:
+    name = str(value).strip().casefold().replace("-", "_")
+    name = "".join(char if char.isalnum() or char == "_" else "_" for char in name)
+    name = "_".join(part for part in name.split("_") if part)
+    if not name:
+        raise ValueError("external prediction extractor name must be non-empty.")
+    return name
+
+
+def _parse_external_prediction_arg(value: str) -> tuple[str, Path]:
+    if "=" not in value:
+        raise ValueError("--external-predictions must be NAME=PATH.")
+    name, path = value.split("=", 1)
+    return _safe_external_name(name), Path(path)
+
+
 def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     indent = None if compact else 2
@@ -465,6 +507,12 @@ def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> Non
 
 
 def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureWorkflowConfig:
+    external_prediction_paths = {}
+    for item in args.external_predictions or ():
+        name, path = _parse_external_prediction_arg(item)
+        if name in external_prediction_paths:
+            raise ValueError(f"duplicate external prediction extractor name: {name}")
+        external_prediction_paths[name] = path
     return TripleExtractionFixtureWorkflowConfig(
         fact_corpus_paths=tuple(args.fact_corpus),
         output_dir=args.output_dir,
@@ -484,6 +532,7 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureWorkfl
         max_temporal_false_positive_rate=args.max_temporal_false_positive_rate,
         metalinguistic_negatives_per_fact=args.metalinguistic_negatives_per_fact,
         max_metalinguistic_false_positive_rate=args.max_metalinguistic_false_positive_rate,
+        external_prediction_paths=external_prediction_paths,
         compact_json=bool(args.compact_json),
     )
 
@@ -508,6 +557,12 @@ def main() -> None:
     parser.add_argument("--max-temporal-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--metalinguistic-negatives-per-fact", type=int, default=0)
     parser.add_argument("--max-metalinguistic-false-positive-rate", type=float, default=0.0)
+    parser.add_argument(
+        "--external-predictions",
+        action="append",
+        default=(),
+        help="optional external extractor predictions as NAME=JSON_OR_JSONL_PATH; repeatable",
+    )
     parser.add_argument("--compact-json", action="store_true")
     run_triple_extraction_fixture_workflow(_config_from_args(parser.parse_args()))
 

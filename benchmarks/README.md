@@ -1015,6 +1015,24 @@ python benchmarks/eval_triple_extraction.py \
   --json artifacts/triple_extraction_eval.json
 ```
 
+External or learned extractors should be evaluated through offline prediction
+files first. The file may be JSON or JSONL, with one record per claim keyed by
+`claim_id`/`id`, `text`/`claim`/`statement`, or an explicit `key`, and a
+`triples` list containing `subject`, `predicate`, and `object` mappings:
+
+```bash
+python benchmarks/eval_triple_extraction.py \
+  --records artifacts/triple_extraction_records.json \
+  --extractor external_predictions \
+  --predictions artifacts/my_external_extractor_predictions.jsonl \
+  --json artifacts/my_external_extractor_triple_eval.json
+```
+
+This keeps learned extractors, OpenIE systems, or LLM JSON extraction behind a
+local file boundary. If the external system extracts triples from negated,
+quoted, temporal, ambiguous, or metalinguistic controls, the same evaluation
+counts those outputs as false positives.
+
 Use `build_triple_extraction_fixture.py` to turn structured fact corpora, such
 as the output of `build_wikidata_qa_corpus.py`, into larger labeled extraction
 fixtures plus matching default regex patterns:
@@ -1041,6 +1059,7 @@ patterns, per-extractor reports, a promotion summary, and an artifact manifest:
 python benchmarks/run_triple_extraction_fixture_workflow.py \
   --fact-corpus artifacts/wikidata-country-core-facts-qa-corpus.json \
   --output-dir artifacts/triple-extraction-fixture-workflow \
+  --external-predictions learned=artifacts/my_external_extractor_predictions.jsonl \
   --adversarial-negatives-per-fact 0 \
   --predicate-confusions-per-fact 0 \
   --non-assertive-negatives-per-fact 0 \
