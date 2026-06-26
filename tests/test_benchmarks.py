@@ -3259,6 +3259,86 @@ def test_fetch_wikidata_reference_docs_builds_multi_property_source_docs(tmp_pat
     assert by_question["What currency does Japan use?"]["answer"] == "Japanese yen"
 
 
+def test_fetch_wikidata_reference_docs_builds_organization_product_source_docs(tmp_path):
+    wikidata = importlib.import_module("benchmarks.fetch_wikidata_reference_docs")
+    triple_builder = importlib.import_module("benchmarks.build_triple_extraction_fixture")
+    sparql_path = tmp_path / "wikidata-organization-product-sparql.json"
+    source_path = tmp_path / "wikidata-organization-product-facts.jsonl"
+    records_path = tmp_path / "triple-records.json"
+    patterns_path = tmp_path / "patterns.json"
+    sparql_path.write_text(
+        json.dumps({
+            "results": {
+                "bindings": [
+                    {
+                        "subject": {"type": "uri", "value": "http://www.wikidata.org/entity/Q21708200"},
+                        "subjectLabel": {"type": "literal", "value": "OpenAI"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P159"},
+                        "propertyLabel": {"type": "literal", "value": "headquarters location"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q62"},
+                        "valueLabel": {"type": "literal", "value": "San Francisco"},
+                    },
+                    {
+                        "subject": {"type": "uri", "value": "http://www.wikidata.org/entity/Q32399"},
+                        "subjectLabel": {"type": "literal", "value": "Model S"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P176"},
+                        "propertyLabel": {"type": "literal", "value": "manufacturer"},
+                        "value": {"type": "uri", "value": "http://www.wikidata.org/entity/Q478214"},
+                        "valueLabel": {"type": "literal", "value": "Tesla"},
+                    },
+                    {
+                        "subject": {"type": "uri", "value": "http://www.wikidata.org/entity/Q21708200"},
+                        "subjectLabel": {"type": "literal", "value": "OpenAI"},
+                        "property": {"type": "uri", "value": "http://www.wikidata.org/entity/P571"},
+                        "propertyLabel": {"type": "literal", "value": "inception"},
+                        "value": {"type": "literal", "value": "2015-12-11T00:00:00Z"},
+                        "valueLabel": {"type": "literal", "value": "2015"},
+                    },
+                ]
+            }
+        }),
+        encoding="utf-8",
+    )
+
+    documents = wikidata.run(
+        SimpleNamespace(
+            output=str(source_path),
+            limit=20,
+            query_preset="organization_product_core_facts",
+            property=None,
+            endpoint="https://query.wikidata.org/sparql",
+            timeout=1.0,
+            user_agent="EigenTruth test",
+            input_json=str(sparql_path),
+            fetched_at="2026-06-26T00:00:00+00:00",
+            artifact_manifest=str(tmp_path / "wikidata-organization-product.manifest.json"),
+        )
+    )
+    fixture = triple_builder.run(
+        SimpleNamespace(
+            fact_corpus=(str(source_path),),
+            output_records=str(records_path),
+            output_patterns=str(patterns_path),
+            max_facts=None,
+            artifact_manifest=None,
+        )
+    )
+    by_property = {document["metadata"]["statement_property"]: document for document in documents}
+    by_predicate = fixture["summary"]["by_predicate"]
+
+    assert len(documents) == 3
+    assert by_property["P159"]["metadata"]["subject"] == "OpenAI"
+    assert by_property["P159"]["metadata"]["headquarters"] == "San Francisco"
+    assert by_property["P159"]["metadata"]["country"] is None
+    assert by_property["P176"]["metadata"]["manufacturer"] == "Tesla"
+    assert by_property["P571"]["metadata"]["inception"] == "2015"
+    assert all(document["metadata"]["query_preset"] == "organization_product_core_facts" for document in documents)
+    assert by_predicate["headquarters_location_of"]["record_count"] == 4
+    assert by_predicate["manufacturer_of"]["record_count"] == 4
+    assert by_predicate["inception_of"]["record_count"] == 4
+    assert patterns_path.exists()
+
+
 def test_build_wikidata_qa_corpus_feeds_retrieval_structured_qa(tmp_path):
     wikidata = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
     builder = importlib.import_module("benchmarks.build_evidence_fixture")

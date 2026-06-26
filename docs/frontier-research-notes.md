@@ -158,6 +158,12 @@ Added a retrieval corpus provenance audit gate:
   `retrieval_groundedness` false alarm is 0.155 against the 0.05 gate. This
   narrows the next frontier step to structured Wikidata QA/triple verification,
   not more lexical threshold tuning.
+- The fetcher now also exposes an `organization_product_core_facts` preset for
+  non-country KG evidence, defaulting to `P159` headquarters location, `P176`
+  manufacturer, and `P571` inception. These source docs carry generic
+  `subject`/`value` metadata and feed `build_triple_extraction_fixture.py`
+  directly, so cross-corpus extractor matrices no longer need synthetic
+  enterprise/product facts as their only non-country test path.
 - `artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/`
   measures that source against the Qwen l80 statement dump. Retrieval covers
   254/556 records, but `retrieval_groundedness` verified false alarm is `0.149`
@@ -388,5 +394,5 @@ Added dependency-free triple extractor plug-ins and eval harness:
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Run `run_triple_extraction_fixture_matrix.py` on the country-core Wikidata corpus and at least one non-country external fact corpus, then require that artifact in `run_release_candidate_registry_workflow.py` before adding those predicate aliases to structured-fact verifier routes.
+2. Run `run_triple_extraction_fixture_matrix.py` on the country-core Wikidata corpus and a fetched `organization_product_core_facts` corpus, then require that artifact in `run_release_candidate_registry_workflow.py` before adding those predicate aliases to structured-fact verifier routes.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

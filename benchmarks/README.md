@@ -2628,11 +2628,14 @@ documents. The default preset is `country_capitals`: each source document states
 one country-capital fact with Wikidata QID metadata, `license=CC0-1.0`, source
 URL metadata, and a retrieval timestamp. The `country_core_facts` preset fetches
 template-ready country facts for selected properties, defaulting to `P36`
-capital, `P37` official language, and `P38` currency. The script uses only the
-standard library and supports `--input-json` for offline replay of saved SPARQL
-results. Rows whose natural-language labels are bare Wikidata `Q...` or `P...`
-ids are skipped by default to avoid turning unresolved entities into retrieval
-evidence; pass `--keep-qid-labels` only when debugging raw SPARQL coverage.
+capital, `P37` official language, and `P38` currency. The
+`organization_product_core_facts` preset fetches non-country structured facts
+for extractor-matrix evidence, defaulting to `P159` headquarters location,
+`P176` manufacturer, and `P571` inception. The script uses only the standard
+library and supports `--input-json` for offline replay of saved SPARQL results.
+Rows whose natural-language labels are bare Wikidata `Q...` or `P...` ids are
+skipped by default to avoid turning unresolved entities into retrieval evidence;
+pass `--keep-qid-labels` only when debugging raw SPARQL coverage.
 
 ```bash
 python benchmarks/fetch_wikidata_reference_docs.py \
@@ -2650,6 +2653,17 @@ python benchmarks/fetch_wikidata_reference_docs.py \
   --limit 360 \
   --output artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl \
   --artifact-manifest artifacts/wikidata-country-core-facts-external-corpus/wikidata-source-manifest.json
+```
+
+```bash
+python benchmarks/fetch_wikidata_reference_docs.py \
+  --query-preset organization_product_core_facts \
+  --property P159 \
+  --property P176 \
+  --property P571 \
+  --limit 180 \
+  --output artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl \
+  --artifact-manifest artifacts/wikidata-organization-product-core-facts/wikidata-source-manifest.json
 ```
 
 The committed evidence-source gate at

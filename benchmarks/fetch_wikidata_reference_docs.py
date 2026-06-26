@@ -34,10 +34,14 @@ DEFAULT_USER_AGENT = (
 WIKIDATA_LICENSE_URL = "https://www.wikidata.org/wiki/Wikidata:Licensing"
 WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 DEFAULT_CORE_FACT_PROPERTIES = ("P36", "P37", "P38")
+DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES = ("P159", "P176", "P571")
 PROPERTY_FIELD_MAP = {
     "P36": ("capital", "capital"),
     "P37": ("language", "official language"),
     "P38": ("currency", "currency"),
+    "P159": ("headquarters", "headquarters location"),
+    "P176": ("manufacturer", "manufacturer"),
+    "P571": ("inception", "inception"),
 }
 _BARE_WIKIDATA_ID_RE = re.compile(r"^[QP][1-9][0-9]*$")
 
@@ -78,6 +82,32 @@ SELECT ?country ?countryLabel ?property ?propertyLabel ?value ?valueLabel WHERE 
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}
 ORDER BY ?countryLabel ?propertyLabel ?valueLabel
+LIMIT {int(limit)}
+""".strip()
+
+
+def wikidata_organization_product_core_facts_query(
+    *,
+    limit: int = 120,
+    properties: Sequence[str] = DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES,
+) -> str:
+    """Return a deterministic organization/product fact query for selected Wikidata properties."""
+    if int(limit) <= 0:
+        raise ValueError("limit must be positive.")
+    property_ids = tuple(_normalize_property_id(item) for item in properties)
+    if not property_ids:
+        raise ValueError("properties must not be empty.")
+    values = " ".join(f"wd:{property_id}" for property_id in property_ids)
+    return f"""
+SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {{
+  VALUES ?property {{ {values} }}
+  VALUES ?class {{ wd:Q43229 wd:Q4830453 wd:Q2424752 }}
+  ?property wikibase:directClaim ?directClaim.
+  ?subject wdt:P31/wdt:P279* ?class.
+  ?subject ?directClaim ?value.
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
+}}
+ORDER BY ?subjectLabel ?propertyLabel ?valueLabel
 LIMIT {int(limit)}
 """.strip()
 
@@ -136,7 +166,7 @@ def build_reference_documents_from_sparql(
             continue
         metadata = document["metadata"]
         key = (
-            str(metadata.get("country_qid") or metadata["country"]),
+            str(metadata.get("subject_qid") or metadata.get("subject")),
             str(metadata["statement_property"]),
             str(metadata.get("value_qid") or metadata["value"]),
         )
@@ -158,8 +188,16 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
         query = wikidata_country_capitals_query(limit=args.limit)
     elif query_preset == "country_core_facts":
         query = wikidata_country_core_facts_query(limit=args.limit, properties=properties)
+    elif query_preset == "organization_product_core_facts":
+        query = wikidata_organization_product_core_facts_query(
+            limit=args.limit,
+            properties=properties,
+        )
     else:
-        raise ValueError("query_preset must be one of: country_capitals, country_core_facts.")
+        raise ValueError(
+            "query_preset must be one of: country_capitals, country_core_facts, "
+            "organization_product_core_facts."
+        )
     if args.input_json:
         payload = json.loads(Path(args.input_json).read_text(encoding="utf-8"))
     else:
@@ -229,12 +267,21 @@ def _document_from_binding(
     country_label = _binding_value(binding, "countryLabel")
     country_uri = _binding_value(binding, "country")
     country_qid = _entity_id(country_uri)
-    if not country_label:
-        return None
-    if skip_qid_labels and _is_bare_wikidata_id(country_label):
-        return None
-    if _binding_value(binding, "property") or _binding_value(binding, "value"):
-        return _generic_country_fact_document(
+    if country_label is not None:
+        if skip_qid_labels and _is_bare_wikidata_id(country_label):
+            return None
+        if _binding_value(binding, "property") or _binding_value(binding, "value"):
+            return _generic_country_fact_document(
+                binding,
+                country_label=country_label,
+                country_qid=country_qid,
+                fetched_at=fetched_at,
+                endpoint=endpoint,
+                query=query,
+                query_preset=query_preset,
+                skip_qid_labels=skip_qid_labels,
+            )
+        return _country_capital_document(
             binding,
             country_label=country_label,
             country_qid=country_qid,
@@ -244,16 +291,27 @@ def _document_from_binding(
             query_preset=query_preset,
             skip_qid_labels=skip_qid_labels,
         )
-    return _country_capital_document(
-        binding,
-        country_label=country_label,
-        country_qid=country_qid,
-        fetched_at=fetched_at,
-        endpoint=endpoint,
-        query=query,
-        query_preset=query_preset,
-        skip_qid_labels=skip_qid_labels,
-    )
+
+    subject_label = _binding_value(binding, "subjectLabel")
+    subject_uri = _binding_value(binding, "subject")
+    subject_qid = _entity_id(subject_uri)
+    if not subject_label:
+        return None
+    if skip_qid_labels and _is_bare_wikidata_id(subject_label):
+        return None
+    if _binding_value(binding, "property") or _binding_value(binding, "value"):
+        return _generic_country_fact_document(
+            binding,
+            country_label=subject_label,
+            country_qid=subject_qid,
+            fetched_at=fetched_at,
+            endpoint=endpoint,
+            query=query,
+            query_preset=query_preset,
+            skip_qid_labels=skip_qid_labels,
+            subject_field="subject",
+        )
+    return None
 
 
 def _country_capital_document(
@@ -309,6 +367,7 @@ def _generic_country_fact_document(
     query: str | None,
     query_preset: str,
     skip_qid_labels: bool,
+    subject_field: str = "country",
 ) -> dict[str, Any] | None:
     value_label = _binding_value(binding, "valueLabel")
     value_uri = _binding_value(binding, "value")
@@ -324,8 +383,10 @@ def _generic_country_fact_document(
     if skip_qid_labels and property_label is not None and _is_bare_wikidata_id(property_label):
         property_label = None
     property_label = property_label or fallback_label
-    country_ref = country_qid or country_label
+    subject_ref = country_qid or country_label
     value_ref = value_qid or value_label
+    country_value = country_label if subject_field == "country" else None
+    country_qid_value = country_qid if subject_field == "country" else None
     metadata = _base_metadata(
         fetched_at=fetched_at,
         endpoint=endpoint,
@@ -333,18 +394,28 @@ def _generic_country_fact_document(
         query_preset=query_preset,
         statement_property=property_id,
         statement_property_label=property_label,
-        country=country_label,
-        country_qid=country_qid,
+        country=country_value,
+        country_qid=country_qid_value,
         value=value_label,
         value_qid=value_qid,
+        subject=country_label,
+        subject_qid=country_qid,
     )
     metadata.update({
         field_name: value_label,
         f"{field_name}_qid": value_qid,
     })
+    if subject_field != "country":
+        metadata.update({
+            subject_field: country_label,
+            f"{subject_field}_qid": country_qid,
+        })
     return {
-        "text": f"According to Wikidata structured data, the {property_label} of {country_label} is {value_label}.",
-        "source": f"wikidata:{country_ref}:{property_id}:{value_ref}",
+        "text": (
+            "According to Wikidata structured data, the "
+            f"{property_label} of {country_label} is {value_label}."
+        ),
+        "source": f"wikidata:{subject_ref}:{property_id}:{value_ref}",
         "metadata": metadata,
     }
 
@@ -357,11 +428,15 @@ def _base_metadata(
     query_preset: str,
     statement_property: str,
     statement_property_label: str,
-    country: str,
+    country: str | None,
     country_qid: str | None,
     value: str,
     value_qid: str | None,
+    subject: str | None = None,
+    subject_qid: str | None = None,
 ) -> dict[str, Any]:
+    subject = subject or country
+    subject_qid = subject_qid or country_qid
     return {
         "provider": "wikidata",
         "license": "CC0-1.0",
@@ -375,9 +450,11 @@ def _base_metadata(
         "statement_property_label": statement_property_label,
         "country": country,
         "country_qid": country_qid,
+        "subject": subject,
+        "subject_qid": subject_qid,
         "value": value,
         "value_qid": value_qid,
-        "url": None if country_qid is None else f"https://www.wikidata.org/wiki/{country_qid}",
+        "url": None if subject_qid is None else f"https://www.wikidata.org/wiki/{subject_qid}",
     }
 
 
@@ -406,6 +483,8 @@ def _normalize_property_id(value: str) -> str:
 def _properties_from_args(args: argparse.Namespace) -> tuple[str, ...]:
     raw_properties = getattr(args, "property", None)
     if not raw_properties:
+        if getattr(args, "query_preset", None) == "organization_product_core_facts":
+            return DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES
         return DEFAULT_CORE_FACT_PROPERTIES
     return tuple(_normalize_property_id(item) for item in raw_properties)
 
@@ -414,10 +493,15 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch Wikidata reference docs for external retrieval corpora")
     parser.add_argument("--output", required=True, help="JSONL source document output path")
     parser.add_argument("--limit", type=int, default=120)
-    parser.add_argument("--query-preset", choices=("country_capitals", "country_core_facts"),
+    parser.add_argument("--query-preset",
+                        choices=("country_capitals", "country_core_facts", "organization_product_core_facts"),
                         default="country_capitals")
     parser.add_argument("--property", action="append", default=None,
-                        help="Wikidata property id for country_core_facts; repeatable, defaults to P36/P37/P38")
+                        help=(
+                            "Wikidata property id for fact presets; repeatable. "
+                            "country_core_facts defaults to P36/P37/P38; "
+                            "organization_product_core_facts defaults to P159/P176/P571."
+                        ))
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--timeout", type=float, default=30.0)
     parser.add_argument("--user-agent", default=DEFAULT_USER_AGENT)
