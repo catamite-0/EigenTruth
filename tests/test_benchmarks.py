@@ -19429,6 +19429,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "world_model_checks": [],
                 "dependencies": [],
             },
+            "final_answer": {
+                "status": "answered",
+                "text": "Paris is the capital of France.",
+                "answerable": True,
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.95,
+                "reason": "supported by structured QA",
+                "claim_summary": {
+                    "total_claims": 1,
+                    "status_counts": {"supported": 1},
+                },
+                "evidence": [{"claim_id": "c1", "text": "Paris capital evidence."}],
+                "followup": {"requires_followup": False},
+            },
             "metadata": {"cache": {"verifier": {"hits": 1, "misses": 1}}},
         }),
         encoding="utf-8",
@@ -19456,6 +19471,22 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                     },
                 }
             ],
+            "final_answer": {
+                "status": "needs_retrieval",
+                "text": "More evidence is required before answering reliably.",
+                "answerable": False,
+                "action": "retrieve",
+                "risk_level": "high",
+                "confidence": 0.60,
+                "reason": "claim was not grounded",
+                "claim_summary": {
+                    "total_claims": 1,
+                    "status_counts": {"insufficient_evidence": 1},
+                    "blocked_claims": ["c1"],
+                },
+                "evidence": [],
+                "followup": {"requires_followup": True},
+            },
             "metadata": {"cache": {"verifier": {"hits": 2, "misses": 0}}},
         }),
         encoding="utf-8",
@@ -19499,8 +19530,22 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["summary"]["verification_plan"]["coverage_rate"] == pytest.approx(0.5)
     assert payload["summary"]["verification_plan"]["route_counts"]["retrieval"] == 1
     assert payload["summary"]["verification_plan"]["tool_payload_counts"]["retrieval_queries"] == 1
+    assert payload["summary"]["final_answer"]["available_trace_count"] == 2
+    assert payload["summary"]["final_answer"]["answerable_count"] == 1
+    assert payload["summary"]["final_answer"]["followup_required_count"] == 1
+    assert payload["summary"]["final_answer"]["status_counts"] == {
+        "answered": 1,
+        "needs_retrieval": 1,
+    }
+    assert payload["summary"]["final_answer"]["action_counts"] == {
+        "accept": 1,
+        "retrieve": 1,
+    }
     assert payload["traces"][0]["metrics"]["verification_plan_available"] is True
+    assert payload["traces"][0]["metrics"]["final_answer_available"] is True
+    assert payload["traces"][0]["metrics"]["final_answer_status"] == "answered"
     assert payload["traces"][1]["metrics"]["verification_plan_available"] is False
+    assert payload["traces"][1]["metrics"]["final_answer_requires_followup"] is True
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"
@@ -21777,6 +21822,18 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
             "explanation": "Private explanation.",
             "metadata": {"key": "Private customer fact."},
         }],
+        "final_answer": {
+            "status": "answered",
+            "text": "Private customer fact.",
+            "answerable": True,
+            "action": "accept",
+            "risk_level": "low",
+            "confidence": 0.9,
+            "reason": "supported",
+            "claim_summary": {"total_claims": 1, "status_counts": {"supported": 1}},
+            "evidence": [{"claim_id": "c1", "text": "Private evidence text."}],
+            "followup": {"requires_followup": False},
+        },
         "metadata": {"runtime_profile": "latency"},
         "runtime_trace": {"total_seconds": 0.10, "phases": []},
     }
@@ -21793,6 +21850,22 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
             "text": "The account balance is 42.",
             "metadata": {"features": {"has_number": True}},
         }],
+        "final_answer": {
+            "status": "needs_retrieval",
+            "text": "Additional evidence is required.",
+            "answerable": False,
+            "action": "retrieve",
+            "risk_level": "medium",
+            "confidence": 0.6,
+            "reason": "numbered claim needs evidence",
+            "claim_summary": {
+                "total_claims": 1,
+                "status_counts": {"insufficient_evidence": 1},
+                "blocked_claims": ["c1"],
+            },
+            "evidence": [],
+            "followup": {"requires_followup": True},
+        },
         "metadata": {"runtime_profile": "audit"},
         "runtime_trace": {"total_seconds": 0.40, "phases": []},
     }
@@ -21825,12 +21898,25 @@ def test_build_product_trace_corpus_redacts_and_registers_replay_ready_traces(tm
     assert payload["summary"]["rejected_count"] == 1
     assert payload["summary"]["runtime_trace_count"] == 2
     assert payload["summary"]["redacted_trace_count"] == 2
+    assert payload["summary"]["final_answer_count"] == 2
+    assert payload["summary"]["final_answer_answerable_count"] == 1
+    assert payload["summary"]["counts_by_final_answer_status"] == {
+        "answered": 1,
+        "needs_retrieval": 1,
+    }
+    assert payload["summary"]["counts_by_final_answer_action"] == {
+        "accept": 1,
+        "retrieve": 1,
+    }
     assert payload["runtime_pair_index"]["record_count"] == 2
     assert payload["runtime_pair_index"]["profile_counts"] == {"audit": 1, "latency": 1}
     assert payload["summary"]["counts_by_runtime_profile"] == {"audit": 1, "latency": 1}
     assert payload["summary"]["rejected_reasons"] == {"missing risk_decision object": 1}
     assert payload["traces"][0]["request_key"] == "low-supported"
+    assert payload["traces"][0]["final_answer_status"] == "answered"
+    assert payload["traces"][1]["final_answer_status"] == "needs_retrieval"
     assert saved_trace["claims"][0]["text"].startswith("[redacted:sha256=")
+    assert saved_trace["final_answer"]["text"].startswith("[redacted:sha256=")
     assert saved_trace["verification_results"][0]["evidence"][0].startswith("[redacted:sha256=")
     assert saved_trace["verification_results"][0]["metadata"]["key"].startswith("[redacted:sha256=")
     assert saved_trace["metadata"]["runtime_replay_key"] == "low-supported"

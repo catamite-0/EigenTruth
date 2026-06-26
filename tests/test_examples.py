@@ -74,6 +74,9 @@ def test_calibrated_control_demo_default_trace_uses_artifact_diagnostics():
     for score_name in demo.default_artifact().score_names():
         assert score_name in payload["diagnostics"]
     assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["final_answer"]["status"] == "abstained"
+    assert payload["final_answer"]["answerable"] is False
+    assert payload["metadata"]["final_answer_summary"]["status"] == "abstained"
     assert payload["runtime_trace"]["summary"]["phase_counts"]["action_execution"] == 1
 
 
@@ -110,6 +113,9 @@ def test_calibrated_control_demo_can_emit_bounded_trace():
     assert payload["trace_format"] == "bounded_product_trace"
     assert payload["request_id"] == "test-bounded-demo"
     assert payload["risk_decision"]["action"] == "abstain"
+    assert payload["final_answer"]["status"] == "abstained"
+    assert payload["summaries"]["final_answer"]["status"] == "abstained"
+    assert payload["metadata"]["final_answer_summary"]["available"] is True
     assert payload["runtime_trace"] is None
     assert payload["truncation"]["runtime_trace_included"] is False
     assert payload["summaries"]["runtime"]["measured_phases"] > 0

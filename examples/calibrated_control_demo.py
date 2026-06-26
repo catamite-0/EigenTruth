@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -42,6 +43,7 @@ from eigentruth.control import (
     RuntimeProfileSelectorPolicy,
     StagedVerificationPolicy,
     evaluate_product_runtime_budget,
+    finalize_loop_answer,
     first_existing_product_promotion_contract_path,
     get_runtime_profile,
     load_product_runtime_evidence_bundle,
@@ -837,7 +839,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "cache": cache_metadata,
         },
     )
-    trace = loop_result.trace
+    final_answer = finalize_loop_answer(loop_result, draft_answer=args.text)
+    trace = replace(loop_result.trace, final_answer=final_answer)
     if verifier_cache is not None:
         cache_metadata["verifier"] = verifier_cache.stats.to_dict()
     if retriever_cache is not None:
@@ -845,6 +848,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     cache_summary = trace.cache_summary()
     route_cost_summary = trace.verification_route_cost_summary()
     verification_stage_summary = trace.verification_stage_summary()
+    final_answer_summary = trace.final_answer_summary()
     bounded_trace = bool(getattr(args, "bounded_trace", False))
     if bounded_trace:
         payload = trace.to_bounded_dict(
@@ -869,6 +873,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     payload["metadata"]["verification_stage_summary"] = (
         payload["summaries"]["verification_stage"] if bounded_trace else verification_stage_summary
+    )
+    payload["metadata"]["final_answer_summary"] = (
+        payload["summaries"]["final_answer"] if bounded_trace else final_answer_summary
     )
     runtime_budget_policy = runtime_budget_policy_from_args(args)
     runtime_budget = (
@@ -920,6 +927,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "cache_summary": cache_summary,
                 "route_cost_summary": route_cost_summary,
                 "verification_stage_summary": verification_stage_summary,
+                "final_answer_summary": final_answer_summary,
                 "runtime_budget": runtime_budget,
                 "verifier_type": type(verifier).__name__,
             },

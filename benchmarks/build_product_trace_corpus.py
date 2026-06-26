@@ -580,6 +580,7 @@ def _accepted_record(source: Mapping[str, Any], trace: Mapping[str, Any], *, out
     risk_decision = _mapping(trace.get("risk_decision"))
     runtime_trace = _mapping(trace.get("runtime_trace"))
     metadata = _mapping(trace.get("metadata"))
+    final_answer = _mapping(trace.get("final_answer"))
     return {
         "source_path": source["source_path"],
         "source_index": source["source_index"],
@@ -590,6 +591,9 @@ def _accepted_record(source: Mapping[str, Any], trace: Mapping[str, Any], *, out
         "runtime_profile": _trace_runtime_profile(trace),
         "risk_level": risk_decision.get("risk_level"),
         "action": risk_decision.get("action"),
+        "final_answer_status": final_answer.get("status"),
+        "final_answer_action": final_answer.get("action"),
+        "final_answer_answerable": final_answer.get("answerable"),
         "claim_count": len(_sequence(trace.get("claims"))),
         "has_runtime_trace": bool(runtime_trace),
         "total_seconds": _float_or_none(runtime_trace.get("total_seconds")),
@@ -621,6 +625,12 @@ def _corpus_summary(accepted: Sequence[Mapping[str, Any]], rejected: Sequence[Ma
         "counts_by_runtime_profile": _counts(record.get("runtime_profile") for record in accepted),
         "counts_by_risk_level": _counts(record.get("risk_level") for record in accepted),
         "counts_by_action": _counts(record.get("action") for record in accepted),
+        "final_answer_count": sum(1 for record in accepted if record.get("final_answer_status") is not None),
+        "final_answer_answerable_count": sum(
+            1 for record in accepted if record.get("final_answer_answerable") is True
+        ),
+        "counts_by_final_answer_status": _counts(record.get("final_answer_status") for record in accepted),
+        "counts_by_final_answer_action": _counts(record.get("final_answer_action") for record in accepted),
         "rejected_reasons": _counts(record.get("reason") for record in rejected),
     }
 

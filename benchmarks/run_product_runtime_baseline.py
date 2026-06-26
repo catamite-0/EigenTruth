@@ -446,6 +446,18 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
         "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
         "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
+        "final_answer_summary": dict(_mapping(metrics.get("final_answer_summary"))),
+        "final_answer_available": bool(metrics.get("final_answer_available")),
+        "final_answer_source": metrics.get("final_answer_source"),
+        "final_answer_status": metrics.get("final_answer_status"),
+        "final_answer_action": metrics.get("final_answer_action"),
+        "final_answer_risk_level": metrics.get("final_answer_risk_level"),
+        "final_answer_answerable": metrics.get("final_answer_answerable"),
+        "final_answer_confidence": metrics.get("final_answer_confidence"),
+        "final_answer_evidence_count": metrics.get("final_answer_evidence_count"),
+        "final_answer_total_claims": metrics.get("final_answer_total_claims"),
+        "final_answer_blocked_claim_count": metrics.get("final_answer_blocked_claim_count"),
+        "final_answer_requires_followup": metrics.get("final_answer_requires_followup"),
     }
 
 
@@ -493,6 +505,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
+        "final_answer": _aggregate_final_answer(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
         "profiles": _aggregate_contexts(contexts),
@@ -1137,6 +1150,33 @@ def _aggregate_verification_plan(metrics: Sequence[Mapping[str, Any]]) -> dict[s
             item.get("verification_plan_dependency_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_final_answer(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    available_count = sum(1 for item in metrics if bool(item.get("final_answer_available")))
+    answerable_count = sum(1 for item in metrics if item.get("final_answer_answerable") is True)
+    followup_count = sum(1 for item in metrics if item.get("final_answer_requires_followup") is True)
+    return {
+        "source_trace_count": len(metrics),
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "answerable_count": answerable_count,
+        "answerable_rate": _safe_div(answerable_count, available_count),
+        "followup_required_count": followup_count,
+        "followup_required_rate": _safe_div(followup_count, available_count),
+        "source_counts": _counts(item.get("final_answer_source") for item in metrics),
+        "status_counts": _counts(item.get("final_answer_status") for item in metrics),
+        "action_counts": _counts(item.get("final_answer_action") for item in metrics),
+        "risk_level_counts": _counts(item.get("final_answer_risk_level") for item in metrics),
+        "confidence": _numeric_summary(item.get("final_answer_confidence") for item in metrics),
+        "evidence_count": _numeric_summary(item.get("final_answer_evidence_count") for item in metrics),
+        "total_claims": _numeric_summary(item.get("final_answer_total_claims") for item in metrics),
+        "blocked_claim_count": _numeric_summary(
+            item.get("final_answer_blocked_claim_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for item in metrics if _mapping(item.get("final_answer_summary"))),
     }
 
 

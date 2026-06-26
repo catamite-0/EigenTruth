@@ -450,6 +450,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_route_cost_metrics(trace))
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
+        metrics.update(_final_answer_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
@@ -484,6 +485,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_route_cost_metrics(trace))
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
+    metrics.update(_final_answer_metrics(trace))
     return metrics
 
 
@@ -706,6 +708,103 @@ def _verification_plan_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[
     }
 
 
+def _final_answer_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    if isinstance(trace, ProductTrace):
+        payload = trace.to_dict()
+    else:
+        payload = dict(trace)
+
+    summary = _mapping(_mapping(payload.get("summaries")).get("final_answer"))
+    answer = _mapping(payload.get("final_answer"))
+    source = "full_trace" if answer else None
+    if payload.get("trace_format") == "bounded_product_trace" and summary:
+        answer = summary
+        source = "bounded_summary"
+    elif not answer and summary:
+        answer = summary
+        source = "bounded_summary"
+
+    if not answer or answer.get("available") is False:
+        return {
+            "final_answer_available": False,
+            "final_answer_source": source or "missing",
+            "final_answer_summary": {
+                "available": False,
+                "source": source or "missing",
+            },
+            "final_answer_status": None,
+            "final_answer_action": None,
+            "final_answer_risk_level": None,
+            "final_answer_answerable": None,
+            "final_answer_confidence": None,
+            "final_answer_evidence_count": None,
+            "final_answer_total_claims": None,
+            "final_answer_blocked_claim_count": None,
+            "final_answer_requires_followup": None,
+        }
+
+    claim_summary = _mapping(answer.get("claim_summary"))
+    status_counts = _mapping(claim_summary.get("status_counts"))
+    followup = _mapping(answer.get("followup"))
+    evidence = _sequence(answer.get("evidence"))
+    total_claims = _finite_float(
+        answer.get("total_claims")
+        if source == "bounded_summary"
+        else claim_summary.get("total_claims")
+    )
+    blocked_claim_count = _finite_float(
+        answer.get("blocked_claim_count")
+        if source == "bounded_summary"
+        else len(_sequence(claim_summary.get("blocked_claims")))
+    )
+    evidence_count = _finite_float(
+        answer.get("evidence_count") if source == "bounded_summary" else len(evidence)
+    )
+    requires_followup = (
+        answer.get("requires_followup")
+        if source == "bounded_summary"
+        else followup.get("requires_followup")
+    )
+    summary = {
+        "available": True,
+        "source": source or "full_trace",
+        "status": answer.get("status"),
+        "action": answer.get("action"),
+        "risk_level": answer.get("risk_level"),
+        "answerable": _optional_bool(answer.get("answerable")),
+        "confidence": _finite_float(answer.get("confidence")),
+        "evidence_count": evidence_count,
+        "total_claims": total_claims,
+        "blocked_claim_count": blocked_claim_count,
+        "supported_claim_count": _finite_float(
+            answer.get("supported_claim_count") if source == "bounded_summary" else status_counts.get("supported")
+        ),
+        "refuted_claim_count": _finite_float(
+            answer.get("refuted_claim_count") if source == "bounded_summary" else status_counts.get("refuted")
+        ),
+        "unsupported_claim_count": _finite_float(
+            answer.get("unsupported_claim_count")
+            if source == "bounded_summary"
+            else status_counts.get("insufficient_evidence")
+        ),
+        "requires_followup": _optional_bool(requires_followup),
+    }
+    return {
+        "final_answer_available": True,
+        "final_answer_source": source or "full_trace",
+        "final_answer_summary": summary,
+        "final_answer_status": answer.get("status"),
+        "final_answer_action": answer.get("action"),
+        "final_answer_risk_level": answer.get("risk_level"),
+        "final_answer_answerable": _optional_bool(answer.get("answerable")),
+        "final_answer_confidence": _finite_float(answer.get("confidence")),
+        "final_answer_evidence_count": evidence_count,
+        "final_answer_total_claims": total_claims,
+        "final_answer_blocked_claim_count": blocked_claim_count,
+        "final_answer_requires_followup": _optional_bool(requires_followup),
+    }
+
+
 def _route_counts_from_plan(plan: Mapping[str, Any]) -> dict[str, int]:
     route_counts: dict[str, int] = {}
     for hint in _sequence(plan.get("route_hints")):
@@ -846,6 +945,19 @@ def _bool_value(value: Any) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     raise ValueError("require_runtime_trace must be a boolean value.")
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return None
 
 
 def _mapping(value: Any) -> dict[str, Any]:

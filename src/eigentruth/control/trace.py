@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping, Optional, Sequence
 
 from eigentruth.control.actions import ActionRequest, ActionResult
+from eigentruth.control.finalization import FinalAnswer
 from eigentruth.control.policy import ControlAction, RiskDecision
 from eigentruth.json_utils import to_jsonable
 from eigentruth.verify.planning import ClaimVerificationPlan, estimate_verification_plan_cost
@@ -161,6 +162,7 @@ class ProductTrace:
     actions: Sequence[ActionRequest | ControlAction | str | Mapping[str, Any]] = ()
     action_results: Sequence[ActionResult | Mapping[str, Any]] = ()
     events: Sequence[TraceEvent | Mapping[str, Any]] = ()
+    final_answer: FinalAnswer | Mapping[str, Any] | None = None
     metadata: Mapping[str, Any] = field(default_factory=dict)
     runtime_trace: RuntimeTrace | Mapping[str, Any] | None = None
 
@@ -178,6 +180,7 @@ class ProductTrace:
             "actions": [_action_to_dict(action) for action in self.actions],
             "action_results": [_action_result_to_dict(result) for result in self.action_results],
             "events": [_event_to_dict(event) for event in self.events],
+            "final_answer": _final_answer_to_dict(self.final_answer),
             "metadata": _to_jsonable(self.metadata),
             "runtime_trace": _runtime_trace_to_dict(self.runtime_trace),
         }
@@ -261,6 +264,7 @@ class ProductTrace:
                 verification_result_count=len(prepared.verification_results),
             ),
             "verification_plan": _verification_plan_summary(prepared.verification_plan),
+            "final_answer": _final_answer_summary(prepared.final_answer),
         }
         payload = {
             "schema_version": 1,
@@ -281,6 +285,11 @@ class ProductTrace:
             "actions": _bounded_sequence(actions, max_actions),
             "action_results": _bounded_sequence(action_results, max_action_results),
             "events": _bounded_sequence(events, max_events),
+            "final_answer": _bounded_final_answer(
+                prepared.final_answer,
+                max_nested_items=max_nested_items,
+                max_string_length=max_string_length,
+            ),
             "metadata": _bounded_metadata(
                 self.metadata,
                 metadata_keys=metadata_keys,
@@ -340,6 +349,10 @@ class ProductTrace:
             verification_result_count=len(self.verification_results),
         )
 
+    def final_answer_summary(self) -> dict[str, Any]:
+        """Summarize final answer status for trace/registry metadata."""
+        return _final_answer_summary(_final_answer_to_dict(self.final_answer))
+
 
 @dataclass(frozen=True)
 class _PreparedTracePayload:
@@ -351,6 +364,7 @@ class _PreparedTracePayload:
     actions: tuple[Any, ...]
     action_results: tuple[dict[str, Any], ...]
     events: tuple[dict[str, Any], ...]
+    final_answer: dict[str, Any] | None
     metadata: Any
     runtime_trace: dict[str, Any] | None
 
@@ -368,6 +382,7 @@ def _prepare_trace_payload(trace: ProductTrace) -> _PreparedTracePayload:
         actions=tuple(_action_to_dict(action) for action in trace.actions),
         action_results=tuple(_action_result_to_dict(result) for result in trace.action_results),
         events=tuple(_event_to_dict(event) for event in trace.events),
+        final_answer=_final_answer_to_dict(trace.final_answer),
         metadata=_to_jsonable(trace.metadata),
         runtime_trace=_runtime_trace_to_dict(trace.runtime_trace),
     )
@@ -604,6 +619,49 @@ def _verification_plan_summary(plan: Mapping[str, Any] | None) -> dict[str, Any]
     }
 
 
+def _final_answer_summary(final_answer: Mapping[str, Any] | None) -> dict[str, Any]:
+    if final_answer is None:
+        return {
+            "available": False,
+            "status": None,
+            "answerable": None,
+            "action": None,
+            "risk_level": None,
+            "confidence": None,
+            "evidence_count": 0,
+            "total_claims": 0,
+            "blocked_claim_count": 0,
+            "supported_claim_count": 0,
+            "refuted_claim_count": 0,
+            "unsupported_claim_count": 0,
+            "requires_followup": None,
+        }
+    claim_summary = final_answer.get("claim_summary", {})
+    if not isinstance(claim_summary, Mapping):
+        claim_summary = {}
+    status_counts = claim_summary.get("status_counts", {})
+    if not isinstance(status_counts, Mapping):
+        status_counts = {}
+    followup = final_answer.get("followup", {})
+    if not isinstance(followup, Mapping):
+        followup = {}
+    return {
+        "available": True,
+        "status": final_answer.get("status"),
+        "answerable": _optional_bool(final_answer.get("answerable")),
+        "action": final_answer.get("action"),
+        "risk_level": final_answer.get("risk_level"),
+        "confidence": _finite_float(final_answer.get("confidence")),
+        "evidence_count": len(_as_sequence(final_answer.get("evidence", ()))),
+        "total_claims": _non_negative_int(claim_summary.get("total_claims")) or 0,
+        "blocked_claim_count": len(_as_sequence(claim_summary.get("blocked_claims", ()))),
+        "supported_claim_count": _non_negative_int(status_counts.get("supported")) or 0,
+        "refuted_claim_count": _non_negative_int(status_counts.get("refuted")) or 0,
+        "unsupported_claim_count": _non_negative_int(status_counts.get("insufficient_evidence")) or 0,
+        "requires_followup": _optional_bool(followup.get("requires_followup")),
+    }
+
+
 def _claim_to_dict(claim: Claim | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(claim, Claim):
         return {
@@ -679,6 +737,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "cache_summary",
     "route_cost_summary",
     "verification_stage_summary",
+    "final_answer_summary",
 )
 
 
@@ -838,6 +897,49 @@ def _bounded_event(
     }
 
 
+def _bounded_final_answer(
+    final_answer: Mapping[str, Any] | None,
+    *,
+    max_nested_items: int,
+    max_string_length: int,
+) -> dict[str, Any] | None:
+    if final_answer is None:
+        return None
+    return {
+        "status": final_answer.get("status"),
+        "answerable": final_answer.get("answerable"),
+        "action": final_answer.get("action"),
+        "risk_level": final_answer.get("risk_level"),
+        "confidence": final_answer.get("confidence"),
+        "reason": _truncate_string(final_answer.get("reason"), max_string_length=max_string_length),
+        "text": _truncate_string(final_answer.get("text"), max_string_length=max_string_length),
+        "claim_summary": _bounded_jsonable(
+            final_answer.get("claim_summary", {}),
+            max_depth=3,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+        "evidence": _bounded_sequence(
+            [
+                _bounded_jsonable(
+                    item,
+                    max_depth=2,
+                    max_items=max_nested_items,
+                    max_string_length=max_string_length,
+                )
+                for item in _as_sequence(final_answer.get("evidence", ()))
+            ],
+            min(max_nested_items, 3),
+        ),
+        "followup": _bounded_jsonable(
+            final_answer.get("followup", {}),
+            max_depth=3,
+            max_items=max_nested_items,
+            max_string_length=max_string_length,
+        ),
+    }
+
+
 def _bounded_jsonable(
     value: Any,
     *,
@@ -959,6 +1061,16 @@ def _event_to_dict(event: TraceEvent | Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(event, TraceEvent):
         return event.to_dict()
     return dict(_to_jsonable(event))
+
+
+def _final_answer_to_dict(answer: FinalAnswer | Mapping[str, Any] | None) -> dict[str, Any] | None:
+    if answer is None:
+        return None
+    if isinstance(answer, FinalAnswer):
+        return answer.to_dict()
+    if isinstance(answer, Mapping):
+        return dict(_to_jsonable(answer))
+    raise ValueError("final_answer must be a FinalAnswer, mapping, or None.")
 
 
 def _latest_event_payload(events: Sequence[Mapping[str, Any]], event_type: str) -> dict[str, Any]:

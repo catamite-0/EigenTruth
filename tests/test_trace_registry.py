@@ -16,6 +16,8 @@ from eigentruth.control import (
     ActionResult,
     ControlAction,
     FeedbackOutcome,
+    FinalAnswer,
+    FinalAnswerStatus,
     ProductFeedbackRecord,
     ProductFeedbackStore,
     ProductPromotionContract,
@@ -95,6 +97,18 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
             ),
         ),
         events=(TraceEvent("risk_decision", {"action": decision.action}),),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.NEEDS_RETRIEVAL,
+            text="I need more evidence before answering reliably.",
+            answerable=False,
+            action=ControlAction.RETRIEVE,
+            risk_level=RiskLevel.MEDIUM,
+            confidence=decision.confidence,
+            reason=decision.reason,
+            claim_summary={"total_claims": 1, "status_counts": {"supported": 1}},
+            evidence=({"claim_id": "c1", "text": "atlas"},),
+            followup={"requires_followup": True},
+        ),
         metadata={"model_id": "tiny"},
     )
     payload = trace.to_dict()
@@ -106,6 +120,10 @@ def test_product_trace_serializes_risk_decision_and_verification_results():
     assert tuple(payload["actions"][0]["payload"]["claim_ids"]) == ("c1",)
     assert payload["action_results"][0]["status"] == "dry_run"
     assert payload["action_results"][0]["output"]["would_execute"] == "retriever"
+    assert payload["final_answer"]["status"] == "needs_retrieval"
+    assert payload["final_answer"]["answerable"] is False
+    assert trace.final_answer_summary()["status"] == "needs_retrieval"
+    assert trace.final_answer_summary()["evidence_count"] == 1
     json.dumps(payload)
 
 
@@ -309,6 +327,18 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         runtime_trace=RuntimeTrace(
             phases=(RuntimePhaseTiming("phase", 0.01),),
         ),
+        final_answer=FinalAnswer(
+            status=FinalAnswerStatus.ANSWERED,
+            text="Final answer " + ("z" * 80),
+            answerable=True,
+            action=ControlAction.ACCEPT,
+            risk_level=RiskLevel.LOW,
+            confidence=0.97,
+            reason="accepted",
+            claim_summary={"total_claims": 4, "status_counts": {"supported": 4}},
+            evidence=tuple({"claim_id": f"c{index}", "text": "evidence " + "w" * 80} for index in range(4)),
+            followup={"requires_followup": False},
+        ),
     )
 
     payload = trace.to_bounded_dict(
@@ -334,6 +364,11 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert payload["runtime_trace"] is None
     assert payload["summaries"]["runtime"]["measured_phases"] == 1
     assert payload["summaries"]["action_execution"]["total"] == 3
+    assert payload["summaries"]["final_answer"]["status"] == "answered"
+    assert payload["summaries"]["final_answer"]["answerable"] is True
+    assert payload["summaries"]["final_answer"]["evidence_count"] == 4
+    assert payload["final_answer"]["text"].endswith("chars]")
+    assert len(payload["final_answer"]["evidence"]) == 2
     assert payload["verification_results"][0]["evidence_count"] == 5
     assert len(payload["verification_results"][0]["evidence"]) == 2
     assert len(payload["verification_results"][0]["explanation"]) <= 40
@@ -341,6 +376,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert "large_unselected_metadata" not in payload["metadata"]
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    metrics = product_runtime_metrics(payload)
+    assert metrics["final_answer_available"] is True
+    assert metrics["final_answer_source"] == "bounded_summary"
+    assert metrics["final_answer_status"] == "answered"
+    assert metrics["final_answer_answerable"] is True
+    assert metrics["final_answer_evidence_count"] == 4.0
     json.dumps(payload)
 
 
