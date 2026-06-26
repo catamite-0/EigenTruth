@@ -1,0 +1,607 @@
+{
+  "extractor": "regex_rule_based",
+  "pattern_count": 15,
+  "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/triple-extraction-regex-patterns.json",
+  "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/triple-extraction-records.json",
+  "report": {
+    "by_record_type": {
+      "adversarial_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 359,
+        "f1": 0.0,
+        "false_positive_rate": 1.0,
+        "false_positive_record_count": 359,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 359,
+        "zero_expected_record_count": 359
+      },
+      "positive": {
+        "exact_match_count": 1436,
+        "expected_triple_count": 1436,
+        "extracted_triple_count": 1436,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "record_count": 1436,
+        "zero_expected_record_count": 0
+      }
+    },
+    "error_examples": [
+      {
+        "claim_id": "0001-capital_of-adversarial-negative-capital-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not kabul",
+            "predicate": "capital_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0001-capital_of-adversarial-negative-capital-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "capital_subject_rule"
+            },
+            "object": "not Kabul",
+            "predicate": "capital_of",
+            "source_text": "The capital of Afghanistan is not Kabul.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 4,
+        "missing": [],
+        "text": "The capital of Afghanistan is not Kabul."
+      },
+      {
+        "claim_id": "0002-currency_of-adversarial-negative-currency-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not afghani",
+            "predicate": "currency_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0002-currency_of-adversarial-negative-currency-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "currency_subject_rule"
+            },
+            "object": "not afghani",
+            "predicate": "currency_of",
+            "source_text": "The currency of Afghanistan is not afghani.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 9,
+        "missing": [],
+        "text": "The currency of Afghanistan is not afghani."
+      },
+      {
+        "claim_id": "0003-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not arabic",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0003-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Arabic",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Arabic.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 14,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Arabic."
+      },
+      {
+        "claim_id": "0004-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not balochi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0004-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Balochi",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Balochi.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 19,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Balochi."
+      },
+      {
+        "claim_id": "0005-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not dari",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0005-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Dari",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Dari.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 24,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Dari."
+      },
+      {
+        "claim_id": "0006-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not nuristani",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0006-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Nuristani",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Nuristani.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 29,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Nuristani."
+      },
+      {
+        "claim_id": "0007-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not pamir",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0007-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Pamir",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Pamir.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 34,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Pamir."
+      },
+      {
+        "claim_id": "0008-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not pashayi",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0008-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Pashayi",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Pashayi.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 39,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Pashayi."
+      },
+      {
+        "claim_id": "0009-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not pashto",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0009-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Pashto",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Pashto.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 44,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Pashto."
+      },
+      {
+        "claim_id": "0010-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not turkmen",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0010-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Turkmen",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Turkmen.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 49,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Turkmen."
+      },
+      {
+        "claim_id": "0011-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not uzbek",
+            "predicate": "official_language_of",
+            "subject": "afghanistan"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0011-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Uzbek",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Afghanistan is not Uzbek.",
+            "subject": "Afghanistan"
+          }
+        ],
+        "index": 54,
+        "missing": [],
+        "text": "The official language of Afghanistan is not Uzbek."
+      },
+      {
+        "claim_id": "0012-capital_of-adversarial-negative-capital-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not tirana",
+            "predicate": "capital_of",
+            "subject": "albania"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0012-capital_of-adversarial-negative-capital-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "capital_subject_rule"
+            },
+            "object": "not Tirana",
+            "predicate": "capital_of",
+            "source_text": "The capital of Albania is not Tirana.",
+            "subject": "Albania"
+          }
+        ],
+        "index": 59,
+        "missing": [],
+        "text": "The capital of Albania is not Tirana."
+      },
+      {
+        "claim_id": "0013-currency_of-adversarial-negative-currency-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not albanian lek",
+            "predicate": "currency_of",
+            "subject": "albania"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0013-currency_of-adversarial-negative-currency-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "currency_subject_rule"
+            },
+            "object": "not Albanian lek",
+            "predicate": "currency_of",
+            "source_text": "The currency of Albania is not Albanian lek.",
+            "subject": "Albania"
+          }
+        ],
+        "index": 64,
+        "missing": [],
+        "text": "The currency of Albania is not Albanian lek."
+      },
+      {
+        "claim_id": "0014-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not albanian",
+            "predicate": "official_language_of",
+            "subject": "albania"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0014-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Albanian",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Albania is not Albanian.",
+            "subject": "Albania"
+          }
+        ],
+        "index": 69,
+        "missing": [],
+        "text": "The official language of Albania is not Albanian."
+      },
+      {
+        "claim_id": "0015-capital_of-adversarial-negative-capital-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not algiers",
+            "predicate": "capital_of",
+            "subject": "algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0015-capital_of-adversarial-negative-capital-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "capital_subject_rule"
+            },
+            "object": "not Algiers",
+            "predicate": "capital_of",
+            "source_text": "The capital of Algeria is not Algiers.",
+            "subject": "Algeria"
+          }
+        ],
+        "index": 74,
+        "missing": [],
+        "text": "The capital of Algeria is not Algiers."
+      },
+      {
+        "claim_id": "0016-currency_of-adversarial-negative-currency-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not algerian dinar",
+            "predicate": "currency_of",
+            "subject": "algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0016-currency_of-adversarial-negative-currency-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "currency_subject_rule"
+            },
+            "object": "not Algerian dinar",
+            "predicate": "currency_of",
+            "source_text": "The currency of Algeria is not Algerian dinar.",
+            "subject": "Algeria"
+          }
+        ],
+        "index": 79,
+        "missing": [],
+        "text": "The currency of Algeria is not Algerian dinar."
+      },
+      {
+        "claim_id": "0017-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not arabic",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0017-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Arabic",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Algeria is not Arabic.",
+            "subject": "Algeria"
+          }
+        ],
+        "index": 84,
+        "missing": [],
+        "text": "The official language of Algeria is not Arabic."
+      },
+      {
+        "claim_id": "0018-official_language_of-adversarial-negative-official-language-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not standard algerian berber",
+            "predicate": "official_language_of",
+            "subject": "algeria"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0018-official_language_of-adversarial-negative-official-language-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "official_language_subject_rule"
+            },
+            "object": "not Standard Algerian Berber",
+            "predicate": "official_language_of",
+            "source_text": "The official language of Algeria is not Standard Algerian Berber.",
+            "subject": "Algeria"
+          }
+        ],
+        "index": 89,
+        "missing": [],
+        "text": "The official language of Algeria is not Standard Algerian Berber."
+      },
+      {
+        "claim_id": "0019-capital_of-adversarial-negative-capital-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not andorra la vella",
+            "predicate": "capital_of",
+            "subject": "andorra"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0019-capital_of-adversarial-negative-capital-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "capital_subject_rule"
+            },
+            "object": "not Andorra la Vella",
+            "predicate": "capital_of",
+            "source_text": "The capital of Andorra is not Andorra la Vella.",
+            "subject": "Andorra"
+          }
+        ],
+        "index": 94,
+        "missing": [],
+        "text": "The capital of Andorra is not Andorra la Vella."
+      },
+      {
+        "claim_id": "0020-currency_of-adversarial-negative-currency-negated-subject-first",
+        "expected": [],
+        "extra": [
+          {
+            "object": "not euro",
+            "predicate": "currency_of",
+            "subject": "andorra"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0020-currency_of-adversarial-negative-currency-negated-subject-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "currency_subject_rule"
+            },
+            "object": "not euro",
+            "predicate": "currency_of",
+            "source_text": "The currency of Andorra is not euro.",
+            "subject": "Andorra"
+          }
+        ],
+        "index": 99,
+        "missing": [],
+        "text": "The currency of Andorra is not euro."
+      }
+    ],
+    "exact_match_count": 1436,
+    "expected_triple_count": 1436,
+    "extracted_triple_count": 1795,
+    "f1": 0.888888888888889,
+    "false_positive_rate": 1.0,
+    "false_positive_record_count": 359,
+    "precision": 0.8,
+    "recall": 1.0,
+    "record_count": 1795,
+    "zero_expected_record_count": 359
+  },
+  "workflow": "triple_extraction_eval"
+}

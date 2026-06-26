@@ -181,6 +181,56 @@ def test_build_triple_extraction_fixture_from_structured_facts(tmp_path):
     assert regex["report"]["f1"] > rule_based["report"]["f1"]
 
 
+def test_build_triple_extraction_fixture_can_include_adversarial_negatives(tmp_path):
+    builder = importlib.import_module("benchmarks.build_triple_extraction_fixture")
+    evaluator = importlib.import_module("benchmarks.eval_triple_extraction")
+    fact_corpus = tmp_path / "facts.json"
+    records_path = tmp_path / "records.json"
+    patterns_path = tmp_path / "patterns.json"
+    fact_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.run(SimpleNamespace(
+        fact_corpus=(str(fact_corpus),),
+        output_records=str(records_path),
+        output_patterns=str(patterns_path),
+        max_facts=None,
+        adversarial_negatives_per_fact=1,
+        artifact_manifest=None,
+    ))
+    regex = evaluator.run_triple_extraction_eval(
+        records_path,
+        extractor_name="regex_rule_based",
+        patterns_path=patterns_path,
+    )
+
+    assert fixture["summary"]["n_records"] == 5
+    assert fixture["summary"]["n_adversarial_negative_records"] == 1
+    negative_records = [
+        record
+        for record in fixture["records"]
+        if record["metadata"]["record_type"] == "adversarial_negative"
+    ]
+    assert negative_records[0]["expected_triples"] == []
+    adversarial = regex["report"]["by_record_type"]["adversarial_negative"]
+    assert adversarial["record_count"] == 1
+    assert adversarial["false_positive_rate"] == pytest.approx(1.0)
+    assert regex["report"]["precision"] < 1.0
+
+
 def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_path):
     module = importlib.import_module("benchmarks.run_triple_extraction_fixture_workflow")
     fact_corpus = tmp_path / "facts.json"
@@ -228,6 +278,48 @@ def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_pat
     assert summary["best_report"]["f1"] == pytest.approx(1.0)
     assert summary["f1_lift"] > 0.0
     assert (tmp_path / "workflow" / "artifact-manifest.json").exists()
+
+
+def test_triple_extraction_fixture_workflow_blocks_adversarial_false_positives(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_workflow")
+    fact_corpus = tmp_path / "facts.json"
+    fact_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    config = module.TripleExtractionFixtureWorkflowConfig(
+        fact_corpus_paths=(fact_corpus,),
+        output_dir=tmp_path / "workflow",
+        min_augmented_f1=0.0,
+        adversarial_negatives_per_fact=1,
+        max_adversarial_false_positive_rate=0.0,
+    )
+
+    summary = module.run_triple_extraction_fixture_workflow(config)
+
+    assert summary["status"] == "blocked"
+    assert summary["fixture_summary"]["n_adversarial_negative_records"] == 1
+    assert summary["best_adversarial_report"]["false_positive_rate"] == pytest.approx(1.0)
+    assert summary["promotion_gate"]["failures"] == (
+        {
+            "gate": "max_adversarial_false_positive_rate",
+            "observed": 1.0,
+            "threshold": 0.0,
+            "false_positive_record_count": 1,
+            "zero_expected_record_count": 1,
+        },
+    )
 
 
 def test_triple_extraction_fixture_matrix_promotes_cross_corpus_domain_templates(tmp_path):
@@ -296,6 +388,53 @@ def test_triple_extraction_fixture_matrix_promotes_cross_corpus_domain_templates
     assert "inception_of" in matrix["distinct_predicates"]
     assert (tmp_path / "matrix" / "artifact-manifest.json").exists()
     assert (tmp_path / "matrix" / "enterprise-product" / "artifact-manifest.json").exists()
+
+
+def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
+    country_corpus = tmp_path / "country-facts.json"
+    domain_corpus = tmp_path / "domain-facts.json"
+    country_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    domain_corpus.write_text(
+        json.dumps({
+            "facts": [
+                {"subject": "OpenAI", "predicate": "P159", "object": "San Francisco"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    config = module.TripleExtractionFixtureMatrixConfig(
+        corpora=(
+            module.TripleExtractionCorpusConfig("country-core", (country_corpus,)),
+            module.TripleExtractionCorpusConfig("enterprise-product", (domain_corpus,)),
+        ),
+        output_dir=tmp_path / "matrix",
+        min_augmented_f1=0.0,
+        min_distinct_predicates=2,
+        adversarial_negatives_per_fact=1,
+        max_adversarial_false_positive_rate=0.0,
+    )
+
+    matrix = module.run_triple_extraction_fixture_matrix(config)
+
+    assert matrix["status"] == "blocked"
+    assert matrix["mean_best_adversarial_false_positive_rate"] == pytest.approx(1.0)
+    assert matrix["max_best_adversarial_false_positive_rate"] == pytest.approx(1.0)
+    assert {item["status"] for item in matrix["corpora"]} == {"blocked"}
 
 
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):

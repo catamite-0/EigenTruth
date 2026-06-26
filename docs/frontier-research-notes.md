@@ -399,9 +399,20 @@ Added dependency-free triple extractor plug-ins and eval harness:
   recursively. This closes the local extractor-evidence item for covered
   predicates; open-domain extraction still requires broader corpora and likely a
   learned or external extractor adapter.
+- `build_triple_extraction_fixture.py --adversarial-negatives-per-fact` now adds
+  negated near-miss records with no expected triples, while
+  `eval_triple_extraction.py` reports subgroup false-positive rates by
+  `record_type`. The adversarial cross-corpus matrix at
+  `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/`
+  deliberately blocks: the same country-core plus organization/product corpora
+  add `367` total adversarial negatives, both workflows drop to best F1 `0.889`,
+  and the best extractor has adversarial false-positive rate `1.000`. This is
+  the correct fail-closed evidence boundary: current regex-with-rule fallback is
+  acceptable only for covered positive/paraphrase KG templates, not for
+  negation-robust open-domain claim extraction.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Extend the structured-fact verifier aliases only behind the promoted cross-corpus triple-extraction matrix, then add a negative corpus with adversarial predicate paraphrases before claiming broader extractor robustness.
+3. Add explicit negation and near-miss rejection to the triple extractor, then rerun the adversarial cross-corpus matrix before claiming broader extractor robustness.

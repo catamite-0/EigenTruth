@@ -41,6 +41,8 @@ class TripleExtractionFixtureWorkflowConfig:
     max_examples: int = 20
     min_augmented_f1: float = 1.0
     require_f1_lift: bool = True
+    adversarial_negatives_per_fact: int = 0
+    max_adversarial_false_positive_rate: float = 0.0
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -55,6 +57,21 @@ class TripleExtractionFixtureWorkflowConfig:
         if int(self.max_examples) < 0:
             raise ValueError("max_examples must be non-negative.")
         object.__setattr__(self, "max_examples", int(self.max_examples))
+        if int(self.adversarial_negatives_per_fact) < 0:
+            raise ValueError("adversarial_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "adversarial_negatives_per_fact",
+            int(self.adversarial_negatives_per_fact),
+        )
+        max_adversarial_false_positive_rate = float(self.max_adversarial_false_positive_rate)
+        if not (0.0 <= max_adversarial_false_positive_rate <= 1.0):
+            raise ValueError("max_adversarial_false_positive_rate must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "max_adversarial_false_positive_rate",
+            max_adversarial_false_positive_rate,
+        )
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
             raise ValueError("min_augmented_f1 must be in [0, 1].")
@@ -87,10 +104,15 @@ def run_triple_extraction_fixture_workflow(
     output_dir.mkdir(parents=True, exist_ok=True)
 
     records = load_fact_records(config.fact_corpus_paths)
-    fixture = build_triple_extraction_fixture(records, max_facts=config.max_facts)
+    fixture = build_triple_extraction_fixture(
+        records,
+        max_facts=config.max_facts,
+        adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
+    )
     fixture["input_provenance"] = build_input_provenance(
         config.fact_corpus_paths,
         max_facts=config.max_facts,
+        adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
     )
     pattern_payload = build_default_regex_pattern_payload()
     _write_json(config.records_path, fixture, compact=config.compact_json)
@@ -131,11 +153,15 @@ def run_triple_extraction_fixture_workflow(
             "workflow": "triple_extraction_fixture_workflow",
             "status": summary["status"],
             "n_records": summary["fixture_summary"]["n_records"],
+            "n_adversarial_negative_records": summary["fixture_summary"]["n_adversarial_negative_records"],
             "pattern_count": summary["pattern_count"],
             "best_extractor": summary["best_extractor"],
             "best_f1": summary["best_report"]["f1"],
             "baseline_f1": summary["baseline_report"]["f1"],
             "f1_lift": summary["f1_lift"],
+            "best_adversarial_false_positive_rate": summary["best_adversarial_report"][
+                "false_positive_rate"
+            ],
             "promotes_augmented_extractor": summary["status"] == "promote",
         },
     )
@@ -175,6 +201,8 @@ def _workflow_summary(
     )
     best_report = augmented_candidates[best_extractor]
     f1_lift = float(best_report["f1"]) - float(baseline_report["f1"])
+    best_adversarial_report = _adversarial_report(best_report)
+    n_adversarial_negative_records = int(fixture["summary"].get("n_adversarial_negative_records", 0))
     failures = []
     if float(best_report["f1"]) < config.min_augmented_f1:
         failures.append({
@@ -188,6 +216,18 @@ def _workflow_summary(
             "observed": f1_lift,
             "threshold": 0.0,
         })
+    if (
+        n_adversarial_negative_records > 0
+        and float(best_adversarial_report["false_positive_rate"])
+        > config.max_adversarial_false_positive_rate
+    ):
+        failures.append({
+            "gate": "max_adversarial_false_positive_rate",
+            "observed": float(best_adversarial_report["false_positive_rate"]),
+            "threshold": config.max_adversarial_false_positive_rate,
+            "false_positive_record_count": int(best_adversarial_report["false_positive_record_count"]),
+            "zero_expected_record_count": int(best_adversarial_report["zero_expected_record_count"]),
+        })
     status = "promote" if not failures else "blocked"
     return {
         "workflow": "triple_extraction_fixture_workflow",
@@ -195,6 +235,8 @@ def _workflow_summary(
         "promotion_gate": {
             "min_augmented_f1": config.min_augmented_f1,
             "require_f1_lift": config.require_f1_lift,
+            "adversarial_negatives_per_fact": config.adversarial_negatives_per_fact,
+            "max_adversarial_false_positive_rate": config.max_adversarial_false_positive_rate,
             "failures": tuple(failures),
         },
         "records_path": str(config.records_path),
@@ -207,8 +249,24 @@ def _workflow_summary(
         "baseline_report": baseline_report,
         "best_extractor": best_extractor,
         "best_report": best_report,
+        "best_adversarial_report": best_adversarial_report,
         "f1_lift": f1_lift,
         "reports": {name: dict(payload["report"]) for name, payload in reports.items()},
+    }
+
+
+def _adversarial_report(report: Mapping[str, Any]) -> dict[str, Any]:
+    by_record_type = report.get("by_record_type", {})
+    if not isinstance(by_record_type, Mapping):
+        by_record_type = {}
+    adversarial = by_record_type.get("adversarial_negative", {})
+    if not isinstance(adversarial, Mapping):
+        adversarial = {}
+    return {
+        "record_count": int(adversarial.get("record_count", 0)),
+        "zero_expected_record_count": int(adversarial.get("zero_expected_record_count", 0)),
+        "false_positive_record_count": int(adversarial.get("false_positive_record_count", 0)),
+        "false_positive_rate": float(adversarial.get("false_positive_rate", 0.0)),
     }
 
 
@@ -226,6 +284,8 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureWorkfl
         max_examples=args.max_examples,
         min_augmented_f1=args.min_augmented_f1,
         require_f1_lift=not bool(args.allow_no_lift),
+        adversarial_negatives_per_fact=args.adversarial_negatives_per_fact,
+        max_adversarial_false_positive_rate=args.max_adversarial_false_positive_rate,
         compact_json=bool(args.compact_json),
     )
 
@@ -238,6 +298,8 @@ def main() -> None:
     parser.add_argument("--max-examples", type=int, default=20)
     parser.add_argument("--min-augmented-f1", type=float, default=1.0)
     parser.add_argument("--allow-no-lift", action="store_true")
+    parser.add_argument("--adversarial-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-adversarial-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--compact-json", action="store_true")
     run_triple_extraction_fixture_workflow(_config_from_args(parser.parse_args()))
 

@@ -133,15 +133,20 @@ def build_triple_extraction_fixture(
     source_records: Sequence[Mapping[str, Any]],
     *,
     max_facts: int | None = None,
+    adversarial_negatives_per_fact: int = 0,
 ) -> dict[str, Any]:
     """Build labeled extraction records from structured fact-like mappings."""
     if max_facts is not None and max_facts <= 0:
         raise ValueError("max_facts must be positive when provided.")
+    if int(adversarial_negatives_per_fact) < 0:
+        raise ValueError("adversarial_negatives_per_fact must be non-negative.")
+    adversarial_negatives_per_fact = int(adversarial_negatives_per_fact)
     facts, skipped = _coerce_structured_facts(source_records)
     if max_facts is not None:
         facts = facts[:max_facts]
     records = []
     by_predicate: dict[str, dict[str, int]] = {}
+    adversarial_negative_count = 0
     seen: set[tuple[str, str, str, str]] = set()
     for index, fact in enumerate(facts):
         predicate = _output_predicate(fact.predicate)
@@ -170,10 +175,37 @@ def build_triple_extraction_fixture(
                         "object": expected_object,
                     }
                 ],
+                    "metadata": {
+                        "record_type": "positive",
+                        "source_fact_index": index,
+                        "template_id": template_id,
+                        "predicate": predicate,
+                        "source_fact": fact.to_dict(),
+                    },
+                })
+        for template_id, text in _adversarial_negative_templates_for_fact(
+            fact,
+            predicate=predicate,
+            limit=adversarial_negatives_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), predicate, "")
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[predicate]["record_count"] += 1
+            adversarial_negative_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-adversarial-negative-{template_id}",
+                "text": text,
+                "expected_triples": [],
                 "metadata": {
+                    "record_type": "adversarial_negative",
                     "source_fact_index": index,
                     "template_id": template_id,
                     "predicate": predicate,
+                    "adversarial_family": "negated_known_fact",
                     "source_fact": fact.to_dict(),
                 },
             })
@@ -192,6 +224,7 @@ def build_triple_extraction_fixture(
             "n_source_records": len(source_records),
             "n_facts": len(facts),
             "n_records": len(records),
+            "n_adversarial_negative_records": adversarial_negative_count,
             "by_predicate": by_predicate,
             "skipped": skipped,
         },
@@ -235,13 +268,21 @@ def load_fact_records(paths: Sequence[str | Path]) -> tuple[Mapping[str, Any], .
     return tuple(records)
 
 
-def build_input_provenance(source_paths: Sequence[str | Path], *, max_facts: int | None) -> dict[str, Any]:
+def build_input_provenance(
+    source_paths: Sequence[str | Path],
+    *,
+    max_facts: int | None,
+    adversarial_negatives_per_fact: int = 0,
+) -> dict[str, Any]:
     """Return source fingerprints and builder settings."""
     return {
         "schema_version": 1,
         "builder": "build_triple_extraction_fixture",
         "sources": [fingerprint_path(path).to_dict() for path in source_paths],
-        "config": {"max_facts": max_facts},
+        "config": {
+            "max_facts": max_facts,
+            "adversarial_negatives_per_fact": int(adversarial_negatives_per_fact),
+        },
     }
 
 
@@ -249,8 +290,17 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run the CLI command."""
     source_paths = tuple(Path(path) for path in args.fact_corpus)
     records = load_fact_records(source_paths)
-    fixture = build_triple_extraction_fixture(records, max_facts=args.max_facts)
-    fixture["input_provenance"] = build_input_provenance(source_paths, max_facts=args.max_facts)
+    adversarial_negatives_per_fact = int(getattr(args, "adversarial_negatives_per_fact", 0))
+    fixture = build_triple_extraction_fixture(
+        records,
+        max_facts=args.max_facts,
+        adversarial_negatives_per_fact=adversarial_negatives_per_fact,
+    )
+    fixture["input_provenance"] = build_input_provenance(
+        source_paths,
+        max_facts=args.max_facts,
+        adversarial_negatives_per_fact=adversarial_negatives_per_fact,
+    )
 
     output_records = Path(args.output_records)
     output_records.parent.mkdir(parents=True, exist_ok=True)
@@ -278,6 +328,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "workflow": "build_triple_extraction_fixture",
                 "n_records": fixture["summary"]["n_records"],
                 "n_facts": fixture["summary"]["n_facts"],
+                "n_adversarial_negative_records": fixture["summary"]["n_adversarial_negative_records"],
                 "pattern_count": 0 if pattern_payload is None else len(pattern_payload["patterns"]),
             },
         )
@@ -287,6 +338,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "triple_extraction_fixture_ok "
         f"facts={fixture['summary']['n_facts']} "
         f"records={fixture['summary']['n_records']} "
+        f"adversarial_negatives={fixture['summary']['n_adversarial_negative_records']} "
         f"output={output_records}"
     )
     return fixture
@@ -367,6 +419,58 @@ def _templates_for_fact(fact: StructuredFact, *, predicate: str) -> tuple[tuple[
     return ()
 
 
+def _adversarial_negative_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    limit: int,
+) -> tuple[tuple[str, str], ...]:
+    if limit <= 0:
+        return ()
+    subject = fact.subject
+    object_value = fact.object
+    templates: tuple[tuple[str, str], ...]
+    if predicate == "capital_of":
+        templates = (
+            ("capital-negated-subject-first", f"The capital of {subject} is not {object_value}."),
+            ("capital-negated-possessive", f"{subject}'s capital is not {object_value}."),
+        )
+    elif predicate == "official_language_of":
+        templates = (
+            (
+                "official-language-negated-subject-first",
+                f"The official language of {subject} is not {object_value}.",
+            ),
+            (
+                "official-language-negated-object-first",
+                f"{object_value} is not an official language of {subject}.",
+            ),
+        )
+    elif predicate == "currency_of":
+        templates = (
+            ("currency-negated-subject-first", f"The currency of {subject} is not {object_value}."),
+            ("currency-negated-usage", f"{subject} does not use {object_value} as its currency."),
+        )
+    elif predicate == "headquarters_location_of":
+        templates = (
+            ("headquarters-negated-headquartered-in", f"{subject} is not headquartered in {object_value}."),
+            ("headquarters-negated-of", f"The headquarters of {subject} are not in {object_value}."),
+        )
+    elif predicate == "manufacturer_of":
+        templates = (
+            ("manufacturer-negated-subject-first", f"{subject} is not manufactured by {object_value}."),
+            ("manufacturer-negated-object-first", f"{object_value} does not manufacture {subject}."),
+        )
+    elif predicate == "inception_of":
+        templates = (
+            ("inception-negated-founded-in", f"{subject} was not founded in {object_value}."),
+            ("inception-negated-date", f"The inception date of {subject} is not {object_value}."),
+        )
+    else:
+        templates = ()
+    return templates[:limit]
+
+
 def _output_predicate(value: Any) -> str | None:
     text = _normalize_predicate(value)
     return PREDICATE_OUTPUTS.get(text)
@@ -418,6 +522,12 @@ def main() -> None:
     parser.add_argument("--output-records", required=True, help="output labeled extraction records JSON")
     parser.add_argument("--output-patterns", default=None, help="optional output regex patterns JSON")
     parser.add_argument("--max-facts", type=int, default=None)
+    parser.add_argument(
+        "--adversarial-negatives-per-fact",
+        type=int,
+        default=0,
+        help="optional near-miss negated records with no expected triples per fact",
+    )
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
     run(parser.parse_args())
 

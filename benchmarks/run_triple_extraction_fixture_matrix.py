@@ -60,6 +60,8 @@ class TripleExtractionFixtureMatrixConfig:
     max_examples: int = 20
     min_augmented_f1: float = 1.0
     require_f1_lift: bool = True
+    adversarial_negatives_per_fact: int = 0
+    max_adversarial_false_positive_rate: float = 0.0
     min_corpora: int = 2
     min_distinct_predicates: int = 4
     compact_json: bool = False
@@ -79,6 +81,21 @@ class TripleExtractionFixtureMatrixConfig:
         if int(self.max_examples) < 0:
             raise ValueError("max_examples must be non-negative.")
         object.__setattr__(self, "max_examples", int(self.max_examples))
+        if int(self.adversarial_negatives_per_fact) < 0:
+            raise ValueError("adversarial_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "adversarial_negatives_per_fact",
+            int(self.adversarial_negatives_per_fact),
+        )
+        max_adversarial_false_positive_rate = float(self.max_adversarial_false_positive_rate)
+        if not (0.0 <= max_adversarial_false_positive_rate <= 1.0):
+            raise ValueError("max_adversarial_false_positive_rate must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "max_adversarial_false_positive_rate",
+            max_adversarial_false_positive_rate,
+        )
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
             raise ValueError("min_augmented_f1 must be in [0, 1].")
@@ -117,6 +134,8 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
                 max_examples=config.max_examples,
                 min_augmented_f1=config.min_augmented_f1,
                 require_f1_lift=config.require_f1_lift,
+                adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
+                max_adversarial_false_positive_rate=config.max_adversarial_false_positive_rate,
                 compact_json=config.compact_json,
             )
         )
@@ -138,6 +157,12 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
             "mean_best_f1": matrix["mean_best_f1"],
             "mean_baseline_f1": matrix["mean_baseline_f1"],
             "mean_f1_lift": matrix["mean_f1_lift"],
+            "mean_best_adversarial_false_positive_rate": matrix[
+                "mean_best_adversarial_false_positive_rate"
+            ],
+            "max_best_adversarial_false_positive_rate": matrix[
+                "max_best_adversarial_false_positive_rate"
+            ],
             "promotes_cross_corpus_extractor": matrix["status"] == "promote",
         },
     )
@@ -161,6 +186,7 @@ def _corpus_result(
 ) -> dict[str, Any]:
     fixture_summary = _mapping(summary.get("fixture_summary"))
     by_predicate = _mapping(fixture_summary.get("by_predicate"))
+    best_adversarial_report = _mapping(summary.get("best_adversarial_report"))
     return {
         "name": corpus.name,
         "slug": corpus.slug,
@@ -177,6 +203,13 @@ def _corpus_result(
         "best_extractor": summary.get("best_extractor"),
         "best_f1": float(_mapping(summary.get("best_report")).get("f1", 0.0)),
         "f1_lift": float(summary.get("f1_lift", 0.0)),
+        "n_adversarial_negative_records": int(fixture_summary.get("n_adversarial_negative_records", 0)),
+        "best_adversarial_false_positive_rate": float(
+            best_adversarial_report.get("false_positive_rate", 0.0)
+        ),
+        "best_adversarial_false_positive_record_count": int(
+            best_adversarial_report.get("false_positive_record_count", 0)
+        ),
     }
 
 
@@ -236,6 +269,14 @@ def _matrix_summary(
         "mean_baseline_f1": _mean(float(item["baseline_f1"]) for item in corpus_results),
         "mean_best_f1": _mean(float(item["best_f1"]) for item in corpus_results),
         "mean_f1_lift": _mean(float(item["f1_lift"]) for item in corpus_results),
+        "mean_best_adversarial_false_positive_rate": _mean(
+            float(item["best_adversarial_false_positive_rate"])
+            for item in corpus_results
+        ),
+        "max_best_adversarial_false_positive_rate": max(
+            (float(item["best_adversarial_false_positive_rate"]) for item in corpus_results),
+            default=0.0,
+        ),
         "corpora": tuple(dict(item) for item in corpus_results),
     }
 
@@ -322,6 +363,8 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureMatrix
         max_examples=args.max_examples,
         min_augmented_f1=args.min_augmented_f1,
         require_f1_lift=not bool(args.allow_no_lift),
+        adversarial_negatives_per_fact=args.adversarial_negatives_per_fact,
+        max_adversarial_false_positive_rate=args.max_adversarial_false_positive_rate,
         min_corpora=args.min_corpora,
         min_distinct_predicates=args.min_distinct_predicates,
         compact_json=bool(args.compact_json),
@@ -341,6 +384,8 @@ def main() -> None:
     parser.add_argument("--max-examples", type=int, default=20)
     parser.add_argument("--min-augmented-f1", type=float, default=1.0)
     parser.add_argument("--allow-no-lift", action="store_true")
+    parser.add_argument("--adversarial-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-adversarial-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--min-corpora", type=int, default=2)
     parser.add_argument("--min-distinct-predicates", type=int, default=4)
     parser.add_argument("--compact-json", action="store_true")

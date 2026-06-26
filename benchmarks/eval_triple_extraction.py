@@ -41,6 +41,9 @@ def evaluate_triple_extractor(
     total_expected = 0
     total_extracted = 0
     true_positive = 0
+    false_positive_records = 0
+    zero_expected_records = 0
+    by_record_type: dict[str, dict[str, int]] = {}
     examples = []
     for index, record in enumerate(records):
         claim = _record_claim(record, index=index)
@@ -53,6 +56,28 @@ def evaluate_triple_extractor(
         total_expected += len(expected_set)
         total_extracted += len(extracted_set)
         true_positive += len(matched)
+        record_type = _record_type(record)
+        group = by_record_type.setdefault(
+            record_type,
+            {
+                "record_count": 0,
+                "expected_triple_count": 0,
+                "extracted_triple_count": 0,
+                "exact_match_count": 0,
+                "zero_expected_record_count": 0,
+                "false_positive_record_count": 0,
+            },
+        )
+        group["record_count"] += 1
+        group["expected_triple_count"] += len(expected_set)
+        group["extracted_triple_count"] += len(extracted_set)
+        group["exact_match_count"] += len(matched)
+        if not expected_set:
+            zero_expected_records += 1
+            group["zero_expected_record_count"] += 1
+            if extracted_set:
+                false_positive_records += 1
+                group["false_positive_record_count"] += 1
         if len(examples) < max_examples and (expected_set != extracted_set):
             examples.append({
                 "index": index,
@@ -71,9 +96,13 @@ def evaluate_triple_extractor(
         "expected_triple_count": total_expected,
         "extracted_triple_count": total_extracted,
         "exact_match_count": true_positive,
+        "zero_expected_record_count": zero_expected_records,
+        "false_positive_record_count": false_positive_records,
+        "false_positive_rate": _safe_div(false_positive_records, zero_expected_records),
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "by_record_type": _group_reports(by_record_type),
         "error_examples": tuple(examples),
     }
 
@@ -196,6 +225,35 @@ def _record_expected_triples(record: Mapping[str, Any], claim: Claim) -> tuple[C
         payload.setdefault("source_text", claim.text)
         triples.append(ClaimTriple.from_dict(payload))
     return tuple(triples)
+
+
+def _record_type(record: Mapping[str, Any]) -> str:
+    metadata = record.get("metadata", {})
+    if isinstance(metadata, Mapping):
+        raw = metadata.get("record_type", record.get("record_type", "positive"))
+    else:
+        raw = record.get("record_type", "positive")
+    text = str(raw).strip()
+    return text or "positive"
+
+
+def _group_reports(groups: Mapping[str, Mapping[str, int]]) -> dict[str, dict[str, Any]]:
+    reports = {}
+    for name, counters in groups.items():
+        precision = _safe_div(counters["exact_match_count"], counters["extracted_triple_count"])
+        recall = _safe_div(counters["exact_match_count"], counters["expected_triple_count"])
+        f1 = 0.0 if precision + recall == 0.0 else 2.0 * precision * recall / (precision + recall)
+        reports[name] = {
+            **dict(counters),
+            "false_positive_rate": _safe_div(
+                counters["false_positive_record_count"],
+                counters["zero_expected_record_count"],
+            ),
+            "precision": precision,
+            "recall": recall,
+            "f1": f1,
+        }
+    return reports
 
 
 def _triple_key(triple: ClaimTriple) -> tuple[str, str, str]:

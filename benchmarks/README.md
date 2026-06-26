@@ -1024,6 +1024,7 @@ python benchmarks/build_triple_extraction_fixture.py \
   --fact-corpus artifacts/wikidata-country-core-facts-qa-corpus.json \
   --output-records artifacts/triple_extraction_records.json \
   --output-patterns artifacts/triple_extraction_regex_patterns.json \
+  --adversarial-negatives-per-fact 0 \
   --artifact-manifest artifacts/triple_extraction_fixture_manifest.json
 ```
 
@@ -1034,13 +1035,17 @@ patterns, per-extractor reports, a promotion summary, and an artifact manifest:
 ```bash
 python benchmarks/run_triple_extraction_fixture_workflow.py \
   --fact-corpus artifacts/wikidata-country-core-facts-qa-corpus.json \
-  --output-dir artifacts/triple-extraction-fixture-workflow
+  --output-dir artifacts/triple-extraction-fixture-workflow \
+  --adversarial-negatives-per-fact 0
 ```
 
 Use `run_triple_extraction_fixture_matrix.py` when extractor templates need
 cross-corpus release evidence. The matrix runs the same workflow per corpus and
 blocks promotion unless enough corpora promote and the generated fixtures cover
-enough distinct predicates:
+enough distinct predicates. Add `--adversarial-negatives-per-fact N` to include
+negated near-miss records with no expected triples, and
+`--max-adversarial-false-positive-rate` to fail closed when an extractor emits
+triples for those negative controls:
 
 ```bash
 python benchmarks/run_triple_extraction_fixture_matrix.py \
@@ -1057,6 +1062,15 @@ The current Wikidata cross-corpus matrix promotes: country-core contributes
 `headquarters_location_of`, `manufacturer_of`, and `inception_of`; the matrix
 records `mean_best_f1=1.000`, `mean_f1_lift=0.625`, and passes recursive
 manifest verification.
+
+The adversarial companion matrix at
+`artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/` enables
+one negated near-miss per fact and intentionally blocks promotion: country-core
+adds `359` adversarial negatives, organization/product adds `8`, both corpora
+drop to best F1 `0.889`, and the best extractor has adversarial false-positive
+rate `1.000`. This is a required negative result: the current dependency-free
+extractor is release evidence for covered positive/paraphrase templates, not
+for negation-robust open-domain claim extraction.
 
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented
