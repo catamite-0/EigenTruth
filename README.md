@@ -150,6 +150,12 @@ For random-matrix spectrum diagnostics, add `--include-layer-spectra` to
 Marchenko-Pastur bulk edges, spike counts, effective rank, and top covariance
 eigenvalues. This is off by default because full eigendecomposition can be
 expensive on large hidden dimensions.
+Use `benchmarks/compare_spectrum_layers.py` and
+`benchmarks/compare_layer_band_selectors.py` to audit whether those cheap
+spectrum and intrinsic-dimension priors can reduce the layer sweep to a
+candidate band. Current l80 evidence supports `max_top_eigenvalue_to_mp_upper`
+with radius 1 as a cost-reducing band prior, not as a replacement for calibrated
+layer/score sweep inside the band.
 
 For ACSE-style experiments, `eval_conformal.py` can also build an adaptive
 conformal report and artifact by inflating the selected diagnostic with primary

@@ -167,6 +167,28 @@ python benchmarks/compare_spectrum_layers.py \
   --json artifacts/tiny-spectrum-layer-comparison.json
 ```
 
+Use `compare_layer_band_selectors.py` when a heuristic should be evaluated as a
+candidate sweep band rather than an exact layer selector. It combines
+intrinsic-dimension peak reports, spectrum reports, and saved sweep reports, then
+checks whether each band contains the calibrated best layer:
+
+```bash
+python benchmarks/compare_layer_band_selectors.py \
+  --intrinsic-report artifacts/e4-intrinsic-dimension-l80/intrinsic-dimension-report.json \
+  --spectrum-report qwen05-l80=artifacts/truthfulqa-frontier-spectrum-layer-selection/qwen05-l80-spectrum-report.json \
+  --spectrum-report smollm2-l80=artifacts/truthfulqa-frontier-spectrum-layer-selection/smollm2-l80-spectrum-report.json \
+  --sweep-report qwen05-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/qwen05-l80/sweep-report.json \
+  --sweep-report smollm2-l80=artifacts/truthfulqa-frontier-qwen-smollm2-l80-cache-only/smollm2-l80/sweep-report.json \
+  --score truth_proj --coverage-top-k 2 \
+  --json artifacts/truthfulqa-frontier-layer-band-selection/layer-band-comparison.json \
+  --artifact-manifest artifacts/truthfulqa-frontier-layer-band-selection/artifact-manifest.json
+```
+
+The current l80 artifact recommends `spectrum_max_top_eigenvalue_to_mp_upper_radius_1`:
+it keeps both models' best `truth_proj` layer in band with zero AUROC regret while
+averaging 2 of 5 monitored layers. Treat it as a cost-reduction prior before the
+normal calibrated sweep, not as a standalone deployment selector.
+
 Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
 bundle or create one when missing. The cache is validated against model, dtype,
 layer list, max length, subspace rank, covariance mode/rank, warmup mode, and
@@ -2905,6 +2927,14 @@ frontier wall-clock drops from 1140.245s to 24.028s. Per-cell replay drops Qwen
 from 784.040s to 3.496s and SmolLM2 from 336.829s to 2.797s. This makes l80
 multi-seed, layer/score resweeps, and post-hoc calibration experiments practical
 without re-running model forward passes.
+
+The layer-band selector audit
+(`artifacts/truthfulqa-frontier-layer-band-selection/`) combines the saved
+intrinsic-dimension, spectrum, and sweep artifacts. The current recommendation is
+`spectrum_max_top_eigenvalue_to_mp_upper_radius_1`: it keeps both l80 best
+`truth_proj` layers in band with zero AUROC regret while averaging 2 of 5
+monitored layers. This is a candidate-band prior for cheaper calibrated sweeps,
+not a replacement for the sweep report or saved calibration artifact.
 
 The registered post-hoc stability report
 (`report:truthfulqa-frontier-qwen-smollm2-l80-stability:0.1`) replays seeds

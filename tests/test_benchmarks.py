@@ -2550,6 +2550,184 @@ def test_compare_spectrum_layers_marks_missing_sweep_score(tmp_path):
     assert "no 'truth_proj' scores" in payload["runs"][0]["missing_reason"]
 
 
+def test_compare_layer_band_selectors_recommends_union_and_writes_manifest(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.compare_layer_band_selectors")
+    intrinsic_path = tmp_path / "intrinsic.json"
+    spectrum_path = tmp_path / "spectrum.json"
+    sweep_path = tmp_path / "sweep.json"
+    output_path = tmp_path / "layer-band-comparison.json"
+    manifest_path = tmp_path / "manifest.json"
+    intrinsic_path.write_text(
+        json.dumps({
+            "reports": [
+                {
+                    "name": "synthetic-run",
+                    "model": "synthetic/model",
+                    "peak_layer": -2,
+                    "peak_intrinsic_dimension": 5.0,
+                    "profile": [
+                        {"layer": -3, "intrinsic_dimension": 3.0},
+                        {"layer": -2, "intrinsic_dimension": 5.0},
+                        {"layer": -1, "intrinsic_dimension": 4.0},
+                    ],
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    spectrum_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic/model"},
+            "layer_spectra": {
+                "-3": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 0,
+                    "effective_rank": 2.0,
+                    "participation_ratio": 2.0,
+                    "stable_rank": 1.5,
+                    "condition_number": 5.0,
+                    "top_eigenvalues": [1.0],
+                },
+                "-2": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 1,
+                    "effective_rank": 3.0,
+                    "participation_ratio": 3.0,
+                    "stable_rank": 2.5,
+                    "condition_number": 4.0,
+                    "top_eigenvalues": [3.0],
+                },
+                "-1": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 2,
+                    "effective_rank": 4.0,
+                    "participation_ratio": 4.0,
+                    "stable_rank": 3.5,
+                    "condition_number": 3.0,
+                    "top_eigenvalues": [6.0],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "synthetic/model",
+            "layers": [
+                {"layer": -3, "scores": [{"score_name": "truth_proj", "auroc": 0.60}]},
+                {"layer": -2, "scores": [{"score_name": "truth_proj", "auroc": 0.70}]},
+                {"layer": -1, "scores": [{"score_name": "truth_proj", "auroc": 0.90}]},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        intrinsic_report=(str(intrinsic_path),),
+        spectrum_report=(str(spectrum_path),),
+        sweep_report=(str(sweep_path),),
+        score="truth_proj",
+        strategy=("intrinsic:0,union:0:max_top_eigenvalue_to_mp_upper:0",),
+        coverage_top_k=1,
+        note=("synthetic layer-band test",),
+        json=str(output_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+
+    assert output_path.exists()
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["artifact_count"] == 4
+    assert set(manifest["artifacts"]) == {
+        "intrinsic_report_0_intrinsic",
+        "layer_band_selector_report",
+        "spectrum_report_0_spectrum",
+        "sweep_report_0_sweep",
+    }
+    assert payload["summary"]["intrinsic_radius_0"]["status"] == "fail"
+    assert payload["summary"]["intrinsic_radius_0"]["best_layer_in_band_rate"] == pytest.approx(0.0)
+    union_name = "union_intrinsic_0_max_top_eigenvalue_to_mp_upper_0"
+    assert payload["recommended_strategy"]["strategy"] == union_name
+    assert payload["summary"][union_name]["status"] == "pass"
+    assert payload["summary"][union_name]["best_layer_in_band_rate"] == pytest.approx(1.0)
+    union_run = [run for run in payload["runs"] if run["strategy"] == union_name][0]
+    assert union_run["candidate_layers"] == [-2, -1]
+    assert union_run["candidate_layer_count"] == 2
+    assert union_run["avoided_layer_count"] == 1
+    assert union_run["best_layer_in_band"] is True
+    assert union_run["auroc_regret"] == pytest.approx(0.0)
+
+
+def test_compare_layer_band_selectors_marks_missing_spectrum(tmp_path):
+    module = importlib.import_module("benchmarks.compare_layer_band_selectors")
+    intrinsic_path = tmp_path / "intrinsic.json"
+    spectrum_path = tmp_path / "spectrum.json"
+    sweep_path = tmp_path / "sweep.json"
+    intrinsic_path.write_text(
+        json.dumps({
+            "reports": [
+                {
+                    "name": "synthetic-run",
+                    "model": "synthetic/model",
+                    "peak_layer": -2,
+                    "profile": [{"layer": -2, "intrinsic_dimension": 2.5}],
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    spectrum_path.write_text(
+        json.dumps({
+            "config": {"model": "other/model"},
+            "layer_spectra": {
+                "-2": {
+                    "status": "ready",
+                    "sample_count": 8,
+                    "hidden_dim": 4,
+                    "marchenko_pastur_upper": 1.0,
+                    "spike_count": 2,
+                    "effective_rank": 2.0,
+                    "participation_ratio": 2.0,
+                    "stable_rank": 1.5,
+                    "condition_number": 3.0,
+                    "top_eigenvalues": [2.0],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "synthetic/model",
+            "layers": [{"layer": -2, "scores": [{"score_name": "truth_proj", "auroc": 0.8}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_layer_band_selectors(
+        [("synthetic-run", intrinsic_path)],
+        [("other", spectrum_path)],
+        [("synthetic-run", sweep_path)],
+        score_name="truth_proj",
+        strategies=("spectrum:max_top_eigenvalue_to_mp_upper:0",),
+    )
+
+    summary = payload["summary"]["spectrum_max_top_eigenvalue_to_mp_upper_radius_0"]
+    assert summary["status"] == "no_evidence"
+    assert payload["runs"][0]["matched"] is False
+    assert "missing spectrum report" in payload["runs"][0]["missing_reason"]
+
+
 def test_training_telemetry_sanity_separates_clean_and_corrupt_runs(tmp_path, capsys):
     module = importlib.import_module("benchmarks.training_telemetry_sanity")
     report_path = tmp_path / "training-telemetry.json"

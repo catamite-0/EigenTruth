@@ -1,6 +1,6 @@
 # EigenTruth Frontier Research Notes
 
-Date: 2026-06-25
+Date: 2026-06-26
 
 ## Current Frontier Direction
 
@@ -170,8 +170,28 @@ Added spectrum-to-sweep layer-selection audit tooling:
   replacing calibrated layer sweeps with spectrum heuristics; spectrum is a
   candidate layer-band prior only.
 
+Added a conservative layer-band selector audit:
+
+- `compare_layer_band_selectors.py` consumes intrinsic-dimension reports,
+  spectrum reports, and saved layer/score sweep reports, then evaluates
+  `intrinsic:R`, `spectrum:HEURISTIC:R`, and
+  `union:ID_R:HEURISTIC:SPEC_R` candidate bands against the calibrated best
+  sweep layer.
+- The cache-only l80 report at
+  `artifacts/truthfulqa-frontier-layer-band-selection/` fingerprints the two
+  spectrum reports, the intrinsic-dimension report, both sweep reports, and the
+  comparison output.
+- On the current Qwen/SmolLM2 l80 evidence, the recommended strategy is
+  `spectrum_max_top_eigenvalue_to_mp_upper_radius_1`: it contains the best
+  `truth_proj` layer for both models, has zero AUROC regret, and reduces the
+  monitored sweep from 5 layers to 2 layers on average. Intrinsic radius 2 also
+  passes, but averages 4 of 5 layers.
+- This promotes a cost-reduction prior for where to sweep next. It still does
+  not promote spectrum or intrinsic dimension as a standalone calibrated risk
+  signal or exact deployment-layer oracle.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
-3. Combine intrinsic-dimension peak evidence with spectrum heuristics into a conservative layer-band selector, then test whether it reduces sweep cost without losing the current `truth_proj` best-layer evidence.
+3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
