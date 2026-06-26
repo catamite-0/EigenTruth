@@ -4523,6 +4523,8 @@ to the workflow report. Add `--fingerprint-cache` when repeating local checks,
 `--corpus-source-cache-json` when only some raw trace files change,
 `--corpus-cache-json` when the entire standardized corpus can be reused,
 `--runtime-trace-records-cache-json` when sweeping runtime budget gates,
+`--runtime-trace-scan-workers` when large standardized trace sets make runtime
+baseline JSON scan and metric extraction the local bottleneck,
 `--save-runtime-recommended-policy` when the workflow should materialize the
 observed baseline's candidate budget thresholds, and
 `--runtime-drift-baseline` plus optional `--runtime-drift-budget-policy` when
@@ -4552,6 +4554,7 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --corpus-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus-cache.json \
   --corpus-source-cache-json artifacts/smollm2_product_trace_replay_workflow/corpus/source-cache.json \
   --runtime-trace-records-cache-json artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/trace-record-cache.json \
+  --runtime-trace-scan-workers 4 \
   --save-runtime-recommended-policy artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/recommended-policy.json \
   --runtime-drift-baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
   --runtime-drift-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \

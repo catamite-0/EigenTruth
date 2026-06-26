@@ -26,7 +26,11 @@ from benchmarks.build_product_trace_corpus import (  # noqa: E402
     build_product_trace_corpus,
 )
 from benchmarks.compare_product_runtime_baselines import compare_product_runtime_baselines  # noqa: E402
-from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bool  # noqa: E402
+from benchmarks.config_utils import (  # noqa: E402
+    planned_artifact_manifest_summary,
+    strict_bool,
+    strict_positive_int,
+)
 from benchmarks.run_product_runtime_baseline import (  # noqa: E402
     ProductRuntimeBaselineConfig,
     build_product_runtime_baseline,
@@ -101,6 +105,7 @@ class ProductTraceReplayWorkflowConfig:
     refresh_corpus_source_cache: bool = False
     runtime_trace_records_cache_path: str | Path | None = None
     refresh_runtime_trace_records_cache: bool = False
+    runtime_trace_scan_workers: int = 1
     selector_trace_inputs_path: str | Path | None = None
     refresh_selector_trace_inputs: bool = False
 
@@ -240,6 +245,11 @@ class ProductTraceReplayWorkflowConfig:
                 self.refresh_runtime_trace_records_cache,
                 name="refresh_runtime_trace_records_cache",
             ),
+        )
+        object.__setattr__(
+            self,
+            "runtime_trace_scan_workers",
+            strict_positive_int(self.runtime_trace_scan_workers, name="runtime_trace_scan_workers"),
         )
         object.__setattr__(
             self,
@@ -437,6 +447,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                     else str(config.runtime_trace_records_cache_path)
                 ),
                 "refresh_runtime_trace_records_cache": config.refresh_runtime_trace_records_cache,
+                "runtime_trace_scan_workers": config.runtime_trace_scan_workers,
                 "selector_trace_inputs": (
                     None if config.selector_trace_inputs_path is None else str(config.selector_trace_inputs_path)
                 ),
@@ -794,6 +805,7 @@ def _run_runtime_baseline(
             promotion_contract_path=config.promotion_contract_path,
             trace_records_cache_path=config.runtime_trace_records_cache_path,
             refresh_trace_records_cache=config.refresh_runtime_trace_records_cache,
+            trace_scan_workers=config.runtime_trace_scan_workers,
             recommended_policy_path=config.runtime_recommended_policy_path,
             artifact_manifest_path=output_dir / "artifact-manifest.json",
             compact_json=config.compact_json,
@@ -1046,6 +1058,12 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "trace_records_cache_source": trace_record_cache.get("source"),
         "trace_records_cache_hit": trace_record_cache.get("cache_hit"),
         "trace_records_cache_written": trace_record_cache.get("cache_written"),
+        "trace_scan_workers": _nested(
+            runtime_baseline,
+            "config",
+            "trace_scan_workers",
+        ),
+        "trace_scan_effective_workers": trace_record_cache.get("trace_scan_workers"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
         "recommended_policy_path": _nested(runtime_baseline, "paths", "recommended_policy"),
         "recommended_policy_written": recommended_policy.get("written"),
@@ -1325,6 +1343,16 @@ def _write_artifact_manifest(
                 "runtime_baseline",
                 "recommended_policy_threshold_count",
             ),
+            "runtime_trace_scan_workers": _nested(
+                report,
+                "runtime_baseline",
+                "trace_scan_workers",
+            ),
+            "runtime_trace_scan_effective_workers": _nested(
+                report,
+                "runtime_baseline",
+                "trace_scan_effective_workers",
+            ),
             "recommended_selector_candidate": _nested(
                 report,
                 "decision",
@@ -1534,6 +1562,16 @@ def _record_registry(
                 report,
                 "runtime_baseline",
                 "trace_records_cache_written",
+            ),
+            "runtime_trace_scan_workers": _nested(
+                report,
+                "runtime_baseline",
+                "trace_scan_workers",
+            ),
+            "runtime_trace_scan_effective_workers": _nested(
+                report,
+                "runtime_baseline",
+                "trace_scan_effective_workers",
             ),
             "selector_trace_inputs_path": _nested(report, "paths", "selector_trace_inputs"),
             "selector_trace_inputs_source": _nested(report, "selector_replay", "trace_inputs_source"),
@@ -1831,6 +1869,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
             Path(args.runtime_trace_records_cache_json) if args.runtime_trace_records_cache_json else None
         ),
         refresh_runtime_trace_records_cache=bool(args.refresh_runtime_trace_records_cache),
+        runtime_trace_scan_workers=args.runtime_trace_scan_workers,
         selector_trace_inputs_path=(
             Path(args.selector_trace_inputs_json) if args.selector_trace_inputs_json else None
         ),
@@ -1927,6 +1966,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional runtime baseline trace-record cache path")
     parser.add_argument("--refresh-runtime-trace-records-cache", action="store_true",
                         help="rebuild --runtime-trace-records-cache-json even when a valid cache exists")
+    parser.add_argument("--runtime-trace-scan-workers", type=int, default=1,
+                        help="maximum worker threads for the child ProductTrace runtime baseline scan")
     parser.add_argument("--selector-trace-inputs-json", default=None,
                         help="optional selector replay input cache path")
     parser.add_argument("--refresh-selector-trace-inputs", action="store_true",

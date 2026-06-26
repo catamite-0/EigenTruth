@@ -26946,6 +26946,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
             corpus_cache_path=corpus_cache_path,
             corpus_source_cache_path=corpus_source_cache_path,
             runtime_trace_records_cache_path=runtime_trace_records_cache_path,
+            runtime_trace_scan_workers=2,
             runtime_recommended_policy_path=runtime_recommended_policy_path,
             selector_trace_inputs_path=selector_trace_inputs_path,
         )
@@ -26981,6 +26982,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["runtime_baseline"]["recommended_policy_written"] is True
     assert payload["runtime_baseline"]["recommended_policy_enabled"] is True
     assert payload["runtime_baseline"]["recommended_policy_threshold_count"] >= 1
+    assert payload["runtime_baseline"]["trace_scan_workers"] == 2
+    assert payload["runtime_baseline"]["trace_scan_effective_workers"] == 2
     assert payload["selector_replay"]["status"] == "promote"
     assert payload["selector_replay"]["recommended_candidate"] == "default"
     assert payload["optimization"]["status"] == "has_recommendations"
@@ -27021,6 +27024,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert payload["config"]["corpus_cache"] == str(corpus_cache_path)
     assert payload["config"]["corpus_source_cache"] == str(corpus_source_cache_path)
     assert payload["config"]["runtime_trace_records_cache"] == str(runtime_trace_records_cache_path)
+    assert payload["config"]["runtime_trace_scan_workers"] == 2
     assert payload["config"]["runtime_recommended_policy"] == str(runtime_recommended_policy_path)
     assert payload["config"]["selector_trace_inputs"] == str(selector_trace_inputs_path)
     assert payload["manifest_verification"]["path"] == str(verification_report_path)
@@ -27033,6 +27037,7 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert corpus_source_cache["summary"]["source_count"] == 3
     assert runtime_trace_records_cache["workflow"] == "product_runtime_baseline_trace_records"
     assert runtime_trace_records_cache["summary"]["trace_count"] == 3
+    assert runtime_trace_records_cache["summary"]["trace_scan_workers"] == 2
     assert loaded_runtime_policy.enabled() is True
     assert runtime_recommended_policy["metadata"]["source"] == (
         "run_product_runtime_baseline.optimization.policy_hints"
@@ -27062,6 +27067,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert manifest["metadata"]["recommended_runtime_policy_path"] == str(runtime_recommended_policy_path)
     assert manifest["metadata"]["recommended_runtime_policy_written"] is True
     assert manifest["metadata"]["recommended_runtime_policy_enabled"] is True
+    assert manifest["metadata"]["runtime_trace_scan_workers"] == 2
+    assert manifest["metadata"]["runtime_trace_scan_effective_workers"] == 2
     assert registry_module.load_and_verify_artifact_manifest(
         payload["paths"]["artifact_manifest"],
         recursive=True,
@@ -27093,6 +27100,8 @@ def test_run_product_trace_replay_workflow_builds_corpus_baseline_and_replay(tmp
     assert record.metadata["corpus_source_cache_written"] is True
     assert record.metadata["runtime_trace_records_cache_path"] == str(runtime_trace_records_cache_path)
     assert record.metadata["runtime_trace_records_cache_written"] is True
+    assert record.metadata["runtime_trace_scan_workers"] == 2
+    assert record.metadata["runtime_trace_scan_effective_workers"] == 2
     assert policy_record.path == str(runtime_recommended_policy_path)
     assert policy_record.metadata["source_workflow_record"] == "report:trace-replay-workflow:0.1"
     assert policy_record.metadata["source_runtime_baseline_report"] == payload["paths"]["runtime_baseline_report"]
@@ -27325,6 +27334,7 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         refresh_corpus_source_cache="false",
         runtime_trace_records_cache_path=tmp_path / "runtime-trace-record-cache.json",
         refresh_runtime_trace_records_cache="false",
+        runtime_trace_scan_workers="2",
         runtime_recommended_policy_path=tmp_path / "runtime-recommended-policy.json",
         selector_trace_inputs_path=tmp_path / "selector-trace-inputs.json",
         refresh_selector_trace_inputs="false",
@@ -27352,11 +27362,20 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.refresh_corpus_source_cache is False
     assert workflow_config.runtime_trace_records_cache_path == tmp_path / "runtime-trace-record-cache.json"
     assert workflow_config.refresh_runtime_trace_records_cache is False
+    assert workflow_config.runtime_trace_scan_workers == 2
     assert workflow_config.runtime_recommended_policy_path == tmp_path / "runtime-recommended-policy.json"
     assert workflow_config.selector_trace_inputs_path == tmp_path / "selector-trace-inputs.json"
     assert workflow_config.refresh_selector_trace_inputs is False
     assert replay_config.compact_json is False
     assert baseline_config.compact_json is False
+
+    with pytest.raises(ValueError, match="runtime_trace_scan_workers"):
+        workflow_module.ProductTraceReplayWorkflowConfig(
+            trace_paths=("trace.json",),
+            output_dir=tmp_path / "bad-workflow-workers",
+            candidates=(candidate,),
+            runtime_trace_scan_workers=True,  # type: ignore[arg-type]
+        )
 
     with pytest.raises(ValueError, match="compact_json"):
         replay_module.RuntimeProfileSelectorReplayConfig(
