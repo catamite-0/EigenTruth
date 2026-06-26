@@ -2969,9 +2969,12 @@ def test_build_wikidata_qa_corpus_feeds_retrieval_structured_qa(tmp_path):
         SimpleNamespace(
             source=[str(source_path)],
             output=str(qa_path),
+            template_json=None,
             statement_property="P36",
             statement_property_label="capital",
             question_template="What is the capital of {country}?",
+            answer_field="capital",
+            qid_label_field=None,
             keep_qid_labels=False,
             artifact_manifest=str(manifest_path),
         )
@@ -3018,6 +3021,118 @@ def test_build_wikidata_qa_corpus_feeds_retrieval_structured_qa(tmp_path):
     assert statuses["insufficient_evidence"] == 0
     assert run["route_quality"]["retrieval_structured_qa"]["decision_accuracy"] == pytest.approx(1.0)
     assert run["retrieval_qa"]["decided_records"] == 4
+
+
+def test_build_wikidata_qa_corpus_supports_multiple_property_templates(tmp_path):
+    wikidata = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
+    source_path = tmp_path / "wikidata-facts.jsonl"
+    template_path = tmp_path / "templates.json"
+    output_path = tmp_path / "wikidata-qa.json"
+    source_rows = [
+        {
+            "text": "According to Wikidata structured data, the capital of France is Paris.",
+            "source": "wikidata:Q142:P36:Q90",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P36",
+                "statement_property_label": "capital",
+                "country": "France",
+                "country_qid": "Q142",
+                "capital": "Paris",
+                "capital_qid": "Q90",
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, an official language of France is French.",
+            "source": "wikidata:Q142:P37:Q150",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P37",
+                "statement_property_label": "official language",
+                "country": "France",
+                "country_qid": "Q142",
+                "language": "French",
+                "language_qid": "Q150",
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, the currency of Japan is Japanese yen.",
+            "source": "wikidata:Q17:P38:Q8146",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P38",
+                "statement_property_label": "currency",
+                "country": "Japan",
+                "country_qid": "Q17",
+                "currency": "Japanese yen",
+                "currency_qid": "Q8146",
+            },
+        },
+        {
+            "text": "This local row is not Wikidata and must not be converted.",
+            "source": "local:bad",
+            "metadata": {
+                "provider": "local",
+                "statement_property": "P36",
+                "country": "Spain",
+                "capital": "Madrid",
+            },
+        },
+    ]
+    templates = {
+        "templates": [
+            {
+                "statement_property": "P36",
+                "statement_property_label": "capital",
+                "question_template": "What is the capital of {country}?",
+                "answer_field": "capital",
+            },
+            {
+                "statement_property": "P37",
+                "statement_property_label": "official language",
+                "question_template": "What is an official language of {country}?",
+                "answer_field": "language",
+            },
+            {
+                "statement_property": "P38",
+                "statement_property_label": "currency",
+                "question_template": "What currency does {country} use?",
+                "answer_field": "currency",
+            },
+        ]
+    }
+    source_path.write_text("\n".join(json.dumps(row) for row in source_rows) + "\n", encoding="utf-8")
+    template_path.write_text(json.dumps(templates), encoding="utf-8")
+
+    corpus = wikidata.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(output_path),
+            template_json=str(template_path),
+            statement_property="P36",
+            statement_property_label="capital",
+            question_template="What is the capital of {country}?",
+            answer_field="capital",
+            qid_label_field=None,
+            keep_qid_labels=False,
+            artifact_manifest=None,
+        )
+    )
+    by_question = {document["question"]: document for document in corpus["documents"]}
+
+    assert corpus["summary"]["n_documents"] == 3
+    assert corpus["summary"]["skipped"]["provider_mismatch"] == 1
+    assert set(by_question) == {
+        "What is the capital of France?",
+        "What is an official language of France?",
+        "What currency does Japan use?",
+    }
+    assert by_question["What is an official language of France?"]["answer"] == "French"
+    assert by_question["What currency does Japan use?"]["metadata"]["statement_property"] == "P38"
+    assert corpus["summary"]["by_property"]["P36"]["n_documents"] == 1
+    assert corpus["summary"]["by_property"]["P37"]["n_documents"] == 1
+    assert corpus["summary"]["by_property"]["P38"]["n_documents"] == 1
+    assert corpus["input_provenance"]["config"]["templates"][2]["answer_field"] == "currency"
 
 
 def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):

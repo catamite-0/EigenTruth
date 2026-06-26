@@ -2492,18 +2492,41 @@ deployable TruthfulQA verifier route.
 ## `build_wikidata_qa_corpus.py`
 
 Converts structured Wikidata fact documents into the existing structured QA
-schema consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. For
-the country-capital preset, each `P36` fact becomes one `question`/`answer`
-record such as `What is the capital of France?` / `Paris`. The builder keeps
-label-use flags false, fingerprints source files, and skips QID-only labels by
-default so unlabeled Wikidata entities do not become awkward natural-language QA
-facts.
+schema consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. The
+default country-capital template maps each `P36` fact into one
+`question`/`answer` record such as `What is the capital of France?` / `Paris`.
+The builder can also consume a template JSON file for multiple properties, for
+example `P36` capital, `P37` official language, and `P38` currency. It keeps
+label-use flags false, fingerprints source files, rejects reserved score-dump
+metadata keys, and skips QID-only labels by default so unlabeled Wikidata
+entities do not become awkward natural-language QA facts.
 
 ```bash
 python benchmarks/build_wikidata_qa_corpus.py \
   --source artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
   --output artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-qa-corpus.json \
   --artifact-manifest artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-qa-manifest.json
+```
+
+Template JSON accepts either a list or an object with a `templates` list:
+
+```json
+{
+  "templates": [
+    {
+      "statement_property": "P36",
+      "statement_property_label": "capital",
+      "question_template": "What is the capital of {country}?",
+      "answer_field": "capital"
+    },
+    {
+      "statement_property": "P37",
+      "statement_property_label": "official language",
+      "question_template": "What is an official language of {country}?",
+      "answer_field": "language"
+    }
+  ]
+}
 ```
 
 Use the generated QA corpus with `build_evidence_fixture.py --query-field

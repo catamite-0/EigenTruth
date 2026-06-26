@@ -430,7 +430,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fetch_wikidata_reference_docs.py` | Materializes small CC0 Wikidata SPARQL result sets as JSONL source documents for external retrieval corpus ingestion. |
 | `build_external_retrieval_corpus.py` | Normalizes caller-supplied JSON/JSONL/text source files into an explicit `external_evidence_candidate` retrieval corpus and rejects score labels, claim ids, or score-dump row links in document metadata. |
 | `audit_retrieval_corpus_provenance.py` | Audits retrieval corpora against statement-bearing score dumps, separating external grounding candidates from controlled dataset baselines and answer-echo/oracle-risk stress corpora. |
-| `build_wikidata_qa_corpus.py` | Converts structured Wikidata facts such as `P36` country-capital records into label-free `QuestionAnswerVerifier` corpora for `retrieval_structured_qa` route smoke tests. |
+| `build_wikidata_qa_corpus.py` | Converts structured Wikidata facts such as `P36` country-capital records, or a multi-property template set, into label-free `QuestionAnswerVerifier` corpora for `retrieval_structured_qa` route smoke tests. |
 | `analyze_retrieval_route_gaps.py` | Reads verifier verified-record JSONL sidecars and summarizes retrieval coverage, final statuses, gap buckets, hit sources, and examples for blocked retrieval routes. |
 | `run_verifier_signal_fusion_workflow.py` | Runs the no-model local evidence loop end to end: retrieval/selfcheck fixture, verifier sidecar, verifier-signal score dumps, geometry-fusion report, deployable geometry artifacts, and manifest verification. |
 | `run_selfcheck_signal_fusion_workflow.py` | Runs the direct no-model selfcheck signal loop end to end: sampled responses, selfcheck score dumps, sample-quality gate, score ensemble report, optional geometry-by-selfcheck fusion artifacts, and manifest verification. |
@@ -488,7 +488,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_retrieval_stress_corpus.py` | Builds answer-echo retrieval stress corpora from statement-bearing score dumps, exposing self-support failure modes when retrieval evidence comes from the same answers being audited. |
 | `fetch_wikidata_reference_docs.py` | Fetches or replays Wikidata country-capital SPARQL results into JSONL source docs for external evidence smoke gates. |
 | `build_external_retrieval_corpus.py` | Builds explicit external-candidate retrieval corpora from local source files before provenance audit and local retrieval fixture construction. |
-| `build_wikidata_qa_corpus.py` | Converts Wikidata fact documents into structured QA corpora consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. |
+| `build_wikidata_qa_corpus.py` | Converts Wikidata fact documents into template-driven structured QA corpora consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. |
 | `analyze_retrieval_route_gaps.py` | Explains blocked retrieval routes from verified-record sidecars by coverage, status, gap bucket, source, and example records. |
 | `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora. |
 | `backfill_truthfulqa_statements.py` | Rebuilds deterministic TruthfulQA statement metadata for older score dumps and can emit label-derived oracle evidence for verifier upper-bound checks. |
@@ -553,7 +553,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fetch_wikidata_reference_docs.py` | 将小型 Wikidata CC0 SPARQL 结果物化为 JSONL source docs，用于外部 retrieval corpus ingestion。 |
 | `build_external_retrieval_corpus.py` | 将调用方提供的 JSON/JSONL/text 来源文件规范化为显式 `external_evidence_candidate` retrieval corpus，并拒绝 document metadata 中的 score label、claim id 或 score-dump row link。 |
 | `audit_retrieval_corpus_provenance.py` | 对 statement-bearing score dump 和 retrieval corpus 做 provenance 审计，区分外部 grounding 候选、受控数据集基线和 answer-echo/oracle-risk stress corpus。 |
-| `build_wikidata_qa_corpus.py` | 将 Wikidata `P36` 等结构化事实转换为无 label 的 `QuestionAnswerVerifier` corpus，用于 `retrieval_structured_qa` route smoke test。 |
+| `build_wikidata_qa_corpus.py` | 将 Wikidata `P36` 或多属性模板结构化事实转换为无 label 的 `QuestionAnswerVerifier` corpus，用于 `retrieval_structured_qa` route smoke test。 |
 | `analyze_retrieval_route_gaps.py` | 读取 verifier verified-record JSONL sidecar，按检索覆盖、最终状态、gap bucket、命中来源和样例解释 blocked retrieval route。 |
 | `run_verifier_signal_fusion_workflow.py` | 端到端运行无模型本地证据闭环：retrieval/selfcheck fixture、verifier sidecar、verifier-signal score dump、geometry-fusion report、可部署 geometry artifact 和 manifest verification。 |
 | `run_selfcheck_signal_fusion_workflow.py` | 端到端运行无模型 direct selfcheck signal 闭环：sampled responses、自一致性 score dump、sample-quality gate、score ensemble report、可选 geometry-by-selfcheck fusion artifact 和 manifest verification。 |
@@ -610,7 +610,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_retrieval_stress_corpus.py` | 从带 statement metadata 的 score dump 构建 answer-echo retrieval stress corpus，用来暴露检索证据来自待审答案本身时的自证失败模式。 |
 | `fetch_wikidata_reference_docs.py` | 拉取或重放 Wikidata country-capital SPARQL 结果，输出外部证据 smoke gate 可用的 JSONL source docs。 |
 | `build_external_retrieval_corpus.py` | 从本地来源文件构建显式外部候选 retrieval corpus，再进入 provenance audit 和本地 retrieval fixture 构建。 |
-| `build_wikidata_qa_corpus.py` | 将 Wikidata fact document 转成 `QuestionAnswerVerifier` / `retrieval_structured_qa` 可消费的 structured QA corpus。 |
+| `build_wikidata_qa_corpus.py` | 将 Wikidata fact document 转成模板驱动的 structured QA corpus，供 `QuestionAnswerVerifier` / `retrieval_structured_qa` 消费。 |
 | `analyze_retrieval_route_gaps.py` | 基于 verified-record sidecar 解释 blocked retrieval route 的覆盖、状态、gap bucket、证据来源和具体样例。 |
 | `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
 | `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |
