@@ -20,6 +20,12 @@ from benchmarks.compare_readiness_baselines import (  # noqa: E402
 )
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
+from benchmarks.release_policy_profiles import (  # noqa: E402
+    RELEASE_POLICY_PROFILE_NAMES,
+    append_unique,
+    apply_release_policy_profile_defaults,
+    clean_optional_key,
+)
 from eigentruth.control import (  # noqa: E402
     RUNTIME_PROFILE_NAMES,
     ControlPolicyConfig,
@@ -43,6 +49,10 @@ def compare_release_candidates(
     readiness_baseline_keys: Sequence[str] = (),
     route_baseline_keys: Sequence[str] = (),
     required_route_baseline_keys: Sequence[str] = (),
+    release_policy_profile: str | None = None,
+    require_structured_fact_robustness: bool = False,
+    structured_fact_canonical_route_key: str | None = None,
+    structured_fact_paraphrase_route_key: str | None = None,
     performance_registry_path: str | Path | None = None,
     performance_baseline_key: str | None = None,
     selector_replay_report_path: str | Path | None = None,
@@ -127,6 +137,58 @@ def compare_release_candidates(
     json_cache_stats: MutableMapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Return a fail-closed deployable release candidate from saved baselines."""
+    release_policy_profile, release_policy_values, release_policy_applied = (
+        apply_release_policy_profile_defaults(
+            release_policy_profile,
+            {
+                "require_structured_fact_robustness": require_structured_fact_robustness,
+                "min_best_quality_auroc": min_best_quality_auroc,
+                "max_uncached_forward_seconds": max_uncached_forward_seconds,
+                "min_selected": min_selected,
+                "min_decision_accuracy": min_decision_accuracy,
+                "max_false_supported_rate": max_false_supported_rate,
+                "min_false_refuted_rate": min_false_refuted_rate,
+                "required_route_min_selected": required_route_min_selected,
+                "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
+                "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
+                "required_route_min_false_refuted_rate": required_route_min_false_refuted_rate,
+            },
+        )
+    )
+    require_structured_fact_robustness = bool(
+        release_policy_values["require_structured_fact_robustness"]
+    )
+    min_best_quality_auroc = release_policy_values["min_best_quality_auroc"]
+    max_uncached_forward_seconds = release_policy_values["max_uncached_forward_seconds"]
+    min_selected = release_policy_values["min_selected"]
+    min_decision_accuracy = release_policy_values["min_decision_accuracy"]
+    max_false_supported_rate = release_policy_values["max_false_supported_rate"]
+    min_false_refuted_rate = release_policy_values["min_false_refuted_rate"]
+    required_route_min_selected = release_policy_values["required_route_min_selected"]
+    required_route_min_decision_accuracy = release_policy_values["required_route_min_decision_accuracy"]
+    required_route_max_false_supported_rate = release_policy_values["required_route_max_false_supported_rate"]
+    required_route_min_false_refuted_rate = release_policy_values["required_route_min_false_refuted_rate"]
+    structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
+    structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
+    if require_structured_fact_robustness and (
+        structured_fact_canonical_route_key is None
+        or structured_fact_paraphrase_route_key is None
+    ):
+        raise ValueError(
+            "structured_fact robustness requires both "
+            "structured_fact_canonical_route_key and structured_fact_paraphrase_route_key."
+        )
+    if not require_structured_fact_robustness and (
+        structured_fact_canonical_route_key is not None
+        or structured_fact_paraphrase_route_key is not None
+    ):
+        raise ValueError("structured_fact route keys require require_structured_fact_robustness=True.")
+    required_route_baseline_keys = tuple(str(key) for key in required_route_baseline_keys)
+    if require_structured_fact_robustness:
+        required_route_baseline_keys = append_unique(
+            required_route_baseline_keys,
+            (structured_fact_canonical_route_key, structured_fact_paraphrase_route_key),
+        )
     if performance_baseline_key is None and (
         require_performance_score_dump_cache
         or min_performance_score_dump_cache_jsonl_view_hit_rate is not None
@@ -458,9 +520,14 @@ def compare_release_candidates(
             "readiness_registry": str(readiness_registry_path),
             "route_registry": str(route_registry_path),
             "performance_registry": str(performance_registry_path),
+            "release_policy_profile": release_policy_profile,
+            "release_policy_profile_applied_defaults": release_policy_applied,
             "readiness_baseline_keys": list(readiness_baseline_keys),
             "route_baseline_keys": list(route_baseline_keys),
             "required_route_baseline_keys": list(required_route_baseline_keys),
+            "require_structured_fact_robustness": require_structured_fact_robustness,
+            "structured_fact_canonical_route_key": structured_fact_canonical_route_key,
+            "structured_fact_paraphrase_route_key": structured_fact_paraphrase_route_key,
             "performance_baseline_key": performance_baseline_key,
             "selector_replay_report": (
                 None if selector_replay_report_path is None else str(selector_replay_report_path)
@@ -3097,6 +3164,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
+        release_policy_profile=args.release_policy_profile,
+        require_structured_fact_robustness=bool(args.require_structured_fact_robustness),
+        structured_fact_canonical_route_key=args.structured_fact_canonical_route_key,
+        structured_fact_paraphrase_route_key=args.structured_fact_paraphrase_route_key,
         performance_registry_path=args.performance_registry,
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=args.selector_replay_report,
@@ -3228,6 +3299,17 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--required-route-baseline-key", action="append", default=[],
                         help="additional promoted route benchmark_manifest key that must verify without "
                              "becoming the selected product route; repeatable")
+    parser.add_argument("--release-policy-profile", default=None,
+                        choices=RELEASE_POLICY_PROFILE_NAMES,
+                        help="optional named release gate defaults; explicit CLI thresholds override profile values")
+    parser.add_argument("--require-structured-fact-robustness", action="store_true",
+                        help="require both canonical and paraphrase structured_fact covered-facts route "
+                             "baselines as additional release evidence")
+    parser.add_argument("--structured-fact-canonical-route-key", default=None,
+                        help="benchmark_manifest:<name>:<version> key for the canonical structured_fact route")
+    parser.add_argument("--structured-fact-paraphrase-route-key", default=None,
+                        help="benchmark_manifest:<name>:<version> key for the paraphrase robustness "
+                             "structured_fact route")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--performance-drift-baseline-key", default=None,

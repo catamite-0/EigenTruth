@@ -11112,20 +11112,9 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
-        required_route_baseline_keys=(
-            "benchmark_manifest:structured-fact-canonical-route:0.1",
-            "benchmark_manifest:structured-fact-paraphrase-route:0.1",
-        ),
-        min_best_quality_auroc=0.70,
-        max_uncached_forward_seconds=20.0,
-        min_selected=700,
-        min_decision_accuracy=0.99,
-        max_false_supported_rate=0.0,
-        min_false_refuted_rate=0.99,
-        required_route_min_selected=700,
-        required_route_min_decision_accuracy=0.99,
-        required_route_max_false_supported_rate=0.0,
-        required_route_min_false_refuted_rate=0.99,
+        release_policy_profile="strict-structured-fact",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
     )
     required_gate = payload["required_route_baseline_gate"]
     required_rows = {
@@ -11134,6 +11123,16 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     }
 
     assert payload["decision"]["status"] == "promote"
+    assert payload["config"]["release_policy_profile"] == "strict_structured_fact"
+    assert payload["config"]["require_structured_fact_robustness"] is True
+    assert payload["config"]["release_policy_profile_applied_defaults"]["min_decision_accuracy"] == (
+        pytest.approx(0.99)
+    )
+    assert payload["config"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 700
+    assert payload["config"]["required_route_baseline_keys"] == [
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    ]
     assert payload["release_candidate"] is not None
     assert payload["release_candidate"]["verifier_route"]["route"] == "structured_fact"
     assert required_gate["gate"]["passed"] is True
@@ -11148,6 +11147,14 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "structured_fact",
         "structured_fact",
     )
+
+    with pytest.raises(ValueError, match="structured_fact robustness requires both"):
+        module.compare_release_candidates(
+            readiness_registry_path=registry_path,
+            route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+            release_policy_profile="strict_structured_fact",
+            structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        )
 
 
 def test_compare_release_candidates_blocks_mismatched_performance_baseline(tmp_path):

@@ -1805,8 +1805,15 @@ release only checks the route's already-registered promotion status and manifest
 validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
 retrieval or world-model adapters. For `structured_fact`, use two required route
-keys to require both the canonical covered-facts route and the paraphrase
-robustness replay before a release can promote.
+keys, or `--release-policy-profile strict_structured_fact` with
+`--structured-fact-canonical-route-key` and
+`--structured-fact-paraphrase-route-key`, to require both the canonical
+covered-facts route and the paraphrase robustness replay before a release can
+promote. Available release policy profiles are `research_smoke`,
+`candidate_release`, and `strict_structured_fact`; profile defaults only fill
+unset values, so explicit thresholds still win. Direct
+`compare_release_candidates.py` reports record `release_policy_profile` and
+`release_policy_profile_applied_defaults` in `config`.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -1931,11 +1938,9 @@ canonical and paraphrase `structured_fact` covered-facts evidence. The workflow
 adds those two records to the required-route gate and records
 `structured_fact_robustness_*` fields in the comparison report, final manifest,
 and release registry metadata.
-Use `--release-policy-profile` to apply a named set of release-gate defaults
-without losing explicit CLI control. Available profiles are `research_smoke`,
-`candidate_release`, and `strict_structured_fact`; profile defaults only fill
-unset values, so explicit thresholds still win. `strict_structured_fact` enables
-the structured-fact robustness requirement, requires both configured
+Use `--release-policy-profile` with the registry workflow to reuse the same
+named defaults while registering the promoted manifest. `strict_structured_fact`
+enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
 and adds stricter route/required-route quality thresholds for covered-fact
 release evidence. The workflow records `release_policy_profile` and

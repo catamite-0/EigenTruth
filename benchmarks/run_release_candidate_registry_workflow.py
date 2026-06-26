@@ -23,6 +23,12 @@ from benchmarks.compare_release_candidates import (  # noqa: E402
 from benchmarks.config_utils import strict_positive_int  # noqa: E402
 from benchmarks.promote_artifact_manifest import promote_artifact_manifest  # noqa: E402
 from benchmarks.recommend_runtime_config import INSIDE_TRIGGER_BUDGET_POLICIES  # noqa: E402
+from benchmarks.release_policy_profiles import (  # noqa: E402
+    RELEASE_POLICY_PROFILE_NAMES,
+    append_unique,
+    apply_release_policy_profile_defaults,
+    clean_optional_key,
+)
 from eigentruth.control import RUNTIME_PROFILE_NAMES, get_runtime_profile  # noqa: E402
 from eigentruth.registry import (  # noqa: E402
     ArtifactVerificationContext,
@@ -32,86 +38,29 @@ from eigentruth.registry import (  # noqa: E402
     save_json_cache,
 )
 
-_CANDIDATE_RELEASE_POLICY_DEFAULTS: Mapping[str, Any] = {
-    "min_best_quality_auroc": 0.70,
-    "max_uncached_forward_seconds": 20.0,
-    "min_selected": 4,
-    "min_decision_accuracy": 0.95,
-    "max_false_supported_rate": 0.05,
-    "min_false_refuted_rate": 0.50,
-}
 
-RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
-    "research_smoke": {
-        "min_best_quality_auroc": 0.50,
-        "min_selected": 1,
-    },
-    "candidate_release": _CANDIDATE_RELEASE_POLICY_DEFAULTS,
-    "strict_structured_fact": {
-        **_CANDIDATE_RELEASE_POLICY_DEFAULTS,
-        "require_structured_fact_robustness": True,
-        "min_decision_accuracy": 0.99,
-        "max_false_supported_rate": 0.0,
-        "min_false_refuted_rate": 0.99,
-        "required_route_min_selected": 700,
-        "required_route_min_decision_accuracy": 0.99,
-        "required_route_max_false_supported_rate": 0.0,
-        "required_route_min_false_refuted_rate": 0.99,
-    },
-}
-RELEASE_POLICY_PROFILE_NAMES = tuple(sorted(RELEASE_POLICY_PROFILES))
-
-
-def _clean_optional_key(value: str | None) -> str | None:
-    if value is None:
-        return None
-    cleaned = str(value).strip()
-    return cleaned or None
-
-
-def _append_unique(existing: Sequence[str], additions: Sequence[str | None]) -> tuple[str, ...]:
-    values = list(existing)
-    seen = set(values)
-    for raw in additions:
-        value = _clean_optional_key(raw)
-        if value is None or value in seen:
-            continue
-        values.append(value)
-        seen.add(value)
-    return tuple(values)
-
-
-def _normalize_release_policy_profile(value: str | None) -> str | None:
-    if value is None:
-        return None
-    profile = str(value).strip().lower().replace("-", "_")
-    if profile not in RELEASE_POLICY_PROFILES:
-        choices = ", ".join(RELEASE_POLICY_PROFILE_NAMES)
-        raise ValueError(f"release_policy_profile must be one of: {choices}")
-    return profile
-
-
-def _profile_default_is_unset(current: Any, default: Any) -> bool:
-    if isinstance(default, bool):
-        return current is False and default is True
-    if isinstance(default, (tuple, list)):
-        return not tuple(current or ())
-    return current is None
-
-
-def _apply_release_policy_profile_defaults(
+def _apply_release_policy_profile_to_config(
     config: "ReleaseCandidateRegistryWorkflowConfig",
 ) -> None:
-    profile = _normalize_release_policy_profile(config.release_policy_profile)
+    profile, values, applied = apply_release_policy_profile_defaults(
+        config.release_policy_profile,
+        {
+            "require_structured_fact_robustness": config.require_structured_fact_robustness,
+            "min_best_quality_auroc": config.min_best_quality_auroc,
+            "max_uncached_forward_seconds": config.max_uncached_forward_seconds,
+            "min_selected": config.min_selected,
+            "min_decision_accuracy": config.min_decision_accuracy,
+            "max_false_supported_rate": config.max_false_supported_rate,
+            "min_false_refuted_rate": config.min_false_refuted_rate,
+            "required_route_min_selected": config.required_route_min_selected,
+            "required_route_min_decision_accuracy": config.required_route_min_decision_accuracy,
+            "required_route_max_false_supported_rate": config.required_route_max_false_supported_rate,
+            "required_route_min_false_refuted_rate": config.required_route_min_false_refuted_rate,
+        },
+    )
     object.__setattr__(config, "release_policy_profile", profile)
-    applied: dict[str, Any] = {}
-    if profile is not None:
-        for key, default in RELEASE_POLICY_PROFILES[profile].items():
-            current = getattr(config, key)
-            if not _profile_default_is_unset(current, default):
-                continue
-            object.__setattr__(config, key, default)
-            applied[key] = default
+    for key, value in values.items():
+        object.__setattr__(config, key, value)
     object.__setattr__(config, "release_policy_profile_applied_defaults", applied)
 
 
@@ -226,7 +175,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     )
 
     def __post_init__(self) -> None:
-        _apply_release_policy_profile_defaults(self)
+        _apply_release_policy_profile_to_config(self)
         object.__setattr__(self, "readiness_registry_path", Path(self.readiness_registry_path))
         object.__setattr__(self, "release_registry_path", Path(self.release_registry_path))
         if self.route_registry_path is not None:
@@ -329,24 +278,36 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 choices = ", ".join(INSIDE_TRIGGER_BUDGET_POLICIES)
                 raise ValueError(f"inside_trigger_budget_policy must be one of: {choices}")
             object.__setattr__(self, "inside_trigger_budget_policy", policy)
-        object.__setattr__(self, "readiness_baseline_keys", tuple(str(key) for key in self.readiness_baseline_keys))
-        object.__setattr__(self, "route_baseline_keys", tuple(str(key) for key in self.route_baseline_keys))
-        canonical_key = _clean_optional_key(self.structured_fact_canonical_route_key)
-        paraphrase_key = _clean_optional_key(self.structured_fact_paraphrase_route_key)
+        object.__setattr__(
+            self,
+            "readiness_baseline_keys",
+            tuple(str(key) for key in self.readiness_baseline_keys),
+        )
+        object.__setattr__(
+            self,
+            "route_baseline_keys",
+            tuple(str(key) for key in self.route_baseline_keys),
+        )
+        canonical_key = clean_optional_key(self.structured_fact_canonical_route_key)
+        paraphrase_key = clean_optional_key(self.structured_fact_paraphrase_route_key)
         object.__setattr__(self, "structured_fact_canonical_route_key", canonical_key)
         object.__setattr__(self, "structured_fact_paraphrase_route_key", paraphrase_key)
-        if self.require_structured_fact_robustness and (canonical_key is None or paraphrase_key is None):
+        if self.require_structured_fact_robustness and (
+            canonical_key is None or paraphrase_key is None
+        ):
             raise ValueError(
                 "structured_fact robustness requires both "
                 "structured_fact_canonical_route_key and structured_fact_paraphrase_route_key."
             )
-        if not self.require_structured_fact_robustness and (canonical_key is not None or paraphrase_key is not None):
+        if not self.require_structured_fact_robustness and (
+            canonical_key is not None or paraphrase_key is not None
+        ):
             raise ValueError(
                 "structured_fact route keys require require_structured_fact_robustness=True."
             )
         required_route_keys = tuple(str(key) for key in self.required_route_baseline_keys)
         if self.require_structured_fact_robustness:
-            required_route_keys = _append_unique(required_route_keys, (canonical_key, paraphrase_key))
+            required_route_keys = append_unique(required_route_keys, (canonical_key, paraphrase_key))
         object.__setattr__(
             self,
             "required_route_baseline_keys",
@@ -401,6 +362,10 @@ def run_release_candidate_registry_workflow(
         readiness_baseline_keys=config.readiness_baseline_keys,
         route_baseline_keys=config.route_baseline_keys,
         required_route_baseline_keys=config.required_route_baseline_keys,
+        release_policy_profile=config.release_policy_profile,
+        require_structured_fact_robustness=config.require_structured_fact_robustness,
+        structured_fact_canonical_route_key=config.structured_fact_canonical_route_key,
+        structured_fact_paraphrase_route_key=config.structured_fact_paraphrase_route_key,
         performance_registry_path=config.performance_registry_path,
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
