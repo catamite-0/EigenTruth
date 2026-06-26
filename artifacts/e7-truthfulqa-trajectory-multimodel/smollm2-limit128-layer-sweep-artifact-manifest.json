@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "source_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+      "sha256": "45bc28339613cdb7b063949142109ee04fbc163eb4ddc8559c92ad707eed3bc3",
+      "size_bytes": 3657
+    },
+    "trajectory_truthfulqa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-qwen-l80-limit128-layer-sweep-report.json",
+      "sha256": "4bb2deff7e36e7765b2f3c7269d8c2636c6474d007e97f8895325f07507cd322",
+      "size_bytes": 378715
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+    "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

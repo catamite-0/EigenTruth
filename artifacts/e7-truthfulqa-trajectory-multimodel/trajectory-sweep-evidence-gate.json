@@ -1,0 +1,387 @@
+{
+  "artifact_manifest_summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  },
+  "config": {
+    "max_skip_rate": 0.2,
+    "min_best_auroc": 0.6,
+    "min_class_count": 20,
+    "min_model_count": 2,
+    "min_n_evaluated": 100,
+    "min_reports": 2
+  },
+  "decision": {
+    "blocking_reasons": [
+      "smollm2.trajectory_score_best_auroc 0.560307 below required minimum 0.6"
+    ],
+    "status": "blocked",
+    "trajectory_track_status": "blocked"
+  },
+  "evidence_summary": {
+    "mean_best_auroc": 0.5840186403508771,
+    "min_best_auroc": 0.5603070175438597,
+    "model_count": 2,
+    "models": [
+      "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "gpt2"
+    ],
+    "promoted_report_count": 1,
+    "recommended_run": {
+      "best_layer": -12,
+      "model": "gpt2",
+      "name": "gpt2",
+      "path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-qwen-l80-limit128-layer-sweep-report.json",
+      "trajectory_score_best_auroc": 0.6077302631578947
+    },
+    "report_count": 2
+  },
+  "manifest_verification": {
+    "checked": 3,
+    "failure_count": 0,
+    "passed": true,
+    "path": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest-verification.json",
+    "recursive": true
+  },
+  "notes": [
+    "gpt2 reaches the default trajectory AUROC gate at limit128, but SmolLM2 does not; keep trajectory status preliminary."
+  ],
+  "paths": {
+    "artifact_manifest": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest.json",
+    "manifest_verification": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest-verification.json",
+    "trajectory_sweep_evidence_report": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate.json"
+  },
+  "run_decisions": [
+    {
+      "blocking_reasons": [],
+      "checks": [
+        {
+          "name": "gpt2.workflow",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "truthfulqa_forced_answer_trajectory",
+            "truthfulqa_forced_answer_trajectory_layer_sweep"
+          ],
+          "value": "truthfulqa_forced_answer_trajectory_layer_sweep"
+        },
+        {
+          "name": "gpt2.status",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "None",
+            "complete"
+          ],
+          "value": "complete"
+        },
+        {
+          "name": "gpt2.n_evaluated",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 100,
+          "value": 121.0
+        },
+        {
+          "name": "gpt2.n_true",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 57.0
+        },
+        {
+          "name": "gpt2.n_false",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 64.0
+        },
+        {
+          "name": "gpt2.skip_rate",
+          "operator": "<=",
+          "passed": true,
+          "reason": null,
+          "threshold": 0.2,
+          "value": 0.0546875
+        },
+        {
+          "name": "gpt2.trajectory_score_best_auroc",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 0.6,
+          "value": 0.6077302631578947
+        }
+      ],
+      "metrics": {
+        "best_layer": -12,
+        "best_resolved_layer": 1,
+        "layer_count": 3,
+        "layer_summaries": [
+          {
+            "layer": -1,
+            "layer_key": "-1",
+            "mean_false_convergence_score": 1.2532789258996415,
+            "mean_false_nll_answer": 2.8952534180134535,
+            "mean_true_convergence_score": 1.4262128588756804,
+            "mean_true_nll_answer": 3.13128389810261,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.4270833333333333,
+            "resolved_layer": 12,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": -0.15452909811030416,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.5893640350877193,
+            "trajectory_score_direction_for_false": "lower",
+            "trajectory_score_higher_is_false_auroc": 0.4106359649122807,
+            "trajectory_score_lower_is_false_auroc": 0.5893640350877193
+          },
+          {
+            "layer": -6,
+            "layer_key": "-6",
+            "mean_false_convergence_score": 0.9199490128985364,
+            "mean_false_nll_answer": 2.8952534180134535,
+            "mean_true_convergence_score": 0.8307581724289187,
+            "mean_true_nll_answer": 3.13128389810261,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.4270833333333333,
+            "resolved_layer": 7,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": 0.1606913014091813,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.5929276315789473,
+            "trajectory_score_direction_for_false": "higher",
+            "trajectory_score_higher_is_false_auroc": 0.5929276315789473,
+            "trajectory_score_lower_is_false_auroc": 0.40707236842105265
+          },
+          {
+            "layer": -12,
+            "layer_key": "-12",
+            "mean_false_convergence_score": 0.8318069514928655,
+            "mean_false_nll_answer": 2.8952534180134535,
+            "mean_true_convergence_score": 0.7443978878457953,
+            "mean_true_nll_answer": 3.13128389810261,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.4270833333333333,
+            "resolved_layer": 1,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": 0.18628814588144027,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.6077302631578947,
+            "trajectory_score_direction_for_false": "higher",
+            "trajectory_score_higher_is_false_auroc": 0.6077302631578947,
+            "trajectory_score_lower_is_false_auroc": 0.39226973684210525
+          }
+        ],
+        "model": "gpt2",
+        "n_evaluated": 121,
+        "n_false": 64,
+        "n_skipped": 7,
+        "n_total": 128,
+        "n_true": 57,
+        "nll_answer_higher_is_false_auroc": 0.4270833333333333,
+        "skip_rate": 0.0546875,
+        "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+        "spearman_convergence_false_label": 0.18628814588144027,
+        "trajectory_score_best_auroc": 0.6077302631578947,
+        "trajectory_score_direction_for_false": "higher",
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep"
+      },
+      "name": "gpt2",
+      "path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-qwen-l80-limit128-layer-sweep-report.json",
+      "status": "promote"
+    },
+    {
+      "blocking_reasons": [
+        "smollm2.trajectory_score_best_auroc 0.560307 below required minimum 0.6"
+      ],
+      "checks": [
+        {
+          "name": "smollm2.workflow",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "truthfulqa_forced_answer_trajectory",
+            "truthfulqa_forced_answer_trajectory_layer_sweep"
+          ],
+          "value": "truthfulqa_forced_answer_trajectory_layer_sweep"
+        },
+        {
+          "name": "smollm2.status",
+          "operator": "in",
+          "passed": true,
+          "reason": null,
+          "threshold": [
+            "None",
+            "complete"
+          ],
+          "value": "complete"
+        },
+        {
+          "name": "smollm2.n_evaluated",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 100,
+          "value": 121.0
+        },
+        {
+          "name": "smollm2.n_true",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 57.0
+        },
+        {
+          "name": "smollm2.n_false",
+          "operator": ">=",
+          "passed": true,
+          "reason": null,
+          "threshold": 20,
+          "value": 64.0
+        },
+        {
+          "name": "smollm2.skip_rate",
+          "operator": "<=",
+          "passed": true,
+          "reason": null,
+          "threshold": 0.2,
+          "value": 0.0546875
+        },
+        {
+          "name": "smollm2.trajectory_score_best_auroc",
+          "operator": ">=",
+          "passed": false,
+          "reason": "smollm2.trajectory_score_best_auroc 0.560307 below required minimum 0.6",
+          "threshold": 0.6,
+          "value": 0.5603070175438597
+        }
+      ],
+      "metrics": {
+        "best_layer": -1,
+        "best_resolved_layer": 30,
+        "layer_count": 3,
+        "layer_summaries": [
+          {
+            "layer": -1,
+            "layer_key": "-1",
+            "mean_false_convergence_score": 1.06642643430025,
+            "mean_false_nll_answer": 2.8707549292594194,
+            "mean_true_convergence_score": 1.1276881681722615,
+            "mean_true_nll_answer": 3.2249824833451655,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.41228070175438597,
+            "resolved_layer": 30,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": -0.10428344044253654,
+            "status": "pass",
+            "trajectory_score_best_auroc": 0.5603070175438597,
+            "trajectory_score_direction_for_false": "lower",
+            "trajectory_score_higher_is_false_auroc": 0.43969298245614036,
+            "trajectory_score_lower_is_false_auroc": 0.5603070175438597
+          },
+          {
+            "layer": -6,
+            "layer_key": "-6",
+            "mean_false_convergence_score": 0.9563020776819013,
+            "mean_false_nll_answer": 2.8707549292594194,
+            "mean_true_convergence_score": 0.8937861903004786,
+            "mean_true_nll_answer": 3.2249824833451655,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.41228070175438597,
+            "resolved_layer": 25,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": 0.08058265852377824,
+            "status": "fail",
+            "trajectory_score_best_auroc": 0.5466008771929824,
+            "trajectory_score_direction_for_false": "higher",
+            "trajectory_score_higher_is_false_auroc": 0.5466008771929824,
+            "trajectory_score_lower_is_false_auroc": 0.45339912280701755
+          },
+          {
+            "layer": -12,
+            "layer_key": "-12",
+            "mean_false_convergence_score": 0.8406796532564725,
+            "mean_false_nll_answer": 2.8707549292594194,
+            "mean_true_convergence_score": 0.8643222897880084,
+            "mean_true_nll_answer": 3.2249824833451655,
+            "n_evaluated": 121,
+            "n_false": 64,
+            "n_skipped": 7,
+            "n_total": 128,
+            "n_true": 57,
+            "nll_answer_higher_is_false_auroc": 0.41228070175438597,
+            "resolved_layer": 19,
+            "skip_reasons": {
+              "answer token count below min_answer_tokens": 7
+            },
+            "spearman_convergence_false_label": -0.03412912596301196,
+            "status": "fail",
+            "trajectory_score_best_auroc": 0.5197368421052632,
+            "trajectory_score_direction_for_false": "lower",
+            "trajectory_score_higher_is_false_auroc": 0.48026315789473684,
+            "trajectory_score_lower_is_false_auroc": 0.5197368421052632
+          }
+        ],
+        "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "n_evaluated": 121,
+        "n_false": 64,
+        "n_skipped": 7,
+        "n_total": 128,
+        "n_true": 57,
+        "nll_answer_higher_is_false_auroc": 0.41228070175438597,
+        "skip_rate": 0.0546875,
+        "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+        "spearman_convergence_false_label": -0.10428344044253654,
+        "trajectory_score_best_auroc": 0.5603070175438597,
+        "trajectory_score_direction_for_false": "lower",
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep"
+      },
+      "name": "smollm2",
+      "path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-qwen-l80-limit128-layer-sweep-report.json",
+      "status": "blocked"
+    }
+  ],
+  "schema_version": 1,
+  "status": "complete",
+  "workflow": "trajectory_sweep_evidence_comparison"
+}

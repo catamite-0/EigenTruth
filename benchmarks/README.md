@@ -4510,15 +4510,17 @@ python benchmarks/eval_trajectory_truthfulqa.py \
 Compares one or more `eval_trajectory_truthfulqa.py --layers` reports and
 applies a fail-closed trajectory evidence gate. Defaults require at least two
 reports, two model families, 100 evaluated examples per report, and AUROC >=
-0.60. A single gpt2 limit-64 mechanism check should therefore remain blocked
-until it is replicated on larger samples and another model family.
+0.60. The current gpt2/SmolLM2 limit-128 comparison remains blocked because
+SmolLM2 reaches only AUROC 0.560, so trajectory convergence is still
+preliminary cross-model evidence rather than a release signal.
 
 ```bash
 python benchmarks/compare_trajectory_sweeps.py \
-  --report gpt2=artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-sweep-report.json \
-  --json artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate.json \
-  --artifact-manifest artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest.json \
-  --verification-report artifacts/e7-truthfulqa-gpt2-trajectory/trajectory-sweep-evidence-gate-manifest-verification.json \
+  --report gpt2=artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-qwen-l80-limit128-layer-sweep-report.json \
+  --report smollm2=artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-qwen-l80-limit128-layer-sweep-report.json \
+  --json artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate.json \
+  --artifact-manifest artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest.json \
+  --verification-report artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest-verification.json \
   --quiet
 ```
 

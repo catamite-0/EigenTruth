@@ -1,0 +1,7 @@
+{
+  "checked": 3,
+  "failures": [],
+  "manifest_path": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-sweep-evidence-gate-manifest.json",
+  "nested": [],
+  "passed": true
+}

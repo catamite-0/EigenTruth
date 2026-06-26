@@ -1,0 +1,41 @@
+{
+  "artifacts": {
+    "trajectory_sweep_evidence_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "trajectory-sweep-evidence-gate.json",
+      "sha256": "f22215f3b6c915309c051e6375c916866de47c126f3a765ea83620206bb432a2",
+      "size_bytes": 13578
+    },
+    "trajectory_sweep_report_0_gpt2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-qwen-l80-limit128-layer-sweep-report.json",
+      "sha256": "13d7cb641c053cee811c0ce018e9f4e17f0ff98ce9858aaeb350acd1650f430f",
+      "size_bytes": 377721
+    },
+    "trajectory_sweep_report_1_smollm2": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "smollm2-qwen-l80-limit128-layer-sweep-report.json",
+      "sha256": "4bb2deff7e36e7765b2f3c7269d8c2636c6474d007e97f8895325f07507cd322",
+      "size_bytes": 378715
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "runner": "compare_trajectory_sweeps",
+    "status": "blocked",
+    "trajectory_track_status": "blocked"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}
