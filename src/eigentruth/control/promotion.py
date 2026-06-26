@@ -157,6 +157,7 @@ class ProductPromotionContract:
         performance_evidence_recommendation = _mapping(
             performance_evidence_bundle.get("recommendation")
         )
+        performance_evidence = _mapping(performance_evidence_bundle.get("evidence"))
         performance_evidence_cost = _mapping(performance_evidence_bundle.get("cost"))
         performance_score_dump_cache = _mapping(performance_evidence_bundle.get("score_dump_cache"))
         performance_score_dump_cache_totals = _mapping(performance_score_dump_cache.get("totals"))
@@ -358,6 +359,61 @@ class ProductPromotionContract:
                 ),
                 "performance_cache_tuning_status": (
                     performance_evidence_recommendation.get("cache_tuning_status")
+                ),
+                "performance_best_quality_signal": (
+                    performance_evidence_recommendation.get("best_quality_signal")
+                ),
+                "performance_best_quality_auroc": (
+                    performance_evidence_recommendation.get("best_quality_auroc")
+                ),
+                "performance_score_fusion_status": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_status"),
+                    performance_evidence.get("score_fusion_status"),
+                ),
+                "performance_score_fusion_signal": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_signal"),
+                    performance_evidence.get("score_fusion_signal"),
+                ),
+                "performance_score_fusion_auroc": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_auroc"),
+                    performance_evidence.get("score_fusion_auroc"),
+                ),
+                "performance_score_fusion_conformal_gate_passed": _first_present(
+                    performance_evidence_recommendation.get("score_fusion_conformal_gate_passed"),
+                    performance_evidence.get("score_fusion_conformal_gate_passed"),
+                ),
+                "performance_selected_fusion_status": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_status"),
+                    performance_evidence.get("selected_fusion_status"),
+                ),
+                "performance_selected_fusion_run": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_run"),
+                    performance_evidence.get("selected_fusion_run"),
+                ),
+                "performance_selected_fusion_candidate": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_candidate"),
+                    performance_evidence.get("selected_fusion_candidate"),
+                ),
+                "performance_selected_fusion_signal": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_signal"),
+                    performance_evidence.get("selected_fusion_signal"),
+                ),
+                "performance_selected_fusion_auroc": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_auroc"),
+                    performance_evidence.get("selected_fusion_auroc"),
+                ),
+                "performance_selected_fusion_false_alarm": (
+                    performance_evidence.get("selected_fusion_false_alarm")
+                ),
+                "performance_selected_fusion_detection": (
+                    performance_evidence.get("selected_fusion_detection")
+                ),
+                "performance_selected_fusion_artifact_report": (
+                    performance_evidence.get("selected_fusion_artifact_report")
+                ),
+                "performance_selected_fusion_artifact_path": _first_present(
+                    performance_evidence_recommendation.get("selected_fusion_artifact_path"),
+                    performance_evidence.get("selected_fusion_artifact_path"),
                 ),
                 "performance_uncached_total_seconds": (
                     performance_evidence_cost.get("uncached_total_seconds")

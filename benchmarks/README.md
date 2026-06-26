@@ -2101,6 +2101,10 @@ promotion contract inherits the recommended runtime profile and efficiency score
 from the candidate. For older release-candidate reports, pass the
 release-efficiency report explicitly so the promotion contract, manifest, and
 registry record also carry the same handoff evidence:
+Performance-bundle provenance is preserved as well: exported contracts retain
+best quality signal, score-fusion status, and selected-fusion
+status/run/candidate/signal/AUROC/false-alarm/detection/artifact metadata when
+those fields were present in the release candidate.
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \
@@ -3808,6 +3812,10 @@ It reuses the same readiness and `structured_qa` route baselines as the
 score-fusion candidate, but gates against the selected-fusion performance
 baseline and records the selected-fusion run/signal/AUROC/artifact path in the
 release registry.
+The deployable contract for this local handoff is
+`product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`
+at
+`artifacts/smollm2_l8_selected_fusion_product_promotion_contract_v0_3/product-promotion-contract.json`.
 
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
@@ -4348,6 +4356,10 @@ and recursive verification
 `artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_staged_release_candidate_manifest_verification.json`.
 It promotes with the same readiness and `structured_qa` route evidence, but its
 performance gate is the selected-fusion baseline record.
+The matching compact product handoff is
+`product_promotion_contract:smollm2-l8-selected-fusion-product-promotion-contract:0.3`
+with artifact manifest
+`artifacts/smollm2_l8_selected_fusion_product_promotion_contract_v0_3/artifact-manifest.json`.
 The corresponding staged structured-QA release candidate is registered as
 `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
 with

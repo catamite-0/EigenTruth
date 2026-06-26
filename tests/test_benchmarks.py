@@ -14274,6 +14274,41 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     },
                 },
                 "verifier_route": {"route": "structured_qa"},
+                "performance_baseline_record": (
+                    "performance_baseline:smollm2-l8-selected-fusion:0.3"
+                ),
+                "performance_evidence_bundle": {
+                    "status": "promote",
+                    "release_ready": True,
+                    "recommendation": {
+                        "best_quality_signal": "truth_proj",
+                        "best_quality_auroc": 0.83,
+                        "score_fusion_status": "promote",
+                        "score_fusion_signal": "score_fusion_mean_rank",
+                        "score_fusion_auroc": 0.68,
+                        "score_fusion_conformal_gate_passed": True,
+                        "selected_fusion_status": "promote",
+                        "selected_fusion_run": "smollm2",
+                        "selected_fusion_candidate": "geometry:mean_rank",
+                        "selected_fusion_signal": "selected_fusion_mean_rank",
+                        "selected_fusion_auroc": 0.69,
+                        "selected_fusion_artifact_path": (
+                            "artifacts/selected/smollm2-selected-fusion-artifact.json"
+                        ),
+                    },
+                    "evidence": {
+                        "selected_fusion_artifact_report": (
+                            "artifacts/selected/selected-fusion-artifact-build-report.json"
+                        ),
+                        "selected_fusion_false_alarm": 0.03,
+                        "selected_fusion_detection": 0.22,
+                    },
+                    "cost": {"uncached_total_seconds": 52.0},
+                    "score_dump_cache": {
+                        "source_count": 0,
+                        "totals": {"jsonl_view": {"hit_rate": None}},
+                    },
+                },
                 "selector_replay": {
                     "recommended": {"candidate": "default", "status": "promote"},
                 },
@@ -14473,6 +14508,28 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
     assert contract["metadata"]["readiness_covariance_selected_mode"] == "low_rank"
     assert contract["metadata"]["performance_covariance_maha_last_delta_vs_baseline"] == -0.02
+    assert contract["metadata"]["performance_baseline_record"] == (
+        "performance_baseline:smollm2-l8-selected-fusion:0.3"
+    )
+    assert contract["metadata"]["performance_best_quality_signal"] == "truth_proj"
+    assert contract["metadata"]["performance_best_quality_auroc"] == pytest.approx(0.83)
+    assert contract["metadata"]["performance_score_fusion_status"] == "promote"
+    assert contract["metadata"]["performance_score_fusion_signal"] == "score_fusion_mean_rank"
+    assert contract["metadata"]["performance_score_fusion_auroc"] == pytest.approx(0.68)
+    assert contract["metadata"]["performance_score_fusion_conformal_gate_passed"] is True
+    assert contract["metadata"]["performance_selected_fusion_status"] == "promote"
+    assert contract["metadata"]["performance_selected_fusion_run"] == "smollm2"
+    assert contract["metadata"]["performance_selected_fusion_candidate"] == "geometry:mean_rank"
+    assert contract["metadata"]["performance_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert contract["metadata"]["performance_selected_fusion_auroc"] == pytest.approx(0.69)
+    assert contract["metadata"]["performance_selected_fusion_false_alarm"] == pytest.approx(0.03)
+    assert contract["metadata"]["performance_selected_fusion_detection"] == pytest.approx(0.22)
+    assert contract["metadata"]["performance_selected_fusion_artifact_report"].endswith(
+        "selected-fusion-artifact-build-report.json"
+    )
+    assert contract["metadata"]["performance_selected_fusion_artifact_path"].endswith(
+        "smollm2-selected-fusion-artifact.json"
+    )
     assert manifest["summary"]["artifact_count"] == 3
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
     assert record.artifact_type == "product_promotion_contract"
@@ -14522,6 +14579,17 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["readiness_covariance_tradeoff_gate_passed"] is True
     assert record.metadata["performance_covariance_tradeoff_gate_passed"] is True
     assert record.metadata["performance_covariance_maha_last_delta_vs_baseline"] == pytest.approx(-0.02)
+    assert record.metadata["performance_best_quality_signal"] == "truth_proj"
+    assert record.metadata["performance_score_fusion_signal"] == "score_fusion_mean_rank"
+    assert record.metadata["performance_selected_fusion_status"] == "promote"
+    assert record.metadata["performance_selected_fusion_run"] == "smollm2"
+    assert record.metadata["performance_selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert record.metadata["performance_selected_fusion_auroc"] == pytest.approx(0.69)
+    assert record.metadata["performance_selected_fusion_false_alarm"] == pytest.approx(0.03)
+    assert record.metadata["performance_selected_fusion_detection"] == pytest.approx(0.22)
+    assert record.metadata["performance_selected_fusion_artifact_path"].endswith(
+        "smollm2-selected-fusion-artifact.json"
+    )
     assert record.metadata["release"] == "smollm2-v1.5"
     assert "\n  " not in contract_path.read_text(encoding="utf-8")
 

@@ -129,6 +129,51 @@ def export_product_promotion_contract(
                 "performance_covariance_maha_last_delta_vs_baseline": contract.metadata.get(
                     "performance_covariance_maha_last_delta_vs_baseline"
                 ),
+                "performance_best_quality_signal": contract.metadata.get(
+                    "performance_best_quality_signal"
+                ),
+                "performance_best_quality_auroc": contract.metadata.get(
+                    "performance_best_quality_auroc"
+                ),
+                "performance_score_fusion_status": contract.metadata.get(
+                    "performance_score_fusion_status"
+                ),
+                "performance_score_fusion_signal": contract.metadata.get(
+                    "performance_score_fusion_signal"
+                ),
+                "performance_score_fusion_auroc": contract.metadata.get(
+                    "performance_score_fusion_auroc"
+                ),
+                "performance_score_fusion_conformal_gate_passed": contract.metadata.get(
+                    "performance_score_fusion_conformal_gate_passed"
+                ),
+                "performance_selected_fusion_status": contract.metadata.get(
+                    "performance_selected_fusion_status"
+                ),
+                "performance_selected_fusion_run": contract.metadata.get(
+                    "performance_selected_fusion_run"
+                ),
+                "performance_selected_fusion_candidate": contract.metadata.get(
+                    "performance_selected_fusion_candidate"
+                ),
+                "performance_selected_fusion_signal": contract.metadata.get(
+                    "performance_selected_fusion_signal"
+                ),
+                "performance_selected_fusion_auroc": contract.metadata.get(
+                    "performance_selected_fusion_auroc"
+                ),
+                "performance_selected_fusion_false_alarm": contract.metadata.get(
+                    "performance_selected_fusion_false_alarm"
+                ),
+                "performance_selected_fusion_detection": contract.metadata.get(
+                    "performance_selected_fusion_detection"
+                ),
+                "performance_selected_fusion_artifact_report": contract.metadata.get(
+                    "performance_selected_fusion_artifact_report"
+                ),
+                "performance_selected_fusion_artifact_path": contract.metadata.get(
+                    "performance_selected_fusion_artifact_path"
+                ),
                 "product_trace_replay_workflow_report": trace_replay_workflow.get("report_path"),
                 "product_trace_replay_workflow_manifest": trace_replay_workflow.get(
                     "manifest_path"
