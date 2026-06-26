@@ -121,6 +121,66 @@ def test_triple_extraction_smoke_uses_versioned_fixture(tmp_path):
     assert (tmp_path / "triple-extraction-smoke-summary.json").exists()
 
 
+def test_build_triple_extraction_fixture_from_structured_facts(tmp_path):
+    builder = importlib.import_module("benchmarks.build_triple_extraction_fixture")
+    evaluator = importlib.import_module("benchmarks.eval_triple_extraction")
+    fact_corpus = tmp_path / "facts.json"
+    records_path = tmp_path / "records.json"
+    patterns_path = tmp_path / "patterns.json"
+    fact_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+                {
+                    "answer": "Portuguese",
+                    "metadata": {
+                        "country": "Brazil",
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                    },
+                },
+                {
+                    "answer": "yen",
+                    "metadata": {
+                        "country": "Japan",
+                        "statement_property": "P38",
+                        "statement_property_label": "currency",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.run(SimpleNamespace(
+        fact_corpus=(str(fact_corpus),),
+        output_records=str(records_path),
+        output_patterns=str(patterns_path),
+        max_facts=None,
+        artifact_manifest=None,
+    ))
+
+    assert fixture["summary"]["n_facts"] == 3
+    assert fixture["summary"]["n_records"] == 12
+    assert fixture["summary"]["by_predicate"]["capital_of"]["record_count"] == 4
+    assert patterns_path.exists()
+    rule_based = evaluator.run_triple_extraction_eval(records_path, extractor_name="rule_based")
+    regex = evaluator.run_triple_extraction_eval(
+        records_path,
+        extractor_name="regex_rule_based",
+        patterns_path=patterns_path,
+    )
+    assert regex["report"]["f1"] == pytest.approx(1.0)
+    assert regex["report"]["f1"] > rule_based["report"]["f1"]
+
+
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"

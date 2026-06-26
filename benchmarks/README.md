@@ -1015,6 +1015,18 @@ python benchmarks/eval_triple_extraction.py \
   --json artifacts/triple_extraction_eval.json
 ```
 
+Use `build_triple_extraction_fixture.py` to turn structured fact corpora, such
+as the output of `build_wikidata_qa_corpus.py`, into larger labeled extraction
+fixtures plus matching default regex patterns:
+
+```bash
+python benchmarks/build_triple_extraction_fixture.py \
+  --fact-corpus artifacts/wikidata-country-core-facts-qa-corpus.json \
+  --output-records artifacts/triple_extraction_records.json \
+  --output-patterns artifacts/triple_extraction_regex_patterns.json \
+  --artifact-manifest artifacts/triple_extraction_fixture_manifest.json
+```
+
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented
 paths improve exact F1 before the benchmark gates pass:
