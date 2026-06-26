@@ -72,6 +72,13 @@ from eigentruth.eval.score_fusion import (
     geometry_calibrated_anomaly_scores,
     native_anomaly_scores,
 )
+from eigentruth.eval.signal_selection import (
+    DEFAULT_TRACKED_SIGNAL,
+    SignalSelectionDecision,
+    SignalSelectionPolicy,
+    SignalSelectionReport,
+    select_signals_from_fusion_ablation_matrix,
+)
 
 __all__ = [
     "roc_auc",
@@ -109,6 +116,11 @@ __all__ = [
     "combine_rank_anomaly_scores",
     "combine_geometry_uncertainty_scores",
     "geometry_calibrated_anomaly_scores",
+    "DEFAULT_TRACKED_SIGNAL",
+    "SignalSelectionDecision",
+    "SignalSelectionPolicy",
+    "SignalSelectionReport",
+    "select_signals_from_fusion_ablation_matrix",
     "ScoreDump",
     "ScoreDumpColumns",
     "ScoreDumpIdentity",

@@ -4587,6 +4587,26 @@ detection 0.229, false alarm 0.053), while SmolLM2 selects `geometry:mean_rank`
 (AUROC 0.692, detection 0.224, false alarm 0.029). This keeps trajectory as a
 conditional fusion/routing candidate rather than a default-added signal.
 
+`select_fusion_signals_from_ablation.py` turns that matrix into a small
+run-specific signal-selection report. It compares the best candidate containing
+the tracked signal against the best baseline candidate and only enables the
+tracked signal when detection/AUROC deltas pass and false-alarm increase stays
+within policy.
+
+```bash
+python benchmarks/select_fusion_signals_from_ablation.py \
+  --matrix artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-fusion-ablation-matrix.json \
+  --json artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-fusion-signal-selection-report.json \
+  --tracked-signal trajectory_convergence \
+  --alpha 0.1 \
+  --max-false-alarm-delta 0.03 \
+  --quiet
+```
+
+The committed selector report enables trajectory for gpt2 and disables it for
+SmolLM2, preserving trajectory as model-conditional evidence rather than a
+global product default.
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use
