@@ -8737,6 +8737,14 @@ def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
     assert set(families) == {"structured_qa", "structured_state", "state_transition"}
     assert payload["promotion_decision"]["status"] == "promote"
     assert payload["route_comparison"]["quality_gate"]["passed"] is True
+    transition = families["state_transition"]
+    transition_state = json.loads(
+        (tmp_path / "state_transition" / "state.json").read_text(encoding="utf-8")
+    )
+    assert transition["world_model_adapter"] == "RuleBasedWorldModelAdapter"
+    assert transition["world_model_rule_count"] == 8
+    assert transition_state["summary"]["n_world_model_rules"] == 8
+    assert len(transition_state["world_model_rules"]) == 8
     for route, item in families.items():
         assert item["status"] == "promote"
         assert item["selected"] == 8

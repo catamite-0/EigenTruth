@@ -212,9 +212,20 @@ def _verifier_report_summary(report: Mapping[str, Any]) -> dict[str, Any]:
             "routes": routes,
             "cache_stats": _cache_summary(run.get("cache_stats", {})),
         })
+    transition_verifier = report.get("transition_verifier", {})
+    transition_summary = {}
+    if isinstance(transition_verifier, Mapping):
+        transition_summary = {
+            "enabled": transition_verifier.get("enabled"),
+            "world_model_adapter": transition_verifier.get("world_model_adapter"),
+            "world_model_rule_count": transition_verifier.get("world_model_rule_count"),
+            "min_prediction_confidence": transition_verifier.get("min_prediction_confidence"),
+            "global_transitions": transition_verifier.get("global_transitions"),
+        }
     return {
         "signal": report.get("signal"),
         "alphas": list(report.get("alphas", ())),
+        "transition_verifier": transition_summary,
         "runs": runs,
     }
 

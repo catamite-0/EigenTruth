@@ -1898,6 +1898,9 @@ adapter-family matrix from `run_adapter_family_matrix.py`. Repeat
 matrix, such as `structured_state`, `state_transition`, or
 `retrieval_groundedness`, or use `--adapter-family-profile strict_audit` to
 require `structured_state`, `state_transition`, and `triple_evidence` together.
+The matrix's `state_transition` fixture uses typed actions plus
+`world_model_rules`, so the promoted world-model evidence exercises
+`RuleBasedWorldModelAdapter` rather than only the legacy in-memory update path.
 This keeps retrieval/database/world-model/audit adapter work inside the same
 fail-closed release gate instead of treating it as a separate benchmark note.
 Release-candidate runtime-budget flags are delegated to the route-baseline

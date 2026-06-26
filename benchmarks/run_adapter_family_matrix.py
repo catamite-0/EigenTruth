@@ -195,7 +195,11 @@ def _run_state_transition(config: AdapterFamilyMatrixConfig) -> dict[str, Any]:
     route = "state_transition"
     route_dir = config.output_dir / route
     route_dir.mkdir(parents=True, exist_ok=True)
-    fixture = build_order_transition_fixture(n_records=config.n_records, signal=config.signal)
+    fixture = build_order_transition_fixture(
+        n_records=config.n_records,
+        signal=config.signal,
+        rule_based_world_model=True,
+    )
     scores_path = route_dir / "scores.json"
     claims_path = route_dir / "claims.json"
     state_path = route_dir / "state.json"
@@ -344,9 +348,11 @@ def _refresh_route(
         _json_text(workflow, compact=config.compact_json, sort_keys=True),
         encoding="utf-8",
     )
-    summary_route = workflow["verifier_report_summary"]["runs"][0]["routes"][route]
+    verifier_summary = workflow["verifier_report_summary"]
+    summary_route = verifier_summary["runs"][0]["routes"][route]
+    transition_summary = verifier_summary.get("transition_verifier", {})
     decision = workflow["promotion"]["decision"]
-    return {
+    family = {
         "route": route,
         "status": decision["status"],
         "recommended_route": decision.get("recommended_route"),
@@ -364,6 +370,10 @@ def _refresh_route(
         "promotion_report_path": str(promotion_report_path),
         "refresh_workflow_path": str(workflow_path),
     }
+    if route == "state_transition" and isinstance(transition_summary, Mapping):
+        family["world_model_adapter"] = transition_summary.get("world_model_adapter")
+        family["world_model_rule_count"] = transition_summary.get("world_model_rule_count")
+    return family
 
 
 def _write_structured_qa_fixture(
