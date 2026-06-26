@@ -8613,6 +8613,96 @@ def _write_frontier_release_evidence_report(
     return report_path
 
 
+def _write_world_model_signal_workflow_report(
+    output_dir: Path,
+    *,
+    passed: bool = True,
+    trace_gap_max: float = 0.0,
+    conflict_positive_count: int = 4,
+    calibrated_conflict_signal_count: int = 1,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "world-model-signal-calibration-workflow.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    release_gate = {
+        "schema_version": 1,
+        "status": "promote" if passed else "blocked",
+        "passed": passed,
+        "blocking_reasons": [] if passed else ["synthetic world-model signal gate blocked"],
+        "policy": {
+            "max_world_model_trace_gap": 0.0,
+            "min_world_model_conflict_positive_count": 1,
+            "conflict_signals": ["world_model_conflict", "world_model_conflict_delta"],
+            "best_alpha": 0.2,
+        },
+        "score_summary": {
+            "world_model_trace_gap": {
+                "present": True,
+                "count": 12,
+                "positive_count": 0 if trace_gap_max == 0 else 1,
+                "min": 0.0,
+                "max": trace_gap_max,
+                "mean": trace_gap_max / 12,
+            },
+            "world_model_conflict": {
+                "present": True,
+                "count": 12,
+                "positive_count": conflict_positive_count,
+                "min": 0.0,
+                "max": 1.0 if conflict_positive_count else 0.0,
+                "mean": conflict_positive_count / 12,
+            },
+            "world_model_conflict_delta": {
+                "present": True,
+                "count": 12,
+                "positive_count": conflict_positive_count,
+                "min": 0.0,
+                "max": 1.0 if conflict_positive_count else 0.0,
+                "mean": conflict_positive_count / 12,
+            },
+        },
+        "calibrated_conflict_signals": [
+            {
+                "run": "synthetic-world-model",
+                "signal": "world_model_conflict",
+                "alpha": 0.2,
+                "auroc": 1.0,
+                "false_alarm": 0.0,
+                "detection": 1.0,
+                "passes_calibration_gate": True,
+            }
+            for _ in range(calibrated_conflict_signal_count)
+        ],
+    }
+    payload = {
+        "schema_version": 1,
+        "workflow": "world_model_signal_calibration_workflow",
+        "artifact_manifest_path": str(manifest_path),
+        "release_gate": release_gate,
+        "world_model_summary": {
+            "adapter": "RuleBasedWorldModelAdapter",
+            "rule_count": 12,
+            "signals": ["truth_proj", "world_model_conflict", "world_model_conflict_delta"],
+        },
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"world_model_signal_workflow": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "run_world_model_signal_calibration_workflow",
+            "workflow": "world_model_signal_calibration_workflow",
+            "release_gate_status": release_gate["status"],
+            "world_model_trace_gap_max": trace_gap_max,
+            "world_model_conflict_positive_count": conflict_positive_count,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _local_retrieval_claims_payload(
     *,
     labels_copied_to_record_metadata: bool,
@@ -10655,6 +10745,87 @@ def test_compare_release_candidates_gates_frontier_release_evidence(tmp_path):
     assert promoted["decision"]["frontier_release_evidence_status"] == "promote"
     assert promoted["release_candidate"]["frontier_release_evidence"]["decision_status"] == "promote"
     assert "frontier_release_evidence_manifest" in promoted["release_candidate"]["manifests"]
+
+
+def test_compare_release_candidates_gates_world_model_signal_workflow(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="world-model-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="world-model-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="world-model-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_workflow_path = _write_world_model_signal_workflow_report(
+        tmp_path / "world-model-signal-blocked",
+        passed=False,
+        trace_gap_max=1.0,
+    )
+    promoted_workflow_path = _write_world_model_signal_workflow_report(
+        tmp_path / "world-model-signal-promote",
+        passed=True,
+        trace_gap_max=0.0,
+        conflict_positive_count=4,
+    )
+
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        world_model_signal_workflow_path=blocked_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        world_model_signal_workflow_path=promoted_workflow_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["world_model_signal_workflow_status"] == "blocked"
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "world_model_signal_workflow"
+    assert blocked["world_model_signal_workflow_gate"]["gate"]["passed"] is False
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["world_model_signal_workflow_status"] == "promote"
+    assert promoted["decision"]["recommended_world_model_signal_workflow_report"] == str(
+        promoted_workflow_path
+    )
+    candidate = promoted["release_candidate"]
+    assert candidate["world_model_signal_workflow"]["release_gate_status"] == "promote"
+    assert candidate["world_model_signal_workflow"]["trace_gap_max"] == pytest.approx(0.0)
+    assert candidate["world_model_signal_workflow"]["conflict_positive_count"] == pytest.approx(4)
+    assert "world_model_signal_workflow_manifest" in candidate["manifests"]
 
 
 def test_compare_release_candidates_verify_manifest_uses_requested_workers(tmp_path, monkeypatch):
@@ -13223,6 +13394,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         tmp_path / "selfcheck-signal-fusion-workflow",
         sample_quality_passed=True,
     )
+    world_model_signal_workflow_report = _write_world_model_signal_workflow_report(
+        tmp_path / "world-model-signal-workflow",
+        passed=True,
+        trace_gap_max=0.0,
+        conflict_positive_count=4,
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_report(
         name="product-trace-replay-workflow",
         path=product_trace_replay_workflow_report,
@@ -13238,6 +13415,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         path=feedback_policy_workflow_report,
         version="0.1",
         metadata={"workflow": "run_feedback_policy_workflow", "status": "recommend"},
+    ).record_report(
+        name="world-model-signal-workflow",
+        path=world_model_signal_workflow_report,
+        version="0.1",
+        metadata={"workflow": "run_world_model_signal_calibration_workflow", "status": "promote"},
     ).save_json()
     adapter_family_matrix_path = _write_adapter_family_matrix(
         tmp_path / "adapter-family-matrix.json",
@@ -13279,6 +13461,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
+        world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
         feedback_policy_min_matched_feedback_count=20,
         feedback_policy_min_safety_coverage=0.70,
         feedback_policy_max_unknown_safety_issue_rate=0.20,
@@ -13327,6 +13510,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "route_manifest",
         "selector_replay_manifest",
         "selfcheck_signal_fusion_workflow_manifest",
+        "world_model_signal_workflow_manifest",
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
     assert manifest["metadata"]["release_candidate_status"] == "promote"
@@ -13338,6 +13522,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_product_trace_replay_workflow_status"] == "promote"
     assert manifest["metadata"]["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
+    assert manifest["metadata"]["release_world_model_signal_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
     assert manifest["metadata"]["release_runtime_profile_applied_defaults"] == {
@@ -13410,6 +13595,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert manifest["metadata"]["recommended_selfcheck_signal_fusion_workflow_report"] == str(
         selfcheck_signal_fusion_workflow_report
+    )
+    assert manifest["metadata"]["recommended_world_model_signal_workflow_report"] == str(
+        world_model_signal_workflow_report
     )
     assert manifest["metadata"]["recommended_feedback_policy_candidate_control_policy"].endswith(
         "candidate-control-policy.json"
@@ -13498,6 +13686,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["feedback_policy_workflow_manifest"].endswith(
         "feedback-policy-workflow/artifact-manifest.json"
     )
+    assert manifest["metadata"]["world_model_signal_workflow_report"] == str(
+        world_model_signal_workflow_report
+    )
+    assert manifest["metadata"]["world_model_signal_workflow_source"] == "registry"
+    assert manifest["metadata"]["world_model_signal_workflow_record"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
+    assert manifest["metadata"]["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert manifest["metadata"]["world_model_signal_workflow_trace_gap_max"] == pytest.approx(0.0)
+    assert manifest["metadata"]["world_model_signal_workflow_conflict_positive_count"] == pytest.approx(4)
+    assert manifest["metadata"]["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert manifest["metadata"]["world_model_signal_workflow_manifest"].endswith(
+        "world-model-signal-workflow/artifact-manifest.json"
+    )
     assert manifest["metadata"]["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
     assert manifest["metadata"]["adapter_family_profile"] == "strict_audit"
     assert manifest["metadata"]["adapter_family_profile_requires_state_transition_world_model"] is True
@@ -13556,6 +13758,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "report:product-trace-replay-workflow:0.1"
     )
     assert payload["config"]["feedback_policy_workflow_key"] == "report:feedback-policy-workflow:0.1"
+    assert payload["config"]["world_model_signal_workflow_key"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
     assert payload["config"]["feedback_policy_min_matched_feedback_count"] == 20
     assert payload["config"]["feedback_policy_min_safety_coverage"] == pytest.approx(0.70)
     assert payload["config"]["feedback_policy_max_unknown_safety_issue_rate"] == pytest.approx(0.20)
@@ -13603,6 +13808,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     )
     assert payload["release_candidate_comparison"]["config"]["feedback_policy_workflow_key"] == (
         "report:feedback-policy-workflow:0.1"
+    )
+    assert payload["release_candidate_comparison"]["config"]["world_model_signal_workflow"] == str(
+        world_model_signal_workflow_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["world_model_signal_workflow_key"] == (
+        "report:world-model-signal-workflow:0.1"
     )
     assert payload["release_candidate_comparison"]["config"]["selector_replay_report"] == str(
         selector_replay_report
@@ -13693,6 +13904,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
     assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
+    assert record.metadata["release_world_model_signal_workflow_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
     )
@@ -13727,6 +13939,15 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["feedback_policy_workflow_final_answer_false_block_rate"] == pytest.approx(0.02)
     assert record.metadata["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(1.0)
     assert record.metadata["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.0)
+    assert record.metadata["world_model_signal_workflow_report"] == str(world_model_signal_workflow_report)
+    assert record.metadata["world_model_signal_workflow_source"] == "registry"
+    assert record.metadata["world_model_signal_workflow_record"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
+    assert record.metadata["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert record.metadata["world_model_signal_workflow_trace_gap_max"] == pytest.approx(0.0)
+    assert record.metadata["world_model_signal_workflow_conflict_positive_count"] == pytest.approx(4)
+    assert record.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
     assert record.metadata["release_adapter_family_status"] == "promote"
     assert record.metadata["release_required_route_baseline_status"] == "promote"
     assert record.metadata["adapter_family_matrix_report"] == str(adapter_family_matrix_path)
@@ -25541,8 +25762,17 @@ def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tm
     assert payload["world_model_summary"]["adapter"] == "RuleBasedWorldModelAdapter"
     assert payload["world_model_summary"]["rule_count"] == 12
     assert payload["registry_record_key"] == "report:synthetic-world-model-calibration:test"
+    assert payload["release_gate"]["status"] == "promote"
+    assert payload["release_gate"]["passed"] is True
+    assert payload["release_gate"]["score_summary"]["world_model_trace_gap"]["max"] == pytest.approx(0.0)
+    assert payload["release_gate"]["score_summary"]["world_model_conflict"]["positive_count"] == 6
+    assert payload["release_gate"]["calibrated_conflict_signals"][0]["signal"] == "world_model_conflict"
+    assert payload["release_gate"]["calibrated_conflict_signals"][0]["passes_calibration_gate"] is True
     assert record.path == str(output_dir / "world-model-signal-calibration-workflow.json")
     assert record.metadata["world_model_rule_count"] == 12
+    assert record.metadata["release_gate_status"] == "promote"
+    assert record.metadata["world_model_trace_gap_max"] == pytest.approx(0.0)
+    assert record.metadata["world_model_conflict_positive_count"] == 6
     assert enhanced.scores["verifier_refuted"] == pytest.approx(tuple(float(label) for label in enhanced.labels))
     assert max(enhanced.scores["world_model_disagreement"]) == pytest.approx(0.0)
     assert max(enhanced.scores["world_model_agreement_gap"]) == pytest.approx(0.0)
@@ -25591,6 +25821,11 @@ def test_world_model_signal_calibration_workflow_can_emit_ensemble_agreement_sig
     assert payload["world_model_summary"]["adapter"] == "EnsembleWorldModelAdapter"
     assert payload["world_model_summary"]["member_count"] == 3
     assert payload["world_model_summary"]["min_agreement"] == pytest.approx(0.75)
+    assert payload["release_gate"]["status"] == "blocked"
+    assert any(
+        "no positive conflict examples" in reason
+        for reason in payload["release_gate"]["blocking_reasons"]
+    )
     expected_labels = tuple(float(label) for label in enhanced.labels)
     assert enhanced.scores["world_model_disagreement"] == pytest.approx(expected_labels)
     assert enhanced.scores["world_model_agreement_gap"] == pytest.approx(
@@ -25643,6 +25878,9 @@ def test_world_model_signal_calibration_workflow_can_emit_policy_replay_agreemen
     assert payload["world_model_summary"]["adapter"] == "EnsembleWorldModelAdapter"
     assert payload["world_model_summary"]["strategy"] == "policy_replay"
     assert payload["manifest_verification"]["passed"] is True
+    assert payload["release_gate"]["status"] == "promote"
+    assert payload["release_gate"]["score_summary"]["world_model_trace_gap"]["max"] == pytest.approx(0.0)
+    assert payload["release_gate"]["score_summary"]["world_model_conflict"]["positive_count"] == 4
     assert enhanced.scores["world_model_disagreement"] == pytest.approx(expected_policy_disagreement)
     assert enhanced.scores["world_model_agreement_gap"] == pytest.approx(
         tuple(value / 3 for value in expected_policy_disagreement)

@@ -64,6 +64,9 @@ def compare_release_candidates(
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
+    world_model_signal_workflow_path: str | Path | None = None,
+    world_model_signal_workflow_registry_path: str | Path | None = None,
+    world_model_signal_workflow_key: str | None = None,
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
@@ -517,6 +520,23 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    world_model_signal_workflow_source = _resolve_world_model_signal_workflow_source(
+        world_model_signal_workflow_path=world_model_signal_workflow_path,
+        world_model_signal_workflow_registry_path=(
+            world_model_signal_workflow_registry_path
+            if world_model_signal_workflow_key is not None
+            else None
+        ),
+        world_model_signal_workflow_key=world_model_signal_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    world_model_signal_workflow = _world_model_signal_workflow_gate(
+        world_model_signal_workflow_source=world_model_signal_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     decision = _decision(
         readiness,
         route,
@@ -529,6 +549,7 @@ def compare_release_candidates(
         product_runtime_drift,
         release_efficiency,
         frontier_release_evidence,
+        world_model_signal_workflow,
         selfcheck_signal_fusion_workflow,
         feedback_policy_workflow,
     )
@@ -543,6 +564,7 @@ def compare_release_candidates(
             product_runtime_drift,
             release_efficiency,
             frontier_release_evidence,
+            world_model_signal_workflow,
             selfcheck_signal_fusion_workflow,
             feedback_policy_workflow,
         )
@@ -592,6 +614,17 @@ def compare_release_candidates(
                 else frontier_release_evidence_source.get("registry")
             ),
             "frontier_release_evidence_key": frontier_release_evidence_key,
+            "world_model_signal_workflow": (
+                None
+                if world_model_signal_workflow_source is None
+                else str(world_model_signal_workflow_source["path"])
+            ),
+            "world_model_signal_workflow_registry": (
+                None
+                if world_model_signal_workflow_source is None
+                else world_model_signal_workflow_source.get("registry")
+            ),
+            "world_model_signal_workflow_key": world_model_signal_workflow_key,
             "product_trace_replay_workflow": (
                 None
                 if product_trace_replay_workflow_source is None
@@ -722,6 +755,7 @@ def compare_release_candidates(
         "product_runtime_drift_gate": product_runtime_drift,
         "release_efficiency_gate": release_efficiency,
         "frontier_release_evidence_gate": frontier_release_evidence,
+        "world_model_signal_workflow_gate": world_model_signal_workflow,
         "adapter_family_matrix_gate": adapter_family,
         "release_candidate": candidate,
         "decision": decision,
@@ -857,6 +891,7 @@ def _decision(
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
+    world_model_signal_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
     feedback_policy_workflow: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -895,6 +930,16 @@ def _decision(
     )
     frontier_release_evidence_status = (
         None if frontier_release_evidence is None else frontier_release_evidence.get("status")
+    )
+    world_model_signal_workflow_gate = _mapping(
+        None
+        if world_model_signal_workflow is None
+        else world_model_signal_workflow.get("gate")
+    )
+    world_model_signal_workflow_status = (
+        None
+        if world_model_signal_workflow is None
+        else world_model_signal_workflow.get("status")
     )
     selfcheck_signal_fusion_workflow_gate = _mapping(
         None
@@ -980,6 +1025,15 @@ def _decision(
             "reasons": list(frontier_release_evidence_gate.get("blocking_reasons", ())),
         })
     if (
+        world_model_signal_workflow is not None
+        and world_model_signal_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "world_model_signal_workflow",
+            "status": world_model_signal_workflow_status,
+            "reasons": list(world_model_signal_workflow_gate.get("blocking_reasons", ())),
+        })
+    if (
         selfcheck_signal_fusion_workflow is not None
         and selfcheck_signal_fusion_workflow_gate.get("passed") is not True
     ):
@@ -1018,6 +1072,7 @@ def _decision(
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
+        "world_model_signal_workflow_status": world_model_signal_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
         "feedback_policy_workflow_status": feedback_policy_workflow_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
@@ -1062,6 +1117,14 @@ def _decision(
                 or frontier_release_evidence_gate.get("passed") is not True
             )
             else frontier_release_evidence.get("report_path")
+        ),
+        "recommended_world_model_signal_workflow_report": (
+            None
+            if (
+                world_model_signal_workflow is None
+                or world_model_signal_workflow_gate.get("passed") is not True
+            )
+            else world_model_signal_workflow.get("report_path")
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": (
             None
@@ -2277,6 +2340,160 @@ def _resolve_frontier_release_evidence_source(
     }
 
 
+def _world_model_signal_workflow_gate(
+    *,
+    world_model_signal_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if world_model_signal_workflow_source is None:
+        return None
+    report_path = Path(world_model_signal_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _world_model_signal_workflow_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="world_model_signal_workflow_manifest",
+        verification_context=verification_context,
+    )
+    release_gate = _mapping(report.get("release_gate"))
+    gate = _world_model_signal_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        release_gate=release_gate,
+        allow_unverified=allow_unverified,
+    )
+    trace_gap_summary = _mapping(
+        _nested(release_gate, "score_summary", "world_model_trace_gap")
+    )
+    conflict_summary = _mapping(
+        _nested(release_gate, "score_summary", "world_model_conflict")
+    )
+    calibrated = tuple(
+        _mapping(item)
+        for item in release_gate.get("calibrated_conflict_signals", ())
+        if isinstance(item, Mapping)
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": world_model_signal_workflow_source.get("source"),
+        "registry": world_model_signal_workflow_source.get("registry"),
+        "record_key": world_model_signal_workflow_source.get("record_key"),
+        "record": world_model_signal_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "release_gate_status": release_gate.get("status"),
+        "release_gate_passed": release_gate.get("passed"),
+        "trace_gap_max": _float_or_none(trace_gap_summary.get("max")),
+        "conflict_positive_count": _float_or_none(conflict_summary.get("positive_count")),
+        "calibrated_conflict_signal_count": len(calibrated),
+        "calibrated_conflict_signals": calibrated,
+        "blocking_reasons": tuple(release_gate.get("blocking_reasons", ())),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _world_model_signal_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    release_gate: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"world-model signal workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("world-model signal workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("world-model signal workflow manifest verification failed")
+    if report.get("workflow") != "world_model_signal_calibration_workflow":
+        failures.append(
+            "world-model signal workflow is "
+            f"{report.get('workflow')!r}, expected 'world_model_signal_calibration_workflow'"
+        )
+    if not release_gate:
+        failures.append("world-model signal workflow release_gate is missing")
+    elif release_gate.get("passed") is not True:
+        failures.append(
+            "world-model signal workflow release gate did not pass"
+            + _format_gate_reasons(release_gate)
+        )
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _world_model_signal_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        report.get("artifact_manifest_path"),
+        _nested(report, "paths", "artifact_manifest"),
+    )
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_world_model_signal_workflow_source(
+    *,
+    world_model_signal_workflow_path: str | Path | None,
+    world_model_signal_workflow_registry_path: str | Path | None,
+    world_model_signal_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if world_model_signal_workflow_path is not None:
+        if world_model_signal_workflow_key is not None:
+            raise ValueError(
+                "world_model_signal_workflow_path is mutually exclusive with "
+                "world_model_signal_workflow_key."
+            )
+        return {"source": "file", "path": Path(world_model_signal_workflow_path)}
+    if world_model_signal_workflow_key is None:
+        if world_model_signal_workflow_registry_path is not None:
+            raise ValueError(
+                "world_model_signal_workflow_registry_path requires "
+                "world_model_signal_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if world_model_signal_workflow_registry_path is None
+        else world_model_signal_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(world_model_signal_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _format_gate_reasons(gate: Mapping[str, Any]) -> str:
+    reasons = tuple(gate.get("blocking_reasons", ()) or ())
+    return f": {reasons!r}" if reasons else ""
+
+
 def _selector_replay_report_gate(
     *,
     report: Mapping[str, Any],
@@ -3119,6 +3336,7 @@ def _candidate_with_gates(
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
+    world_model_signal_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
     feedback_policy_workflow: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
@@ -3245,6 +3463,27 @@ def _candidate_with_gates(
         }
         manifests["frontier_release_evidence_manifest"] = frontier_release_evidence.get(
             "manifest_path"
+        )
+    if world_model_signal_workflow is not None:
+        payload["world_model_signal_workflow"] = {
+            "report_path": world_model_signal_workflow.get("report_path"),
+            "manifest_path": world_model_signal_workflow.get("manifest_path"),
+            "source": world_model_signal_workflow.get("source"),
+            "registry": world_model_signal_workflow.get("registry"),
+            "record_key": world_model_signal_workflow.get("record_key"),
+            "workflow": world_model_signal_workflow.get("workflow"),
+            "release_gate_status": world_model_signal_workflow.get("release_gate_status"),
+            "trace_gap_max": world_model_signal_workflow.get("trace_gap_max"),
+            "conflict_positive_count": world_model_signal_workflow.get(
+                "conflict_positive_count"
+            ),
+            "calibrated_conflict_signal_count": world_model_signal_workflow.get(
+                "calibrated_conflict_signal_count"
+            ),
+            "blocking_reasons": tuple(world_model_signal_workflow.get("blocking_reasons", ())),
+        }
+        manifests["world_model_signal_workflow_manifest"] = (
+            world_model_signal_workflow.get("manifest_path")
         )
     if selfcheck_signal_fusion_workflow is not None:
         payload["selfcheck_signal_fusion_workflow"] = {
@@ -3530,6 +3769,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
+        world_model_signal_workflow_path=args.world_model_signal_workflow,
+        world_model_signal_workflow_registry_path=args.world_model_signal_workflow_registry,
+        world_model_signal_workflow_key=args.world_model_signal_workflow_key,
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
@@ -3633,6 +3875,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
+        f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
@@ -3686,6 +3929,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--frontier-release-evidence-key", default=None,
                         help="optional report:<name>:<version> registry key for frontier release evidence")
+    parser.add_argument("--world-model-signal-workflow", default=None,
+                        help="optional world-model signal calibration workflow report that must pass its "
+                             "conflict/trace-gap release gate")
+    parser.add_argument("--world-model-signal-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --world-model-signal-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--world-model-signal-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a world-model signal workflow")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "

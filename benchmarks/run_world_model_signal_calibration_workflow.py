@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from contextlib import contextmanager
@@ -49,6 +50,7 @@ DEFAULT_WORLD_MODEL_UNCERTAINTY_SIGNALS = (
     "world_model_low_agreement",
     "world_model_conflict",
 )
+WORLD_MODEL_CONFLICT_SIGNALS = ("world_model_conflict", "world_model_conflict_delta")
 
 
 @dataclass(frozen=True)
@@ -211,11 +213,19 @@ def run_world_model_signal_calibration_workflow(
         enhanced_path,
         required_scores=tuple(signal for signal in config.fusion_signals if signal != config.signal),
     )
+    score_ensemble_report_path = Path(verifier_signal_payload["score_ensemble_report_path"])
+    score_ensemble_report = _read_json_mapping(score_ensemble_report_path)
+    release_gate = _world_model_release_gate(
+        enhanced_scores=enhanced_dump.scores,
+        score_ensemble_report=score_ensemble_report,
+        best_alpha=float(config.best_alpha),
+    )
     manifest_metadata = _manifest_metadata(
         config,
         fixture=fixture,
         verifier_signal_payload=verifier_signal_payload,
         enhanced_dump_summary=enhanced_dump.summary(),
+        release_gate=release_gate,
         profile=profile,
         total_seconds=time.perf_counter() - started,
     )
@@ -262,6 +272,13 @@ def run_world_model_signal_calibration_workflow(
                         "world_model_ensemble_min_agreement"
                     ],
                     "fusion_summary": verifier_signal_payload.get("fusion_summary"),
+                    "release_gate_status": release_gate["status"],
+                    "world_model_trace_gap_max": release_gate["score_summary"][
+                        "world_model_trace_gap"
+                    ]["max"],
+                    "world_model_conflict_positive_count": release_gate["score_summary"][
+                        "world_model_conflict"
+                    ]["positive_count"],
                 },
             )
             registry.save_json()
@@ -289,6 +306,7 @@ def run_world_model_signal_calibration_workflow(
         "manifest_summary": manifest.get("summary"),
         "manifest_verification": manifest_verification,
         "registry_record_key": registry_record_key,
+        "release_gate": release_gate,
         "world_model_summary": {
             "adapter": (
                 "EnsembleWorldModelAdapter"
@@ -338,6 +356,7 @@ def _manifest_metadata(
     fixture: Mapping[str, Any],
     verifier_signal_payload: Mapping[str, Any],
     enhanced_dump_summary: Mapping[str, Any],
+    release_gate: Mapping[str, Any],
     profile: Mapping[str, float],
     total_seconds: float,
 ) -> dict[str, Any]:
@@ -357,9 +376,138 @@ def _manifest_metadata(
         "enhanced_score_dump_summary": dict(enhanced_dump_summary),
         "fusion_summary": verifier_signal_payload.get("fusion_summary"),
         "verifier_summary": verifier_signal_payload.get("verifier_summary"),
+        "release_gate_status": release_gate.get("status"),
+        "world_model_trace_gap_max": _nested_float(
+            release_gate,
+            "score_summary",
+            "world_model_trace_gap",
+            "max",
+        ),
+        "world_model_conflict_positive_count": _nested_float(
+            release_gate,
+            "score_summary",
+            "world_model_conflict",
+            "positive_count",
+        ),
         "profile": dict(profile),
         "total_seconds": float(total_seconds),
     }
+
+
+def _world_model_release_gate(
+    *,
+    enhanced_scores: Mapping[str, Sequence[float]],
+    score_ensemble_report: Mapping[str, Any],
+    best_alpha: float,
+) -> dict[str, Any]:
+    score_summary = {
+        "world_model_conflict": _score_signal_summary(enhanced_scores, "world_model_conflict"),
+        "world_model_conflict_delta": _score_signal_summary(
+            enhanced_scores,
+            "world_model_conflict_delta",
+        ),
+        "world_model_trace_gap": _score_signal_summary(enhanced_scores, "world_model_trace_gap"),
+    }
+    calibrated_conflict_signals = _calibrated_conflict_signal_summaries(
+        score_ensemble_report,
+        best_alpha=best_alpha,
+    )
+    failures = []
+    trace_gap = score_summary["world_model_trace_gap"]
+    if not trace_gap["present"]:
+        failures.append("world_model_trace_gap score is missing from enhanced score dump")
+    elif trace_gap["max"] is None or trace_gap["max"] > 0.0:
+        failures.append(
+            "world_model_trace_gap must be zero for release, "
+            f"observed max={trace_gap['max']!r}"
+        )
+    conflict = score_summary["world_model_conflict"]
+    if not conflict["present"]:
+        failures.append("world_model_conflict score is missing from enhanced score dump")
+    elif int(conflict["positive_count"] or 0) < 1:
+        failures.append("world_model_conflict has no positive conflict examples")
+    if not calibrated_conflict_signals:
+        failures.append("score ensemble report did not calibrate a world-model conflict signal")
+    elif not any(item["passes_calibration_gate"] for item in calibrated_conflict_signals):
+        failures.append(
+            "no calibrated world-model conflict signal met the false-alarm and AUROC gate"
+        )
+    return {
+        "schema_version": 1,
+        "status": "promote" if not failures else "blocked",
+        "passed": not failures,
+        "blocking_reasons": failures,
+        "policy": {
+            "max_world_model_trace_gap": 0.0,
+            "min_world_model_conflict_positive_count": 1,
+            "conflict_signals": list(WORLD_MODEL_CONFLICT_SIGNALS),
+            "best_alpha": float(best_alpha),
+            "calibrated_signal_requires_detection": False,
+            "min_calibrated_signal_auroc": 0.5,
+        },
+        "score_summary": score_summary,
+        "calibrated_conflict_signals": calibrated_conflict_signals,
+    }
+
+
+def _score_signal_summary(
+    scores: Mapping[str, Sequence[float]],
+    name: str,
+) -> dict[str, Any]:
+    raw_values = scores.get(name)
+    if raw_values is None:
+        return {
+            "present": False,
+            "count": 0,
+            "positive_count": 0,
+            "min": None,
+            "max": None,
+            "mean": None,
+        }
+    values = [float(value) for value in raw_values]
+    return {
+        "present": True,
+        "count": len(values),
+        "positive_count": sum(1 for value in values if value > 0.0),
+        "min": min(values) if values else None,
+        "max": max(values) if values else None,
+        "mean": (sum(values) / len(values)) if values else None,
+    }
+
+
+def _calibrated_conflict_signal_summaries(
+    score_ensemble_report: Mapping[str, Any],
+    *,
+    best_alpha: float,
+) -> list[dict[str, Any]]:
+    alpha_key = str(float(best_alpha))
+    summaries = []
+    for run in score_ensemble_report.get("runs", ()):
+        run_payload = _mapping(run)
+        single_results = _mapping(run_payload.get("single_results"))
+        for signal in WORLD_MODEL_CONFLICT_SIGNALS:
+            result = _mapping(single_results.get(signal))
+            alpha_payload = _mapping(_mapping(result.get("alphas")).get(alpha_key))
+            if not result or not alpha_payload:
+                continue
+            false_alarm = _optional_float(alpha_payload.get("false_alarm"))
+            detection = _optional_float(alpha_payload.get("detection"))
+            auroc = _optional_float(result.get("auroc"))
+            summaries.append({
+                "run": run_payload.get("name"),
+                "signal": signal,
+                "alpha": float(best_alpha),
+                "auroc": auroc,
+                "false_alarm": false_alarm,
+                "detection": detection,
+                "passes_calibration_gate": (
+                    false_alarm is not None
+                    and auroc is not None
+                    and false_alarm <= float(best_alpha)
+                    and auroc > 0.5
+                ),
+            })
+    return summaries
 
 
 def _config_payload(config: WorldModelSignalCalibrationWorkflowConfig) -> dict[str, Any]:
@@ -410,6 +558,13 @@ def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> Non
     path.write_text(text, encoding="utf-8")
 
 
+def _read_json_mapping(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path} must contain a JSON object.")
+    return dict(payload)
+
+
 def _parse_csv(value: str | None, *, name: str) -> tuple[str, ...] | None:
     if value is None:
         return None
@@ -430,6 +585,31 @@ def _non_empty_string(value: Any, *, name: str) -> str:
     if not text:
         raise ValueError(f"{name} must be non-empty.")
     return text
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, Mapping):
+        return dict(value)
+    return {}
+
+
+def _optional_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def _nested_float(payload: Mapping[str, Any], *keys: str) -> float | None:
+    current: Any = payload
+    for key in keys:
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(key)
+    return _optional_float(current)
 
 
 def _world_model_ensemble_strategy(value: Any) -> str:

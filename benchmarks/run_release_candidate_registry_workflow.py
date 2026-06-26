@@ -91,6 +91,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
+    world_model_signal_workflow_path: Path | None = None
+    world_model_signal_workflow_registry_path: Path | None = None
+    world_model_signal_workflow_key: str | None = None
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
@@ -214,6 +217,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "frontier_release_evidence_registry_path",
                 Path(self.frontier_release_evidence_registry_path),
+            )
+        if self.world_model_signal_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "world_model_signal_workflow_path",
+                Path(self.world_model_signal_workflow_path),
+            )
+        if self.world_model_signal_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "world_model_signal_workflow_registry_path",
+                Path(self.world_model_signal_workflow_registry_path),
             )
         if self.product_trace_replay_workflow_path is not None:
             object.__setattr__(
@@ -395,6 +410,9 @@ def run_release_candidate_registry_workflow(
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
+        world_model_signal_workflow_path=config.world_model_signal_workflow_path,
+        world_model_signal_workflow_registry_path=config.world_model_signal_workflow_registry_path,
+        world_model_signal_workflow_key=config.world_model_signal_workflow_key,
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
@@ -576,6 +594,17 @@ def run_release_candidate_registry_workflow(
                 else str(config.frontier_release_evidence_registry_path)
             ),
             "frontier_release_evidence_key": config.frontier_release_evidence_key,
+            "world_model_signal_workflow": (
+                None
+                if config.world_model_signal_workflow_path is None
+                else str(config.world_model_signal_workflow_path)
+            ),
+            "world_model_signal_workflow_registry": (
+                None
+                if config.world_model_signal_workflow_registry_path is None
+                else str(config.world_model_signal_workflow_registry_path)
+            ),
+            "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
             "product_trace_replay_workflow": (
                 None
                 if config.product_trace_replay_workflow_path is None
@@ -776,6 +805,17 @@ def _comparison_with_registry_config(
         ),
         "required_adapter_routes": list(config.required_adapter_routes),
         "require_state_transition_world_model": bool(config.require_state_transition_world_model),
+        "world_model_signal_workflow": (
+            comparison_config.get("world_model_signal_workflow")
+            if config.world_model_signal_workflow_path is None
+            else str(config.world_model_signal_workflow_path)
+        ),
+        "world_model_signal_workflow_registry": (
+            comparison_config.get("world_model_signal_workflow_registry")
+            if config.world_model_signal_workflow_registry_path is None
+            else str(config.world_model_signal_workflow_registry_path)
+        ),
+        "world_model_signal_workflow_key": config.world_model_signal_workflow_key,
     })
     payload["config"] = comparison_config
     return payload
@@ -803,6 +843,8 @@ def _write_artifact_manifest(
         "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
+        "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
+        or _nested(comparison, "world_model_signal_workflow_gate", "manifest_path"),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -919,6 +961,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
     if not frontier_release_evidence:
         frontier_release_evidence = dict(comparison.get("frontier_release_evidence_gate") or {})
+    world_model_signal_workflow = dict(candidate.get("world_model_signal_workflow") or {})
+    if not world_model_signal_workflow:
+        world_model_signal_workflow = dict(comparison.get("world_model_signal_workflow_gate") or {})
     return {
         "runner": "run_release_candidate_registry_workflow",
         "workflow": comparison.get("workflow"),
@@ -931,6 +976,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_efficiency_status": decision.get("release_efficiency_status"),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
+        ),
+        "release_world_model_signal_workflow_status": decision.get(
+            "world_model_signal_workflow_status"
         ),
         "release_adapter_family_status": decision.get("adapter_family_status"),
         "release_required_route_baseline_status": decision.get("required_route_baseline_status"),
@@ -957,6 +1005,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
+        ),
+        "recommended_world_model_signal_workflow_report": decision.get(
+            "recommended_world_model_signal_workflow_report"
         ),
         "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
             "recommended_selfcheck_signal_fusion_workflow_report"
@@ -1330,6 +1381,26 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "frontier_release_evidence_abstention_track_status": frontier_release_evidence.get(
             "abstention_track_status"
         ),
+        "world_model_signal_workflow_report": world_model_signal_workflow.get("report_path"),
+        "world_model_signal_workflow_manifest": (
+            manifests.get("world_model_signal_workflow_manifest")
+            or world_model_signal_workflow.get("manifest_path")
+        ),
+        "world_model_signal_workflow_source": world_model_signal_workflow.get("source"),
+        "world_model_signal_workflow_registry": world_model_signal_workflow.get("registry"),
+        "world_model_signal_workflow_record": world_model_signal_workflow.get("record_key"),
+        "world_model_signal_workflow_release_gate_status": (
+            world_model_signal_workflow.get("release_gate_status")
+        ),
+        "world_model_signal_workflow_trace_gap_max": (
+            world_model_signal_workflow.get("trace_gap_max")
+        ),
+        "world_model_signal_workflow_conflict_positive_count": (
+            world_model_signal_workflow.get("conflict_positive_count")
+        ),
+        "world_model_signal_workflow_calibrated_conflict_signal_count": (
+            world_model_signal_workflow.get("calibrated_conflict_signal_count")
+        ),
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
@@ -1492,6 +1563,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.frontier_release_evidence_registry)
         ),
         frontier_release_evidence_key=args.frontier_release_evidence_key,
+        world_model_signal_workflow_path=(
+            None
+            if args.world_model_signal_workflow is None
+            else Path(args.world_model_signal_workflow)
+        ),
+        world_model_signal_workflow_registry_path=(
+            None
+            if args.world_model_signal_workflow_registry is None
+            else Path(args.world_model_signal_workflow_registry)
+        ),
+        world_model_signal_workflow_key=args.world_model_signal_workflow_key,
         product_trace_replay_workflow_path=(
             None
             if args.product_trace_replay_workflow is None
@@ -1680,6 +1762,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--frontier-release-evidence-key", default=None,
                         help="optional report:<name>:<version> registry key for frontier release evidence")
+    parser.add_argument("--world-model-signal-workflow", default=None,
+                        help="optional world-model signal calibration workflow report that must pass its "
+                             "conflict/trace-gap release gate")
+    parser.add_argument("--world-model-signal-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for --world-model-signal-workflow-key; "
+                             "defaults to --readiness-registry")
+    parser.add_argument("--world-model-signal-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a world-model signal workflow")
     parser.add_argument("--product-trace-replay-workflow", default=None,
                         help="optional product trace replay workflow report; when supplied, its selector "
                              "replay and runtime-drift child reports are used unless explicit child report "

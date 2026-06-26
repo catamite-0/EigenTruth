@@ -3350,6 +3350,16 @@ Direct ensemble agreement metadata from external multi-world-model adapters is
 also preserved by `build_verifier_signal_score_dump.py` when present in
 sidecars.
 
+The workflow report now includes a `release_gate` for the world-model signal
+handoff. It promotes only when the generated trace has no unexplained
+`world_model_trace_gap`, has positive world-model conflict examples, and the
+score-ensemble report calibrates at least one conflict signal such as
+`world_model_conflict` or `world_model_conflict_delta` under the selected
+`--best-alpha`. Release candidates can require this evidence by passing
+`--world-model-signal-workflow path/to/world-model-signal-calibration-workflow.json`
+or by registering the workflow and passing
+`--world-model-signal-workflow-key report:world-model-signal-workflow:0.1`.
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
