@@ -392,10 +392,12 @@ Added dependency-free triple extractor plug-ins and eval harness:
 - `benchmarks/compare_release_candidates.py` and
   `benchmarks/run_release_candidate_registry_workflow.py` can now require that
   matrix with `--triple-extraction-fixture-matrix`, plus optional corpus and
-  predicate diversity floors. This moves extractor evidence from a standalone
-  benchmark into the same fail-closed release candidate and registered manifest
-  gates as readiness, route, selfcheck, world-model, feedback, and
-  adapter-family evidence.
+  predicate diversity floors. They can also require external-prediction count,
+  external-prediction corpus coverage, and mean best external F1 when a learned
+  or external extractor is being treated as release evidence. This moves
+  extractor evidence from a standalone benchmark into the same fail-closed
+  release candidate and registered manifest gates as readiness, route,
+  selfcheck, world-model, feedback, and adapter-family evidence.
 - The first real cross-corpus matrix is now materialized at
   `artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/`. It
   combines the 359-fact country-core Wikidata corpus with the fetched
@@ -419,6 +421,18 @@ Added dependency-free triple extractor plug-ins and eval harness:
   false-positive rates are `0.000`. This promotes simple negative-context
   robustness for covered KG templates while preserving the broader open-domain
   extraction boundary.
+
+Added the first stdlib-only external retrieval service shell:
+
+- `HTTPJSONRetriever` calls a caller-provided HTTP JSON search endpoint and
+  normalizes list payloads or `hits` / `results` / `documents` objects into
+  `RetrievalHit` values. This is adapter plumbing only: no network endpoint is
+  bundled, and no external retrieval quality claim is made.
+- `RetrievalActionExecutor` now fails closed when a retriever raises, returning
+  a structured failed `ActionResult` with per-query errors instead of letting
+  adapter exceptions escape the control loop. That keeps future RAG/search
+  service failures visible in product traces and prevents failed retrieval from
+  being mistaken for supported evidence.
 
 ## Next Research-to-Code Candidates
 

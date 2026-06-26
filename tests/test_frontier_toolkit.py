@@ -1,5 +1,6 @@
 """Tests for the frontier-toolkit MVP modules."""
 
+import json
 import math
 import sqlite3
 import time
@@ -12,6 +13,7 @@ from eigentruth.adapters import (
     CachedStateSource,
     CalculatorVerifier,
     EnsembleWorldModelAdapter,
+    HTTPJSONRetriever,
     InMemoryRetriever,
     InMemoryWorldModelAdapter,
     QuestionAnswerFact,
@@ -1482,6 +1484,91 @@ def test_sqlite_fts_retriever_can_reuse_persistent_index(tmp_path):
     assert changed.available
     assert changed.index_reused is False
     assert changed.document_fingerprint != first.document_fingerprint
+
+
+def test_http_json_retriever_parses_external_hits(monkeypatch):
+    seen = {}
+
+    class Headers:
+        def get_content_charset(self):
+            return "utf-8"
+
+    class Response:
+        status = 200
+        headers = Headers()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def read(self, limit=-1):
+            return json.dumps({
+                "hits": [
+                    {
+                        "content": "Paris is the capital of France.",
+                        "source": "external:wiki",
+                        "score": 0.9,
+                        "rank": 1,
+                    }
+                ]
+            }).encode("utf-8")
+
+    def fake_urlopen(request, *, timeout):
+        seen["url"] = request.full_url
+        seen["timeout"] = timeout
+        seen["header"] = request.get_header("X-test")
+        return Response()
+
+    monkeypatch.setattr("eigentruth.adapters.retrieval.urllib.request.urlopen", fake_urlopen)
+    retriever = HTTPJSONRetriever(
+        "https://search.example/api?existing=1",
+        headers={"X-Test": "frontier"},
+        timeout_seconds=2.5,
+    )
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital", claim_id="c1"), limit=2)
+
+    assert "existing=1" in seen["url"]
+    assert "q=Paris+capital" in seen["url"]
+    assert "limit=2" in seen["url"]
+    assert seen["timeout"] == pytest.approx(2.5)
+    assert seen["header"] == "frontier"
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].source == "external:wiki"
+    assert hits[0].score == pytest.approx(0.9)
+    assert hits[0].metadata["rank"] == 1
+    assert hits[0].metadata["retriever"] == "HTTPJSONRetriever"
+    assert hits[0].metadata["retriever_backend"] == "http_json"
+    assert hits[0].metadata["claim_id"] == "c1"
+
+
+def test_retrieval_action_executor_fails_closed_when_retriever_errors():
+    class FailingRetriever:
+        def retrieve(self, query, *, limit=5):
+            raise RuntimeError("search backend offline")
+
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"retrieval_targets": ({"claim_id": "c1", "text": "Paris capital France"},)},
+        request_id="req-search",
+    )
+    executor = RetrievalActionExecutor(FailingRetriever())
+
+    result = executor.execute(request, context={"request_id": "req-search"})
+
+    assert result.status is ActionExecutionStatus.FAILED
+    assert result.request_id == "req-search"
+    assert result.error == "retrieval failed for 1 of 1 queries"
+    assert result.output["hits"] == ()
+    assert result.output["errors"][0]["error_type"] == "RuntimeError"
+    assert "search backend offline" in result.output["errors"][0]["error"]
+    assert result.output["hits_by_query"][0]["hits"] == ()
+    assert result.metadata["retriever"] == "FailingRetriever"
+    assert result.metadata["fail_closed"] is True
+    assert result.metadata["side_effects"] is False
 
 
 def test_question_answer_verifier_checks_structured_question_answers():

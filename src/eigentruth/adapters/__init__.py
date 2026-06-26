@@ -11,6 +11,7 @@ from eigentruth.adapters.calculator import CalculationResult, CalculatorVerifier
 from eigentruth.adapters.facts import StructuredFact, StructuredFactVerifier
 from eigentruth.adapters.qa import QuestionAnswerFact, QuestionAnswerVerifier
 from eigentruth.adapters.retrieval import (
+    HTTPJSONRetriever,
     InMemoryRetriever,
     RetrievalActionExecutor,
     RetrievalHit,
@@ -50,6 +51,7 @@ __all__ = [
     "QuestionAnswerVerifier",
     "StructuredFact",
     "StructuredFactVerifier",
+    "HTTPJSONRetriever",
     "InMemoryRetriever",
     "RetrievalActionExecutor",
     "RetrievalHit",

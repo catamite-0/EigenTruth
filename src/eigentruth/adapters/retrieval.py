@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
+import urllib.error
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass, field
 from hashlib import sha256
 from pathlib import Path
@@ -266,6 +269,98 @@ class SQLiteFTSRetriever:
 
 
 @dataclass(frozen=True)
+class HTTPJSONRetriever:
+    """HTTP JSON retriever shell for external search services.
+
+    The retriever is stdlib-only and expects a JSON list or an object containing
+    one of ``hits``, ``results``, or ``documents``. It performs no retries and
+    raises on transport/parse errors so executor boundaries can fail closed and
+    record the error in traceable action results.
+    """
+
+    endpoint: str
+    query_param: str = "q"
+    limit_param: str = "limit"
+    headers: Mapping[str, str] = field(default_factory=dict)
+    timeout_seconds: float = 5.0
+    max_response_bytes: int = 2_000_000
+    hit_keys: Sequence[str] = ("hits", "results", "documents")
+
+    def __post_init__(self) -> None:
+        endpoint = str(self.endpoint).strip()
+        parsed = urllib.parse.urlparse(endpoint)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("endpoint must be an absolute http(s) URL.")
+        query_param = str(self.query_param).strip()
+        limit_param = str(self.limit_param).strip()
+        if not query_param:
+            raise ValueError("query_param must be non-empty.")
+        if not limit_param:
+            raise ValueError("limit_param must be non-empty.")
+        timeout_seconds = float(self.timeout_seconds)
+        if timeout_seconds <= 0.0:
+            raise ValueError("timeout_seconds must be positive.")
+        max_response_bytes = int(self.max_response_bytes)
+        if max_response_bytes <= 0:
+            raise ValueError("max_response_bytes must be positive.")
+        object.__setattr__(self, "endpoint", endpoint)
+        object.__setattr__(self, "query_param", query_param)
+        object.__setattr__(self, "limit_param", limit_param)
+        object.__setattr__(self, "headers", {str(key): str(value) for key, value in self.headers.items()})
+        object.__setattr__(self, "timeout_seconds", timeout_seconds)
+        object.__setattr__(self, "max_response_bytes", max_response_bytes)
+        object.__setattr__(self, "hit_keys", _non_empty_strings(self.hit_keys, name="hit_keys"))
+
+    def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
+        """Return hits from a caller-provided HTTP JSON endpoint."""
+        if limit <= 0:
+            return ()
+        request = urllib.request.Request(
+            _url_with_query(
+                self.endpoint,
+                {
+                    self.query_param: query.query,
+                    self.limit_param: str(limit),
+                },
+            ),
+            headers=dict(self.headers),
+            method="GET",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout_seconds) as response:
+                status = int(getattr(response, "status", 200))
+                if status < 200 or status >= 300:
+                    raise RuntimeError(f"retrieval endpoint returned HTTP {status}.")
+                raw = response.read(self.max_response_bytes + 1)
+                if len(raw) > self.max_response_bytes:
+                    raise RuntimeError("retrieval response exceeded max_response_bytes.")
+                charset = _response_charset(response)
+        except (OSError, urllib.error.URLError) as exc:
+            raise RuntimeError(f"retrieval endpoint request failed: {exc}") from exc
+        try:
+            payload = json.loads(raw.decode(charset))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"retrieval endpoint returned invalid JSON: {exc}") from exc
+
+        hits = []
+        for item in _hits_from_payload(payload, hit_keys=self.hit_keys):
+            hit = _coerce_hit(item)
+            metadata = {
+                **dict(hit.metadata),
+                "retriever": type(self).__name__,
+                "retriever_backend": "http_json",
+                "endpoint": self.endpoint,
+                "status_code": status,
+            }
+            if query.claim_id is not None:
+                metadata["claim_id"] = query.claim_id
+            hits.append(RetrievalHit(hit.text, hit.source, hit.score, metadata))
+            if len(hits) >= limit:
+                break
+        return tuple(hits)
+
+
+@dataclass(frozen=True)
 class RetrievalActionExecutor:
     """Execute retrieve actions against a dependency-free retriever."""
 
@@ -300,27 +395,42 @@ class RetrievalActionExecutor:
         limit = _limit_from_payload(request.payload, default=self.limit)
         hits_by_query = []
         all_hits = []
+        errors = []
         for query in queries:
-            hits = tuple(self.retriever.retrieve(query, limit=limit))
+            try:
+                hits = tuple(self.retriever.retrieve(query, limit=limit))
+            except Exception as exc:  # noqa: BLE001 - executor boundary must fail closed.
+                error = {
+                    "query": query.to_dict(),
+                    "error": str(exc),
+                    "error_type": type(exc).__name__,
+                }
+                errors.append(error)
+                hits_by_query.append({"query": query.to_dict(), "hits": (), "error": error})
+                continue
             hit_dicts = tuple(hit.to_dict() for hit in hits)
             hits_by_query.append({"query": query.to_dict(), "hits": hit_dicts})
             all_hits.extend(hit_dicts)
 
         return ActionResult(
             action=request.action,
-            status=ActionExecutionStatus.SUCCEEDED,
+            status=ActionExecutionStatus.FAILED if errors else ActionExecutionStatus.SUCCEEDED,
             output={
                 "queries": tuple(query.to_dict() for query in queries),
                 "hits": tuple(all_hits),
                 "hits_by_query": tuple(hits_by_query),
+                "errors": tuple(errors),
             },
             metadata={
                 "executor": type(self).__name__,
+                "retriever": type(self.retriever).__name__,
                 "request_metadata": dict(request.metadata),
                 "context": dict(context or {}),
                 "side_effects": False,
+                "fail_closed": bool(errors),
             },
             request_id=request.request_id,
+            error=None if not errors else f"retrieval failed for {len(errors)} of {len(queries)} queries",
         )
 
     def execute_many(
@@ -476,6 +586,55 @@ def _json_loads_mapping(payload: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise ValueError("JSON payload is not a mapping.")
     return value
+
+
+def _url_with_query(endpoint: str, params: Mapping[str, str]) -> str:
+    parsed = urllib.parse.urlsplit(endpoint)
+    query_items = urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    query_items.extend((str(key), str(value)) for key, value in params.items())
+    return urllib.parse.urlunsplit((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        urllib.parse.urlencode(query_items),
+        parsed.fragment,
+    ))
+
+
+def _response_charset(response: Any) -> str:
+    headers = getattr(response, "headers", None)
+    if headers is not None:
+        get_content_charset = getattr(headers, "get_content_charset", None)
+        if callable(get_content_charset):
+            charset = get_content_charset()
+            if charset:
+                return str(charset)
+    return "utf-8"
+
+
+def _hits_from_payload(payload: Any, *, hit_keys: Sequence[str]) -> tuple[RetrievalHit | Mapping[str, Any] | str, ...]:
+    if isinstance(payload, Mapping):
+        for key in hit_keys:
+            value = payload.get(key)
+            if _is_hit_sequence(value):
+                return tuple(value)
+        if "text" in payload or "content" in payload:
+            return (payload,)
+        raise RuntimeError(f"retrieval JSON object did not contain any hit list keys: {tuple(hit_keys)!r}.")
+    if _is_hit_sequence(payload):
+        return tuple(payload)
+    raise RuntimeError("retrieval JSON payload must be a hit list or object containing a hit list.")
+
+
+def _is_hit_sequence(value: Any) -> bool:
+    return isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray))
+
+
+def _non_empty_strings(values: Sequence[Any], *, name: str) -> tuple[str, ...]:
+    strings = tuple(str(value).strip() for value in values)
+    if not strings or any(not value for value in strings):
+        raise ValueError(f"{name} must contain non-empty strings.")
+    return strings
 
 
 def _queries_from_request(request: ActionRequest) -> tuple[RetrievalQuery, ...]:
