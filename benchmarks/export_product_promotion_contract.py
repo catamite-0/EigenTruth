@@ -51,6 +51,7 @@ def export_product_promotion_contract(
     control_policy_config = dict(contract.control_policy_config)
     control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
+    selfcheck_signal_fusion_workflow = dict(contract.selfcheck_signal_fusion_workflow)
     feedback_policy_workflow = dict(contract.feedback_policy_workflow)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
@@ -145,6 +146,42 @@ def export_product_promotion_contract(
                 "product_trace_replay_workflow_runtime_drift_report": (
                     trace_replay_workflow.get("product_runtime_drift_report_path")
                 ),
+                "selfcheck_signal_fusion_workflow_report": (
+                    selfcheck_signal_fusion_workflow.get("report_path")
+                ),
+                "selfcheck_signal_fusion_workflow_manifest": (
+                    selfcheck_signal_fusion_workflow.get("manifest_path")
+                ),
+                "selfcheck_signal_fusion_workflow_source": (
+                    selfcheck_signal_fusion_workflow.get("source")
+                ),
+                "selfcheck_signal_fusion_workflow_registry": (
+                    selfcheck_signal_fusion_workflow.get("registry")
+                ),
+                "selfcheck_signal_fusion_workflow_record": (
+                    selfcheck_signal_fusion_workflow.get("record_key")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_status": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_status")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_passed": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_passed")
+                ),
+                "selfcheck_signal_fusion_workflow_failed_runs": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_failed_runs")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_run_count": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_run_count")
+                ),
+                "selfcheck_signal_fusion_workflow_fusion_run_count": (
+                    selfcheck_signal_fusion_workflow.get("fusion_run_count")
+                ),
+                "selfcheck_signal_fusion_workflow_geometry_artifact_count": (
+                    selfcheck_signal_fusion_workflow.get("geometry_fusion_artifact_count")
+                ),
+                "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": (
+                    selfcheck_signal_fusion_workflow.get("enhanced_score_dump_count")
+                ),
                 "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
                 "feedback_policy_workflow_manifest": feedback_policy_workflow.get(
                     "manifest_path"
@@ -205,6 +242,7 @@ def export_product_promotion_contract(
             "control_policy_config": control_policy_config,
             "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
+            "selfcheck_signal_fusion_workflow": selfcheck_signal_fusion_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),

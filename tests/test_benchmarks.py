@@ -12653,11 +12653,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         safety_coverage_rate=1.0,
         unknown_safety_issue_rate=0.0,
     )
+    selfcheck_signal_fusion_workflow_report = _write_selfcheck_signal_fusion_workflow_report(
+        tmp_path / "selfcheck-signal-fusion-workflow",
+        sample_quality_passed=True,
+    )
     ArtifactRegistry.load_json(baseline_registry_path).record_report(
         name="product-trace-replay-workflow",
         path=product_trace_replay_workflow_report,
         version="0.1",
         metadata={"workflow": "run_product_trace_replay_workflow", "status": "promote"},
+    ).record_report(
+        name="selfcheck-signal-fusion-workflow",
+        path=selfcheck_signal_fusion_workflow_report,
+        version="0.1",
+        metadata={"workflow": "run_selfcheck_signal_fusion_workflow", "status": "promote"},
     ).record_report(
         name="feedback-policy-workflow",
         path=feedback_policy_workflow_report,
@@ -12702,6 +12711,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
         release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
+        selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         feedback_policy_min_matched_feedback_count=20,
         feedback_policy_min_safety_coverage=0.70,
@@ -12750,6 +12760,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "required_route_manifest_1",
         "route_manifest",
         "selector_replay_manifest",
+        "selfcheck_signal_fusion_workflow_manifest",
     ]
     assert manifest["metadata"]["runner"] == "run_release_candidate_registry_workflow"
     assert manifest["metadata"]["release_candidate_status"] == "promote"
@@ -12759,6 +12770,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["release_product_runtime_drift_status"] == "promote"
     assert manifest["metadata"]["release_efficiency_status"] == "promote"
     assert manifest["metadata"]["release_product_trace_replay_workflow_status"] == "promote"
+    assert manifest["metadata"]["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert manifest["metadata"]["release_feedback_policy_workflow_status"] == "promote"
     assert manifest["metadata"]["release_adapter_family_status"] == "promote"
     assert manifest["metadata"]["release_required_route_baseline_status"] == "promote"
@@ -12819,6 +12831,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["recommended_feedback_policy_workflow_report"] == str(
         feedback_policy_workflow_report
     )
+    assert manifest["metadata"]["recommended_selfcheck_signal_fusion_workflow_report"] == str(
+        selfcheck_signal_fusion_workflow_report
+    )
     assert manifest["metadata"]["recommended_feedback_policy_candidate_control_policy"].endswith(
         "candidate-control-policy.json"
     )
@@ -12876,6 +12891,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["product_trace_replay_workflow_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_report"] == str(
+        selfcheck_signal_fusion_workflow_report
+    )
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_source"] == "registry"
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_record"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_failed_runs"] == []
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_run_count"] == 1
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_geometry_artifact_count"] == 1
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_enhanced_score_dump_count"] == 1
     assert manifest["metadata"]["feedback_policy_workflow_report"] == str(feedback_policy_workflow_report)
     assert manifest["metadata"]["feedback_policy_workflow_source"] == "registry"
     assert manifest["metadata"]["feedback_policy_workflow_record"] == (
@@ -12986,6 +13015,12 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert payload["release_candidate_comparison"]["config"]["product_trace_replay_workflow_key"] == (
         "report:product-trace-replay-workflow:0.1"
     )
+    assert payload["release_candidate_comparison"]["config"]["selfcheck_signal_fusion_workflow"] == str(
+        selfcheck_signal_fusion_workflow_report
+    )
+    assert payload["release_candidate_comparison"]["config"]["selfcheck_signal_fusion_workflow_key"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
     assert payload["release_candidate_comparison"]["config"]["feedback_policy_workflow"] == str(
         feedback_policy_workflow_report
     )
@@ -13075,6 +13110,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["release_efficiency_quality_passed"] is True
     assert record.metadata["release_efficiency_trace_record_cache_hit_profile_count"] == 1
     assert record.metadata["release_product_trace_replay_workflow_status"] == "promote"
+    assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "promote"
     assert record.metadata["release_feedback_policy_workflow_status"] == "promote"
     assert record.metadata["product_trace_replay_workflow_report"] == str(
         product_trace_replay_workflow_report
@@ -13086,6 +13122,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == str(
         product_runtime_drift_report
     )
+    assert record.metadata["selfcheck_signal_fusion_workflow_report"] == str(
+        selfcheck_signal_fusion_workflow_report
+    )
+    assert record.metadata["selfcheck_signal_fusion_workflow_source"] == "registry"
+    assert record.metadata["selfcheck_signal_fusion_workflow_record"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
+    assert record.metadata["selfcheck_signal_fusion_workflow_failed_runs"] == []
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_run_count"] == 1
+    assert record.metadata["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+    assert record.metadata["selfcheck_signal_fusion_workflow_geometry_artifact_count"] == 1
+    assert record.metadata["selfcheck_signal_fusion_workflow_enhanced_score_dump_count"] == 1
     assert record.metadata["feedback_policy_workflow_report"] == str(feedback_policy_workflow_report)
     assert record.metadata["feedback_policy_workflow_source"] == "registry"
     assert record.metadata["feedback_policy_workflow_record"] == (
@@ -13277,6 +13327,92 @@ def test_run_release_candidate_registry_workflow_records_blocked_frontier_eviden
     assert record.metadata["frontier_release_evidence_manifest"].endswith(
         "frontier-blocked/artifact-manifest.json"
     )
+
+
+def test_run_release_candidate_registry_workflow_blocks_failed_selfcheck_signal_fusion(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="selfcheck-readiness",
+        version="0.1",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="selfcheck-route",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
+        name="selfcheck-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    blocked_selfcheck_path = _write_selfcheck_signal_fusion_workflow_report(
+        tmp_path / "selfcheck-blocked",
+        sample_quality_passed=False,
+        failed_runs=("qwen",),
+        coverage=0.10,
+        average_samples_per_record=0.4,
+        not_applicable_rate=0.90,
+    )
+
+    workflow_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=baseline_registry_path,
+        release_registry_path=release_registry_path,
+        name="selfcheck-gated-release",
+        version="0.1",
+        selfcheck_signal_fusion_workflow_path=blocked_selfcheck_path,
+        release_report_path=tmp_path / "release-comparison.json",
+        artifact_manifest_path=tmp_path / "release-manifest.json",
+        verification_report_path=tmp_path / "release-verification.json",
+        workflow_report_path=tmp_path / "release-workflow.json",
+        allow_non_promote=True,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    payload = module.run_release_candidate_registry_workflow(workflow_config)
+
+    assert payload["decision"]["status"] == "blocked"
+    comparison_decision = payload["release_candidate_comparison"]["decision"]
+    assert comparison_decision["selfcheck_signal_fusion_workflow_status"] == "blocked"
+    assert comparison_decision["blocking_reasons"][0]["gate"] == "selfcheck_signal_fusion_workflow"
+    assert "sample quality gate" in comparison_decision["blocking_reasons"][0]["reasons"][0]
+    manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["selfcheck_signal_fusion_workflow_manifest"]["path"].endswith(
+        "selfcheck-blocked/artifact-manifest.json"
+    )
+    assert manifest["metadata"]["release_selfcheck_signal_fusion_workflow_status"] == "blocked"
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_report"] == str(
+        blocked_selfcheck_path
+    )
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_status"] == "fail"
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_passed"] is False
+    assert manifest["metadata"]["selfcheck_signal_fusion_workflow_failed_runs"] == ["qwen"]
+    registry = ArtifactRegistry.load_json(release_registry_path)
+    record = registry.get("benchmark_manifest:selfcheck-gated-release:0.1")
+    assert record.metadata["release_candidate_status"] == "blocked"
+    assert record.metadata["release_selfcheck_signal_fusion_workflow_status"] == "blocked"
+    assert record.metadata["selfcheck_signal_fusion_workflow_report"] == str(blocked_selfcheck_path)
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_status"] == "fail"
 
 
 def test_manifest_fingerprint_worker_sweep_recommends_worker_and_registers(tmp_path):
@@ -13665,6 +13801,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "recommended_route": "structured_qa",
                 "recommended_selector_replay_candidate": "default",
                 "product_runtime_drift_status": "promote",
+                "selfcheck_signal_fusion_workflow_status": "promote",
+                "recommended_selfcheck_signal_fusion_workflow_report": (
+                    "artifacts/selfcheck-signal-fusion/selfcheck-signal-fusion-workflow.json"
+                ),
                 "feedback_policy_workflow_status": "promote",
                 "recommended_feedback_policy_workflow_report": (
                     "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
@@ -13717,6 +13857,22 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "selector_replay_report_path": "artifacts/selector/selector-replay.json",
                     "product_runtime_drift_report_path": "artifacts/runtime-drift/runtime-drift.json",
                 },
+                "selfcheck_signal_fusion_workflow": {
+                    "report_path": "artifacts/selfcheck-signal-fusion/selfcheck-signal-fusion-workflow.json",
+                    "manifest_path": "artifacts/selfcheck-signal-fusion/artifact-manifest.json",
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:selfcheck-signal-fusion-workflow:0.1",
+                    "workflow": "selfcheck_signal_fusion_workflow",
+                    "status": "promote",
+                    "sample_quality_status": "pass",
+                    "sample_quality_passed": True,
+                    "sample_quality_failed_runs": [],
+                    "sample_quality_run_count": 1,
+                    "fusion_run_count": 1,
+                    "geometry_fusion_artifact_count": 1,
+                    "enhanced_score_dump_count": 1,
+                },
                 "feedback_policy_workflow": {
                     "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
                     "manifest_path": "artifacts/feedback-policy-workflow/artifact-manifest.json",
@@ -13755,6 +13911,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "product_trace_replay_workflow_manifest": (
                         "artifacts/trace-replay-workflow/artifact-manifest.json"
+                    ),
+                    "selfcheck_signal_fusion_workflow_manifest": (
+                        "artifacts/selfcheck-signal-fusion/artifact-manifest.json"
                     ),
                 },
             },
@@ -13826,6 +13985,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["feedback_policy_workflow"]["record_key"] == (
         "report:feedback-policy-workflow:0.1"
     )
+    assert contract["selfcheck_signal_fusion_workflow"]["record_key"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert contract["selfcheck_signal_fusion_workflow"]["sample_quality_passed"] is True
     assert contract["feedback_policy_workflow"]["candidate_control_policy"].endswith(
         "candidate-control-policy.json"
     )
@@ -13849,6 +14012,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["recommended_feedback_policy_workflow_report"] == (
         "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
     )
+    assert contract["metadata"]["recommended_selfcheck_signal_fusion_workflow_report"] == (
+        "artifacts/selfcheck-signal-fusion/selfcheck-signal-fusion-workflow.json"
+    )
+    assert contract["metadata"]["selfcheck_signal_fusion_workflow_status"] == "promote"
+    assert contract["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
+    assert contract["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
     assert contract["metadata"]["feedback_policy_workflow_status"] == "promote"
     assert contract["metadata"]["feedback_policy_workflow_report_status"] == "recommend"
     assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
@@ -13873,6 +14042,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"
     )
+    assert record.metadata["selfcheck_signal_fusion_workflow_source"] == "registry"
+    assert record.metadata["selfcheck_signal_fusion_workflow_record"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
+    assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
+    assert record.metadata["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
     assert record.metadata["feedback_policy_workflow_source"] == "registry"
     assert record.metadata["feedback_policy_workflow_record"] == (
         "report:feedback-policy-workflow:0.1"
@@ -14951,6 +15127,147 @@ def _write_feedback_policy_workflow_report(
                     "status": status,
                     "matched_feedback_count": matched_feedback_count,
                     "safety_coverage_rate": safety_coverage_rate,
+                },
+            ),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return report_path
+
+
+def _write_selfcheck_signal_fusion_workflow_report(
+    output_dir,
+    *,
+    sample_quality_passed=True,
+    failed_runs=(),
+    coverage=0.75,
+    average_samples_per_record=2.0,
+    not_applicable_rate=0.10,
+):
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "selfcheck-signal-fusion-workflow.json"
+    sample_quality_path = output_dir / "sample-quality-report.json"
+    score_ensemble_path = output_dir / "score-ensemble-report.json"
+    enhanced_scores_path = output_dir / "qwen-selfcheck-scores.manifest.json"
+    geometry_artifact_path = output_dir / "qwen-selfcheck-geometry-fusion-artifact.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    sample_quality = {
+        "schema_version": 1,
+        "report_type": "selfcheck_sample_quality_gate",
+        "status": "pass" if sample_quality_passed else "fail",
+        "passed": sample_quality_passed,
+        "thresholds": {
+            "min_coverage": 0.50,
+            "max_not_applicable_rate": 0.50,
+            "min_average_samples_per_record": 1.0,
+            "min_records_meeting_min_samples": None,
+            "min_best_overlap_mean": 0.0,
+        },
+        "runs": {
+            "qwen": {
+                "name": "qwen",
+                "passed": sample_quality_passed,
+                "status": "pass" if sample_quality_passed else "fail",
+                "n_total": 20,
+                "records_with_samples": 18,
+                "records_meeting_min_samples": int(round(coverage * 20)),
+                "total_samples": 40,
+                "coverage": coverage,
+                "sample_presence_rate": 0.90,
+                "average_samples_per_record": average_samples_per_record,
+                "not_applicable_rate": not_applicable_rate,
+                "best_overlap_mean": 0.72,
+                "sample_count_mean": average_samples_per_record,
+                "failures": [] if sample_quality_passed else [{
+                    "metric": "coverage",
+                    "value": coverage,
+                    "threshold": 0.50,
+                    "rule": "value >= threshold",
+                }],
+            },
+        },
+        "failed_runs": list(failed_runs),
+        "recommendation": (
+            "selfcheck signals have enough sample coverage for calibrated replay"
+            if sample_quality_passed else
+            "collect better aligned samples before promoting selfcheck signals"
+        ),
+    }
+    fusion_summary = {
+        "runs": [
+            {
+                "name": "qwen",
+                "best_single_at_alpha": {
+                    "name": "truth_proj",
+                    "alpha": 0.10,
+                    "auroc": 0.72,
+                },
+                "best_ensemble_at_alpha": {
+                    "name": "score_fusion_mean_rank",
+                    "alpha": 0.10,
+                    "auroc": 0.76,
+                },
+                "best_geometry_fusion_at_alpha": {
+                    "name": "geometry_by_selfcheck",
+                    "alpha": 0.10,
+                    "auroc": 0.77,
+                },
+            },
+        ],
+    }
+    sample_quality_path.write_text(
+        json.dumps(sample_quality, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    score_ensemble_path.write_text(
+        json.dumps({"schema_version": 1, "runs": fusion_summary["runs"]}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    enhanced_scores_path.write_text(
+        json.dumps({"schema_version": 1, "format": "jsonl"}) + "\n",
+        encoding="utf-8",
+    )
+    geometry_artifact_path.write_text(
+        json.dumps({"schema_version": 1, "name": "geometry_by_selfcheck"}) + "\n",
+        encoding="utf-8",
+    )
+    report_payload = {
+        "schema_version": 1,
+        "workflow": "selfcheck_signal_fusion_workflow",
+        "config": {
+            "min_samples": 2,
+            "sample_quality_gate": sample_quality["thresholds"],
+        },
+        "enhanced_score_dumps": {"qwen": str(enhanced_scores_path)},
+        "sample_quality_report_path": str(sample_quality_path),
+        "sample_quality": sample_quality,
+        "score_ensemble_report_path": str(score_ensemble_path),
+        "geometry_fusion_artifacts": {"qwen": str(geometry_artifact_path)},
+        "artifact_manifest_path": str(manifest_path),
+        "fusion_summary": fusion_summary,
+    }
+    report_path.write_text(json.dumps(report_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {
+                    "selfcheck_signal_fusion_workflow": report_path,
+                    "sample_quality_report": sample_quality_path,
+                    "score_ensemble_report": score_ensemble_path,
+                    "enhanced_scores.qwen": enhanced_scores_path,
+                    "geometry_fusion_artifact.qwen": geometry_artifact_path,
+                },
+                root=output_dir,
+                metadata={
+                    "runner": "run_selfcheck_signal_fusion_workflow",
+                    "workflow": "selfcheck_signal_fusion_workflow",
+                    "sample_quality": sample_quality,
+                    "fusion_summary": fusion_summary,
                 },
             ),
             indent=2,

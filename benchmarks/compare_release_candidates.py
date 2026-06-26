@@ -67,6 +67,9 @@ def compare_release_candidates(
     product_trace_replay_workflow_path: str | Path | None = None,
     product_trace_replay_workflow_registry_path: str | Path | None = None,
     product_trace_replay_workflow_key: str | None = None,
+    selfcheck_signal_fusion_workflow_path: str | Path | None = None,
+    selfcheck_signal_fusion_workflow_registry_path: str | Path | None = None,
+    selfcheck_signal_fusion_workflow_key: str | None = None,
     feedback_policy_workflow_path: str | Path | None = None,
     feedback_policy_workflow_registry_path: str | Path | None = None,
     feedback_policy_workflow_key: str | None = None,
@@ -337,6 +340,23 @@ def compare_release_candidates(
             product_runtime_drift_report_path = str(
                 product_trace_replay_workflow["product_runtime_drift_report_path"]
             )
+    selfcheck_signal_fusion_workflow_source = _resolve_selfcheck_signal_fusion_workflow_source(
+        selfcheck_signal_fusion_workflow_path=selfcheck_signal_fusion_workflow_path,
+        selfcheck_signal_fusion_workflow_registry_path=(
+            selfcheck_signal_fusion_workflow_registry_path
+            if selfcheck_signal_fusion_workflow_key is not None
+            else None
+        ),
+        selfcheck_signal_fusion_workflow_key=selfcheck_signal_fusion_workflow_key,
+        default_registry_path=readiness_registry_path,
+    )
+    selfcheck_signal_fusion_workflow = _selfcheck_signal_fusion_workflow_gate(
+        selfcheck_signal_fusion_workflow_source=selfcheck_signal_fusion_workflow_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        verification_context=verification_context,
+    )
     feedback_policy_workflow_source = _resolve_feedback_policy_workflow_source(
         feedback_policy_workflow_path=feedback_policy_workflow_path,
         feedback_policy_workflow_registry_path=(
@@ -509,6 +529,7 @@ def compare_release_candidates(
         product_runtime_drift,
         release_efficiency,
         frontier_release_evidence,
+        selfcheck_signal_fusion_workflow,
         feedback_policy_workflow,
     )
     candidate = (
@@ -522,6 +543,7 @@ def compare_release_candidates(
             product_runtime_drift,
             release_efficiency,
             frontier_release_evidence,
+            selfcheck_signal_fusion_workflow,
             feedback_policy_workflow,
         )
         if decision["status"] == "promote"
@@ -581,6 +603,17 @@ def compare_release_candidates(
                 else product_trace_replay_workflow_source.get("registry")
             ),
             "product_trace_replay_workflow_key": product_trace_replay_workflow_key,
+            "selfcheck_signal_fusion_workflow": (
+                None
+                if selfcheck_signal_fusion_workflow_source is None
+                else str(selfcheck_signal_fusion_workflow_source["path"])
+            ),
+            "selfcheck_signal_fusion_workflow_registry": (
+                None
+                if selfcheck_signal_fusion_workflow_source is None
+                else selfcheck_signal_fusion_workflow_source.get("registry")
+            ),
+            "selfcheck_signal_fusion_workflow_key": selfcheck_signal_fusion_workflow_key,
             "feedback_policy_workflow": (
                 None
                 if feedback_policy_workflow_source is None
@@ -683,6 +716,7 @@ def compare_release_candidates(
         "required_route_baseline_gate": required_routes,
         "performance_baseline_gate": performance,
         "product_trace_replay_workflow_gate": product_trace_replay_workflow,
+        "selfcheck_signal_fusion_workflow_gate": selfcheck_signal_fusion_workflow,
         "feedback_policy_workflow_gate": feedback_policy_workflow,
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
@@ -823,6 +857,7 @@ def _decision(
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
+    selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
     feedback_policy_workflow: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     readiness_decision = _mapping(readiness.get("decision"))
@@ -860,6 +895,16 @@ def _decision(
     )
     frontier_release_evidence_status = (
         None if frontier_release_evidence is None else frontier_release_evidence.get("status")
+    )
+    selfcheck_signal_fusion_workflow_gate = _mapping(
+        None
+        if selfcheck_signal_fusion_workflow is None
+        else selfcheck_signal_fusion_workflow.get("gate")
+    )
+    selfcheck_signal_fusion_workflow_status = (
+        None
+        if selfcheck_signal_fusion_workflow is None
+        else selfcheck_signal_fusion_workflow.get("status")
     )
     feedback_policy_workflow_gate = _mapping(
         None if feedback_policy_workflow is None else feedback_policy_workflow.get("gate")
@@ -935,6 +980,15 @@ def _decision(
             "reasons": list(frontier_release_evidence_gate.get("blocking_reasons", ())),
         })
     if (
+        selfcheck_signal_fusion_workflow is not None
+        and selfcheck_signal_fusion_workflow_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "selfcheck_signal_fusion_workflow",
+            "status": selfcheck_signal_fusion_workflow_status,
+            "reasons": list(selfcheck_signal_fusion_workflow_gate.get("blocking_reasons", ())),
+        })
+    if (
         feedback_policy_workflow is not None
         and feedback_policy_workflow_gate.get("passed") is not True
     ):
@@ -964,6 +1018,7 @@ def _decision(
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
+        "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
         "feedback_policy_workflow_status": feedback_policy_workflow_status,
         "recommended_readiness_record": None if candidate is None else candidate.get("readiness_record"),
         "recommended_route_record": None if candidate is None else candidate.get("route_record"),
@@ -1007,6 +1062,14 @@ def _decision(
                 or frontier_release_evidence_gate.get("passed") is not True
             )
             else frontier_release_evidence.get("report_path")
+        ),
+        "recommended_selfcheck_signal_fusion_workflow_report": (
+            None
+            if (
+                selfcheck_signal_fusion_workflow is None
+                or selfcheck_signal_fusion_workflow_gate.get("passed") is not True
+            )
+            else selfcheck_signal_fusion_workflow.get("report_path")
         ),
         "recommended_feedback_policy_workflow_report": (
             None
@@ -1670,6 +1733,174 @@ def _feedback_policy_workflow_gate(
         "verification": verification,
         "gate": gate,
     }
+
+
+def _selfcheck_signal_fusion_workflow_gate(
+    *,
+    selfcheck_signal_fusion_workflow_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if selfcheck_signal_fusion_workflow_source is None:
+        return None
+    report_path = Path(selfcheck_signal_fusion_workflow_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _selfcheck_signal_fusion_workflow_manifest_path(
+        report,
+        report_path=report_path,
+    )
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="selfcheck_signal_fusion_workflow_manifest",
+        verification_context=verification_context,
+    )
+    gate = _selfcheck_signal_fusion_workflow_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        allow_unverified=allow_unverified,
+    )
+    sample_quality = _mapping(report.get("sample_quality"))
+    fusion_summary = _mapping(report.get("fusion_summary"))
+    fusion_runs = tuple(fusion_summary.get("runs") or ())
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": selfcheck_signal_fusion_workflow_source.get("source"),
+        "registry": selfcheck_signal_fusion_workflow_source.get("registry"),
+        "record_key": selfcheck_signal_fusion_workflow_source.get("record_key"),
+        "record": selfcheck_signal_fusion_workflow_source.get("record"),
+        "workflow": report.get("workflow"),
+        "sample_quality_status": sample_quality.get("status"),
+        "sample_quality_passed": sample_quality.get("passed"),
+        "sample_quality_failed_runs": tuple(sample_quality.get("failed_runs") or ()),
+        "sample_quality_run_count": len(_mapping(sample_quality.get("runs"))),
+        "sample_quality_runs": _selfcheck_sample_quality_run_summaries(sample_quality),
+        "fusion_summary": fusion_summary,
+        "fusion_run_count": len(fusion_runs),
+        "geometry_fusion_artifact_count": len(_mapping(report.get("geometry_fusion_artifacts"))),
+        "enhanced_score_dump_count": len(_mapping(report.get("enhanced_score_dumps"))),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _resolve_selfcheck_signal_fusion_workflow_source(
+    *,
+    selfcheck_signal_fusion_workflow_path: str | Path | None,
+    selfcheck_signal_fusion_workflow_registry_path: str | Path | None,
+    selfcheck_signal_fusion_workflow_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if selfcheck_signal_fusion_workflow_path is not None:
+        if selfcheck_signal_fusion_workflow_key is not None:
+            raise ValueError(
+                "selfcheck_signal_fusion_workflow_path is mutually exclusive with "
+                "selfcheck_signal_fusion_workflow_key."
+            )
+        return {"source": "file", "path": Path(selfcheck_signal_fusion_workflow_path)}
+    if selfcheck_signal_fusion_workflow_key is None:
+        if selfcheck_signal_fusion_workflow_registry_path is not None:
+            raise ValueError(
+                "selfcheck_signal_fusion_workflow_registry_path requires "
+                "selfcheck_signal_fusion_workflow_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if selfcheck_signal_fusion_workflow_registry_path is None
+        else selfcheck_signal_fusion_workflow_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(selfcheck_signal_fusion_workflow_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _selfcheck_signal_fusion_workflow_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"selfcheck signal fusion workflow report could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("selfcheck signal fusion workflow artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("selfcheck signal fusion workflow manifest verification failed")
+    if report.get("workflow") != "selfcheck_signal_fusion_workflow":
+        failures.append(
+            "selfcheck signal fusion workflow is "
+            f"{report.get('workflow')!r}, expected 'selfcheck_signal_fusion_workflow'"
+        )
+    sample_quality = _mapping(report.get("sample_quality"))
+    if sample_quality.get("passed") is not True:
+        failed_runs = tuple(sample_quality.get("failed_runs") or ())
+        failures.append(
+            "selfcheck signal fusion sample quality gate did not pass"
+            + (f": failed_runs={failed_runs!r}" if failed_runs else "")
+        )
+    fusion_summary = _mapping(report.get("fusion_summary"))
+    if not tuple(fusion_summary.get("runs") or ()):
+        failures.append("selfcheck signal fusion summary has no runs")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _selfcheck_signal_fusion_workflow_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        report.get("artifact_manifest_path"),
+        _nested(report, "paths", "artifact_manifest"),
+    )
+    if raw_path is None:
+        return None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _selfcheck_sample_quality_run_summaries(
+    sample_quality: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    summaries = []
+    for name, payload in _mapping(sample_quality.get("runs")).items():
+        run = _mapping(payload)
+        summaries.append({
+            "name": str(name),
+            "status": run.get("status"),
+            "passed": run.get("passed"),
+            "n_total": run.get("n_total"),
+            "records_meeting_min_samples": run.get("records_meeting_min_samples"),
+            "coverage": _float_or_none(run.get("coverage")),
+            "average_samples_per_record": _float_or_none(
+                run.get("average_samples_per_record")
+            ),
+            "not_applicable_rate": _float_or_none(run.get("not_applicable_rate")),
+            "best_overlap_mean": _float_or_none(run.get("best_overlap_mean")),
+        })
+    return tuple(summaries)
 
 
 def _resolve_feedback_policy_workflow_source(
@@ -2888,6 +3119,7 @@ def _candidate_with_gates(
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
+    selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
     feedback_policy_workflow: Mapping[str, Any] | None,
 ) -> dict[str, Any] | None:
     if candidate is None:
@@ -3013,6 +3245,42 @@ def _candidate_with_gates(
         }
         manifests["frontier_release_evidence_manifest"] = frontier_release_evidence.get(
             "manifest_path"
+        )
+    if selfcheck_signal_fusion_workflow is not None:
+        payload["selfcheck_signal_fusion_workflow"] = {
+            "report_path": selfcheck_signal_fusion_workflow.get("report_path"),
+            "manifest_path": selfcheck_signal_fusion_workflow.get("manifest_path"),
+            "source": selfcheck_signal_fusion_workflow.get("source"),
+            "registry": selfcheck_signal_fusion_workflow.get("registry"),
+            "record_key": selfcheck_signal_fusion_workflow.get("record_key"),
+            "workflow": selfcheck_signal_fusion_workflow.get("workflow"),
+            "status": selfcheck_signal_fusion_workflow.get("status"),
+            "sample_quality_status": selfcheck_signal_fusion_workflow.get(
+                "sample_quality_status"
+            ),
+            "sample_quality_passed": selfcheck_signal_fusion_workflow.get(
+                "sample_quality_passed"
+            ),
+            "sample_quality_failed_runs": tuple(
+                selfcheck_signal_fusion_workflow.get("sample_quality_failed_runs", ())
+            ),
+            "sample_quality_run_count": selfcheck_signal_fusion_workflow.get(
+                "sample_quality_run_count"
+            ),
+            "sample_quality_runs": tuple(
+                _mapping(run)
+                for run in selfcheck_signal_fusion_workflow.get("sample_quality_runs", ())
+            ),
+            "fusion_run_count": selfcheck_signal_fusion_workflow.get("fusion_run_count"),
+            "geometry_fusion_artifact_count": selfcheck_signal_fusion_workflow.get(
+                "geometry_fusion_artifact_count"
+            ),
+            "enhanced_score_dump_count": selfcheck_signal_fusion_workflow.get(
+                "enhanced_score_dump_count"
+            ),
+        }
+        manifests["selfcheck_signal_fusion_workflow_manifest"] = (
+            selfcheck_signal_fusion_workflow.get("manifest_path")
         )
     if feedback_policy_workflow is not None:
         payload["feedback_policy_workflow"] = {
@@ -3265,6 +3533,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         product_trace_replay_workflow_path=args.product_trace_replay_workflow,
         product_trace_replay_workflow_registry_path=args.product_trace_replay_workflow_registry,
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        selfcheck_signal_fusion_workflow_path=args.selfcheck_signal_fusion_workflow,
+        selfcheck_signal_fusion_workflow_registry_path=args.selfcheck_signal_fusion_workflow_registry,
+        selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
         feedback_policy_workflow_path=args.feedback_policy_workflow,
         feedback_policy_workflow_registry_path=args.feedback_policy_workflow_registry,
         feedback_policy_workflow_key=args.feedback_policy_workflow_key,
@@ -3361,7 +3632,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"selector_replay={decision.get('recommended_selector_replay_candidate')} "
         f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
-        f"frontier_release_evidence={decision.get('frontier_release_evidence_status')}"
+        f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
+        f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -3423,6 +3695,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--selfcheck-signal-fusion-workflow", default=None,
+                        help="optional selfcheck signal fusion workflow report that must pass sample-quality "
+                             "and manifest gates")
+    parser.add_argument("--selfcheck-signal-fusion-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--selfcheck-signal-fusion-workflow-key; defaults to --readiness-registry")
+    parser.add_argument("--selfcheck-signal-fusion-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a selfcheck signal fusion workflow")
     parser.add_argument("--feedback-policy-workflow", default=None,
                         help="optional feedback-policy workflow report that must recommend/observe and verify")
     parser.add_argument("--feedback-policy-workflow-registry", default=None,

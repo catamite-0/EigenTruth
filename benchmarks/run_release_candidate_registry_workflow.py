@@ -94,6 +94,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_trace_replay_workflow_path: Path | None = None
     product_trace_replay_workflow_registry_path: Path | None = None
     product_trace_replay_workflow_key: str | None = None
+    selfcheck_signal_fusion_workflow_path: Path | None = None
+    selfcheck_signal_fusion_workflow_registry_path: Path | None = None
+    selfcheck_signal_fusion_workflow_key: str | None = None
     feedback_policy_workflow_path: Path | None = None
     feedback_policy_workflow_registry_path: Path | None = None
     feedback_policy_workflow_key: str | None = None
@@ -223,6 +226,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "product_trace_replay_workflow_registry_path",
                 Path(self.product_trace_replay_workflow_registry_path),
+            )
+        if self.selfcheck_signal_fusion_workflow_path is not None:
+            object.__setattr__(
+                self,
+                "selfcheck_signal_fusion_workflow_path",
+                Path(self.selfcheck_signal_fusion_workflow_path),
+            )
+        if self.selfcheck_signal_fusion_workflow_registry_path is not None:
+            object.__setattr__(
+                self,
+                "selfcheck_signal_fusion_workflow_registry_path",
+                Path(self.selfcheck_signal_fusion_workflow_registry_path),
             )
         if self.feedback_policy_workflow_path is not None:
             object.__setattr__(
@@ -383,6 +398,11 @@ def run_release_candidate_registry_workflow(
         product_trace_replay_workflow_path=config.product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=config.product_trace_replay_workflow_registry_path,
         product_trace_replay_workflow_key=config.product_trace_replay_workflow_key,
+        selfcheck_signal_fusion_workflow_path=config.selfcheck_signal_fusion_workflow_path,
+        selfcheck_signal_fusion_workflow_registry_path=(
+            config.selfcheck_signal_fusion_workflow_registry_path
+        ),
+        selfcheck_signal_fusion_workflow_key=config.selfcheck_signal_fusion_workflow_key,
         feedback_policy_workflow_path=config.feedback_policy_workflow_path,
         feedback_policy_workflow_registry_path=config.feedback_policy_workflow_registry_path,
         feedback_policy_workflow_key=config.feedback_policy_workflow_key,
@@ -567,6 +587,17 @@ def run_release_candidate_registry_workflow(
                 else str(config.product_trace_replay_workflow_registry_path)
             ),
             "product_trace_replay_workflow_key": config.product_trace_replay_workflow_key,
+            "selfcheck_signal_fusion_workflow": (
+                None
+                if config.selfcheck_signal_fusion_workflow_path is None
+                else str(config.selfcheck_signal_fusion_workflow_path)
+            ),
+            "selfcheck_signal_fusion_workflow_registry": (
+                None
+                if config.selfcheck_signal_fusion_workflow_registry_path is None
+                else str(config.selfcheck_signal_fusion_workflow_registry_path)
+            ),
+            "selfcheck_signal_fusion_workflow_key": config.selfcheck_signal_fusion_workflow_key,
             "feedback_policy_workflow": (
                 None
                 if config.feedback_policy_workflow_path is None
@@ -775,6 +806,10 @@ def _write_artifact_manifest(
         "product_trace_replay_workflow_manifest": manifests.get(
             "product_trace_replay_workflow_manifest"
         ),
+        "selfcheck_signal_fusion_workflow_manifest": manifests.get(
+            "selfcheck_signal_fusion_workflow_manifest"
+        )
+        or _nested(comparison, "selfcheck_signal_fusion_workflow_gate", "manifest_path"),
         "feedback_policy_workflow_manifest": manifests.get("feedback_policy_workflow_manifest"),
         "adapter_family_matrix_report": manifests.get("adapter_family_matrix_report"),
     }
@@ -873,6 +908,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         else {}
     )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
+    selfcheck_signal_fusion_workflow = dict(
+        candidate.get("selfcheck_signal_fusion_workflow") or {}
+    )
+    if not selfcheck_signal_fusion_workflow:
+        selfcheck_signal_fusion_workflow = dict(
+            comparison.get("selfcheck_signal_fusion_workflow_gate") or {}
+        )
     feedback_policy_workflow = dict(candidate.get("feedback_policy_workflow") or {})
     frontier_release_evidence = dict(candidate.get("frontier_release_evidence") or {})
     if not frontier_release_evidence:
@@ -895,6 +937,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_product_trace_replay_workflow_status": decision.get(
             "product_trace_replay_workflow_status"
         ),
+        "release_selfcheck_signal_fusion_workflow_status": decision.get(
+            "selfcheck_signal_fusion_workflow_status"
+        ),
         "release_feedback_policy_workflow_status": decision.get("feedback_policy_workflow_status"),
         "release_policy_profile": config.get("release_policy_profile"),
         "release_policy_profile_applied_defaults": config.get(
@@ -912,6 +957,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
+        ),
+        "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
+            "recommended_selfcheck_signal_fusion_workflow_report"
         ),
         "recommended_feedback_policy_workflow_report": decision.get(
             "recommended_feedback_policy_workflow_report"
@@ -1128,6 +1176,35 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         ),
         "product_trace_replay_workflow_runtime_drift_report": product_trace_replay_workflow.get(
             "product_runtime_drift_report_path"
+        ),
+        "selfcheck_signal_fusion_workflow_report": selfcheck_signal_fusion_workflow.get("report_path"),
+        "selfcheck_signal_fusion_workflow_manifest": (
+            manifests.get("selfcheck_signal_fusion_workflow_manifest")
+            or selfcheck_signal_fusion_workflow.get("manifest_path")
+        ),
+        "selfcheck_signal_fusion_workflow_source": selfcheck_signal_fusion_workflow.get("source"),
+        "selfcheck_signal_fusion_workflow_registry": selfcheck_signal_fusion_workflow.get("registry"),
+        "selfcheck_signal_fusion_workflow_record": selfcheck_signal_fusion_workflow.get("record_key"),
+        "selfcheck_signal_fusion_workflow_sample_quality_status": (
+            selfcheck_signal_fusion_workflow.get("sample_quality_status")
+        ),
+        "selfcheck_signal_fusion_workflow_sample_quality_passed": (
+            selfcheck_signal_fusion_workflow.get("sample_quality_passed")
+        ),
+        "selfcheck_signal_fusion_workflow_failed_runs": (
+            selfcheck_signal_fusion_workflow.get("sample_quality_failed_runs")
+        ),
+        "selfcheck_signal_fusion_workflow_sample_quality_run_count": (
+            selfcheck_signal_fusion_workflow.get("sample_quality_run_count")
+        ),
+        "selfcheck_signal_fusion_workflow_fusion_run_count": (
+            selfcheck_signal_fusion_workflow.get("fusion_run_count")
+        ),
+        "selfcheck_signal_fusion_workflow_geometry_artifact_count": (
+            selfcheck_signal_fusion_workflow.get("geometry_fusion_artifact_count")
+        ),
+        "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": (
+            selfcheck_signal_fusion_workflow.get("enhanced_score_dump_count")
         ),
         "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
         "feedback_policy_workflow_source": feedback_policy_workflow.get("source"),
@@ -1405,6 +1482,17 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             else Path(args.product_trace_replay_workflow_registry)
         ),
         product_trace_replay_workflow_key=args.product_trace_replay_workflow_key,
+        selfcheck_signal_fusion_workflow_path=(
+            None
+            if args.selfcheck_signal_fusion_workflow is None
+            else Path(args.selfcheck_signal_fusion_workflow)
+        ),
+        selfcheck_signal_fusion_workflow_registry_path=(
+            None
+            if args.selfcheck_signal_fusion_workflow_registry is None
+            else Path(args.selfcheck_signal_fusion_workflow_registry)
+        ),
+        selfcheck_signal_fusion_workflow_key=args.selfcheck_signal_fusion_workflow_key,
         feedback_policy_workflow_path=(
             None
             if args.feedback_policy_workflow is None
@@ -1580,6 +1668,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "defaults to --readiness-registry")
     parser.add_argument("--product-trace-replay-workflow-key", default=None,
                         help="optional report:<name>:<version> registry key for a product trace replay workflow")
+    parser.add_argument("--selfcheck-signal-fusion-workflow", default=None,
+                        help="optional selfcheck signal fusion workflow report that must pass sample-quality "
+                             "and manifest gates")
+    parser.add_argument("--selfcheck-signal-fusion-workflow-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--selfcheck-signal-fusion-workflow-key; defaults to --readiness-registry")
+    parser.add_argument("--selfcheck-signal-fusion-workflow-key", default=None,
+                        help="optional report:<name>:<version> registry key for a selfcheck signal fusion workflow")
     parser.add_argument("--feedback-policy-workflow", default=None,
                         help="optional feedback-policy workflow report that must recommend/observe and verify")
     parser.add_argument("--feedback-policy-workflow-registry", default=None,

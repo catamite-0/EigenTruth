@@ -33,6 +33,7 @@ class ProductPromotionContract:
     source_workflow: str | None = None
     source_status: str | None = None
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
+    selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -54,6 +55,11 @@ class ProductPromotionContract:
             self,
             "product_trace_replay_workflow",
             dict(self.product_trace_replay_workflow),
+        )
+        object.__setattr__(
+            self,
+            "selfcheck_signal_fusion_workflow",
+            dict(self.selfcheck_signal_fusion_workflow),
         )
         object.__setattr__(
             self,
@@ -87,6 +93,9 @@ class ProductPromotionContract:
                 control_defaults=_mapping(payload.get("control_defaults")),
                 product_trace_replay_workflow=_mapping(
                     payload.get("product_trace_replay_workflow")
+                ),
+                selfcheck_signal_fusion_workflow=_mapping(
+                    payload.get("selfcheck_signal_fusion_workflow")
                 ),
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
@@ -129,6 +138,9 @@ class ProductPromotionContract:
         required_route_baselines = _mapping(candidate.get("required_route_baselines"))
         product_trace_replay_workflow = _mapping(
             candidate.get("product_trace_replay_workflow")
+        )
+        selfcheck_signal_fusion_workflow = _mapping(
+            candidate.get("selfcheck_signal_fusion_workflow")
         )
         feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
         release_efficiency = _release_efficiency_metadata(
@@ -190,6 +202,10 @@ class ProductPromotionContract:
                 product_trace_replay_workflow,
                 manifests=manifests,
             ),
+            selfcheck_signal_fusion_workflow=_selfcheck_signal_fusion_workflow_metadata(
+                selfcheck_signal_fusion_workflow,
+                manifests=manifests,
+            ),
             feedback_policy_workflow=_feedback_policy_workflow_metadata(
                 feedback_policy_workflow,
                 manifests=manifests,
@@ -243,6 +259,49 @@ class ProductPromotionContract:
                 ),
                 "product_trace_replay_workflow_runtime_drift_report": (
                     product_trace_replay_workflow.get("product_runtime_drift_report_path")
+                ),
+                "selfcheck_signal_fusion_workflow_status": decision.get(
+                    "selfcheck_signal_fusion_workflow_status"
+                ),
+                "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
+                    "recommended_selfcheck_signal_fusion_workflow_report"
+                ),
+                "selfcheck_signal_fusion_workflow_report": (
+                    selfcheck_signal_fusion_workflow.get("report_path")
+                ),
+                "selfcheck_signal_fusion_workflow_manifest": (
+                    selfcheck_signal_fusion_workflow.get("manifest_path")
+                    or manifests.get("selfcheck_signal_fusion_workflow_manifest")
+                ),
+                "selfcheck_signal_fusion_workflow_source": (
+                    selfcheck_signal_fusion_workflow.get("source")
+                ),
+                "selfcheck_signal_fusion_workflow_registry": (
+                    selfcheck_signal_fusion_workflow.get("registry")
+                ),
+                "selfcheck_signal_fusion_workflow_record": (
+                    selfcheck_signal_fusion_workflow.get("record_key")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_status": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_status")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_passed": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_passed")
+                ),
+                "selfcheck_signal_fusion_workflow_failed_runs": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_failed_runs")
+                ),
+                "selfcheck_signal_fusion_workflow_sample_quality_run_count": (
+                    selfcheck_signal_fusion_workflow.get("sample_quality_run_count")
+                ),
+                "selfcheck_signal_fusion_workflow_fusion_run_count": (
+                    selfcheck_signal_fusion_workflow.get("fusion_run_count")
+                ),
+                "selfcheck_signal_fusion_workflow_geometry_artifact_count": (
+                    selfcheck_signal_fusion_workflow.get("geometry_fusion_artifact_count")
+                ),
+                "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": (
+                    selfcheck_signal_fusion_workflow.get("enhanced_score_dump_count")
                 ),
                 "feedback_policy_workflow_status": decision.get(
                     "feedback_policy_workflow_status"
@@ -457,6 +516,7 @@ class ProductPromotionContract:
             "control_policy_config": dict(self.control_policy_config),
             "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
+            "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
@@ -695,6 +755,9 @@ def product_promotion_contract_metadata(
         "promotion_contract_product_trace_replay_workflow": dict(
             contract.product_trace_replay_workflow
         ),
+        "promotion_contract_selfcheck_signal_fusion_workflow": dict(
+            contract.selfcheck_signal_fusion_workflow
+        ),
         "promotion_contract_feedback_policy_workflow": dict(
             contract.feedback_policy_workflow
         ),
@@ -829,6 +892,35 @@ def _product_trace_replay_workflow_metadata(
         "product_runtime_drift_report_path": workflow.get(
             "product_runtime_drift_report_path"
         ),
+    }
+
+
+def _selfcheck_signal_fusion_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("selfcheck_signal_fusion_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "workflow": workflow.get("workflow"),
+        "status": workflow.get("status"),
+        "sample_quality_status": workflow.get("sample_quality_status"),
+        "sample_quality_passed": workflow.get("sample_quality_passed"),
+        "sample_quality_failed_runs": workflow.get("sample_quality_failed_runs"),
+        "sample_quality_run_count": workflow.get("sample_quality_run_count"),
+        "sample_quality_runs": workflow.get("sample_quality_runs"),
+        "fusion_run_count": workflow.get("fusion_run_count"),
+        "geometry_fusion_artifact_count": workflow.get("geometry_fusion_artifact_count"),
+        "enhanced_score_dump_count": workflow.get("enhanced_score_dump_count"),
     }
 
 
