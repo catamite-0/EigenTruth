@@ -1017,6 +1017,7 @@ def _release_candidate(
     route_row = _recommended_row(route, route_decision.get("recommended_record"))
     if not readiness_row or not route_row:
         return None
+    route_property_summary = _covered_fact_property_summary(route_row)
     return {
         "readiness_record": readiness_row.get("record_key"),
         "route_record": route_row.get("record_key"),
@@ -1100,6 +1101,9 @@ def _release_candidate(
             "runtime_retrieval_hit_count": route_row.get("runtime_retrieval_hit_count"),
             "claims_cache_hit_rate": route_row.get("claims_cache_hit_rate"),
             "verifier_trace_cache_hit_rate": route_row.get("verifier_trace_cache_hit_rate"),
+            "covered_fact_property_count": route_property_summary["count"],
+            "covered_fact_properties": route_property_summary["properties"],
+            "covered_fact_property_metrics": route_property_summary["metrics"],
         },
         "manifests": {
             "readiness_manifest": readiness_row.get("manifest_path"),
@@ -1119,6 +1123,25 @@ def _recommended_row(
         if row_map.get("record_key") == record_key:
             return row_map
     return {}
+
+
+def _covered_fact_property_summary(row: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = {
+        str(property_id): dict(_mapping(property_metrics))
+        for property_id, property_metrics in _mapping(
+            row.get("covered_fact_property_metrics")
+        ).items()
+        if str(property_id)
+    }
+    properties = tuple(sorted(metrics))
+    count = row.get("covered_fact_property_count")
+    if count is None and properties:
+        count = len(properties)
+    return {
+        "count": count,
+        "properties": properties,
+        "metrics": {property_id: metrics[property_id] for property_id in properties},
+    }
 
 
 def _decision(
@@ -4143,11 +4166,32 @@ def _candidate_with_gates(
         required_manifest_paths = tuple(
             row.get("manifest_path") for row in required_rows if row.get("manifest_path") is not None
         )
+        property_counts: dict[str, Any] = {}
+        property_sets: dict[str, tuple[str, ...]] = {}
+        property_metrics: dict[str, dict[str, Any]] = {}
+        for row in required_rows:
+            record_key = row.get("record_key")
+            if record_key is None:
+                continue
+            summary = _covered_fact_property_summary(row)
+            if (
+                summary["count"] is None
+                and not summary["properties"]
+                and not summary["metrics"]
+            ):
+                continue
+            key = str(record_key)
+            property_counts[key] = summary["count"]
+            property_sets[key] = summary["properties"]
+            property_metrics[key] = summary["metrics"]
         payload["required_route_baselines"] = {
             "registry": required_routes.get("registry"),
             "records": required_records,
             "routes": tuple(row.get("recommended_route") for row in required_rows),
             "manifest_paths": required_manifest_paths,
+            "covered_fact_property_counts": property_counts,
+            "covered_fact_properties": property_sets,
+            "covered_fact_property_metrics": property_metrics,
         }
         for idx, manifest_path in enumerate(required_manifest_paths, start=1):
             manifests[f"required_route_manifest_{idx}"] = manifest_path

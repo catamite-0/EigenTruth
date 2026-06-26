@@ -2096,7 +2096,10 @@ promote. Covered-fact route gates can also require per-property evidence with
 `--required-route-min-covered-fact-property-source-documents`,
 `--required-route-min-covered-fact-property-decision-accuracy`,
 `--required-route-max-covered-fact-property-false-supported-rate`, and
-`--required-route-min-covered-fact-property-false-refuted-rate`. Available release policy profiles are `research_smoke`,
+`--required-route-min-covered-fact-property-false-refuted-rate`. Promoted
+release candidates carry the selected route's covered-property ids and the
+required-route record-to-property coverage summary into the comparison report,
+final manifest, and registry metadata. Available release policy profiles are `research_smoke`,
 `candidate_release`, `strict_structured_fact`, and `frontier_audit`; profile
 defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
@@ -2261,7 +2264,8 @@ Use `--require-structured-fact-robustness` with
 canonical and paraphrase `structured_fact` covered-facts evidence. The workflow
 adds those two records to the required-route gate and records
 `structured_fact_robustness_*` fields in the comparison report, final manifest,
-and release registry metadata.
+and release registry metadata, including property counts and property ids for
+the covered-fact slices that were actually gated.
 Use `--release-policy-profile` with the registry workflow to reuse the same
 named defaults while registering the promoted manifest. `strict_structured_fact`
 enables the structured-fact robustness requirement, requires both configured

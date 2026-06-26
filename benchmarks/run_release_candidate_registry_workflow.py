@@ -1211,6 +1211,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             comparison.get("triple_extraction_fixture_matrix_gate") or {}
         )
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
+    required_route_property_counts = dict(
+        required_route_baselines.get("covered_fact_property_counts") or {}
+    )
+    required_route_property_sets = dict(
+        required_route_baselines.get("covered_fact_properties") or {}
+    )
     structured_fact_robustness = _structured_fact_robustness_metadata(
         config,
         required_route_baselines,
@@ -1324,6 +1330,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "required_route_baseline_records": decision.get("required_route_baseline_records"),
         "recommended_model": decision.get("recommended_model"),
         "recommended_route": decision.get("recommended_route"),
+        "recommended_route_covered_fact_property_count": (
+            verifier_route.get("covered_fact_property_count")
+        ),
+        "recommended_route_covered_fact_properties": (
+            verifier_route.get("covered_fact_properties")
+        ),
         "recommended_layer": runtime.get("layer"),
         "recommended_batch_size": runtime.get("batch_size"),
         "recommended_hidden_state_capture": runtime.get("hidden_state_capture"),
@@ -1507,6 +1519,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "structured_fact_robustness_records": structured_fact_robustness["records"],
         "structured_fact_robustness_routes": structured_fact_robustness["routes"],
         "structured_fact_robustness_manifests": structured_fact_robustness["manifests"],
+        "structured_fact_robustness_property_counts": (
+            structured_fact_robustness["property_counts"]
+        ),
+        "structured_fact_robustness_properties": structured_fact_robustness["properties"],
         "selector_replay_report": selector_replay.get("report_path"),
         "selector_replay_recommended_policy_path": selector_replay.get("recommended_policy_path"),
         "selector_replay_estimated_cost_units_mean": selector_replay_recommended.get(
@@ -1731,6 +1747,8 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "required_route_baseline_registry": required_route_baselines.get("registry"),
         "required_route_baseline_routes": required_route_baselines.get("routes"),
         "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
+        "required_route_baseline_covered_fact_property_counts": required_route_property_counts,
+        "required_route_baseline_covered_fact_properties": required_route_property_sets,
         "required_route_budget_policy": {
             key: config.get(key)
             for key in (
@@ -1838,16 +1856,22 @@ def _structured_fact_robustness_metadata(
     records = list(required_route_baselines.get("records") or ())
     routes = list(required_route_baselines.get("routes") or ())
     manifests = list(required_route_baselines.get("manifest_paths") or ())
+    property_counts_by_record = dict(required_route_baselines.get("covered_fact_property_counts") or {})
+    properties_by_record = dict(required_route_baselines.get("covered_fact_properties") or {})
     by_record: dict[str, dict[str, Any]] = {}
     for idx, record in enumerate(records):
         key = str(record)
         by_record[key] = {
             "route": routes[idx] if idx < len(routes) else None,
             "manifest": manifests[idx] if idx < len(manifests) else None,
+            "property_count": property_counts_by_record.get(key),
+            "properties": properties_by_record.get(key),
         }
     selected_records: list[str] = []
     selected_routes: list[Any] = []
     selected_manifests: list[Any] = []
+    selected_property_counts: dict[str, Any] = {}
+    selected_properties: dict[str, Any] = {}
     for key in target_keys:
         entry = by_record.get(key)
         if entry is None:
@@ -1855,6 +1879,8 @@ def _structured_fact_robustness_metadata(
         selected_records.append(key)
         selected_routes.append(entry["route"])
         selected_manifests.append(entry["manifest"])
+        selected_property_counts[key] = entry["property_count"]
+        selected_properties[key] = entry["properties"]
     return {
         "required": bool(config.get("require_structured_fact_robustness")),
         "canonical_route_key": canonical_key,
@@ -1862,6 +1888,8 @@ def _structured_fact_robustness_metadata(
         "records": selected_records,
         "routes": selected_routes,
         "manifests": selected_manifests,
+        "property_counts": selected_property_counts,
+        "properties": selected_properties,
     }
 
 

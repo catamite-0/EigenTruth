@@ -14216,6 +14216,15 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     ]
     assert payload["release_candidate"] is not None
     assert payload["release_candidate"]["verifier_route"]["route"] == "structured_fact"
+    assert payload["release_candidate"]["verifier_route"]["covered_fact_property_count"] == 3
+    assert payload["release_candidate"]["verifier_route"]["covered_fact_properties"] == (
+        "P36",
+        "P37",
+        "P38",
+    )
+    assert payload["release_candidate"]["verifier_route"]["covered_fact_property_metrics"]["P36"][
+        "statement_property_label"
+    ] == "capital"
     assert required_gate["gate"]["passed"] is True
     assert set(required_rows) == {
         "benchmark_manifest:structured-fact-canonical-route:0.1",
@@ -14231,6 +14240,18 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "structured_fact",
         "structured_fact",
     )
+    assert payload["release_candidate"]["required_route_baselines"][
+        "covered_fact_property_counts"
+    ] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert payload["release_candidate"]["required_route_baselines"][
+        "covered_fact_properties"
+    ] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": ("P36", "P37", "P38"),
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": ("P36", "P37", "P38"),
+    }
     assert frontier_payload["decision"]["status"] == "promote"
     assert frontier_payload["config"]["release_policy_profile"] == "frontier_audit"
     assert frontier_payload["config"]["adapter_family_profile"] == "strict_audit"
@@ -15489,6 +15510,28 @@ def test_run_release_candidate_registry_workflow_records_structured_fact_robustn
         str(canonical_manifest),
         str(paraphrase_manifest),
     ]
+    assert manifest["metadata"]["recommended_route_covered_fact_property_count"] == 3
+    assert manifest["metadata"]["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert manifest["metadata"]["required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert manifest["metadata"]["required_route_baseline_covered_fact_properties"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": ["P36", "P37", "P38"],
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": ["P36", "P37", "P38"],
+    }
+    assert manifest["metadata"]["structured_fact_robustness_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert manifest["metadata"]["structured_fact_robustness_properties"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": ["P36", "P37", "P38"],
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": ["P36", "P37", "P38"],
+    }
     assert manifest["metadata"]["release_policy_profile"] == "strict_structured_fact"
     assert manifest["metadata"]["release_policy_profile_applied_defaults"]["required_route_min_selected"] == 700
     assert manifest["metadata"]["release_policy_profile_applied_defaults"][
@@ -15516,6 +15559,20 @@ def test_run_release_candidate_registry_workflow_records_structured_fact_robustn
         str(canonical_manifest),
         str(paraphrase_manifest),
     ]
+    assert record.metadata["recommended_route_covered_fact_property_count"] == 3
+    assert record.metadata["recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert record.metadata["required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": 3,
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": 3,
+    }
+    assert record.metadata["structured_fact_robustness_properties"] == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1": ["P36", "P37", "P38"],
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1": ["P36", "P37", "P38"],
+    }
     assert record.metadata["release_policy_profile"] == "strict_structured_fact"
     assert record.metadata["required_route_budget_policy"]["required_route_min_covered_fact_properties"] == 3
 
