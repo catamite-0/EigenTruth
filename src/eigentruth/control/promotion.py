@@ -34,6 +34,7 @@ class ProductPromotionContract:
     source_status: str | None = None
     product_trace_replay_workflow: Mapping[str, Any] = field(default_factory=dict)
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
+    world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
@@ -60,6 +61,11 @@ class ProductPromotionContract:
             self,
             "selfcheck_signal_fusion_workflow",
             dict(self.selfcheck_signal_fusion_workflow),
+        )
+        object.__setattr__(
+            self,
+            "world_model_signal_workflow",
+            dict(self.world_model_signal_workflow),
         )
         object.__setattr__(
             self,
@@ -96,6 +102,9 @@ class ProductPromotionContract:
                 ),
                 selfcheck_signal_fusion_workflow=_mapping(
                     payload.get("selfcheck_signal_fusion_workflow")
+                ),
+                world_model_signal_workflow=_mapping(
+                    payload.get("world_model_signal_workflow")
                 ),
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
@@ -142,6 +151,7 @@ class ProductPromotionContract:
         selfcheck_signal_fusion_workflow = _mapping(
             candidate.get("selfcheck_signal_fusion_workflow")
         )
+        world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
         feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
         release_efficiency = _release_efficiency_metadata(
             _mapping(candidate.get("release_efficiency")),
@@ -207,6 +217,10 @@ class ProductPromotionContract:
                 selfcheck_signal_fusion_workflow,
                 manifests=manifests,
             ),
+            world_model_signal_workflow=_world_model_signal_workflow_metadata(
+                world_model_signal_workflow,
+                manifests=manifests,
+            ),
             feedback_policy_workflow=_feedback_policy_workflow_metadata(
                 feedback_policy_workflow,
                 manifests=manifests,
@@ -266,6 +280,40 @@ class ProductPromotionContract:
                 ),
                 "recommended_selfcheck_signal_fusion_workflow_report": decision.get(
                     "recommended_selfcheck_signal_fusion_workflow_report"
+                ),
+                "world_model_signal_workflow_status": decision.get(
+                    "world_model_signal_workflow_status"
+                ),
+                "recommended_world_model_signal_workflow_report": decision.get(
+                    "recommended_world_model_signal_workflow_report"
+                ),
+                "world_model_signal_workflow_report": (
+                    world_model_signal_workflow.get("report_path")
+                ),
+                "world_model_signal_workflow_manifest": (
+                    world_model_signal_workflow.get("manifest_path")
+                    or manifests.get("world_model_signal_workflow_manifest")
+                ),
+                "world_model_signal_workflow_source": (
+                    world_model_signal_workflow.get("source")
+                ),
+                "world_model_signal_workflow_registry": (
+                    world_model_signal_workflow.get("registry")
+                ),
+                "world_model_signal_workflow_record": (
+                    world_model_signal_workflow.get("record_key")
+                ),
+                "world_model_signal_workflow_release_gate_status": (
+                    world_model_signal_workflow.get("release_gate_status")
+                ),
+                "world_model_signal_workflow_trace_gap_max": (
+                    world_model_signal_workflow.get("trace_gap_max")
+                ),
+                "world_model_signal_workflow_conflict_positive_count": (
+                    world_model_signal_workflow.get("conflict_positive_count")
+                ),
+                "world_model_signal_workflow_calibrated_conflict_signal_count": (
+                    world_model_signal_workflow.get("calibrated_conflict_signal_count")
                 ),
                 "selfcheck_signal_fusion_workflow_report": (
                     selfcheck_signal_fusion_workflow.get("report_path")
@@ -573,6 +621,7 @@ class ProductPromotionContract:
             "control_defaults": dict(self.control_defaults),
             "product_trace_replay_workflow": dict(self.product_trace_replay_workflow),
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
+            "world_model_signal_workflow": dict(self.world_model_signal_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
@@ -671,6 +720,20 @@ class ProductRuntimeEvidenceBundle:
         )
     )
     _selfcheck_signal_fusion_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _world_model_signal_workflow_manifest_verification: ArtifactManifestVerification | None = (
+        field(
+            default=None,
+            init=False,
+            compare=False,
+            repr=False,
+        )
+    )
+    _world_model_signal_workflow_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -871,6 +934,120 @@ class ProductRuntimeEvidenceBundle:
             ),
         }
 
+    @property
+    def world_model_signal_workflow(self) -> Mapping[str, Any]:
+        """Return the world-model signal workflow contract, if present."""
+        return self.contract.world_model_signal_workflow
+
+    @property
+    def world_model_signal_workflow_report_path(self) -> Path | None:
+        """Return the world-model signal workflow report path."""
+        return _resolve_contract_metadata_path(
+            self.world_model_signal_workflow.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def world_model_signal_workflow_manifest_path(self) -> Path | None:
+        """Return the world-model signal workflow manifest path."""
+        return _resolve_contract_metadata_path(
+            self.world_model_signal_workflow.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def world_model_signal_workflow_registry_path(self) -> Path | None:
+        """Return the world-model signal workflow registry path."""
+        return _resolve_contract_metadata_path(
+            self.world_model_signal_workflow.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_world_model_signal_workflow_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional world-model signal workflow manifest."""
+        manifest_path = self.world_model_signal_workflow_manifest_path
+        if manifest_path is None:
+            return None
+        if self._world_model_signal_workflow_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_world_model_signal_workflow_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._world_model_signal_workflow_manifest_verification
+
+    def world_model_signal_workflow_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional world-model signal workflow registry record."""
+        registry_path = self.world_model_signal_workflow_registry_path
+        record_key = self.world_model_signal_workflow.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._world_model_signal_workflow_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_world_model_signal_workflow_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._world_model_signal_workflow_registry_record
+
+    def world_model_signal_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready world-model signal provenance metadata."""
+        workflow = self.world_model_signal_workflow
+        report_path = self.world_model_signal_workflow_report_path
+        manifest_path = self.world_model_signal_workflow_manifest_path
+        registry_path = self.world_model_signal_workflow_registry_path
+        manifest_verification = (
+            self.verify_world_model_signal_workflow_manifest() if verify_manifest else None
+        )
+        record_key = workflow.get("record_key")
+        registry_record = (
+            self.world_model_signal_workflow_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "world_model_signal_workflow_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "world_model_signal_workflow_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "world_model_signal_workflow_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "world_model_signal_workflow_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "world_model_signal_workflow_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "world_model_signal_workflow_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "world_model_signal_workflow_status": workflow.get("status"),
+            "world_model_signal_workflow_release_gate_status": workflow.get(
+                "release_gate_status"
+            ),
+            "world_model_signal_workflow_trace_gap_max": workflow.get("trace_gap_max"),
+            "world_model_signal_workflow_conflict_positive_count": workflow.get(
+                "conflict_positive_count"
+            ),
+            "world_model_signal_workflow_calibrated_conflict_signal_count": (
+                workflow.get("calibrated_conflict_signal_count")
+            ),
+        }
+
     def runtime_metadata(
         self,
         *,
@@ -879,6 +1056,8 @@ class ProductRuntimeEvidenceBundle:
         include_registry_record: bool = True,
         verify_selfcheck_signal_fusion_manifest: bool = False,
         include_selfcheck_signal_fusion_record: bool = False,
+        verify_world_model_signal_workflow_manifest: bool = False,
+        include_world_model_signal_workflow_record: bool = False,
     ) -> dict[str, Any]:
         """Return ProductTrace metadata for contract and provenance evidence."""
         return {
@@ -890,6 +1069,10 @@ class ProductRuntimeEvidenceBundle:
             **self.selfcheck_signal_fusion_evidence_metadata(
                 verify_manifest=verify_selfcheck_signal_fusion_manifest,
                 include_registry_record=include_selfcheck_signal_fusion_record,
+            ),
+            **self.world_model_signal_evidence_metadata(
+                verify_manifest=verify_world_model_signal_workflow_manifest,
+                include_registry_record=include_world_model_signal_workflow_record,
             ),
         }
 
@@ -952,6 +1135,9 @@ def product_promotion_contract_metadata(
         ),
         "promotion_contract_selfcheck_signal_fusion_workflow": dict(
             contract.selfcheck_signal_fusion_workflow
+        ),
+        "promotion_contract_world_model_signal_workflow": dict(
+            contract.world_model_signal_workflow
         ),
         "promotion_contract_feedback_policy_workflow": dict(
             contract.feedback_policy_workflow
@@ -1116,6 +1302,34 @@ def _selfcheck_signal_fusion_workflow_metadata(
         "fusion_run_count": workflow.get("fusion_run_count"),
         "geometry_fusion_artifact_count": workflow.get("geometry_fusion_artifact_count"),
         "enhanced_score_dump_count": workflow.get("enhanced_score_dump_count"),
+    }
+
+
+def _world_model_signal_workflow_metadata(
+    workflow: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not workflow:
+        return {}
+    return {
+        "report_path": workflow.get("report_path"),
+        "manifest_path": (
+            workflow.get("manifest_path")
+            or manifests.get("world_model_signal_workflow_manifest")
+        ),
+        "source": workflow.get("source"),
+        "registry": workflow.get("registry"),
+        "record_key": workflow.get("record_key"),
+        "workflow": workflow.get("workflow"),
+        "status": workflow.get("status"),
+        "release_gate_status": workflow.get("release_gate_status"),
+        "trace_gap_max": workflow.get("trace_gap_max"),
+        "conflict_positive_count": workflow.get("conflict_positive_count"),
+        "calibrated_conflict_signal_count": workflow.get(
+            "calibrated_conflict_signal_count"
+        ),
+        "blocking_reasons": workflow.get("blocking_reasons"),
     }
 
 

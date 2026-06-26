@@ -14607,6 +14607,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "recommended_selfcheck_signal_fusion_workflow_report": (
                     "artifacts/selfcheck-signal-fusion/selfcheck-signal-fusion-workflow.json"
                 ),
+                "world_model_signal_workflow_status": "promote",
+                "recommended_world_model_signal_workflow_report": (
+                    "artifacts/world-model-signal/world-model-signal-workflow.json"
+                ),
                 "feedback_policy_workflow_status": "promote",
                 "recommended_feedback_policy_workflow_report": (
                     "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
@@ -14710,6 +14714,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "geometry_fusion_artifact_count": 1,
                     "enhanced_score_dump_count": 1,
                 },
+                "world_model_signal_workflow": {
+                    "report_path": "artifacts/world-model-signal/world-model-signal-workflow.json",
+                    "manifest_path": "artifacts/world-model-signal/artifact-manifest.json",
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:world-model-signal-workflow:0.1",
+                    "workflow": "world_model_signal_calibration_workflow",
+                    "status": "promote",
+                    "release_gate_status": "promote",
+                    "trace_gap_max": 0.0,
+                    "conflict_positive_count": 4,
+                    "calibrated_conflict_signal_count": 1,
+                },
                 "feedback_policy_workflow": {
                     "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
                     "manifest_path": "artifacts/feedback-policy-workflow/artifact-manifest.json",
@@ -14751,6 +14768,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "selfcheck_signal_fusion_workflow_manifest": (
                         "artifacts/selfcheck-signal-fusion/artifact-manifest.json"
+                    ),
+                    "world_model_signal_workflow_manifest": (
+                        "artifacts/world-model-signal/artifact-manifest.json"
                     ),
                 },
             },
@@ -14825,6 +14845,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["selfcheck_signal_fusion_workflow"]["record_key"] == (
         "report:selfcheck-signal-fusion-workflow:0.1"
     )
+    assert contract["world_model_signal_workflow"]["record_key"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
+    assert contract["world_model_signal_workflow"]["release_gate_status"] == "promote"
     assert contract["selfcheck_signal_fusion_workflow"]["sample_quality_passed"] is True
     assert contract["feedback_policy_workflow"]["candidate_control_policy"].endswith(
         "candidate-control-policy.json"
@@ -14843,6 +14867,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert payload["contract"]["feedback_policy_workflow"]["report_path"] == (
         "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
     )
+    assert payload["contract"]["world_model_signal_workflow"]["report_path"] == (
+        "artifacts/world-model-signal/world-model-signal-workflow.json"
+    )
     assert payload["paths"]["release_efficiency_report"] == str(release_efficiency_path)
     assert payload["contract"]["release_efficiency"]["status"] == "promote"
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
@@ -14855,6 +14882,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["selfcheck_signal_fusion_workflow_status"] == "promote"
     assert contract["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
     assert contract["metadata"]["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
+    assert contract["metadata"]["world_model_signal_workflow_status"] == "promote"
+    assert contract["metadata"]["recommended_world_model_signal_workflow_report"] == (
+        "artifacts/world-model-signal/world-model-signal-workflow.json"
+    )
+    assert contract["metadata"]["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert contract["metadata"]["world_model_signal_workflow_trace_gap_max"] == 0.0
+    assert contract["metadata"]["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert contract["metadata"]["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
     assert contract["metadata"]["feedback_policy_workflow_status"] == "promote"
     assert contract["metadata"]["feedback_policy_workflow_report_status"] == "recommend"
     assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
@@ -14908,6 +14943,14 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_status"] == "pass"
     assert record.metadata["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
     assert record.metadata["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+    assert record.metadata["world_model_signal_workflow_source"] == "registry"
+    assert record.metadata["world_model_signal_workflow_record"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
+    assert record.metadata["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert record.metadata["world_model_signal_workflow_trace_gap_max"] == pytest.approx(0.0)
+    assert record.metadata["world_model_signal_workflow_conflict_positive_count"] == pytest.approx(4)
+    assert record.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
     assert record.metadata["feedback_policy_workflow_source"] == "registry"
     assert record.metadata["feedback_policy_workflow_record"] == (
         "report:feedback-policy-workflow:0.1"

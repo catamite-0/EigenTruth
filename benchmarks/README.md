@@ -2125,6 +2125,10 @@ policy. When the release candidate was gated by a feedback-policy workflow, the
 contract and registry metadata also retain the feedback-policy report/manifest,
 promotion decision, candidate control-policy/default paths, validated
 `ControlPolicyConfig`, control-default config, and replay safety metrics. When
+the release candidate was gated by a world-model signal workflow, the contract
+and registry metadata retain the workflow report/manifest, release-gate status,
+trace-gap maximum, conflict-positive count, and calibrated conflict-signal
+count. When
 the release candidate was gated by a release-efficiency report, the
 promotion contract inherits the recommended runtime profile and efficiency score
 from the candidate. For older release-candidate reports, pass the

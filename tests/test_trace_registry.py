@@ -321,6 +321,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metadata={
             "artifact_source": "artifact.json",
             "promotion_contract_source": "contract.json",
+            "promotion_contract_selfcheck_signal_fusion_workflow": {
+                "report_path": "selfcheck.json"
+            },
+            "promotion_contract_world_model_signal_workflow": {
+                "release_gate_status": "promote"
+            },
             "runtime_budget": {"passed": True},
             "large_unselected_metadata": tuple(range(100)),
         },
@@ -376,6 +382,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert "large_unselected_metadata" not in payload["metadata"]
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    assert payload["metadata"]["promotion_contract_selfcheck_signal_fusion_workflow"] == {
+        "report_path": "selfcheck.json"
+    }
+    assert payload["metadata"]["promotion_contract_world_model_signal_workflow"] == {
+        "release_gate_status": "promote"
+    }
     metrics = product_runtime_metrics(payload)
     assert metrics["final_answer_available"] is True
     assert metrics["final_answer_source"] == "bounded_summary"
@@ -1459,6 +1471,10 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "artifacts/runtime-drift/product-runtime-drift.json"
             ),
             "product_trace_replay_workflow_status": "promote",
+            "world_model_signal_workflow_status": "promote",
+            "recommended_world_model_signal_workflow_report": (
+                "artifacts/world-model-signal/world-model-signal-workflow.json"
+            ),
             "feedback_policy_workflow_status": "promote",
             "recommended_feedback_policy_workflow_report": (
                 "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
@@ -1550,6 +1566,20 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_runtime_drift_report_path": (
                     "artifacts/runtime-drift/product-runtime-drift.json"
                 ),
+            },
+            "world_model_signal_workflow": {
+                "report_path": "artifacts/world-model-signal/world-model-signal-workflow.json",
+                "manifest_path": "artifacts/world-model-signal/artifact-manifest.json",
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:world-model-signal-workflow:0.1",
+                "workflow": "world_model_signal_calibration_workflow",
+                "status": "promote",
+                "release_gate_status": "promote",
+                "trace_gap_max": 0.0,
+                "conflict_positive_count": 4,
+                "calibrated_conflict_signal_count": 1,
+                "blocking_reasons": [],
             },
             "feedback_policy_workflow": {
                 "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
@@ -1668,6 +1698,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "product_trace_replay_workflow_manifest": (
                     "artifacts/trace-replay-workflow/artifact-manifest.json"
                 ),
+                "world_model_signal_workflow_manifest": (
+                    "artifacts/world-model-signal/artifact-manifest.json"
+                ),
                 "feedback_policy_workflow_manifest": (
                     "artifacts/feedback-policy-workflow/artifact-manifest.json"
                 ),
@@ -1709,6 +1742,7 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     roundtrip = ProductPromotionContract.from_mapping(contract.to_dict())
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
+    assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
     assert contract.runtime["layer"] == -12
     assert contract.verifier_route["route"] == "structured_state"
     assert contract.metadata["runtime_profile"] == "balanced"
@@ -1778,6 +1812,28 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/product-runtime-drift.json"
     )
+    assert contract.world_model_signal_workflow == {
+        "report_path": "artifacts/world-model-signal/world-model-signal-workflow.json",
+        "manifest_path": "artifacts/world-model-signal/artifact-manifest.json",
+        "source": "registry",
+        "registry": "artifacts/release-registry.json",
+        "record_key": "report:world-model-signal-workflow:0.1",
+        "workflow": "world_model_signal_calibration_workflow",
+        "status": "promote",
+        "release_gate_status": "promote",
+        "trace_gap_max": 0.0,
+        "conflict_positive_count": 4,
+        "calibrated_conflict_signal_count": 1,
+        "blocking_reasons": [],
+    }
+    assert contract.metadata["world_model_signal_workflow_status"] == "promote"
+    assert contract.metadata["recommended_world_model_signal_workflow_report"] == (
+        "artifacts/world-model-signal/world-model-signal-workflow.json"
+    )
+    assert contract.metadata["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
+    assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
     assert contract.control_policy_config["unsupported_action"] == "clarify"
     assert contract.control_policy_config["compound_verification_escalates"] is False
     assert contract.feedback_policy_workflow["record_key"] == "report:feedback-policy-workflow:0.1"
@@ -1912,6 +1968,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "report_path": "trace-replay-workflow.json",
             "record_key": "report:trace-replay-workflow:0.1",
         },
+        world_model_signal_workflow={
+            "report_path": "world-model-signal-workflow.json",
+            "record_key": "report:world-model-signal-workflow:0.1",
+            "release_gate_status": "promote",
+            "trace_gap_max": 0.0,
+        },
         control_policy_config={
             "unsupported_action": "clarify",
             "compound_verification_escalates": False,
@@ -1956,6 +2018,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "report_path": "trace-replay-workflow.json",
         "record_key": "report:trace-replay-workflow:0.1",
     }
+    assert metadata["promotion_contract_world_model_signal_workflow"] == {
+        "report_path": "world-model-signal-workflow.json",
+        "record_key": "report:world-model-signal-workflow:0.1",
+        "release_gate_status": "promote",
+        "trace_gap_max": 0.0,
+    }
     assert metadata["promotion_contract_feedback_policy_workflow"] == {
         "report_path": "feedback-policy-workflow.json",
         "record_key": "report:feedback-policy-workflow:0.1",
@@ -1981,6 +2049,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     selfcheck_report_path = selfcheck_dir / "workflow.json"
     selfcheck_manifest_path = selfcheck_dir / "artifact-manifest.json"
     selfcheck_registry_path = selfcheck_dir / "registry.json"
+    world_model_dir = tmp_path / "world-model-signal"
+    world_model_dir.mkdir()
+    world_model_report_path = world_model_dir / "workflow.json"
+    world_model_manifest_path = world_model_dir / "artifact-manifest.json"
+    world_model_registry_path = world_model_dir / "registry.json"
     selfcheck_report_path.write_text(
         json.dumps({
             "workflow": "selfcheck_signal_fusion_workflow",
@@ -2006,6 +2079,39 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         version="0.1",
         metadata={"artifact_manifest": str(selfcheck_manifest_path)},
     ).save_json()
+    world_model_report_path.write_text(
+        json.dumps({
+            "workflow": "world_model_signal_calibration_workflow",
+            "release_gate": {
+                "status": "promote",
+                "passed": True,
+                "score_summary": {
+                    "world_model_trace_gap": {"max": 0.0},
+                    "world_model_conflict": {"positive_count": 4},
+                },
+                "calibrated_conflict_signals": [
+                    {"signal": "world_model_conflict", "passes_calibration_gate": True}
+                ],
+            },
+        }),
+        encoding="utf-8",
+    )
+    world_model_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"world_model_signal_workflow": world_model_report_path},
+                root=world_model_dir,
+                metadata={"workflow": "world_model_signal_calibration_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(world_model_registry_path).record_report(
+        name="world-model-signal-workflow",
+        path=world_model_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(world_model_manifest_path)},
+    ).save_json()
     ProductPromotionContract(
         model_id="demo-model",
         runtime={"layer": -2},
@@ -2029,6 +2135,17 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "fusion_run_count": 1,
             "geometry_fusion_artifact_count": 1,
             "enhanced_score_dump_count": 1,
+        },
+        world_model_signal_workflow={
+            "report_path": "world-model-signal/workflow.json",
+            "manifest_path": "world-model-signal/artifact-manifest.json",
+            "registry": "world-model-signal/registry.json",
+            "record_key": "report:world-model-signal-workflow:0.1",
+            "status": "promote",
+            "release_gate_status": "promote",
+            "trace_gap_max": 0.0,
+            "conflict_positive_count": 4,
+            "calibrated_conflict_signal_count": 1,
         },
         metadata={"product_runtime_drift_status": "promote"},
     ).save_json(contract_path)
@@ -2098,6 +2215,26 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         is True
     )
     assert metadata_without_verification["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+    assert metadata_without_verification["world_model_signal_workflow_report"] == str(
+        world_model_report_path
+    )
+    assert metadata_without_verification["world_model_signal_workflow_manifest"] == str(
+        world_model_manifest_path
+    )
+    assert (
+        metadata_without_verification["world_model_signal_workflow_manifest_verification"]
+        is None
+    )
+    assert metadata_without_verification["world_model_signal_workflow_registry"] == str(
+        world_model_registry_path
+    )
+    assert metadata_without_verification["world_model_signal_workflow_registry_key"] == (
+        "report:world-model-signal-workflow:0.1"
+    )
+    assert metadata_without_verification["world_model_signal_workflow_registry_record"] is None
+    assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
+    assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
+    assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
 
     metadata_with_verification = bundle.runtime_metadata(
         budget_enabled=True,
@@ -2136,6 +2273,31 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_selfcheck_verification[
         "selfcheck_signal_fusion_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(selfcheck_manifest_path)}
+
+    metadata_with_world_model_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_world_model_signal_workflow_manifest=True,
+        include_world_model_signal_workflow_record=True,
+    )
+    assert (
+        metadata_with_world_model_verification[
+            "world_model_signal_workflow_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_world_model_verification[
+            "world_model_signal_workflow_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_world_model_verification["world_model_signal_workflow_registry_key"]
+        == "report:world-model-signal-workflow:0.1"
+    )
+    assert metadata_with_world_model_verification[
+        "world_model_signal_workflow_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):

@@ -52,6 +52,7 @@ def export_product_promotion_contract(
     control_defaults = dict(contract.control_defaults)
     trace_replay_workflow = dict(contract.product_trace_replay_workflow)
     selfcheck_signal_fusion_workflow = dict(contract.selfcheck_signal_fusion_workflow)
+    world_model_signal_workflow = dict(contract.world_model_signal_workflow)
     feedback_policy_workflow = dict(contract.feedback_policy_workflow)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
@@ -227,6 +228,33 @@ def export_product_promotion_contract(
                 "selfcheck_signal_fusion_workflow_enhanced_score_dump_count": (
                     selfcheck_signal_fusion_workflow.get("enhanced_score_dump_count")
                 ),
+                "world_model_signal_workflow_report": (
+                    world_model_signal_workflow.get("report_path")
+                ),
+                "world_model_signal_workflow_manifest": (
+                    world_model_signal_workflow.get("manifest_path")
+                ),
+                "world_model_signal_workflow_source": (
+                    world_model_signal_workflow.get("source")
+                ),
+                "world_model_signal_workflow_registry": (
+                    world_model_signal_workflow.get("registry")
+                ),
+                "world_model_signal_workflow_record": (
+                    world_model_signal_workflow.get("record_key")
+                ),
+                "world_model_signal_workflow_release_gate_status": (
+                    world_model_signal_workflow.get("release_gate_status")
+                ),
+                "world_model_signal_workflow_trace_gap_max": (
+                    world_model_signal_workflow.get("trace_gap_max")
+                ),
+                "world_model_signal_workflow_conflict_positive_count": (
+                    world_model_signal_workflow.get("conflict_positive_count")
+                ),
+                "world_model_signal_workflow_calibrated_conflict_signal_count": (
+                    world_model_signal_workflow.get("calibrated_conflict_signal_count")
+                ),
                 "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
                 "feedback_policy_workflow_manifest": feedback_policy_workflow.get(
                     "manifest_path"
@@ -288,6 +316,7 @@ def export_product_promotion_contract(
             "control_defaults": control_defaults,
             "product_trace_replay_workflow": trace_replay_workflow,
             "selfcheck_signal_fusion_workflow": selfcheck_signal_fusion_workflow,
+            "world_model_signal_workflow": world_model_signal_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
