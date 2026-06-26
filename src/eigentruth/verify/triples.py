@@ -191,7 +191,7 @@ class RuleBasedTripleExtractor:
         text = _clean_sentence(claim.text)
         if not text:
             return ()
-        if _contains_explicit_negation(text) or _contains_non_assertive_context(text):
+        if _contains_blocked_extraction_context(text):
             return ()
 
         capital = _CAPITAL_OF_RE.match(text)
@@ -467,7 +467,7 @@ class RegexTripleExtractor:
             if metadata_triples:
                 return metadata_triples
         text = _clean_sentence(claim.text)
-        if not text or _contains_explicit_negation(text) or _contains_non_assertive_context(text):
+        if not text or _contains_blocked_extraction_context(text):
             return ()
         triples: list[ClaimTriple] = []
         seen: set[tuple[str, str, str]] = set()
@@ -1310,6 +1310,16 @@ def _contains_explicit_negation(value: str) -> bool:
     return "not" in tokens or "never" in tokens
 
 
+def _contains_blocked_extraction_context(value: str) -> bool:
+    return (
+        _contains_explicit_negation(value)
+        or _contains_non_assertive_context(value)
+        or _contains_ambiguous_context(value)
+        or _contains_temporal_qualifier_context(value)
+        or _contains_metalinguistic_context(value)
+    )
+
+
 def _contains_non_assertive_context(value: str) -> bool:
     tokens = set(_tokens(value))
     return bool(
@@ -1318,6 +1328,7 @@ def _contains_non_assertive_context(value: str) -> bool:
             "asks",
             "asked",
             "claim",
+            "claimed",
             "claims",
             "mentions",
             "phrase",
@@ -1326,6 +1337,59 @@ def _contains_non_assertive_context(value: str) -> bool:
             "quoted",
             "reviewed",
             "whether",
+        }
+    )
+
+
+def _contains_ambiguous_context(value: str) -> bool:
+    tokens = set(_tokens(value))
+    return bool(
+        tokens
+        & {
+            "alternate",
+            "alternative",
+            "ambiguous",
+            "candidate",
+            "candidates",
+            "either",
+            "maybe",
+            "or",
+            "possibly",
+            "possible",
+        }
+    )
+
+
+def _contains_temporal_qualifier_context(value: str) -> bool:
+    tokens = set(_tokens(value))
+    return bool(
+        tokens
+        & {
+            "former",
+            "formerly",
+            "historical",
+            "historically",
+            "outdated",
+            "past",
+            "previous",
+            "previously",
+            "timeline",
+        }
+    )
+
+
+def _contains_metalinguistic_context(value: str) -> bool:
+    tokens = set(_tokens(value))
+    return bool(
+        tokens
+        & {
+            "compared",
+            "comparison",
+            "literal",
+            "sentence",
+            "word",
+            "wording",
+            "words",
         }
     )
 

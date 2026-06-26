@@ -211,6 +211,9 @@ def test_build_triple_extraction_fixture_can_include_adversarial_negatives(tmp_p
         adversarial_negatives_per_fact=1,
         predicate_confusions_per_fact=1,
         non_assertive_negatives_per_fact=1,
+        ambiguity_negatives_per_fact=1,
+        temporal_negatives_per_fact=1,
+        metalinguistic_negatives_per_fact=1,
         artifact_manifest=None,
     ))
     regex = evaluator.run_triple_extraction_eval(
@@ -219,10 +222,13 @@ def test_build_triple_extraction_fixture_can_include_adversarial_negatives(tmp_p
         patterns_path=patterns_path,
     )
 
-    assert fixture["summary"]["n_records"] == 7
+    assert fixture["summary"]["n_records"] == 10
     assert fixture["summary"]["n_adversarial_negative_records"] == 1
     assert fixture["summary"]["n_predicate_confusion_records"] == 1
     assert fixture["summary"]["n_non_assertive_negative_records"] == 1
+    assert fixture["summary"]["n_ambiguity_negative_records"] == 1
+    assert fixture["summary"]["n_temporal_negative_records"] == 1
+    assert fixture["summary"]["n_metalinguistic_negative_records"] == 1
     negative_records = [
         record
         for record in fixture["records"]
@@ -238,16 +244,40 @@ def test_build_triple_extraction_fixture_can_include_adversarial_negatives(tmp_p
         for record in fixture["records"]
         if record["metadata"]["record_type"] == "non_assertive_negative"
     ]
+    ambiguity_records = [
+        record
+        for record in fixture["records"]
+        if record["metadata"]["record_type"] == "ambiguity_negative"
+    ]
+    temporal_records = [
+        record
+        for record in fixture["records"]
+        if record["metadata"]["record_type"] == "temporal_negative"
+    ]
+    metalinguistic_records = [
+        record
+        for record in fixture["records"]
+        if record["metadata"]["record_type"] == "metalinguistic_negative"
+    ]
     assert negative_records[0]["expected_triples"] == []
     assert predicate_confusion_records[0]["expected_triples"][0]["predicate"] == "currency_of"
     assert non_assertive_records[0]["expected_triples"] == []
+    assert ambiguity_records[0]["expected_triples"] == []
+    assert temporal_records[0]["expected_triples"] == []
+    assert metalinguistic_records[0]["expected_triples"] == []
     adversarial = regex["report"]["by_record_type"]["adversarial_negative"]
     predicate_confusion = regex["report"]["by_record_type"]["predicate_confusion"]
     non_assertive = regex["report"]["by_record_type"]["non_assertive_negative"]
+    ambiguity = regex["report"]["by_record_type"]["ambiguity_negative"]
+    temporal = regex["report"]["by_record_type"]["temporal_negative"]
+    metalinguistic = regex["report"]["by_record_type"]["metalinguistic_negative"]
     assert adversarial["record_count"] == 1
     assert adversarial["false_positive_rate"] == pytest.approx(0.0)
     assert predicate_confusion["f1"] == pytest.approx(1.0)
     assert non_assertive["false_positive_rate"] == pytest.approx(0.0)
+    assert ambiguity["false_positive_rate"] == pytest.approx(0.0)
+    assert temporal["false_positive_rate"] == pytest.approx(0.0)
+    assert metalinguistic["false_positive_rate"] == pytest.approx(0.0)
     assert regex["report"]["f1"] == pytest.approx(1.0)
     assert regex["report"]["precision"] == pytest.approx(1.0)
 
@@ -329,6 +359,12 @@ def test_triple_extraction_fixture_workflow_promotes_when_adversarial_negatives_
         min_predicate_confusion_f1=1.0,
         non_assertive_negatives_per_fact=1,
         max_non_assertive_false_positive_rate=0.0,
+        ambiguity_negatives_per_fact=1,
+        max_ambiguity_false_positive_rate=0.0,
+        temporal_negatives_per_fact=1,
+        max_temporal_false_positive_rate=0.0,
+        metalinguistic_negatives_per_fact=1,
+        max_metalinguistic_false_positive_rate=0.0,
     )
 
     summary = module.run_triple_extraction_fixture_workflow(config)
@@ -337,11 +373,20 @@ def test_triple_extraction_fixture_workflow_promotes_when_adversarial_negatives_
     assert summary["fixture_summary"]["n_adversarial_negative_records"] == 1
     assert summary["fixture_summary"]["n_predicate_confusion_records"] == 1
     assert summary["fixture_summary"]["n_non_assertive_negative_records"] == 1
+    assert summary["fixture_summary"]["n_ambiguity_negative_records"] == 1
+    assert summary["fixture_summary"]["n_temporal_negative_records"] == 1
+    assert summary["fixture_summary"]["n_metalinguistic_negative_records"] == 1
     assert summary["best_adversarial_report"]["false_positive_rate"] == pytest.approx(0.0)
     assert summary["best_predicate_confusion_report"]["f1"] == pytest.approx(1.0)
     assert summary["best_non_assertive_report"]["false_positive_rate"] == pytest.approx(0.0)
+    assert summary["best_ambiguity_report"]["false_positive_rate"] == pytest.approx(0.0)
+    assert summary["best_temporal_report"]["false_positive_rate"] == pytest.approx(0.0)
+    assert summary["best_metalinguistic_report"]["false_positive_rate"] == pytest.approx(0.0)
     assert summary["promotion_gate"]["predicate_confusions_per_fact"] == 1
     assert summary["promotion_gate"]["non_assertive_negatives_per_fact"] == 1
+    assert summary["promotion_gate"]["ambiguity_negatives_per_fact"] == 1
+    assert summary["promotion_gate"]["temporal_negatives_per_fact"] == 1
+    assert summary["promotion_gate"]["metalinguistic_negatives_per_fact"] == 1
     assert summary["promotion_gate"]["failures"] == ()
 
 
@@ -454,6 +499,12 @@ def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
         min_predicate_confusion_f1=1.0,
         non_assertive_negatives_per_fact=1,
         max_non_assertive_false_positive_rate=0.0,
+        ambiguity_negatives_per_fact=1,
+        max_ambiguity_false_positive_rate=0.0,
+        temporal_negatives_per_fact=1,
+        max_temporal_false_positive_rate=0.0,
+        metalinguistic_negatives_per_fact=1,
+        max_metalinguistic_false_positive_rate=0.0,
     )
 
     matrix = module.run_triple_extraction_fixture_matrix(config)
@@ -465,6 +516,12 @@ def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
     assert matrix["min_best_predicate_confusion_f1"] == pytest.approx(1.0)
     assert matrix["mean_best_non_assertive_false_positive_rate"] == pytest.approx(0.0)
     assert matrix["max_best_non_assertive_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["mean_best_ambiguity_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["max_best_ambiguity_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["mean_best_temporal_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["max_best_temporal_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["mean_best_metalinguistic_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["max_best_metalinguistic_false_positive_rate"] == pytest.approx(0.0)
     assert {item["status"] for item in matrix["corpora"]} == {"promote"}
 
 

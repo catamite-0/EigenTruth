@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/artifact-manifest.json",
-      "sha256": "fac685b3fc71b279f126f8c29e40879b6378564ea7a441aaf47c0f1d1ad12e53",
-      "size_bytes": 2730
+      "sha256": "b3aa153509bab318f7e8b1557f1e0889ddadbe6ff47ace07479420a4373deb0c",
+      "size_bytes": 3002
     },
     "corpus.country-core.source.1.wikidata-country-core-facts-source": {
       "exists": true,
@@ -21,16 +21,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/triple-extraction-workflow-summary.json",
-      "sha256": "de0dfe2f7760975a7b7c8dd5d9491cde8519891521c5f4a76eec3fe8d31e8cfc",
-      "size_bytes": 62117
+      "sha256": "3e1d584574f936751dd597d8c20bb3cc01f96b99a9af49d7c212e1ab5660c010",
+      "size_bytes": 69125
     },
     "corpus.organization-product.artifact_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/artifact-manifest.json",
-      "sha256": "7de97e5434af3cc707c2038f3d3b91c721372e2f70fe94082d4acc3fad1a0696",
-      "size_bytes": 2689
+      "sha256": "5d5dabc8e1d90c108f6ead87a8c97603c12edf0e6898a5fcc7f898b59c248fa9",
+      "size_bytes": 2955
     },
     "corpus.organization-product.source.1.wikidata-organization-product-source": {
       "exists": true,
@@ -45,28 +45,34 @@
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/triple-extraction-workflow-summary.json",
-      "sha256": "3b1a52922904f5aacfdf5327a5e9a8d065af1c9186b8d21613bffd970f01580a",
-      "size_bytes": 62877
+      "sha256": "461a57e2da39af3c040fc69655f19fc9cb2b7921c88ed7b3a0d173fd0a813337",
+      "size_bytes": 69798
     },
     "matrix_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-fixture-matrix.json",
-      "sha256": "2ce7e8b164aff40bfe1bffea53875d6e51922bfad7e6ea75707ec3cf0086b187",
-      "size_bytes": 4350
+      "sha256": "a5e2dc75b0a483a915c9ee0754f07d4d7ecc6ffaf411125336f025ec8f27d9a3",
+      "size_bytes": 5818
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "distinct_predicate_count": 6,
     "max_best_adversarial_false_positive_rate": 0.0,
+    "max_best_ambiguity_false_positive_rate": 0.0,
+    "max_best_metalinguistic_false_positive_rate": 0.0,
     "max_best_non_assertive_false_positive_rate": 0.0,
+    "max_best_temporal_false_positive_rate": 0.0,
     "mean_baseline_f1": 0.4000000000000001,
     "mean_best_adversarial_false_positive_rate": 0.0,
+    "mean_best_ambiguity_false_positive_rate": 0.0,
     "mean_best_f1": 1.0,
+    "mean_best_metalinguistic_false_positive_rate": 0.0,
     "mean_best_non_assertive_false_positive_rate": 0.0,
     "mean_best_predicate_confusion_f1": 1.0,
+    "mean_best_temporal_false_positive_rate": 0.0,
     "mean_f1_lift": 0.5999999999999999,
     "min_best_predicate_confusion_f1": 1.0,
     "min_distinct_predicates": 6,

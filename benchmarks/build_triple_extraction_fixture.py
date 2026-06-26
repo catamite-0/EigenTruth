@@ -136,6 +136,9 @@ def build_triple_extraction_fixture(
     adversarial_negatives_per_fact: int = 0,
     predicate_confusions_per_fact: int = 0,
     non_assertive_negatives_per_fact: int = 0,
+    ambiguity_negatives_per_fact: int = 0,
+    temporal_negatives_per_fact: int = 0,
+    metalinguistic_negatives_per_fact: int = 0,
 ) -> dict[str, Any]:
     """Build labeled extraction records from structured fact-like mappings."""
     if max_facts is not None and max_facts <= 0:
@@ -149,6 +152,15 @@ def build_triple_extraction_fixture(
     if int(non_assertive_negatives_per_fact) < 0:
         raise ValueError("non_assertive_negatives_per_fact must be non-negative.")
     non_assertive_negatives_per_fact = int(non_assertive_negatives_per_fact)
+    if int(ambiguity_negatives_per_fact) < 0:
+        raise ValueError("ambiguity_negatives_per_fact must be non-negative.")
+    ambiguity_negatives_per_fact = int(ambiguity_negatives_per_fact)
+    if int(temporal_negatives_per_fact) < 0:
+        raise ValueError("temporal_negatives_per_fact must be non-negative.")
+    temporal_negatives_per_fact = int(temporal_negatives_per_fact)
+    if int(metalinguistic_negatives_per_fact) < 0:
+        raise ValueError("metalinguistic_negatives_per_fact must be non-negative.")
+    metalinguistic_negatives_per_fact = int(metalinguistic_negatives_per_fact)
     facts, skipped = _coerce_structured_facts(source_records)
     if max_facts is not None:
         facts = facts[:max_facts]
@@ -157,6 +169,9 @@ def build_triple_extraction_fixture(
     adversarial_negative_count = 0
     predicate_confusion_count = 0
     non_assertive_negative_count = 0
+    ambiguity_negative_count = 0
+    temporal_negative_count = 0
+    metalinguistic_negative_count = 0
     seen: set[tuple[str, str, str, str]] = set()
     for index, fact in enumerate(facts):
         predicate = _output_predicate(fact.predicate)
@@ -279,6 +294,87 @@ def build_triple_extraction_fixture(
                     "source_fact": fact.to_dict(),
                 },
             })
+        for template_id, text in _ambiguity_negative_templates_for_fact(
+            fact,
+            predicate=predicate,
+            positive_templates=templates,
+            limit=ambiguity_negatives_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), predicate, "")
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[predicate]["record_count"] += 1
+            ambiguity_negative_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-ambiguity-negative-{template_id}",
+                "text": text,
+                "expected_triples": [],
+                "metadata": {
+                    "record_type": "ambiguity_negative",
+                    "source_fact_index": index,
+                    "template_id": template_id,
+                    "predicate": predicate,
+                    "adversarial_family": "ambiguous_or_multi_object_claim",
+                    "source_fact": fact.to_dict(),
+                },
+            })
+        for template_id, text in _temporal_negative_templates_for_fact(
+            fact,
+            predicate=predicate,
+            positive_templates=templates,
+            limit=temporal_negatives_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), predicate, "")
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[predicate]["record_count"] += 1
+            temporal_negative_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-temporal-negative-{template_id}",
+                "text": text,
+                "expected_triples": [],
+                "metadata": {
+                    "record_type": "temporal_negative",
+                    "source_fact_index": index,
+                    "template_id": template_id,
+                    "predicate": predicate,
+                    "adversarial_family": "temporal_qualified_claim",
+                    "source_fact": fact.to_dict(),
+                },
+            })
+        for template_id, text in _metalinguistic_negative_templates_for_fact(
+            fact,
+            predicate=predicate,
+            positive_templates=templates,
+            limit=metalinguistic_negatives_per_fact,
+        ):
+            key = (_normalize(text), _normalize(fact.subject), predicate, "")
+            if key in seen:
+                skipped["duplicate_record"] += 1
+                continue
+            seen.add(key)
+            by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
+            by_predicate[predicate]["record_count"] += 1
+            metalinguistic_negative_count += 1
+            records.append({
+                "id": f"{index + 1:04d}-{predicate}-metalinguistic-negative-{template_id}",
+                "text": text,
+                "expected_triples": [],
+                "metadata": {
+                    "record_type": "metalinguistic_negative",
+                    "source_fact_index": index,
+                    "template_id": template_id,
+                    "predicate": predicate,
+                    "adversarial_family": "metalinguistic_or_comparative_claim",
+                    "source_fact": fact.to_dict(),
+                },
+            })
         by_predicate.setdefault(predicate, {"fact_count": 0, "record_count": 0})
         by_predicate[predicate]["fact_count"] += 1
     if not records:
@@ -297,6 +393,9 @@ def build_triple_extraction_fixture(
             "n_adversarial_negative_records": adversarial_negative_count,
             "n_predicate_confusion_records": predicate_confusion_count,
             "n_non_assertive_negative_records": non_assertive_negative_count,
+            "n_ambiguity_negative_records": ambiguity_negative_count,
+            "n_temporal_negative_records": temporal_negative_count,
+            "n_metalinguistic_negative_records": metalinguistic_negative_count,
             "by_predicate": by_predicate,
             "skipped": skipped,
         },
@@ -347,6 +446,9 @@ def build_input_provenance(
     adversarial_negatives_per_fact: int = 0,
     predicate_confusions_per_fact: int = 0,
     non_assertive_negatives_per_fact: int = 0,
+    ambiguity_negatives_per_fact: int = 0,
+    temporal_negatives_per_fact: int = 0,
+    metalinguistic_negatives_per_fact: int = 0,
 ) -> dict[str, Any]:
     """Return source fingerprints and builder settings."""
     return {
@@ -358,6 +460,9 @@ def build_input_provenance(
             "adversarial_negatives_per_fact": int(adversarial_negatives_per_fact),
             "predicate_confusions_per_fact": int(predicate_confusions_per_fact),
             "non_assertive_negatives_per_fact": int(non_assertive_negatives_per_fact),
+            "ambiguity_negatives_per_fact": int(ambiguity_negatives_per_fact),
+            "temporal_negatives_per_fact": int(temporal_negatives_per_fact),
+            "metalinguistic_negatives_per_fact": int(metalinguistic_negatives_per_fact),
         },
     }
 
@@ -369,12 +474,18 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     adversarial_negatives_per_fact = int(getattr(args, "adversarial_negatives_per_fact", 0))
     predicate_confusions_per_fact = int(getattr(args, "predicate_confusions_per_fact", 0))
     non_assertive_negatives_per_fact = int(getattr(args, "non_assertive_negatives_per_fact", 0))
+    ambiguity_negatives_per_fact = int(getattr(args, "ambiguity_negatives_per_fact", 0))
+    temporal_negatives_per_fact = int(getattr(args, "temporal_negatives_per_fact", 0))
+    metalinguistic_negatives_per_fact = int(getattr(args, "metalinguistic_negatives_per_fact", 0))
     fixture = build_triple_extraction_fixture(
         records,
         max_facts=args.max_facts,
         adversarial_negatives_per_fact=adversarial_negatives_per_fact,
         predicate_confusions_per_fact=predicate_confusions_per_fact,
         non_assertive_negatives_per_fact=non_assertive_negatives_per_fact,
+        ambiguity_negatives_per_fact=ambiguity_negatives_per_fact,
+        temporal_negatives_per_fact=temporal_negatives_per_fact,
+        metalinguistic_negatives_per_fact=metalinguistic_negatives_per_fact,
     )
     fixture["input_provenance"] = build_input_provenance(
         source_paths,
@@ -382,6 +493,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         adversarial_negatives_per_fact=adversarial_negatives_per_fact,
         predicate_confusions_per_fact=predicate_confusions_per_fact,
         non_assertive_negatives_per_fact=non_assertive_negatives_per_fact,
+        ambiguity_negatives_per_fact=ambiguity_negatives_per_fact,
+        temporal_negatives_per_fact=temporal_negatives_per_fact,
+        metalinguistic_negatives_per_fact=metalinguistic_negatives_per_fact,
     )
 
     output_records = Path(args.output_records)
@@ -413,6 +527,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 "n_adversarial_negative_records": fixture["summary"]["n_adversarial_negative_records"],
                 "n_predicate_confusion_records": fixture["summary"]["n_predicate_confusion_records"],
                 "n_non_assertive_negative_records": fixture["summary"]["n_non_assertive_negative_records"],
+                "n_ambiguity_negative_records": fixture["summary"]["n_ambiguity_negative_records"],
+                "n_temporal_negative_records": fixture["summary"]["n_temporal_negative_records"],
+                "n_metalinguistic_negative_records": fixture["summary"]["n_metalinguistic_negative_records"],
                 "pattern_count": 0 if pattern_payload is None else len(pattern_payload["patterns"]),
             },
         )
@@ -425,6 +542,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"adversarial_negatives={fixture['summary']['n_adversarial_negative_records']} "
         f"predicate_confusions={fixture['summary']['n_predicate_confusion_records']} "
         f"non_assertive_negatives={fixture['summary']['n_non_assertive_negative_records']} "
+        f"ambiguity_negatives={fixture['summary']['n_ambiguity_negative_records']} "
+        f"temporal_negatives={fixture['summary']['n_temporal_negative_records']} "
+        f"metalinguistic_negatives={fixture['summary']['n_metalinguistic_negative_records']} "
         f"output={output_records}"
     )
     return fixture
@@ -651,6 +771,82 @@ def _non_assertive_negative_templates_for_fact(
     return templates[:limit]
 
 
+def _ambiguity_negative_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    positive_templates: Sequence[tuple[str, str, str]],
+    limit: int,
+) -> tuple[tuple[str, str], ...]:
+    if limit <= 0 or not positive_templates:
+        return ()
+    _template_id, positive_text, _expected_object = positive_templates[0]
+    claim_text = positive_text.rstrip(".")
+    label = _predicate_label(predicate)
+    templates = (
+        ("either-or-claim", f"Either {claim_text} or an alternate record says otherwise."),
+        (
+            "candidate-list",
+            f"Possible candidates for {_subject_possessive(fact.subject)} {label} include "
+            f"{fact.object} and another value.",
+        ),
+    )
+    return templates[:limit]
+
+
+def _temporal_negative_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    positive_templates: Sequence[tuple[str, str, str]],
+    limit: int,
+) -> tuple[tuple[str, str], ...]:
+    if limit <= 0 or not positive_templates:
+        return ()
+    _template_id, positive_text, _expected_object = positive_templates[0]
+    claim_text = positive_text.rstrip(".")
+    templates = (
+        ("historical-period", f"Historically, {claim_text} for a past period."),
+        ("former-record", f"Formerly, {claim_text} according to an outdated timeline."),
+    )
+    return templates[:limit]
+
+
+def _metalinguistic_negative_templates_for_fact(
+    fact: StructuredFact,
+    *,
+    predicate: str,
+    positive_templates: Sequence[tuple[str, str, str]],
+    limit: int,
+) -> tuple[tuple[str, str], ...]:
+    if limit <= 0 or not positive_templates:
+        return ()
+    _template_id, positive_text, _expected_object = positive_templates[0]
+    claim_text = positive_text.rstrip(".")
+    templates = (
+        ("phrase-mentions", f'The phrase "{claim_text}" mentions {fact.object}.'),
+        ("compared-wording", f'Compared with another wording, the phrase "{claim_text}" is shorter.'),
+    )
+    return templates[:limit]
+
+
+def _subject_possessive(subject: str) -> str:
+    """Return a simple possessive form for generated diagnostic text."""
+    return f"{subject}'" if subject.endswith("s") else f"{subject}'s"
+
+
+def _predicate_label(predicate: str) -> str:
+    labels = {
+        "capital_of": "capital",
+        "official_language_of": "official language",
+        "currency_of": "currency",
+        "headquarters_location_of": "headquarters location",
+        "manufacturer_of": "manufacturer",
+        "inception_of": "inception date",
+    }
+    return labels.get(predicate, predicate.replace("_", " "))
+
+
 def _output_predicate(value: Any) -> str | None:
     text = _normalize_predicate(value)
     return PREDICATE_OUTPUTS.get(text)
@@ -719,6 +915,24 @@ def main() -> None:
         type=int,
         default=0,
         help="optional quoted/questioned records with no expected triples per fact",
+    )
+    parser.add_argument(
+        "--ambiguity-negatives-per-fact",
+        type=int,
+        default=0,
+        help="optional ambiguous or multi-object records with no expected triples per fact",
+    )
+    parser.add_argument(
+        "--temporal-negatives-per-fact",
+        type=int,
+        default=0,
+        help="optional temporal-qualified records with no expected triples per fact",
+    )
+    parser.add_argument(
+        "--metalinguistic-negatives-per-fact",
+        type=int,
+        default=0,
+        help="optional phrase/comparison records with no expected triples per fact",
     )
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest path")
     run(parser.parse_args())

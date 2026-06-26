@@ -47,6 +47,12 @@ class TripleExtractionFixtureWorkflowConfig:
     min_predicate_confusion_f1: float = 1.0
     non_assertive_negatives_per_fact: int = 0
     max_non_assertive_false_positive_rate: float = 0.0
+    ambiguity_negatives_per_fact: int = 0
+    max_ambiguity_false_positive_rate: float = 0.0
+    temporal_negatives_per_fact: int = 0
+    max_temporal_false_positive_rate: float = 0.0
+    metalinguistic_negatives_per_fact: int = 0
+    max_metalinguistic_false_positive_rate: float = 0.0
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -102,6 +108,43 @@ class TripleExtractionFixtureWorkflowConfig:
             "max_non_assertive_false_positive_rate",
             max_non_assertive_false_positive_rate,
         )
+        if int(self.ambiguity_negatives_per_fact) < 0:
+            raise ValueError("ambiguity_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "ambiguity_negatives_per_fact",
+            int(self.ambiguity_negatives_per_fact),
+        )
+        max_ambiguity_false_positive_rate = float(self.max_ambiguity_false_positive_rate)
+        if not (0.0 <= max_ambiguity_false_positive_rate <= 1.0):
+            raise ValueError("max_ambiguity_false_positive_rate must be in [0, 1].")
+        object.__setattr__(self, "max_ambiguity_false_positive_rate", max_ambiguity_false_positive_rate)
+        if int(self.temporal_negatives_per_fact) < 0:
+            raise ValueError("temporal_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "temporal_negatives_per_fact",
+            int(self.temporal_negatives_per_fact),
+        )
+        max_temporal_false_positive_rate = float(self.max_temporal_false_positive_rate)
+        if not (0.0 <= max_temporal_false_positive_rate <= 1.0):
+            raise ValueError("max_temporal_false_positive_rate must be in [0, 1].")
+        object.__setattr__(self, "max_temporal_false_positive_rate", max_temporal_false_positive_rate)
+        if int(self.metalinguistic_negatives_per_fact) < 0:
+            raise ValueError("metalinguistic_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "metalinguistic_negatives_per_fact",
+            int(self.metalinguistic_negatives_per_fact),
+        )
+        max_metalinguistic_false_positive_rate = float(self.max_metalinguistic_false_positive_rate)
+        if not (0.0 <= max_metalinguistic_false_positive_rate <= 1.0):
+            raise ValueError("max_metalinguistic_false_positive_rate must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "max_metalinguistic_false_positive_rate",
+            max_metalinguistic_false_positive_rate,
+        )
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
             raise ValueError("min_augmented_f1 must be in [0, 1].")
@@ -140,6 +183,9 @@ def run_triple_extraction_fixture_workflow(
         adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
         predicate_confusions_per_fact=config.predicate_confusions_per_fact,
         non_assertive_negatives_per_fact=config.non_assertive_negatives_per_fact,
+        ambiguity_negatives_per_fact=config.ambiguity_negatives_per_fact,
+        temporal_negatives_per_fact=config.temporal_negatives_per_fact,
+        metalinguistic_negatives_per_fact=config.metalinguistic_negatives_per_fact,
     )
     fixture["input_provenance"] = build_input_provenance(
         config.fact_corpus_paths,
@@ -147,6 +193,9 @@ def run_triple_extraction_fixture_workflow(
         adversarial_negatives_per_fact=config.adversarial_negatives_per_fact,
         predicate_confusions_per_fact=config.predicate_confusions_per_fact,
         non_assertive_negatives_per_fact=config.non_assertive_negatives_per_fact,
+        ambiguity_negatives_per_fact=config.ambiguity_negatives_per_fact,
+        temporal_negatives_per_fact=config.temporal_negatives_per_fact,
+        metalinguistic_negatives_per_fact=config.metalinguistic_negatives_per_fact,
     )
     pattern_payload = build_default_regex_pattern_payload()
     _write_json(config.records_path, fixture, compact=config.compact_json)
@@ -190,6 +239,9 @@ def run_triple_extraction_fixture_workflow(
             "n_adversarial_negative_records": summary["fixture_summary"]["n_adversarial_negative_records"],
             "n_predicate_confusion_records": summary["fixture_summary"]["n_predicate_confusion_records"],
             "n_non_assertive_negative_records": summary["fixture_summary"]["n_non_assertive_negative_records"],
+            "n_ambiguity_negative_records": summary["fixture_summary"]["n_ambiguity_negative_records"],
+            "n_temporal_negative_records": summary["fixture_summary"]["n_temporal_negative_records"],
+            "n_metalinguistic_negative_records": summary["fixture_summary"]["n_metalinguistic_negative_records"],
             "pattern_count": summary["pattern_count"],
             "best_extractor": summary["best_extractor"],
             "best_f1": summary["best_report"]["f1"],
@@ -200,6 +252,15 @@ def run_triple_extraction_fixture_workflow(
             ],
             "best_predicate_confusion_f1": summary["best_predicate_confusion_report"]["f1"],
             "best_non_assertive_false_positive_rate": summary["best_non_assertive_report"][
+                "false_positive_rate"
+            ],
+            "best_ambiguity_false_positive_rate": summary["best_ambiguity_report"][
+                "false_positive_rate"
+            ],
+            "best_temporal_false_positive_rate": summary["best_temporal_report"][
+                "false_positive_rate"
+            ],
+            "best_metalinguistic_false_positive_rate": summary["best_metalinguistic_report"][
                 "false_positive_rate"
             ],
             "promotes_augmented_extractor": summary["status"] == "promote",
@@ -244,9 +305,15 @@ def _workflow_summary(
     best_adversarial_report = _record_type_report(best_report, "adversarial_negative")
     best_predicate_confusion_report = _record_type_report(best_report, "predicate_confusion")
     best_non_assertive_report = _record_type_report(best_report, "non_assertive_negative")
+    best_ambiguity_report = _record_type_report(best_report, "ambiguity_negative")
+    best_temporal_report = _record_type_report(best_report, "temporal_negative")
+    best_metalinguistic_report = _record_type_report(best_report, "metalinguistic_negative")
     n_adversarial_negative_records = int(fixture["summary"].get("n_adversarial_negative_records", 0))
     n_predicate_confusion_records = int(fixture["summary"].get("n_predicate_confusion_records", 0))
     n_non_assertive_negative_records = int(fixture["summary"].get("n_non_assertive_negative_records", 0))
+    n_ambiguity_negative_records = int(fixture["summary"].get("n_ambiguity_negative_records", 0))
+    n_temporal_negative_records = int(fixture["summary"].get("n_temporal_negative_records", 0))
+    n_metalinguistic_negative_records = int(fixture["summary"].get("n_metalinguistic_negative_records", 0))
     failures = []
     if float(best_report["f1"]) < config.min_augmented_f1:
         failures.append({
@@ -294,6 +361,40 @@ def _workflow_summary(
             "false_positive_record_count": int(best_non_assertive_report["false_positive_record_count"]),
             "zero_expected_record_count": int(best_non_assertive_report["zero_expected_record_count"]),
         })
+    if (
+        n_ambiguity_negative_records > 0
+        and float(best_ambiguity_report["false_positive_rate"]) > config.max_ambiguity_false_positive_rate
+    ):
+        failures.append({
+            "gate": "max_ambiguity_false_positive_rate",
+            "observed": float(best_ambiguity_report["false_positive_rate"]),
+            "threshold": config.max_ambiguity_false_positive_rate,
+            "false_positive_record_count": int(best_ambiguity_report["false_positive_record_count"]),
+            "zero_expected_record_count": int(best_ambiguity_report["zero_expected_record_count"]),
+        })
+    if (
+        n_temporal_negative_records > 0
+        and float(best_temporal_report["false_positive_rate"]) > config.max_temporal_false_positive_rate
+    ):
+        failures.append({
+            "gate": "max_temporal_false_positive_rate",
+            "observed": float(best_temporal_report["false_positive_rate"]),
+            "threshold": config.max_temporal_false_positive_rate,
+            "false_positive_record_count": int(best_temporal_report["false_positive_record_count"]),
+            "zero_expected_record_count": int(best_temporal_report["zero_expected_record_count"]),
+        })
+    if (
+        n_metalinguistic_negative_records > 0
+        and float(best_metalinguistic_report["false_positive_rate"])
+        > config.max_metalinguistic_false_positive_rate
+    ):
+        failures.append({
+            "gate": "max_metalinguistic_false_positive_rate",
+            "observed": float(best_metalinguistic_report["false_positive_rate"]),
+            "threshold": config.max_metalinguistic_false_positive_rate,
+            "false_positive_record_count": int(best_metalinguistic_report["false_positive_record_count"]),
+            "zero_expected_record_count": int(best_metalinguistic_report["zero_expected_record_count"]),
+        })
     status = "promote" if not failures else "blocked"
     return {
         "workflow": "triple_extraction_fixture_workflow",
@@ -307,6 +408,12 @@ def _workflow_summary(
             "min_predicate_confusion_f1": config.min_predicate_confusion_f1,
             "non_assertive_negatives_per_fact": config.non_assertive_negatives_per_fact,
             "max_non_assertive_false_positive_rate": config.max_non_assertive_false_positive_rate,
+            "ambiguity_negatives_per_fact": config.ambiguity_negatives_per_fact,
+            "max_ambiguity_false_positive_rate": config.max_ambiguity_false_positive_rate,
+            "temporal_negatives_per_fact": config.temporal_negatives_per_fact,
+            "max_temporal_false_positive_rate": config.max_temporal_false_positive_rate,
+            "metalinguistic_negatives_per_fact": config.metalinguistic_negatives_per_fact,
+            "max_metalinguistic_false_positive_rate": config.max_metalinguistic_false_positive_rate,
             "failures": tuple(failures),
         },
         "records_path": str(config.records_path),
@@ -322,6 +429,9 @@ def _workflow_summary(
         "best_adversarial_report": best_adversarial_report,
         "best_predicate_confusion_report": best_predicate_confusion_report,
         "best_non_assertive_report": best_non_assertive_report,
+        "best_ambiguity_report": best_ambiguity_report,
+        "best_temporal_report": best_temporal_report,
+        "best_metalinguistic_report": best_metalinguistic_report,
         "f1_lift": f1_lift,
         "reports": {name: dict(payload["report"]) for name, payload in reports.items()},
     }
@@ -368,6 +478,12 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureWorkfl
         min_predicate_confusion_f1=args.min_predicate_confusion_f1,
         non_assertive_negatives_per_fact=args.non_assertive_negatives_per_fact,
         max_non_assertive_false_positive_rate=args.max_non_assertive_false_positive_rate,
+        ambiguity_negatives_per_fact=args.ambiguity_negatives_per_fact,
+        max_ambiguity_false_positive_rate=args.max_ambiguity_false_positive_rate,
+        temporal_negatives_per_fact=args.temporal_negatives_per_fact,
+        max_temporal_false_positive_rate=args.max_temporal_false_positive_rate,
+        metalinguistic_negatives_per_fact=args.metalinguistic_negatives_per_fact,
+        max_metalinguistic_false_positive_rate=args.max_metalinguistic_false_positive_rate,
         compact_json=bool(args.compact_json),
     )
 
@@ -386,6 +502,12 @@ def main() -> None:
     parser.add_argument("--min-predicate-confusion-f1", type=float, default=1.0)
     parser.add_argument("--non-assertive-negatives-per-fact", type=int, default=0)
     parser.add_argument("--max-non-assertive-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--ambiguity-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-ambiguity-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--temporal-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-temporal-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--metalinguistic-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-metalinguistic-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--compact-json", action="store_true")
     run_triple_extraction_fixture_workflow(_config_from_args(parser.parse_args()))
 

@@ -1027,6 +1027,9 @@ python benchmarks/build_triple_extraction_fixture.py \
   --adversarial-negatives-per-fact 0 \
   --predicate-confusions-per-fact 0 \
   --non-assertive-negatives-per-fact 0 \
+  --ambiguity-negatives-per-fact 0 \
+  --temporal-negatives-per-fact 0 \
+  --metalinguistic-negatives-per-fact 0 \
   --artifact-manifest artifacts/triple_extraction_fixture_manifest.json
 ```
 
@@ -1040,7 +1043,10 @@ python benchmarks/run_triple_extraction_fixture_workflow.py \
   --output-dir artifacts/triple-extraction-fixture-workflow \
   --adversarial-negatives-per-fact 0 \
   --predicate-confusions-per-fact 0 \
-  --non-assertive-negatives-per-fact 0
+  --non-assertive-negatives-per-fact 0 \
+  --ambiguity-negatives-per-fact 0 \
+  --temporal-negatives-per-fact 0 \
+  --metalinguistic-negatives-per-fact 0
 ```
 
 Use `run_triple_extraction_fixture_matrix.py` when extractor templates need
@@ -1052,7 +1058,10 @@ negated near-miss records with no expected triples, and
 triples for those negative controls. Add `--predicate-confusions-per-fact N`
 to require the extractor to emit the predicate stated by a wrong-predicate
 claim, and `--non-assertive-negatives-per-fact N` to reject quoted or
-questioned fact mentions:
+questioned fact mentions. `--ambiguity-negatives-per-fact N`,
+`--temporal-negatives-per-fact N`, and
+`--metalinguistic-negatives-per-fact N` add ambiguous/multi-object, temporal,
+and phrase/comparison context controls:
 
 ```bash
 python benchmarks/run_triple_extraction_fixture_matrix.py \
@@ -1063,7 +1072,10 @@ python benchmarks/run_triple_extraction_fixture_matrix.py \
   --min-distinct-predicates 6 \
   --adversarial-negatives-per-fact 0 \
   --predicate-confusions-per-fact 0 \
-  --non-assertive-negatives-per-fact 0
+  --non-assertive-negatives-per-fact 0 \
+  --ambiguity-negatives-per-fact 0 \
+  --temporal-negatives-per-fact 0 \
+  --metalinguistic-negatives-per-fact 0
 ```
 
 The current Wikidata cross-corpus matrix promotes: country-core contributes
@@ -1075,16 +1087,17 @@ manifest verification.
 
 The adversarial companion matrix at
 `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/` enables
-one negated near-miss, one predicate-confusion claim, and one non-assertive
-quoted/questioned mention per fact. It now promotes after applying the same
-negation/non-assertive guard to regex and rule-based paths: country-core has
-`2513` records with `359` records in each adversarial subgroup,
-organization/product has `56` records with `8` records in each subgroup, both
-corpora keep best F1 `1.000`, predicate-confusion F1 is `1.000`, and both
-adversarial and non-assertive false-positive rates are `0.000`. This is still
+one record per fact for each of six controls: negated near-miss,
+predicate-confusion, non-assertive quoted/questioned mention, ambiguity,
+temporal qualification, and metalinguistic/comparison context. It promotes after
+applying the same blocked-context guard to regex and rule-based paths:
+country-core has `3590` records with `359` records in each adversarial
+subgroup, organization/product has `80` records with `8` records in each
+subgroup, both corpora keep best F1 `1.000`, predicate-confusion F1 is `1.000`,
+and every zero-expected subgroup false-positive rate is `0.000`. This is still
 covered-KG template evidence, not a broad open-domain extractor claim; remaining
-negative controls include multi-object/list ambiguity, temporal qualifiers, and
-comparative or metalinguistic claims.
+work is broader corpora, richer surface variation, and learned/external
+extractor adapters.
 
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented

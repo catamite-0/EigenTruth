@@ -21,55 +21,61 @@
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-records.json",
-      "sha256": "e9cad689f7a31fe4f5baec50b0a91f7191a0a79f45593389c81328ac3a624de7",
-      "size_bytes": 4658426
+      "sha256": "374f7a082b435d58fbae1d5303448eadb088994767164042d59b0799beaf919f",
+      "size_bytes": 6622082
     },
     "report.composite": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "composite-triple-extraction-report.json",
-      "sha256": "e97b3a163b34c291afc2082cc1a40fca4839f7bf6421615f0f60eb9b3211b899",
-      "size_bytes": 2190
+      "sha256": "03ec7085718607fcf08240c22387805b0ed9956d1adca7766a05eea92b97022e",
+      "size_bytes": 3278
     },
     "report.regex_rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "regex_rule_based-triple-extraction-report.json",
-      "sha256": "57b19e9f643daa8b559ef0c55105c246d291b36feee0199a2f1da5300290c31e",
-      "size_bytes": 2197
+      "sha256": "c6cc4559a993a5060f6f6230e0130f5fadd9cecf2fa04bc9716b3c43a3fcfdbb",
+      "size_bytes": 3285
     },
     "report.rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "rule_based-triple-extraction-report.json",
-      "sha256": "346529fb19a2e9dcd5b7ddd6a094a1132630f997ce9f5654693be72ff8a9b665",
-      "size_bytes": 26038
+      "sha256": "d09babcc12dbdd3bba0d81a9629917f0c395ed70f9790da18f2a9ac849f987c6",
+      "size_bytes": 27130
     },
     "workflow_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-workflow-summary.json",
-      "sha256": "de0dfe2f7760975a7b7c8dd5d9491cde8519891521c5f4a76eec3fe8d31e8cfc",
-      "size_bytes": 62117
+      "sha256": "3e1d584574f936751dd597d8c20bb3cc01f96b99a9af49d7c212e1ab5660c010",
+      "size_bytes": 69125
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "baseline_f1": 0.8000000000000002,
     "best_adversarial_false_positive_rate": 0.0,
+    "best_ambiguity_false_positive_rate": 0.0,
     "best_extractor": "regex_rule_based",
     "best_f1": 1.0,
+    "best_metalinguistic_false_positive_rate": 0.0,
     "best_non_assertive_false_positive_rate": 0.0,
     "best_predicate_confusion_f1": 1.0,
+    "best_temporal_false_positive_rate": 0.0,
     "f1_lift": 0.19999999999999984,
     "n_adversarial_negative_records": 359,
+    "n_ambiguity_negative_records": 359,
+    "n_metalinguistic_negative_records": 359,
     "n_non_assertive_negative_records": 359,
     "n_predicate_confusion_records": 359,
-    "n_records": 2513,
+    "n_records": 3590,
+    "n_temporal_negative_records": 359,
     "pattern_count": 15,
     "promotes_augmented_extractor": true,
     "status": "promote",

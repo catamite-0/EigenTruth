@@ -690,16 +690,18 @@ def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
 
 
 def test_rule_based_claim_triples_reject_explicit_negation():
-    claims = extract_claims(
-        'The capital of France is not Paris. OpenAI is not headquartered in San Francisco. '
-        'The claim "Paris is the capital of France" was reviewed. '
-        "A question asks whether Paris is the capital of France."
+    examples = (
+        "The capital of France is not Paris.",
+        "OpenAI is not headquartered in San Francisco.",
+        'The claim "Paris is the capital of France" was reviewed.',
+        "A question asks whether Paris is the capital of France.",
+        "Either Paris is the capital of France or an alternate record says otherwise.",
+        "Historically, Paris is the capital of France for a past period.",
+        'The phrase "Paris is the capital of France" mentions Paris.',
     )
 
-    assert extract_claim_triples(claims[0]) == ()
-    assert extract_claim_triples(claims[1]) == ()
-    assert extract_claim_triples(claims[2]) == ()
-    assert extract_claim_triples(claims[3]) == ()
+    for text in examples:
+        assert extract_claim_triples(extract_claims(text)[0]) == ()
 
 
 def test_rule_based_claim_triples_extract_stated_predicate_for_confusion_claim():
@@ -955,15 +957,22 @@ def test_regex_triple_extractor_extends_rule_based_extraction():
     )
 
 
-def test_regex_triple_extractor_rejects_non_assertive_context():
-    claim = Claim('The claim "OpenAI is headquartered in San Francisco" was reviewed.')
+def test_regex_triple_extractor_rejects_blocked_contexts():
     pattern = RegexTriplePattern(
         pattern=r"^(?P<subject>.+?) is headquartered in (?P<object>.+)$",
         predicate="headquarters_location_of",
     )
     extractor = RegexTripleExtractor(patterns=(pattern,), fallback=RuleBasedTripleExtractor())
 
-    assert extractor.extract(claim) == ()
+    examples = (
+        'The claim "OpenAI is headquartered in San Francisco" was reviewed.',
+        "Either OpenAI is headquartered in San Francisco or an alternate record says otherwise.",
+        "Historically, OpenAI is headquartered in San Francisco for a past period.",
+        'The phrase "OpenAI is headquartered in San Francisco" mentions San Francisco.',
+    )
+
+    for text in examples:
+        assert extractor.extract(Claim(text)) == ()
 
 
 def test_structured_fact_verifier_accepts_injected_triple_extractor():

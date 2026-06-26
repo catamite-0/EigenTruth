@@ -399,17 +399,18 @@ Added dependency-free triple extractor plug-ins and eval harness:
   recursively. This closes the local extractor-evidence item for covered
   predicates; open-domain extraction still requires broader corpora and likely a
   learned or external extractor adapter.
-- `build_triple_extraction_fixture.py` now supports three adversarial subgroups:
+- `build_triple_extraction_fixture.py` now supports six adversarial subgroups:
   negated near-miss records, predicate-confusion assertions that state the wrong
-  property but still require extracting the stated predicate, and non-assertive
-  quoted/questioned fact mentions with no expected triples. The adversarial
-  cross-corpus matrix at
+  property but still require extracting the stated predicate, non-assertive
+  quoted/questioned fact mentions, ambiguous/multi-object wording,
+  temporal-qualified wording, and metalinguistic/comparison context. The
+  adversarial cross-corpus matrix at
   `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/`
-  first exposed real false positives in the extractor stack; after applying
-  negation/non-assertive guards to both rule-based and regex paths, the same
+  first exposed real false positives in the extractor stack; after applying a
+  shared blocked-context guard to both rule-based and regex paths, the same
   country-core plus organization/product corpora add `367` records to each
   adversarial subgroup, both workflows promote, best F1 remains `1.000`,
-  predicate-confusion F1 is `1.000`, and both adversarial and non-assertive
+  predicate-confusion F1 is `1.000`, and all zero-expected subgroup
   false-positive rates are `0.000`. This promotes simple negative-context
   robustness for covered KG templates while preserving the broader open-domain
   extraction boundary.
@@ -418,4 +419,4 @@ Added dependency-free triple extractor plug-ins and eval harness:
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Add multi-object/list ambiguity, temporal qualifiers, and comparative or metalinguistic negative controls to the triple-extraction matrix before claiming broader extractor robustness.
+3. Evaluate a learned or external triple extractor adapter on the same Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

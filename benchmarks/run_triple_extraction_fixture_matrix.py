@@ -66,6 +66,12 @@ class TripleExtractionFixtureMatrixConfig:
     min_predicate_confusion_f1: float = 1.0
     non_assertive_negatives_per_fact: int = 0
     max_non_assertive_false_positive_rate: float = 0.0
+    ambiguity_negatives_per_fact: int = 0
+    max_ambiguity_false_positive_rate: float = 0.0
+    temporal_negatives_per_fact: int = 0
+    max_temporal_false_positive_rate: float = 0.0
+    metalinguistic_negatives_per_fact: int = 0
+    max_metalinguistic_false_positive_rate: float = 0.0
     min_corpora: int = 2
     min_distinct_predicates: int = 4
     compact_json: bool = False
@@ -126,6 +132,43 @@ class TripleExtractionFixtureMatrixConfig:
             "max_non_assertive_false_positive_rate",
             max_non_assertive_false_positive_rate,
         )
+        if int(self.ambiguity_negatives_per_fact) < 0:
+            raise ValueError("ambiguity_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "ambiguity_negatives_per_fact",
+            int(self.ambiguity_negatives_per_fact),
+        )
+        max_ambiguity_false_positive_rate = float(self.max_ambiguity_false_positive_rate)
+        if not (0.0 <= max_ambiguity_false_positive_rate <= 1.0):
+            raise ValueError("max_ambiguity_false_positive_rate must be in [0, 1].")
+        object.__setattr__(self, "max_ambiguity_false_positive_rate", max_ambiguity_false_positive_rate)
+        if int(self.temporal_negatives_per_fact) < 0:
+            raise ValueError("temporal_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "temporal_negatives_per_fact",
+            int(self.temporal_negatives_per_fact),
+        )
+        max_temporal_false_positive_rate = float(self.max_temporal_false_positive_rate)
+        if not (0.0 <= max_temporal_false_positive_rate <= 1.0):
+            raise ValueError("max_temporal_false_positive_rate must be in [0, 1].")
+        object.__setattr__(self, "max_temporal_false_positive_rate", max_temporal_false_positive_rate)
+        if int(self.metalinguistic_negatives_per_fact) < 0:
+            raise ValueError("metalinguistic_negatives_per_fact must be non-negative.")
+        object.__setattr__(
+            self,
+            "metalinguistic_negatives_per_fact",
+            int(self.metalinguistic_negatives_per_fact),
+        )
+        max_metalinguistic_false_positive_rate = float(self.max_metalinguistic_false_positive_rate)
+        if not (0.0 <= max_metalinguistic_false_positive_rate <= 1.0):
+            raise ValueError("max_metalinguistic_false_positive_rate must be in [0, 1].")
+        object.__setattr__(
+            self,
+            "max_metalinguistic_false_positive_rate",
+            max_metalinguistic_false_positive_rate,
+        )
         min_augmented_f1 = float(self.min_augmented_f1)
         if not (0.0 <= min_augmented_f1 <= 1.0):
             raise ValueError("min_augmented_f1 must be in [0, 1].")
@@ -170,6 +213,12 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
                 min_predicate_confusion_f1=config.min_predicate_confusion_f1,
                 non_assertive_negatives_per_fact=config.non_assertive_negatives_per_fact,
                 max_non_assertive_false_positive_rate=config.max_non_assertive_false_positive_rate,
+                ambiguity_negatives_per_fact=config.ambiguity_negatives_per_fact,
+                max_ambiguity_false_positive_rate=config.max_ambiguity_false_positive_rate,
+                temporal_negatives_per_fact=config.temporal_negatives_per_fact,
+                max_temporal_false_positive_rate=config.max_temporal_false_positive_rate,
+                metalinguistic_negatives_per_fact=config.metalinguistic_negatives_per_fact,
+                max_metalinguistic_false_positive_rate=config.max_metalinguistic_false_positive_rate,
                 compact_json=config.compact_json,
             )
         )
@@ -205,6 +254,24 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
             "max_best_non_assertive_false_positive_rate": matrix[
                 "max_best_non_assertive_false_positive_rate"
             ],
+            "mean_best_ambiguity_false_positive_rate": matrix[
+                "mean_best_ambiguity_false_positive_rate"
+            ],
+            "max_best_ambiguity_false_positive_rate": matrix[
+                "max_best_ambiguity_false_positive_rate"
+            ],
+            "mean_best_temporal_false_positive_rate": matrix[
+                "mean_best_temporal_false_positive_rate"
+            ],
+            "max_best_temporal_false_positive_rate": matrix[
+                "max_best_temporal_false_positive_rate"
+            ],
+            "mean_best_metalinguistic_false_positive_rate": matrix[
+                "mean_best_metalinguistic_false_positive_rate"
+            ],
+            "max_best_metalinguistic_false_positive_rate": matrix[
+                "max_best_metalinguistic_false_positive_rate"
+            ],
             "promotes_cross_corpus_extractor": matrix["status"] == "promote",
         },
     )
@@ -231,6 +298,9 @@ def _corpus_result(
     best_adversarial_report = _mapping(summary.get("best_adversarial_report"))
     best_predicate_confusion_report = _mapping(summary.get("best_predicate_confusion_report"))
     best_non_assertive_report = _mapping(summary.get("best_non_assertive_report"))
+    best_ambiguity_report = _mapping(summary.get("best_ambiguity_report"))
+    best_temporal_report = _mapping(summary.get("best_temporal_report"))
+    best_metalinguistic_report = _mapping(summary.get("best_metalinguistic_report"))
     return {
         "name": corpus.name,
         "slug": corpus.slug,
@@ -267,6 +337,29 @@ def _corpus_result(
         ),
         "best_non_assertive_false_positive_record_count": int(
             best_non_assertive_report.get("false_positive_record_count", 0)
+        ),
+        "n_ambiguity_negative_records": int(fixture_summary.get("n_ambiguity_negative_records", 0)),
+        "best_ambiguity_false_positive_rate": float(
+            best_ambiguity_report.get("false_positive_rate", 0.0)
+        ),
+        "best_ambiguity_false_positive_record_count": int(
+            best_ambiguity_report.get("false_positive_record_count", 0)
+        ),
+        "n_temporal_negative_records": int(fixture_summary.get("n_temporal_negative_records", 0)),
+        "best_temporal_false_positive_rate": float(
+            best_temporal_report.get("false_positive_rate", 0.0)
+        ),
+        "best_temporal_false_positive_record_count": int(
+            best_temporal_report.get("false_positive_record_count", 0)
+        ),
+        "n_metalinguistic_negative_records": int(
+            fixture_summary.get("n_metalinguistic_negative_records", 0)
+        ),
+        "best_metalinguistic_false_positive_rate": float(
+            best_metalinguistic_report.get("false_positive_rate", 0.0)
+        ),
+        "best_metalinguistic_false_positive_record_count": int(
+            best_metalinguistic_report.get("false_positive_record_count", 0)
         ),
     }
 
@@ -324,6 +417,12 @@ def _matrix_summary(
             "min_predicate_confusion_f1": config.min_predicate_confusion_f1,
             "non_assertive_negatives_per_fact": config.non_assertive_negatives_per_fact,
             "max_non_assertive_false_positive_rate": config.max_non_assertive_false_positive_rate,
+            "ambiguity_negatives_per_fact": config.ambiguity_negatives_per_fact,
+            "max_ambiguity_false_positive_rate": config.max_ambiguity_false_positive_rate,
+            "temporal_negatives_per_fact": config.temporal_negatives_per_fact,
+            "max_temporal_false_positive_rate": config.max_temporal_false_positive_rate,
+            "metalinguistic_negatives_per_fact": config.metalinguistic_negatives_per_fact,
+            "max_metalinguistic_false_positive_rate": config.max_metalinguistic_false_positive_rate,
             "failures": tuple(failures),
         },
         "n_corpora": len(corpus_results),
@@ -355,6 +454,30 @@ def _matrix_summary(
         ),
         "max_best_non_assertive_false_positive_rate": max(
             (float(item["best_non_assertive_false_positive_rate"]) for item in corpus_results),
+            default=0.0,
+        ),
+        "mean_best_ambiguity_false_positive_rate": _mean(
+            float(item["best_ambiguity_false_positive_rate"])
+            for item in corpus_results
+        ),
+        "max_best_ambiguity_false_positive_rate": max(
+            (float(item["best_ambiguity_false_positive_rate"]) for item in corpus_results),
+            default=0.0,
+        ),
+        "mean_best_temporal_false_positive_rate": _mean(
+            float(item["best_temporal_false_positive_rate"])
+            for item in corpus_results
+        ),
+        "max_best_temporal_false_positive_rate": max(
+            (float(item["best_temporal_false_positive_rate"]) for item in corpus_results),
+            default=0.0,
+        ),
+        "mean_best_metalinguistic_false_positive_rate": _mean(
+            float(item["best_metalinguistic_false_positive_rate"])
+            for item in corpus_results
+        ),
+        "max_best_metalinguistic_false_positive_rate": max(
+            (float(item["best_metalinguistic_false_positive_rate"]) for item in corpus_results),
             default=0.0,
         ),
         "corpora": tuple(dict(item) for item in corpus_results),
@@ -449,6 +572,12 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureMatrix
         min_predicate_confusion_f1=args.min_predicate_confusion_f1,
         non_assertive_negatives_per_fact=args.non_assertive_negatives_per_fact,
         max_non_assertive_false_positive_rate=args.max_non_assertive_false_positive_rate,
+        ambiguity_negatives_per_fact=args.ambiguity_negatives_per_fact,
+        max_ambiguity_false_positive_rate=args.max_ambiguity_false_positive_rate,
+        temporal_negatives_per_fact=args.temporal_negatives_per_fact,
+        max_temporal_false_positive_rate=args.max_temporal_false_positive_rate,
+        metalinguistic_negatives_per_fact=args.metalinguistic_negatives_per_fact,
+        max_metalinguistic_false_positive_rate=args.max_metalinguistic_false_positive_rate,
         min_corpora=args.min_corpora,
         min_distinct_predicates=args.min_distinct_predicates,
         compact_json=bool(args.compact_json),
@@ -474,6 +603,12 @@ def main() -> None:
     parser.add_argument("--min-predicate-confusion-f1", type=float, default=1.0)
     parser.add_argument("--non-assertive-negatives-per-fact", type=int, default=0)
     parser.add_argument("--max-non-assertive-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--ambiguity-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-ambiguity-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--temporal-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-temporal-false-positive-rate", type=float, default=0.0)
+    parser.add_argument("--metalinguistic-negatives-per-fact", type=int, default=0)
+    parser.add_argument("--max-metalinguistic-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--min-corpora", type=int, default=2)
     parser.add_argument("--min-distinct-predicates", type=int, default=4)
     parser.add_argument("--compact-json", action="store_true")

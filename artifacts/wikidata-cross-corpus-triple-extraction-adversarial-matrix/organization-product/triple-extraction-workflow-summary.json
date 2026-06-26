@@ -14,6 +14,30 @@
         "record_count": 8,
         "zero_expected_record_count": 8
       },
+      "ambiguity_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
+      },
+      "metalinguistic_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
+      },
       "non_assertive_negative": {
         "exact_match_count": 0,
         "expected_triple_count": 0,
@@ -49,6 +73,18 @@
         "recall": 0.0,
         "record_count": 8,
         "zero_expected_record_count": 0
+      },
+      "temporal_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
       }
     },
     "error_examples": [
@@ -282,7 +318,7 @@
             "subject": "Apple Inc"
           }
         ],
-        "index": 7,
+        "index": 10,
         "missing": [
           {
             "object": "1976-04-01t00:00:00z",
@@ -322,7 +358,7 @@
             "subject": "The inception date of Apple Inc"
           }
         ],
-        "index": 8,
+        "index": 11,
         "missing": [
           {
             "object": "1976-04-01t00:00:00z",
@@ -362,7 +398,7 @@
             "subject": "Apple Inc's inception date"
           }
         ],
-        "index": 9,
+        "index": 12,
         "missing": [
           {
             "object": "1976-04-01t00:00:00z",
@@ -402,7 +438,7 @@
             "subject": "1976-04-01T00:00:00Z"
           }
         ],
-        "index": 10,
+        "index": 13,
         "missing": [
           {
             "object": "1976-04-01t00:00:00z",
@@ -442,7 +478,7 @@
             "subject": "Apple Inc"
           }
         ],
-        "index": 12,
+        "index": 15,
         "missing": [
           {
             "object": "1976-04-01t00:00:00z",
@@ -482,7 +518,7 @@
             "subject": "OpenAI"
           }
         ],
-        "index": 14,
+        "index": 20,
         "missing": [
           {
             "object": "san francisco",
@@ -522,7 +558,7 @@
             "subject": "The headquarters of OpenAI"
           }
         ],
-        "index": 15,
+        "index": 21,
         "missing": [
           {
             "object": "san francisco",
@@ -562,7 +598,7 @@
             "subject": "OpenAI's headquarters"
           }
         ],
-        "index": 16,
+        "index": 22,
         "missing": [
           {
             "object": "san francisco",
@@ -602,7 +638,7 @@
             "subject": "San Francisco"
           }
         ],
-        "index": 17,
+        "index": 23,
         "missing": [
           {
             "object": "san francisco",
@@ -642,7 +678,7 @@
             "subject": "OpenAI"
           }
         ],
-        "index": 19,
+        "index": 25,
         "missing": [
           {
             "object": "san francisco",
@@ -682,7 +718,7 @@
             "subject": "OpenAI"
           }
         ],
-        "index": 21,
+        "index": 30,
         "missing": [
           {
             "object": "2015-12-08t00:00:00z",
@@ -722,7 +758,7 @@
             "subject": "The inception date of OpenAI"
           }
         ],
-        "index": 22,
+        "index": 31,
         "missing": [
           {
             "object": "2015-12-08t00:00:00z",
@@ -762,7 +798,7 @@
             "subject": "OpenAI's inception date"
           }
         ],
-        "index": 23,
+        "index": 32,
         "missing": [
           {
             "object": "2015-12-08t00:00:00z",
@@ -802,7 +838,7 @@
             "subject": "2015-12-08T00:00:00Z"
           }
         ],
-        "index": 24,
+        "index": 33,
         "missing": [
           {
             "object": "2015-12-08t00:00:00z",
@@ -842,7 +878,7 @@
             "subject": "OpenAI"
           }
         ],
-        "index": 26,
+        "index": 35,
         "missing": [
           {
             "object": "2015-12-08t00:00:00z",
@@ -861,8 +897,8 @@
     "false_positive_record_count": 0,
     "precision": 0.0,
     "recall": 0.0,
-    "record_count": 56,
-    "zero_expected_record_count": 16
+    "record_count": 80,
+    "zero_expected_record_count": 40
   },
   "best_adversarial_report": {
     "exact_match_count": 0,
@@ -876,7 +912,31 @@
     "record_count": 8,
     "zero_expected_record_count": 8
   },
+  "best_ambiguity_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 8,
+    "zero_expected_record_count": 8
+  },
   "best_extractor": "regex_rule_based",
+  "best_metalinguistic_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 8,
+    "zero_expected_record_count": 8
+  },
   "best_non_assertive_report": {
     "exact_match_count": 0,
     "expected_triple_count": 0,
@@ -904,6 +964,30 @@
   "best_report": {
     "by_record_type": {
       "adversarial_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
+      },
+      "ambiguity_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
+      },
+      "metalinguistic_negative": {
         "exact_match_count": 0,
         "expected_triple_count": 0,
         "extracted_triple_count": 0,
@@ -950,6 +1034,18 @@
         "recall": 1.0,
         "record_count": 8,
         "zero_expected_record_count": 0
+      },
+      "temporal_negative": {
+        "exact_match_count": 0,
+        "expected_triple_count": 0,
+        "extracted_triple_count": 0,
+        "f1": 0.0,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "record_count": 8,
+        "zero_expected_record_count": 8
       }
     },
     "error_examples": [],
@@ -961,8 +1057,20 @@
     "false_positive_record_count": 0,
     "precision": 1.0,
     "recall": 1.0,
-    "record_count": 56,
-    "zero_expected_record_count": 16
+    "record_count": 80,
+    "zero_expected_record_count": 40
+  },
+  "best_temporal_report": {
+    "exact_match_count": 0,
+    "expected_triple_count": 0,
+    "extracted_triple_count": 0,
+    "f1": 0.0,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "record_count": 8,
+    "zero_expected_record_count": 8
   },
   "f1_lift": 1.0,
   "fact_corpus_paths": [
@@ -972,23 +1080,26 @@
     "by_predicate": {
       "headquarters_location_of": {
         "fact_count": 3,
-        "record_count": 23
+        "record_count": 32
       },
       "inception_of": {
         "fact_count": 3,
-        "record_count": 18
+        "record_count": 27
       },
       "manufacturer_of": {
         "fact_count": 2,
-        "record_count": 15
+        "record_count": 21
       }
     },
     "n_adversarial_negative_records": 8,
+    "n_ambiguity_negative_records": 8,
     "n_facts": 8,
+    "n_metalinguistic_negative_records": 8,
     "n_non_assertive_negative_records": 8,
     "n_predicate_confusion_records": 8,
-    "n_records": 56,
+    "n_records": 80,
     "n_source_records": 8,
+    "n_temporal_negative_records": 8,
     "skipped": {
       "duplicate_record": 0,
       "invalid_fact": 0,
@@ -999,14 +1110,20 @@
   "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/triple-extraction-regex-patterns.json",
   "promotion_gate": {
     "adversarial_negatives_per_fact": 1,
+    "ambiguity_negatives_per_fact": 1,
     "failures": [],
     "max_adversarial_false_positive_rate": 0.0,
+    "max_ambiguity_false_positive_rate": 0.0,
+    "max_metalinguistic_false_positive_rate": 0.0,
     "max_non_assertive_false_positive_rate": 0.0,
+    "max_temporal_false_positive_rate": 0.0,
+    "metalinguistic_negatives_per_fact": 1,
     "min_augmented_f1": 1.0,
     "min_predicate_confusion_f1": 1.0,
     "non_assertive_negatives_per_fact": 1,
     "predicate_confusions_per_fact": 1,
-    "require_f1_lift": true
+    "require_f1_lift": true,
+    "temporal_negatives_per_fact": 1
   },
   "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/triple-extraction-records.json",
   "report_paths": {
@@ -1029,6 +1146,30 @@
           "record_count": 8,
           "zero_expected_record_count": 8
         },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
         "non_assertive_negative": {
           "exact_match_count": 0,
           "expected_triple_count": 0,
@@ -1064,6 +1205,18 @@
           "recall": 1.0,
           "record_count": 8,
           "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
         }
       },
       "error_examples": [],
@@ -1075,8 +1228,8 @@
       "false_positive_record_count": 0,
       "precision": 1.0,
       "recall": 1.0,
-      "record_count": 56,
-      "zero_expected_record_count": 16
+      "record_count": 80,
+      "zero_expected_record_count": 40
     },
     "regex_rule_based": {
       "by_record_type": {
@@ -1092,6 +1245,30 @@
           "record_count": 8,
           "zero_expected_record_count": 8
         },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
+        "metalinguistic_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
         "non_assertive_negative": {
           "exact_match_count": 0,
           "expected_triple_count": 0,
@@ -1127,6 +1304,18 @@
           "recall": 1.0,
           "record_count": 8,
           "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
         }
       },
       "error_examples": [],
@@ -1138,12 +1327,36 @@
       "false_positive_record_count": 0,
       "precision": 1.0,
       "recall": 1.0,
-      "record_count": 56,
-      "zero_expected_record_count": 16
+      "record_count": 80,
+      "zero_expected_record_count": 40
     },
     "rule_based": {
       "by_record_type": {
         "adversarial_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
+        "ambiguity_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
+        },
+        "metalinguistic_negative": {
           "exact_match_count": 0,
           "expected_triple_count": 0,
           "extracted_triple_count": 0,
@@ -1190,6 +1403,18 @@
           "recall": 0.0,
           "record_count": 8,
           "zero_expected_record_count": 0
+        },
+        "temporal_negative": {
+          "exact_match_count": 0,
+          "expected_triple_count": 0,
+          "extracted_triple_count": 0,
+          "f1": 0.0,
+          "false_positive_rate": 0.0,
+          "false_positive_record_count": 0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "record_count": 8,
+          "zero_expected_record_count": 8
         }
       },
       "error_examples": [
@@ -1423,7 +1648,7 @@
               "subject": "Apple Inc"
             }
           ],
-          "index": 7,
+          "index": 10,
           "missing": [
             {
               "object": "1976-04-01t00:00:00z",
@@ -1463,7 +1688,7 @@
               "subject": "The inception date of Apple Inc"
             }
           ],
-          "index": 8,
+          "index": 11,
           "missing": [
             {
               "object": "1976-04-01t00:00:00z",
@@ -1503,7 +1728,7 @@
               "subject": "Apple Inc's inception date"
             }
           ],
-          "index": 9,
+          "index": 12,
           "missing": [
             {
               "object": "1976-04-01t00:00:00z",
@@ -1543,7 +1768,7 @@
               "subject": "1976-04-01T00:00:00Z"
             }
           ],
-          "index": 10,
+          "index": 13,
           "missing": [
             {
               "object": "1976-04-01t00:00:00z",
@@ -1583,7 +1808,7 @@
               "subject": "Apple Inc"
             }
           ],
-          "index": 12,
+          "index": 15,
           "missing": [
             {
               "object": "1976-04-01t00:00:00z",
@@ -1623,7 +1848,7 @@
               "subject": "OpenAI"
             }
           ],
-          "index": 14,
+          "index": 20,
           "missing": [
             {
               "object": "san francisco",
@@ -1663,7 +1888,7 @@
               "subject": "The headquarters of OpenAI"
             }
           ],
-          "index": 15,
+          "index": 21,
           "missing": [
             {
               "object": "san francisco",
@@ -1703,7 +1928,7 @@
               "subject": "OpenAI's headquarters"
             }
           ],
-          "index": 16,
+          "index": 22,
           "missing": [
             {
               "object": "san francisco",
@@ -1743,7 +1968,7 @@
               "subject": "San Francisco"
             }
           ],
-          "index": 17,
+          "index": 23,
           "missing": [
             {
               "object": "san francisco",
@@ -1783,7 +2008,7 @@
               "subject": "OpenAI"
             }
           ],
-          "index": 19,
+          "index": 25,
           "missing": [
             {
               "object": "san francisco",
@@ -1823,7 +2048,7 @@
               "subject": "OpenAI"
             }
           ],
-          "index": 21,
+          "index": 30,
           "missing": [
             {
               "object": "2015-12-08t00:00:00z",
@@ -1863,7 +2088,7 @@
               "subject": "The inception date of OpenAI"
             }
           ],
-          "index": 22,
+          "index": 31,
           "missing": [
             {
               "object": "2015-12-08t00:00:00z",
@@ -1903,7 +2128,7 @@
               "subject": "OpenAI's inception date"
             }
           ],
-          "index": 23,
+          "index": 32,
           "missing": [
             {
               "object": "2015-12-08t00:00:00z",
@@ -1943,7 +2168,7 @@
               "subject": "2015-12-08T00:00:00Z"
             }
           ],
-          "index": 24,
+          "index": 33,
           "missing": [
             {
               "object": "2015-12-08t00:00:00z",
@@ -1983,7 +2208,7 @@
               "subject": "OpenAI"
             }
           ],
-          "index": 26,
+          "index": 35,
           "missing": [
             {
               "object": "2015-12-08t00:00:00z",
@@ -2002,8 +2227,8 @@
       "false_positive_record_count": 0,
       "precision": 0.0,
       "recall": 0.0,
-      "record_count": 56,
-      "zero_expected_record_count": 16
+      "record_count": 80,
+      "zero_expected_record_count": 40
     }
   },
   "status": "promote",
