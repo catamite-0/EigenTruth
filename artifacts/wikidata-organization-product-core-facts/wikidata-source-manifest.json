@@ -1,0 +1,43 @@
+{
+  "artifacts": {
+    "wikidata_reference_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-organization-product-source.jsonl",
+      "sha256": "f4cd3dc8d01c7c4e5b11de0e1e38041e70827115cb02f4fdc1e4d1899a454f94",
+      "size_bytes": 9663
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "endpoint": "https://query.wikidata.org/sparql",
+    "fetched_at": "2026-06-26T17:26:44+00:00",
+    "license": "CC0-1.0",
+    "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+    "n_documents": 8,
+    "properties": [
+      "P159",
+      "P176",
+      "P571"
+    ],
+    "provider": "wikidata",
+    "query_preset": "organization_product_core_facts",
+    "skip_qid_labels": true,
+    "subjects": [
+      "Q21708200",
+      "Q32399",
+      "Q2766",
+      "Q478214",
+      "Q312"
+    ],
+    "workflow": "fetch_wikidata_reference_docs"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

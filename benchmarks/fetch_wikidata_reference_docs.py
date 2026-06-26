@@ -35,6 +35,13 @@ WIKIDATA_LICENSE_URL = "https://www.wikidata.org/wiki/Wikidata:Licensing"
 WIKIDATA_ENTITY_PREFIX = "http://www.wikidata.org/entity/"
 DEFAULT_CORE_FACT_PROPERTIES = ("P36", "P37", "P38")
 DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES = ("P159", "P176", "P571")
+DEFAULT_ORGANIZATION_PRODUCT_FACT_SUBJECTS = (
+    "Q21708200",  # OpenAI
+    "Q32399",  # Tesla Model S
+    "Q2766",  # iPhone
+    "Q478214",  # Tesla, Inc.
+    "Q312",  # Apple Inc.
+)
 PROPERTY_FIELD_MAP = {
     "P36": ("capital", "capital"),
     "P37": ("language", "official language"),
@@ -90,6 +97,7 @@ def wikidata_organization_product_core_facts_query(
     *,
     limit: int = 120,
     properties: Sequence[str] = DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES,
+    subjects: Sequence[str] = DEFAULT_ORGANIZATION_PRODUCT_FACT_SUBJECTS,
 ) -> str:
     """Return a deterministic organization/product fact query for selected Wikidata properties."""
     if int(limit) <= 0:
@@ -97,13 +105,16 @@ def wikidata_organization_product_core_facts_query(
     property_ids = tuple(_normalize_property_id(item) for item in properties)
     if not property_ids:
         raise ValueError("properties must not be empty.")
+    subject_ids = tuple(_normalize_entity_id(item) for item in subjects)
+    if not subject_ids:
+        raise ValueError("subjects must not be empty.")
     values = " ".join(f"wd:{property_id}" for property_id in property_ids)
+    subject_values = " ".join(f"wd:{subject_id}" for subject_id in subject_ids)
     return f"""
 SELECT ?subject ?subjectLabel ?property ?propertyLabel ?value ?valueLabel WHERE {{
   VALUES ?property {{ {values} }}
-  VALUES ?class {{ wd:Q43229 wd:Q4830453 wd:Q2424752 }}
+  VALUES ?subject {{ {subject_values} }}
   ?property wikibase:directClaim ?directClaim.
-  ?subject wdt:P31/wdt:P279* ?class.
   ?subject ?directClaim ?value.
   SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
 }}
@@ -184,6 +195,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
     fetched_at = args.fetched_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     query_preset = getattr(args, "query_preset", "country_capitals")
     properties = _properties_from_args(args)
+    subjects = _subjects_from_args(args)
     if query_preset == "country_capitals":
         query = wikidata_country_capitals_query(limit=args.limit)
     elif query_preset == "country_core_facts":
@@ -192,6 +204,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
         query = wikidata_organization_product_core_facts_query(
             limit=args.limit,
             properties=properties,
+            subjects=subjects,
         )
     else:
         raise ValueError(
@@ -236,6 +249,7 @@ def run(args: argparse.Namespace) -> tuple[dict[str, Any], ...]:
                 "license_url": WIKIDATA_LICENSE_URL,
                 "query_preset": query_preset,
                 "properties": properties,
+                "subjects": subjects,
                 "endpoint": args.endpoint,
                 "fetched_at": fetched_at,
                 "n_documents": len(documents),
@@ -411,9 +425,10 @@ def _generic_country_fact_document(
             f"{subject_field}_qid": country_qid,
         })
     return {
-        "text": (
-            "According to Wikidata structured data, the "
-            f"{property_label} of {country_label} is {value_label}."
+        "text": _wikidata_fact_sentence(
+            property_label=property_label,
+            subject_label=country_label,
+            value_label=value_label,
         ),
         "source": f"wikidata:{subject_ref}:{property_id}:{value_ref}",
         "metadata": metadata,
@@ -471,12 +486,33 @@ def _is_bare_wikidata_id(value: str) -> bool:
     return bool(_BARE_WIKIDATA_ID_RE.fullmatch(value.strip()))
 
 
+def _wikidata_fact_sentence(
+    *,
+    property_label: str,
+    subject_label: str,
+    value_label: str,
+) -> str:
+    text = f"According to Wikidata structured data, the {property_label} of {subject_label} is {value_label}"
+    if text.endswith((".", "?", "!")):
+        return text
+    return f"{text}."
+
+
 def _normalize_property_id(value: str) -> str:
     text = str(value).strip()
     if text.startswith("wd:"):
         text = text[3:]
     if not re.fullmatch(r"P[1-9][0-9]*", text):
         raise ValueError(f"invalid Wikidata property id: {value!r}.")
+    return text
+
+
+def _normalize_entity_id(value: str) -> str:
+    text = str(value).strip()
+    if text.startswith("wd:"):
+        text = text[3:]
+    if not re.fullmatch(r"Q[1-9][0-9]*", text):
+        raise ValueError(f"invalid Wikidata entity id: {value!r}.")
     return text
 
 
@@ -487,6 +523,15 @@ def _properties_from_args(args: argparse.Namespace) -> tuple[str, ...]:
             return DEFAULT_ORGANIZATION_PRODUCT_FACT_PROPERTIES
         return DEFAULT_CORE_FACT_PROPERTIES
     return tuple(_normalize_property_id(item) for item in raw_properties)
+
+
+def _subjects_from_args(args: argparse.Namespace) -> tuple[str, ...]:
+    raw_subjects = getattr(args, "subject", None)
+    if not raw_subjects:
+        if getattr(args, "query_preset", None) == "organization_product_core_facts":
+            return DEFAULT_ORGANIZATION_PRODUCT_FACT_SUBJECTS
+        return ()
+    return tuple(_normalize_entity_id(item) for item in raw_subjects)
 
 
 def main() -> None:
@@ -501,6 +546,11 @@ def main() -> None:
                             "Wikidata property id for fact presets; repeatable. "
                             "country_core_facts defaults to P36/P37/P38; "
                             "organization_product_core_facts defaults to P159/P176/P571."
+                        ))
+    parser.add_argument("--subject", action="append", default=None,
+                        help=(
+                            "Wikidata entity id for organization_product_core_facts; repeatable, "
+                            "defaults to a small OpenAI/Tesla/Apple product seed set."
                         ))
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--timeout", type=float, default=30.0)

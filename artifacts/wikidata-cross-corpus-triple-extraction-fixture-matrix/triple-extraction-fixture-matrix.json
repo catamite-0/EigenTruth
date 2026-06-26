@@ -1,0 +1,74 @@
+{
+  "corpora": [
+    {
+      "artifact_manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/artifact-manifest.json",
+      "baseline_f1": 0.75,
+      "best_extractor": "regex_rule_based",
+      "best_f1": 1.0,
+      "f1_lift": 0.25,
+      "fact_corpus_paths": [
+        "artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl"
+      ],
+      "n_facts": 359,
+      "n_records": 1436,
+      "name": "country-core",
+      "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/triple-extraction-regex-patterns.json",
+      "predicates": [
+        "capital_of",
+        "currency_of",
+        "official_language_of"
+      ],
+      "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/triple-extraction-records.json",
+      "slug": "country-core",
+      "status": "promote",
+      "workflow_summary_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/country-core/triple-extraction-workflow-summary.json"
+    },
+    {
+      "artifact_manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/artifact-manifest.json",
+      "baseline_f1": 0.0,
+      "best_extractor": "regex_rule_based",
+      "best_f1": 1.0,
+      "f1_lift": 1.0,
+      "fact_corpus_paths": [
+        "artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl"
+      ],
+      "n_facts": 8,
+      "n_records": 32,
+      "name": "organization-product",
+      "patterns_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/triple-extraction-regex-patterns.json",
+      "predicates": [
+        "headquarters_location_of",
+        "inception_of",
+        "manufacturer_of"
+      ],
+      "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/triple-extraction-records.json",
+      "slug": "organization-product",
+      "status": "promote",
+      "workflow_summary_path": "artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix/organization-product/triple-extraction-workflow-summary.json"
+    }
+  ],
+  "distinct_predicate_count": 6,
+  "distinct_predicates": [
+    "capital_of",
+    "currency_of",
+    "headquarters_location_of",
+    "inception_of",
+    "manufacturer_of",
+    "official_language_of"
+  ],
+  "mean_baseline_f1": 0.375,
+  "mean_best_f1": 1.0,
+  "mean_f1_lift": 0.625,
+  "n_corpora": 2,
+  "promoted_corpora": 2,
+  "promotion_gate": {
+    "failures": [],
+    "min_augmented_f1": 1.0,
+    "min_corpora": 2,
+    "min_distinct_predicates": 6,
+    "require_f1_lift": true
+  },
+  "schema_version": 1,
+  "status": "promote",
+  "workflow": "triple_extraction_fixture_matrix"
+}

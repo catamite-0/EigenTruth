@@ -1044,10 +1044,19 @@ enough distinct predicates:
 
 ```bash
 python benchmarks/run_triple_extraction_fixture_matrix.py \
-  --corpus country-core=artifacts/wikidata-country-core-facts-qa-corpus.json \
-  --corpus enterprise-product=artifacts/domain-specific-facts.json \
-  --output-dir artifacts/triple-extraction-fixture-matrix
+  --corpus country-core=artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl \
+  --corpus organization-product=artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl \
+  --output-dir artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix \
+  --min-corpora 2 \
+  --min-distinct-predicates 6
 ```
+
+The current Wikidata cross-corpus matrix promotes: country-core contributes
+`1436` generated records over `capital_of`, `official_language_of`, and
+`currency_of`; organization/product contributes `32` records over
+`headquarters_location_of`, `manufacturer_of`, and `inception_of`; the matrix
+records `mean_best_f1=1.000`, `mean_f1_lift=0.625`, and passes recursive
+manifest verification.
 
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented
@@ -2631,11 +2640,14 @@ template-ready country facts for selected properties, defaulting to `P36`
 capital, `P37` official language, and `P38` currency. The
 `organization_product_core_facts` preset fetches non-country structured facts
 for extractor-matrix evidence, defaulting to `P159` headquarters location,
-`P176` manufacturer, and `P571` inception. The script uses only the standard
-library and supports `--input-json` for offline replay of saved SPARQL results.
-Rows whose natural-language labels are bare Wikidata `Q...` or `P...` ids are
-skipped by default to avoid turning unresolved entities into retrieval evidence;
-pass `--keep-qid-labels` only when debugging raw SPARQL coverage.
+`P176` manufacturer, and `P571` inception over a small deterministic
+OpenAI/Tesla/Apple seed set. Add repeated `--subject Q...` values to expand
+that seed set without changing the dependency-free fetcher. The script uses
+only the standard library and supports `--input-json` for offline replay of
+saved SPARQL results. Rows whose natural-language labels are bare Wikidata
+`Q...` or `P...` ids are skipped by default to avoid turning unresolved entities
+into retrieval evidence; pass `--keep-qid-labels` only when debugging raw SPARQL
+coverage.
 
 ```bash
 python benchmarks/fetch_wikidata_reference_docs.py \
@@ -2661,6 +2673,9 @@ python benchmarks/fetch_wikidata_reference_docs.py \
   --property P159 \
   --property P176 \
   --property P571 \
+  --subject Q21708200 \
+  --subject Q32399 \
+  --subject Q2766 \
   --limit 180 \
   --output artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl \
   --artifact-manifest artifacts/wikidata-organization-product-core-facts/wikidata-source-manifest.json
