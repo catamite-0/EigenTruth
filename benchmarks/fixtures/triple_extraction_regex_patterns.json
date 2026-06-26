@@ -1,0 +1,61 @@
+{
+  "description": "Regex patterns that extend the default rule-based triple extractor on the bundled triple extraction fixture.",
+  "patterns": [
+    {
+      "pattern": "^(?P<subject>.+?) has its capital at (?P<object>.+)$",
+      "predicate": "capital_of",
+      "source": "capital_has_at_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^The official language spoken in (?P<subject>.+?) is (?P<object>.+)$",
+      "predicate": "official_language_of",
+      "source": "official_language_spoken_in_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^(?P<subject>.+?) recognizes (?P<object>.+?) as an official language$",
+      "predicate": "official_language_of",
+      "source": "official_language_recognizes_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^(?P<object>.+?) is (?P<subject>.+?)(?:'s|\\u2019s) currency$",
+      "predicate": "currency_of",
+      "source": "currency_possessive_inverse_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^(?P<subject>.+?) (?:was|is) born in (?P<object>.+)$",
+      "predicate": "born_in",
+      "source": "born_in_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^(?P<subject>.+?) founded (?P<object>.+)$",
+      "predicate": "founded",
+      "source": "founded_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    },
+    {
+      "pattern": "^(?P<subject>.+?) launched in (?P<object>\\d{4})$",
+      "predicate": "launch_year",
+      "source": "launch_year_template",
+      "metadata": {
+        "fixture": "triple_extraction_records"
+      }
+    }
+  ]
+}

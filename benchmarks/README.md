@@ -1009,10 +1009,19 @@ Before promoting a new extractor into a verifier route, use
 
 ```bash
 python benchmarks/eval_triple_extraction.py \
-  --records artifacts/triple_extraction_fixture.json \
+  --records benchmarks/fixtures/triple_extraction_records.json \
   --extractor regex_rule_based \
-  --patterns artifacts/triple_regex_patterns.json \
+  --patterns benchmarks/fixtures/triple_extraction_regex_patterns.json \
   --json artifacts/triple_extraction_eval.json
+```
+
+`triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
+`regex_rule_based`, and `composite` extractors and asserts that the augmented
+paths improve exact F1 before the benchmark gates pass:
+
+```bash
+python benchmarks/triple_extraction_smoke.py \
+  --output-dir artifacts/triple-extraction-smoke
 ```
 
 For structured state, business rules, policy checks, or tool-output checks,

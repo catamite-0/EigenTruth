@@ -355,9 +355,15 @@ Added dependency-free triple extractor plug-ins and eval harness:
 - `benchmarks/eval_triple_extraction.py` compares rule-based, regex,
   regex-with-rule-based fallback, and composite extractors on labeled triples
   with exact precision, recall, F1, and bounded error examples.
+- `benchmarks/fixtures/triple_extraction_records.json`,
+  `benchmarks/fixtures/triple_extraction_regex_patterns.json`, and
+  `benchmarks/triple_extraction_smoke.py` add a versioned extractor fixture and
+  CI-gated smoke comparison. The current fixture keeps the heavier extractor
+  question measurable: regex-with-fallback must beat default rule-based exact F1
+  before templates are promoted into verifier routes.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Populate `eval_triple_extraction.py` with a larger labeled extractor fixture from KG-covered facts and compare regex/composite templates against the default rule-based extractor before adding a heavier extractor dependency.
+2. Expand the triple-extraction fixture from the current hand-labeled KG-style seed into generated KG-covered paraphrase families, then use the same smoke/report path to decide whether a heavier extractor dependency earns its runtime and maintenance cost.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

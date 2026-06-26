@@ -109,6 +109,18 @@ def test_eval_triple_extraction_compares_regex_against_rule_based(tmp_path):
     assert regex["report"]["f1"] == pytest.approx(1.0)
 
 
+def test_triple_extraction_smoke_uses_versioned_fixture(tmp_path):
+    module = importlib.import_module("benchmarks.triple_extraction_smoke")
+
+    result = module.build_triple_extraction_smoke(tmp_path)
+
+    summary = result["summary"]
+    assert summary["regex_rule_based_f1"] == pytest.approx(1.0)
+    assert summary["composite_f1"] == pytest.approx(summary["regex_rule_based_f1"])
+    assert summary["f1_lift"] > 0.0
+    assert (tmp_path / "triple-extraction-smoke-summary.json").exists()
+
+
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"
