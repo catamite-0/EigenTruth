@@ -1154,6 +1154,12 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "feedback_policy_workflow_abstain_false_positive_rate": feedback_policy_workflow.get(
             "abstain_false_positive_rate"
         ),
+        "feedback_policy_workflow_final_answered_but_wrong_rate": feedback_policy_workflow.get(
+            "final_answered_but_wrong_rate"
+        ),
+        "feedback_policy_workflow_final_answer_false_block_rate": feedback_policy_workflow.get(
+            "final_answer_false_block_rate"
+        ),
         "feedback_policy_workflow_safety_coverage_rate": feedback_policy_workflow.get(
             "safety_coverage_rate"
         ),

@@ -10814,6 +10814,8 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
         "unsupported_action"
     ] == "clarify"
     assert payload["feedback_policy_workflow_gate"]["matched_feedback_count"] == pytest.approx(30)
+    assert payload["feedback_policy_workflow_gate"]["final_answered_but_wrong_rate"] == pytest.approx(0.08)
+    assert payload["feedback_policy_workflow_gate"]["final_answer_false_block_rate"] == pytest.approx(0.02)
     assert payload["feedback_policy_workflow_gate"]["safety_coverage_rate"] == pytest.approx(1.0)
     assert payload["feedback_policy_workflow_gate"]["unknown_safety_issue_rate"] == pytest.approx(0.0)
     candidate = payload["release_candidate"]
@@ -10827,6 +10829,8 @@ def test_compare_release_candidates_can_require_feedback_policy_workflow(tmp_pat
     assert candidate["feedback_policy_workflow"]["candidate_control_defaults_config"][
         "max_verifier_route_attempts"
     ] == 2
+    assert candidate["feedback_policy_workflow"]["final_answered_but_wrong_rate"] == pytest.approx(0.08)
+    assert candidate["feedback_policy_workflow"]["final_answer_false_block_rate"] == pytest.approx(0.02)
     assert candidate["manifests"]["feedback_policy_workflow_manifest"].endswith(
         "feedback-policy-workflow/artifact-manifest.json"
     )
@@ -12881,6 +12885,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "promote_candidate_policy"
     )
     assert manifest["metadata"]["feedback_policy_workflow_matched_feedback_count"] == pytest.approx(30)
+    assert manifest["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == pytest.approx(0.08)
+    assert manifest["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == pytest.approx(0.02)
     assert manifest["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(1.0)
     assert manifest["metadata"]["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.0)
     assert manifest["metadata"]["feedback_policy_workflow_manifest"].endswith(
@@ -13086,6 +13092,8 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "report:feedback-policy-workflow:0.1"
     )
     assert record.metadata["feedback_policy_workflow_matched_feedback_count"] == pytest.approx(30)
+    assert record.metadata["feedback_policy_workflow_final_answered_but_wrong_rate"] == pytest.approx(0.08)
+    assert record.metadata["feedback_policy_workflow_final_answer_false_block_rate"] == pytest.approx(0.02)
     assert record.metadata["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(1.0)
     assert record.metadata["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.0)
     assert record.metadata["release_adapter_family_status"] == "promote"
@@ -13736,6 +13744,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "accepted_but_wrong_rate": 0.03,
                     "retrieved_failure_rate": 0.04,
                     "abstain_false_positive_rate": 0.02,
+                    "final_answered_but_wrong_rate": 0.07,
+                    "final_answer_false_block_rate": 0.01,
                     "safety_coverage_rate": 0.92,
                     "unknown_safety_issue_rate": 0.05,
                 },
@@ -13822,6 +13832,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["feedback_policy_workflow"]["candidate_control_policy_config"][
         "unsupported_action"
     ] == "clarify"
+    assert contract["feedback_policy_workflow"]["final_answered_but_wrong_rate"] == 0.07
+    assert contract["feedback_policy_workflow"]["final_answer_false_block_rate"] == 0.01
     assert contract["release_efficiency"]["recommended_profile"] == "balanced"
     assert contract["release_efficiency"]["recommended_efficiency_score"] == 2.0
     assert contract["metadata"]["release_efficiency_recommended_profile"] == "balanced"
@@ -13839,6 +13851,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert contract["metadata"]["feedback_policy_workflow_status"] == "promote"
     assert contract["metadata"]["feedback_policy_workflow_report_status"] == "recommend"
+    assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
+    assert contract["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["max_covariance_maha_last_auroc_drop"] == 0.05
@@ -13870,6 +13884,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "candidate-control-defaults.json"
     )
     assert record.metadata["feedback_policy_workflow_matched_feedback_count"] == 30
+    assert record.metadata["feedback_policy_workflow_final_answered_but_wrong_rate"] == pytest.approx(0.07)
+    assert record.metadata["feedback_policy_workflow_final_answer_false_block_rate"] == pytest.approx(0.01)
     assert record.metadata["feedback_policy_workflow_safety_coverage_rate"] == pytest.approx(0.92)
     assert record.metadata["feedback_policy_workflow_unknown_safety_issue_rate"] == pytest.approx(0.05)
     assert record.metadata["release_efficiency_report"] == str(release_efficiency_path)
@@ -14858,6 +14874,8 @@ def _write_feedback_policy_workflow_report(
     status="recommend",
     promotion_decision="promote_candidate_policy",
     matched_feedback_count=30,
+    final_answered_but_wrong_rate=0.08,
+    final_answer_false_block_rate=0.02,
     safety_coverage_rate=1.0,
     unknown_safety_issue_rate=0.0,
 ):
@@ -14903,6 +14921,8 @@ def _write_feedback_policy_workflow_report(
             "accepted_but_wrong_rate": {"estimate": 0.10},
             "retrieved_failure_rate": {"estimate": 0.05},
             "abstain_false_positive_rate": {"estimate": 0.0},
+            "final_answered_but_wrong_rate": {"estimate": final_answered_but_wrong_rate},
+            "final_answer_false_block_rate": {"estimate": final_answer_false_block_rate},
         },
         "replay_summary": {
             "matched_feedback_count": matched_feedback_count,

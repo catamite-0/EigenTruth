@@ -279,6 +279,12 @@ class ProductPromotionContract:
                 "feedback_policy_workflow_abstain_false_positive_rate": (
                     feedback_policy_workflow.get("abstain_false_positive_rate")
                 ),
+                "feedback_policy_workflow_final_answered_but_wrong_rate": (
+                    feedback_policy_workflow.get("final_answered_but_wrong_rate")
+                ),
+                "feedback_policy_workflow_final_answer_false_block_rate": (
+                    feedback_policy_workflow.get("final_answer_false_block_rate")
+                ),
                 "feedback_policy_workflow_safety_coverage_rate": (
                     feedback_policy_workflow.get("safety_coverage_rate")
                 ),
@@ -856,6 +862,8 @@ def _feedback_policy_workflow_metadata(
         "accepted_but_wrong_rate": workflow.get("accepted_but_wrong_rate"),
         "retrieved_failure_rate": workflow.get("retrieved_failure_rate"),
         "abstain_false_positive_rate": workflow.get("abstain_false_positive_rate"),
+        "final_answered_but_wrong_rate": workflow.get("final_answered_but_wrong_rate"),
+        "final_answer_false_block_rate": workflow.get("final_answer_false_block_rate"),
         "safety_coverage_rate": workflow.get("safety_coverage_rate"),
         "unknown_safety_issue_rate": workflow.get("unknown_safety_issue_rate"),
     }

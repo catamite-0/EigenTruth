@@ -164,6 +164,12 @@ def export_product_promotion_contract(
                 "feedback_policy_workflow_matched_feedback_count": (
                     feedback_policy_workflow.get("matched_feedback_count")
                 ),
+                "feedback_policy_workflow_final_answered_but_wrong_rate": (
+                    feedback_policy_workflow.get("final_answered_but_wrong_rate")
+                ),
+                "feedback_policy_workflow_final_answer_false_block_rate": (
+                    feedback_policy_workflow.get("final_answer_false_block_rate")
+                ),
                 "feedback_policy_workflow_safety_coverage_rate": (
                     feedback_policy_workflow.get("safety_coverage_rate")
                 ),

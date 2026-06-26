@@ -1659,6 +1659,12 @@ def _feedback_policy_workflow_gate(
         "abstain_false_positive_rate": _float_or_none(
             _nested(report, "feedback_summary", "abstain_false_positive_rate", "estimate")
         ),
+        "final_answered_but_wrong_rate": _float_or_none(
+            _nested(report, "feedback_summary", "final_answered_but_wrong_rate", "estimate")
+        ),
+        "final_answer_false_block_rate": _float_or_none(
+            _nested(report, "feedback_summary", "final_answer_false_block_rate", "estimate")
+        ),
         "safety_coverage_rate": _float_or_none(_feedback_policy_safety_coverage_rate(report)),
         "unknown_safety_issue_rate": _float_or_none(_feedback_policy_unknown_safety_issue_rate(report)),
         "verification": verification,
@@ -3029,6 +3035,12 @@ def _candidate_with_gates(
             "accepted_but_wrong_rate": feedback_policy_workflow.get("accepted_but_wrong_rate"),
             "retrieved_failure_rate": feedback_policy_workflow.get("retrieved_failure_rate"),
             "abstain_false_positive_rate": feedback_policy_workflow.get("abstain_false_positive_rate"),
+            "final_answered_but_wrong_rate": feedback_policy_workflow.get(
+                "final_answered_but_wrong_rate"
+            ),
+            "final_answer_false_block_rate": feedback_policy_workflow.get(
+                "final_answer_false_block_rate"
+            ),
             "safety_coverage_rate": feedback_policy_workflow.get("safety_coverage_rate"),
             "unknown_safety_issue_rate": feedback_policy_workflow.get("unknown_safety_issue_rate"),
         }

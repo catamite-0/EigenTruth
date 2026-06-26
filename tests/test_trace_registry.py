@@ -1575,6 +1575,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                     "max_verifier_route_attempts": 2,
                 },
                 "matched_feedback_count": 30,
+                "accepted_but_wrong_rate": 0.03,
+                "retrieved_failure_rate": 0.04,
+                "abstain_false_positive_rate": 0.02,
+                "final_answered_but_wrong_rate": 0.07,
+                "final_answer_false_block_rate": 0.01,
                 "safety_coverage_rate": 1.0,
                 "unknown_safety_issue_rate": 0.0,
             },
@@ -1785,10 +1790,14 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.feedback_policy_workflow["candidate_control_defaults_config"][
         "max_verifier_route_attempts"
     ] == 2
+    assert contract.feedback_policy_workflow["final_answered_but_wrong_rate"] == 0.07
+    assert contract.feedback_policy_workflow["final_answer_false_block_rate"] == 0.01
     assert contract.metadata["recommended_feedback_policy_workflow_report"] == (
         "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
     )
     assert contract.metadata["feedback_policy_workflow_status"] == "promote"
+    assert contract.metadata["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
+    assert contract.metadata["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract.release_efficiency["recommended_profile"] == "balanced"
     assert contract.release_efficiency["recommended_efficiency_score"] == 2.0
     assert contract.metadata["release_efficiency_report"] == (
