@@ -870,8 +870,10 @@ audit or debugging; the main report keeps summary metrics and references the
 sidecar path/count instead of embedding those records.
 Add `--enable-triple-evidence` to evaluate strict fact-level
 subject-predicate-object audits for sensitive factual claims before lexical
-groundedness fallback; use `--triple-min-slot-coverage` to relax or tighten the
-per-slot evidence coverage threshold.
+groundedness fallback. Multi-snippet slot coverage is accepted only when the
+selected evidence is linked by source, metadata, claim id, or subject anchor;
+use `--triple-min-slot-coverage` to relax or tighten the per-slot evidence
+coverage threshold.
 Each run validates inputs through `eigentruth.eval.ScoreDump` or selected score
 views and records a `score_dump` summary plus SHA-256 fingerprint, so
 verifier-cache and route promotion evidence can be tied back to the exact score
@@ -1590,10 +1592,10 @@ python benchmarks/run_adapter_family_matrix.py \
 ```
 
 The strict triple-evidence route audits whether local evidence covers the
-subject, predicate, and object slots for sensitive factual claims. Missing slot
-coverage returns insufficient evidence rather than a direct refutation, so use a
-false-supported gate and disable the false-refuted requirement for this audit
-family:
+subject, predicate, and object slots for sensitive factual claims. Missing or
+unlinked slot coverage returns insufficient evidence rather than a direct
+refutation, so use a false-supported gate and disable the false-refuted
+requirement for this audit family:
 
 ```bash
 python benchmarks/run_adapter_family_matrix.py \

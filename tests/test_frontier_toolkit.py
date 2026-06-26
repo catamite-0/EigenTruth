@@ -680,8 +680,16 @@ def test_triple_evidence_audit_can_combine_slots_across_documents():
     claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
     verifier = TripleEvidenceVerifier(
         evidence=(
-            EvidenceDocument("AlphaCorp has offices.", source="company-profile"),
-            EvidenceDocument("The annual report lists 10 offices in Europe.", source="annual-report"),
+            EvidenceDocument(
+                "AlphaCorp has offices.",
+                source="company-profile",
+                metadata={"entity": "AlphaCorp"},
+            ),
+            EvidenceDocument(
+                "The annual report lists 10 offices in Europe.",
+                source="annual-report",
+                metadata={"entity": "AlphaCorp"},
+            ),
         )
     )
 
@@ -696,11 +704,34 @@ def test_triple_evidence_audit_can_combine_slots_across_documents():
     assert audit["covered_slots"] == ("subject", "predicate", "object")
     assert audit["missing_slots"] == ()
     assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
+    assert audit["metadata"]["evidence_link_passed"] is True
+    assert audit["metadata"]["evidence_link_rule"] == "subject_metadata"
     assert audit["metadata"]["slot_sources"] == {
         "subject": "company-profile",
         "predicate": "company-profile",
         "object": "annual-report",
     }
+
+
+def test_triple_evidence_audit_rejects_unlinked_cross_document_slots():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument("AlphaCorp has offices.", source="company-profile"),
+            EvidenceDocument("BetaCorp has 10 offices in Europe.", source="annual-report"),
+        )
+    )
+
+    result = verifier.verify(claim)
+    audit = result.metadata["audit_report"]["audits"][0]
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.explanation == "one or more extracted claim triples have unlinked evidence slots"
+    assert audit["covered_slots"] == ("subject", "predicate", "object")
+    assert audit["missing_slots"] == ()
+    assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
+    assert audit["metadata"]["evidence_link_passed"] is False
+    assert audit["metadata"]["evidence_link_rule"] == "unlinked_multi_document_evidence"
 
 
 def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():

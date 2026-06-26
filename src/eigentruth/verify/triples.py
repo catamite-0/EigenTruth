@@ -104,6 +104,9 @@ _PREDICATE_ALIASES = {
     "located_in": ("located",),
     "is": (),
 }
+_LINK_GROUP_METADATA_KEYS = ("evidence_group", "document_group", "record_id", "source_record_id")
+_LINK_CLAIM_METADATA_KEYS = ("claim_id", "claim_ids", "supports_claim_id", "supports_claim_ids")
+_LINK_ENTITY_METADATA_KEYS = ("entity", "entities", "subject", "subjects", "subject_id", "entity_id")
 
 
 @runtime_checkable
@@ -465,11 +468,17 @@ class TripleEvidenceVerifier:
                 explanation="all extracted claim triples have subject, predicate, and object evidence coverage",
                 metadata=metadata,
             )
+        explanation = "one or more extracted claim triples have missing evidence slots"
+        if any(
+            audit.metadata.get("evidence_link_passed") is False
+            for audit in report.audits
+        ):
+            explanation = "one or more extracted claim triples have unlinked evidence slots"
         return VerificationResult(
             status=VerificationStatus.INSUFFICIENT_EVIDENCE,
             confidence=0.35,
             evidence=evidence,
-            explanation="one or more extracted claim triples have missing evidence slots",
+            explanation=explanation,
             metadata=metadata,
         )
 
@@ -625,9 +634,14 @@ def _aggregate_scored_documents(
     )
     if not evidence_documents:
         evidence_documents = (max(scored, key=lambda item: sum(item.slot_coverage.values())).document,)
+    link_metadata = _multi_document_link_metadata(
+        scored[0].triple,
+        evidence_documents,
+        min_slot_coverage=min_slot_coverage,
+    )
     return TripleEvidenceAudit(
         triple=scored[0].triple,
-        passed=not missing,
+        passed=not missing and bool(link_metadata["evidence_link_passed"]),
         evidence=tuple(_evidence_label(document) for document in evidence_documents),
         covered_slots=covered,
         missing_slots=missing,
@@ -647,6 +661,7 @@ def _aggregate_scored_documents(
                 for slot in ("subject", "predicate", "object")
             },
             "evidence_document_count": len(evidence_documents),
+            **link_metadata,
         },
     )
 
@@ -655,6 +670,8 @@ def _aggregate_is_better(
     aggregate: TripleEvidenceAudit,
     best: _ScoredDocument,
 ) -> bool:
+    if not best.missing_slots and not aggregate.passed:
+        return False
     aggregate_covered = len(aggregate.covered_slots)
     best_covered = len(best.covered_slots)
     if aggregate_covered > best_covered:
@@ -674,6 +691,131 @@ def _unique_slot_documents(documents: Sequence[EvidenceDocument]) -> tuple[Evide
         seen.add(key)
         unique.append(document)
     return tuple(unique)
+
+
+def _multi_document_link_metadata(
+    triple: ClaimTriple,
+    documents: Sequence[EvidenceDocument],
+    *,
+    min_slot_coverage: float,
+) -> dict[str, Any]:
+    if len(documents) <= 1:
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "single_document",
+        }
+    shared_source = _shared_non_empty_value(tuple(document.source for document in documents))
+    if shared_source is not None:
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "shared_source",
+            "evidence_link_value": shared_source,
+        }
+    shared_group = _shared_metadata_value(documents, _LINK_GROUP_METADATA_KEYS)
+    if shared_group is not None:
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "shared_metadata_group",
+            "evidence_link_value": shared_group,
+        }
+    if triple.claim_id is not None and all(
+        _metadata_contains(document.metadata, _LINK_CLAIM_METADATA_KEYS, triple.claim_id)
+        for document in documents
+    ):
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "claim_id_metadata",
+            "evidence_link_value": triple.claim_id,
+        }
+    if all(
+        _metadata_contains_slot(document.metadata, _LINK_ENTITY_METADATA_KEYS, triple.subject)
+        for document in documents
+    ):
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "subject_metadata",
+            "evidence_link_value": triple.subject,
+        }
+    subject_tokens = _slot_tokens(triple.subject)
+    if all(
+        _slot_coverage(subject_tokens, set(_tokens(document.text))) >= min_slot_coverage
+        for document in documents
+    ):
+        return {
+            "evidence_link_passed": True,
+            "evidence_link_rule": "subject_text_anchor",
+            "evidence_link_value": triple.subject,
+        }
+    return {
+        "evidence_link_passed": False,
+        "evidence_link_rule": "unlinked_multi_document_evidence",
+        "evidence_link_value": None,
+    }
+
+
+def _shared_non_empty_value(values: Sequence[str | None]) -> str | None:
+    normalized = tuple(str(value).strip() for value in values if value is not None and str(value).strip())
+    if not normalized:
+        return None
+    first = normalized[0]
+    if len(normalized) == len(values) and all(value == first for value in normalized):
+        return first
+    return None
+
+
+def _shared_metadata_value(
+    documents: Sequence[EvidenceDocument],
+    keys: Sequence[str],
+) -> str | None:
+    value_sets = [
+        set(_metadata_values(document.metadata, keys))
+        for document in documents
+    ]
+    if not value_sets or any(not values for values in value_sets):
+        return None
+    shared = set.intersection(*value_sets)
+    if not shared:
+        return None
+    return sorted(shared)[0]
+
+
+def _metadata_contains(metadata: Mapping[str, Any], keys: Sequence[str], expected: str) -> bool:
+    expected_key = _metadata_key(expected)
+    return any(_metadata_key(value) == expected_key for value in _metadata_values(metadata, keys))
+
+
+def _metadata_contains_slot(metadata: Mapping[str, Any], keys: Sequence[str], expected: str) -> bool:
+    expected_tokens = set(_slot_tokens(expected))
+    if not expected_tokens:
+        return False
+    for value in _metadata_values(metadata, keys):
+        value_tokens = set(_slot_tokens(value))
+        if expected_tokens <= value_tokens or value_tokens <= expected_tokens:
+            return True
+    return False
+
+
+def _metadata_values(metadata: Mapping[str, Any], keys: Sequence[str]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in keys:
+        raw_value = metadata.get(key)
+        if raw_value is None:
+            continue
+        for item in _metadata_sequence(raw_value):
+            text = str(item).strip()
+            if text:
+                values.append(text)
+    return tuple(values)
+
+
+def _metadata_sequence(value: Any) -> tuple[Any, ...]:
+    if isinstance(value, (str, bytes, bytearray)) or not isinstance(value, Sequence):
+        return (value,)
+    return tuple(value)
+
+
+def _metadata_key(value: Any) -> str:
+    return " ".join(_tokens(str(value)))
 
 
 def _score_document(
