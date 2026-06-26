@@ -1911,15 +1911,14 @@ registry record also carry the same handoff evidence:
 
 ```bash
 python benchmarks/export_product_promotion_contract.py \
-  --source artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
-  --output artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
-  --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
-  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_5/artifact-manifest.json \
+  --source artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_registry_workflow.json \
+  --output artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
+  --artifact-manifest artifacts/smollm2_product_promotion_contract_v1_6/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-product-promotion-contract \
-  --version 1.5 \
-  --metadata release=smollm2-v1.5 \
-  --metadata source_record=benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5 \
+  --version 1.6 \
+  --metadata release=smollm2-v1.6 \
+  --metadata source_record=benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6 \
   --compact-json
 ```
 
@@ -2187,17 +2186,18 @@ comparison or registry workflow to make the final gate select the top-10%
 trigger budget from the same verified sweep evidence.
 
 The current strict structured-retrieval-audit SmolLM2 default records
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5`.
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6`.
 It keeps the same 0.8 readiness baseline, 0.4 staged structured-QA product
 route, and registered performance handoff
 `performance_baseline:smollm2-l20-performance-baseline:0.9`, then requires the
 promoted adapter-family matrix with `structured_state`, `state_transition`,
 `retrieval_groundedness`, and `retrieval_structured_qa` routes present and
 promoted. It also requires
-`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
-retrieval-structured-QA audit route with its own quality and runtime budget.
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6` as a separate
+retrieval-structured-QA audit route with its own quality/runtime budget,
+non-oracle evidence provenance, and answer-echo retrieval stress control.
 The final manifest fingerprints the release-candidate report plus readiness,
-route, performance, product-trace-replay, selector replay, product-runtime-drift,
+route, performance, selector replay, product-runtime-drift,
 adapter-family, and required retrieval-audit manifests; the
 release comparison verifies that the performance baseline recommendation matches
 the selected runtime: layer `-12`, batch size `8`, `outputs` hidden-state
@@ -2205,9 +2205,16 @@ capture, no prefix-KV cache, worker count `1`, `truth_proj` AUROC `0.682`, and
 the quality-balanced `top_0p4` triggered `adaptive_selfcheck` budget. The
 selected product route gates `retrieval_use_rate` at `0.0` and
 `mean_attempted_route_count` at `1.1`; retrieval is required as audit capability
-evidence, not as the default low-latency route. Version 1.5 adds promoted
-selector replay and runtime-drift evidence through
-`artifacts/smollm2_product_trace_replay_workflow/product-trace-replay-workflow.json`.
+evidence, not as the default low-latency route. Version 1.6 adds promoted
+selector replay, refreshed runtime-drift evidence, and a compact deployable
+contract at `artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json`.
+The required retrieval audit route promotes with selected `238`, decision
+accuracy `0.992`, false-supported rate `0.000`, false-refuted rate `1.000`,
+verified false alarm `0.009`, verified detection `1.000`, total runtime
+`0.845s`, and `410` retrieval hits under a `450` hit budget. Its answer-echo
+stress control verifies that answer-derived evidence supports false claims at
+rate `0.980` and refutes them at `0.000`, so such corpora are blocked as
+grounding evidence.
 
 ```bash
 python benchmarks/run_release_candidate_registry_workflow.py \
@@ -2216,12 +2223,13 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-registry artifacts/local-readiness-registry.json \
   --release-registry artifacts/local-release-registry.json \
   --name smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate \
-  --version 1.5 \
+  --version 1.6 \
   --readiness-baseline-key benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8 \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
-  --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5 \
+  --required-route-baseline-key benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6 \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
-  --product-trace-replay-workflow-key report:smollm2-product-trace-replay-workflow:0.1 \
+  --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
+  --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \
@@ -2237,6 +2245,8 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --max-p99-duration-seconds 0.01 \
   --max-mean-attempted-route-count 1.1 \
   --max-retrieval-use-rate 0.0 \
+  --max-inside-sample-count-ratio 0.6 \
+  --max-inside-generation-seconds-ratio 0.8 \
   --required-route-min-selected 200 \
   --required-route-min-decision-accuracy 0.99 \
   --required-route-max-false-supported-rate 0.01 \
@@ -2247,12 +2257,15 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --required-route-max-retrieval-use-rate 1.0 \
   --required-route-max-runtime-total-seconds 8.0 \
   --required-route-max-retrieval-hit-count 450 \
-  --json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
-  --release-report-json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_comparison.json \
-  --artifact-manifest artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_manifest.json \
-  --verification-report artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_manifest_verification.json \
-  --metadata release=strict_structured_retrieval_audit \
-  --metadata adapter_family_retrieval_structured_qa=required \
+  --required-route-require-non-oracle-evidence \
+  --required-route-require-retrieval-stress-control \
+  --required-route-min-stress-false-supported-rate 0.90 \
+  --required-route-max-stress-false-refuted-rate 0.05 \
+  --json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_registry_workflow.json \
+  --release-report-json artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_comparison.json \
+  --artifact-manifest artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest.json \
+  --verification-report artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest_verification.json \
+  --metadata evidence=smollm2_l20_release_candidate_required_route_non_oracle_stress_gated \
   --fail-on-blocked
 ```
 
@@ -2399,20 +2412,24 @@ For strict false-support gates on TruthfulQA-style local corpora, prefer
 wrong answer and the same-question correct-answer evidence as support.
 
 The current registered SmolLM2 l80 retrieval audit baseline is
-`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5`:
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6`:
 
 ```bash
 python benchmarks/run_local_retrieval_route_workflow.py \
   --scores artifacts/smollm2_truthfulqa_l80_scores_with_statements.json \
   --corpus artifacts/truthfulqa_l80_correct_answer_corpus.json \
-  --output-dir artifacts/smollm2_l80_retrieval_structured_qa_route \
+  --output-dir artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6 \
   --registry artifacts/staged-route-registry.json \
   --name smollm2-l80-retrieval-structured-qa-route \
-  --version 0.5 \
+  --version 0.6 \
+  --score-name retrieval \
   --signal truth_proj \
+  --alpha 0.10 \
+  --repeats 1 \
   --query-field answer \
   --retriever-backend memory \
   --retriever-min-overlap 0.95 \
+  --verifier-min-overlap 0.65 \
   --retrieval-limit 3 \
   --gate-route retrieval_structured_qa \
   --min-selected 200 \
@@ -2426,14 +2443,20 @@ python benchmarks/run_local_retrieval_route_workflow.py \
   --max-retrieval-use-rate 1.0 \
   --max-runtime-total-seconds 8.0 \
   --max-retrieval-hit-count 450 \
+  --omit-label-metadata \
+  --retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
+  --metadata evidence=smollm2_l80_retrieval_structured_qa_label_free_stress_gated \
   --compact-json \
   --fail-on-blocked
 ```
 
 It promotes `retrieval_structured_qa` with selected `238`, decision accuracy
 `0.992`, false-supported rate `0.000`, false-refuted rate `1.000`, verified
-detection `1.000`, verified false alarm `0.009`, runtime `~1.05s`, and `410`
-retrieval hits under the explicit `450` hit budget.
+detection `1.000`, verified false alarm `0.009`, runtime `0.845s`, and `410`
+retrieval hits. Its claims artifact records `labels_used_for_retrieval=false`,
+`labels_copied_to_record_metadata=false`, and score/corpus `input_provenance`.
+The attached answer-echo stress manifest verifies the expected self-support
+failure mode before the route can be used as release audit evidence.
 
 `--claims-cache-dir` is optional. When set, the workflow caches generated
 claims fixtures by score-dump fingerprint, corpus fingerprints, query field,
@@ -3291,7 +3314,7 @@ and a finite selective claim skip rate:
 python benchmarks/run_product_runtime_baseline.py \
   --trace artifacts/demo-request-a.json \
   --trace artifacts/demo-request-b.json \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
   --json artifacts/product-runtime-baseline.json \
   --trace-records-jsonl artifacts/product-runtime-baseline-trace-records.jsonl \
   --trace-records-cache-json artifacts/product-runtime-baseline-trace-record-cache.json \
@@ -3452,11 +3475,10 @@ python benchmarks/compare_product_runtime_baselines.py \
   --registry artifacts/local-release-registry.json \
   --baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
   --current artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json \
-  --runtime-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
-  --json artifacts/smollm2_product_runtime_drift_v1_5/product-runtime-drift.json \
-  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_5/artifact-manifest.json \
+  --json artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
+  --artifact-manifest artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json \
   --name smollm2-product-runtime-drift \
-  --version 0.1 \
+  --version 0.2 \
   --max-total-seconds-mean-ratio 1.3 \
   --max-total-seconds-p95-ratio 1.6 \
   --max-mean-route-duration-ratio 1.2 \
@@ -3466,6 +3488,7 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-cache-hit-rate-drop 0.0 \
   --max-verification-skip-rate-drop 0.0 \
   --min-current-trace-count 12 \
+  --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift
 ```
 
@@ -3572,7 +3595,7 @@ path:
 ```bash
 python benchmarks/run_product_runtime_profile_sweep.py \
   --output-dir artifacts/product-runtime-profile-sweep \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
   --runtime-profile-selector-policy artifacts/product-runtime-profile-sweep/runtime-profile-selector-policy.json \
   --slo-policy artifacts/product-runtime-profile-sweep/runtime-profile-slo-policy.json \
   --trace-records-cache-dir artifacts/product-runtime-profile-sweep/trace-record-caches \
@@ -3666,7 +3689,7 @@ selector:
 ```bash
 python benchmarks/run_runtime_profile_selector_tuning.py \
   --output-dir artifacts/runtime-profile-selector-tuning \
-  --promotion-contract artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_5_registry_workflow.json \
+  --promotion-contract artifacts/smollm2_product_promotion_contract_v1_6/product-promotion-contract.json \
   --slo-policy artifacts/smollm2_product_runtime_profile_sweep/runtime-profile-slo-policy.json \
   --registry artifacts/local-release-registry.json \
   --name smollm2-runtime-profile-selector-tuning \

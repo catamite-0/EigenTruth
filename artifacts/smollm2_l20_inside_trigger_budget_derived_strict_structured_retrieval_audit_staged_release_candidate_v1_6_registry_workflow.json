@@ -1,0 +1,2264 @@
+{
+  "artifact_cache": {
+    "artifact_fingerprint_cache": {
+      "entries": 85,
+      "hit_rate": 0.9166666666666666,
+      "hits": 88,
+      "misses": 8,
+      "requests": 96
+    },
+    "artifact_json_cache": {
+      "entries": 23,
+      "errors": 0,
+      "hit_rate": 0.3235294117647059,
+      "hits": 11,
+      "misses": 23,
+      "requests": 34
+    }
+  },
+  "config": {
+    "adapter_family_matrix": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+    "adapter_family_profile": null,
+    "allow_non_promote": false,
+    "allow_promotion_failures": false,
+    "artifact_json_cache": null,
+    "artifact_manifest": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest.json",
+    "feedback_policy_max_unknown_safety_issue_rate": null,
+    "feedback_policy_min_matched_feedback_count": null,
+    "feedback_policy_min_safety_coverage": null,
+    "feedback_policy_workflow": null,
+    "feedback_policy_workflow_key": null,
+    "feedback_policy_workflow_registry": null,
+    "fingerprint_cache": null,
+    "frontier_release_evidence": null,
+    "frontier_release_evidence_key": null,
+    "frontier_release_evidence_registry": null,
+    "inside_trigger_budget_policy": null,
+    "manifest_fingerprint_workers": 1,
+    "max_covariance_maha_last_auroc_drop": null,
+    "max_performance_cache_only_total_seconds_ratio": null,
+    "max_performance_cached_total_seconds_ratio": null,
+    "max_performance_score_dump_cache_jsonl_view_hit_rate_drop": null,
+    "max_performance_uncached_total_seconds_ratio": null,
+    "max_stress_false_refuted_rate": null,
+    "min_performance_score_dump_cache_jsonl_view_hit_rate": null,
+    "min_stress_false_supported_rate": null,
+    "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate",
+    "performance_baseline_key": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+    "performance_drift_baseline_key": null,
+    "performance_registry": "artifacts/local-readiness-registry.json",
+    "product_runtime_drift_report": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+    "product_trace_replay_workflow": null,
+    "product_trace_replay_workflow_key": null,
+    "product_trace_replay_workflow_registry": null,
+    "readiness_baseline_keys": [
+      "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8"
+    ],
+    "readiness_registry": "artifacts/local-readiness-registry.json",
+    "recursive": true,
+    "release_efficiency_report": null,
+    "release_registry": "artifacts/local-release-registry.json",
+    "release_report": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_comparison.json",
+    "require_non_oracle_evidence": false,
+    "require_performance_score_dump_cache": false,
+    "require_retrieval_stress_control": false,
+    "required_adapter_routes": [
+      "structured_state",
+      "state_transition",
+      "retrieval_groundedness",
+      "retrieval_structured_qa"
+    ],
+    "required_route_baseline_keys": [
+      "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+    ],
+    "required_route_max_false_supported_rate": 0.01,
+    "required_route_max_max_duration_seconds": null,
+    "required_route_max_mean_attempted_route_count": 2.1,
+    "required_route_max_mean_duration_seconds": null,
+    "required_route_max_p99_duration_seconds": null,
+    "required_route_max_retrieval_hit_count": 450.0,
+    "required_route_max_retrieval_use_rate": 1.0,
+    "required_route_max_runtime_total_seconds": 8.0,
+    "required_route_max_stress_false_refuted_rate": 0.05,
+    "required_route_max_verified_false_alarm": 0.01,
+    "required_route_min_claims_cache_hit_rate": null,
+    "required_route_min_decision_accuracy": 0.99,
+    "required_route_min_false_refuted_rate": 1.0,
+    "required_route_min_selected": 200,
+    "required_route_min_stress_false_supported_rate": 0.9,
+    "required_route_min_verified_detection": 1.0,
+    "required_route_min_verifier_trace_cache_hit_rate": null,
+    "required_route_require_non_oracle_evidence": true,
+    "required_route_require_retrieval_stress_control": true,
+    "required_route_retrieval_stress_manifest": null,
+    "retrieval_stress_manifest": null,
+    "route_baseline_keys": [
+      "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4"
+    ],
+    "route_registry": "artifacts/staged-route-registry.json",
+    "runtime_profile": "balanced",
+    "selector_replay_report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json",
+    "version": "1.6"
+  },
+  "decision": {
+    "blocking_reasons": [],
+    "manifest_promoted": true,
+    "manifest_verified": true,
+    "registry_record": "benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6",
+    "release_candidate_status": "promote",
+    "status": "promote"
+  },
+  "promotion": {
+    "manifest": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest.json",
+    "name": "smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate",
+    "records": {
+      "benchmark_manifest": "benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6",
+      "manifest_verification": "manifest_verification:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate-verification:1.6"
+    },
+    "registry": "artifacts/local-release-registry.json",
+    "verification": {
+      "checked": 8,
+      "failures": [],
+      "manifest_path": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest.json",
+      "nested": [
+        {
+          "checked": 6,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 8,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 9,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            },
+            {
+              "checked": 2,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 3,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 7,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+          "nested": [
+            {
+              "checked": 2,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 11,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            }
+          ],
+          "passed": true
+        },
+        {
+          "checked": 2,
+          "failures": [],
+          "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+          "nested": [],
+          "passed": true
+        },
+        {
+          "checked": 19,
+          "failures": [],
+          "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
+          "nested": [],
+          "passed": true
+        }
+      ],
+      "passed": true
+    },
+    "verification_report": "artifacts/smollm2_l20_inside_trigger_budget_derived_strict_structured_retrieval_audit_staged_release_candidate_v1_6_manifest_verification.json",
+    "version": "1.6"
+  },
+  "release_candidate_comparison": {
+    "adapter_family_matrix_gate": {
+      "alpha": 0.2,
+      "audit_routes": [],
+      "family_statuses": {
+        "retrieval_groundedness": "promote",
+        "retrieval_structured_qa": "promote",
+        "state_transition": "promote",
+        "structured_qa": "promote",
+        "structured_state": "promote"
+      },
+      "gate": {
+        "blocking_reasons": [],
+        "passed": true
+      },
+      "matrix_path": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+      "n_records": 8,
+      "promoted_routes": [
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "promotion_status": "promote",
+      "quality_gate_passed": true,
+      "required_routes": [
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "retrieval_routes": [
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "routes": [
+        "structured_qa",
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "schema_version": 1,
+      "status": "promote",
+      "workflow": "adapter_family_matrix"
+    },
+    "config": {
+      "adapter_family_matrix": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+      "adapter_family_profile": null,
+      "adapter_family_profile_required_routes": [],
+      "allow_unverified": false,
+      "feedback_policy_max_unknown_safety_issue_rate": null,
+      "feedback_policy_min_matched_feedback_count": null,
+      "feedback_policy_min_safety_coverage": null,
+      "feedback_policy_workflow": null,
+      "feedback_policy_workflow_key": null,
+      "feedback_policy_workflow_registry": null,
+      "frontier_release_evidence": null,
+      "frontier_release_evidence_key": null,
+      "frontier_release_evidence_registry": null,
+      "inside_trigger_budget_policy": "quality_balanced",
+      "manifest_fingerprint_workers": 1,
+      "max_cache_only_seconds": null,
+      "max_covariance_maha_last_auroc_drop": null,
+      "max_false_supported_rate": 0.01,
+      "max_inside_generation_seconds_ratio": 0.8,
+      "max_inside_sample_count_ratio": 0.6,
+      "max_max_duration_seconds": null,
+      "max_mean_attempted_route_count": 1.1,
+      "max_mean_duration_seconds": null,
+      "max_p99_duration_seconds": 0.01,
+      "max_performance_cache_only_total_seconds_ratio": null,
+      "max_performance_cached_total_seconds_ratio": null,
+      "max_performance_score_dump_cache_jsonl_view_hit_rate_drop": null,
+      "max_performance_uncached_total_seconds_ratio": null,
+      "max_retrieval_hit_count": null,
+      "max_retrieval_use_rate": 0.0,
+      "max_runtime_total_seconds": null,
+      "max_stress_false_refuted_rate": null,
+      "max_uncached_forward_seconds": null,
+      "max_verified_false_alarm": 0.01,
+      "min_best_quality_auroc": null,
+      "min_claims_cache_hit_rate": null,
+      "min_decision_accuracy": 0.99,
+      "min_false_refuted_rate": 1.0,
+      "min_performance_score_dump_cache_jsonl_view_hit_rate": null,
+      "min_selected": 200,
+      "min_stress_false_supported_rate": null,
+      "min_verified_detection": 1.0,
+      "min_verifier_trace_cache_hit_rate": null,
+      "performance_baseline_key": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+      "performance_drift_baseline_key": null,
+      "performance_registry": "artifacts/local-readiness-registry.json",
+      "product_runtime_drift_report": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+      "product_trace_replay_workflow": null,
+      "product_trace_replay_workflow_key": null,
+      "product_trace_replay_workflow_registry": null,
+      "readiness_baseline_keys": [
+        "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8"
+      ],
+      "readiness_registry": "artifacts/local-readiness-registry.json",
+      "recursive": true,
+      "release_efficiency_report": null,
+      "require_non_oracle_evidence": false,
+      "require_performance_score_dump_cache": false,
+      "require_retrieval_stress_control": false,
+      "required_adapter_routes": [
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "required_route_baseline_keys": [
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+      ],
+      "required_route_max_false_supported_rate": 0.01,
+      "required_route_max_max_duration_seconds": null,
+      "required_route_max_mean_attempted_route_count": 2.1,
+      "required_route_max_mean_duration_seconds": null,
+      "required_route_max_p99_duration_seconds": null,
+      "required_route_max_retrieval_hit_count": 450.0,
+      "required_route_max_retrieval_use_rate": 1.0,
+      "required_route_max_runtime_total_seconds": 8.0,
+      "required_route_max_stress_false_refuted_rate": 0.05,
+      "required_route_max_verified_false_alarm": 0.01,
+      "required_route_min_claims_cache_hit_rate": null,
+      "required_route_min_decision_accuracy": 0.99,
+      "required_route_min_false_refuted_rate": 1.0,
+      "required_route_min_selected": 200,
+      "required_route_min_stress_false_supported_rate": 0.9,
+      "required_route_min_verified_detection": 1.0,
+      "required_route_min_verifier_trace_cache_hit_rate": null,
+      "required_route_require_non_oracle_evidence": true,
+      "required_route_require_retrieval_stress_control": true,
+      "required_route_retrieval_stress_manifest": null,
+      "retrieval_stress_manifest": null,
+      "route_baseline_keys": [
+        "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4"
+      ],
+      "route_registry": "artifacts/staged-route-registry.json",
+      "runtime_profile": "balanced",
+      "runtime_profile_applied_defaults": {
+        "inside_trigger_budget_policy": "quality_balanced"
+      },
+      "runtime_profile_defaults": {
+        "inside_trigger_budget_policy": "quality_balanced",
+        "max_inside_generation_seconds_ratio": 0.8,
+        "max_inside_sample_count_ratio": 0.6,
+        "max_mean_attempted_route_count": 1.5,
+        "max_retrieval_use_rate": 0.5
+      },
+      "selector_replay_report": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json"
+    },
+    "decision": {
+      "adapter_family_status": "promote",
+      "blocking_reasons": [],
+      "feedback_policy_workflow_status": null,
+      "frontier_release_evidence_status": null,
+      "performance_status": "promote",
+      "product_runtime_drift_status": "promote",
+      "product_trace_replay_workflow_status": null,
+      "readiness_status": "promote",
+      "recommended_feedback_policy_candidate_control_defaults": null,
+      "recommended_feedback_policy_candidate_control_policy": null,
+      "recommended_feedback_policy_workflow_report": null,
+      "recommended_frontier_release_evidence_report": null,
+      "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "recommended_performance_baseline_record": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+      "recommended_product_runtime_drift_report": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+      "recommended_readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+      "recommended_release_efficiency_profile": null,
+      "recommended_release_efficiency_report": null,
+      "recommended_route": "structured_qa",
+      "recommended_route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+      "recommended_selector_replay_candidate": "default",
+      "release_efficiency_status": null,
+      "required_adapter_routes": [
+        "structured_state",
+        "state_transition",
+        "retrieval_groundedness",
+        "retrieval_structured_qa"
+      ],
+      "required_route_baseline_records": [
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+      ],
+      "required_route_baseline_status": "promote",
+      "route_status": "promote",
+      "selector_replay_status": "promote",
+      "status": "promote"
+    },
+    "feedback_policy_workflow_gate": null,
+    "frontier_release_evidence_gate": null,
+    "notes": [
+      "release candidate registry workflow"
+    ],
+    "performance_baseline_gate": {
+      "covariance_tradeoff_gate": {
+        "baseline_cell": null,
+        "blocking_reasons": [],
+        "enabled": false,
+        "max_covariance_maha_last_auroc_drop": null,
+        "passed": true,
+        "selected_cell": null,
+        "selected_covariance_low_rank": null,
+        "selected_covariance_mode": null,
+        "selected_maha_last_auroc": null,
+        "selected_maha_last_delta_vs_baseline": null,
+        "status": null
+      },
+      "gate": {
+        "blocking_reasons": [],
+        "covariance_tradeoff": {
+          "baseline_cell": null,
+          "blocking_reasons": [],
+          "enabled": false,
+          "max_covariance_maha_last_auroc_drop": null,
+          "passed": true,
+          "selected_cell": null,
+          "selected_covariance_low_rank": null,
+          "selected_covariance_mode": null,
+          "selected_maha_last_auroc": null,
+          "selected_maha_last_delta_vs_baseline": null,
+          "status": null
+        },
+        "passed": true,
+        "performance_trend": null,
+        "score_dump_cache": {
+          "blocking_reasons": [],
+          "enabled": false,
+          "min_jsonl_view_hit_rate": null,
+          "observed_jsonl_view_hit_rate": null,
+          "observed_source_count": null,
+          "passed": true,
+          "required": false
+        }
+      },
+      "manifest_path": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+      "performance_drift_baseline_manifest_path": null,
+      "performance_drift_baseline_record": null,
+      "performance_drift_baseline_report_path": null,
+      "performance_drift_baseline_verification": null,
+      "performance_evidence_bundle": null,
+      "performance_evidence_bundle_release_ready": null,
+      "performance_evidence_bundle_status": null,
+      "performance_score_dump_cache": null,
+      "performance_score_dump_cache_gate": {
+        "blocking_reasons": [],
+        "enabled": false,
+        "min_jsonl_view_hit_rate": null,
+        "observed_jsonl_view_hit_rate": null,
+        "observed_source_count": null,
+        "passed": true,
+        "required": false
+      },
+      "performance_score_dump_cache_jsonl_view_hit_rate": null,
+      "performance_score_dump_cache_source_count": null,
+      "performance_trend_gate": null,
+      "record": {
+        "artifact_type": "performance_baseline",
+        "metadata": {
+          "artifact_manifest": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+          "recommended_batch_size": 8,
+          "recommended_best_quality_signal": "truth_proj",
+          "recommended_cell": "layer_m12_batch_8_capture_outputs",
+          "recommended_layer": -12,
+          "recommended_max_workers": 1,
+          "runtime_recommendation": "artifacts/smollm2_l20_performance_baseline/runtime-recommendation.json",
+          "runtime_recommendation_status": "promote",
+          "status": "promote",
+          "workflow": "run_performance_baseline_workflow"
+        },
+        "name": "smollm2-l20-performance-baseline",
+        "path": "artifacts/smollm2_l20_performance_baseline/performance-baseline-workflow.json",
+        "version": "0.9"
+      },
+      "record_key": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+      "registry": "artifacts/local-readiness-registry.json",
+      "report_path": "artifacts/smollm2_l20_performance_baseline/performance-baseline-workflow.json",
+      "runtime": {
+        "batch_size": 8,
+        "best_quality_signal": {
+          "auroc": 0.6823529411764706,
+          "name": "truth_proj"
+        },
+        "cell_id": "layer_m12_batch_8_capture_outputs",
+        "covariance_low_rank": null,
+        "covariance_mode": null,
+        "hidden_state_capture": "outputs",
+        "inside_trigger_budget_id": "top_0p4",
+        "inside_trigger_budget_policy": "quality_balanced",
+        "layer": -12,
+        "max_batch_tokens": 0,
+        "max_workers": 1,
+        "prefix_kv_cache": false
+      },
+      "runtime_recommendation_source": "artifacts/smollm2_l20_performance_baseline/performance-baseline-workflow.json",
+      "runtime_recommendation_status": "promote",
+      "schema_version": 1,
+      "status": "promote",
+      "verification": {
+        "checked": 6,
+        "failures": [],
+        "manifest_path": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+        "nested": [
+          {
+            "checked": 8,
+            "failures": [],
+            "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 9,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/artifact-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          {
+            "checked": 2,
+            "failures": [],
+            "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 11,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l20_performance_baseline/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          }
+        ],
+        "passed": true
+      }
+    },
+    "product_runtime_drift_gate": {
+      "baseline": {
+        "optimization": {},
+        "path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+        "record": null,
+        "record_key": null,
+        "registry": null,
+        "source": "file",
+        "status": "promote"
+      },
+      "current": {
+        "optimization": {},
+        "path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+        "status": "observed"
+      },
+      "decision_status": "promote",
+      "gate": {
+        "blocking_reasons": [],
+        "passed": true
+      },
+      "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+      "metrics": [
+        {
+          "absolute_delta": 9.808556448357797e-05,
+          "absolute_drop": null,
+          "baseline": 0.00041855359449982643,
+          "comparison": "max_ratio",
+          "current": 0.0005166391589834044,
+          "metric": "total_seconds.mean",
+          "ratio_to_baseline": 1.2343440977989706,
+          "reason": null,
+          "status": "pass",
+          "threshold": 1.3
+        },
+        {
+          "absolute_delta": 0.00026950683677569017,
+          "absolute_drop": null,
+          "baseline": 0.0005332090426236391,
+          "comparison": "max_ratio",
+          "current": 0.0008027158793993293,
+          "metric": "total_seconds.p95",
+          "ratio_to_baseline": 1.505443109984763,
+          "reason": null,
+          "status": "pass",
+          "threshold": 1.6
+        },
+        {
+          "absolute_delta": 3.6776376267274243e-06,
+          "absolute_drop": null,
+          "baseline": 3.624181651199857e-05,
+          "comparison": "max_ratio",
+          "current": 3.9919454138725996e-05,
+          "metric": "route.mean_duration_seconds.mean",
+          "ratio_to_baseline": 1.1014749805796813,
+          "reason": null,
+          "status": "pass",
+          "threshold": 1.2
+        },
+        {
+          "absolute_delta": 3.576434877080216e-06,
+          "absolute_drop": null,
+          "baseline": 3.700455223831038e-05,
+          "comparison": "max_ratio",
+          "current": 4.0580987115390595e-05,
+          "metric": "route.p95_duration_seconds.mean",
+          "ratio_to_baseline": 1.0966485110817683,
+          "reason": null,
+          "status": "pass",
+          "threshold": 1.2
+        },
+        {
+          "absolute_delta": 0.0,
+          "absolute_drop": null,
+          "baseline": 0.6666666666666666,
+          "comparison": "max_increase",
+          "current": 0.6666666666666666,
+          "metric": "mean_attempted_route_count.mean",
+          "ratio_to_baseline": null,
+          "reason": null,
+          "status": "pass",
+          "threshold": 0.0
+        },
+        {
+          "absolute_delta": 0.0,
+          "absolute_drop": null,
+          "baseline": 0.0,
+          "comparison": "max_increase",
+          "current": 0.0,
+          "metric": "retrieval_use_rate.mean",
+          "ratio_to_baseline": null,
+          "reason": null,
+          "status": "pass",
+          "threshold": 0.0
+        },
+        {
+          "absolute_delta": 0.0,
+          "absolute_drop": 0.0,
+          "baseline": 0.0,
+          "comparison": "max_drop",
+          "current": 0.0,
+          "metric": "cache_hit_rate.mean",
+          "ratio_to_baseline": null,
+          "reason": null,
+          "status": "pass",
+          "threshold": 0.0
+        },
+        {
+          "absolute_delta": 0.0,
+          "absolute_drop": 0.0,
+          "baseline": 0.3333333333333333,
+          "comparison": "max_drop",
+          "current": 0.3333333333333333,
+          "metric": "verification_skip_rate.mean",
+          "ratio_to_baseline": null,
+          "reason": null,
+          "status": "pass",
+          "threshold": 0.0
+        },
+        {
+          "absolute_delta": null,
+          "absolute_drop": null,
+          "baseline": null,
+          "comparison": "min_current",
+          "current": 12.0,
+          "metric": "n_traces",
+          "ratio_to_baseline": null,
+          "reason": null,
+          "status": "pass",
+          "threshold": 12
+        }
+      ],
+      "report_path": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+      "report_status": "promote",
+      "schema_version": 1,
+      "status": "promote",
+      "summary": {
+        "blocked_metric_count": 0,
+        "compared_metric_count": 9,
+        "gate_enabled": true,
+        "observed_metric_count": 0
+      },
+      "verification": {
+        "checked": 3,
+        "failures": [],
+        "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+        "nested": [],
+        "passed": true
+      },
+      "workflow": "product_runtime_drift_comparison"
+    },
+    "product_trace_replay_workflow_gate": null,
+    "readiness_baseline_comparison": {
+      "config": {
+        "allow_unverified": false,
+        "baseline_keys": [
+          "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8"
+        ],
+        "inside_trigger_budget_policy": "quality_balanced",
+        "max_cache_only_seconds": null,
+        "max_covariance_maha_last_auroc_drop": null,
+        "max_inside_generation_seconds_ratio": 0.8,
+        "max_inside_sample_count_ratio": 0.6,
+        "max_uncached_forward_seconds": null,
+        "min_best_quality_auroc": null,
+        "recursive": true
+      },
+      "decision": {
+        "blocking_reasons": [],
+        "recommended_best_quality_signal": {
+          "auroc": 0.6823529411764706,
+          "name": "truth_proj"
+        },
+        "recommended_model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+        "recommended_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+        "status": "promote"
+      },
+      "leaderboard": [
+        {
+          "adapter_family_status": "promote",
+          "batch_size": 8,
+          "benchmark_flags": {
+            "eval_truthfulqa": [
+              "--layer",
+              "-12",
+              "--batch-size",
+              "8",
+              "--hidden-state-capture",
+              "outputs",
+              "--length-bucketed-batches",
+              "--inside-samples",
+              "3",
+              "--inside-batch-size",
+              "1",
+              "--inside-max-new-tokens",
+              "4",
+              "--inside-pooling",
+              "last",
+              "--inside-adaptive-sampling",
+              "--inside-selfcheck-early-stop",
+              "--inside-trigger-signal",
+              "truth_proj",
+              "--inside-trigger-top-fraction",
+              "0.4"
+            ],
+            "run_adapter_readiness_workflow": [
+              "--layers",
+              "-12",
+              "--batch-sizes",
+              "8",
+              "--hidden-state-captures",
+              "outputs",
+              "--max-workers",
+              "1"
+            ],
+            "run_cache_profile_matrix": [
+              "--layers",
+              "-12",
+              "--batch-sizes",
+              "8",
+              "--hidden-state-captures",
+              "outputs",
+              "--max-workers",
+              "1"
+            ],
+            "run_inside_sampling_profile": [
+              "--inside-samples",
+              "3",
+              "--inside-batch-size",
+              "1",
+              "--inside-max-new-tokens",
+              "4",
+              "--inside-pooling",
+              "last",
+              "--inside-trigger-signal",
+              "truth_proj",
+              "--inside-trigger-top-fraction",
+              "0.4",
+              "--runs",
+              "adaptive_selfcheck"
+            ],
+            "run_inside_trigger_budget_sweep": [
+              "--trigger-signal",
+              "truth_proj",
+              "--top-fractions",
+              "0.1,0.25,0.4",
+              "--reference-report",
+              "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+              "--model",
+              "HuggingFaceTB/SmolLM2-135M-Instruct",
+              "--dtype",
+              "float32",
+              "--layer",
+              "-12",
+              "--limit",
+              "20",
+              "--manifold-questions",
+              "40",
+              "--batch-size",
+              "8",
+              "--max-batch-tokens",
+              "0",
+              "--max-length",
+              "64",
+              "--hidden-state-capture",
+              "outputs",
+              "--real-truthfulqa",
+              "--inside-samples",
+              "3",
+              "--inside-batch-size",
+              "1",
+              "--inside-max-new-tokens",
+              "4",
+              "--runs",
+              "adaptive_selfcheck",
+              "--shared-cache-dir",
+              "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+              "--eval-reps-cache-shard-size",
+              "8",
+              "--derive-from-max-budget"
+            ]
+          },
+          "best_quality_signal": {
+            "auroc": 0.6823529411764706,
+            "name": "truth_proj"
+          },
+          "cache_only_total_seconds": 0.339105,
+          "covariance_low_rank": 16,
+          "covariance_maha_last_delta_vs_baseline": null,
+          "covariance_mode": "full",
+          "covariance_tradeoff": null,
+          "covariance_tradeoff_gate": {
+            "baseline_cell": null,
+            "blocking_reasons": [],
+            "enabled": false,
+            "max_covariance_maha_last_auroc_drop": null,
+            "passed": true,
+            "selected_cell": null,
+            "selected_covariance_low_rank": null,
+            "selected_covariance_mode": null,
+            "selected_maha_last_auroc": null,
+            "selected_maha_last_delta_vs_baseline": null,
+            "status": null
+          },
+          "covariance_tradeoff_status": null,
+          "dtype": "float32",
+          "gate": {
+            "blocking_reasons": [],
+            "covariance_tradeoff": {
+              "baseline_cell": null,
+              "blocking_reasons": [],
+              "enabled": false,
+              "max_covariance_maha_last_auroc_drop": null,
+              "passed": true,
+              "selected_cell": null,
+              "selected_covariance_low_rank": null,
+              "selected_covariance_mode": null,
+              "selected_maha_last_auroc": null,
+              "selected_maha_last_delta_vs_baseline": null,
+              "status": null
+            },
+            "passed": true
+          },
+          "hidden_state_capture": "outputs",
+          "inside_generation_seconds": 235.259019,
+          "inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+          "inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+          "inside_generation_seconds_ratio_to_baseline": null,
+          "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "inside_sampling": {
+            "adaptive": true,
+            "derive_from_max_budget": true,
+            "derived_source_budget_id": "top_0p4",
+            "inside_batch_size": 1,
+            "inside_generation_seconds": 235.259019,
+            "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+            "inside_generation_seconds_source": "measured_source_run",
+            "inside_max_new_tokens": 4,
+            "inside_pooling": "last",
+            "inside_samples": 3,
+            "inside_trigger_budget_id": "top_0p4",
+            "inside_trigger_budget_policy": "quality_balanced",
+            "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+            "inside_trigger_signal": "truth_proj",
+            "inside_trigger_top_fraction": 0.4,
+            "mode": "triggered",
+            "recommended_run": "adaptive_selfcheck",
+            "sample_count_ratio_to_reference": 0.47186147186147187,
+            "selfcheck_early_stop": true,
+            "stop_reason_counts": {
+              "selfcheck_thresholds_unreachable": 13
+            },
+            "total_generated_samples": 218
+          },
+          "inside_sampling_recommended_run": "adaptive_selfcheck",
+          "inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+          "inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+          "inside_sampling_sample_count_ratio_to_baseline": null,
+          "inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+          "inside_sampling_stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "inside_sampling_total_generated_samples": 218,
+          "inside_trigger_budget_derive_from_max_budget": true,
+          "inside_trigger_budget_id": "top_0p4",
+          "inside_trigger_budget_policy": "quality_balanced",
+          "inside_trigger_budget_sweep": {
+            "batch_size": 8,
+            "best_quality_value": 0.5703324808184144,
+            "budget_kind": "top_fraction",
+            "budget_value": 0.4,
+            "budgets": [
+              {
+                "id": "top_0p1",
+                "kind": "top_fraction",
+                "value": 0.1
+              },
+              {
+                "id": "top_0p25",
+                "kind": "top_fraction",
+                "value": 0.25
+              },
+              {
+                "id": "top_0p4",
+                "kind": "top_fraction",
+                "value": 0.4
+              }
+            ],
+            "cost_metric": "inside_generation_seconds_ratio_to_reference",
+            "cost_value": 0.5031603665201702,
+            "derive_from_max_budget": true,
+            "derived_source_budget_id": "top_0p4",
+            "derived_source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+            "dtype": "float32",
+            "eval_reps_cache_shard_size": 8,
+            "hidden_state_capture": "outputs",
+            "inside_auroc": {
+              "inside_eigenscore": 0.4782608695652174,
+              "inside_embedding_entropy": 0.5670076726342711,
+              "inside_semantic_entropy": 0.5703324808184144
+            },
+            "inside_batch_size": 1,
+            "inside_generation_seconds": 235.259019,
+            "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+            "inside_generation_seconds_source": "measured_source_run",
+            "inside_max_new_tokens": 4,
+            "inside_samples": 3,
+            "layer": -12,
+            "limit": 20,
+            "manifold_questions": 40,
+            "max_batch_tokens": 0,
+            "max_length": 64,
+            "mean_samples_per_record": 1.4155844155844155,
+            "mean_samples_per_sampled_record": 2.831168831168831,
+            "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "offline": false,
+            "quality_metric": "inside_semantic_entropy",
+            "quality_tolerance": 0.02,
+            "quality_value": 0.5703324808184144,
+            "reason": "lowest_cost_within_inside_quality_tolerance",
+            "recommendation_source": "quality_balanced_recommendation",
+            "recommended_budget_id": "top_0p4",
+            "recommended_run": "adaptive_selfcheck",
+            "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+            "refresh_shared_caches": false,
+            "report_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json",
+            "run_names": [
+              "adaptive_selfcheck"
+            ],
+            "sample_count_ratio_to_reference": 0.47186147186147187,
+            "sampled": 77,
+            "selection_policy": "quality_balanced",
+            "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+            "skipped_by_trigger": 77,
+            "source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+            "stop_reason_counts": {
+              "selfcheck_thresholds_unreachable": 13
+            },
+            "total_generated_samples": 218,
+            "trigger_signal": "truth_proj"
+          },
+          "layer": -12,
+          "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+          "max_batch_tokens": 0,
+          "max_workers": 1,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "name": "smollm2-l20-readiness-inside-trigger-budget-derived",
+          "performance_status": "promote",
+          "performance_wall_clock_seconds": 162.65887685900088,
+          "prefix_kv_cache": false,
+          "quality_signals": {
+            "disp_euclid": 0.45217391304347826,
+            "disp_hse": 0.4235294117647059,
+            "eigenscore": 0.4792838874680307,
+            "maha_last": 0.5914748508098892,
+            "nll_answer": 0.4584825234441603,
+            "subspace_resid": 0.5087809036658142,
+            "truth_proj": 0.6823529411764706
+          },
+          "readiness_status": "promote",
+          "recommended_performance_cell": "layer_m12_batch_8_capture_outputs",
+          "recommended_route": "structured_qa",
+          "record_key": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+          "runtime_recommendation_source": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/cache-profile-matrix-report.json",
+          "runtime_recommendation_status": "promote",
+          "truth_proj_auroc": 0.6823529411764706,
+          "uncached_forced_answer_forward_seconds": 38.786261,
+          "uncached_forward_cost_seconds": 38.786261,
+          "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds",
+          "uncached_total_seconds": 138.677391,
+          "verification": {
+            "checked": 7,
+            "failures": [],
+            "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 2,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/artifact-manifest.json",
+                "nested": [
+                  {
+                    "checked": 11,
+                    "failures": [],
+                    "manifest_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_readiness_inside/cache-profile-matrix/layer_m12_batch_8_capture_outputs/artifact-manifest.json",
+                    "nested": [],
+                    "passed": true
+                  }
+                ],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          "version": "0.8",
+          "wall_clock_seconds": 0.04928272299002856
+        }
+      ],
+      "notes": [
+        "release candidate readiness comparison"
+      ],
+      "registry": "artifacts/local-readiness-registry.json",
+      "schema_version": 1,
+      "summary": {
+        "artifact_json_cache": {
+          "entries": 3,
+          "errors": 0,
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 3,
+          "requests": 3
+        },
+        "passing_count": 1,
+        "recommended_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+        "record_count": 1
+      },
+      "workflow": "readiness_baseline_comparison"
+    },
+    "release_candidate": {
+      "adapter_family_matrix": {
+        "audit_routes": [],
+        "matrix_path": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+        "promoted_routes": [
+          "structured_qa",
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "promotion_status": "promote",
+        "required_routes": [
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "retrieval_routes": [
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ],
+        "routes": [
+          "structured_qa",
+          "structured_state",
+          "state_transition",
+          "retrieval_groundedness",
+          "retrieval_structured_qa"
+        ]
+      },
+      "manifests": {
+        "adapter_family_matrix_report": "artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json",
+        "performance_manifest": "artifacts/smollm2_l20_performance_baseline/artifact-manifest.json",
+        "product_runtime_drift_manifest": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+        "readiness_manifest": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/artifact-manifest.json",
+        "required_route_manifest_1": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+        "route_manifest": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+        "selector_replay_manifest": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json"
+      },
+      "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+      "performance_baseline_record": "performance_baseline:smollm2-l20-performance-baseline:0.9",
+      "product_runtime_drift": {
+        "baseline": {
+          "optimization": {},
+          "path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+          "record": null,
+          "record_key": null,
+          "registry": null,
+          "source": "file",
+          "status": "promote"
+        },
+        "current": {
+          "optimization": {},
+          "path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+          "status": "observed"
+        },
+        "decision_status": "promote",
+        "manifest_path": "artifacts/smollm2_product_runtime_drift_v1_6/artifact-manifest.json",
+        "metrics": [
+          {
+            "absolute_delta": 9.808556448357797e-05,
+            "absolute_drop": null,
+            "baseline": 0.00041855359449982643,
+            "comparison": "max_ratio",
+            "current": 0.0005166391589834044,
+            "metric": "total_seconds.mean",
+            "ratio_to_baseline": 1.2343440977989706,
+            "reason": null,
+            "status": "pass",
+            "threshold": 1.3
+          },
+          {
+            "absolute_delta": 0.00026950683677569017,
+            "absolute_drop": null,
+            "baseline": 0.0005332090426236391,
+            "comparison": "max_ratio",
+            "current": 0.0008027158793993293,
+            "metric": "total_seconds.p95",
+            "ratio_to_baseline": 1.505443109984763,
+            "reason": null,
+            "status": "pass",
+            "threshold": 1.6
+          },
+          {
+            "absolute_delta": 3.6776376267274243e-06,
+            "absolute_drop": null,
+            "baseline": 3.624181651199857e-05,
+            "comparison": "max_ratio",
+            "current": 3.9919454138725996e-05,
+            "metric": "route.mean_duration_seconds.mean",
+            "ratio_to_baseline": 1.1014749805796813,
+            "reason": null,
+            "status": "pass",
+            "threshold": 1.2
+          },
+          {
+            "absolute_delta": 3.576434877080216e-06,
+            "absolute_drop": null,
+            "baseline": 3.700455223831038e-05,
+            "comparison": "max_ratio",
+            "current": 4.0580987115390595e-05,
+            "metric": "route.p95_duration_seconds.mean",
+            "ratio_to_baseline": 1.0966485110817683,
+            "reason": null,
+            "status": "pass",
+            "threshold": 1.2
+          },
+          {
+            "absolute_delta": 0.0,
+            "absolute_drop": null,
+            "baseline": 0.6666666666666666,
+            "comparison": "max_increase",
+            "current": 0.6666666666666666,
+            "metric": "mean_attempted_route_count.mean",
+            "ratio_to_baseline": null,
+            "reason": null,
+            "status": "pass",
+            "threshold": 0.0
+          },
+          {
+            "absolute_delta": 0.0,
+            "absolute_drop": null,
+            "baseline": 0.0,
+            "comparison": "max_increase",
+            "current": 0.0,
+            "metric": "retrieval_use_rate.mean",
+            "ratio_to_baseline": null,
+            "reason": null,
+            "status": "pass",
+            "threshold": 0.0
+          },
+          {
+            "absolute_delta": 0.0,
+            "absolute_drop": 0.0,
+            "baseline": 0.0,
+            "comparison": "max_drop",
+            "current": 0.0,
+            "metric": "cache_hit_rate.mean",
+            "ratio_to_baseline": null,
+            "reason": null,
+            "status": "pass",
+            "threshold": 0.0
+          },
+          {
+            "absolute_delta": 0.0,
+            "absolute_drop": 0.0,
+            "baseline": 0.3333333333333333,
+            "comparison": "max_drop",
+            "current": 0.3333333333333333,
+            "metric": "verification_skip_rate.mean",
+            "ratio_to_baseline": null,
+            "reason": null,
+            "status": "pass",
+            "threshold": 0.0
+          },
+          {
+            "absolute_delta": null,
+            "absolute_drop": null,
+            "baseline": null,
+            "comparison": "min_current",
+            "current": 12.0,
+            "metric": "n_traces",
+            "ratio_to_baseline": null,
+            "reason": null,
+            "status": "pass",
+            "threshold": 12
+          }
+        ],
+        "report_path": "artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json",
+        "report_status": "promote",
+        "summary": {
+          "blocked_metric_count": 0,
+          "compared_metric_count": 9,
+          "gate_enabled": true,
+          "observed_metric_count": 0
+        }
+      },
+      "quality": {
+        "best_quality_signal": {
+          "auroc": 0.6823529411764706,
+          "name": "truth_proj"
+        },
+        "covariance_tradeoff": null,
+        "covariance_tradeoff_gate": {
+          "baseline_cell": null,
+          "blocking_reasons": [],
+          "enabled": false,
+          "max_covariance_maha_last_auroc_drop": null,
+          "passed": true,
+          "selected_cell": null,
+          "selected_covariance_low_rank": null,
+          "selected_covariance_mode": null,
+          "selected_maha_last_auroc": null,
+          "selected_maha_last_delta_vs_baseline": null,
+          "status": null
+        },
+        "quality_signals": {
+          "disp_euclid": 0.45217391304347826,
+          "disp_hse": 0.4235294117647059,
+          "eigenscore": 0.4792838874680307,
+          "maha_last": 0.5914748508098892,
+          "nll_answer": 0.4584825234441603,
+          "subspace_resid": 0.5087809036658142,
+          "truth_proj": 0.6823529411764706
+        },
+        "truth_proj_auroc": 0.6823529411764706
+      },
+      "readiness_record": "benchmark_manifest:smollm2-l20-readiness-inside-trigger-budget-derived:0.8",
+      "required_route_baselines": {
+        "manifest_paths": [
+          "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json"
+        ],
+        "records": [
+          "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+        ],
+        "registry": "artifacts/staged-route-registry.json",
+        "routes": [
+          "retrieval_structured_qa"
+        ]
+      },
+      "route_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+      "runtime": {
+        "batch_size": 8,
+        "benchmark_flags": {
+          "eval_truthfulqa": [
+            "--layer",
+            "-12",
+            "--batch-size",
+            "8",
+            "--hidden-state-capture",
+            "outputs",
+            "--length-bucketed-batches",
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--inside-pooling",
+            "last",
+            "--inside-adaptive-sampling",
+            "--inside-selfcheck-early-stop",
+            "--inside-trigger-signal",
+            "truth_proj",
+            "--inside-trigger-top-fraction",
+            "0.4"
+          ],
+          "run_adapter_readiness_workflow": [
+            "--layers",
+            "-12",
+            "--batch-sizes",
+            "8",
+            "--hidden-state-captures",
+            "outputs",
+            "--max-workers",
+            "1"
+          ],
+          "run_cache_profile_matrix": [
+            "--layers",
+            "-12",
+            "--batch-sizes",
+            "8",
+            "--hidden-state-captures",
+            "outputs",
+            "--max-workers",
+            "1"
+          ],
+          "run_inside_sampling_profile": [
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--inside-pooling",
+            "last",
+            "--inside-trigger-signal",
+            "truth_proj",
+            "--inside-trigger-top-fraction",
+            "0.4",
+            "--runs",
+            "adaptive_selfcheck"
+          ],
+          "run_inside_trigger_budget_sweep": [
+            "--trigger-signal",
+            "truth_proj",
+            "--top-fractions",
+            "0.1,0.25,0.4",
+            "--reference-report",
+            "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+            "--model",
+            "HuggingFaceTB/SmolLM2-135M-Instruct",
+            "--dtype",
+            "float32",
+            "--layer",
+            "-12",
+            "--limit",
+            "20",
+            "--manifold-questions",
+            "40",
+            "--batch-size",
+            "8",
+            "--max-batch-tokens",
+            "0",
+            "--max-length",
+            "64",
+            "--hidden-state-capture",
+            "outputs",
+            "--real-truthfulqa",
+            "--inside-samples",
+            "3",
+            "--inside-batch-size",
+            "1",
+            "--inside-max-new-tokens",
+            "4",
+            "--runs",
+            "adaptive_selfcheck",
+            "--shared-cache-dir",
+            "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+            "--eval-reps-cache-shard-size",
+            "8",
+            "--derive-from-max-budget"
+          ]
+        },
+        "covariance_low_rank": 16,
+        "covariance_mode": "full",
+        "hidden_state_capture": "outputs",
+        "inside_sampling": {
+          "adaptive": true,
+          "derive_from_max_budget": true,
+          "derived_source_budget_id": "top_0p4",
+          "inside_batch_size": 1,
+          "inside_generation_seconds": 235.259019,
+          "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "inside_generation_seconds_source": "measured_source_run",
+          "inside_max_new_tokens": 4,
+          "inside_pooling": "last",
+          "inside_samples": 3,
+          "inside_trigger_budget_id": "top_0p4",
+          "inside_trigger_budget_policy": "quality_balanced",
+          "inside_trigger_budget_source": "inside_trigger_budget_sweep",
+          "inside_trigger_signal": "truth_proj",
+          "inside_trigger_top_fraction": 0.4,
+          "mode": "triggered",
+          "recommended_run": "adaptive_selfcheck",
+          "sample_count_ratio_to_reference": 0.47186147186147187,
+          "selfcheck_early_stop": true,
+          "stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "total_generated_samples": 218
+        },
+        "inside_trigger_budget_policy": "quality_balanced",
+        "inside_trigger_budget_sweep": {
+          "batch_size": 8,
+          "best_quality_value": 0.5703324808184144,
+          "budget_kind": "top_fraction",
+          "budget_value": 0.4,
+          "budgets": [
+            {
+              "id": "top_0p1",
+              "kind": "top_fraction",
+              "value": 0.1
+            },
+            {
+              "id": "top_0p25",
+              "kind": "top_fraction",
+              "value": 0.25
+            },
+            {
+              "id": "top_0p4",
+              "kind": "top_fraction",
+              "value": 0.4
+            }
+          ],
+          "cost_metric": "inside_generation_seconds_ratio_to_reference",
+          "cost_value": 0.5031603665201702,
+          "derive_from_max_budget": true,
+          "derived_source_budget_id": "top_0p4",
+          "derived_source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+          "dtype": "float32",
+          "eval_reps_cache_shard_size": 8,
+          "hidden_state_capture": "outputs",
+          "inside_auroc": {
+            "inside_eigenscore": 0.4782608695652174,
+            "inside_embedding_entropy": 0.5670076726342711,
+            "inside_semantic_entropy": 0.5703324808184144
+          },
+          "inside_batch_size": 1,
+          "inside_generation_seconds": 235.259019,
+          "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+          "inside_generation_seconds_source": "measured_source_run",
+          "inside_max_new_tokens": 4,
+          "inside_samples": 3,
+          "layer": -12,
+          "limit": 20,
+          "manifold_questions": 40,
+          "max_batch_tokens": 0,
+          "max_length": 64,
+          "mean_samples_per_record": 1.4155844155844155,
+          "mean_samples_per_sampled_record": 2.831168831168831,
+          "model": "HuggingFaceTB/SmolLM2-135M-Instruct",
+          "offline": false,
+          "quality_metric": "inside_semantic_entropy",
+          "quality_tolerance": 0.02,
+          "quality_value": 0.5703324808184144,
+          "reason": "lowest_cost_within_inside_quality_tolerance",
+          "recommendation_source": "quality_balanced_recommendation",
+          "recommended_budget_id": "top_0p4",
+          "recommended_run": "adaptive_selfcheck",
+          "reference_report": "artifacts/smollm2_l20_inside_sampling/inside-sampling-profile-comparison.json",
+          "refresh_shared_caches": false,
+          "report_path": "artifacts/smollm2_l20_readiness_inside_trigger_budget_derived/../smollm2_l20_inside_trigger_budget_sweep_derived/inside-trigger-budget-sweep.json",
+          "run_names": [
+            "adaptive_selfcheck"
+          ],
+          "sample_count_ratio_to_reference": 0.47186147186147187,
+          "sampled": 77,
+          "selection_policy": "quality_balanced",
+          "shared_cache_dir": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches",
+          "skipped_by_trigger": 77,
+          "source_score_dump": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+          "stop_reason_counts": {
+            "selfcheck_thresholds_unreachable": 13
+          },
+          "total_generated_samples": 218,
+          "trigger_signal": "truth_proj"
+        },
+        "layer": -12,
+        "max_batch_tokens": 0,
+        "max_workers": 1,
+        "performance_cell": "layer_m12_batch_8_capture_outputs",
+        "prefix_kv_cache": false
+      },
+      "runtime_cost": {
+        "cache_only_total_seconds": 0.339105,
+        "inside_generation_seconds": 235.259019,
+        "inside_generation_seconds_ratio_for_gate": 0.5031603665201702,
+        "inside_generation_seconds_ratio_source": "inside_generation_seconds_ratio_to_reference",
+        "inside_generation_seconds_ratio_to_baseline": null,
+        "inside_generation_seconds_ratio_to_reference": 0.5031603665201702,
+        "inside_sampling_recommended_run": "adaptive_selfcheck",
+        "inside_sampling_sample_count_ratio_for_gate": 0.47186147186147187,
+        "inside_sampling_sample_count_ratio_source": "sample_count_ratio_to_reference",
+        "inside_sampling_sample_count_ratio_to_baseline": null,
+        "inside_sampling_sample_count_ratio_to_reference": 0.47186147186147187,
+        "inside_sampling_stop_reason_counts": {
+          "selfcheck_thresholds_unreachable": 13
+        },
+        "inside_sampling_total_generated_samples": 218,
+        "inside_trigger_budget_derive_from_max_budget": true,
+        "inside_trigger_budget_id": "top_0p4",
+        "inside_trigger_budget_policy": "quality_balanced",
+        "uncached_forward_cost_seconds": 38.786261,
+        "uncached_forward_cost_source": "uncached_forced_answer_forward_seconds"
+      },
+      "selector_replay": {
+        "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
+        "recommended": {
+          "candidate": "default",
+          "changed_rate": 0.5833333333333334,
+          "estimated_cost_units_mean": 2.25,
+          "observed_runtime_coverage_rate": 1.0,
+          "observed_runtime_delta_coverage_rate": 1.0,
+          "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+          "observed_selected_to_original_ratio_mean": 1.0965569346288282,
+          "observed_selected_total_seconds_mean": 0.000494600758732607,
+          "observed_selected_total_seconds_p95": 0.0005944980075582862,
+          "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+          "status": "promote"
+        },
+        "recommended_candidate": "default",
+        "recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+        "report_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json"
+      },
+      "verifier_route": {
+        "claims_cache_hit_rate": null,
+        "decision_accuracy": 1.0,
+        "false_refuted_rate": 1.0,
+        "false_supported_rate": 0.0,
+        "max_duration_seconds": 0.0007935770554468036,
+        "mean_attempted_route_count": 1.0,
+        "mean_duration_seconds": 0.00010692605227675466,
+        "p99_duration_seconds": 0.0001987196248956039,
+        "retrieval_use_rate": 0.0,
+        "route": "structured_qa",
+        "runtime_retrieval_hit_count": null,
+        "runtime_total_seconds": null,
+        "selected": 210,
+        "verified_detection": 1.0,
+        "verified_false_alarm": 0.0,
+        "verifier_trace_cache_hit_rate": null
+      }
+    },
+    "release_efficiency_gate": null,
+    "required_route_baseline_gate": {
+      "comparison": {
+        "config": {
+          "allow_unverified": false,
+          "baseline_keys": [
+            "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+          ],
+          "max_false_supported_rate": 0.01,
+          "max_max_duration_seconds": null,
+          "max_mean_attempted_route_count": 2.1,
+          "max_mean_duration_seconds": null,
+          "max_p99_duration_seconds": null,
+          "max_retrieval_hit_count": 450.0,
+          "max_retrieval_use_rate": 1.0,
+          "max_runtime_total_seconds": 8.0,
+          "max_stress_false_refuted_rate": 0.05,
+          "max_verified_false_alarm": 0.01,
+          "min_claims_cache_hit_rate": null,
+          "min_decision_accuracy": 0.99,
+          "min_false_refuted_rate": 1.0,
+          "min_selected": 200,
+          "min_stress_false_supported_rate": 0.9,
+          "min_verified_detection": 1.0,
+          "min_verifier_trace_cache_hit_rate": null,
+          "recursive": true,
+          "require_non_oracle_evidence": true,
+          "require_retrieval_stress_control": true,
+          "retrieval_stress_manifest": null
+        },
+        "decision": {
+          "blocking_reasons": [],
+          "recommended_record": "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+          "recommended_route": "retrieval_structured_qa",
+          "status": "promote"
+        },
+        "leaderboard": [
+          {
+            "claims_cache_hit_rate": null,
+            "claims_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-claims.json",
+            "decision_accuracy": 0.9915966386554622,
+            "evidence_audit": {
+              "blocking_reasons": [],
+              "claims_error": null,
+              "claims_loaded": true,
+              "corpus_fingerprint_count": 1,
+              "enabled": true,
+              "input_provenance_present": true,
+              "labels_copied_to_record_metadata": false,
+              "labels_used_for_retrieval": false,
+              "passed": true,
+              "score_dump_provenance_present": true
+            },
+            "false_refuted_rate": 1.0,
+            "false_supported_rate": 0.0,
+            "gate": {
+              "blocking_reasons": [],
+              "evidence_audit": {
+                "blocking_reasons": [],
+                "claims_error": null,
+                "claims_loaded": true,
+                "corpus_fingerprint_count": 1,
+                "enabled": true,
+                "input_provenance_present": true,
+                "labels_copied_to_record_metadata": false,
+                "labels_used_for_retrieval": false,
+                "passed": true,
+                "score_dump_provenance_present": true
+              },
+              "passed": true,
+              "retrieval_stress_audit": {
+                "blocking_reasons": [],
+                "corpus_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json",
+                "corpus_type": "retrieval_stress_answer_echo",
+                "enabled": true,
+                "label_usage": {
+                  "labels_copied_to_document_metadata": false,
+                  "labels_used_for_documents": false
+                },
+                "max_false_refuted_rate": 0.0,
+                "max_false_supported_rate": 0.9803921568627451,
+                "max_stress_false_refuted_rate": 0.05,
+                "min_false_refuted_rate": 0.0,
+                "min_false_supported_rate": 0.9803921568627451,
+                "min_stress_false_supported_rate": 0.9,
+                "passed": true,
+                "run_count": 2,
+                "runs": [
+                  {
+                    "decision_accuracy": 0.43820224719101125,
+                    "false_refuted_rate": 0.0,
+                    "false_supported_rate": 0.9803921568627451,
+                    "name": "qwen-l80",
+                    "true_supported_rate": 0.936
+                  },
+                  {
+                    "decision_accuracy": 0.43820224719101125,
+                    "false_refuted_rate": 0.0,
+                    "false_supported_rate": 0.9803921568627451,
+                    "name": "smollm2-l80",
+                    "true_supported_rate": 0.936
+                  }
+                ],
+                "stress_manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                "verification": {
+                  "checked": 15,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                },
+                "verification_passed": true,
+                "verifier_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/verifier-ensemble-report.json"
+              }
+            },
+            "invalid_metric_counts": {},
+            "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+            "max_duration_seconds": 0.05764016800094396,
+            "mean_attempted_route_count": 2.0,
+            "mean_duration_seconds": 0.0003577770966170219,
+            "name": "smollm2-l80-retrieval-structured-qa-route",
+            "p95_duration_seconds": 0.00013466894797602434,
+            "p99_duration_seconds": 0.00016037754692661103,
+            "recommended_route": "retrieval_structured_qa",
+            "record_key": "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+            "retrieval_stress_audit": {
+              "blocking_reasons": [],
+              "corpus_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json",
+              "corpus_type": "retrieval_stress_answer_echo",
+              "enabled": true,
+              "label_usage": {
+                "labels_copied_to_document_metadata": false,
+                "labels_used_for_documents": false
+              },
+              "max_false_refuted_rate": 0.0,
+              "max_false_supported_rate": 0.9803921568627451,
+              "max_stress_false_refuted_rate": 0.05,
+              "min_false_refuted_rate": 0.0,
+              "min_false_supported_rate": 0.9803921568627451,
+              "min_stress_false_supported_rate": 0.9,
+              "passed": true,
+              "run_count": 2,
+              "runs": [
+                {
+                  "decision_accuracy": 0.43820224719101125,
+                  "false_refuted_rate": 0.0,
+                  "false_supported_rate": 0.9803921568627451,
+                  "name": "qwen-l80",
+                  "true_supported_rate": 0.936
+                },
+                {
+                  "decision_accuracy": 0.43820224719101125,
+                  "false_refuted_rate": 0.0,
+                  "false_supported_rate": 0.9803921568627451,
+                  "name": "smollm2-l80",
+                  "true_supported_rate": 0.936
+                }
+              ],
+              "stress_manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+              "verification": {
+                "checked": 15,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              "verification_passed": true,
+              "verifier_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/verifier-ensemble-report.json"
+            },
+            "retrieval_use_rate": 1.0,
+            "route_promotion_status": "promote",
+            "route_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-comparison.json",
+            "runtime_budget": {
+              "checks": [
+                {
+                  "limit": 8.0,
+                  "limit_type": "max",
+                  "metric": "total_seconds",
+                  "passed": true,
+                  "raw_value": "0.845373",
+                  "value": 0.845373
+                },
+                {
+                  "limit": 450.0,
+                  "limit_type": "max",
+                  "metric": "retrieval_hit_count",
+                  "passed": true,
+                  "raw_value": "410",
+                  "value": 410.0
+                }
+              ],
+              "enabled": true,
+              "failures": [],
+              "metrics": {
+                "cache_hit_rate": null,
+                "claims_cache_hit_rate": null,
+                "retrieval_hit_count": 410.0,
+                "total_seconds": 0.845373,
+                "verifier_trace_cache_hit_rate": null
+              },
+              "passed": true,
+              "policy": {
+                "max_retrieval_hit_count": 450.0,
+                "max_total_seconds": 8.0,
+                "min_cache_hit_rate": null,
+                "min_claims_cache_hit_rate": null,
+                "min_verifier_trace_cache_hit_rate": null
+              }
+            },
+            "runtime_retrieval_hit_count": 410.0,
+            "runtime_total_seconds": 0.845373,
+            "selected": 238,
+            "verification": {
+              "checked": 7,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+              "nested": [
+                {
+                  "checked": 15,
+                  "failures": [],
+                  "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                  "nested": [],
+                  "passed": true
+                }
+              ],
+              "passed": true
+            },
+            "verified_detection": 1.0,
+            "verified_false_alarm": 0.008771929824561403,
+            "verifier_trace_cache_hit_rate": null,
+            "version": "0.6"
+          }
+        ],
+        "notes": [
+          "release candidate required route baseline gate"
+        ],
+        "registry": "artifacts/staged-route-registry.json",
+        "schema_version": 1,
+        "summary": {
+          "artifact_json_cache": {
+            "entries": 11,
+            "errors": 0,
+            "hit_rate": 0.0,
+            "hits": 0,
+            "misses": 11,
+            "requests": 11
+          },
+          "passing_count": 1,
+          "recommended_record": "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+          "recommended_route": "retrieval_structured_qa",
+          "record_count": 1
+        },
+        "workflow": "route_baseline_comparison"
+      },
+      "gate": {
+        "blocking_reasons": [],
+        "passed": true
+      },
+      "registry": "artifacts/staged-route-registry.json",
+      "required_keys": [
+        "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6"
+      ],
+      "rows": [
+        {
+          "claims_cache_hit_rate": null,
+          "claims_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-claims.json",
+          "decision_accuracy": 0.9915966386554622,
+          "evidence_audit": {
+            "blocking_reasons": [],
+            "claims_error": null,
+            "claims_loaded": true,
+            "corpus_fingerprint_count": 1,
+            "enabled": true,
+            "input_provenance_present": true,
+            "labels_copied_to_record_metadata": false,
+            "labels_used_for_retrieval": false,
+            "passed": true,
+            "score_dump_provenance_present": true
+          },
+          "false_refuted_rate": 1.0,
+          "false_supported_rate": 0.0,
+          "gate": {
+            "blocking_reasons": [],
+            "evidence_audit": {
+              "blocking_reasons": [],
+              "claims_error": null,
+              "claims_loaded": true,
+              "corpus_fingerprint_count": 1,
+              "enabled": true,
+              "input_provenance_present": true,
+              "labels_copied_to_record_metadata": false,
+              "labels_used_for_retrieval": false,
+              "passed": true,
+              "score_dump_provenance_present": true
+            },
+            "passed": true,
+            "retrieval_stress_audit": {
+              "blocking_reasons": [],
+              "corpus_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json",
+              "corpus_type": "retrieval_stress_answer_echo",
+              "enabled": true,
+              "label_usage": {
+                "labels_copied_to_document_metadata": false,
+                "labels_used_for_documents": false
+              },
+              "max_false_refuted_rate": 0.0,
+              "max_false_supported_rate": 0.9803921568627451,
+              "max_stress_false_refuted_rate": 0.05,
+              "min_false_refuted_rate": 0.0,
+              "min_false_supported_rate": 0.9803921568627451,
+              "min_stress_false_supported_rate": 0.9,
+              "passed": true,
+              "run_count": 2,
+              "runs": [
+                {
+                  "decision_accuracy": 0.43820224719101125,
+                  "false_refuted_rate": 0.0,
+                  "false_supported_rate": 0.9803921568627451,
+                  "name": "qwen-l80",
+                  "true_supported_rate": 0.936
+                },
+                {
+                  "decision_accuracy": 0.43820224719101125,
+                  "false_refuted_rate": 0.0,
+                  "false_supported_rate": 0.9803921568627451,
+                  "name": "smollm2-l80",
+                  "true_supported_rate": 0.936
+                }
+              ],
+              "stress_manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+              "verification": {
+                "checked": 15,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                "nested": [],
+                "passed": true
+              },
+              "verification_passed": true,
+              "verifier_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/verifier-ensemble-report.json"
+            }
+          },
+          "invalid_metric_counts": {},
+          "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+          "max_duration_seconds": 0.05764016800094396,
+          "mean_attempted_route_count": 2.0,
+          "mean_duration_seconds": 0.0003577770966170219,
+          "name": "smollm2-l80-retrieval-structured-qa-route",
+          "p95_duration_seconds": 0.00013466894797602434,
+          "p99_duration_seconds": 0.00016037754692661103,
+          "recommended_route": "retrieval_structured_qa",
+          "record_key": "benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6",
+          "retrieval_stress_audit": {
+            "blocking_reasons": [],
+            "corpus_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/answer-echo-corpus.json",
+            "corpus_type": "retrieval_stress_answer_echo",
+            "enabled": true,
+            "label_usage": {
+              "labels_copied_to_document_metadata": false,
+              "labels_used_for_documents": false
+            },
+            "max_false_refuted_rate": 0.0,
+            "max_false_supported_rate": 0.9803921568627451,
+            "max_stress_false_refuted_rate": 0.05,
+            "min_false_refuted_rate": 0.0,
+            "min_false_supported_rate": 0.9803921568627451,
+            "min_stress_false_supported_rate": 0.9,
+            "passed": true,
+            "run_count": 2,
+            "runs": [
+              {
+                "decision_accuracy": 0.43820224719101125,
+                "false_refuted_rate": 0.0,
+                "false_supported_rate": 0.9803921568627451,
+                "name": "qwen-l80",
+                "true_supported_rate": 0.936
+              },
+              {
+                "decision_accuracy": 0.43820224719101125,
+                "false_refuted_rate": 0.0,
+                "false_supported_rate": 0.9803921568627451,
+                "name": "smollm2-l80",
+                "true_supported_rate": 0.936
+              }
+            ],
+            "stress_manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+            "verification": {
+              "checked": 15,
+              "failures": [],
+              "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+              "nested": [],
+              "passed": true
+            },
+            "verification_passed": true,
+            "verifier_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/verifier-ensemble-report.json"
+          },
+          "retrieval_use_rate": 1.0,
+          "route_promotion_status": "promote",
+          "route_report_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-comparison.json",
+          "runtime_budget": {
+            "checks": [
+              {
+                "limit": 8.0,
+                "limit_type": "max",
+                "metric": "total_seconds",
+                "passed": true,
+                "raw_value": "0.845373",
+                "value": 0.845373
+              },
+              {
+                "limit": 450.0,
+                "limit_type": "max",
+                "metric": "retrieval_hit_count",
+                "passed": true,
+                "raw_value": "410",
+                "value": 410.0
+              }
+            ],
+            "enabled": true,
+            "failures": [],
+            "metrics": {
+              "cache_hit_rate": null,
+              "claims_cache_hit_rate": null,
+              "retrieval_hit_count": 410.0,
+              "total_seconds": 0.845373,
+              "verifier_trace_cache_hit_rate": null
+            },
+            "passed": true,
+            "policy": {
+              "max_retrieval_hit_count": 450.0,
+              "max_total_seconds": 8.0,
+              "min_cache_hit_rate": null,
+              "min_claims_cache_hit_rate": null,
+              "min_verifier_trace_cache_hit_rate": null
+            }
+          },
+          "runtime_retrieval_hit_count": 410.0,
+          "runtime_total_seconds": 0.845373,
+          "selected": 238,
+          "verification": {
+            "checked": 7,
+            "failures": [],
+            "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/retrieval-route-artifact-manifest.json",
+            "nested": [
+              {
+                "checked": 15,
+                "failures": [],
+                "manifest_path": "artifacts/smollm2_l80_retrieval_structured_qa_route_v0_6/../truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json",
+                "nested": [],
+                "passed": true
+              }
+            ],
+            "passed": true
+          },
+          "verified_detection": 1.0,
+          "verified_false_alarm": 0.008771929824561403,
+          "verifier_trace_cache_hit_rate": null,
+          "version": "0.6"
+        }
+      ],
+      "schema_version": 1,
+      "status": "promote"
+    },
+    "route_baseline_comparison": {
+      "config": {
+        "allow_unverified": false,
+        "baseline_keys": [
+          "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4"
+        ],
+        "max_false_supported_rate": 0.01,
+        "max_max_duration_seconds": null,
+        "max_mean_attempted_route_count": 1.1,
+        "max_mean_duration_seconds": null,
+        "max_p99_duration_seconds": 0.01,
+        "max_retrieval_hit_count": null,
+        "max_retrieval_use_rate": 0.0,
+        "max_runtime_total_seconds": null,
+        "max_stress_false_refuted_rate": null,
+        "max_verified_false_alarm": 0.01,
+        "min_claims_cache_hit_rate": null,
+        "min_decision_accuracy": 0.99,
+        "min_false_refuted_rate": 1.0,
+        "min_selected": 200,
+        "min_stress_false_supported_rate": null,
+        "min_verified_detection": 1.0,
+        "min_verifier_trace_cache_hit_rate": null,
+        "recursive": true,
+        "require_non_oracle_evidence": false,
+        "require_retrieval_stress_control": false,
+        "retrieval_stress_manifest": null
+      },
+      "decision": {
+        "blocking_reasons": [],
+        "recommended_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+        "recommended_route": "structured_qa",
+        "status": "promote"
+      },
+      "leaderboard": [
+        {
+          "claims_cache_hit_rate": null,
+          "claims_path": null,
+          "decision_accuracy": 1.0,
+          "evidence_audit": {
+            "blocking_reasons": [],
+            "claims_error": null,
+            "claims_loaded": false,
+            "corpus_fingerprint_count": 0,
+            "enabled": false,
+            "input_provenance_present": false,
+            "labels_copied_to_record_metadata": null,
+            "labels_used_for_retrieval": null,
+            "passed": true,
+            "score_dump_provenance_present": false
+          },
+          "false_refuted_rate": 1.0,
+          "false_supported_rate": 0.0,
+          "gate": {
+            "blocking_reasons": [],
+            "evidence_audit": {
+              "blocking_reasons": [],
+              "claims_error": null,
+              "claims_loaded": false,
+              "corpus_fingerprint_count": 0,
+              "enabled": false,
+              "input_provenance_present": false,
+              "labels_copied_to_record_metadata": null,
+              "labels_used_for_retrieval": null,
+              "passed": true,
+              "score_dump_provenance_present": false
+            },
+            "passed": true,
+            "retrieval_stress_audit": {
+              "blocking_reasons": [],
+              "corpus_path": null,
+              "corpus_type": null,
+              "enabled": false,
+              "max_false_refuted_rate": null,
+              "max_stress_false_refuted_rate": null,
+              "min_false_supported_rate": null,
+              "min_stress_false_supported_rate": null,
+              "passed": true,
+              "run_count": 0,
+              "runs": [],
+              "stress_manifest_path": null,
+              "verification_passed": null,
+              "verifier_report_path": null
+            }
+          },
+          "invalid_metric_counts": {},
+          "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+          "max_duration_seconds": 0.0007935770554468036,
+          "mean_attempted_route_count": 1.0,
+          "mean_duration_seconds": 0.00010692605227675466,
+          "name": "truthfulqa-l80-structured-qa-staged-route",
+          "p95_duration_seconds": 0.00012811180204153058,
+          "p99_duration_seconds": 0.0001987196248956039,
+          "recommended_route": "structured_qa",
+          "record_key": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+          "retrieval_stress_audit": {
+            "blocking_reasons": [],
+            "corpus_path": null,
+            "corpus_type": null,
+            "enabled": false,
+            "max_false_refuted_rate": null,
+            "max_stress_false_refuted_rate": null,
+            "min_false_supported_rate": null,
+            "min_stress_false_supported_rate": null,
+            "passed": true,
+            "run_count": 0,
+            "runs": [],
+            "stress_manifest_path": null,
+            "verification_passed": null,
+            "verifier_report_path": null
+          },
+          "retrieval_use_rate": 0.0,
+          "route_promotion_status": "promote",
+          "route_report_path": "artifacts/truthfulqa_l80_structured_qa_staged_registry_route_comparison.json",
+          "runtime_budget": {
+            "checks": [],
+            "enabled": false,
+            "failures": [],
+            "metrics": {
+              "cache_hit_rate": null,
+              "claims_cache_hit_rate": null,
+              "retrieval_hit_count": null,
+              "total_seconds": null,
+              "verifier_trace_cache_hit_rate": null
+            },
+            "passed": true,
+            "policy": {
+              "max_retrieval_hit_count": null,
+              "max_total_seconds": null,
+              "min_cache_hit_rate": null,
+              "min_claims_cache_hit_rate": null,
+              "min_verifier_trace_cache_hit_rate": null
+            }
+          },
+          "runtime_retrieval_hit_count": null,
+          "runtime_total_seconds": null,
+          "selected": 210,
+          "verification": {
+            "checked": 2,
+            "failures": [],
+            "manifest_path": "artifacts/truthfulqa_l80_structured_qa_staged_adapter_promotion_manifest.json",
+            "nested": [],
+            "passed": true
+          },
+          "verified_detection": 1.0,
+          "verified_false_alarm": 0.0,
+          "verifier_trace_cache_hit_rate": null,
+          "version": "0.4"
+        }
+      ],
+      "notes": [
+        "release candidate route comparison"
+      ],
+      "registry": "artifacts/staged-route-registry.json",
+      "schema_version": 1,
+      "summary": {
+        "artifact_json_cache": {
+          "entries": 5,
+          "errors": 0,
+          "hit_rate": 0.0,
+          "hits": 0,
+          "misses": 5,
+          "requests": 5
+        },
+        "passing_count": 1,
+        "recommended_record": "benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4",
+        "recommended_route": "structured_qa",
+        "record_count": 1
+      },
+      "workflow": "route_baseline_comparison"
+    },
+    "schema_version": 1,
+    "selector_replay_gate": {
+      "gate": {
+        "blocking_reasons": [],
+        "passed": true
+      },
+      "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
+      "recommended": {
+        "candidate": "default",
+        "changed_rate": 0.5833333333333334,
+        "estimated_cost_units_mean": 2.25,
+        "observed_runtime_coverage_rate": 1.0,
+        "observed_runtime_delta_coverage_rate": 1.0,
+        "observed_selected_minus_original_seconds_mean": -2.203840025079747e-05,
+        "observed_selected_to_original_ratio_mean": 1.0965569346288282,
+        "observed_selected_total_seconds_mean": 0.000494600758732607,
+        "observed_selected_total_seconds_p95": 0.0005944980075582862,
+        "policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+        "status": "promote"
+      },
+      "recommended_candidate": "default",
+      "recommended_policy_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/policies/default.json",
+      "report_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json",
+      "report_status": "promote",
+      "schema_version": 1,
+      "status": "promote",
+      "verification": {
+        "checked": 19,
+        "failures": [],
+        "manifest_path": "artifacts/smollm2_product_trace_replay_workflow/selector-replay/artifact-manifest.json",
+        "nested": [],
+        "passed": true
+      },
+      "workflow": "runtime_profile_selector_replay"
+    },
+    "summary": {
+      "artifact_json_cache": {
+        "entries": 22,
+        "errors": 0,
+        "hit_rate": 0.0,
+        "hits": 0,
+        "misses": 22,
+        "requests": 22
+      }
+    },
+    "workflow": "release_candidate_comparison"
+  },
+  "schema_version": 1,
+  "timing": {
+    "phase_total_seconds": 0.27038,
+    "phases": {
+      "compare": {
+        "seconds": 0.214051
+      },
+      "comparison_write": {
+        "seconds": 0.003163
+      },
+      "manifest_build": {
+        "seconds": 0.003286
+      },
+      "promotion": {
+        "seconds": 0.046233
+      },
+      "workflow_report_write": {
+        "seconds": 0.003647
+      }
+    },
+    "total_seconds": 0.270537
+  },
+  "workflow": "release_candidate_registry_workflow"
+}

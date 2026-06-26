@@ -188,7 +188,7 @@ leaving `inside_generation` at 1.001 of fixed, while `truth_proj` top-25%
 triggering samples 39/154 statements and cuts fixed `inside_generation` to
 0.253 of full-sample fixed. The current registered SmolLM2 strict
 structured-retrieval-audit release
-`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.5`
+`benchmark_manifest:smollm2-l20-inside-trigger-budget-derived-strict-structured-retrieval-audit-staged-qa-release-candidate:1.6`
 selects the top-40% quality-balanced budget from a single largest-budget run,
 uses 218 generated samples with sample-count ratio 0.472 and
 `inside_generation` ratio 0.503 against the full-sample fixed reference,
@@ -196,13 +196,17 @@ requires `performance_baseline:smollm2-l20-performance-baseline:0.9` to match
 the final runtime, requires promoted `structured_state`, `state_transition`, and
 `retrieval_groundedness` plus `retrieval_structured_qa` adapter-family routes,
 and requires
-`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.5` as a separate
-retrieval structured-QA audit baseline. That audit route promotes with selected
+`benchmark_manifest:smollm2-l80-retrieval-structured-qa-route:0.6` as a separate
+retrieval structured-QA audit baseline with non-oracle evidence provenance and
+answer-echo retrieval stress control. That audit route promotes with selected
 238, decision accuracy 0.992, false-supported rate 0.000, false-refuted rate
-1.000, runtime about 1.05s, and 410 retrieval hits under a 450-hit budget. The
+1.000, runtime about 0.85s, and 410 retrieval hits under a 450-hit budget. The
+answer-echo stress run intentionally self-supports false claims at rate 0.980
+and false-refutes them at 0.000, so answer-derived retrieval evidence is rejected
+as grounding. The
 selected product route remains strict low-latency `structured_qa` with
 `max_retrieval_use_rate=0.0` and `max_mean_attempted_route_count=1.1`.
-Version 1.5 also requires promoted selector replay over 12 redacted product
+Version 1.6 also requires promoted selector replay over 12 redacted product
 traces and a promoted runtime-drift report comparing the trace replay baseline
 against the promoted `auto` profile baseline; all 9 drift metrics pass with zero
 blocked metrics.

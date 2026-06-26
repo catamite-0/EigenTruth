@@ -9835,6 +9835,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         mean_duration_seconds=0.01,
         p99_duration_seconds=0.02,
     )
+    stress_manifest = _write_retrieval_stress_manifest(tmp_path, name="registry-workflow-stress")
     retrieval_manifest = _write_route_baseline_manifest(
         tmp_path,
         name="retrieval",
@@ -9849,6 +9850,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         runtime_total_seconds=2.0,
         runtime_n_retrieval_hits=24,
         claims_payload=_local_retrieval_claims_payload(labels_copied_to_record_metadata=False),
+        stress_manifest_path=stress_manifest,
     )
     ArtifactRegistry.load_json(baseline_registry_path).record_benchmark_manifest(
         name="structured-route",
@@ -10021,6 +10023,9 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         required_route_max_retrieval_hit_count=30,
         required_route_max_retrieval_use_rate=1.0,
         required_route_require_non_oracle_evidence=True,
+        required_route_require_retrieval_stress_control=True,
+        required_route_min_stress_false_supported_rate=0.90,
+        required_route_max_stress_false_refuted_rate=0.05,
         promotion_metadata={"scope": "unit"},
     )
     payload = module.run_release_candidate_registry_workflow(workflow_config)
@@ -10197,11 +10202,23 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["required_route_budget_policy"][
         "required_route_require_non_oracle_evidence"
     ] is True
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_require_retrieval_stress_control"
+    ] is True
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_min_stress_false_supported_rate"
+    ] == pytest.approx(0.90)
+    assert manifest["metadata"]["required_route_budget_policy"][
+        "required_route_max_stress_false_refuted_rate"
+    ] == pytest.approx(0.05)
     assert payload["config"]["runtime_profile"] == "balanced"
     assert payload["config"]["route_baseline_keys"] == ("benchmark_manifest:structured-route:0.6",)
     assert payload["config"]["required_route_baseline_keys"] == ("benchmark_manifest:retrieval-route:0.7",)
     assert payload["config"]["required_route_max_runtime_total_seconds"] == pytest.approx(3.0)
     assert payload["config"]["required_route_require_non_oracle_evidence"] is True
+    assert payload["config"]["required_route_require_retrieval_stress_control"] is True
+    assert payload["config"]["required_route_min_stress_false_supported_rate"] == pytest.approx(0.90)
+    assert payload["config"]["required_route_max_stress_false_refuted_rate"] == pytest.approx(0.05)
     assert payload["config"]["performance_baseline_key"] == "performance_baseline:qwen-performance:0.6"
     assert payload["config"]["fingerprint_cache"] == str(fingerprint_cache_path)
     assert payload["config"]["artifact_json_cache"] == str(json_cache_path)
@@ -10271,6 +10288,20 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         release_efficiency_report
     )
     assert payload["release_candidate_comparison"]["config"]["required_route_require_non_oracle_evidence"] is True
+    assert (
+        payload["release_candidate_comparison"]["config"]["required_route_require_retrieval_stress_control"]
+        is True
+    )
+    assert payload["release_candidate_comparison"]["config"][
+        "required_route_min_stress_false_supported_rate"
+    ] == pytest.approx(0.90)
+    assert payload["release_candidate_comparison"]["config"][
+        "required_route_max_stress_false_refuted_rate"
+    ] == pytest.approx(0.05)
+    stress_audit = payload["release_candidate_comparison"]["required_route_baseline_gate"]["rows"][0][
+        "retrieval_stress_audit"
+    ]
+    assert stress_audit["passed"] is True
     assert payload["release_candidate_comparison"]["performance_baseline_gate"][
         "performance_trend_gate"
     ]["passed"] is True
@@ -10355,6 +10386,18 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         pytest.approx(30.0)
     )
     assert record.metadata["required_route_budget_policy"]["required_route_require_non_oracle_evidence"] is True
+    assert (
+        record.metadata["required_route_budget_policy"][
+            "required_route_require_retrieval_stress_control"
+        ]
+        is True
+    )
+    assert record.metadata["required_route_budget_policy"][
+        "required_route_min_stress_false_supported_rate"
+    ] == pytest.approx(0.90)
+    assert record.metadata["required_route_budget_policy"][
+        "required_route_max_stress_false_refuted_rate"
+    ] == pytest.approx(0.05)
     assert record.metadata["adapter_family_required_routes"] == [
         "structured_state",
         "state_transition",

@@ -784,6 +784,11 @@ def _required_route_budget_policy(config: Mapping[str, Any]) -> dict[str, Any]:
             "required_route_max_retrieval_hit_count",
             "required_route_min_claims_cache_hit_rate",
             "required_route_min_verifier_trace_cache_hit_rate",
+            "required_route_require_non_oracle_evidence",
+            "required_route_require_retrieval_stress_control",
+            "required_route_retrieval_stress_manifest",
+            "required_route_min_stress_false_supported_rate",
+            "required_route_max_stress_false_refuted_rate",
         )
     }
 

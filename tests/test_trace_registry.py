@@ -1398,6 +1398,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "required_route_min_selected": 200,
             "required_route_max_runtime_total_seconds": 8.0,
             "required_route_max_retrieval_hit_count": 450.0,
+            "required_route_require_non_oracle_evidence": True,
+            "required_route_require_retrieval_stress_control": True,
+            "required_route_retrieval_stress_manifest": "artifacts/retrieval-stress/artifact-manifest.json",
+            "required_route_min_stress_false_supported_rate": 0.90,
+            "required_route_max_stress_false_refuted_rate": 0.05,
             "require_performance_score_dump_cache": True,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": 0.5,
             "performance_drift_baseline_key": "performance_baseline:runtime-reference:0.8",
@@ -1806,6 +1811,25 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     ]
     assert contract.metadata["required_route_budget_policy"]["required_route_min_selected"] == 200
     assert contract.metadata["required_route_budget_policy"]["required_route_max_retrieval_hit_count"] == 450.0
+    assert (
+        contract.metadata["required_route_budget_policy"]["required_route_require_non_oracle_evidence"]
+        is True
+    )
+    assert (
+        contract.metadata["required_route_budget_policy"][
+            "required_route_require_retrieval_stress_control"
+        ]
+        is True
+    )
+    assert contract.metadata["required_route_budget_policy"]["required_route_retrieval_stress_manifest"] == (
+        "artifacts/retrieval-stress/artifact-manifest.json"
+    )
+    assert contract.metadata["required_route_budget_policy"][
+        "required_route_min_stress_false_supported_rate"
+    ] == 0.90
+    assert contract.metadata["required_route_budget_policy"][
+        "required_route_max_stress_false_refuted_rate"
+    ] == 0.05
     assert contract.runtime_budget_policy == direct_policy
     assert contract.runtime_budget_policy.max_total_seconds == 1.0
     assert contract.runtime_budget_policy.max_mean_route_duration_seconds == 0.05

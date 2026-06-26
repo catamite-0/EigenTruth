@@ -1,0 +1,48 @@
+{
+  "artifacts": {
+    "baseline_product_runtime_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+      "sha256": "1f8df4db040cbdc11a1e97357605a82a6d7bea7b626e222b3513989950e17f9f",
+      "size_bytes": 63469
+    },
+    "current_product_runtime_baseline": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+      "sha256": "00af9fc758ffbcad9a515c7cd4e32e546f848d94121b68a719d2b256924af93f",
+      "size_bytes": 82074
+    },
+    "product_runtime_drift_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "product-runtime-drift.json",
+      "sha256": "ae873cbaa08ae742b2579c06d62a4c13436a093fe45dbee2000098efb126bb00",
+      "size_bytes": 4820
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "baseline_path": "artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json",
+    "compact_json": false,
+    "current_path": "artifacts/smollm2_product_trace_replay_workflow/runtime-baseline/product-runtime-baseline.json",
+    "runner": "compare_product_runtime_baselines",
+    "runtime_budget_policy_failed_count": 0,
+    "runtime_budget_policy_gate_enabled": false,
+    "runtime_budget_policy_key": null,
+    "runtime_budget_policy_passed": null,
+    "runtime_budget_policy_path": null,
+    "status": "promote"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 3,
+    "directory_count": 0,
+    "file_count": 3,
+    "missing_count": 0
+  }
+}

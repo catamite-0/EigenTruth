@@ -105,6 +105,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
     min_claims_cache_hit_rate: float | None = None
     min_verifier_trace_cache_hit_rate: float | None = None
     require_non_oracle_evidence: bool = False
+    require_retrieval_stress_control: bool = False
+    retrieval_stress_manifest_path: Path | None = None
+    min_stress_false_supported_rate: float | None = None
+    max_stress_false_refuted_rate: float | None = None
     required_route_min_selected: int | None = None
     required_route_min_decision_accuracy: float | None = None
     required_route_max_false_supported_rate: float | None = None
@@ -121,6 +125,10 @@ class ReleaseCandidateRegistryWorkflowConfig:
     required_route_min_claims_cache_hit_rate: float | None = None
     required_route_min_verifier_trace_cache_hit_rate: float | None = None
     required_route_require_non_oracle_evidence: bool = False
+    required_route_require_retrieval_stress_control: bool = False
+    required_route_retrieval_stress_manifest_path: Path | None = None
+    required_route_min_stress_false_supported_rate: float | None = None
+    required_route_max_stress_false_refuted_rate: float | None = None
     promotion_metadata: Mapping[str, Any] | None = None
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
@@ -184,6 +192,18 @@ class ReleaseCandidateRegistryWorkflowConfig:
             )
         if self.adapter_family_matrix_path is not None:
             object.__setattr__(self, "adapter_family_matrix_path", Path(self.adapter_family_matrix_path))
+        if self.retrieval_stress_manifest_path is not None:
+            object.__setattr__(
+                self,
+                "retrieval_stress_manifest_path",
+                Path(self.retrieval_stress_manifest_path),
+            )
+        if self.required_route_retrieval_stress_manifest_path is not None:
+            object.__setattr__(
+                self,
+                "required_route_retrieval_stress_manifest_path",
+                Path(self.required_route_retrieval_stress_manifest_path),
+            )
         if self.release_report_path is not None:
             object.__setattr__(self, "release_report_path", Path(self.release_report_path))
         if self.artifact_manifest_path is not None:
@@ -335,6 +355,10 @@ def run_release_candidate_registry_workflow(
         min_claims_cache_hit_rate=config.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=config.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=config.require_non_oracle_evidence,
+        require_retrieval_stress_control=config.require_retrieval_stress_control,
+        retrieval_stress_manifest=config.retrieval_stress_manifest_path,
+        min_stress_false_supported_rate=config.min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=config.max_stress_false_refuted_rate,
         required_route_min_selected=config.required_route_min_selected,
         required_route_min_decision_accuracy=config.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=config.required_route_max_false_supported_rate,
@@ -351,6 +375,18 @@ def run_release_candidate_registry_workflow(
         required_route_min_claims_cache_hit_rate=config.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=config.required_route_min_verifier_trace_cache_hit_rate,
         required_route_require_non_oracle_evidence=config.required_route_require_non_oracle_evidence,
+        required_route_require_retrieval_stress_control=(
+            config.required_route_require_retrieval_stress_control
+        ),
+        required_route_retrieval_stress_manifest=(
+            config.required_route_retrieval_stress_manifest_path
+        ),
+        required_route_min_stress_false_supported_rate=(
+            config.required_route_min_stress_false_supported_rate
+        ),
+        required_route_max_stress_false_refuted_rate=(
+            config.required_route_max_stress_false_refuted_rate
+        ),
         notes=("release candidate registry workflow",),
         fingerprint_cache=fingerprint_cache,
         json_cache=json_cache,
@@ -526,7 +562,29 @@ def run_release_candidate_registry_workflow(
                 config.required_route_min_verifier_trace_cache_hit_rate
             ),
             "require_non_oracle_evidence": config.require_non_oracle_evidence,
+            "require_retrieval_stress_control": config.require_retrieval_stress_control,
+            "retrieval_stress_manifest": (
+                None
+                if config.retrieval_stress_manifest_path is None
+                else str(config.retrieval_stress_manifest_path)
+            ),
+            "min_stress_false_supported_rate": config.min_stress_false_supported_rate,
+            "max_stress_false_refuted_rate": config.max_stress_false_refuted_rate,
             "required_route_require_non_oracle_evidence": config.required_route_require_non_oracle_evidence,
+            "required_route_require_retrieval_stress_control": (
+                config.required_route_require_retrieval_stress_control
+            ),
+            "required_route_retrieval_stress_manifest": (
+                None
+                if config.required_route_retrieval_stress_manifest_path is None
+                else str(config.required_route_retrieval_stress_manifest_path)
+            ),
+            "required_route_min_stress_false_supported_rate": (
+                config.required_route_min_stress_false_supported_rate
+            ),
+            "required_route_max_stress_false_refuted_rate": (
+                config.required_route_max_stress_false_refuted_rate
+            ),
         },
         "release_candidate_comparison": comparison,
         "promotion": promotion,
@@ -878,6 +936,17 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_route_runtime_retrieval_hit_count": verifier_route.get("runtime_retrieval_hit_count"),
         "recommended_route_claims_cache_hit_rate": verifier_route.get("claims_cache_hit_rate"),
         "recommended_route_verifier_trace_cache_hit_rate": verifier_route.get("verifier_trace_cache_hit_rate"),
+        "release_route_require_non_oracle_evidence": config.get("require_non_oracle_evidence"),
+        "release_route_require_retrieval_stress_control": config.get(
+            "require_retrieval_stress_control"
+        ),
+        "release_route_retrieval_stress_manifest": config.get("retrieval_stress_manifest"),
+        "release_route_min_stress_false_supported_rate": config.get(
+            "min_stress_false_supported_rate"
+        ),
+        "release_route_max_stress_false_refuted_rate": config.get(
+            "max_stress_false_refuted_rate"
+        ),
         "selector_replay_report": selector_replay.get("report_path"),
         "selector_replay_recommended_policy_path": selector_replay.get("recommended_policy_path"),
         "selector_replay_estimated_cost_units_mean": selector_replay_recommended.get(
@@ -988,6 +1057,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
                 "required_route_min_claims_cache_hit_rate",
                 "required_route_min_verifier_trace_cache_hit_rate",
                 "required_route_require_non_oracle_evidence",
+                "required_route_require_retrieval_stress_control",
+                "required_route_retrieval_stress_manifest",
+                "required_route_min_stress_false_supported_rate",
+                "required_route_max_stress_false_refuted_rate",
             )
         },
         "readiness_manifest": manifests.get("readiness_manifest"),
@@ -1203,6 +1276,12 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         min_claims_cache_hit_rate=args.min_claims_cache_hit_rate,
         min_verifier_trace_cache_hit_rate=args.min_verifier_trace_cache_hit_rate,
         require_non_oracle_evidence=bool(args.require_non_oracle_evidence),
+        require_retrieval_stress_control=bool(args.require_retrieval_stress_control),
+        retrieval_stress_manifest_path=(
+            None if args.retrieval_stress_manifest is None else Path(args.retrieval_stress_manifest)
+        ),
+        min_stress_false_supported_rate=args.min_stress_false_supported_rate,
+        max_stress_false_refuted_rate=args.max_stress_false_refuted_rate,
         required_route_min_selected=args.required_route_min_selected,
         required_route_min_decision_accuracy=args.required_route_min_decision_accuracy,
         required_route_max_false_supported_rate=args.required_route_max_false_supported_rate,
@@ -1219,6 +1298,16 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         required_route_min_claims_cache_hit_rate=args.required_route_min_claims_cache_hit_rate,
         required_route_min_verifier_trace_cache_hit_rate=args.required_route_min_verifier_trace_cache_hit_rate,
         required_route_require_non_oracle_evidence=bool(args.required_route_require_non_oracle_evidence),
+        required_route_require_retrieval_stress_control=bool(
+            args.required_route_require_retrieval_stress_control
+        ),
+        required_route_retrieval_stress_manifest_path=(
+            None
+            if args.required_route_retrieval_stress_manifest is None
+            else Path(args.required_route_retrieval_stress_manifest)
+        ),
+        required_route_min_stress_false_supported_rate=args.required_route_min_stress_false_supported_rate,
+        required_route_max_stress_false_refuted_rate=args.required_route_max_stress_false_refuted_rate,
         promotion_metadata=_parse_metadata(args.metadata or ()),
         allow_non_promote=bool(args.allow_non_promote),
         allow_promotion_failures=bool(args.allow_promotion_failures),
@@ -1436,6 +1525,28 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="require selected route claims to omit labels and include input provenance",
     )
     parser.add_argument(
+        "--require-retrieval-stress-control",
+        action="store_true",
+        help="require selected retrieval route evidence to pass an answer-echo stress control",
+    )
+    parser.add_argument(
+        "--retrieval-stress-manifest",
+        default=None,
+        help="optional selected-route answer-echo retrieval stress artifact manifest path",
+    )
+    parser.add_argument(
+        "--min-stress-false-supported-rate",
+        type=lambda value: _parse_unit_float(value, flag="--min-stress-false-supported-rate"),
+        default=None,
+        help="minimum false-supported rate expected on answer-echo stress control",
+    )
+    parser.add_argument(
+        "--max-stress-false-refuted-rate",
+        type=lambda value: _parse_unit_float(value, flag="--max-stress-false-refuted-rate"),
+        default=None,
+        help="maximum false-refuted rate expected on answer-echo stress control",
+    )
+    parser.add_argument(
         "--min-performance-score-dump-cache-jsonl-view-hit-rate",
         type=lambda value: _parse_unit_float(
             value,
@@ -1548,6 +1659,34 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--required-route-require-non-oracle-evidence",
         action="store_true",
         help="require required route claims to omit labels and include input provenance",
+    )
+    parser.add_argument(
+        "--required-route-require-retrieval-stress-control",
+        action="store_true",
+        help="require required route evidence to pass an answer-echo retrieval stress control",
+    )
+    parser.add_argument(
+        "--required-route-retrieval-stress-manifest",
+        default=None,
+        help="optional required-route answer-echo retrieval stress artifact manifest path",
+    )
+    parser.add_argument(
+        "--required-route-min-stress-false-supported-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--required-route-min-stress-false-supported-rate",
+        ),
+        default=None,
+        help="minimum false-supported rate expected for required-route answer-echo stress control",
+    )
+    parser.add_argument(
+        "--required-route-max-stress-false-refuted-rate",
+        type=lambda value: _parse_unit_float(
+            value,
+            flag="--required-route-max-stress-false-refuted-rate",
+        ),
+        default=None,
+        help="maximum false-refuted rate expected for required-route answer-echo stress control",
     )
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero unless the release candidate registry workflow promotes")
