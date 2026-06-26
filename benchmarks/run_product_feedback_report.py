@@ -56,6 +56,8 @@ class ProductFeedbackReportConfig:
     max_accepted_but_wrong_rate: float | None = None
     max_retrieved_failure_rate: float | None = None
     max_abstain_false_positive_rate: float | None = None
+    max_final_answered_but_wrong_rate: float | None = None
+    max_final_answer_false_block_rate: float | None = None
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -107,6 +109,22 @@ class ProductFeedbackReportConfig:
                 name="max_abstain_false_positive_rate",
             ),
         )
+        object.__setattr__(
+            self,
+            "max_final_answered_but_wrong_rate",
+            _optional_unit_float(
+                self.max_final_answered_but_wrong_rate,
+                name="max_final_answered_but_wrong_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "max_final_answer_false_block_rate",
+            _optional_unit_float(
+                self.max_final_answer_false_block_rate,
+                name="max_final_answer_false_block_rate",
+            ),
+        )
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
     @property
@@ -145,6 +163,8 @@ def build_product_feedback_report(config: ProductFeedbackReportConfig) -> dict[s
             "max_accepted_but_wrong_rate": config.max_accepted_but_wrong_rate,
             "max_retrieved_failure_rate": config.max_retrieved_failure_rate,
             "max_abstain_false_positive_rate": config.max_abstain_false_positive_rate,
+            "max_final_answered_but_wrong_rate": config.max_final_answered_but_wrong_rate,
+            "max_final_answer_false_block_rate": config.max_final_answer_false_block_rate,
             "metadata": dict(config.metadata),
         },
         "paths": {
@@ -212,6 +232,15 @@ def _joined_record(record: ProductFeedbackRecord, trace: Mapping[str, Any]) -> d
     retrieved = _has_action(actions, decision_action, "retrieve")
     abstained = _has_action(actions, decision_action, "abstain")
     clarified = _has_action(actions, decision_action, "clarify")
+    final_status = _optional_str(trace.get("final_answer_status"))
+    final_answerable = _optional_bool(trace.get("final_answer_answerable"))
+    final_action = _optional_str(trace.get("final_answer_action"))
+    final_available = final_status is not None or final_answerable is not None or final_action is not None
+    final_answered = final_status == "answered" or final_answerable is True
+    final_blocks = final_available and (
+        final_answerable is False
+        or final_status in {"abstained", "needs_retrieval", "needs_clarification"}
+    )
     return {
         "feedback": record.to_dict(),
         "trace": {
@@ -221,6 +250,10 @@ def _joined_record(record: ProductFeedbackRecord, trace: Mapping[str, Any]) -> d
             "decision_action": decision_action,
             "risk_level": trace.get("risk_level"),
             "action_names": actions,
+            "final_answer_status": final_status,
+            "final_answer_action": final_action,
+            "final_answer_answerable": final_answerable,
+            "final_answer_risk_level": trace.get("final_answer_risk_level"),
         },
         "flags": {
             "accepted": accepted,
@@ -234,6 +267,11 @@ def _joined_record(record: ProductFeedbackRecord, trace: Mapping[str, Any]) -> d
             "retrieved_failure": retrieved and outcome in _WRONG_OUTCOMES,
             "retrieved_but_still_unsupported": retrieved and outcome in _UNSUPPORTED_OUTCOMES,
             "abstain_false_positive": abstained and outcome in _BLOCK_FALSE_POSITIVE_OUTCOMES,
+            "final_answer_available": final_available,
+            "final_answered": final_answered,
+            "final_answer_blocks": final_blocks,
+            "final_answered_but_wrong": final_answered and outcome in _WRONG_OUTCOMES,
+            "final_answer_false_block": final_blocks and outcome in _BLOCK_FALSE_POSITIVE_OUTCOMES,
         },
     }
 
@@ -252,7 +290,15 @@ def _feedback_summary(
     retrieved_still_unsupported_count = 0
     abstain_count = 0
     abstain_false_positive_count = 0
+    final_answer_available_count = 0
+    final_answered_count = 0
+    final_answerable_count = 0
+    final_answer_block_count = 0
+    final_answered_but_wrong_count = 0
+    final_answer_false_block_count = 0
     claim_level_count = 0
+    final_answer_status_counts: dict[str, int] = {}
+    final_answer_action_counts: dict[str, int] = {}
     for item in matched:
         feedback = _mapping(item.get("feedback"))
         trace = _mapping(item.get("trace"))
@@ -277,6 +323,22 @@ def _feedback_summary(
             abstain_count += 1
         if flags.get("abstain_false_positive"):
             abstain_false_positive_count += 1
+        if flags.get("final_answer_available"):
+            final_answer_available_count += 1
+            final_status = str(trace.get("final_answer_status") or "unknown")
+            final_answer_status_counts[final_status] = final_answer_status_counts.get(final_status, 0) + 1
+            final_action = str(trace.get("final_answer_action") or "unknown")
+            final_answer_action_counts[final_action] = final_answer_action_counts.get(final_action, 0) + 1
+        if flags.get("final_answered"):
+            final_answered_count += 1
+        if trace.get("final_answer_answerable") is True:
+            final_answerable_count += 1
+        if flags.get("final_answer_blocks"):
+            final_answer_block_count += 1
+        if flags.get("final_answered_but_wrong"):
+            final_answered_but_wrong_count += 1
+        if flags.get("final_answer_false_block"):
+            final_answer_false_block_count += 1
 
     matched_count = len(matched)
     feedback_count = matched_count + unmatched_count
@@ -311,6 +373,23 @@ def _feedback_summary(
             abstain_false_positive_count,
             abstain_count,
         ),
+        "final_answer_available_feedback_count": final_answer_available_count,
+        "final_answer_unavailable_feedback_count": matched_count - final_answer_available_count,
+        "final_answer_status_counts": final_answer_status_counts,
+        "final_answer_action_counts": final_answer_action_counts,
+        "final_answered_feedback_count": final_answered_count,
+        "final_answerable_feedback_count": final_answerable_count,
+        "final_answer_block_feedback_count": final_answer_block_count,
+        "final_answered_but_wrong_count": final_answered_but_wrong_count,
+        "final_answered_but_wrong_rate": binomial_confidence_interval(
+            final_answered_but_wrong_count,
+            final_answered_count,
+        ),
+        "final_answer_false_block_count": final_answer_false_block_count,
+        "final_answer_false_block_rate": binomial_confidence_interval(
+            final_answer_false_block_count,
+            final_answer_block_count,
+        ),
     }
 
 
@@ -340,6 +419,18 @@ def _gate_summary(summary: Mapping[str, Any], config: ProductFeedbackReportConfi
         _nested_estimate(summary, "abstain_false_positive_rate"),
         config.max_abstain_false_positive_rate,
     )
+    _check_max_rate(
+        failures,
+        "final_answered_but_wrong_rate",
+        _nested_estimate(summary, "final_answered_but_wrong_rate"),
+        config.max_final_answered_but_wrong_rate,
+    )
+    _check_max_rate(
+        failures,
+        "final_answer_false_block_rate",
+        _nested_estimate(summary, "final_answer_false_block_rate"),
+        config.max_final_answer_false_block_rate,
+    )
     configured = any(
         value is not None
         for value in (
@@ -347,6 +438,8 @@ def _gate_summary(summary: Mapping[str, Any], config: ProductFeedbackReportConfi
             config.max_accepted_but_wrong_rate,
             config.max_retrieved_failure_rate,
             config.max_abstain_false_positive_rate,
+            config.max_final_answered_but_wrong_rate,
+            config.max_final_answer_false_block_rate,
         )
     )
     return {
@@ -359,6 +452,8 @@ def _gate_summary(summary: Mapping[str, Any], config: ProductFeedbackReportConfi
             "max_accepted_but_wrong_rate": config.max_accepted_but_wrong_rate,
             "max_retrieved_failure_rate": config.max_retrieved_failure_rate,
             "max_abstain_false_positive_rate": config.max_abstain_false_positive_rate,
+            "max_final_answered_but_wrong_rate": config.max_final_answered_but_wrong_rate,
+            "max_final_answer_false_block_rate": config.max_final_answer_false_block_rate,
         },
     }
 
@@ -408,6 +503,7 @@ def _load_trace_record(path: str | Path) -> dict[str, Any]:
     fingerprint = product_trace_fingerprint(payload)
     risk_decision = _mapping(payload.get("risk_decision"))
     action_names = _trace_action_names(payload)
+    final_answer = _mapping(payload.get("final_answer"))
     return {
         "path": str(trace_path),
         "request_id": payload.get("request_id"),
@@ -415,6 +511,10 @@ def _load_trace_record(path: str | Path) -> dict[str, Any]:
         "decision_action": risk_decision.get("action"),
         "risk_level": risk_decision.get("risk_level"),
         "action_names": action_names,
+        "final_answer_status": final_answer.get("status"),
+        "final_answer_action": final_answer.get("action"),
+        "final_answer_answerable": _optional_bool(final_answer.get("answerable")),
+        "final_answer_risk_level": final_answer.get("risk_level"),
     }
 
 
@@ -493,6 +593,18 @@ def _record_registry(config: ProductFeedbackReportConfig, report: Mapping[str, A
                 "abstain_false_positive_rate",
                 "estimate",
             ),
+            "final_answered_but_wrong_rate": _nested(
+                report,
+                "summary",
+                "final_answered_but_wrong_rate",
+                "estimate",
+            ),
+            "final_answer_false_block_rate": _nested(
+                report,
+                "summary",
+                "final_answer_false_block_rate",
+                "estimate",
+            ),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             **dict(config.metadata),
         },
@@ -541,6 +653,8 @@ def _config_from_args(args: argparse.Namespace) -> ProductFeedbackReportConfig:
         max_accepted_but_wrong_rate=args.max_accepted_but_wrong_rate,
         max_retrieved_failure_rate=args.max_retrieved_failure_rate,
         max_abstain_false_positive_rate=args.max_abstain_false_positive_rate,
+        max_final_answered_but_wrong_rate=args.max_final_answered_but_wrong_rate,
+        max_final_answer_false_block_rate=args.max_final_answer_false_block_rate,
         compact_json=bool(args.compact_json),
     )
 
@@ -577,6 +691,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-accepted-but-wrong-rate", type=float, default=None)
     parser.add_argument("--max-retrieved-failure-rate", type=float, default=None)
     parser.add_argument("--max-abstain-false-positive-rate", type=float, default=None)
+    parser.add_argument("--max-final-answered-but-wrong-rate", type=float, default=None)
+    parser.add_argument("--max-final-answer-false-block-rate", type=float, default=None)
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",
                         help="exit non-zero when configured feedback gates fail")
@@ -615,6 +731,19 @@ def _optional_non_negative_int(value: Any, *, name: str) -> int | None:
     if numeric < 0:
         raise ValueError(f"{name} must be non-negative.")
     return numeric
+
+
+def _optional_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return None
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    return None
 
 
 def _nested(mapping: Mapping[str, Any], *keys: str) -> Any:

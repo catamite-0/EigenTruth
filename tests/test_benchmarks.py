@@ -19787,6 +19787,35 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
         ("req-retrieve", "retrieve"),
         ("req-abstain", "abstain"),
     ):
+        final_answer = {
+            "accept": {
+                "status": "answered",
+                "text": "Unit answer",
+                "answerable": True,
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 0.9,
+                "reason": "unit",
+            },
+            "retrieve": {
+                "status": "needs_retrieval",
+                "text": "More evidence is required.",
+                "answerable": False,
+                "action": "retrieve",
+                "risk_level": "high",
+                "confidence": 0.7,
+                "reason": "unit",
+            },
+            "abstain": {
+                "status": "abstained",
+                "text": "I cannot answer reliably.",
+                "answerable": False,
+                "action": "abstain",
+                "risk_level": "high",
+                "confidence": 0.8,
+                "reason": "unit",
+            },
+        }[action]
         path = tmp_path / f"{request_id}.json"
         path.write_text(
             json.dumps({
@@ -19798,6 +19827,7 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
                     "reason": "unit",
                 },
                 "actions": [{"action": action, "reason": "unit", "payload": {}}],
+                "final_answer": final_answer,
                 "metadata": {"scenario": request_id},
             }),
             encoding="utf-8",
@@ -19831,6 +19861,8 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
             max_accepted_but_wrong_rate=1.0,
             max_retrieved_failure_rate=1.0,
             max_abstain_false_positive_rate=1.0,
+            max_final_answered_but_wrong_rate=1.0,
+            max_final_answer_false_block_rate=1.0,
             metadata={"suite": "unit"},
         )
     )
@@ -19845,9 +19877,31 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
     assert report["summary"]["retrieved_failure_count"] == 1
     assert report["summary"]["retrieved_but_still_unsupported_count"] == 1
     assert report["summary"]["abstain_false_positive_count"] == 1
+    assert report["summary"]["final_answer_available_feedback_count"] == 3
+    assert report["summary"]["final_answer_status_counts"] == {
+        "answered": 1,
+        "needs_retrieval": 1,
+        "abstained": 1,
+    }
+    assert report["summary"]["final_answer_action_counts"] == {
+        "accept": 1,
+        "retrieve": 1,
+        "abstain": 1,
+    }
+    assert report["summary"]["final_answered_feedback_count"] == 1
+    assert report["summary"]["final_answered_but_wrong_count"] == 1
+    assert report["summary"]["final_answered_but_wrong_rate"]["estimate"] == pytest.approx(1.0)
+    assert report["summary"]["final_answer_block_feedback_count"] == 2
+    assert report["summary"]["final_answer_false_block_count"] == 1
+    assert report["summary"]["final_answer_false_block_rate"]["estimate"] == pytest.approx(0.5)
+    assert report["matched_feedback"][0]["trace"]["final_answer_status"] == "answered"
+    assert report["matched_feedback"][0]["flags"]["final_answered_but_wrong"] is True
+    assert report["matched_feedback"][2]["flags"]["final_answer_false_block"] is True
     assert saved["artifact_manifest_summary"]["artifact_count"] == 5
     assert record.metadata["workflow"] == "product_feedback_report"
     assert record.metadata["accepted_but_wrong_rate"] == pytest.approx(1.0)
+    assert record.metadata["final_answered_but_wrong_rate"] == pytest.approx(1.0)
+    assert record.metadata["final_answer_false_block_rate"] == pytest.approx(0.5)
     assert record.metadata["suite"] == "unit"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
 
@@ -19863,12 +19917,31 @@ def test_product_feedback_report_joins_feedback_and_registers(tmp_path):
     assert blocked["status"] == "blocked"
     assert blocked["quality_gate"]["failures"][0]["metric"] == "accepted_but_wrong_rate"
 
+    final_blocked = module.build_product_feedback_report(
+        module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=tmp_path / "blocked-final-feedback-report.json",
+            max_final_answer_false_block_rate=0.25,
+        )
+    )
+
+    assert final_blocked["status"] == "blocked"
+    assert final_blocked["quality_gate"]["failures"][0]["metric"] == "final_answer_false_block_rate"
+
     with pytest.raises(ValueError, match="not bool"):
         module.ProductFeedbackReportConfig(
             trace_paths=trace_paths,
             feedback_paths=(feedback_path,),
             report_path=tmp_path / "invalid-feedback-report.json",
             max_retrieved_failure_rate=True,
+        )
+    with pytest.raises(ValueError, match="not bool"):
+        module.ProductFeedbackReportConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            report_path=tmp_path / "invalid-final-feedback-report.json",
+            max_final_answered_but_wrong_rate=True,
         )
 
 
