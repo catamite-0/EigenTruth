@@ -1,0 +1,29 @@
+{
+  "checked": 7,
+  "failures": [],
+  "manifest_path": "artifacts/wikidata-country-capitals-external-corpus/artifact-manifest.json",
+  "nested": [
+    {
+      "checked": 3,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-country-capitals-external-corpus/provenance-audit-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 2,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-country-capitals-external-corpus/external-corpus-manifest.json",
+      "nested": [],
+      "passed": true
+    },
+    {
+      "checked": 1,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-country-capitals-external-corpus/wikidata-source-manifest.json",
+      "nested": [],
+      "passed": true
+    }
+  ],
+  "passed": true
+}

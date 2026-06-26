@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "wikidata_reference_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-capitals-source.jsonl",
+      "sha256": "e0c400b36ca4ea89834b385e0bbc2649d80bf02ed8ace4aebab44fcf5794ea60",
+      "size_bytes": 107058
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "endpoint": "https://query.wikidata.org/sparql",
+    "fetched_at": "2026-06-26T03:00:04+00:00",
+    "license": "CC0-1.0",
+    "license_url": "https://www.wikidata.org/wiki/Wikidata:Licensing",
+    "n_documents": 120,
+    "provider": "wikidata",
+    "query_preset": "country_capitals",
+    "workflow": "fetch_wikidata_reference_docs"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 1,
+    "directory_count": 0,
+    "file_count": 1,
+    "missing_count": 0
+  }
+}

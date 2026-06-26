@@ -2435,6 +2435,31 @@ answer corpus. `compare_route_baselines.py --require-retrieval-stress-control`
 and `compare_release_candidates.py --required-route-require-retrieval-stress-control`
 turn this negative control into a fail-closed route/release gate.
 
+## `fetch_wikidata_reference_docs.py`
+
+Fetches or replays a small Wikidata SPARQL result set into JSONL source
+documents. The current preset is `country_capitals`: each source document states
+one country-capital fact with Wikidata QID metadata, `license=CC0-1.0`, source
+URL metadata, and a retrieval timestamp. The script uses only the standard
+library and supports `--input-json` for offline replay of saved SPARQL results.
+
+```bash
+python benchmarks/fetch_wikidata_reference_docs.py \
+  --limit 120 \
+  --output artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-source.jsonl \
+  --artifact-manifest artifacts/wikidata-country-capitals-external-corpus/wikidata-source-manifest.json
+```
+
+The committed evidence-source gate at
+`artifacts/wikidata-country-capitals-external-corpus/` fetches 120 Wikidata
+country-capital records, normalizes them through
+`build_external_retrieval_corpus.py`, passes
+`audit_retrieval_corpus_provenance.py --audit-role grounding`, and recursively
+verifies the top-level manifest. Its scope is deliberately narrow:
+`promotes_verifier_route=false`; it proves a real CC0 external source can pass
+the provenance gate, not that the country-capital corpus is sufficient
+open-domain grounding coverage for TruthfulQA.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied

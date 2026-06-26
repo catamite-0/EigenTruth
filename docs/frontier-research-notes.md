@@ -134,6 +134,13 @@ Added a retrieval corpus provenance audit gate:
 - Grounding audit is fail-closed for untyped local corpora: absence of answer
   copies or labels is no longer enough to mark a local text dump as external
   evidence.
+- `fetch_wikidata_reference_docs.py` materializes real Wikidata CC0
+  country-capital SPARQL records as JSONL source docs. The artifact at
+  `artifacts/wikidata-country-capitals-external-corpus/` fetches 120 records,
+  normalizes them through the external corpus builder, passes grounding
+  provenance audit, and recursively verifies the manifest. It is source/provenance
+  evidence only (`promotes_verifier_route=false`), not a broad TruthfulQA
+  grounding route.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

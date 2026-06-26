@@ -1,0 +1,40 @@
+{
+  "artifacts": {
+    "corpus": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-capitals-corpus.json",
+      "sha256": "6925c26ece6a1b16e1dd232b206a9ff72744e254c57995cfe565d9c4f4a3e76f",
+      "size_bytes": 168255
+    },
+    "source.1.wikidata-country-capitals-source": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "wikidata-country-capitals-source.jsonl",
+      "sha256": "e0c400b36ca4ea89834b385e0bbc2649d80bf02ed8ace4aebab44fcf5794ea60",
+      "size_bytes": 107058
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "corpus_type": "external_evidence_candidate",
+    "summary": {
+      "n_documents": 120,
+      "n_documents_with_source": 120,
+      "n_documents_with_timestamp": 120,
+      "n_documents_with_url": 120,
+      "n_skipped_short": 0,
+      "n_sources": 1
+    },
+    "workflow": "build_external_retrieval_corpus"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

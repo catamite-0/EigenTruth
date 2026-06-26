@@ -427,6 +427,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_selfcheck_signal_score_dump.py` | Converts aligned sampled responses directly into score-dump columns such as `selfcheck_support_rate`, `selfcheck_refute_rate`, and `selfcheck_disagreement`, so self-consistency evidence can be calibrated or fused without going through a verifier sidecar. |
 | `export_inside_diagnostics_samples.py` | Recovers sampled response texts from an `eval_truthfulqa.py --inside-diagnostics-cache` file into a selfcheck samples payload with source/cache/output manifest provenance. |
 | `build_text_baseline_score_dump.py` | Appends dependency-free text/length redline baselines such as answer length, claim length, lexical overlap, negation, and number counts to statement-bearing score dumps, so new detector claims can be compared against cheap lexical controls. |
+| `fetch_wikidata_reference_docs.py` | Materializes small CC0 Wikidata SPARQL result sets as JSONL source documents for external retrieval corpus ingestion. |
 | `build_external_retrieval_corpus.py` | Normalizes caller-supplied JSON/JSONL/text source files into an explicit `external_evidence_candidate` retrieval corpus and rejects score labels, claim ids, or score-dump row links in document metadata. |
 | `audit_retrieval_corpus_provenance.py` | Audits retrieval corpora against statement-bearing score dumps, separating external grounding candidates from controlled dataset baselines and answer-echo/oracle-risk stress corpora. |
 | `run_verifier_signal_fusion_workflow.py` | Runs the no-model local evidence loop end to end: retrieval/selfcheck fixture, verifier sidecar, verifier-signal score dumps, geometry-fusion report, deployable geometry artifacts, and manifest verification. |
@@ -483,6 +484,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_transition_fixture.py` | Builds deterministic order-reservation transition fixtures for state-transition verifier benchmarks. |
 | `build_truthfulqa_corpus.py` | Builds a local TruthfulQA correct-answer corpus for reproducible non-oracle retrieval baselines. |
 | `build_retrieval_stress_corpus.py` | Builds answer-echo retrieval stress corpora from statement-bearing score dumps, exposing self-support failure modes when retrieval evidence comes from the same answers being audited. |
+| `fetch_wikidata_reference_docs.py` | Fetches or replays Wikidata country-capital SPARQL results into JSONL source docs for external evidence smoke gates. |
 | `build_external_retrieval_corpus.py` | Builds explicit external-candidate retrieval corpora from local source files before provenance audit and local retrieval fixture construction. |
 | `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora. |
 | `backfill_truthfulqa_statements.py` | Rebuilds deterministic TruthfulQA statement metadata for older score dumps and can emit label-derived oracle evidence for verifier upper-bound checks. |
@@ -544,6 +546,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_selfcheck_signal_score_dump.py` | 将对齐的 sampled responses 直接转成 `selfcheck_support_rate`、`selfcheck_refute_rate`、`selfcheck_disagreement` 等 score-dump 列，让自一致性证据不经过 verifier sidecar 也能单独校准或融合。 |
 | `export_inside_diagnostics_samples.py` | 从 `eval_truthfulqa.py --inside-diagnostics-cache` 文件恢复 sampled response 文本，导出 selfcheck samples payload，并写入 source/cache/output manifest provenance。 |
 | `build_text_baseline_score_dump.py` | 给带 statement metadata 的 score dump 追加无依赖 text/length 红线 baseline，例如 answer/claim 长度、词面重叠、否定和数字计数，确保新 detector 先和廉价词面控制项对比。 |
+| `fetch_wikidata_reference_docs.py` | 将小型 Wikidata CC0 SPARQL 结果物化为 JSONL source docs，用于外部 retrieval corpus ingestion。 |
 | `build_external_retrieval_corpus.py` | 将调用方提供的 JSON/JSONL/text 来源文件规范化为显式 `external_evidence_candidate` retrieval corpus，并拒绝 document metadata 中的 score label、claim id 或 score-dump row link。 |
 | `audit_retrieval_corpus_provenance.py` | 对 statement-bearing score dump 和 retrieval corpus 做 provenance 审计，区分外部 grounding 候选、受控数据集基线和 answer-echo/oracle-risk stress corpus。 |
 | `run_verifier_signal_fusion_workflow.py` | 端到端运行无模型本地证据闭环：retrieval/selfcheck fixture、verifier sidecar、verifier-signal score dump、geometry-fusion report、可部署 geometry artifact 和 manifest verification。 |
@@ -599,6 +602,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_transition_fixture.py` | 构建确定性的订单预留 state-transition fixture，用于 world-model/postcondition verifier benchmark。 |
 | `build_truthfulqa_corpus.py` | 构建本地 TruthfulQA correct-answer corpus，用于可复现的非 oracle retrieval baseline。 |
 | `build_retrieval_stress_corpus.py` | 从带 statement metadata 的 score dump 构建 answer-echo retrieval stress corpus，用来暴露检索证据来自待审答案本身时的自证失败模式。 |
+| `fetch_wikidata_reference_docs.py` | 拉取或重放 Wikidata country-capital SPARQL 结果，输出外部证据 smoke gate 可用的 JSONL source docs。 |
 | `build_external_retrieval_corpus.py` | 从本地来源文件构建显式外部候选 retrieval corpus，再进入 provenance audit 和本地 retrieval fixture 构建。 |
 | `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
 | `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |

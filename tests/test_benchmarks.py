@@ -2781,6 +2781,107 @@ def test_build_external_retrieval_corpus_outputs_auditable_external_candidate(tm
     assert report["gate"]["external_domain_shift_ready"] is True
 
 
+def test_fetch_wikidata_reference_docs_feeds_external_corpus_gate(tmp_path):
+    wikidata = importlib.import_module("benchmarks.fetch_wikidata_reference_docs")
+    builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
+    audit = importlib.import_module("benchmarks.audit_retrieval_corpus_provenance")
+    sparql_path = tmp_path / "wikidata-sparql.json"
+    source_path = tmp_path / "wikidata-reference.jsonl"
+    corpus_path = tmp_path / "wikidata-corpus.json"
+    scores_path = tmp_path / "scores.json"
+    sparql_path.write_text(
+        json.dumps({
+            "results": {
+                "bindings": [
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q142"},
+                        "countryLabel": {"type": "literal", "value": "France"},
+                        "capital": {"type": "uri", "value": "http://www.wikidata.org/entity/Q90"},
+                        "capitalLabel": {"type": "literal", "value": "Paris"},
+                    },
+                    {
+                        "country": {"type": "uri", "value": "http://www.wikidata.org/entity/Q17"},
+                        "countryLabel": {"type": "literal", "value": "Japan"},
+                        "capital": {"type": "uri", "value": "http://www.wikidata.org/entity/Q1490"},
+                        "capitalLabel": {"type": "literal", "value": "Tokyo"},
+                    },
+                ]
+            }
+        }),
+        encoding="utf-8",
+    )
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.2, 0.8]},
+            "statements": [
+                {
+                    "claim_id": "paris",
+                    "question": "What is the capital of France?",
+                    "answer": "Paris.",
+                    "text": "Paris is the capital of France.",
+                },
+                {
+                    "claim_id": "lyon",
+                    "question": "What is the capital of France?",
+                    "answer": "Lyon.",
+                    "text": "Lyon is the capital of France.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    documents = wikidata.run(
+        SimpleNamespace(
+            output=str(source_path),
+            limit=10,
+            endpoint="https://query.wikidata.org/sparql",
+            timeout=1.0,
+            user_agent="EigenTruth test",
+            input_json=str(sparql_path),
+            fetched_at="2026-06-26T00:00:00+00:00",
+            artifact_manifest=str(tmp_path / "wikidata-source.manifest.json"),
+        )
+    )
+    corpus = builder.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(corpus_path),
+            corpus_name="wikidata_country_capitals",
+            source_kind="wikidata_sparql_jsonl",
+            min_chars=10,
+            allow_missing_source=False,
+            trusted_source=["wikidata.org"],
+            default_timestamp=None,
+            artifact_manifest=None,
+        )
+    )
+    report = audit.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(corpus_path)],
+            output=str(tmp_path / "wikidata-audit.json"),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+
+    assert len(documents) == 2
+    assert "capital of France is Paris" in documents[0]["text"]
+    assert documents[0]["metadata"]["license"] == "CC0-1.0"
+    assert documents[0]["metadata"]["country_qid"] == "Q142"
+    assert corpus["corpus_type"] == "external_evidence_candidate"
+    assert corpus["documents"][0]["metadata"]["provider"] == "wikidata"
+    assert "claim_id" not in corpus["documents"][0]["metadata"]
+    assert report["status"] == "pass"
+    assert report["gate"]["external_domain_shift_ready"] is True
+
+
 def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):
     builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
     source_path = tmp_path / "bad-reference.json"
@@ -2811,6 +2912,39 @@ def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):
                 artifact_manifest=None,
             )
         )
+
+
+def test_build_external_retrieval_corpus_cli_accepts_trusted_source(tmp_path, monkeypatch):
+    builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
+    source_path = tmp_path / "reference.jsonl"
+    output_path = tmp_path / "external-corpus.json"
+    source_path.write_text(
+        json.dumps({
+            "text": "According to Wikidata structured data, the capital of France is Paris.",
+            "source": "wikidata:Q142:P36:Q90",
+            "metadata": {"provider": "wikidata", "license": "CC0-1.0"},
+        }) + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "build_external_retrieval_corpus.py",
+            "--source",
+            str(source_path),
+            "--output",
+            str(output_path),
+            "--trusted-source",
+            "wikidata.org",
+        ],
+    )
+
+    builder.main()
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert payload["corpus_type"] == "external_evidence_candidate"
+    assert payload["config"]["trusted_source"] == ["wikidata.org"]
 
 
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):

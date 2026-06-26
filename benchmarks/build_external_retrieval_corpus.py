@@ -291,7 +291,7 @@ def main() -> None:
     parser.add_argument("--source-kind", default="local_external_source")
     parser.add_argument("--min-chars", type=int, default=1)
     parser.add_argument("--allow-missing-source", action="store_true")
-    parser.add_argument("--trusted-source", action="append", default=())
+    parser.add_argument("--trusted-source", action="append", default=None)
     parser.add_argument("--default-timestamp", default=None)
     parser.add_argument("--artifact-manifest", default=None, help="optional manifest for source/corpus files")
     run(parser.parse_args())
