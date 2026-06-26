@@ -1720,6 +1720,46 @@ stress run exposes self-support with high `false_supported_rate` and low
 `false_refuted_rate`. This prevents answer-derived retrieval evidence from being
 promoted as grounding.
 
+## `compare_external_evidence_baselines.py`
+
+Combines the route gate above with a text/length redline check for external or
+domain-shifted evidence candidates. It does not rerun models or verifier
+adapters; it reads registered route manifests plus saved `eval_score_ensemble.py`
+reports and writes one fail-closed comparison artifact.
+
+```bash
+python benchmarks/compare_external_evidence_baselines.py \
+  --route-registry artifacts/registry.json \
+  --route-baseline-key benchmark_manifest:external-retrieval-route:0.1 \
+  --require-route-baseline \
+  --min-decision-accuracy 0.95 \
+  --max-false-supported-rate 0.02 \
+  --min-false-refuted-rate 0.90 \
+  --require-non-oracle-evidence \
+  --require-retrieval-provenance-filter \
+  --required-retrieval-source-prefix external: \
+  --required-retrieval-metadata corpus_role=grounding \
+  --min-retrieval-filter-score 0.5 \
+  --require-retrieval-stress-control \
+  --retrieval-stress-manifest artifacts/truthfulqa-l80-answer-echo-retrieval-stress/artifact-manifest.json \
+  --min-stress-false-supported-rate 0.90 \
+  --max-stress-false-refuted-rate 0.05 \
+  --candidate-score-report artifacts/external-retrieval-fusion/score-ensemble-report.json \
+  --text-baseline-report artifacts/truthfulqa-l80-text-baseline-comparison/score-ensemble-report.json \
+  --require-text-redline \
+  --min-text-detection-margin 0.10 \
+  --min-text-auroc-margin 0.10 \
+  --json artifacts/external-evidence-baseline-comparison.json \
+  --fail-on-blocked
+```
+
+The route side delegates to `compare_route_baselines.py`, including the
+answer-echo stress-control audit. The text-redline side pairs runs by name,
+selects the best non-text candidate signal/fusion at the report `best_alpha`,
+selects the best cheap text baseline from `single_results`, and blocks unless
+the candidate clears the configured detection/AUROC margins. Missing reports,
+ambiguous run pairing, or non-finite metrics block the comparison.
+
 ## `run_adapter_family_matrix.py`
 
 Builds deterministic local fixtures for the front-line adapter families and

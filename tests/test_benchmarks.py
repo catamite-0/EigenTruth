@@ -9606,6 +9606,56 @@ def _write_retrieval_stress_manifest(
     return manifest_path
 
 
+def _write_score_redline_report(
+    path: Path,
+    *,
+    run_name: str,
+    signal: str,
+    detection: float,
+    auroc: float,
+    false_alarm: float = 0.05,
+) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "best_alpha": 0.1,
+                "runs": [
+                    {
+                        "name": run_name,
+                        "best_single_at_alpha": {
+                            "name": signal,
+                            "auroc": auroc,
+                            "false_alarm": false_alarm,
+                            "detection": detection,
+                        },
+                        "single_results": {
+                            signal: {
+                                "direction": "higher",
+                                "auroc": auroc,
+                                "alphas": {
+                                    "0.1": {
+                                        "false_alarm": false_alarm,
+                                        "coverage": 1.0 - false_alarm,
+                                        "detection": detection,
+                                        "pass": True,
+                                        "repeats": 3,
+                                    }
+                                },
+                            }
+                        },
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _write_frontier_release_evidence_report(
     output_dir: Path,
     *,
@@ -10590,6 +10640,146 @@ def test_compare_route_baselines_applies_runtime_budget_metadata(tmp_path):
     assert "runtime_budget: retrieval_hit_count above 5.0" in reasons
     assert "runtime_budget: claims_cache_hit_rate below 0.5" in reasons
     assert "runtime_budget: verifier_trace_cache_hit_rate below 0.9" in reasons
+
+
+def test_compare_external_evidence_baselines_promotes_route_and_text_redline(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    trusted_filter = {
+        "require_source": True,
+        "allowed_source_prefixes": ["external:wiki"],
+        "denied_source_prefixes": ["answer_echo:"],
+        "min_score": 0.8,
+        "required_metadata": {"corpus_role": "grounding"},
+    }
+    stress_manifest = _write_retrieval_stress_manifest(
+        tmp_path,
+        name="external-comparison-stress",
+        false_supported_rate=0.98,
+        false_refuted_rate=0.0,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="external-comparison-route",
+        route="retrieval_groundedness",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+        claims_payload=_local_retrieval_claims_payload(
+            labels_copied_to_record_metadata=False,
+            provenance_filter=trusted_filter,
+        ),
+        stress_manifest_path=stress_manifest,
+        retrieval_provenance_filter=trusted_filter,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="external-comparison-route",
+        path=route_manifest,
+        version="0.1",
+        metadata={"manifest_metadata": {"runner": "run_local_retrieval_route_workflow"}},
+    ).save_json()
+    candidate_report = _write_score_redline_report(
+        tmp_path / "candidate-score-report.json",
+        run_name="qwen",
+        signal="verifier_refuted",
+        detection=0.45,
+        auroc=0.88,
+    )
+    text_report = _write_score_redline_report(
+        tmp_path / "text-baseline-report.json",
+        run_name="qwen",
+        signal="answer_token_count",
+        detection=0.10,
+        auroc=0.52,
+    )
+
+    payload = module.compare_external_evidence_baselines(
+        route_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:external-comparison-route:0.1",),
+        require_route_baseline=True,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_non_oracle_evidence=True,
+        require_retrieval_provenance_filter=True,
+        required_retrieval_source_prefixes=("external:wiki",),
+        required_retrieval_metadata={"corpus_role": "grounding"},
+        min_retrieval_filter_score=0.8,
+        require_retrieval_stress_control=True,
+        min_stress_false_supported_rate=0.90,
+        max_stress_false_refuted_rate=0.05,
+        candidate_score_report_path=candidate_report,
+        text_baseline_report_path=text_report,
+        require_text_redline=True,
+        min_text_detection_margin=0.20,
+        min_text_auroc_margin=0.20,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["route_baseline_comparison"]["passed"] is True
+    assert payload["text_redline_comparison"]["passed"] is True
+    row = payload["text_redline_comparison"]["runs"][0]
+    assert row["candidate_best"]["name"] == "verifier_refuted"
+    assert row["text_best"]["name"] == "answer_token_count"
+    assert row["detection_margin"] == pytest.approx(0.35)
+
+
+def test_compare_external_evidence_baselines_blocks_text_redline_underperformance(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+    candidate_report = _write_score_redline_report(
+        tmp_path / "candidate-score-report.json",
+        run_name="qwen",
+        signal="verifier_refuted",
+        detection=0.18,
+        auroc=0.58,
+    )
+    text_report = _write_score_redline_report(
+        tmp_path / "text-baseline-report.json",
+        run_name="qwen",
+        signal="answer_token_count",
+        detection=0.16,
+        auroc=0.55,
+    )
+
+    payload = module.compare_external_evidence_baselines(
+        candidate_score_report_path=candidate_report,
+        text_baseline_report_path=text_report,
+        require_text_redline=True,
+        min_text_detection_margin=0.10,
+        min_text_auroc_margin=0.10,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["route_baseline_comparison"]["enabled"] is False
+    assert payload["text_redline_comparison"]["passed"] is False
+    assert any(
+        "candidate minus text detection below 0.1" in reason
+        for reason in payload["decision"]["blocking_reasons"]
+    )
+
+
+def test_compare_external_evidence_baselines_requires_text_redline_report(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+    candidate_report = _write_score_redline_report(
+        tmp_path / "candidate-score-report.json",
+        run_name="qwen",
+        signal="verifier_refuted",
+        detection=0.45,
+        auroc=0.88,
+    )
+
+    payload = module.compare_external_evidence_baselines(
+        candidate_score_report_path=candidate_report,
+        require_text_redline=True,
+    )
+
+    assert payload["decision"]["status"] == "blocked"
+    assert payload["text_redline_comparison"]["passed"] is False
+    assert "text_redline: text baseline report is required" in payload["decision"]["blocking_reasons"]
 
 
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
