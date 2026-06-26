@@ -18970,6 +18970,146 @@ def test_runtime_config_recommendation_uses_gated_score_fusion(tmp_path):
     assert blocked["recommendation"]["score_fusion"]["conformal_gate_passed"] is False
 
 
+def test_runtime_config_recommendation_uses_selected_fusion_artifact_report(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    selected_report_path = tmp_path / "selected-fusion.json"
+    matrix_report = {
+        "config": {"model": "unit-model", "max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m1_batch_2_capture_outputs",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m1_batch_2_capture_outputs",
+                "layer": -1,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "cache_only_total_seconds": 0.1,
+                "truth_proj_auroc": 0.72,
+            },
+        },
+        "cells": [],
+    }
+    selected_fusion_artifact_report = {
+        "workflow": "selected_fusion_artifact_build",
+        "selection_status": "complete",
+        "runs": [
+            {
+                "run_name": "gpt2",
+                "artifact_path": "gpt2-selected-fusion-artifact.json",
+                "selected_candidate": "geometry_trajectory:mean_rank",
+                "selected_signals": [
+                    "truth_proj",
+                    "subspace_resid",
+                    "trajectory_convergence",
+                ],
+                "selected_method": "mean_rank",
+                "artifact_method": "mean_rank",
+                "tracked_signal": "trajectory_convergence",
+                "tracked_signal_enabled": True,
+                "selected_metrics": {
+                    "alpha": 0.1,
+                    "auroc": 0.84,
+                    "false_alarm": 0.04,
+                    "detection": 0.71,
+                    "coverage": 0.96,
+                },
+            },
+            {
+                "run_name": "smollm2",
+                "artifact_path": "smollm2-selected-fusion-artifact.json",
+                "selected_candidate": "geometry:mean_rank",
+                "selected_signals": ["truth_proj", "subspace_resid"],
+                "selected_method": "mean_rank",
+                "artifact_method": "mean_rank",
+                "tracked_signal": "trajectory_convergence",
+                "tracked_signal_enabled": False,
+                "selected_metrics": {
+                    "alpha": 0.1,
+                    "auroc": 0.73,
+                    "false_alarm": 0.03,
+                    "detection": 0.40,
+                    "coverage": 0.97,
+                },
+            },
+        ],
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_report_path,
+        selected_fusion_run="gpt2",
+    )
+
+    assert report["status"] == "promote"
+    assert report["recommendation"]["quality_signals"]["selected_fusion_mean_rank"] == pytest.approx(0.84)
+    assert report["recommendation"]["best_quality_signal"] == {
+        "name": "selected_fusion_mean_rank",
+        "auroc": pytest.approx(0.84),
+    }
+    selected = report["recommendation"]["selected_fusion_artifact"]
+    assert selected["status"] == "promote"
+    assert selected["run_name"] == "gpt2"
+    assert selected["selected_candidate"] == "geometry_trajectory:mean_rank"
+    assert selected["tracked_signal_enabled"] is True
+    assert selected["artifact_path"] == "gpt2-selected-fusion-artifact.json"
+    assert report["evidence"]["selected_fusion_artifact_report"] == str(selected_report_path)
+    assert report["evidence"]["selected_fusion_requested_run"] == "gpt2"
+    assert report["evidence"]["selected_fusion_status"] == "promote"
+    assert report["evidence"]["selected_fusion_signal"] == "selected_fusion_mean_rank"
+    assert report["evidence"]["selected_fusion_false_alarm"] == pytest.approx(0.04)
+
+
+def test_runtime_config_recommendation_does_not_auto_select_ambiguous_selected_fusion_run():
+    module = importlib.import_module("benchmarks.recommend_runtime_config")
+    matrix_report = {
+        "config": {"max_workers": 1},
+        "matrix_decision": {
+            "status": "promote",
+            "recommended_cell": "layer_m1_batch_2_capture_outputs",
+            "recommendation_metric": "cache_only_total_seconds",
+            "candidate_count": 1,
+            "checked_cell_count": 1,
+            "blocking_reasons": (),
+            "recommended": {
+                "id": "layer_m1_batch_2_capture_outputs",
+                "layer": -1,
+                "batch_size": 2,
+                "hidden_state_capture": "outputs",
+                "cache_only_total_seconds": 0.1,
+                "truth_proj_auroc": 0.72,
+            },
+        },
+        "cells": [],
+    }
+    selected_fusion_artifact_report = {
+        "workflow": "selected_fusion_artifact_build",
+        "runs": [
+            {"run_name": "gpt2", "artifact_path": "gpt2.json", "selected_metrics": {"auroc": 0.84}},
+            {"run_name": "smollm2", "artifact_path": "smollm2.json", "selected_metrics": {"auroc": 0.82}},
+        ],
+    }
+
+    report = module.build_runtime_recommendation(
+        matrix_report,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+    )
+
+    assert report["recommendation"]["quality_signals"] == {"truth_proj": pytest.approx(0.72)}
+    assert report["recommendation"]["best_quality_signal"] == {
+        "name": "truth_proj",
+        "auroc": pytest.approx(0.72),
+    }
+    selected = report["recommendation"]["selected_fusion_artifact"]
+    assert selected["status"] == "ambiguous_matching_runs"
+    assert selected["run_count"] == 2
+    assert report["evidence"]["selected_fusion_status"] == "ambiguous_matching_runs"
+
+
 def test_runtime_config_worker_matrix_match_allows_equivalent_report_path(tmp_path):
     module = importlib.import_module("benchmarks.recommend_runtime_config")
     matrix_report = {

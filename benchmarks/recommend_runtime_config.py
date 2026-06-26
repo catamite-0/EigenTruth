@@ -46,12 +46,15 @@ def build_runtime_recommendation(
     inside_sampling_report: Mapping[str, Any] | None = None,
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None = None,
     score_ensemble_report: Mapping[str, Any] | None = None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None = None,
     inside_trigger_budget_policy: str = "quality_balanced",
+    selected_fusion_run: str | None = None,
     matrix_report_path: str | Path | None = None,
     worker_sweep_report_path: str | Path | None = None,
     inside_sampling_report_path: str | Path | None = None,
     inside_trigger_budget_sweep_report_path: str | Path | None = None,
     score_ensemble_report_path: str | Path | None = None,
+    selected_fusion_artifact_report_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """Return one runtime recommendation from matrix and optional worker evidence."""
     inside_trigger_budget_policy = _normalize_inside_trigger_budget_policy(inside_trigger_budget_policy)
@@ -97,8 +100,11 @@ def build_runtime_recommendation(
             inside_sampling_decision=inside_sampling_decision,
             inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
             score_ensemble_report=score_ensemble_report,
+            selected_fusion_artifact_report=selected_fusion_artifact_report,
+            selected_fusion_run=selected_fusion_run,
             matrix_report_path=matrix_report_path,
             score_ensemble_report_path=score_ensemble_report_path,
+            selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
         )
         if recommended is None:
             status = "no_candidate"
@@ -124,12 +130,15 @@ def build_runtime_recommendation(
         inside_trigger_budget_sweep_decision=inside_trigger_budget_sweep_decision,
         inside_trigger_budget_sweep_report=inside_trigger_budget_sweep_report,
         score_ensemble_report=score_ensemble_report,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
         inside_trigger_budget_policy=inside_trigger_budget_policy,
+        selected_fusion_run=selected_fusion_run,
     )
     report = {
         "schema_version": 1,
@@ -153,8 +162,11 @@ def _recommendation(
     inside_sampling_decision: Mapping[str, Any],
     inside_trigger_budget_sweep_decision: Mapping[str, Any],
     score_ensemble_report: Mapping[str, Any] | None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None,
+    selected_fusion_run: str | None,
     matrix_report_path: str | Path | None,
     score_ensemble_report_path: str | Path | None,
+    selected_fusion_artifact_report_path: str | Path | None,
 ) -> dict[str, Any] | None:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     if not matrix_recommended or any(
@@ -173,6 +185,9 @@ def _recommendation(
         matrix_report_path=matrix_report_path,
         score_ensemble_report=score_ensemble_report,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
+        selected_fusion_run=selected_fusion_run,
     )
     totals = _runtime_totals(matrix_recommended)
     matrix_config = _mapping(matrix_report.get("config"))
@@ -204,6 +219,9 @@ def _recommendation(
     score_fusion = _mapping(quality.get("score_fusion"))
     if score_fusion and score_fusion.get("status") != "not_configured":
         recommendation["score_fusion"] = score_fusion
+    selected_fusion = _mapping(quality.get("selected_fusion_artifact"))
+    if selected_fusion and selected_fusion.get("status") != "not_configured":
+        recommendation["selected_fusion_artifact"] = selected_fusion
     covariance_tradeoff = _covariance_tradeoff_summary(
         matrix_report,
         matrix_recommended,
@@ -531,6 +549,9 @@ def _quality_signal_summary(
     matrix_report_path: str | Path | None = None,
     score_ensemble_report: Mapping[str, Any] | None = None,
     score_ensemble_report_path: str | Path | None = None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None = None,
+    selected_fusion_artifact_report_path: str | Path | None = None,
+    selected_fusion_run: str | None = None,
 ) -> dict[str, Any]:
     cell_id = matrix_recommended.get("id")
     cell = _find_by_id(matrix_report.get("cells"), cell_id) if cell_id is not None else {}
@@ -551,6 +572,16 @@ def _quality_signal_summary(
         auroc = _float_or_none(score_fusion.get("auroc"))
         if signal_name and auroc is not None:
             signals[str(signal_name)] = auroc
+    selected_fusion = _selected_fusion_artifact_quality_signal(
+        selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
+        selected_fusion_run=selected_fusion_run,
+    )
+    if selected_fusion.get("status") == "promote":
+        signal_name = selected_fusion.get("signal_name")
+        auroc = _float_or_none(selected_fusion.get("auroc"))
+        if signal_name and auroc is not None:
+            signals[str(signal_name)] = auroc
     signals = {name: signals[name] for name in sorted(signals)}
     best = _best_quality_signal(signals)
     return {
@@ -559,6 +590,7 @@ def _quality_signal_summary(
         "source": source,
         "count": len(signals),
         "score_fusion": score_fusion,
+        "selected_fusion_artifact": selected_fusion,
     }
 
 
@@ -673,6 +705,82 @@ def _score_ensemble_alpha_payload(
         if numeric is not None and math.isclose(numeric, alpha, rel_tol=1e-9, abs_tol=1e-12):
             return _mapping(value)
     return {}
+
+
+def _selected_fusion_artifact_quality_signal(
+    selected_fusion_artifact_report: Mapping[str, Any] | None,
+    *,
+    selected_fusion_artifact_report_path: str | Path | None,
+    selected_fusion_run: str | None,
+) -> dict[str, Any]:
+    if selected_fusion_artifact_report is None:
+        return {"status": "not_configured"}
+    runs = selected_fusion_artifact_report.get("runs")
+    if not isinstance(runs, Sequence) or isinstance(runs, str) or not runs:
+        return {
+            "status": "no_runs",
+            "report": _optional_path_str(selected_fusion_artifact_report_path),
+        }
+    selected, selection_status = _select_selected_fusion_artifact_run(
+        runs,
+        selected_fusion_run=selected_fusion_run,
+    )
+    if selected is None:
+        return {
+            "status": selection_status,
+            "report": _optional_path_str(selected_fusion_artifact_report_path),
+            "run_count": len(runs),
+            "requested_run": selected_fusion_run,
+        }
+    metrics = _mapping(selected.get("selected_metrics"))
+    auroc = _float_or_none(metrics.get("auroc"))
+    method = str(_first_present(selected.get("artifact_method"), selected.get("selected_method"), "fusion"))
+    signal_name = f"selected_fusion_{method}"
+    artifact_path = selected.get("artifact_path")
+    status = "promote" if auroc is not None and artifact_path else "blocked"
+    return {
+        "status": status,
+        "report": _optional_path_str(selected_fusion_artifact_report_path),
+        "run_name": selected.get("run_name"),
+        "selected_candidate": selected.get("selected_candidate"),
+        "method": method,
+        "signal_name": signal_name,
+        "auroc": auroc,
+        "alpha": _float_or_none(metrics.get("alpha")),
+        "false_alarm": _float_or_none(metrics.get("false_alarm")),
+        "detection": _float_or_none(metrics.get("detection")),
+        "coverage": _float_or_none(metrics.get("coverage")),
+        "artifact_path": None if artifact_path is None else str(artifact_path),
+        "selected_signals": _string_sequence(selected.get("selected_signals")),
+        "tracked_signal": selected.get("tracked_signal"),
+        "tracked_signal_enabled": selected.get("tracked_signal_enabled") is True,
+        "selection_status": selected_fusion_artifact_report.get("selection_status"),
+        "workflow": selected_fusion_artifact_report.get("workflow"),
+    }
+
+
+def _select_selected_fusion_artifact_run(
+    runs: Any,
+    *,
+    selected_fusion_run: str | None,
+) -> tuple[dict[str, Any] | None, str]:
+    run_items = [_mapping(run) for run in runs if _mapping(run)]
+    if selected_fusion_run:
+        matches = [run for run in run_items if run.get("run_name") == selected_fusion_run]
+        if len(matches) == 1:
+            return matches[0], "matched_run_name"
+        if not matches:
+            return None, "no_matching_run"
+        return None, "ambiguous_matching_runs"
+    if len(run_items) == 1:
+        return run_items[0], "single_run"
+    return None, "ambiguous_matching_runs"
+
+
+def _string_sequence(values: Any) -> list[str]:
+    if not isinstance(values, Sequence) or isinstance(values, str):
+        return []
+    return [str(value) for value in values]
 
 
 def _quality_signals_from_cell(
@@ -1645,12 +1753,15 @@ def _evidence(
     inside_trigger_budget_sweep_report: Mapping[str, Any] | None,
     inside_trigger_budget_sweep_decision: Mapping[str, Any],
     score_ensemble_report: Mapping[str, Any] | None,
+    selected_fusion_artifact_report: Mapping[str, Any] | None,
     matrix_report_path: str | Path | None,
     worker_sweep_report_path: str | Path | None,
     inside_sampling_report_path: str | Path | None,
     inside_trigger_budget_sweep_report_path: str | Path | None,
     score_ensemble_report_path: str | Path | None,
+    selected_fusion_artifact_report_path: str | Path | None,
     inside_trigger_budget_policy: str,
+    selected_fusion_run: str | None,
 ) -> dict[str, Any]:
     matrix_recommended = _recommended_runtime_row(matrix_report, matrix_decision)
     worker_recommended = _mapping(worker_decision.get("recommended"))
@@ -1661,8 +1772,12 @@ def _evidence(
         matrix_report_path=matrix_report_path,
         score_ensemble_report=score_ensemble_report,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report=selected_fusion_artifact_report,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
+        selected_fusion_run=selected_fusion_run,
     )
     score_fusion = _mapping(quality.get("score_fusion"))
+    selected_fusion = _mapping(quality.get("selected_fusion_artifact"))
     config = _mapping(matrix_report.get("config"))
     trigger_budget = _mapping(inside_trigger_budget_sweep_decision.get("recommended"))
     evidence = {
@@ -1687,6 +1802,17 @@ def _evidence(
         "score_fusion_false_alarm": score_fusion.get("false_alarm"),
         "score_fusion_detection": score_fusion.get("detection"),
         "score_fusion_alpha": score_fusion.get("alpha"),
+        "selected_fusion_artifact_report": _optional_path_str(selected_fusion_artifact_report_path),
+        "selected_fusion_requested_run": selected_fusion_run,
+        "selected_fusion_status": selected_fusion.get("status"),
+        "selected_fusion_run": selected_fusion.get("run_name"),
+        "selected_fusion_candidate": selected_fusion.get("selected_candidate"),
+        "selected_fusion_signal": selected_fusion.get("signal_name"),
+        "selected_fusion_auroc": selected_fusion.get("auroc"),
+        "selected_fusion_false_alarm": selected_fusion.get("false_alarm"),
+        "selected_fusion_detection": selected_fusion.get("detection"),
+        "selected_fusion_alpha": selected_fusion.get("alpha"),
+        "selected_fusion_artifact_path": selected_fusion.get("artifact_path"),
         "worker_sweep_report": None if worker_sweep_report_path is None else str(worker_sweep_report_path),
         "worker_sweep_status": None if worker_sweep_report is None else worker_decision.get("status"),
         "worker_recommended_worker_count": worker_decision.get("recommended_worker_count"),
@@ -1909,6 +2035,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     )
     score_ensemble_report_arg = getattr(args, "score_ensemble_report", None)
     score_ensemble_report_path = Path(score_ensemble_report_arg) if score_ensemble_report_arg else None
+    selected_fusion_artifact_report_arg = getattr(args, "selected_fusion_artifact_report", None)
+    selected_fusion_artifact_report_path = (
+        Path(selected_fusion_artifact_report_arg) if selected_fusion_artifact_report_arg else None
+    )
     report = build_runtime_recommendation(
         _load_json(matrix_report_path),
         worker_sweep_report=None if worker_sweep_report_path is None else _load_json(worker_sweep_report_path),
@@ -1923,12 +2053,19 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         score_ensemble_report=(
             None if score_ensemble_report_path is None else _load_json(score_ensemble_report_path)
         ),
+        selected_fusion_artifact_report=(
+            None
+            if selected_fusion_artifact_report_path is None
+            else _load_json(selected_fusion_artifact_report_path)
+        ),
         inside_trigger_budget_policy=args.inside_trigger_budget_policy,
+        selected_fusion_run=getattr(args, "selected_fusion_run", None),
         matrix_report_path=matrix_report_path,
         worker_sweep_report_path=worker_sweep_report_path,
         inside_sampling_report_path=inside_sampling_report_path,
         inside_trigger_budget_sweep_report_path=inside_trigger_budget_sweep_report_path,
         score_ensemble_report_path=score_ensemble_report_path,
+        selected_fusion_artifact_report_path=selected_fusion_artifact_report_path,
     )
     output = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
@@ -1960,6 +2097,11 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "INSIDE work, and quality_first chooses the highest inside quality metric")
     parser.add_argument("--score-ensemble-report", default=None,
                         help="optional eval_score_ensemble.py report to fold in as gated quality evidence")
+    parser.add_argument("--selected-fusion-artifact-report", default=None,
+                        help="optional build_selected_fusion_artifacts.py report to fold in as selected "
+                             "fusion quality evidence")
+    parser.add_argument("--selected-fusion-run", default=None,
+                        help="run_name to select when --selected-fusion-artifact-report has multiple runs")
     parser.add_argument("--output", default=None,
                         help="optional path to write the recommendation JSON")
     parser.add_argument("--fail-on-blocked", action="store_true",

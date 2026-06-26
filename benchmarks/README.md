@@ -3720,6 +3720,12 @@ With `--score-ensemble-report`, a best fusion signal is added to
 `quality_signals` only when the selected ensemble alpha passed its conformal
 false-alarm gate; blocked or ambiguous fusion evidence is retained in
 `score_fusion` and `evidence` without changing the runtime recommendation.
+With `--selected-fusion-artifact-report`, selected fusion artifacts produced by
+`build_selected_fusion_artifacts.py` can likewise contribute a
+`selected_fusion_*` quality signal. If the report has multiple runs, pass
+`--selected-fusion-run <run_name>`; otherwise the recommendation keeps the
+selected-fusion evidence as `ambiguous_matching_runs` and does not change the
+best quality signal.
 When the matrix report and worker-sweep child matrix are separate files, the
 recommendation still treats them as compatible if they select the same promoted
 runtime cell and matching quality/cache-only evidence; this lets a serial matrix
@@ -4624,7 +4630,10 @@ python benchmarks/build_selected_fusion_artifacts.py \
 The committed build report writes `gpt2-selected-fusion-artifact.json` with
 `truth_proj,subspace_resid,eigenscore,maha_last,trajectory_convergence` and
 `smollm2-selected-fusion-artifact.json` with the geometry-only bundle. Both use
-`mean_rank` and alpha 0.1.
+`mean_rank` and alpha 0.1. A runtime recommendation can consume this build
+report with `--selected-fusion-artifact-report`; because this report has one
+artifact per trajectory source run, provide `--selected-fusion-run gpt2` or
+`--selected-fusion-run smollm2` explicitly.
 
 ## `compare_transfer.py`
 
