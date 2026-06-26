@@ -1,0 +1,78 @@
+{
+  "claim_scope": "gpt2 limit64 forced-answer trajectory mechanism check only; not a promoted hallucination detector.",
+  "decision": {
+    "detector_signal": "preliminary_positive",
+    "harness": "accepted_for_reproducible_real_model_smoke",
+    "promotion_blocker": "requires larger sample and at least one additional model family before calibration or product routing use."
+  },
+  "notes": [
+    "Both gpt2 limit64 layer checks pass the AUROC > 0.55 exploratory gate, but margins are modest.",
+    "The best final-layer run reaches trajectory AUROC 0.6029 on 60 evaluated examples.",
+    "NLL higher-is-false AUROC is 0.3515 on the same subset, so answer NLL is not a useful baseline direction here.",
+    "CPU rerun required ATEN_CPU_CAPABILITY=default OMP_NUM_THREADS=1 after an initial illegal-instruction exit."
+  ],
+  "recommended_run": {
+    "layer": -1,
+    "limit": 64,
+    "manifest_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-limit64-layer-1-artifact-manifest.json",
+    "model": "gpt2",
+    "n_evaluated": 60,
+    "n_false": 31,
+    "n_skipped": 4,
+    "n_true": 29,
+    "name": "gpt2_limit64_layer_-1",
+    "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+    "report_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-1-trajectory-report.json",
+    "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+    "spearman_convergence_false_label": -0.17814005684723852,
+    "status": "pass",
+    "trajectory_score_best_auroc": 0.6028921023359288,
+    "trajectory_score_direction_for_false": "lower",
+    "trajectory_score_higher_is_false_auroc": 0.3971078976640712,
+    "trajectory_score_lower_is_false_auroc": 0.6028921023359288
+  },
+  "runs": [
+    {
+      "layer": -1,
+      "limit": 64,
+      "manifest_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-limit64-layer-1-artifact-manifest.json",
+      "model": "gpt2",
+      "n_evaluated": 60,
+      "n_false": 31,
+      "n_skipped": 4,
+      "n_true": 29,
+      "name": "gpt2_limit64_layer_-1",
+      "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+      "report_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-1-trajectory-report.json",
+      "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+      "spearman_convergence_false_label": -0.17814005684723852,
+      "status": "pass",
+      "trajectory_score_best_auroc": 0.6028921023359288,
+      "trajectory_score_direction_for_false": "lower",
+      "trajectory_score_higher_is_false_auroc": 0.3971078976640712,
+      "trajectory_score_lower_is_false_auroc": 0.6028921023359288
+    },
+    {
+      "layer": -6,
+      "limit": 64,
+      "manifest_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-limit64-layer-6-artifact-manifest.json",
+      "model": "gpt2",
+      "n_evaluated": 60,
+      "n_false": 31,
+      "n_skipped": 4,
+      "n_true": 29,
+      "name": "gpt2_limit64_layer_-6",
+      "nll_answer_higher_is_false_auroc": 0.3515016685205784,
+      "report_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-6-trajectory-report.json",
+      "source_scores_path": "artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+      "spearman_convergence_false_label": 0.1338457724419792,
+      "status": "pass",
+      "trajectory_score_best_auroc": 0.5773081201334817,
+      "trajectory_score_direction_for_false": "higher",
+      "trajectory_score_higher_is_false_auroc": 0.5773081201334817,
+      "trajectory_score_lower_is_false_auroc": 0.42269187986651835
+    }
+  ],
+  "status": "preliminary_real_data_signal",
+  "workflow": "truthfulqa_forced_answer_trajectory_layer_comparison"
+}

@@ -497,7 +497,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         )
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps(report, indent=2, sort_keys=True))
+    if not getattr(args, "quiet", False):
+        print(json.dumps(report, indent=2, sort_keys=True))
     return report
 
 
@@ -515,6 +516,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-auroc", type=float, default=0.55)
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
     parser.add_argument("--artifact-manifest", default=None, help="optional manifest path for --json output")
+    parser.add_argument("--quiet", action="store_true", help="write requested artifacts without printing full JSON")
     run(parser.parse_args(argv))
 
 

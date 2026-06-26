@@ -1,0 +1,32 @@
+{
+  "artifacts": {
+    "source_scores": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json",
+      "sha256": "45bc28339613cdb7b063949142109ee04fbc163eb4ddc8559c92ad707eed3bc3",
+      "size_bytes": 3657
+    },
+    "trajectory_truthfulqa_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "gpt2-qwen-l80-limit64-layer-6-trajectory-report.json",
+      "sha256": "54ac9700f0a47c5d46457a10e24948ef5211b9360949394f11f026af141f5cc5",
+      "size_bytes": 72888
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "model": "gpt2",
+    "workflow": "truthfulqa_forced_answer_trajectory"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 2,
+    "directory_count": 0,
+    "file_count": 2,
+    "missing_count": 0
+  }
+}

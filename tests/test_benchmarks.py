@@ -4365,10 +4365,12 @@ def test_eval_trajectory_truthfulqa_offline_reports_forced_answer_signal(tmp_pat
         min_auroc=0.55,
         json=str(report_path),
         artifact_manifest=str(manifest_path),
+        quiet=True,
     ))
-    capsys.readouterr()
+    captured = capsys.readouterr()
     summary = payload["summary"]
 
+    assert captured.out == ""
     assert report_path.exists()
     assert manifest_path.exists()
     assert payload["workflow"] == "truthfulqa_forced_answer_trajectory"

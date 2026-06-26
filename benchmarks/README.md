@@ -4484,8 +4484,12 @@ python benchmarks/eval_trajectory_truthfulqa.py \
   --layer -12 \
   --limit 64 \
   --json artifacts/qwen-l80-trajectory-report.json \
-  --artifact-manifest artifacts/qwen-l80-trajectory-manifest.json
+  --artifact-manifest artifacts/qwen-l80-trajectory-manifest.json \
+  --quiet
 ```
+
+On CPU hosts that fail with an illegal-instruction exit while loading PyTorch or
+model kernels, rerun with `ATEN_CPU_CAPABILITY=default OMP_NUM_THREADS=1`.
 
 Use the deterministic no-download smoke path for local wiring checks:
 
@@ -4493,7 +4497,8 @@ Use the deterministic no-download smoke path for local wiring checks:
 python benchmarks/eval_trajectory_truthfulqa.py \
   --offline \
   --json artifacts/trajectory-offline-smoke.json \
-  --artifact-manifest artifacts/trajectory-offline-manifest.json
+  --artifact-manifest artifacts/trajectory-offline-manifest.json \
+  --quiet
 ```
 
 ## `compare_transfer.py`
