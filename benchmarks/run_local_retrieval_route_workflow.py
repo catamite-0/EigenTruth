@@ -59,6 +59,12 @@ class LocalRetrievalRouteWorkflowConfig:
     retriever_backend: str = "memory"
     retriever_index_path: Path | None = None
     include_label_metadata: bool = True
+    require_retrieval_source: bool = False
+    allowed_retrieval_source_prefixes: Sequence[str] = ()
+    denied_retrieval_source_prefixes: Sequence[str] = ()
+    min_retrieval_score: float = 0.0
+    required_retrieval_metadata: Mapping[str, Any] | None = None
+    max_retrieval_hits_per_source: int | None = None
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.20
     retrieval_limit: int = 5
@@ -130,6 +136,26 @@ class LocalRetrievalRouteWorkflowConfig:
             raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
         if self.retriever_backend == "memory" and self.retriever_index_path is not None:
             raise ValueError("retriever_index_path is only supported with sqlite_fts or auto backends.")
+        object.__setattr__(
+            self,
+            "allowed_retrieval_source_prefixes",
+            _clean_strings(self.allowed_retrieval_source_prefixes, name="allowed_retrieval_source_prefixes"),
+        )
+        object.__setattr__(
+            self,
+            "denied_retrieval_source_prefixes",
+            _clean_strings(self.denied_retrieval_source_prefixes, name="denied_retrieval_source_prefixes"),
+        )
+        min_retrieval_score = float(self.min_retrieval_score)
+        if not (0.0 <= min_retrieval_score <= 1.0):
+            raise ValueError("min_retrieval_score must be in [0, 1].")
+        object.__setattr__(self, "min_retrieval_score", min_retrieval_score)
+        if self.max_retrieval_hits_per_source is not None:
+            max_hits = int(self.max_retrieval_hits_per_source)
+            if max_hits <= 0:
+                raise ValueError("max_retrieval_hits_per_source must be positive when set.")
+            object.__setattr__(self, "max_retrieval_hits_per_source", max_hits)
+        object.__setattr__(self, "required_retrieval_metadata", dict(self.required_retrieval_metadata or {}))
         registry_fields = (self.registry_path, self.name, self.version)
         if any(value is not None for value in registry_fields) and not all(registry_fields):
             raise ValueError("registry_path, name, and version must be provided together.")
@@ -195,6 +221,12 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
                 retriever_backend=config.retriever_backend,
                 retriever_index_path=config.retriever_index_path,
                 include_label_metadata=config.include_label_metadata,
+                require_retrieval_source=config.require_retrieval_source,
+                allowed_retrieval_source_prefixes=config.allowed_retrieval_source_prefixes,
+                denied_retrieval_source_prefixes=config.denied_retrieval_source_prefixes,
+                min_retrieval_score=config.min_retrieval_score,
+                required_retrieval_metadata=config.required_retrieval_metadata,
+                max_retrieval_hits_per_source=config.max_retrieval_hits_per_source,
             )
             claims_fixture["input_provenance"] = build_evidence_input_provenance(
                 scores_path=config.scores_path,
@@ -206,6 +238,12 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
                 retrieval_limit=config.retrieval_limit,
                 query_field=config.query_field,
                 include_label_metadata=config.include_label_metadata,
+                require_retrieval_source=config.require_retrieval_source,
+                allowed_retrieval_source_prefixes=config.allowed_retrieval_source_prefixes,
+                denied_retrieval_source_prefixes=config.denied_retrieval_source_prefixes,
+                min_retrieval_score=config.min_retrieval_score,
+                required_retrieval_metadata=config.required_retrieval_metadata,
+                max_retrieval_hits_per_source=config.max_retrieval_hits_per_source,
             )
         claims_cache = {
             **claims_cache,
@@ -353,6 +391,7 @@ def run_local_retrieval_route_workflow(config: LocalRetrievalRouteWorkflowConfig
             "retriever_backend": config.retriever_backend,
             "retriever_index_path": None if config.retriever_index_path is None else str(config.retriever_index_path),
             "include_label_metadata": bool(config.include_label_metadata),
+            "retrieval_provenance_filter": _retrieval_provenance_filter_config(config),
             "verifier_min_overlap": float(config.verifier_min_overlap),
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
@@ -497,6 +536,9 @@ def _manifest_metadata(
         "retriever_actual_backend": retriever_info.get("actual_backend"),
         "retriever_actual_index_path": retriever_info.get("actual_index_path"),
         "retriever_index_reused": retriever_info.get("index_reused"),
+        "retriever_type": retriever_info.get("type"),
+        "retriever_wrapped_type": retriever_info.get("wrapped_type"),
+        "retrieval_provenance_filter": retriever_info.get("provenance_filter"),
         "labels_used_for_retrieval": label_usage.get("labels_used_for_retrieval"),
         "labels_copied_to_record_metadata": label_usage.get("labels_copied_to_record_metadata"),
         "verifier_min_overlap": float(config.verifier_min_overlap),
@@ -583,7 +625,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
     return {
         "schema_version": 1,
         "cache_type": "local_retrieval_claims",
-        "builder": "build_evidence_fixture:v3",
+        "builder": "build_evidence_fixture:v4",
         "score_dump": fingerprint_path(config.scores_path).to_dict(),
         "corpora": [fingerprint_path(path).to_dict() for path in config.corpus_paths],
         "retrieval": {
@@ -592,6 +634,7 @@ def _claims_cache_material(config: LocalRetrievalRouteWorkflowConfig) -> dict[st
             "retriever_min_overlap": float(config.retriever_min_overlap),
             "retrieval_limit": int(config.retrieval_limit),
             "include_label_metadata": bool(config.include_label_metadata),
+            "provenance_filter": _retrieval_provenance_filter_config(config),
         },
     }
 
@@ -955,6 +998,33 @@ def _parse_metadata(values: Sequence[str]) -> dict[str, str]:
     return metadata
 
 
+def _parse_csv_values(values: Sequence[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    parsed: list[str] = []
+    for value in values:
+        parsed.extend(part.strip() for part in str(value).split(",") if part.strip())
+    return tuple(parsed)
+
+
+def _clean_strings(values: Sequence[Any], *, name: str) -> tuple[str, ...]:
+    cleaned = tuple(str(value).strip() for value in values)
+    if any(not value for value in cleaned):
+        raise ValueError(f"{name} must contain non-empty strings.")
+    return cleaned
+
+
+def _retrieval_provenance_filter_config(config: LocalRetrievalRouteWorkflowConfig) -> dict[str, Any]:
+    return {
+        "require_source": bool(config.require_retrieval_source),
+        "allowed_source_prefixes": tuple(config.allowed_retrieval_source_prefixes),
+        "denied_source_prefixes": tuple(config.denied_retrieval_source_prefixes),
+        "min_score": float(config.min_retrieval_score),
+        "required_metadata": dict(config.required_retrieval_metadata or {}),
+        "max_hits_per_source": config.max_retrieval_hits_per_source,
+    }
+
+
 def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowConfig:
     return LocalRetrievalRouteWorkflowConfig(
         scores_path=Path(args.scores),
@@ -973,6 +1043,12 @@ def _config_from_args(args: argparse.Namespace) -> LocalRetrievalRouteWorkflowCo
         retriever_backend=args.retriever_backend,
         retriever_index_path=None if args.retriever_index_path is None else Path(args.retriever_index_path),
         include_label_metadata=not bool(args.omit_label_metadata),
+        require_retrieval_source=bool(args.require_retrieval_source),
+        allowed_retrieval_source_prefixes=_parse_csv_values(args.allowed_retrieval_source_prefix),
+        denied_retrieval_source_prefixes=_parse_csv_values(args.denied_retrieval_source_prefix),
+        min_retrieval_score=args.min_retrieval_score,
+        required_retrieval_metadata=_parse_metadata(args.required_retrieval_metadata or ()),
+        max_retrieval_hits_per_source=args.max_retrieval_hits_per_source,
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -1062,6 +1138,41 @@ def main(argv: Sequence[str] | None = None) -> None:
         "--omit-label-metadata",
         action="store_true",
         help="do not copy score labels into generated claims fixture record metadata",
+    )
+    parser.add_argument(
+        "--require-retrieval-source",
+        action="store_true",
+        help="drop retrieved hits that do not carry a source before verifier evidence handoff",
+    )
+    parser.add_argument(
+        "--allowed-retrieval-source-prefix",
+        action="append",
+        default=None,
+        help="allowed source prefix for retrieved hits; comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--denied-retrieval-source-prefix",
+        action="append",
+        default=None,
+        help="denied source prefix for retrieved hits; comma-separated or repeatable",
+    )
+    parser.add_argument(
+        "--min-retrieval-score",
+        type=lambda value: _parse_non_negative_float(value, flag="--min-retrieval-score"),
+        default=0.0,
+        help="minimum retriever score required before a hit becomes evidence",
+    )
+    parser.add_argument(
+        "--required-retrieval-metadata",
+        action="append",
+        default=None,
+        help="required retrieved-hit metadata key=value; repeatable",
+    )
+    parser.add_argument(
+        "--max-retrieval-hits-per-source",
+        type=lambda value: _parse_positive_int(value, flag="--max-retrieval-hits-per-source"),
+        default=None,
+        help="maximum accepted hits per source before verifier evidence handoff",
     )
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.20)

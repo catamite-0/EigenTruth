@@ -17,7 +17,13 @@ from typing import Any, Mapping, Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from eigentruth.adapters import InMemoryRetriever, RetrievalHit, RetrievalQuery, SQLiteFTSRetriever
+from eigentruth.adapters import (
+    InMemoryRetriever,
+    ProvenanceFilteredRetriever,
+    RetrievalHit,
+    RetrievalQuery,
+    SQLiteFTSRetriever,
+)
 from eigentruth.eval.score_dump import (
     ScoreDump,
     score_dump_file_metadata,
@@ -64,6 +70,12 @@ def build_evidence_fixture(
     retriever_backend: str = "memory",
     retriever_index_path: str | Path | None = None,
     include_label_metadata: bool = True,
+    require_retrieval_source: bool = False,
+    allowed_retrieval_source_prefixes: Sequence[str] = (),
+    denied_retrieval_source_prefixes: Sequence[str] = (),
+    min_retrieval_score: float = 0.0,
+    required_retrieval_metadata: Mapping[str, Any] | None = None,
+    max_retrieval_hits_per_source: int | None = None,
 ) -> dict[str, Any]:
     """Build a claim/evidence fixture using only local retrieval over claim text."""
     if retrieval_limit <= 0:
@@ -86,6 +98,14 @@ def build_evidence_fixture(
         min_overlap=retriever_min_overlap,
         backend=retriever_backend,
         index_path=index_path,
+        provenance_filter=_retrieval_provenance_filter_config(
+            require_source=require_retrieval_source,
+            allowed_source_prefixes=allowed_retrieval_source_prefixes,
+            denied_source_prefixes=denied_retrieval_source_prefixes,
+            min_score=min_retrieval_score,
+            required_metadata=required_retrieval_metadata,
+            max_hits_per_source=max_retrieval_hits_per_source,
+        ),
     )
     records = []
     total_hits = 0
@@ -114,6 +134,7 @@ def build_evidence_fixture(
                 "limit": retrieval_limit,
                 "query_field": query_field,
                 "query": query_text,
+                "provenance_filter": retriever_info.get("provenance_filter"),
             },
         }
         if include_label_metadata:
@@ -165,6 +186,12 @@ def build_evidence_input_provenance(
     retrieval_limit: int = 5,
     query_field: str = "text",
     include_label_metadata: bool = True,
+    require_retrieval_source: bool = False,
+    allowed_retrieval_source_prefixes: Sequence[str] = (),
+    denied_retrieval_source_prefixes: Sequence[str] = (),
+    min_retrieval_score: float = 0.0,
+    required_retrieval_metadata: Mapping[str, Any] | None = None,
+    max_retrieval_hits_per_source: int | None = None,
 ) -> dict[str, Any]:
     """Build input fingerprints and builder settings for fixture reproducibility."""
     score_dump_obj = _coerce_score_dump_for_metadata(score_dump)
@@ -181,6 +208,14 @@ def build_evidence_input_provenance(
             "retrieval_limit": int(retrieval_limit),
             "query_field": query_field,
             "include_label_metadata": bool(include_label_metadata),
+            "provenance_filter": _retrieval_provenance_filter_config(
+                require_source=require_retrieval_source,
+                allowed_source_prefixes=allowed_retrieval_source_prefixes,
+                denied_source_prefixes=denied_retrieval_source_prefixes,
+                min_score=min_retrieval_score,
+                required_metadata=required_retrieval_metadata,
+                max_hits_per_source=max_retrieval_hits_per_source,
+            ),
         },
     }
 
@@ -206,6 +241,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         retriever_backend=args.retriever_backend,
         retriever_index_path=args.retriever_index_path,
         include_label_metadata=include_label_metadata,
+        require_retrieval_source=bool(getattr(args, "require_retrieval_source", False)),
+        allowed_retrieval_source_prefixes=_parse_csv(getattr(args, "allowed_retrieval_source_prefix", None)),
+        denied_retrieval_source_prefixes=_parse_csv(getattr(args, "denied_retrieval_source_prefix", None)),
+        min_retrieval_score=float(getattr(args, "min_retrieval_score", 0.0)),
+        required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
+        max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
     )
     fixture["input_provenance"] = build_evidence_input_provenance(
         scores_path=scores_path,
@@ -217,6 +258,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         retrieval_limit=args.retrieval_limit,
         query_field=args.query_field,
         include_label_metadata=include_label_metadata,
+        require_retrieval_source=bool(getattr(args, "require_retrieval_source", False)),
+        allowed_retrieval_source_prefixes=_parse_csv(getattr(args, "allowed_retrieval_source_prefix", None)),
+        denied_retrieval_source_prefixes=_parse_csv(getattr(args, "denied_retrieval_source_prefix", None)),
+        min_retrieval_score=float(getattr(args, "min_retrieval_score", 0.0)),
+        required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
+        max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
     )
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -255,11 +302,12 @@ def _build_retriever(
     min_overlap: float,
     backend: str,
     index_path: Path | None,
+    provenance_filter: Mapping[str, Any] | None,
 ):
     requested_index_path = None if index_path is None else str(index_path)
     if backend == "memory":
         retriever = InMemoryRetriever(documents, min_overlap=min_overlap)
-        return retriever, {
+        retriever_info = {
             "type": type(retriever).__name__,
             "requested_backend": backend,
             "actual_backend": "memory",
@@ -268,9 +316,10 @@ def _build_retriever(
             "actual_index_path": None,
             "index_reused": False,
         }
+        return _maybe_wrap_retriever(retriever, retriever_info, provenance_filter=provenance_filter)
     retriever = SQLiteFTSRetriever(documents, min_overlap=min_overlap, index_path=index_path)
     if retriever.available:
-        return retriever, {
+        retriever_info = {
             "type": type(retriever).__name__,
             "requested_backend": backend,
             "actual_backend": "sqlite_fts",
@@ -280,8 +329,9 @@ def _build_retriever(
             "index_reused": retriever.index_reused,
             "document_fingerprint": retriever.document_fingerprint,
         }
+        return _maybe_wrap_retriever(retriever, retriever_info, provenance_filter=provenance_filter)
     if backend == "sqlite_fts":
-        return retriever, {
+        retriever_info = {
             "type": "InMemoryRetriever",
             "requested_backend": backend,
             "actual_backend": "memory",
@@ -291,8 +341,9 @@ def _build_retriever(
             "index_reused": False,
             "document_fingerprint": retriever.document_fingerprint,
         }
+        return _maybe_wrap_retriever(retriever, retriever_info, provenance_filter=provenance_filter)
     fallback = InMemoryRetriever(documents, min_overlap=min_overlap)
-    return fallback, {
+    retriever_info = {
         "type": type(fallback).__name__,
         "requested_backend": backend,
         "actual_backend": "memory",
@@ -302,6 +353,82 @@ def _build_retriever(
         "index_reused": False,
         "document_fingerprint": retriever.document_fingerprint,
     }
+    return _maybe_wrap_retriever(fallback, retriever_info, provenance_filter=provenance_filter)
+
+
+def _maybe_wrap_retriever(
+    retriever,
+    retriever_info: Mapping[str, Any],
+    *,
+    provenance_filter: Mapping[str, Any] | None,
+):
+    info = dict(retriever_info)
+    if not provenance_filter or not _provenance_filter_enabled(provenance_filter):
+        info["provenance_filter"] = None
+        return retriever, info
+    wrapped = ProvenanceFilteredRetriever(
+        retriever,
+        min_score=float(provenance_filter["min_score"]),
+        require_source=bool(provenance_filter["require_source"]),
+        allowed_source_prefixes=tuple(provenance_filter["allowed_source_prefixes"]),
+        denied_source_prefixes=tuple(provenance_filter["denied_source_prefixes"]),
+        required_metadata=dict(provenance_filter["required_metadata"]),
+        max_hits_per_source=provenance_filter["max_hits_per_source"],
+    )
+    info["wrapped_type"] = info.get("type")
+    info["type"] = type(wrapped).__name__
+    info["provenance_filter"] = dict(provenance_filter)
+    return wrapped, info
+
+
+def _retrieval_provenance_filter_config(
+    *,
+    require_source: bool,
+    allowed_source_prefixes: Sequence[str],
+    denied_source_prefixes: Sequence[str],
+    min_score: float,
+    required_metadata: Mapping[str, Any] | None,
+    max_hits_per_source: int | None,
+) -> dict[str, Any]:
+    score = float(min_score)
+    if not (0.0 <= score <= 1.0):
+        raise ValueError("min_retrieval_score must be in [0, 1].")
+    if max_hits_per_source is not None:
+        max_hits_per_source = int(max_hits_per_source)
+        if max_hits_per_source <= 0:
+            raise ValueError("max_retrieval_hits_per_source must be positive when set.")
+    return {
+        "require_source": bool(require_source),
+        "allowed_source_prefixes": _clean_string_tuple(
+            allowed_source_prefixes,
+            name="allowed_retrieval_source_prefixes",
+        ),
+        "denied_source_prefixes": _clean_string_tuple(
+            denied_source_prefixes,
+            name="denied_retrieval_source_prefixes",
+        ),
+        "min_score": score,
+        "required_metadata": dict(required_metadata or {}),
+        "max_hits_per_source": max_hits_per_source,
+    }
+
+
+def _provenance_filter_enabled(config: Mapping[str, Any]) -> bool:
+    return (
+        bool(config.get("require_source"))
+        or bool(config.get("allowed_source_prefixes"))
+        or bool(config.get("denied_source_prefixes"))
+        or float(config.get("min_score", 0.0)) > 0.0
+        or bool(config.get("required_metadata"))
+        or config.get("max_hits_per_source") is not None
+    )
+
+
+def _clean_string_tuple(values: Sequence[str], *, name: str) -> tuple[str, ...]:
+    cleaned = tuple(str(value).strip() for value in values)
+    if any(not value for value in cleaned):
+        raise ValueError(f"{name} must contain non-empty strings.")
+    return cleaned
 
 
 def _query_text(statement: Mapping[str, Any], *, query_field: str) -> str:
@@ -373,12 +500,38 @@ def _coerce_document(value: Any, *, source_default: str) -> RetrievalHit:
     for key in ("question", "answer"):
         if key in value and value[key] is not None:
             metadata[key] = str(value[key])
+    for key, item in value.items():
+        metadata_key = str(key)
+        if metadata_key not in {"text", "content", "source", "score", "metadata"} and metadata_key not in metadata:
+            metadata[metadata_key] = item
     return RetrievalHit(
         text=str(value.get("text", value.get("content", ""))),
         source=source,
         score=float(value.get("score", 1.0)),
         metadata=metadata,
     )
+
+
+def _parse_csv(values: Sequence[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    parts: list[str] = []
+    for value in values:
+        parts.extend(part.strip() for part in str(value).split(",") if part.strip())
+    return tuple(parts)
+
+
+def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
+    metadata = {}
+    for value in values or ():
+        if "=" not in value:
+            raise ValueError(f"metadata entry must be key=value: {value!r}")
+        key, text = value.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError(f"metadata key must not be empty: {value!r}")
+        metadata[key] = text
+    return metadata
 
 
 def main() -> None:
@@ -396,6 +549,18 @@ def main() -> None:
                         help="statement field used for retrieval query; claim text remains unchanged")
     parser.add_argument("--omit-label-metadata", action="store_true",
                         help="do not copy score labels into fixture record metadata")
+    parser.add_argument("--require-retrieval-source", action="store_true",
+                        help="drop retrieved hits that do not carry a source")
+    parser.add_argument("--allowed-retrieval-source-prefix", action="append", default=None,
+                        help="allowed source prefix for retrieved hits; comma-separated or repeatable")
+    parser.add_argument("--denied-retrieval-source-prefix", action="append", default=None,
+                        help="denied source prefix for retrieved hits; comma-separated or repeatable")
+    parser.add_argument("--min-retrieval-score", type=float, default=0.0,
+                        help="minimum retriever score required before a hit becomes evidence")
+    parser.add_argument("--required-retrieval-metadata", action="append", default=None,
+                        help="required hit metadata key=value; repeatable")
+    parser.add_argument("--max-retrieval-hits-per-source", type=int, default=None,
+                        help="maximum accepted hits per source before verifier evidence handoff")
     run(parser.parse_args())
 
 

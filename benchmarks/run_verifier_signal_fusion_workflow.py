@@ -93,6 +93,12 @@ class VerifierSignalFusionWorkflowConfig:
     retriever_backend: str = "memory"
     retriever_index_path: Path | None = None
     include_label_metadata: bool = False
+    require_retrieval_source: bool = False
+    allowed_retrieval_source_prefixes: Sequence[str] = ()
+    denied_retrieval_source_prefixes: Sequence[str] = ()
+    min_retrieval_score: float = 0.0
+    required_retrieval_metadata: Mapping[str, Any] | None = None
+    max_retrieval_hits_per_source: int | None = None
     verifier_min_overlap: float = 0.65
     retriever_min_overlap: float = 0.20
     retrieval_limit: int = 5
@@ -151,6 +157,26 @@ class VerifierSignalFusionWorkflowConfig:
             raise ValueError(f"retriever_backend must be one of: {', '.join(RETRIEVER_BACKENDS)}.")
         if self.retriever_backend == "memory" and self.retriever_index_path is not None:
             raise ValueError("retriever_index_path is only supported with sqlite_fts or auto backends.")
+        object.__setattr__(
+            self,
+            "allowed_retrieval_source_prefixes",
+            _clean_strings(self.allowed_retrieval_source_prefixes, name="allowed_retrieval_source_prefixes"),
+        )
+        object.__setattr__(
+            self,
+            "denied_retrieval_source_prefixes",
+            _clean_strings(self.denied_retrieval_source_prefixes, name="denied_retrieval_source_prefixes"),
+        )
+        min_retrieval_score = float(self.min_retrieval_score)
+        if not (0.0 <= min_retrieval_score <= 1.0):
+            raise ValueError("min_retrieval_score must be in [0, 1].")
+        object.__setattr__(self, "min_retrieval_score", min_retrieval_score)
+        if self.max_retrieval_hits_per_source is not None:
+            max_hits = int(self.max_retrieval_hits_per_source)
+            if max_hits <= 0:
+                raise ValueError("max_retrieval_hits_per_source must be positive when set.")
+            object.__setattr__(self, "max_retrieval_hits_per_source", max_hits)
+        object.__setattr__(self, "required_retrieval_metadata", dict(self.required_retrieval_metadata or {}))
         if self.claims_path is not None and (self.corpus_paths or self.sample_paths):
             raise ValueError("claims_path cannot be combined with corpus_paths or sample_paths.")
         if not (0.0 <= float(self.min_world_model_confidence) <= 1.0):
@@ -373,6 +399,12 @@ def _build_or_load_claims_fixture(
             retriever_backend=config.retriever_backend,
             retriever_index_path=config.retriever_index_path,
             include_label_metadata=bool(config.include_label_metadata),
+            require_retrieval_source=config.require_retrieval_source,
+            allowed_retrieval_source_prefixes=config.allowed_retrieval_source_prefixes,
+            denied_retrieval_source_prefixes=config.denied_retrieval_source_prefixes,
+            min_retrieval_score=config.min_retrieval_score,
+            required_retrieval_metadata=config.required_retrieval_metadata,
+            max_retrieval_hits_per_source=config.max_retrieval_hits_per_source,
         )
         retrieval_fixture["input_provenance"] = build_evidence_input_provenance(
             scores_path=first_scores_path,
@@ -384,6 +416,12 @@ def _build_or_load_claims_fixture(
             retrieval_limit=int(config.retrieval_limit),
             query_field=config.query_field,
             include_label_metadata=bool(config.include_label_metadata),
+            require_retrieval_source=config.require_retrieval_source,
+            allowed_retrieval_source_prefixes=config.allowed_retrieval_source_prefixes,
+            denied_retrieval_source_prefixes=config.denied_retrieval_source_prefixes,
+            min_retrieval_score=config.min_retrieval_score,
+            required_retrieval_metadata=config.required_retrieval_metadata,
+            max_retrieval_hits_per_source=config.max_retrieval_hits_per_source,
         )
 
     selfcheck_fixture = None
@@ -692,6 +730,7 @@ def _config_payload(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any
         "retriever_backend": config.retriever_backend,
         "retriever_index_path": None if config.retriever_index_path is None else str(config.retriever_index_path),
         "include_label_metadata": bool(config.include_label_metadata),
+        "retrieval_provenance_filter": _retrieval_provenance_filter_config(config),
         "verifier_min_overlap": float(config.verifier_min_overlap),
         "retriever_min_overlap": float(config.retriever_min_overlap),
         "retrieval_limit": int(config.retrieval_limit),
@@ -748,6 +787,46 @@ def _parse_csv(value: str | None, *, name: str) -> tuple[str, ...] | None:
     return parts
 
 
+def _parse_csv_values(values: Sequence[str] | None) -> tuple[str, ...]:
+    if not values:
+        return ()
+    parts: list[str] = []
+    for value in values:
+        parts.extend(part.strip() for part in str(value).split(",") if part.strip())
+    return tuple(parts)
+
+
+def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
+    metadata = {}
+    for value in values or ():
+        if "=" not in value:
+            raise ValueError(f"metadata entry must be key=value: {value!r}")
+        key, text = value.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise ValueError(f"metadata key must not be empty: {value!r}")
+        metadata[key] = text
+    return metadata
+
+
+def _clean_strings(values: Sequence[Any], *, name: str) -> tuple[str, ...]:
+    cleaned = tuple(str(value).strip() for value in values)
+    if any(not value for value in cleaned):
+        raise ValueError(f"{name} must contain non-empty strings.")
+    return cleaned
+
+
+def _retrieval_provenance_filter_config(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any]:
+    return {
+        "require_source": bool(config.require_retrieval_source),
+        "allowed_source_prefixes": tuple(config.allowed_retrieval_source_prefixes),
+        "denied_source_prefixes": tuple(config.denied_retrieval_source_prefixes),
+        "min_score": float(config.min_retrieval_score),
+        "required_metadata": dict(config.required_retrieval_metadata or {}),
+        "max_hits_per_source": config.max_retrieval_hits_per_source,
+    }
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from CLI-style arguments."""
     config = VerifierSignalFusionWorkflowConfig(
@@ -783,6 +862,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         retriever_backend=args.retriever_backend,
         retriever_index_path=None if args.retriever_index_path is None else Path(args.retriever_index_path),
         include_label_metadata=not bool(args.omit_label_metadata),
+        require_retrieval_source=bool(getattr(args, "require_retrieval_source", False)),
+        allowed_retrieval_source_prefixes=_parse_csv_values(getattr(args, "allowed_retrieval_source_prefix", None)),
+        denied_retrieval_source_prefixes=_parse_csv_values(getattr(args, "denied_retrieval_source_prefix", None)),
+        min_retrieval_score=float(getattr(args, "min_retrieval_score", 0.0)),
+        required_retrieval_metadata=_parse_key_values(getattr(args, "required_retrieval_metadata", None)),
+        max_retrieval_hits_per_source=getattr(args, "max_retrieval_hits_per_source", None),
         verifier_min_overlap=args.verifier_min_overlap,
         retriever_min_overlap=args.retriever_min_overlap,
         retrieval_limit=args.retrieval_limit,
@@ -838,6 +923,18 @@ def main() -> None:
     parser.add_argument("--retriever-index-path", default=None)
     parser.add_argument("--omit-label-metadata", action="store_true", default=True)
     parser.add_argument("--include-label-metadata", dest="omit_label_metadata", action="store_false")
+    parser.add_argument("--require-retrieval-source", action="store_true",
+                        help="drop retrieved hits that do not carry a source before verifier evidence handoff")
+    parser.add_argument("--allowed-retrieval-source-prefix", action="append", default=None,
+                        help="allowed source prefix for retrieved hits; comma-separated or repeatable")
+    parser.add_argument("--denied-retrieval-source-prefix", action="append", default=None,
+                        help="denied source prefix for retrieved hits; comma-separated or repeatable")
+    parser.add_argument("--min-retrieval-score", type=float, default=0.0,
+                        help="minimum retriever score required before a hit becomes evidence")
+    parser.add_argument("--required-retrieval-metadata", action="append", default=None,
+                        help="required retrieved-hit metadata key=value; repeatable")
+    parser.add_argument("--max-retrieval-hits-per-source", type=int, default=None,
+                        help="maximum accepted hits per source before verifier evidence handoff")
     parser.add_argument("--verifier-min-overlap", type=float, default=0.65)
     parser.add_argument("--retriever-min-overlap", type=float, default=0.20)
     parser.add_argument("--retrieval-limit", type=int, default=5)

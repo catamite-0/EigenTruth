@@ -6833,6 +6833,74 @@ def test_build_evidence_fixture_can_use_sqlite_fts_backend(tmp_path):
         )
 
 
+def test_build_evidence_fixture_applies_retrieval_provenance_filter(tmp_path):
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "corpus.json"
+    scores_path.write_text(
+        json.dumps({
+            "labels": [0],
+            "statements": [
+                {
+                    "claim_id": "c1",
+                    "answer": "Paris is the capital of France.",
+                    "text": "Paris is the capital of France.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "Paris is the capital of France.",
+                    "source": "external:wiki:france",
+                    "score": 0.95,
+                    "corpus_role": "grounding",
+                },
+                {
+                    "text": "The answer says Paris is the capital of France.",
+                    "source": "answer_echo:truthfulqa",
+                    "score": 1.0,
+                    "corpus_role": "stress_control",
+                },
+                {
+                    "text": "Paris is a common travel destination in France.",
+                    "source": "external:blog",
+                    "score": 0.6,
+                    "corpus_role": "grounding",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((corpus_path,)),
+        retriever_min_overlap=0.2,
+        retrieval_limit=3,
+        query_field="answer",
+        require_retrieval_source=True,
+        allowed_retrieval_source_prefixes=("external:wiki",),
+        denied_retrieval_source_prefixes=("answer_echo:",),
+        min_retrieval_score=0.8,
+        required_retrieval_metadata={"corpus_role": "grounding"},
+        max_retrieval_hits_per_source=1,
+    )
+
+    hits = fixture["records"][0]["retrieval_documents"]
+    assert fixture["summary"]["records_with_hits"] == 1
+    assert fixture["summary"]["total_hits"] == 1
+    assert fixture["retriever"]["type"] == "ProvenanceFilteredRetriever"
+    assert fixture["retriever"]["wrapped_type"] == "InMemoryRetriever"
+    assert fixture["retriever"]["provenance_filter"]["allowed_source_prefixes"] == ("external:wiki",)
+    assert hits[0]["source"] == "external:wiki:france"
+    assert hits[0]["metadata"]["corpus_role"] == "grounding"
+    assert hits[0]["metadata"]["provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
+
+
 def test_build_domain_state_fixture_feeds_structured_state_verifier(tmp_path):
     builder = importlib.import_module("benchmarks.build_domain_state_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
@@ -8835,18 +8903,22 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
                 {
                     "text": "Order R1 is approved for expedited shipping.",
                     "source": "shipping:R1:support",
+                    "corpus_role": "grounding",
                 },
                 {
                     "text": "Order R2 is approved for expedited shipping.",
                     "source": "shipping:R2:support",
+                    "corpus_role": "grounding",
                 },
                 {
                     "text": "Order R1 is not approved for same-day drone shipping.",
                     "source": "shipping:R1:refute",
+                    "corpus_role": "grounding",
                 },
                 {
                     "text": "Order R2 is not approved for same-day drone shipping.",
                     "source": "shipping:R2:refute",
+                    "corpus_role": "grounding",
                 },
             ],
         }),
@@ -8867,6 +8939,11 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
             retrieval_stress_manifest_path=stress_manifest_path,
             retrieval_limit=1,
             retriever_min_overlap=0.6,
+            require_retrieval_source=True,
+            allowed_retrieval_source_prefixes=("shipping:",),
+            min_retrieval_score=0.5,
+            required_retrieval_metadata={"corpus_role": "grounding"},
+            max_retrieval_hits_per_source=1,
             min_selected=4,
             gate_min_selected=4,
             min_decision_accuracy=0.99,
@@ -8888,6 +8965,9 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert payload["claims_summary"]["total_hits"] == 4
     assert payload["config"]["retriever_backend"] == "auto"
     assert payload["config"]["retriever_index_path"] == str(retriever_index_path)
+    assert payload["config"]["retrieval_provenance_filter"]["require_source"] is True
+    assert payload["config"]["retrieval_provenance_filter"]["allowed_source_prefixes"] == ("shipping:",)
+    assert payload["config"]["retrieval_provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
     profile = payload["profile"]
     assert profile["total_seconds"] >= 0.0
     assert profile["summary"]["bottleneck"] in profile["phases"]
@@ -8925,6 +9005,11 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert manifest["metadata"]["runner"] == "run_local_retrieval_route_workflow"
     assert manifest["metadata"]["recommended_route"] == "retrieval_groundedness"
     assert manifest["metadata"]["retriever_backend"] == "auto"
+    assert manifest["metadata"]["retriever_type"] == "ProvenanceFilteredRetriever"
+    assert manifest["metadata"]["retriever_wrapped_type"] in {"SQLiteFTSRetriever", "InMemoryRetriever"}
+    assert manifest["metadata"]["retrieval_provenance_filter"]["require_source"] is True
+    assert manifest["metadata"]["retrieval_provenance_filter"]["allowed_source_prefixes"] == ["shipping:"]
+    assert manifest["metadata"]["retrieval_provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
     assert manifest["metadata"]["retrieval_stress_manifest_path"] == str(stress_manifest_path)
     assert manifest["metadata"]["retriever_requested_index_path"] == str(retriever_index_path)
     assert manifest["metadata"]["retriever_actual_backend"] in {"sqlite_fts", "memory"}
@@ -8947,6 +9032,8 @@ def test_run_local_retrieval_route_workflow_registers_retrieval_baseline(tmp_pat
     assert record.metadata["workflow"] == "run_local_retrieval_route_workflow"
     assert record.metadata["recommended_route"] == "retrieval_groundedness"
     assert record.metadata["retrieval_stress_manifest_path"] == str(stress_manifest_path)
+    assert record.metadata["retriever_type"] == "ProvenanceFilteredRetriever"
+    assert record.metadata["retrieval_provenance_filter"]["require_source"] is True
     assert record.metadata["retriever_actual_backend"] in {"sqlite_fts", "memory"}
     assert record.metadata["recommended_retrieval_use_rate"] == pytest.approx(1.0)
     assert record.metadata["runtime_bottleneck"] in profile["phases"]
@@ -27200,7 +27287,7 @@ def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(
             "text": claim,
         })
         if label == 0:
-            documents.append({"text": claim, "source": f"facts:true:{idx}"})
+            documents.append({"text": claim, "source": f"facts:true:{idx}", "corpus_role": "grounding"})
             sample_rows.append([
                 claim,
                 f"{claim} Verified by the local sample.",
@@ -27210,7 +27297,11 @@ def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(
             subspace_resid.append(float(idx % 3))
             eigenscore.append(float(idx % 5))
         else:
-            documents.append({"text": f"Fact item {idx} is not correct.", "source": f"facts:false:{idx}"})
+            documents.append({
+                "text": f"Fact item {idx} is not correct.",
+                "source": f"facts:false:{idx}",
+                "corpus_role": "grounding",
+            })
             sample_rows.append([
                 f"Fact item {idx} is not correct.",
                 f"Fact item {idx} is wrong.",
@@ -27260,6 +27351,10 @@ def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(
             geometry_fusion_methods=("interaction",),
             query_field="answer",
             retriever_min_overlap=0.5,
+            require_retrieval_source=True,
+            allowed_retrieval_source_prefixes=("facts:",),
+            required_retrieval_metadata={"corpus_role": "grounding"},
+            min_retrieval_score=0.5,
             verifier_min_overlap=0.6,
             selfcheck_min_overlap=0.5,
             selfcheck_support_threshold=0.5,
@@ -27274,11 +27369,16 @@ def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(
     verified_records = (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").strip().splitlines()
 
     assert payload["workflow"] == "verifier_signal_fusion_workflow"
+    assert payload["config"]["retrieval_provenance_filter"]["require_source"] is True
+    assert payload["config"]["retrieval_provenance_filter"]["allowed_source_prefixes"] == ("facts:",)
+    assert payload["config"]["retrieval_provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
     assert payload["manifest_verification"]["passed"] is True
     assert payload["claims_summary"]["records_with_hits"] == len(labels)
     assert payload["claims_summary"]["records_with_samples"] == len(labels)
     assert claims["fixture_type"] == "local_retrieval_selfcheck_evidence"
     assert claims["label_usage"]["labels_copied_to_record_metadata"] is False
+    assert claims["retriever"]["type"] == "ProvenanceFilteredRetriever"
+    assert claims["records"][0]["retrieval_documents"][0]["metadata"]["provenance_filter"]["require_source"] is True
     assert "score_label" not in claims["records"][0]["metadata"]
     assert len(verified_records) == len(labels)
     assert enhanced.scores["verifier_refuted"][-1] == pytest.approx(1.0)

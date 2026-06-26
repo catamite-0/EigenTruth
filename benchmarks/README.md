@@ -3046,9 +3046,15 @@ and retrieval behavior fully reproducible. The default retriever backend is
 `memory`; `auto` tries SQLite FTS5 and falls back to memory when unavailable.
 When `--retriever-index-path` is provided with `auto` or `sqlite_fts`, the FTS
 index is persisted and reused when its stored corpus fingerprint matches the
-current corpus. `--verification-cache-dir` is optional and stores verified-record
-traces keyed by score dump, claims/evidence content, verifier parameters, and
-state/QA sources so repeated alpha/repeat sweeps can skip claim verification.
+current corpus. Use the provenance filter flags when a local corpus represents
+external or domain-shifted evidence: `--require-retrieval-source`,
+`--allowed-retrieval-source-prefix`, `--denied-retrieval-source-prefix`,
+`--min-retrieval-score`, `--required-retrieval-metadata key=value`, and
+`--max-retrieval-hits-per-source` drop untrusted hits before they become verifier
+evidence and record the filter in `input_provenance`. `--verification-cache-dir`
+is optional and stores verified-record traces keyed by score dump,
+claims/evidence content, verifier parameters, and state/QA sources so repeated
+alpha/repeat sweeps can skip claim verification.
 
 ## `run_local_retrieval_route_workflow.py`
 
@@ -3103,6 +3109,11 @@ route promotion must also satisfy an explicit runtime/cache budget. These gates
 fail closed when the corresponding metric is missing or non-finite, block final
 workflow promotion, and prevent registry promotion when the pre-registration
 budget has already failed.
+The same provenance filter flags supported by `build_evidence_fixture.py` are
+available here and are included in the claims-cache key, workflow report,
+artifact manifest, and registry metadata. Use them with external corpora or
+HTTP/exported retrieval snapshots so answer-echo stress controls, low-score
+documents, or untrusted source prefixes cannot silently enter a promoted route.
 
 For strict false-support gates on TruthfulQA-style local corpora, prefer
 `--gate-route retrieval_structured_qa`. The route uses retrieved documents with
@@ -3500,6 +3511,9 @@ python benchmarks/run_verifier_signal_fusion_workflow.py \
   --geometry-signals truth_proj,subspace_resid,eigenscore \
   --uncertainty-signals verifier_refuted,verifier_uncertainty,selfcheck_refute_rate \
   --query-field answer \
+  --require-retrieval-source \
+  --allowed-retrieval-source-prefix external: \
+  --required-retrieval-metadata corpus_role=grounding \
   --omit-label-metadata
 ```
 
@@ -3508,7 +3522,10 @@ sampler provides aligned self-consistency responses.
 
 The workflow is intentionally post-hoc and dependency-free. It is the preferred
 entry point when testing whether local retrieval and self-consistency evidence
-improves a calibrated geometry monitor without rerunning model scoring.
+improves a calibrated geometry monitor without rerunning model scoring. Its
+retrieval fixture builder accepts the same provenance filter flags as
+`build_evidence_fixture.py`, so verifier-signal fusion can be run only over
+source-typed, score-filtered, metadata-tagged evidence.
 
 For world-model correction specifically,
 `run_world_model_signal_calibration_workflow.py` builds a deterministic

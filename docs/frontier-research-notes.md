@@ -441,6 +441,12 @@ Added the first stdlib-only external retrieval service shell:
   filter policy in metadata for trace/replay audits. This still makes no
   external-RAG quality claim; it only prevents untrusted retrieval plumbing from
   silently becoming support evidence.
+- `build_evidence_fixture.py`, `run_local_retrieval_route_workflow.py`, and
+  `run_verifier_signal_fusion_workflow.py` now expose the same provenance filter
+  knobs and persist them in fixture input provenance, workflow reports, route
+  manifests, claims-cache keys, and registry metadata. This moves the filter
+  from an adapter-only primitive into the reproducible route/fusion evidence
+  path needed for external or domain-shifted retrieval experiments.
 
 ## Next Research-to-Code Candidates
 

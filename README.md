@@ -459,7 +459,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_wikidata_qa_corpus.py` | Converts structured Wikidata facts such as `P36` country-capital records, or a multi-property template set, into label-free `QuestionAnswerVerifier` corpora for `retrieval_structured_qa` route smoke tests. |
 | `run_wikidata_structured_qa_route_workflow.py` | Builds a balanced covered-facts score dump from a Wikidata QA corpus, runs either the structured QA route or natural-language structured-fact route, can expand structured-fact claims into paraphrase robustness variants, and writes a manifest-backed property-level correction artifact. |
 | `analyze_retrieval_route_gaps.py` | Reads verifier verified-record JSONL sidecars and summarizes retrieval coverage, final statuses, gap buckets, hit sources, and examples for blocked retrieval routes. |
-| `run_verifier_signal_fusion_workflow.py` | Runs the no-model local evidence loop end to end: retrieval/selfcheck fixture, verifier sidecar, verifier-signal score dumps, geometry-fusion report, deployable geometry artifacts, and manifest verification. |
+| `run_verifier_signal_fusion_workflow.py` | Runs the no-model local evidence loop end to end: retrieval/selfcheck fixture, optional retrieval provenance filtering, verifier sidecar, verifier-signal score dumps, geometry-fusion report, deployable geometry artifacts, and manifest verification. |
 | `run_world_model_signal_calibration_workflow.py` | Runs a deterministic world-model correction loop end to end: state-transition fixture, optional controlled world-model ensemble disagreement, world-model verifier sidecar, verifier-signal score dump, score/geometry fusion report, release gate over trace-gap/conflict calibration evidence, nested manifest verification, and optional local registry record. |
 | `run_selfcheck_signal_fusion_workflow.py` | Runs the direct no-model selfcheck signal loop end to end: sampled responses, selfcheck score dumps, sample-quality gate, score ensemble report, optional geometry-by-selfcheck fusion artifacts, and manifest verification. |
 | `eval_verifier_stability.py` | Replays verifier-ensemble reports across multiple split-conformal seeds, summarizes verified risk stability and route-selection stability, fingerprints verifier inputs, and optionally registers the post-hoc report. |
@@ -487,7 +487,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_registry_workflow.py` | Runs route promotion, writes a manifest, recursively verifies it, and registers the promoted route baseline in one command. |
 | `compare_route_baselines.py` | Compares registered verifier-route promotion manifests or covered-facts route-summary manifests by verified state, route quality, false support/refutation, tail latency, retrieval cost, and optional answer-echo retrieval stress-control gates. |
 | `run_adapter_family_matrix.py` | Builds deterministic structured QA, structured-state, state-transition, optional retrieval-groundedness, optional retrieval-structured-QA, and optional strict triple-evidence fixtures, then compares their promotion metrics in one local matrix. |
-| `run_local_retrieval_route_workflow.py` | Builds local retrieval evidence from score dumps and corpora, promotes retrieval routes, fingerprints all source artifacts, records a runtime profile, optionally attaches answer-echo stress-control evidence, optionally uses persistent SQLite FTS/cached claims fixtures/verifier traces, and optionally registers the route baseline. |
+| `run_local_retrieval_route_workflow.py` | Builds local retrieval evidence from score dumps and corpora, optionally applies retrieval provenance filters, promotes retrieval routes, fingerprints all source artifacts, records a runtime profile, optionally attaches answer-echo stress-control evidence, optionally uses persistent SQLite FTS/cached claims fixtures/verifier traces, and optionally registers the route baseline. |
 | `run_cache_profile_matrix.py` | Runs same-machine profile sweeps across layers, batch sizes, capture modes, and TruthManifold covariance modes, then emits a matrix-level performance promotion decision with per-cell AUROC quality signals. |
 | `run_cache_worker_sweep.py` | Runs the same cache-profile matrix across several worker counts and recommends the fastest promoted worker count by wall-clock time. |
 | `run_inside_sampling_profile.py` | Compares fixed, adaptive, and self-check-bounded INSIDE sampling runs, producing sample-count and `inside_generation` cost evidence for release gates. |
@@ -523,7 +523,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_wikidata_qa_corpus.py` | Converts Wikidata fact documents into template-driven structured QA corpora consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. |
 | `run_wikidata_structured_qa_route_workflow.py` | Runs covered-facts structured QA or structured-fact route workflows, optionally expands structured-fact claims into paraphrase robustness variants, and records support/refutation metrics for Wikidata properties present in the QA corpus. |
 | `analyze_retrieval_route_gaps.py` | Explains blocked retrieval routes from verified-record sidecars by coverage, status, gap bucket, source, and example records. |
-| `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora. |
+| `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora, with optional source/metadata/score provenance filters before hits become verifier evidence. |
 | `backfill_truthfulqa_statements.py` | Rebuilds deterministic TruthfulQA statement metadata for older score dumps and can emit label-derived oracle evidence for verifier upper-bound checks. |
 
 ### 主要组件
@@ -593,7 +593,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_wikidata_qa_corpus.py` | 将 Wikidata `P36` 或多属性模板结构化事实转换为无 label 的 `QuestionAnswerVerifier` corpus，用于 `retrieval_structured_qa` route smoke test。 |
 | `run_wikidata_structured_qa_route_workflow.py` | 从 Wikidata QA corpus 构建平衡 covered-facts score dump，可运行 structured QA route 或自然语言 structured-fact route，可将 structured-fact claim 展开为 paraphrase robustness 变体，并写出带 manifest 的属性级校正证据。 |
 | `analyze_retrieval_route_gaps.py` | 读取 verifier verified-record JSONL sidecar，按检索覆盖、最终状态、gap bucket、命中来源和样例解释 blocked retrieval route。 |
-| `run_verifier_signal_fusion_workflow.py` | 端到端运行无模型本地证据闭环：retrieval/selfcheck fixture、verifier sidecar、verifier-signal score dump、geometry-fusion report、可部署 geometry artifact 和 manifest verification。 |
+| `run_verifier_signal_fusion_workflow.py` | 端到端运行无模型本地证据闭环：retrieval/selfcheck fixture、可选 retrieval provenance filtering、verifier sidecar、verifier-signal score dump、geometry-fusion report、可部署 geometry artifact 和 manifest verification。 |
 | `run_world_model_signal_calibration_workflow.py` | 端到端运行确定性 world-model 校正闭环：state-transition fixture、可选受控 world-model ensemble disagreement、world-model verifier sidecar、verifier-signal score dump、score/geometry fusion report、基于 trace-gap / conflict calibration evidence 的 release gate、嵌套 manifest verification 和可选本地 registry record。 |
 | `run_selfcheck_signal_fusion_workflow.py` | 端到端运行无模型 direct selfcheck signal 闭环：sampled responses、自一致性 score dump、sample-quality gate、score ensemble report、可选 geometry-by-selfcheck fusion artifact 和 manifest verification。 |
 | `eval_verifier_stability.py` | 对 verifier-ensemble report 做多 seed split-conformal 重放，总结 verified risk 和 route-selection 稳定性，指纹化 verifier 输入，并可选登记 post-hoc report。 |
@@ -620,7 +620,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `run_adapter_promotion_registry_workflow.py` | 一次性执行 route promotion、写 manifest、递归验证 manifest，并把 promoted route baseline 注册到本地 registry。 |
 | `compare_route_baselines.py` | 按 manifest 验证状态、route 质量、误支持/反证率、尾延迟、retrieval 成本和可选 answer-echo retrieval stress-control gate 比较已注册 verifier-route promotion baseline 或 covered-facts route-summary manifest。 |
 | `run_adapter_family_matrix.py` | 构建确定性的 structured QA、structured-state、state-transition、可选 retrieval-groundedness、可选 retrieval-structured-QA 和可选 strict triple-evidence fixtures，并在一个本地矩阵里比较 promotion 指标。 |
-| `run_local_retrieval_route_workflow.py` | 从 score dump 和本地 corpus 构建 retrieval evidence，promote retrieval route，指纹化全部源 artifact，记录运行 profile，可选挂载 answer-echo stress-control evidence，可选使用持久化 SQLite FTS/claims fixture/verifier trace 缓存，并可选注册 route baseline。 |
+| `run_local_retrieval_route_workflow.py` | 从 score dump 和本地 corpus 构建 retrieval evidence，可选应用 retrieval provenance filter，promote retrieval route，指纹化全部源 artifact，记录运行 profile，可选挂载 answer-echo stress-control evidence，可选使用持久化 SQLite FTS/claims fixture/verifier trace 缓存，并可选注册 route baseline。 |
 | `run_cache_profile_matrix.py` | 跨 layer、batch size、capture mode 和 TruthManifold covariance mode 执行同机 profile sweep，并输出矩阵级性能 promotion decision 和每个 cell 的 AUROC quality signals。 |
 | `run_cache_worker_sweep.py` | 用多个 worker count 运行同一 cache-profile matrix，并按 wall-clock 推荐最快的已 promoted worker count。 |
 | `run_inside_sampling_profile.py` | 比较 fixed、adaptive 和 self-check-bounded INSIDE sampling，输出 sample-count 与 `inside_generation` 成本证据，供 release gate 使用。 |
@@ -656,7 +656,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_wikidata_qa_corpus.py` | 将 Wikidata fact document 转成模板驱动的 structured QA corpus，供 `QuestionAnswerVerifier` / `retrieval_structured_qa` 消费。 |
 | `run_wikidata_structured_qa_route_workflow.py` | 执行 covered-facts structured QA 或 structured-fact route workflow，可展开 structured-fact paraphrase robustness 变体，并记录 QA corpus 覆盖属性的支持/反证指标。 |
 | `analyze_retrieval_route_gaps.py` | 基于 verified-record sidecar 解释 blocked retrieval route 的覆盖、状态、gap bucket、证据来源和具体样例。 |
-| `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
+| `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture，可在 hit 进入 verifier evidence 前应用来源、metadata 和分数 provenance filter。 |
 | `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |
 
 `TimeoutActionExecutor` uses a stdlib thread-pool timeout so the control loop can
