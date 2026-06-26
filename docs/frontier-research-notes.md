@@ -152,6 +152,12 @@ Added a retrieval corpus provenance audit gate:
   refuted status. All 925 hits come from Wikidata `P36` capital facts, so the
   next iteration should expand source predicates or add a structured Wikidata
   verifier rather than only tuning lexical overlap thresholds.
+- `build_wikidata_qa_corpus.py` adds the first structured Wikidata bridge by
+  converting `P36` fact documents into label-free `QuestionAnswerVerifier`
+  corpora. This lets covered country-capital statements be supported or refuted
+  by exact structured values through the existing `retrieval_structured_qa`
+  route, while preserving the earlier blocked result for open-domain TruthfulQA
+  coverage.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

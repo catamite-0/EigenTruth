@@ -2489,6 +2489,30 @@ above the `0.05` gate, with verified detection `0.286`. This makes the current
 Wikidata country-capital corpus a useful external-source smoke gate, not a
 deployable TruthfulQA verifier route.
 
+## `build_wikidata_qa_corpus.py`
+
+Converts structured Wikidata fact documents into the existing structured QA
+schema consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. For
+the country-capital preset, each `P36` fact becomes one `question`/`answer`
+record such as `What is the capital of France?` / `Paris`. The builder keeps
+label-use flags false, fingerprints source files, and skips QID-only labels by
+default so unlabeled Wikidata entities do not become awkward natural-language QA
+facts.
+
+```bash
+python benchmarks/build_wikidata_qa_corpus.py \
+  --source artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
+  --output artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-qa-corpus.json \
+  --artifact-manifest artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-qa-manifest.json
+```
+
+Use the generated QA corpus with `build_evidence_fixture.py --query-field
+question` or directly through `eval_verifier_ensemble.py --qa-corpus` when the
+score dump contains matching `question`/`answer` statement metadata. This route
+is a structured knowledge-graph bridge: it can support correct values and refute
+wrong values for covered properties, but it does not broaden the Wikidata source
+coverage by itself.
+
 ## `analyze_retrieval_route_gaps.py`
 
 Explains blocked retrieval routes from `eval_verifier_ensemble.py

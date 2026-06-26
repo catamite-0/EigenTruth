@@ -2882,6 +2882,144 @@ def test_fetch_wikidata_reference_docs_feeds_external_corpus_gate(tmp_path):
     assert report["gate"]["external_domain_shift_ready"] is True
 
 
+def test_build_wikidata_qa_corpus_feeds_retrieval_structured_qa(tmp_path):
+    wikidata = importlib.import_module("benchmarks.build_wikidata_qa_corpus")
+    builder = importlib.import_module("benchmarks.build_evidence_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    source_path = tmp_path / "wikidata-source.jsonl"
+    qa_path = tmp_path / "wikidata-qa-corpus.json"
+    manifest_path = tmp_path / "wikidata-qa-corpus.manifest.json"
+    scores_path = tmp_path / "scores.json"
+    fixture_path = tmp_path / "fixture.json"
+    source_rows = [
+        {
+            "text": "According to Wikidata structured data, the capital of France is Paris.",
+            "source": "wikidata:Q142:P36:Q90",
+            "metadata": {
+                "provider": "wikidata",
+                "license": "CC0-1.0",
+                "statement_property": "P36",
+                "statement_property_label": "capital",
+                "country": "France",
+                "country_qid": "Q142",
+                "capital": "Paris",
+                "capital_qid": "Q90",
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, the capital of Q12345 is Example City.",
+            "source": "wikidata:Q12345:P36:Q67890",
+            "metadata": {
+                "provider": "wikidata",
+                "statement_property": "P36",
+                "country": "Q12345",
+                "country_qid": "Q12345",
+                "capital": "Example City",
+                "capital_qid": "Q67890",
+            },
+        },
+        {
+            "text": "According to Wikidata structured data, the capital of Japan is Tokyo.",
+            "source": "wikidata:Q17:P36:Q1490",
+            "metadata": {
+                "provider": "wikidata",
+                "license": "CC0-1.0",
+                "statement_property": "P36",
+                "statement_property_label": "capital",
+                "country": "Japan",
+                "country_qid": "Q17",
+                "capital": "Tokyo",
+                "capital_qid": "Q1490",
+            },
+        },
+    ]
+    source_path.write_text("\n".join(json.dumps(row) for row in source_rows) + "\n", encoding="utf-8")
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 0, 1, 1],
+            "scores": {"truth_proj": [0.1, 0.2, 0.8, 0.9]},
+            "statements": [
+                {
+                    "question": "What is the capital of France?",
+                    "answer": "Paris",
+                    "text": "What is the capital of France? Paris",
+                },
+                {
+                    "question": "What is the capital of Japan?",
+                    "answer": "Tokyo",
+                    "text": "What is the capital of Japan? Tokyo",
+                },
+                {
+                    "question": "What is the capital of France?",
+                    "answer": "Lyon",
+                    "text": "What is the capital of France? Lyon",
+                },
+                {
+                    "question": "What is the capital of Japan?",
+                    "answer": "Osaka",
+                    "text": "What is the capital of Japan? Osaka",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    corpus = wikidata.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(qa_path),
+            statement_property="P36",
+            statement_property_label="capital",
+            question_template="What is the capital of {country}?",
+            keep_qid_labels=False,
+            artifact_manifest=str(manifest_path),
+        )
+    )
+    fixture = builder.build_evidence_fixture(
+        builder.load_score_dump(scores_path),
+        builder.load_corpus((qa_path,)),
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+        query_field="question",
+        include_label_metadata=False,
+    )
+    fixture_path.write_text(json.dumps(fixture), encoding="utf-8")
+
+    payload = verifier.build_verifier_ensemble_report(
+        [("wikidata-qa", scores_path)],
+        signal="truth_proj",
+        claims_path=fixture_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        retriever_min_overlap=1.0,
+        retrieval_limit=1,
+    )
+    run = payload["runs"][0]
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert corpus["corpus_type"] == "structured_qa_external_evidence"
+    assert corpus["summary"]["n_documents"] == 2
+    assert corpus["summary"]["skipped"]["qid_labels"] == 1
+    assert corpus["documents"][0]["question"] == "What is the capital of France?"
+    assert corpus["documents"][0]["answer"] == "Paris"
+    assert corpus["documents"][0]["metadata"]["external_source"] is True
+    assert corpus["label_usage"]["labels_used_for_documents"] is False
+    assert corpus["input_provenance"]["sources"][0]["path"] == str(source_path)
+    assert manifest["artifacts"]["qa_corpus"]["exists"] is True
+    assert fixture["records"][0]["retrieval_documents"][0]["metadata"]["question"] == (
+        "What is the capital of France?"
+    )
+    assert run["route_summary"]["selected_counts"] == {"retrieval_structured_qa": 4}
+    statuses = run["route_summary"]["by_route"]["retrieval_structured_qa"]["statuses"]
+    assert statuses["supported"] == 2
+    assert statuses["refuted"] == 2
+    assert statuses["insufficient_evidence"] == 0
+    assert run["route_quality"]["retrieval_structured_qa"]["decision_accuracy"] == pytest.approx(1.0)
+    assert run["retrieval_qa"]["decided_records"] == 4
+
+
 def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):
     builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
     source_path = tmp_path / "bad-reference.json"
