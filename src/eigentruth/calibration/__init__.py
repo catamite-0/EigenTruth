@@ -23,6 +23,13 @@ from eigentruth.calibration.sweeps import (
     LayerScoreSweepResult,
     SweepScoreResult,
 )
+from eigentruth.calibration.trajectory_fusion import (
+    DEFAULT_NLL_SIGNAL_NAME,
+    DEFAULT_TRAJECTORY_SIGNAL_NAME,
+    TrajectoryFusionDataset,
+    calibrate_trajectory_fusion_from_report,
+    trajectory_fusion_dataset_from_report,
+)
 
 __all__ = [
     "AdaptiveConformalCalibrator",
@@ -30,6 +37,8 @@ __all__ = [
     "CalibrationScore",
     "ConformalCalibrator",
     "DEFAULT_SCORE_DIRECTIONS",
+    "DEFAULT_NLL_SIGNAL_NAME",
+    "DEFAULT_TRAJECTORY_SIGNAL_NAME",
     "GeometryScoreFusionArtifact",
     "GeometryScoreFusionCalibrator",
     "LayerScoreSweepCalibrator",
@@ -40,4 +49,7 @@ __all__ = [
     "ScoreFusionSignal",
     "SteeringPolicyConfig",
     "SweepScoreResult",
+    "TrajectoryFusionDataset",
+    "calibrate_trajectory_fusion_from_report",
+    "trajectory_fusion_dataset_from_report",
 ]

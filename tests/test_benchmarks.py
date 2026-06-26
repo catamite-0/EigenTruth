@@ -4423,6 +4423,82 @@ def test_eval_trajectory_truthfulqa_layer_sweep_reports_best_layer(tmp_path, cap
     assert payload["records"][0]["trajectories"]["0"]["metadata"]["resolved_layer"] == 0
 
 
+def test_build_trajectory_fusion_artifact_writes_report_and_artifact(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.build_trajectory_fusion_artifact")
+    source_path = tmp_path / "trajectory-sweep.json"
+    output_path = tmp_path / "trajectory-fusion-report.json"
+    artifact_path = tmp_path / "trajectory-fusion-artifact.json"
+    _write_trajectory_fusion_source_report(source_path)
+
+    payload = module.run(SimpleNamespace(
+        trajectory_report=str(source_path),
+        json=str(output_path),
+        artifact=str(artifact_path),
+        layer="best",
+        signal_name="trajectory_convergence",
+        include_nll_answer=True,
+        alpha=0.4,
+        method="max_rank",
+        quiet=True,
+    ))
+    captured = capsys.readouterr()
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+
+    assert captured.out == ""
+    assert output_path.exists()
+    assert artifact_path.exists()
+    assert payload["workflow"] == "trajectory_fusion_artifact_build"
+    assert payload["summary"]["signal_names"] == ("trajectory_convergence", "nll_answer")
+    assert payload["summary"]["auroc"] > 0.8
+    assert payload["dataset_metadata"]["layer"] == -6
+    assert artifact["signals"][0]["name"] == "trajectory_convergence"
+    assert artifact["signals"][0]["direction"] == "higher"
+    assert artifact["signals"][1]["name"] == "nll_answer"
+
+
+def _write_trajectory_fusion_source_report(path: Path) -> None:
+    labels = [0, 0, 0, 1, 1]
+    scores = [0.1, 0.2, 0.3, 0.8, 0.9]
+    payload = {
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep",
+        "config": {"layers": [-1, -6]},
+        "summary": {
+            "status": "pass",
+            "n_total": 5,
+            "n_evaluated": 5,
+            "n_skipped": 0,
+            "best_layer": -6,
+            "best_layer_key": "-6",
+            "best_resolved_layer": 7,
+            "trajectory_score_best_auroc": 1.0,
+            "trajectory_score_direction_for_false": "higher",
+        },
+        "layer_summaries": [{
+            "layer": -6,
+            "layer_key": "-6",
+            "resolved_layer": 7,
+            "trajectory_score_best_auroc": 1.0,
+            "trajectory_score_direction_for_false": "higher",
+        }],
+        "records": [
+            {
+                "index": index,
+                "label": label,
+                "nll_answer": float(index + 1),
+                "trajectories": {
+                    "-6": {
+                        "convergence_score": scores[index],
+                        "metadata": {"layer": -6, "resolved_layer": 7},
+                    }
+                },
+            }
+            for index, label in enumerate(labels)
+        ],
+        "metadata": {"model": "synthetic"},
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def _write_trajectory_sweep_report(
     path: Path,
     *,

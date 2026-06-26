@@ -4524,6 +4524,25 @@ python benchmarks/compare_trajectory_sweeps.py \
   --quiet
 ```
 
+## `build_trajectory_fusion_artifact.py`
+
+Converts a trajectory benchmark report into a rank-calibrated fusion artifact.
+This is the bridge for using trajectory convergence as an optional fusion or
+routing signal after the evidence gate records it as preliminary. It does not
+promote trajectory convergence into a standalone release detector.
+
+```bash
+python benchmarks/build_trajectory_fusion_artifact.py \
+  --trajectory-report artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-qwen-l80-limit128-layer-sweep-report.json \
+  --json artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-fusion-report.json \
+  --artifact artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-fusion-artifact.json \
+  --quiet
+```
+
+Use `--include-nll-answer` only for explicit ablations; the current gpt2
+trajectory evidence has a weak NLL baseline, so NLL is not the recommended
+default companion signal.
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use
