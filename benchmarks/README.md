@@ -1071,7 +1071,11 @@ python benchmarks/run_triple_extraction_fixture_workflow.py \
 Use `run_triple_extraction_fixture_matrix.py` when extractor templates need
 cross-corpus release evidence. The matrix runs the same workflow per corpus and
 blocks promotion unless enough corpora promote and the generated fixtures cover
-enough distinct predicates. Add `--adversarial-negatives-per-fact N` to include
+enough distinct predicates. Add `--external-predictions CORPUS:NAME=PATH` to
+evaluate learned/OpenIE/LLM-json prediction files for one corpus in the same
+matrix run; `CORPUS` may be either the configured corpus name or its slug, and
+the external files are recorded in both per-corpus and matrix manifests. Add
+`--adversarial-negatives-per-fact N` to include
 negated near-miss records with no expected triples, and
 `--max-adversarial-false-positive-rate` to fail closed when an extractor emits
 triples for those negative controls. Add `--predicate-confusions-per-fact N`
@@ -1087,6 +1091,8 @@ python benchmarks/run_triple_extraction_fixture_matrix.py \
   --corpus country-core=artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl \
   --corpus organization-product=artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl \
   --output-dir artifacts/wikidata-cross-corpus-triple-extraction-fixture-matrix \
+  --external-predictions country-core:learned=artifacts/country-core-extractor-predictions.jsonl \
+  --external-predictions organization-product:learned=artifacts/organization-product-extractor-predictions.jsonl \
   --min-corpora 2 \
   --min-distinct-predicates 6 \
   --adversarial-negatives-per-fact 0 \

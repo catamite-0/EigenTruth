@@ -12,7 +12,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -74,6 +74,9 @@ class TripleExtractionFixtureMatrixConfig:
     max_metalinguistic_false_positive_rate: float = 0.0
     min_corpora: int = 2
     min_distinct_predicates: int = 4
+    external_prediction_paths_by_corpus: Mapping[str, Mapping[str, str | Path]] = field(
+        default_factory=dict
+    )
     compact_json: bool = False
 
     def __post_init__(self) -> None:
@@ -85,6 +88,11 @@ class TripleExtractionFixtureMatrixConfig:
             raise ValueError("corpus names must produce unique slugs.")
         object.__setattr__(self, "corpora", corpora)
         object.__setattr__(self, "output_dir", Path(self.output_dir))
+        object.__setattr__(
+            self,
+            "external_prediction_paths_by_corpus",
+            _normalize_external_prediction_paths(self.external_prediction_paths_by_corpus, corpora),
+        )
         if self.max_facts is not None and int(self.max_facts) <= 0:
             raise ValueError("max_facts must be positive when provided.")
         object.__setattr__(self, "max_facts", None if self.max_facts is None else int(self.max_facts))
@@ -219,6 +227,7 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
                 max_temporal_false_positive_rate=config.max_temporal_false_positive_rate,
                 metalinguistic_negatives_per_fact=config.metalinguistic_negatives_per_fact,
                 max_metalinguistic_false_positive_rate=config.max_metalinguistic_false_positive_rate,
+                external_prediction_paths=config.external_prediction_paths_by_corpus.get(corpus.slug, {}),
                 compact_json=config.compact_json,
             )
         )
@@ -240,6 +249,9 @@ def run_triple_extraction_fixture_matrix(config: TripleExtractionFixtureMatrixCo
             "mean_best_f1": matrix["mean_best_f1"],
             "mean_baseline_f1": matrix["mean_baseline_f1"],
             "mean_f1_lift": matrix["mean_f1_lift"],
+            "external_prediction_count": matrix["external_prediction_count"],
+            "external_prediction_corpora": matrix["external_prediction_corpora"],
+            "mean_best_external_f1": matrix["mean_best_external_f1"],
             "mean_best_adversarial_false_positive_rate": matrix[
                 "mean_best_adversarial_false_positive_rate"
             ],
@@ -301,6 +313,15 @@ def _corpus_result(
     best_ambiguity_report = _mapping(summary.get("best_ambiguity_report"))
     best_temporal_report = _mapping(summary.get("best_temporal_report"))
     best_metalinguistic_report = _mapping(summary.get("best_metalinguistic_report"))
+    external_prediction_paths = {
+        str(name): str(path)
+        for name, path in _mapping(summary.get("external_prediction_paths")).items()
+    }
+    external_reports = {
+        str(name): _mapping(report)
+        for name, report in _mapping(summary.get("reports")).items()
+        if str(name).startswith("external_")
+    }
     return {
         "name": corpus.name,
         "slug": corpus.slug,
@@ -317,6 +338,13 @@ def _corpus_result(
         "best_extractor": summary.get("best_extractor"),
         "best_f1": float(_mapping(summary.get("best_report")).get("f1", 0.0)),
         "f1_lift": float(summary.get("f1_lift", 0.0)),
+        "external_prediction_paths": external_prediction_paths,
+        "external_prediction_count": len(external_prediction_paths),
+        "external_extractors": tuple(sorted(external_reports)),
+        "best_external_f1": max(
+            (float(report.get("f1", 0.0)) for report in external_reports.values()),
+            default=0.0,
+        ),
         "n_adversarial_negative_records": int(fixture_summary.get("n_adversarial_negative_records", 0)),
         "best_adversarial_false_positive_rate": float(
             best_adversarial_report.get("false_positive_rate", 0.0)
@@ -375,6 +403,15 @@ def _matrix_summary(
         for item in corpus_results
         for predicate in item.get("predicates", ())
     }))
+    external_prediction_corpora = tuple(
+        str(item["slug"])
+        for item in corpus_results
+        if int(item.get("external_prediction_count", 0)) > 0
+    )
+    external_prediction_count = sum(
+        int(item.get("external_prediction_count", 0))
+        for item in corpus_results
+    )
     failures = []
     if len(corpus_results) < config.min_corpora:
         failures.append({
@@ -432,6 +469,13 @@ def _matrix_summary(
         "mean_baseline_f1": _mean(float(item["baseline_f1"]) for item in corpus_results),
         "mean_best_f1": _mean(float(item["best_f1"]) for item in corpus_results),
         "mean_f1_lift": _mean(float(item["f1_lift"]) for item in corpus_results),
+        "external_prediction_count": external_prediction_count,
+        "external_prediction_corpora": external_prediction_corpora,
+        "mean_best_external_f1": _mean(
+            float(item.get("best_external_f1", 0.0))
+            for item in corpus_results
+            if int(item.get("external_prediction_count", 0)) > 0
+        ),
         "mean_best_adversarial_false_positive_rate": _mean(
             float(item["best_adversarial_false_positive_rate"])
             for item in corpus_results
@@ -497,6 +541,8 @@ def _manifest_artifacts(
         for idx, source_path in enumerate(result.get("fact_corpus_paths", ()), start=1):
             path = Path(str(source_path))
             artifacts[f"corpus.{slug}.source.{idx}.{path.stem}"] = path
+        for name, predictions_path in _mapping(result.get("external_prediction_paths")).items():
+            artifacts[f"corpus.{slug}.external_predictions.{name}"] = Path(str(predictions_path))
     return artifacts
 
 
@@ -531,6 +577,79 @@ def _parse_corpus_specs(specs: Sequence[str]) -> tuple[TripleExtractionCorpusCon
         TripleExtractionCorpusConfig(name=name, fact_corpus_paths=tuple(paths))
         for name, paths in grouped.items()
     )
+
+
+def _normalize_external_prediction_paths(
+    value: Mapping[str, Mapping[str, str | Path]],
+    corpora: Sequence[TripleExtractionCorpusConfig],
+) -> dict[str, dict[str, Path]]:
+    if not isinstance(value, Mapping):
+        raise ValueError("external_prediction_paths_by_corpus must be a mapping.")
+
+    corpus_by_key: dict[str, TripleExtractionCorpusConfig] = {}
+    for corpus in corpora:
+        for key in (corpus.name, corpus.slug, _slugify(corpus.name)):
+            normalized = str(key).strip()
+            existing = corpus_by_key.get(normalized)
+            if existing is not None and existing.slug != corpus.slug:
+                raise ValueError(f"external prediction corpus key is ambiguous: {normalized}")
+            corpus_by_key[normalized] = corpus
+
+    normalized: dict[str, dict[str, Path]] = {}
+    for corpus_key, predictions in value.items():
+        key = str(corpus_key).strip()
+        if not key:
+            raise ValueError("external prediction corpus key must be non-empty.")
+        corpus = corpus_by_key.get(key) or corpus_by_key.get(_slugify(key))
+        if corpus is None:
+            raise ValueError(f"external predictions reference unknown corpus: {corpus_key}")
+        if not isinstance(predictions, Mapping):
+            raise ValueError("external predictions for a corpus must be a NAME=PATH mapping.")
+        corpus_predictions = dict(normalized.get(corpus.slug, {}))
+        for name, path in predictions.items():
+            safe_name = _safe_external_prediction_name(name)
+            if safe_name in corpus_predictions:
+                raise ValueError(
+                    f"duplicate external prediction extractor {safe_name!r} for corpus {corpus.slug!r}"
+                )
+            path_value = str(path).strip()
+            if not path_value:
+                raise ValueError("external prediction path must be non-empty.")
+            corpus_predictions[safe_name] = Path(path)
+        normalized[corpus.slug] = corpus_predictions
+    return normalized
+
+
+def _parse_external_prediction_specs(
+    specs: Sequence[str],
+) -> dict[str, dict[str, Path]]:
+    grouped: dict[str, dict[str, Path]] = {}
+    for spec in specs:
+        if ":" not in spec or "=" not in spec:
+            raise ValueError("--external-predictions must use CORPUS:NAME=PATH format.")
+        corpus_key, remainder = spec.split(":", 1)
+        name, path = remainder.split("=", 1)
+        corpus_key = corpus_key.strip()
+        safe_name = _safe_external_prediction_name(name)
+        path = path.strip()
+        if not corpus_key or not path:
+            raise ValueError("--external-predictions must use non-empty CORPUS:NAME=PATH values.")
+        corpus_predictions = grouped.setdefault(corpus_key, {})
+        if safe_name in corpus_predictions:
+            raise ValueError(
+                f"duplicate external prediction extractor {safe_name!r} for corpus {corpus_key!r}"
+            )
+        corpus_predictions[safe_name] = Path(path)
+    return grouped
+
+
+def _safe_external_prediction_name(value: Any) -> str:
+    name = str(value).strip().casefold().replace("-", "_")
+    name = "".join(char if char.isalnum() or char == "_" else "_" for char in name)
+    name = "_".join(part for part in name.split("_") if part)
+    if not name:
+        raise ValueError("external prediction extractor name must be non-empty.")
+    return name
 
 
 def _slugify(value: str) -> str:
@@ -580,6 +699,9 @@ def _config_from_args(args: argparse.Namespace) -> TripleExtractionFixtureMatrix
         max_metalinguistic_false_positive_rate=args.max_metalinguistic_false_positive_rate,
         min_corpora=args.min_corpora,
         min_distinct_predicates=args.min_distinct_predicates,
+        external_prediction_paths_by_corpus=_parse_external_prediction_specs(
+            tuple(args.external_predictions or ())
+        ),
         compact_json=bool(args.compact_json),
     )
 
@@ -611,6 +733,12 @@ def main() -> None:
     parser.add_argument("--max-metalinguistic-false-positive-rate", type=float, default=0.0)
     parser.add_argument("--min-corpora", type=int, default=2)
     parser.add_argument("--min-distinct-predicates", type=int, default=4)
+    parser.add_argument(
+        "--external-predictions",
+        action="append",
+        default=(),
+        help="external prediction file in CORPUS:NAME=PATH format; CORPUS may be corpus name or slug",
+    )
     parser.add_argument("--compact-json", action="store_true")
     run_triple_extraction_fixture_matrix(_config_from_args(parser.parse_args()))
 

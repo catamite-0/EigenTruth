@@ -575,6 +575,154 @@ def test_triple_extraction_fixture_matrix_promotes_cross_corpus_domain_templates
     assert (tmp_path / "matrix" / "enterprise-product" / "artifact-manifest.json").exists()
 
 
+def test_triple_extraction_fixture_matrix_records_external_prediction_reports(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
+    country_corpus = tmp_path / "country-facts.json"
+    domain_corpus = tmp_path / "domain-facts.json"
+    country_predictions = tmp_path / "country-predictions.json"
+    domain_predictions = tmp_path / "domain-predictions.json"
+    country_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    domain_corpus.write_text(
+        json.dumps({
+            "facts": [
+                {"subject": "OpenAI", "predicate": "P159", "object": "San Francisco"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    country_predictions.write_text(
+        json.dumps({
+            "claim_id:0001-capital_of-capital-object-first": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-subject-first": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-possessive": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+            "claim_id:0001-capital_of-capital-has-at": [
+                {"subject": "France", "predicate": "capital_of", "object": "Paris"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    domain_predictions.write_text(
+        json.dumps({
+            "claim_id:0001-headquarters_location_of-headquarters-headquartered-in": [
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ],
+            "claim_id:0001-headquarters_location_of-headquarters-of": [
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ],
+            "claim_id:0001-headquarters_location_of-headquarters-possessive": [
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ],
+            "claim_id:0001-headquarters_location_of-headquarters-object-first": [
+                {
+                    "subject": "OpenAI",
+                    "predicate": "headquarters_location_of",
+                    "object": "San Francisco",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(
+        corpus=(
+            f"Country Core={country_corpus}",
+            f"enterprise-product={domain_corpus}",
+        ),
+        output_dir=str(tmp_path / "matrix"),
+        max_facts=None,
+        max_examples=20,
+        min_augmented_f1=1.0,
+        allow_no_lift=False,
+        adversarial_negatives_per_fact=0,
+        max_adversarial_false_positive_rate=0.0,
+        predicate_confusions_per_fact=0,
+        min_predicate_confusion_f1=1.0,
+        non_assertive_negatives_per_fact=0,
+        max_non_assertive_false_positive_rate=0.0,
+        ambiguity_negatives_per_fact=0,
+        max_ambiguity_false_positive_rate=0.0,
+        temporal_negatives_per_fact=0,
+        max_temporal_false_positive_rate=0.0,
+        metalinguistic_negatives_per_fact=0,
+        max_metalinguistic_false_positive_rate=0.0,
+        min_corpora=2,
+        min_distinct_predicates=2,
+        external_predictions=(
+            f"country-core:Learned-Smoke={country_predictions}",
+            f"enterprise-product:learned_smoke={domain_predictions}",
+        ),
+        compact_json=False,
+    )
+    config = module._config_from_args(args)  # noqa: SLF001
+
+    matrix = module.run_triple_extraction_fixture_matrix(config)
+    manifest = json.loads((tmp_path / "matrix" / "artifact-manifest.json").read_text(encoding="utf-8"))
+
+    assert matrix["status"] == "promote"
+    assert matrix["external_prediction_count"] == 2
+    assert matrix["external_prediction_corpora"] == ("country-core", "enterprise-product")
+    assert matrix["mean_best_external_f1"] == pytest.approx(1.0)
+    by_slug = {item["slug"]: item for item in matrix["corpora"]}
+    assert by_slug["country-core"]["external_prediction_count"] == 1
+    assert by_slug["country-core"]["external_extractors"] == ("external_learned_smoke",)
+    assert by_slug["enterprise-product"]["best_external_f1"] == pytest.approx(1.0)
+    assert (
+        tmp_path
+        / "matrix"
+        / "country-core"
+        / "external_learned_smoke-triple-extraction-report.json"
+    ).exists()
+    assert (
+        tmp_path
+        / "matrix"
+        / "enterprise-product"
+        / "external_learned_smoke-triple-extraction-report.json"
+    ).exists()
+    assert manifest["metadata"]["external_prediction_count"] == 2
+    assert manifest["metadata"]["external_prediction_corpora"] == [
+        "country-core",
+        "enterprise-product",
+    ]
+    assert manifest["metadata"]["mean_best_external_f1"] == pytest.approx(1.0)
+    assert manifest["artifacts"]["corpus.country-core.external_predictions.learned_smoke"][
+        "exists"
+    ] is True
+    assert manifest["artifacts"]["corpus.enterprise-product.external_predictions.learned_smoke"][
+        "exists"
+    ] is True
+
+
 def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
     module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
     country_corpus = tmp_path / "country-facts.json"

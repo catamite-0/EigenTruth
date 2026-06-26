@@ -73,7 +73,7 @@ Added dependency-free fact-level claim metadata:
 
 - `extract_claims(..., include_triples=True)` and `SentenceClaimExtractor(include_triples=True)` can attach rule-based `claim_triples` metadata without requiring an external extractor.
 - `ClaimVerificationPlanner(include_extracted_triples=True)` routes those extracted triples into the existing `triple_evidence` path, so local fact-level audits can be planned before a stronger extractor is available.
-- The API keeps stronger extraction optional through the existing claim and triple extractor protocols.
+- The API keeps stronger extraction optional through the existing claim and triple extractor protocols. External or learned extractors can now hand local prediction files to the single-corpus workflow or to the cross-corpus fixture matrix with `--external-predictions CORPUS:NAME=PATH`, keeping the evaluation boundary dependency-free while testing cross-corpus/adversarial robustness.
 
 Added a geometry-calibrated score primitive:
 
