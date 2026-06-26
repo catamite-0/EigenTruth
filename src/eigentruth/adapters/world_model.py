@@ -76,11 +76,18 @@ class StateTransitionVerifier:
 
     The verifier reads `state_transition` metadata from the claim or context,
     predicts the next state with the configured world model, then evaluates a
-    structured postcondition over that predicted state.
+    structured postcondition over that predicted state. Set
+    `min_prediction_confidence` above zero to fail closed when the world-model
+    prediction is too uncertain to support a postcondition judgment.
     """
 
     world_model: WorldModelAdapter
     state: Mapping[str, Any] = field(default_factory=dict)
+    min_prediction_confidence: float = 0.0
+
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.min_prediction_confidence <= 1.0):
+            raise ValueError("min_prediction_confidence must be in [0, 1].")
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against a predicted state transition."""
@@ -120,6 +127,22 @@ class StateTransitionVerifier:
                 confidence=0.25,
                 explanation=f"world model prediction failed: {exc}",
                 metadata={"verifier": "state_transition", "decision_rule": "prediction_error"},
+            )
+        if prediction.confidence < self.min_prediction_confidence:
+            return VerificationResult(
+                status=VerificationStatus.INSUFFICIENT_EVIDENCE,
+                confidence=prediction.confidence,
+                explanation="world model prediction confidence below threshold",
+                metadata={
+                    "verifier": "state_transition",
+                    "decision_rule": "prediction_confidence_below_threshold",
+                    "world_model": type(self.world_model).__name__,
+                    "action": dict(transition.action),
+                    "prediction_confidence": prediction.confidence,
+                    "min_prediction_confidence": self.min_prediction_confidence,
+                    "prediction_explanation": prediction.explanation,
+                    "source": transition.source,
+                },
             )
 
         postcondition_claim = Claim(

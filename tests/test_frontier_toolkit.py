@@ -26,6 +26,7 @@ from eigentruth.adapters import (
     StructuredStateVerifier,
     ToolOutputMapping,
     ToolOutputStateSource,
+    WorldModelPrediction,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
 from eigentruth.control import (
@@ -1929,6 +1930,49 @@ def test_state_transition_verifier_checks_predicted_postconditions():
     assert verifier.state["inventory"]["sku_123"]["available"] == 10
 
 
+def test_state_transition_verifier_fails_closed_on_low_confidence_prediction():
+    class LowConfidenceWorldModel:
+        def verify(self, claim, context=None):
+            return VerificationResult(VerificationStatus.INSUFFICIENT_EVIDENCE, 0.2)
+
+        def predict(self, state, action):
+            next_state = dict(state)
+            next_state["approved"] = True
+            return WorldModelPrediction(
+                state=next_state,
+                confidence=0.4,
+                explanation="weak simulated transition",
+            )
+
+        def explain(self, claim):
+            return "low-confidence world model"
+
+    verifier = StateTransitionVerifier(
+        world_model=LowConfidenceWorldModel(),
+        min_prediction_confidence=0.7,
+    )
+    result = verifier.verify(
+        Claim(
+            "The action is approved.",
+            metadata={
+                "state_transition": {
+                    "action": {"set": {"approved": True}},
+                    "postcondition": {"path": "approved", "operator": "eq", "value": True},
+                }
+            },
+        )
+    )
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.confidence == pytest.approx(0.4)
+    assert result.metadata["decision_rule"] == "prediction_confidence_below_threshold"
+    assert result.metadata["prediction_confidence"] == pytest.approx(0.4)
+    assert result.metadata["min_prediction_confidence"] == pytest.approx(0.7)
+
+    with pytest.raises(ValueError, match="min_prediction_confidence"):
+        StateTransitionVerifier(world_model=LowConfidenceWorldModel(), min_prediction_confidence=1.1)
+
+
 def test_state_transition_verifier_uses_context_state_and_claim_specific_transition():
     adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
     verifier = StateTransitionVerifier(world_model=adapter, state={"quota": {"remaining": 5}})
@@ -1955,6 +1999,22 @@ def test_state_transition_verifier_uses_context_state_and_claim_specific_transit
     assert not_applicable.metadata["decision_rule"] == "no_state_transition"
     assert invalid.status is VerificationStatus.ERROR
     assert invalid.metadata["decision_rule"] == "invalid_state_transition"
+
+
+def test_default_verifier_routes_pass_world_model_confidence_gate():
+    adapter = InMemoryWorldModelAdapter(verifier=InMemoryVerifier({}))
+
+    routes = default_verifier_routes(
+        world_model=adapter,
+        state={"quota": {"remaining": 2}},
+        min_world_model_confidence=0.8,
+        include_calculator=False,
+        include_triple_evidence=False,
+        include_groundedness=False,
+    )
+
+    assert routes[0].name == "state_transition"
+    assert routes[0].verifier.min_prediction_confidence == pytest.approx(0.8)
 
 
 def test_action_executor_registry_uses_fallback_and_registered_executor():

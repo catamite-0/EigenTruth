@@ -32,6 +32,7 @@ def default_verifier_routes(
     include_groundedness: bool = True,
     min_groundedness_overlap: float = 0.65,
     min_triple_slot_coverage: float = 1.0,
+    min_world_model_confidence: float = 0.0,
 ) -> tuple[VerifierRoute, ...]:
     """Build a conservative dependency-free verifier route stack.
 
@@ -60,7 +61,11 @@ def default_verifier_routes(
     if transition_verifier is None and world_model is not None:
         from eigentruth.adapters import StateTransitionVerifier
 
-        transition_verifier = StateTransitionVerifier(world_model=world_model, state=state or {})
+        transition_verifier = StateTransitionVerifier(
+            world_model=world_model,
+            state=state or {},
+            min_prediction_confidence=min_world_model_confidence,
+        )
     if transition_verifier is not None:
         routes.append(
             VerifierRoute(
