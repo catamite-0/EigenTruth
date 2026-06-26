@@ -150,6 +150,16 @@ Added the missing direct selfcheck signal bridge:
 - Current committed l80 artifacts do not contain sampled response text, so this
   is an implementation bridge rather than a new l80 performance claim.
 
+Added a direct selfcheck-signal fusion workflow:
+
+- `run_selfcheck_signal_fusion_workflow.py` wraps the direct bridge into one
+  no-model workflow: sampled responses -> selfcheck-enhanced score dumps ->
+  `eval_score_ensemble.py` report -> optional geometry-by-selfcheck fusion
+  artifacts -> artifact manifest verification.
+- This is the preferred next replay path when aligned multi-sample generations
+  are available, because it tests self-consistency as a calibrated signal before
+  mixing it into verifier sidecars or product policy.
+
 Added spectrum-to-sweep layer-selection audit tooling:
 
 - `compare_spectrum_layers.py` consumes `eval_truthfulqa.py --include-layer-spectra`

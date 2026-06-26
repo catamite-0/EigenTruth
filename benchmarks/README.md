@@ -1122,6 +1122,23 @@ python benchmarks/eval_score_ensemble.py \
   --json artifacts/tiny_selfcheck_signal_ensemble_report.json
 ```
 
+Use `run_selfcheck_signal_fusion_workflow.py` to run that direct selfcheck-signal
+path in one reproducible no-model command, including enhanced score dumps,
+ensemble report, optional geometry-by-selfcheck fusion artifacts, and artifact
+manifest verification:
+
+```bash
+python benchmarks/run_selfcheck_signal_fusion_workflow.py \
+  --scores tiny=artifacts/tiny_scores_with_samples.manifest.json \
+  --samples artifacts/external_sampled_generations.json \
+  --output-dir artifacts/tiny_selfcheck_signal_fusion \
+  --keep-signals truth_proj,subspace_resid,eigenscore \
+  --fusion-signals truth_proj,subspace_resid,eigenscore,selfcheck_support_rate,selfcheck_refute_rate,selfcheck_disagreement,selfcheck_best_overlap \
+  --geometry-signals truth_proj,subspace_resid,eigenscore \
+  --uncertainty-signals selfcheck_support_rate,selfcheck_refute_rate,selfcheck_disagreement,selfcheck_best_overlap \
+  --alphas 0.05,0.1,0.2
+```
+
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops
 judging samples once the finite sample budget can no longer change the final
