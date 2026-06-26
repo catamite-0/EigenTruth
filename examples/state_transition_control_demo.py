@@ -105,8 +105,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         name="--diagnostics",
     ).items()}
     state = parse_json_object(args.state, default=default_state(), name="--state")
+    min_world_model_confidence = float(getattr(args, "min_world_model_confidence", 0.0))
+    if not (0.0 <= min_world_model_confidence <= 1.0):
+        raise ValueError("--min-world-model-confidence must be in [0, 1].")
     world_model = InMemoryWorldModelAdapter(verifier=StructuredStateVerifier(state={}))
-    verifier = StateTransitionVerifier(world_model=world_model, state=state)
+    verifier = StateTransitionVerifier(
+        world_model=world_model,
+        state=state,
+        min_prediction_confidence=min_world_model_confidence,
+    )
     claims = demo_claims()
     loop_result = run_verification_loop(
         request_id=args.request_id,
@@ -120,6 +127,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "artifact_model_id": artifact.model_id,
             "verifier_type": type(verifier).__name__,
             "world_model_type": type(world_model).__name__,
+            "min_world_model_confidence": min_world_model_confidence,
             "business_domain": "order_fulfillment_transition",
         },
     )
@@ -136,6 +144,8 @@ def main() -> None:
     parser.add_argument("--diagnostics", default=None,
                         help="diagnostics JSON object; defaults below the toy threshold")
     parser.add_argument("--state", default=None, help="base state JSON object; defaults to the order fixture")
+    parser.add_argument("--min-world-model-confidence", type=float, default=0.0,
+                        help="minimum prediction confidence required for world-model postcondition checks")
     parser.add_argument("--request-id", default="state-transition-demo", help="request id stored in ProductTrace")
     parser.add_argument("--output", default=None, help="optional path to write the trace JSON")
     payload = run(parser.parse_args())

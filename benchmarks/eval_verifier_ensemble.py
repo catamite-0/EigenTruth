@@ -1750,6 +1750,7 @@ def _verification_trace_cache_key(
     selfcheck_max_samples: int | None,
     enable_triple_evidence: bool,
     triple_min_slot_coverage: float,
+    min_world_model_confidence: float,
     staged_verification: bool,
     staged_alpha: float,
     staged_direction: str,
@@ -1790,6 +1791,10 @@ def _verification_trace_cache_key(
             "type": "TripleEvidenceVerifier",
             "enabled": bool(enable_triple_evidence),
             "min_slot_coverage": float(triple_min_slot_coverage),
+        },
+        "transition_verifier": {
+            "type": "StateTransitionVerifier",
+            "min_prediction_confidence": float(min_world_model_confidence),
         },
         "staged_verification": {
             "enabled": bool(staged_verification),
@@ -1929,6 +1934,7 @@ def build_verifier_ensemble_report(
     selfcheck_max_samples: int | None = None,
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
+    min_world_model_confidence: float = 0.0,
     verification_cache_dir: Path | None = None,
     staged_verification: bool = False,
     staged_alpha: float = 0.10,
@@ -1967,6 +1973,8 @@ def build_verifier_ensemble_report(
         raise ValueError("selfcheck_max_samples must be >= selfcheck_min_samples when set.")
     if not (0.0 <= triple_min_slot_coverage <= 1.0):
         raise ValueError("triple_min_slot_coverage must be in [0, 1].")
+    if not (0.0 <= min_world_model_confidence <= 1.0):
+        raise ValueError("min_world_model_confidence must be in [0, 1].")
     if not (0.0 < float(staged_alpha) < 1.0):
         raise ValueError("staged_alpha must be in (0, 1).")
 
@@ -2051,6 +2059,7 @@ def build_verifier_ensemble_report(
                 StateTransitionVerifier(
                     world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
                     state=global_state,
+                    min_prediction_confidence=float(min_world_model_confidence),
                 )
                 if transition_enabled
                 else None
@@ -2079,6 +2088,7 @@ def build_verifier_ensemble_report(
                 selfcheck_max_samples=selfcheck_max_samples,
                 enable_triple_evidence=bool(enable_triple_evidence),
                 triple_min_slot_coverage=float(triple_min_slot_coverage),
+                min_world_model_confidence=float(min_world_model_confidence),
                 staged_verification=stage_policy is not None,
                 staged_alpha=float(staged_alpha),
                 staged_direction=resolved_direction,
@@ -2230,6 +2240,7 @@ def build_verifier_ensemble_report(
                 },
                 "transition_verifier": {
                     "enabled": transition_enabled,
+                    "min_prediction_confidence": float(min_world_model_confidence),
                     "decided_records": sum(
                         1 for record in verified_records
                         if record.get("transition") is not None
@@ -2364,6 +2375,7 @@ def build_verifier_ensemble_report(
         "transition_verifier": {
             "type": "StateTransitionVerifier",
             "enabled": any_transition_enabled,
+            "min_prediction_confidence": float(min_world_model_confidence),
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),
             "global_transitions": len(global_state_transitions),
@@ -2410,6 +2422,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_max_samples=getattr(args, "selfcheck_max_samples", None),
         enable_triple_evidence=bool(getattr(args, "enable_triple_evidence", False)),
         triple_min_slot_coverage=float(getattr(args, "triple_min_slot_coverage", 1.0)),
+        min_world_model_confidence=float(getattr(args, "min_world_model_confidence", 0.0)),
         verification_cache_dir=(
             None
             if getattr(args, "verification_cache_dir", None) is None
@@ -2498,6 +2511,8 @@ def main() -> None:
                         help="enable strict subject-predicate-object evidence audits for sensitive factual claims")
     parser.add_argument("--triple-min-slot-coverage", type=float, default=1.0,
                         help="minimum per-slot evidence coverage for triple-evidence audits")
+    parser.add_argument("--min-world-model-confidence", type=float, default=0.0,
+                        help="minimum world-model prediction confidence required for state-transition postconditions")
     parser.add_argument("--verification-cache-dir", default=None,
                         help="optional directory for file-backed verified-record trace cache")
     parser.add_argument("--verified-records-jsonl", default=None,

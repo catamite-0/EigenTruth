@@ -3645,6 +3645,7 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
         signal="truth_proj",
         claims_path=claims_path,
         state_path=state_path,
+        min_world_model_confidence=0.8,
         alphas=(0.2,),
         repeats=1,
         seed=0,
@@ -3656,7 +3657,9 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     route_impact = run["alphas"]["0.2"]["route_control_impact"]["state_transition"]
 
     assert report["transition_verifier"]["enabled"] is True
+    assert report["transition_verifier"]["min_prediction_confidence"] == pytest.approx(0.8)
     assert run["transition_verifier"]["enabled"] is True
+    assert run["transition_verifier"]["min_prediction_confidence"] == pytest.approx(0.8)
     assert run["transition_verifier"]["decided_records"] == 8
     assert run["cache_stats"]["transition_verifier"]["requests"] == 8
     assert routes["selected_counts"] == {"state_transition": 8}
@@ -3668,6 +3671,18 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     assert route_quality["false_supported_rate"] == pytest.approx(0.0)
     assert route_impact["n_selected"] == 8
     assert route_impact["verified"]["false_alarm"] == pytest.approx(0.0)
+
+    with pytest.raises(ValueError, match="min_world_model_confidence"):
+        verifier.build_verifier_ensemble_report(
+            [("transitions", scores_path)],
+            signal="truth_proj",
+            claims_path=claims_path,
+            state_path=state_path,
+            min_world_model_confidence=1.1,
+            alphas=(0.2,),
+            repeats=1,
+            seed=0,
+        )
     assert route_impact["verified"]["detection"] == pytest.approx(1.0)
     assert quality["true_supported_rate"] == pytest.approx(1.0)
     assert quality["false_refuted_rate"] == pytest.approx(1.0)

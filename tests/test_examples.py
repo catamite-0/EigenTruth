@@ -5,6 +5,8 @@ import json
 import sqlite3
 from types import SimpleNamespace
 
+import pytest
+
 
 def test_calibrated_control_demo_defaults_to_best_repository_artifact_when_available():
     demo = importlib.import_module("examples.calibrated_control_demo")
@@ -876,6 +878,7 @@ def test_state_transition_control_demo_refutes_predicted_postcondition():
         SimpleNamespace(
             diagnostics=None,
             state=None,
+            min_world_model_confidence=0.9,
             request_id="test-state-transition-demo",
             output=None,
         )
@@ -886,12 +889,24 @@ def test_state_transition_control_demo_refutes_predicted_postcondition():
 
     assert payload["metadata"]["verifier_type"] == "StateTransitionVerifier"
     assert payload["metadata"]["world_model_type"] == "InMemoryWorldModelAdapter"
+    assert payload["metadata"]["min_world_model_confidence"] == pytest.approx(0.9)
     assert payload["metadata"]["business_domain"] == "order_fulfillment_transition"
     assert payload["diagnostics"] == {"truth_proj": 0.0}
     assert statuses == ["supported", "refuted"]
     assert routes == ["transition_postcondition_passed", "transition_postcondition_failed"]
     assert payload["risk_decision"]["action"] == "abstain"
     assert payload["risk_decision"]["risk_level"] == "high"
+
+    with pytest.raises(ValueError, match="min-world-model-confidence"):
+        demo.run(
+            SimpleNamespace(
+                diagnostics=None,
+                state=None,
+                min_world_model_confidence=1.1,
+                request_id="invalid-state-transition-demo",
+                output=None,
+            )
+        )
 
 
 def test_production_tool_loop_demo_maps_tool_output_to_postcondition(tmp_path):

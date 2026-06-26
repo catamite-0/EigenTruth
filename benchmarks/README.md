@@ -970,13 +970,16 @@ python benchmarks/eval_verifier_ensemble.py \
   --scores transitions=artifacts/order_transition_scores.json \
   --claims artifacts/order_transition_claims.json \
   --state-source artifacts/order_transition_state.json \
+  --min-world-model-confidence 0.8 \
   --signal truth_proj \
   --json artifacts/order_transition_verifier_ensemble_report.json
 ```
 
 This fixture checks action-consequence verification: true labels match the
 predicted inventory after reservation, while false labels assert an off-by-one
-postcondition that the predicted state refutes.
+postcondition that the predicted state refutes. `--min-world-model-confidence`
+fails closed on low-confidence transition predictions and is recorded in the
+report and verified-record trace-cache key.
 
 The current policy is deliberately simple and auditable: `refuted` always
 triggers, `supported` suppresses an internal trigger, and
