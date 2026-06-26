@@ -614,6 +614,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
                 "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
                 "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
+                "product_runtime_drift_promotion_evidence_required": config.get(
+                    "require_product_runtime_drift_promotion_evidence"
+                ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
                 ),

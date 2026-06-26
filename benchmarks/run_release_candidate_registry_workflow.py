@@ -94,6 +94,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
+    require_product_runtime_drift_promotion_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
@@ -430,6 +431,9 @@ def run_release_candidate_registry_workflow(
         performance_baseline_key=config.performance_baseline_key,
         selector_replay_report_path=config.selector_replay_report_path,
         product_runtime_drift_report_path=config.product_runtime_drift_report_path,
+        require_product_runtime_drift_promotion_evidence=(
+            config.require_product_runtime_drift_promotion_evidence
+        ),
         release_efficiency_report_path=config.release_efficiency_report_path,
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
@@ -610,6 +614,9 @@ def run_release_candidate_registry_workflow(
                 None
                 if config.product_runtime_drift_report_path is None
                 else str(config.product_runtime_drift_report_path)
+            ),
+            "require_product_runtime_drift_promotion_evidence": (
+                config.require_product_runtime_drift_promotion_evidence
             ),
             "release_efficiency_report": (
                 None
@@ -1304,6 +1311,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "product_runtime_drift_baseline_path": product_runtime_drift_baseline.get("path"),
         "product_runtime_drift_current_path": product_runtime_drift_current.get("path"),
         "product_runtime_drift_gate_enabled": product_runtime_drift_summary.get("gate_enabled"),
+        "product_runtime_drift_promotion_evidence_required": config.get(
+            "require_product_runtime_drift_promotion_evidence"
+        ),
         "product_runtime_drift_compared_metric_count": product_runtime_drift_summary.get(
             "compared_metric_count"
         ),
@@ -1674,6 +1684,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             if args.product_runtime_drift_report is None
             else Path(args.product_runtime_drift_report)
         ),
+        require_product_runtime_drift_promotion_evidence=bool(
+            args.require_product_runtime_drift_promotion_evidence
+        ),
         release_efficiency_report_path=(
             None
             if args.release_efficiency_report is None
@@ -1893,6 +1906,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional runtime-profile selector replay report that must promote and verify")
     parser.add_argument("--product-runtime-drift-report", default=None,
                         help="optional product runtime drift report that must promote and verify")
+    parser.add_argument("--require-product-runtime-drift-promotion-evidence", action="store_true",
+                        help="require the product runtime drift report to include promotion-contract "
+                             "coverage and triple-extraction fixture-matrix quality metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--frontier-release-evidence", default=None,

@@ -2539,6 +2539,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-baseline-key performance_baseline:smollm2-l20-performance-baseline:0.9 \
   --selector-replay-report artifacts/smollm2_product_trace_replay_workflow/selector-replay/runtime-profile-selector-replay.json \
   --product-runtime-drift-report artifacts/smollm2_product_runtime_drift_v1_6/product-runtime-drift.json \
+  --require-product-runtime-drift-promotion-evidence \
   --adapter-family-matrix artifacts/smollm2_l20_adapter_family_retrieval_structured_qa/adapter-family-matrix.json \
   --required-adapter-route structured_state \
   --required-adapter-route state_transition \

@@ -11522,6 +11522,11 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         blocked_metric_count=0,
         promotion_evidence=True,
     )
+    missing_evidence_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "missing-evidence-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+    )
     blocked_drift_report = _write_product_runtime_drift_report(
         tmp_path / "blocked-runtime-drift",
         status="blocked",
@@ -11537,6 +11542,18 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         product_runtime_drift_report_path=drift_report,
+        require_product_runtime_drift_promotion_evidence=True,
+    )
+    missing_evidence = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        product_runtime_drift_report_path=missing_evidence_drift_report,
+        require_product_runtime_drift_promotion_evidence=True,
     )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -11553,8 +11570,11 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert payload["decision"]["product_runtime_drift_status"] == "promote"
     assert payload["decision"]["recommended_product_runtime_drift_report"] == str(drift_report)
     assert payload["product_runtime_drift_gate"]["gate"]["passed"] is True
+    assert payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
     candidate = payload["release_candidate"]
     assert candidate["product_runtime_drift"]["summary"]["blocked_metric_count"] == 0
+    assert candidate["product_runtime_drift"]["summary"]["promotion_evidence_required"] is True
+    assert candidate["product_runtime_drift"]["summary"]["promotion_evidence_metric_count"] == 4
     assert candidate["product_runtime_drift"]["summary"]["promotion_evidence_blocked_metric_count"] == 0
     assert candidate["product_runtime_drift"]["summary"]["promotion_contract_coverage_rate_current"] == (
         pytest.approx(1.0)
@@ -11568,6 +11588,22 @@ def test_compare_release_candidates_can_require_product_runtime_drift_report(tmp
     assert candidate["product_runtime_drift"]["baseline"]["path"].endswith("baseline.json")
     assert candidate["product_runtime_drift"]["current"]["path"].endswith("current.json")
     assert candidate["manifests"]["product_runtime_drift_manifest"].endswith("artifact-manifest.json")
+
+    assert missing_evidence["decision"]["status"] == "blocked"
+    assert missing_evidence["release_candidate"] is None
+    assert missing_evidence["product_runtime_drift_gate"]["gate"]["passed"] is False
+    assert missing_evidence["product_runtime_drift_gate"]["summary"]["promotion_evidence_required"] is True
+    assert missing_evidence["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 0
+    assert missing_evidence["product_runtime_drift_gate"]["summary"]["promotion_evidence_missing_metrics"] == (
+        "promotion_contract.coverage_rate",
+        "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+    )
+    assert any(
+        "promotion evidence metrics are incomplete" in reason
+        for reason in missing_evidence["decision"]["blocking_reasons"][0]["reasons"]
+    )
 
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
@@ -13881,6 +13917,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop=0.4,
         release_efficiency_report_path=release_efficiency_report,
         product_trace_replay_workflow_key="report:product-trace-replay-workflow:0.1",
+        require_product_runtime_drift_promotion_evidence=True,
         selfcheck_signal_fusion_workflow_key="report:selfcheck-signal-fusion-workflow:0.1",
         feedback_policy_workflow_key="report:feedback-policy-workflow:0.1",
         world_model_signal_workflow_key="report:world-model-signal-workflow:0.1",
@@ -14063,6 +14100,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert manifest["metadata"]["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert manifest["metadata"]["product_runtime_drift_report"] == str(product_runtime_drift_report)
     assert manifest["metadata"]["product_runtime_drift_gate_enabled"] is True
+    assert manifest["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
     assert manifest["metadata"]["product_runtime_drift_compared_metric_count"] == 6
     assert manifest["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert manifest["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
@@ -14361,6 +14399,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     assert record.metadata["recommended_selector_replay_candidate"] == "default"
     assert record.metadata["selector_replay_observed_selected_to_original_ratio_mean"] == pytest.approx(0.80)
     assert record.metadata["release_product_runtime_drift_status"] == "promote"
+    assert record.metadata["product_runtime_drift_promotion_evidence_required"] is True
     assert record.metadata["product_runtime_drift_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
     assert record.metadata["product_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_current"] == (
@@ -15078,6 +15117,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "max_retrieval_use_rate": 0.0,
                 "runtime_profile": "balanced",
                 "max_covariance_maha_last_auroc_drop": 0.05,
+                "require_product_runtime_drift_promotion_evidence": True,
             },
             "decision": {
                 "status": "promote",
@@ -15436,6 +15476,7 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
     assert contract["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
+    assert contract["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_blocked_metric_count"] == 0
     assert contract["metadata"]["product_runtime_drift_promotion_contract_coverage_rate_current"] == 1.0
