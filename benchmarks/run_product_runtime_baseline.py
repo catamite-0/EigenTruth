@@ -11,6 +11,7 @@ import argparse
 import json
 import math
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -24,6 +25,7 @@ from benchmarks.config_utils import (  # noqa: E402
     planned_artifact_manifest_summary,
     reject_bounded_product_trace,
     strict_bool,
+    strict_positive_int,
 )
 from eigentruth.control import (  # noqa: E402
     ProductPromotionContract,
@@ -46,6 +48,7 @@ class ProductRuntimeBaselineConfig:
     trace_records_path: str | Path | None = None
     trace_records_cache_path: str | Path | None = None
     refresh_trace_records_cache: bool = False
+    trace_scan_workers: int = 1
     recommended_policy_path: str | Path | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
@@ -89,6 +92,11 @@ class ProductRuntimeBaselineConfig:
                 self.refresh_trace_records_cache,
                 name="refresh_trace_records_cache",
             ),
+        )
+        object.__setattr__(
+            self,
+            "trace_scan_workers",
+            strict_positive_int(self.trace_scan_workers, name="trace_scan_workers"),
         )
 
     @property
@@ -149,6 +157,7 @@ def build_product_runtime_baseline(config: ProductRuntimeBaselineConfig) -> dict
             "policy_source": policy_source,
             "trace_records_sidecar": config.trace_records_path is not None,
             "trace_record_cache": trace_record_cache,
+            "trace_scan_workers": config.trace_scan_workers,
             "recommended_policy": {
                 "enabled": config.recommended_policy_path is not None,
                 "path": None if config.recommended_policy_path is None else str(config.recommended_policy_path),
@@ -185,12 +194,14 @@ def _build_trace_records(
                 "source_count": len(_sequence(payload.get("sources"))),
                 "refresh": False,
                 "invalidation_reason": None,
+                "trace_scan_workers": 0,
             }
         invalidation_reason = "fingerprint_policy_or_schema_mismatch"
 
-    scanned_records = tuple(
-        _trace_record(path, _load_trace(path), policy=policy)
-        for path in config.trace_paths
+    scanned_records = _scan_trace_records(
+        config.trace_paths,
+        policy=policy,
+        max_workers=config.trace_scan_workers,
     )
     if cache_path is not None:
         payload = _trace_records_cache_payload(config, scanned_records, policy=policy)
@@ -206,7 +217,35 @@ def _build_trace_records(
         "source_count": len(config.trace_paths),
         "refresh": config.refresh_trace_records_cache,
         "invalidation_reason": invalidation_reason,
+        "trace_scan_workers": _effective_worker_count(
+            config.trace_scan_workers,
+            item_count=len(config.trace_paths),
+        ),
     }
+
+
+def _scan_trace_records(
+    trace_paths: Sequence[Path],
+    *,
+    policy: ProductRuntimeBudgetPolicy | None,
+    max_workers: int,
+) -> tuple[dict[str, Any], ...]:
+    if max_workers <= 1 or len(trace_paths) <= 1:
+        return tuple(
+            _trace_record(path, _load_trace(path), policy=policy)
+            for path in trace_paths
+        )
+    worker_count = _effective_worker_count(max_workers, item_count=len(trace_paths))
+
+    def scan(path: Path) -> dict[str, Any]:
+        return _trace_record(path, _load_trace(path), policy=policy)
+
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        return tuple(executor.map(scan, trace_paths))
+
+
+def _effective_worker_count(max_workers: int, *, item_count: int) -> int:
+    return max(1, min(max_workers, max(1, item_count)))
 
 
 def _emit_trace_records(
@@ -339,6 +378,10 @@ def _trace_records_cache_payload(
         "summary": {
             "trace_count": len(records),
             "source_count": len(config.trace_paths),
+            "trace_scan_workers": _effective_worker_count(
+                config.trace_scan_workers,
+                item_count=len(config.trace_paths),
+            ),
         },
         "policy": {
             "signature": _policy_signature(policy),
@@ -1579,6 +1622,13 @@ def _write_artifact_manifest(
             "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
             "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
             "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
+            "trace_scan_workers": config.trace_scan_workers,
+            "trace_scan_effective_workers": _nested(
+                report,
+                "config",
+                "trace_record_cache",
+                "trace_scan_workers",
+            ),
             "recommended_policy_path": _nested(report, "paths", "recommended_policy"),
             "recommended_policy_written": _nested(report, "config", "recommended_policy", "written"),
             "recommended_policy_enabled": _nested(report, "config", "recommended_policy", "policy_enabled"),
@@ -1631,6 +1681,13 @@ def _record_registry(config: ProductRuntimeBaselineConfig, report: Mapping[str, 
             "trace_records_cache_source": _nested(report, "config", "trace_record_cache", "source"),
             "trace_records_cache_hit": _nested(report, "config", "trace_record_cache", "cache_hit"),
             "trace_records_cache_written": _nested(report, "config", "trace_record_cache", "cache_written"),
+            "trace_scan_workers": config.trace_scan_workers,
+            "trace_scan_effective_workers": _nested(
+                report,
+                "config",
+                "trace_record_cache",
+                "trace_scan_workers",
+            ),
             "recommended_policy_path": _nested(report, "paths", "recommended_policy"),
             "recommended_policy_written": _nested(report, "config", "recommended_policy", "written"),
             "recommended_policy_enabled": _nested(report, "config", "recommended_policy", "policy_enabled"),
@@ -1915,6 +1972,7 @@ def _config_from_args(args: argparse.Namespace) -> ProductRuntimeBaselineConfig:
             Path(args.trace_records_cache_json) if args.trace_records_cache_json else None
         ),
         refresh_trace_records_cache=bool(args.refresh_trace_records_cache),
+        trace_scan_workers=args.trace_scan_workers,
         recommended_policy_path=Path(args.save_recommended_policy) if args.save_recommended_policy else None,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
@@ -1946,6 +2004,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional cache path for compact per-trace runtime metric/budget records")
     parser.add_argument("--refresh-trace-records-cache", action="store_true",
                         help="rebuild --trace-records-cache-json even when a valid cache exists")
+    parser.add_argument("--trace-scan-workers", type=int, default=1,
+                        help="maximum worker threads for ProductTrace JSON scan and metric extraction")
     parser.add_argument("--save-recommended-policy", default=None,
                         help="write the optimization candidate ProductRuntimeBudgetPolicy JSON")
     parser.add_argument("--artifact-manifest", default=None, help="optional artifact manifest output path")

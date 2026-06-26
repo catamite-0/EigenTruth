@@ -24834,6 +24834,74 @@ def test_run_product_runtime_baseline_writes_trace_records_sidecar(tmp_path):
     assert record.metadata["trace_records_path"] == str(sidecar_path)
 
 
+def test_run_product_runtime_baseline_parallel_trace_scan_preserves_order(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    registry_module = importlib.import_module("eigentruth.registry")
+    trace_paths = []
+    for index, total_seconds in enumerate((0.10, 0.20, 0.30)):
+        trace_path = tmp_path / f"trace-{index}.json"
+        trace_path.write_text(
+            json.dumps({
+                "request_id": f"req-{index}",
+                "runtime_trace": {
+                    "total_seconds": total_seconds,
+                    "phases": [{"name": "initial_verification", "seconds": total_seconds / 2}],
+                },
+                "verification_results": [],
+                "metadata": {},
+            }),
+            encoding="utf-8",
+        )
+        trace_paths.append(trace_path)
+
+    report_path = tmp_path / "product-runtime-baseline.json"
+    sidecar_path = tmp_path / "trace-records.jsonl"
+    registry_path = tmp_path / "registry.json"
+    payload = module.build_product_runtime_baseline(
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=tuple(trace_paths),
+            report_path=report_path,
+            trace_records_path=sidecar_path,
+            registry_path=registry_path,
+            name="runtime-baseline",
+            version="parallel-scan",
+            policy={"max_total_seconds": 0.40},
+            trace_scan_workers=2,
+        )
+    )
+    records = [
+        json.loads(line)
+        for line in sidecar_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry_record = registry_module.ArtifactRegistry.load_json(registry_path).get(
+        "product_runtime_baseline:runtime-baseline:parallel-scan"
+    )
+
+    assert [record["request_id"] for record in records] == ["req-0", "req-1", "req-2"]
+    assert payload["config"]["trace_scan_workers"] == 2
+    assert payload["config"]["trace_record_cache"]["trace_scan_workers"] == 2
+    assert payload["summary"]["total_seconds"]["mean"] == pytest.approx(0.20)
+    assert manifest["metadata"]["trace_scan_workers"] == 2
+    assert manifest["metadata"]["trace_scan_effective_workers"] == 2
+    assert registry_record.metadata["trace_scan_workers"] == 2
+    assert registry_record.metadata["trace_scan_effective_workers"] == 2
+
+    with pytest.raises(ValueError, match="trace_scan_workers"):
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=tuple(trace_paths),
+            report_path=tmp_path / "bad-workers.json",
+            trace_scan_workers=0,
+        )
+    with pytest.raises(ValueError, match="trace_scan_workers"):
+        module.ProductRuntimeBaselineConfig(
+            trace_paths=tuple(trace_paths),
+            report_path=tmp_path / "bad-bool-workers.json",
+            trace_scan_workers=True,  # type: ignore[arg-type]
+        )
+
+
 def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     registry_module = importlib.import_module("eigentruth.registry")

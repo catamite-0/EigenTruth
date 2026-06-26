@@ -4276,7 +4276,10 @@ as a recommended `max_verifier_route_attempts` when route-budget exhaustion is
 observed. Add
 `--trace-records-cache-json` when repeatedly sweeping runtime budget policies
 over unchanged traces; the cache is keyed by source trace fingerprints and the
-resolved policy payload. `ProductRuntimeBudgetPolicy` can gate overall staged
+resolved policy payload. Add `--trace-scan-workers` for faster JSON scan and
+metric extraction on large trace sets; reports, manifests, and registry records
+preserve the configured and effective worker counts, while the default remains
+single-worker for comparable timing evidence. `ProductRuntimeBudgetPolicy` can gate overall staged
 verification savings with `min_verification_skip_rate`, and can specifically
 gate triggered-only partial verification with `min_selective_claim_skip_rate`.
 The latter fails closed unless the trace records `verification_scope="triggered"`
@@ -4290,6 +4293,7 @@ python benchmarks/run_product_runtime_baseline.py \
   --json artifacts/product-runtime-baseline.json \
   --trace-records-jsonl artifacts/product-runtime-baseline-trace-records.jsonl \
   --trace-records-cache-json artifacts/product-runtime-baseline-trace-record-cache.json \
+  --trace-scan-workers 4 \
   --save-recommended-policy artifacts/product-runtime-baseline-recommended-policy.json \
   --artifact-manifest artifacts/product-runtime-baseline-manifest.json \
   --registry artifacts/local-release-registry.json \
