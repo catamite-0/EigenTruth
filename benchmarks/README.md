@@ -3800,6 +3800,14 @@ The selected-fusion evidence is promoted as `selected_fusion_mean_rank`
 (`AUROC=0.692`, false alarm `0.029`, detection `0.224`, `alpha=0.1`) from the
 SmolLM2 `geometry:mean_rank` selected artifact, while `truth_proj` remains the
 best quality signal for the runtime recommendation.
+The matching staged structured-QA release candidate is registered as
+`benchmark_manifest:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate:0.3`
+with recursive manifest verification
+`manifest_verification:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate-verification:0.3`.
+It reuses the same readiness and `structured_qa` route baselines as the
+score-fusion candidate, but gates against the selected-fusion performance
+baseline and records the selected-fusion run/signal/AUROC/artifact path in the
+release registry.
 
 Use `run_product_runtime_baseline.py` for the product-control side of the same
 performance story: aggregate saved `ProductTrace` JSON files, summarize request
@@ -4331,6 +4339,15 @@ It keeps the same recommended runtime cell and `truth_proj` best quality signal
 while adding promoted `selected_fusion_mean_rank` evidence (`AUROC=0.692`,
 false alarm `0.029`, detection `0.224`, `alpha=0.1`) from the SmolLM2
 `geometry:mean_rank` selected artifact.
+The corresponding selected-fusion staged structured-QA release candidate is
+registered as
+`benchmark_manifest:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate:0.3`
+with
+`artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_staged_release_candidate_manifest.json`
+and recursive verification
+`artifacts/smollm2_l8_read_cache_worker_sweep_selected_fusion_staged_release_candidate_manifest_verification.json`.
+It promotes with the same readiness and `structured_qa` route evidence, but its
+performance gate is the selected-fusion baseline record.
 The corresponding staged structured-QA release candidate is registered as
 `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-score-fusion-staged-qa-release-candidate:0.2`
 with

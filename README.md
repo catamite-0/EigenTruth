@@ -273,6 +273,11 @@ The same evidence now promotes
 through the staged structured-QA release gate; its release manifest and registry
 metadata expose the score-fusion status, signal, AUROC, conformal gate result,
 and source score-ensemble report for audit.
+The selected-fusion handoff now has the parallel staged structured-QA release
+gate
+`benchmark_manifest:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate:0.3`,
+which verifies the selected-fusion performance manifest and records selected
+fusion status/run/signal/AUROC/artifact metadata in the release registry.
 Profile comparison and matrix reports
 propagate the derived cache-efficiency hit-rate metrics for IO diagnosis.
 Runtime recommendations include cache-tuning advice

@@ -185,7 +185,8 @@ representation-observability toolkit spanning **training and inference**.
   records the `smollm2` `geometry:mean_rank` selected artifact as promoted
   auxiliary evidence (`selected_fusion_mean_rank` AUROC 0.692, false alarm
   0.029, detection 0.224) while leaving `truth_proj` as the best runtime quality
-  signal.
+  signal. The same evidence now has a staged structured-QA release gate via
+  `benchmark_manifest:smollm2-l8-read-cache-worker-sweep-selected-fusion-staged-qa-release-candidate:0.3`.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be
