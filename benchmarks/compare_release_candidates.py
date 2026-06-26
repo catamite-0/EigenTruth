@@ -77,6 +77,7 @@ def compare_release_candidates(
     product_runtime_drift_report_path: str | Path | None = None,
     require_product_runtime_drift_promotion_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
+    external_evidence_baseline_comparison_path: str | Path | None = None,
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
@@ -592,6 +593,10 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    external_evidence_baseline_comparison = _external_evidence_baseline_comparison_gate(
+        external_evidence_baseline_comparison_path=external_evidence_baseline_comparison_path,
+        verification_context=verification_context,
+    )
     frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
         frontier_release_evidence_path=frontier_release_evidence_path,
         frontier_release_evidence_registry_path=(
@@ -638,6 +643,7 @@ def compare_release_candidates(
         selector_replay,
         product_runtime_drift,
         release_efficiency,
+        external_evidence_baseline_comparison,
         frontier_release_evidence,
         world_model_signal_workflow,
         selfcheck_signal_fusion_workflow,
@@ -654,6 +660,7 @@ def compare_release_candidates(
             selector_replay,
             product_runtime_drift,
             release_efficiency,
+            external_evidence_baseline_comparison,
             frontier_release_evidence,
             world_model_signal_workflow,
             selfcheck_signal_fusion_workflow,
@@ -696,6 +703,11 @@ def compare_release_candidates(
                 None
                 if release_efficiency_report_path is None
                 else str(release_efficiency_report_path)
+            ),
+            "external_evidence_baseline_comparison": (
+                None
+                if external_evidence_baseline_comparison_path is None
+                else str(external_evidence_baseline_comparison_path)
             ),
             "frontier_release_evidence": (
                 None
@@ -884,6 +896,7 @@ def compare_release_candidates(
         "selector_replay_gate": selector_replay,
         "product_runtime_drift_gate": product_runtime_drift,
         "release_efficiency_gate": release_efficiency,
+        "external_evidence_baseline_comparison_gate": external_evidence_baseline_comparison,
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
         "adapter_family_matrix_gate": adapter_family,
@@ -1022,6 +1035,7 @@ def _decision(
     selector_replay: Mapping[str, Any] | None = None,
     product_runtime_drift: Mapping[str, Any] | None = None,
     release_efficiency: Mapping[str, Any] | None = None,
+    external_evidence_baseline_comparison: Mapping[str, Any] | None = None,
     frontier_release_evidence: Mapping[str, Any] | None = None,
     world_model_signal_workflow: Mapping[str, Any] | None = None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None = None,
@@ -1066,6 +1080,16 @@ def _decision(
     )
     release_efficiency_status = (
         None if release_efficiency is None else release_efficiency.get("status")
+    )
+    external_evidence_baseline_comparison_gate = _mapping(
+        None
+        if external_evidence_baseline_comparison is None
+        else external_evidence_baseline_comparison.get("gate")
+    )
+    external_evidence_baseline_comparison_status = (
+        None
+        if external_evidence_baseline_comparison is None
+        else external_evidence_baseline_comparison.get("status")
     )
     frontier_release_evidence_gate = _mapping(
         None if frontier_release_evidence is None else frontier_release_evidence.get("gate")
@@ -1167,6 +1191,15 @@ def _decision(
             "reasons": list(release_efficiency_gate.get("blocking_reasons", ())),
         })
     if (
+        external_evidence_baseline_comparison is not None
+        and external_evidence_baseline_comparison_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "external_evidence_baseline_comparison",
+            "status": external_evidence_baseline_comparison_status,
+            "reasons": list(external_evidence_baseline_comparison_gate.get("blocking_reasons", ())),
+        })
+    if (
         frontier_release_evidence is not None
         and frontier_release_evidence_gate.get("passed") is not True
     ):
@@ -1223,6 +1256,7 @@ def _decision(
         "selector_replay_status": selector_replay_status,
         "product_runtime_drift_status": product_runtime_drift_status,
         "release_efficiency_status": release_efficiency_status,
+        "external_evidence_baseline_comparison_status": external_evidence_baseline_comparison_status,
         "frontier_release_evidence_status": frontier_release_evidence_status,
         "world_model_signal_workflow_status": world_model_signal_workflow_status,
         "selfcheck_signal_fusion_workflow_status": selfcheck_signal_fusion_workflow_status,
@@ -1269,6 +1303,14 @@ def _decision(
             None
             if release_efficiency is None or release_efficiency_gate.get("passed") is not True
             else release_efficiency.get("recommended_profile")
+        ),
+        "recommended_external_evidence_baseline_comparison_report": (
+            None
+            if (
+                external_evidence_baseline_comparison is None
+                or external_evidence_baseline_comparison_gate.get("passed") is not True
+            )
+            else external_evidence_baseline_comparison.get("report_path")
         ),
         "recommended_frontier_release_evidence_report": (
             None
@@ -2584,6 +2626,69 @@ def _selector_replay_gate(
     }
 
 
+def _external_evidence_baseline_comparison_gate(
+    *,
+    external_evidence_baseline_comparison_path: str | Path | None,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if external_evidence_baseline_comparison_path is None:
+        return None
+    report_path = Path(external_evidence_baseline_comparison_path)
+    report, report_error = verification_context.load_json_object(report_path)
+    decision = _mapping(report.get("decision"))
+    route_comparison = _mapping(report.get("route_baseline_comparison"))
+    text_redline = _mapping(report.get("text_redline_comparison"))
+    gate = _external_evidence_baseline_comparison_report_gate(
+        report=report,
+        report_error=report_error,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "workflow": report.get("workflow"),
+        "decision_status": decision.get("status"),
+        "recommended_route": decision.get("recommended_route"),
+        "recommended_route_record": decision.get("recommended_route_record"),
+        "route_passed": route_comparison.get("passed"),
+        "text_redline_passed": text_redline.get("passed"),
+        "text_redline_run_count": text_redline.get("run_count"),
+        "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
+        "gate": gate,
+    }
+
+
+def _external_evidence_baseline_comparison_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"external evidence baseline comparison could not be loaded: {report_error}")
+    if report.get("workflow") != "external_evidence_baseline_comparison":
+        failures.append(
+            "external evidence baseline comparison workflow is "
+            f"{report.get('workflow')!r}, expected 'external_evidence_baseline_comparison'"
+        )
+    decision = _mapping(report.get("decision"))
+    if decision.get("status") != "promote":
+        failures.append(
+            "external evidence baseline comparison status is "
+            f"{decision.get('status')!r}, expected 'promote'"
+        )
+    route_comparison = _mapping(report.get("route_baseline_comparison"))
+    if route_comparison and route_comparison.get("passed") is not True:
+        failures.append("external evidence route baseline comparison did not pass")
+    text_redline = _mapping(report.get("text_redline_comparison"))
+    if text_redline and text_redline.get("passed") is not True:
+        failures.append("external evidence text redline comparison did not pass")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
 def _frontier_release_evidence_gate(
     *,
     frontier_release_evidence_source: Mapping[str, Any] | None,
@@ -3811,6 +3916,7 @@ def _candidate_with_gates(
     selector_replay: Mapping[str, Any] | None,
     product_runtime_drift: Mapping[str, Any] | None,
     release_efficiency: Mapping[str, Any] | None,
+    external_evidence_baseline_comparison: Mapping[str, Any] | None,
     frontier_release_evidence: Mapping[str, Any] | None,
     world_model_signal_workflow: Mapping[str, Any] | None,
     selfcheck_signal_fusion_workflow: Mapping[str, Any] | None,
@@ -3954,6 +4060,29 @@ def _candidate_with_gates(
             "leaderboard": (leaderboard_top,) if leaderboard_top else (),
         }
         manifests["release_efficiency_manifest"] = release_efficiency.get("manifest_path")
+    if external_evidence_baseline_comparison is not None:
+        payload["external_evidence_baseline_comparison"] = {
+            "report_path": external_evidence_baseline_comparison.get("report_path"),
+            "workflow": external_evidence_baseline_comparison.get("workflow"),
+            "decision_status": external_evidence_baseline_comparison.get("decision_status"),
+            "recommended_route": external_evidence_baseline_comparison.get("recommended_route"),
+            "recommended_route_record": external_evidence_baseline_comparison.get(
+                "recommended_route_record"
+            ),
+            "route_passed": external_evidence_baseline_comparison.get("route_passed"),
+            "text_redline_passed": external_evidence_baseline_comparison.get(
+                "text_redline_passed"
+            ),
+            "text_redline_run_count": external_evidence_baseline_comparison.get(
+                "text_redline_run_count"
+            ),
+            "blocking_reasons": tuple(
+                external_evidence_baseline_comparison.get("blocking_reasons", ())
+            ),
+        }
+        manifests["external_evidence_baseline_comparison_report"] = (
+            external_evidence_baseline_comparison.get("report_path")
+        )
     if frontier_release_evidence is not None:
         payload["frontier_release_evidence"] = {
             "report_path": frontier_release_evidence.get("report_path"),
@@ -4314,6 +4443,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             args.require_product_runtime_drift_promotion_evidence
         ),
         release_efficiency_report_path=args.release_efficiency_report,
+        external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
@@ -4450,6 +4580,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"selector_replay={decision.get('recommended_selector_replay_candidate')} "
         f"product_runtime_drift={decision.get('product_runtime_drift_status')} "
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
+        f"external_evidence={decision.get('external_evidence_baseline_comparison_status')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
         f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
@@ -4502,6 +4633,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "coverage and triple-extraction fixture-matrix quality metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
+    parser.add_argument("--external-evidence-baseline-comparison", default=None,
+                        help="optional compare_external_evidence_baselines.py report that must promote")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,

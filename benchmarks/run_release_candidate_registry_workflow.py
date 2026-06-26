@@ -99,6 +99,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     product_runtime_drift_report_path: Path | None = None
     require_product_runtime_drift_promotion_evidence: bool = False
     release_efficiency_report_path: Path | None = None
+    external_evidence_baseline_comparison_path: Path | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
@@ -232,6 +233,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "release_efficiency_report_path",
                 Path(self.release_efficiency_report_path),
+            )
+        if self.external_evidence_baseline_comparison_path is not None:
+            object.__setattr__(
+                self,
+                "external_evidence_baseline_comparison_path",
+                Path(self.external_evidence_baseline_comparison_path),
             )
         if self.frontier_release_evidence_path is not None:
             object.__setattr__(
@@ -469,6 +476,9 @@ def run_release_candidate_registry_workflow(
             config.require_product_runtime_drift_promotion_evidence
         ),
         release_efficiency_report_path=config.release_efficiency_report_path,
+        external_evidence_baseline_comparison_path=(
+            config.external_evidence_baseline_comparison_path
+        ),
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
@@ -677,6 +687,11 @@ def run_release_candidate_registry_workflow(
                 None
                 if config.release_efficiency_report_path is None
                 else str(config.release_efficiency_report_path)
+            ),
+            "external_evidence_baseline_comparison": (
+                None
+                if config.external_evidence_baseline_comparison_path is None
+                else str(config.external_evidence_baseline_comparison_path)
             ),
             "frontier_release_evidence": (
                 None
@@ -975,6 +990,11 @@ def _comparison_with_registry_config(
         "min_triple_extraction_mean_best_external_f1": (
             config.min_triple_extraction_mean_best_external_f1
         ),
+        "external_evidence_baseline_comparison": (
+            comparison_config.get("external_evidence_baseline_comparison")
+            if config.external_evidence_baseline_comparison_path is None
+            else str(config.external_evidence_baseline_comparison_path)
+        ),
     })
     payload["config"] = comparison_config
     return payload
@@ -1000,6 +1020,10 @@ def _write_artifact_manifest(
         "selector_replay_manifest": manifests.get("selector_replay_manifest"),
         "product_runtime_drift_manifest": manifests.get("product_runtime_drift_manifest"),
         "release_efficiency_manifest": manifests.get("release_efficiency_manifest"),
+        "external_evidence_baseline_comparison_report": manifests.get(
+            "external_evidence_baseline_comparison_report"
+        )
+        or _nested(comparison, "external_evidence_baseline_comparison_gate", "report_path"),
         "frontier_release_evidence_manifest": manifests.get("frontier_release_evidence_manifest")
         or _nested(comparison, "frontier_release_evidence_gate", "manifest_path"),
         "world_model_signal_workflow_manifest": manifests.get("world_model_signal_workflow_manifest")
@@ -1119,6 +1143,13 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         if isinstance(release_efficiency_leaderboard, (list, tuple)) and release_efficiency_leaderboard
         else {}
     )
+    external_evidence_baseline_comparison = dict(
+        candidate.get("external_evidence_baseline_comparison") or {}
+    )
+    if not external_evidence_baseline_comparison:
+        external_evidence_baseline_comparison = dict(
+            comparison.get("external_evidence_baseline_comparison_gate") or {}
+        )
     product_trace_replay_workflow = dict(candidate.get("product_trace_replay_workflow") or {})
     selfcheck_signal_fusion_workflow = dict(
         candidate.get("selfcheck_signal_fusion_workflow") or {}
@@ -1144,6 +1175,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_selector_replay_status": decision.get("selector_replay_status"),
         "release_product_runtime_drift_status": decision.get("product_runtime_drift_status"),
         "release_efficiency_status": decision.get("release_efficiency_status"),
+        "release_external_evidence_baseline_comparison_status": decision.get(
+            "external_evidence_baseline_comparison_status"
+        ),
         "release_frontier_release_evidence_status": decision.get(
             "frontier_release_evidence_status"
         ),
@@ -1176,6 +1210,9 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "recommended_product_runtime_drift_report": decision.get("recommended_product_runtime_drift_report"),
         "recommended_release_efficiency_report": decision.get("recommended_release_efficiency_report"),
         "recommended_release_efficiency_profile": decision.get("recommended_release_efficiency_profile"),
+        "recommended_external_evidence_baseline_comparison_report": decision.get(
+            "recommended_external_evidence_baseline_comparison_report"
+        ),
         "recommended_frontier_release_evidence_report": decision.get(
             "recommended_frontier_release_evidence_report"
         ),
@@ -1427,6 +1464,27 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             release_efficiency_summary.get("trace_record_cache_hit_profile_count")
         ),
         "release_efficiency_leaderboard_top_profile": release_efficiency_top.get("profile"),
+        "external_evidence_baseline_comparison_report": (
+            external_evidence_baseline_comparison.get("report_path")
+        ),
+        "external_evidence_baseline_comparison_decision_status": (
+            external_evidence_baseline_comparison.get("decision_status")
+        ),
+        "external_evidence_baseline_comparison_recommended_route": (
+            external_evidence_baseline_comparison.get("recommended_route")
+        ),
+        "external_evidence_baseline_comparison_recommended_route_record": (
+            external_evidence_baseline_comparison.get("recommended_route_record")
+        ),
+        "external_evidence_baseline_comparison_route_passed": (
+            external_evidence_baseline_comparison.get("route_passed")
+        ),
+        "external_evidence_baseline_comparison_text_redline_passed": (
+            external_evidence_baseline_comparison.get("text_redline_passed")
+        ),
+        "external_evidence_baseline_comparison_text_redline_run_count": (
+            external_evidence_baseline_comparison.get("text_redline_run_count")
+        ),
         "product_trace_replay_workflow_report": product_trace_replay_workflow.get("report_path"),
         "product_trace_replay_workflow_source": product_trace_replay_workflow.get("source"),
         "product_trace_replay_workflow_registry": product_trace_replay_workflow.get("registry"),
@@ -1839,6 +1897,11 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             if args.release_efficiency_report is None
             else Path(args.release_efficiency_report)
         ),
+        external_evidence_baseline_comparison_path=(
+            None
+            if args.external_evidence_baseline_comparison is None
+            else Path(args.external_evidence_baseline_comparison)
+        ),
         frontier_release_evidence_path=(
             None
             if args.frontier_release_evidence is None
@@ -2081,6 +2144,8 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "coverage and triple-extraction fixture-matrix quality metrics")
     parser.add_argument("--release-efficiency-report", default=None,
                         help="optional release efficiency report that must promote and verify")
+    parser.add_argument("--external-evidence-baseline-comparison", default=None,
+                        help="optional compare_external_evidence_baselines.py report that must promote")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,

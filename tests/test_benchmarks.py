@@ -9656,6 +9656,55 @@ def _write_score_redline_report(
     return path
 
 
+def _write_external_evidence_baseline_comparison_report(
+    path: Path,
+    *,
+    status: str = "promote",
+    route_passed: bool = True,
+    text_redline_passed: bool = True,
+) -> Path:
+    blocking_reasons = [] if status == "promote" else [
+        "text_redline: candidate minus text detection below 0.1"
+    ]
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "workflow": "external_evidence_baseline_comparison",
+                "decision": {
+                    "status": status,
+                    "recommended_route": (
+                        "retrieval_groundedness" if status == "promote" else None
+                    ),
+                    "recommended_route_record": (
+                        "benchmark_manifest:external-comparison-route:0.1"
+                        if status == "promote"
+                        else None
+                    ),
+                    "blocking_reasons": blocking_reasons,
+                },
+                "route_baseline_comparison": {
+                    "enabled": True,
+                    "passed": route_passed,
+                    "blocking_reasons": [] if route_passed else ["route baseline blocked"],
+                },
+                "text_redline_comparison": {
+                    "enabled": True,
+                    "passed": text_redline_passed,
+                    "run_count": 1,
+                    "blocking_reasons": [] if text_redline_passed else blocking_reasons,
+                    "runs": [],
+                },
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _write_frontier_release_evidence_report(
     output_dir: Path,
     *,
@@ -12808,6 +12857,98 @@ def test_compare_release_candidates_can_require_release_efficiency_report(tmp_pa
     )
 
 
+def test_compare_release_candidates_can_require_external_evidence_baseline_comparison(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    comparison_report = _write_external_evidence_baseline_comparison_report(
+        tmp_path / "external-evidence-baseline-comparison.json"
+    )
+    blocked_report = _write_external_evidence_baseline_comparison_report(
+        tmp_path / "blocked-external-evidence-baseline-comparison.json",
+        status="blocked",
+        text_redline_passed=False,
+    )
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        external_evidence_baseline_comparison_path=comparison_report,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        external_evidence_baseline_comparison_path=blocked_report,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["external_evidence_baseline_comparison_status"] == "promote"
+    assert promoted["decision"]["recommended_external_evidence_baseline_comparison_report"] == (
+        str(comparison_report)
+    )
+    assert promoted["external_evidence_baseline_comparison_gate"]["gate"]["passed"] is True
+    external_gate = promoted["release_candidate"]["external_evidence_baseline_comparison"]
+    assert external_gate["decision_status"] == "promote"
+    assert external_gate["recommended_route"] == "retrieval_groundedness"
+    assert external_gate["recommended_route_record"] == (
+        "benchmark_manifest:external-comparison-route:0.1"
+    )
+    assert external_gate["text_redline_passed"] is True
+    assert promoted["release_candidate"]["manifests"][
+        "external_evidence_baseline_comparison_report"
+    ] == str(comparison_report)
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["decision"]["external_evidence_baseline_comparison_status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == (
+        "external_evidence_baseline_comparison"
+    )
+    assert blocked["external_evidence_baseline_comparison_gate"]["gate"]["passed"] is False
+    assert any(
+        "external evidence baseline comparison status is 'blocked'" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
 def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_path):
     module = importlib.import_module("benchmarks.compare_release_candidates")
     from eigentruth.registry import ArtifactRegistry
@@ -14754,15 +14895,54 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
     captured: dict[str, object] = {}
     compare_captured: dict[str, object] = {}
+    comparison_report = _write_external_evidence_baseline_comparison_report(
+        tmp_path / "external-evidence-baseline-comparison.json"
+    )
 
     def fake_compare_release_candidates(**kwargs):
         compare_captured.update(kwargs)
         return {
             "schema_version": 1,
             "workflow": "fake_release_candidate_comparison",
-            "config": {},
-            "decision": {"status": "promote"},
-            "release_candidate": {"manifests": {}},
+            "config": {
+                "external_evidence_baseline_comparison": str(comparison_report),
+            },
+            "decision": {
+                "status": "promote",
+                "external_evidence_baseline_comparison_status": "promote",
+                "recommended_external_evidence_baseline_comparison_report": (
+                    str(comparison_report)
+                ),
+            },
+            "release_candidate": {
+                "manifests": {
+                    "external_evidence_baseline_comparison_report": str(comparison_report),
+                },
+                "external_evidence_baseline_comparison": {
+                    "report_path": str(comparison_report),
+                    "decision_status": "promote",
+                    "recommended_route": "retrieval_groundedness",
+                    "recommended_route_record": (
+                        "benchmark_manifest:external-comparison-route:0.1"
+                    ),
+                    "route_passed": True,
+                    "text_redline_passed": True,
+                    "text_redline_run_count": 1,
+                },
+            },
+            "external_evidence_baseline_comparison_gate": {
+                "status": "promote",
+                "report_path": str(comparison_report),
+                "decision_status": "promote",
+                "recommended_route": "retrieval_groundedness",
+                "recommended_route_record": (
+                    "benchmark_manifest:external-comparison-route:0.1"
+                ),
+                "route_passed": True,
+                "text_redline_passed": True,
+                "text_redline_run_count": 1,
+                "gate": {"passed": True, "blocking_reasons": []},
+            },
         }
 
     def fake_promote_artifact_manifest(**kwargs):
@@ -14788,6 +14968,7 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
             manifest_fingerprint_workers=3,
             recursive=False,
             adapter_family_profile="strict_audit",
+            external_evidence_baseline_comparison_path=comparison_report,
         )
     )
 
@@ -14796,14 +14977,41 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert compare_captured["manifest_fingerprint_workers"] == 3
     assert compare_captured["adapter_family_profile"] == "strict_audit"
     assert compare_captured["require_state_transition_world_model"] is True
+    assert compare_captured["external_evidence_baseline_comparison_path"] == comparison_report
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
     assert payload["config"]["adapter_family_profile_requires_state_transition_world_model"] is True
     assert payload["config"]["require_state_transition_world_model"] is True
+    assert payload["config"]["external_evidence_baseline_comparison"] == str(comparison_report)
+    assert payload["release_candidate_comparison"]["config"][
+        "external_evidence_baseline_comparison"
+    ] == str(comparison_report)
     assert payload["release_candidate_comparison"]["config"][
         "adapter_family_profile_requires_state_transition_world_model"
     ] is True
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["artifacts"]["external_evidence_baseline_comparison_report"][
+        "path"
+    ].endswith(
+        "external-evidence-baseline-comparison.json"
+    )
+    metadata = captured["metadata"]
+    assert metadata["release_external_evidence_baseline_comparison_status"] == "promote"
+    assert metadata["recommended_external_evidence_baseline_comparison_report"] == (
+        str(comparison_report)
+    )
+    assert metadata["external_evidence_baseline_comparison_report"] == str(comparison_report)
+    assert metadata["external_evidence_baseline_comparison_decision_status"] == "promote"
+    assert metadata["external_evidence_baseline_comparison_recommended_route"] == (
+        "retrieval_groundedness"
+    )
+    assert metadata["external_evidence_baseline_comparison_recommended_route_record"] == (
+        "benchmark_manifest:external-comparison-route:0.1"
+    )
+    assert metadata["external_evidence_baseline_comparison_route_passed"] is True
+    assert metadata["external_evidence_baseline_comparison_text_redline_passed"] is True
+    assert metadata["external_evidence_baseline_comparison_text_redline_run_count"] == 1
     assert payload["decision"]["status"] == "promote"
 
 

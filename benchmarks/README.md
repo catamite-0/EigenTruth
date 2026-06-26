@@ -1990,6 +1990,7 @@ python benchmarks/compare_release_candidates.py \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
+  --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
   --route-baseline-key benchmark_manifest:truthfulqa-l80-structured-qa-staged-route:0.4 \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
@@ -2207,15 +2208,18 @@ To write, verify, and register that release candidate as its own manifest, use
 `--feedback-policy-workflow`, `--feedback-policy-workflow-registry`,
 feedback-policy threshold options, `--selector-replay-report`,
 `--product-runtime-drift-report`, `--release-efficiency-report`,
-`--adapter-family-matrix`, and `--triple-extraction-fixture-matrix` options and
-includes those route/workflow/feedback-policy/selector/drift/efficiency/adapter
-and extractor manifests in the final release-candidate manifest when the gate
-promotes. Required-route budget settings are also copied into manifest metadata
-as `required_route_budget_policy`, including
+`--external-evidence-baseline-comparison`, `--adapter-family-matrix`, and
+`--triple-extraction-fixture-matrix` options and includes those
+route/workflow/feedback-policy/selector/drift/efficiency/external-evidence
+comparison/adapter and extractor manifests in the final release-candidate
+manifest when the gate promotes. Required-route budget settings are also copied
+into manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` and
 `--required-route-require-retrieval-provenance-filter` when the audit route must
 prove label-free local retrieval claims and a recorded evidence provenance
 filter.
+External-evidence baseline comparison gates are copied into the comparison,
+manifest, and registry metadata when configured.
 Triple-extraction external-prediction gates are copied into the comparison,
 manifest, and registry metadata when configured.
 Use `--require-structured-fact-robustness` with
@@ -2274,6 +2278,7 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --feedback-policy-min-safety-coverage 0.70 \
   --feedback-policy-max-unknown-safety-issue-rate 0.20 \
   --release-efficiency-report artifacts/product-runtime-profile-sweep/release-efficiency-report.json \
+  --external-evidence-baseline-comparison artifacts/external-evidence-baseline-comparison.json \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --adapter-family-profile strict_audit \
   --triple-extraction-fixture-matrix artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json \
