@@ -3422,6 +3422,42 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
         for statement in fact_score_dump["statements"]
     )
 
+    robust_output_dir = tmp_path / "fact-paraphrase-workflow"
+    robust_summary = module.run(
+        SimpleNamespace(
+            qa_corpus=str(qa_path),
+            output_dir=str(robust_output_dir),
+            score_name="wikidata-covered-facts",
+            route="structured_fact",
+            fact_claim_style="paraphrase_robustness",
+            signal="truth_proj",
+            alpha=0.2,
+            seed=0,
+            limit=None,
+            score_dump_json=None,
+            verifier_report_json=None,
+            verified_records_jsonl=None,
+            artifact_manifest=None,
+            json=None,
+            compact_json=False,
+        )
+    )
+    robust_score_dump = json.loads((robust_output_dir / "covered-facts-scores.json").read_text(encoding="utf-8"))
+    robust_texts = {statement["text"] for statement in robust_score_dump["statements"]}
+
+    assert robust_summary["status"] == "promote"
+    assert robust_summary["route"] == "structured_fact"
+    assert robust_summary["structured_fact_metrics"]["decision_accuracy"] == pytest.approx(1.0)
+    assert robust_summary["structured_fact_metrics"]["false_supported_rate"] == pytest.approx(0.0)
+    assert robust_score_dump["config"]["statement_style"] == "natural_fact_paraphrase"
+    assert robust_score_dump["summary"]["n_records"] > fact_score_dump["summary"]["n_records"]
+    assert robust_summary["selected_route_counts"] == {
+        "structured_fact": robust_score_dump["summary"]["n_records"],
+    }
+    assert "France's capital is Paris." in robust_texts
+    assert "The capital of France is Paris." in robust_texts
+    assert "The official languages of Belgium include Dutch and French." in robust_texts
+
 
 def test_eval_verifier_ensemble_routes_natural_claims_to_structured_fact_corpus(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")

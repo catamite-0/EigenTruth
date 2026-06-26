@@ -190,6 +190,15 @@ Added a retrieval corpus provenance audit gate:
   keeps false-supported rate `0.0`. This closes the gap between QA-shaped
   metadata and normal generated claims for KG-covered properties while still
   limiting the claim to covered structured facts.
+- `run_wikidata_structured_qa_route_workflow.py --fact-claim-style
+  paraphrase_robustness` adds the route-level robustness replay for the same
+  KG-covered facts. The artifact expands canonical claims into possessive,
+  subject-first, currency-use, and multi-object-list surface forms, producing
+  `2868` balanced rows (`1434` true / `1434` false). It selects
+  `structured_fact` for every row, reaches decision accuracy `1.0`, keeps
+  false-supported rate `0.0`, and verifies the manifest recursively. This is
+  surface-form robustness for known structured facts, not evidence of broader
+  open-domain coverage.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

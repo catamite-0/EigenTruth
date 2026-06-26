@@ -2615,6 +2615,21 @@ python benchmarks/run_wikidata_structured_qa_route_workflow.py \
   --compact-json
 ```
 
+Use `--fact-claim-style paraphrase_robustness` to stress the same
+KG-covered facts with common natural-language variants such as possessive
+claims, subject-first claims, currency-use claims, and multi-object list claims:
+
+```bash
+python benchmarks/run_wikidata_structured_qa_route_workflow.py \
+  --qa-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
+  --output-dir artifacts/wikidata-country-core-facts-structured-fact-paraphrase-route \
+  --score-name wikidata-country-core-facts-structured-fact-paraphrase \
+  --route structured_fact \
+  --fact-claim-style paraphrase_robustness \
+  --alpha 0.10 \
+  --compact-json
+```
+
 The current covered-facts artifact promotes the structured QA route for exactly
 the properties present in the source corpus: `718` rows from `359` Wikidata
 `P36`/`P37`/`P38` facts, selected route `structured_qa` for all rows, `359`
@@ -2626,6 +2641,12 @@ The matching structured-fact artifact promotes the same `718` covered-fact rows
 as natural-language claims, selects `structured_fact` for all rows, supports all
 `359` true facts, refutes all `359` swapped-answer false facts, and records
 decision accuracy `1.0` with false-supported rate `0.0`.
+The paraphrase robustness artifact expands those covered facts to `2868`
+natural-language claim rows (`1434` true / `1434` false), selects
+`structured_fact` for all rows, reaches decision accuracy `1.0`, and keeps
+false-supported rate `0.0`; it is a
+surface-form robustness check for covered KG facts, not a broad open-domain
+claim.
 
 ## `analyze_retrieval_route_gaps.py`
 

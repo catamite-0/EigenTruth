@@ -45,6 +45,7 @@ def build_wikidata_covered_fact_score_dump(
         raise ValueError("at least two QA documents are required to generate false answers.")
 
     known_answers = _known_answers_by_question(documents)
+    known_answer_values = _known_answer_values_by_question(documents)
     statements: list[dict[str, Any]] = []
     labels: list[int] = []
     scores: list[float] = []
@@ -54,17 +55,18 @@ def build_wikidata_covered_fact_score_dump(
         answer = str(document["answer"])
         metadata = dict(document.get("metadata", {}))
         source = document.get("source")
-        true_statement = _statement(
+        true_statements = _statements(
             question=question,
             answer=answer,
             source=None if source is None else str(source),
             metadata=metadata,
             label_generation="wikidata_known_answer",
             statement_style=statement_style,
+            known_answers=known_answer_values.get(normalize_claim_text(question), ()),
         )
-        statements.append(true_statement)
-        labels.append(0)
-        scores.append(0.0)
+        statements.extend(true_statements)
+        labels.extend(0 for _ in true_statements)
+        scores.extend(0.0 for _ in true_statements)
 
         false_answer = _false_answer_for(
             document,
@@ -74,7 +76,7 @@ def build_wikidata_covered_fact_score_dump(
         if false_answer is None:
             skipped_false_answer += 1
             continue
-        false_statement = _statement(
+        false_statements = _statements(
             question=question,
             answer=false_answer["answer"],
             source=None if false_answer.get("source") is None else str(false_answer["source"]),
@@ -85,10 +87,11 @@ def build_wikidata_covered_fact_score_dump(
             },
             label_generation="wikidata_known_answer_mismatch",
             statement_style=statement_style,
+            known_answers=known_answer_values.get(normalize_claim_text(question), ()),
         )
-        statements.append(false_statement)
-        labels.append(1)
-        scores.append(0.0)
+        statements.extend(false_statements)
+        labels.extend(1 for _ in false_statements)
+        scores.extend(0.0 for _ in false_statements)
 
     if not any(label == 1 for label in labels):
         raise ValueError("no false-answer rows could be generated.")
@@ -141,7 +144,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         qa_corpus,
         limit=args.limit,
         signal=signal,
-        statement_style="natural_fact" if route == "structured_fact" else "qa",
+        statement_style=_statement_style_for_route(route, getattr(args, "fact_claim_style", "canonical")),
     )
     route_stem = route.replace("_", "-")
     score_dump_path = Path(args.score_dump_json or output_dir / "covered-facts-scores.json")
@@ -300,6 +303,21 @@ def _known_answers_by_question(documents: Sequence[Mapping[str, Any]]) -> dict[s
     return known
 
 
+def _known_answer_values_by_question(documents: Sequence[Mapping[str, Any]]) -> dict[str, tuple[str, ...]]:
+    known: dict[str, list[str]] = {}
+    seen: dict[str, set[str]] = {}
+    for document in documents:
+        question_key = normalize_claim_text(str(document["question"]))
+        answer = str(document["answer"])
+        answer_key = normalize_claim_text(answer)
+        seen.setdefault(question_key, set())
+        if answer_key in seen[question_key]:
+            continue
+        known.setdefault(question_key, []).append(answer)
+        seen[question_key].add(answer_key)
+    return {key: tuple(values) for key, values in known.items()}
+
+
 def _false_answer_for(
     document: Mapping[str, Any],
     *,
@@ -346,6 +364,43 @@ def _false_answer_for(
     return None
 
 
+def _statements(
+    *,
+    question: str,
+    answer: str,
+    source: str | None,
+    metadata: Mapping[str, Any],
+    label_generation: str,
+    statement_style: str,
+    known_answers: Sequence[str] = (),
+) -> list[dict[str, Any]]:
+    if statement_style == "qa":
+        templates = (("qa", f"{question} {answer}"),)
+    elif statement_style == "natural_fact":
+        templates = (("canonical", _natural_fact_statement(answer=answer, metadata=metadata)),)
+    elif statement_style == "natural_fact_paraphrase":
+        templates = _natural_fact_paraphrases(
+            answer=answer,
+            metadata=metadata,
+            known_answers=known_answers,
+        )
+    else:
+        raise ValueError(f"unsupported statement_style: {statement_style!r}")
+    return [
+        _statement_payload(
+            question=question,
+            answer=answer,
+            text=text,
+            source=source,
+            metadata=metadata,
+            label_generation=label_generation,
+            statement_style=statement_style,
+            claim_template_id=claim_template_id,
+        )
+        for claim_template_id, text in templates
+    ]
+
+
 def _statement(
     *,
     question: str,
@@ -355,11 +410,27 @@ def _statement(
     label_generation: str,
     statement_style: str,
 ) -> dict[str, Any]:
-    text = (
-        _natural_fact_statement(answer=answer, metadata=metadata)
-        if statement_style == "natural_fact"
-        else f"{question} {answer}"
-    )
+    return _statements(
+        question=question,
+        answer=answer,
+        source=source,
+        metadata=metadata,
+        label_generation=label_generation,
+        statement_style=statement_style,
+    )[0]
+
+
+def _statement_payload(
+    *,
+    question: str,
+    answer: str,
+    text: str,
+    source: str | None,
+    metadata: Mapping[str, Any],
+    label_generation: str,
+    statement_style: str,
+    claim_template_id: str,
+) -> dict[str, Any]:
     return {
         "question": question,
         "answer": answer,
@@ -369,6 +440,7 @@ def _statement(
             "source": source,
             "label_generation": label_generation,
             "statement_style": statement_style,
+            "claim_template_id": claim_template_id,
             "statement_property": metadata.get("statement_property"),
             "statement_property_label": metadata.get("statement_property_label"),
             "question_template": metadata.get("question_template"),
@@ -384,20 +456,65 @@ def _statement(
     }
 
 
+def _natural_fact_paraphrases(
+    *,
+    answer: str,
+    metadata: Mapping[str, Any],
+    known_answers: Sequence[str],
+) -> tuple[tuple[str, str], ...]:
+    country = _required_country(metadata)
+    property_key = _property_key(metadata)
+    if property_key == "p36" or property_key == "capital":
+        return (
+            ("canonical", f"{answer} is the capital of {country}."),
+            ("subject_first", f"The capital of {country} is {answer}."),
+            ("possessive", f"{country}'s capital is {answer}."),
+        )
+    if property_key == "p37" or property_key == "official language":
+        templates = [
+            ("canonical", f"{answer} is an official language of {country}."),
+            ("subject_first", f"The official languages of {country} include {answer}."),
+            ("possessive", f"{country}'s official languages include {answer}."),
+        ]
+        list_answer = _list_answer_for(answer, known_answers=known_answers)
+        if list_answer is not None:
+            templates.append(("object_list", f"The official languages of {country} include {list_answer}."))
+        return tuple(templates)
+    if property_key == "p38" or property_key == "currency":
+        templates = [
+            ("canonical", f"{answer} is a currency of {country}."),
+            ("subject_first", f"The currency of {country} is {answer}."),
+            ("possessive", f"{country}'s currency is {answer}."),
+            ("uses_currency", f"{country} uses {answer} as its currency."),
+        ]
+        list_answer = _list_answer_for(answer, known_answers=known_answers)
+        if list_answer is not None:
+            templates.append(("object_list", f"The currencies of {country} include {list_answer}."))
+        return tuple(templates)
+    raise ValueError(f"unsupported natural_fact Wikidata property: {_property_label(metadata)!r}")
+
+
 def _natural_fact_statement(*, answer: str, metadata: Mapping[str, Any]) -> str:
-    country = _clean_text(metadata.get("country"))
-    if country is None:
-        raise ValueError("natural_fact statements require metadata.country.")
-    property_id = _clean_text(metadata.get("statement_property"))
-    property_label = _clean_text(metadata.get("statement_property_label"))
-    property_key = normalize_claim_text(property_id or property_label or "")
+    country = _required_country(metadata)
+    property_key = _property_key(metadata)
     if property_key == "p36" or property_key == "capital":
         return f"{answer} is the capital of {country}."
     if property_key == "p37" or property_key == "official language":
         return f"{answer} is an official language of {country}."
     if property_key == "p38" or property_key == "currency":
         return f"{answer} is a currency of {country}."
-    raise ValueError(f"unsupported natural_fact Wikidata property: {property_id or property_label!r}")
+    raise ValueError(f"unsupported natural_fact Wikidata property: {_property_label(metadata)!r}")
+
+
+def _statement_style_for_route(route: str, fact_claim_style: Any) -> str:
+    if route != "structured_fact":
+        return "qa"
+    style = str(fact_claim_style).strip()
+    if style == "canonical":
+        return "natural_fact"
+    if style == "paraphrase_robustness":
+        return "natural_fact_paraphrase"
+    raise ValueError("fact_claim_style must be canonical or paraphrase_robustness.")
 
 
 def _normalize_route(value: Any) -> str:
@@ -409,9 +526,52 @@ def _normalize_route(value: Any) -> str:
 
 def _normalize_statement_style(value: Any) -> str:
     style = str(value).strip()
-    if style not in {"qa", "natural_fact"}:
-        raise ValueError("statement_style must be qa or natural_fact.")
+    if style not in {"qa", "natural_fact", "natural_fact_paraphrase"}:
+        raise ValueError("statement_style must be qa, natural_fact, or natural_fact_paraphrase.")
     return style
+
+
+def _required_country(metadata: Mapping[str, Any]) -> str:
+    country = _clean_text(metadata.get("country"))
+    if country is None:
+        raise ValueError("natural_fact statements require metadata.country.")
+    return country
+
+
+def _property_label(metadata: Mapping[str, Any]) -> str:
+    property_id = _clean_text(metadata.get("statement_property"))
+    property_label = _clean_text(metadata.get("statement_property_label"))
+    return property_id or property_label or ""
+
+
+def _property_key(metadata: Mapping[str, Any]) -> str:
+    return normalize_claim_text(_property_label(metadata))
+
+
+def _list_answer_for(answer: str, *, known_answers: Sequence[str]) -> str | None:
+    values: list[str] = []
+    seen = set()
+    answer_key = normalize_claim_text(answer)
+    for value in known_answers:
+        value_key = normalize_claim_text(str(value))
+        if not value_key or value_key in seen:
+            continue
+        values.append(str(value))
+        seen.add(value_key)
+    if answer_key not in seen:
+        if values:
+            values = [values[0], answer]
+        else:
+            return None
+    if len(values) == 1:
+        return values[0]
+    return _join_answer_list(values)
+
+
+def _join_answer_list(values: Sequence[str]) -> str:
+    if len(values) == 2:
+        return f"{values[0]} and {values[1]}"
+    return ", ".join(values[:-1]) + f", and {values[-1]}"
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -446,6 +606,12 @@ def main() -> None:
         choices=("structured_qa", "structured_fact"),
         default="structured_qa",
         help="route to benchmark; structured_fact emits natural-language fact claims",
+    )
+    parser.add_argument(
+        "--fact-claim-style",
+        choices=("canonical", "paraphrase_robustness"),
+        default="canonical",
+        help="structured_fact claim generation style; paraphrase_robustness emits multiple natural-language variants",
     )
     parser.add_argument("--signal", default=DEFAULT_SIGNAL)
     parser.add_argument("--alpha", type=float, default=DEFAULT_ALPHA)
