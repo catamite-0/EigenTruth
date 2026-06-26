@@ -2460,6 +2460,35 @@ verifies the top-level manifest. Its scope is deliberately narrow:
 the provenance gate, not that the country-capital corpus is sufficient
 open-domain grounding coverage for TruthfulQA.
 
+The follow-up route-quality audit at
+`artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/` runs the
+same external corpus through `run_local_retrieval_route_workflow.py` against the
+Qwen l80 statement dump:
+
+```bash
+python benchmarks/run_local_retrieval_route_workflow.py \
+  --scores artifacts/qwen05_truthfulqa_l80_scores_with_statements.json \
+  --corpus artifacts/wikidata-country-capitals-external-corpus/wikidata-country-capitals-corpus.json \
+  --output-dir artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80 \
+  --score-name qwen05-l80-wikidata-country-capitals \
+  --query-field question_answer \
+  --retriever-min-overlap 0.15 \
+  --verifier-min-overlap 0.55 \
+  --retrieval-limit 5 \
+  --omit-label-metadata \
+  --gate-route retrieval_groundedness \
+  --gate-min-selected 1 \
+  --max-verified-false-alarm 0.05 \
+  --min-verified-detection 0.20 \
+  --allow-non-promote
+```
+
+The audit is correctly blocked: the corpus retrieves hits for `254/556`
+records, but the retrieval-backed route has verified false alarm `0.149`,
+above the `0.05` gate, with verified detection `0.286`. This makes the current
+Wikidata country-capital corpus a useful external-source smoke gate, not a
+deployable TruthfulQA verifier route.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied

@@ -141,6 +141,11 @@ Added a retrieval corpus provenance audit gate:
   provenance audit, and recursively verifies the manifest. It is source/provenance
   evidence only (`promotes_verifier_route=false`), not a broad TruthfulQA
   grounding route.
+- `artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/`
+  measures that source against the Qwen l80 statement dump. Retrieval covers
+  254/556 records, but `retrieval_groundedness` verified false alarm is `0.149`
+  against a `0.05` gate, so the route remains blocked. This is the desired
+  distinction: source provenance can pass while route quality still fails.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

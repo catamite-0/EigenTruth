@@ -1,0 +1,127 @@
+{
+  "claims_summary": {
+    "average_hits_per_record": 1.6636690647482015,
+    "n_records": 556,
+    "records_with_hits": 254,
+    "total_hits": 925
+  },
+  "coverage": {
+    "average_hits_per_record": 1.6636690647482015,
+    "coverage_rate": 0.4568345323741007,
+    "n_records": 556,
+    "records_with_hits": 254,
+    "total_hits": 925
+  },
+  "lexical_groundedness_metrics": {
+    "false_refuted_rate": 0.0,
+    "false_supported_rate": 0.0,
+    "mean_duration_seconds": 5.232021187521542e-05,
+    "mean_selection_rate": 0.5431654676258992,
+    "n_false": 166,
+    "n_true": 136,
+    "p95_duration_seconds": 6.365200024447403e-05,
+    "retrieval_hit_count": 0,
+    "retrieval_use_rate": 0.0,
+    "selected": 302,
+    "verified_detection": 0.35542168674698793,
+    "verified_false_alarm": 0.12068965517241381
+  },
+  "manifest_verification_passed": true,
+  "next_step": "Expand external evidence coverage or add a stronger semantic/structured verifier before consuming this route in release gates.",
+  "promotion_decision": {
+    "blocking_failures": [],
+    "frontier_rank": 1,
+    "frontier_recommended_route": "groundedness",
+    "gate_checked_route": false,
+    "gate_status": "failed",
+    "missing_metrics": [
+      "decision_accuracy"
+    ],
+    "promotion_score": 0.536883989895289,
+    "reason": "recommended Pareto route was not covered by the quality/cost gate",
+    "recommended_route": "groundedness",
+    "route_gate_passed": null,
+    "schema_version": 1,
+    "status": "needs_gate_for_recommended",
+    "warnings": [
+      {
+        "checked_routes": [
+          "retrieval_groundedness"
+        ],
+        "route": "groundedness",
+        "type": "unchecked_recommended_route"
+      }
+    ]
+  },
+  "quality_gate": {
+    "checked_routes": [
+      "retrieval_groundedness"
+    ],
+    "config": {
+      "max_false_supported_rate": null,
+      "max_max_duration_seconds": null,
+      "max_mean_attempted_route_count": null,
+      "max_mean_duration_seconds": null,
+      "max_p95_duration_seconds": null,
+      "max_p99_duration_seconds": null,
+      "max_retrieval_use_rate": 1.0,
+      "max_staged_delta_false_alarm": null,
+      "max_staged_verified_false_alarm": null,
+      "max_verified_false_alarm": 0.05,
+      "min_cache_hit_rate": null,
+      "min_decision_accuracy": null,
+      "min_false_refuted_rate": null,
+      "min_selected": 1,
+      "min_staged_delta_detection": null,
+      "min_staged_skip_rate": null,
+      "min_staged_verified_detection": null,
+      "min_verified_detection": 0.2,
+      "routes": [
+        "retrieval_groundedness"
+      ]
+    },
+    "enabled": true,
+    "failures": [
+      {
+        "limit": 0.05,
+        "limit_type": "max",
+        "metric": "verified_false_alarm",
+        "raw_value": "0.14925373134328354",
+        "route": "retrieval_groundedness",
+        "value": 0.14925373134328354
+      }
+    ],
+    "passed": false
+  },
+  "reason": "Wikidata country-capital corpus is real external evidence but too narrow/noisy for route promotion.",
+  "retrieval_groundedness_metrics": {
+    "false_refuted_rate": 0.0,
+    "false_supported_rate": 0.0,
+    "mean_duration_seconds": 0.00022922559795070688,
+    "mean_selection_rate": 0.4568345323741007,
+    "n_false": 140,
+    "n_true": 114,
+    "p95_duration_seconds": 0.000279476095965947,
+    "retrieval_hit_count": 925,
+    "retrieval_use_rate": 1.0,
+    "selected": 254,
+    "verified_detection": 0.2857142857142857,
+    "verified_false_alarm": 0.14925373134328354
+  },
+  "route_audit_artifact_manifest": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-artifact-manifest.json",
+  "schema_version": 1,
+  "source_artifact": "artifacts/wikidata-country-capitals-external-corpus/artifact-manifest.json",
+  "status": "blocked",
+  "workflow": "wikidata_external_route_quality_summary",
+  "workflow_decision": {
+    "adapter_promotion_status": "blocked",
+    "blocking_reasons": [
+      "adapter promotion decision did not promote"
+    ],
+    "manifest_promoted": false,
+    "manifest_verified": false,
+    "registry_record": null,
+    "runtime_budget_passed": true,
+    "status": "blocked"
+  }
+}

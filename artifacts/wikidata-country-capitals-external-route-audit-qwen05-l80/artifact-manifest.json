@@ -1,0 +1,105 @@
+{
+  "artifacts": {
+    "promotion_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-promotion.json",
+      "sha256": "5a1541fcec3b0bc698cfe19997217b6f8a7f443ce70fe58b6573f3ddcf31a574",
+      "size_bytes": 21089
+    },
+    "retrieval_claims": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-claims.json",
+      "sha256": "7752a0c7400404187153e4e644a6321f25b38b0e0068352293b8d44081618ac6",
+      "size_bytes": 2180343
+    },
+    "route_comparison_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-comparison.json",
+      "sha256": "74924826832da29f8b82e2d5b97d1cc833ff1f5a9abc9535f0ef006a44547d4d",
+      "size_bytes": 19292
+    },
+    "route_quality_summary": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "route-quality-summary.json",
+      "sha256": "6163b5969c0cc064cb4e8f005d34f7ff4167b3db6d16b0be1fd60cec32fc0b5d",
+      "size_bytes": 4134
+    },
+    "score_dump": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../qwen05_truthfulqa_l80_scores_with_statements.json",
+      "sha256": "afe25f1a8741c6b3f609172afa322033627e1765b378d37126c468d5089d5f52",
+      "size_bytes": 572479
+    },
+    "source_gate_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "../wikidata-country-capitals-external-corpus/artifact-manifest.json",
+      "sha256": "38ce9f4a557c54a5a161b19478590b141741ef27b50edf4932a3427366f81454",
+      "size_bytes": 2610
+    },
+    "verifier_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-verifier-report.json",
+      "sha256": "95bb67e8e8ef218a5a6076ee1e0443bbe7b4ba4388476724bb55c4fb1d3d65f3",
+      "size_bytes": 18699
+    },
+    "workflow_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-artifact-manifest.json",
+      "sha256": "106ff83ac8b047a89ac1da42585b3f004eb732e74b0ac4925e8fcb458db1d5b1",
+      "size_bytes": 5013
+    },
+    "workflow_manifest_verification": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-manifest-verification.json",
+      "sha256": "166833addddf68697c9996f692494d34c8fb99c49efc4ae6b572621f2798d13a",
+      "size_bytes": 200
+    },
+    "workflow_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "local-retrieval-route-workflow.json",
+      "sha256": "b04fafc1f6ef022586349cb33b1a12b4a78ae3ae476d977d9914e4cb2ec5ca42",
+      "size_bytes": 28100
+    }
+  },
+  "digest_algorithm": "sha256",
+  "metadata": {
+    "blocking_reason": "Wikidata country-capital corpus is real external evidence but too narrow/noisy for route promotion.",
+    "coverage_rate": 0.4568345323741007,
+    "n_records": 556,
+    "promotes_verifier_route": false,
+    "records_with_hits": 254,
+    "retrieval_verified_detection": 0.2857142857142857,
+    "retrieval_verified_false_alarm": 0.14925373134328354,
+    "source_provider": "wikidata",
+    "source_scope": "country_capitals",
+    "status": "blocked",
+    "workflow": "wikidata_external_route_quality_audit"
+  },
+  "schema_version": 1,
+  "summary": {
+    "artifact_count": 10,
+    "directory_count": 0,
+    "file_count": 10,
+    "missing_count": 0
+  }
+}

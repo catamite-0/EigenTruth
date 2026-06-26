@@ -1,0 +1,7 @@
+{
+  "checked": 6,
+  "failures": [],
+  "manifest_path": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-artifact-manifest.json",
+  "nested": [],
+  "passed": true
+}
