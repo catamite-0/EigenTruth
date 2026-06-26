@@ -22,6 +22,7 @@ from benchmarks.run_adapter_readiness_workflow import (  # noqa: E402
     _parse_non_negative_float,
     _parse_str_list,
     run_adapter_readiness_workflow,
+    state_transition_world_model_evidence,
 )
 from benchmarks.run_cache_profile_matrix import (  # noqa: E402
     MATRIX_MODES,
@@ -143,6 +144,7 @@ def _promotion_metadata(
     runtime = dict(readiness_report.get("runtime_recommendation") or {})
     runtime_config = dict(runtime.get("recommendation") or {})
     adapter_family = dict(readiness_report.get("adapter_family_matrix") or {})
+    world_model_evidence = state_transition_world_model_evidence(adapter_family)
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     score_fusion = dict(runtime_config.get("score_fusion") or {})
     metadata = {
@@ -184,6 +186,15 @@ def _promotion_metadata(
             config.readiness.include_triple_evidence,
         ),
         "adapter_triple_min_slot_coverage": config.readiness.triple_min_slot_coverage,
+        "adapter_family_state_transition_world_model_adapter": world_model_evidence.get(
+            "world_model_adapter"
+        ),
+        "adapter_family_state_transition_world_model_rule_count": world_model_evidence.get(
+            "world_model_rule_count"
+        ),
+        "adapter_family_state_transition_rule_based_world_model": world_model_evidence.get(
+            "rule_based_world_model"
+        ),
     }
     inside_sampling = dict(runtime_config.get("inside_sampling") or {})
     if inside_sampling:

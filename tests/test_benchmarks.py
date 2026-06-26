@@ -8937,7 +8937,20 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert payload["execution"]["wall_clock_seconds"] >= 0.0
     assert payload["execution"]["performance_wall_clock_seconds"] >= 0.0
     assert payload["execution"]["performance_max_workers"] == 1
+    assert payload["adapter_family_world_model_evidence"] == {
+        "route": "state_transition",
+        "present": True,
+        "status": "promote",
+        "world_model_adapter": "RuleBasedWorldModelAdapter",
+        "world_model_rule_count": 8,
+        "rule_based_world_model": True,
+    }
     assert payload["readiness_decision"]["status"] == "needs_performance_evidence"
+    assert payload["readiness_decision"]["state_transition_world_model_adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert payload["readiness_decision"]["state_transition_world_model_rule_count"] == 8
+    assert payload["readiness_decision"]["state_transition_rule_based_world_model"] is True
     assert payload["runtime_recommendation"]["status"] == "needs_evidence"
     assert payload["readiness_decision"]["recommended_route"] in {
         "structured_qa",
@@ -8960,6 +8973,11 @@ def test_run_adapter_readiness_workflow_requires_real_performance_evidence(tmp_p
     assert manifest["metadata"]["readiness_status"] == "needs_performance_evidence"
     assert manifest["metadata"]["prefix_kv_cache"] is True
     assert manifest["metadata"]["runtime_recommendation_status"] == "needs_evidence"
+    assert manifest["metadata"]["adapter_family_state_transition_world_model_adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert manifest["metadata"]["adapter_family_state_transition_world_model_rule_count"] == 8
+    assert manifest["metadata"]["adapter_family_state_transition_rule_based_world_model"] is True
     assert manifest["metadata"]["wall_clock_seconds"] >= 0.0
     assert manifest["metadata"]["performance_wall_clock_seconds"] >= 0.0
     assert manifest["artifacts"]["readiness_report"]["exists"] is True
@@ -9490,6 +9508,11 @@ def test_run_adapter_readiness_registry_workflow_promotes_manifest(tmp_path, mon
     assert record.metadata["adapter_include_retrieval"] is True
     assert record.metadata["adapter_include_retrieval_structured_qa"] is True
     assert record.metadata["adapter_include_triple_evidence"] is True
+    assert record.metadata["adapter_family_state_transition_world_model_adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert record.metadata["adapter_family_state_transition_world_model_rule_count"] == 8
+    assert record.metadata["adapter_family_state_transition_rule_based_world_model"] is True
     assert record.metadata["scope"] == "unit"
     assert (tmp_path / "workflow.json").exists()
 
@@ -14865,6 +14888,14 @@ def _write_fake_readiness_report(output_dir, *, status, runtime_status):
         ),
         "retrieval_routes": ("retrieval_groundedness", "retrieval_structured_qa"),
         "audit_routes": ("triple_evidence",),
+        "families": (
+            {
+                "route": "state_transition",
+                "status": "promote",
+                "world_model_adapter": "RuleBasedWorldModelAdapter",
+                "world_model_rule_count": 8,
+            },
+        ),
     }
     runtime_payload = {
         "status": runtime_status,

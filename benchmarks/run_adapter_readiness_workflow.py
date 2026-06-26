@@ -259,6 +259,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
     )
     wall_clock_seconds = time.perf_counter() - started_at
     runtime_budget = _runtime_budget_report(config, wall_clock_seconds=wall_clock_seconds)
+    world_model_evidence = state_transition_world_model_evidence(adapter_report)
     decision = build_readiness_decision(
         adapter_report,
         performance_report,
@@ -280,6 +281,7 @@ def run_adapter_readiness_workflow(config: AdapterReadinessWorkflowConfig) -> di
         "performance_matrix": performance_report,
         "runtime_recommendation": runtime_recommendation,
         "runtime_budget": runtime_budget,
+        "adapter_family_world_model_evidence": world_model_evidence,
         "readiness_decision": decision,
         "execution": {
             "wall_clock_seconds": wall_clock_seconds,
@@ -314,6 +316,7 @@ def build_readiness_decision(
     runtime_status = str(runtime_recommendation.get("status") or "missing")
     runtime_budget = dict(runtime_budget or {"enabled": False, "passed": True})
     runtime_budget_passed = (not runtime_budget.get("enabled")) or bool(runtime_budget.get("passed"))
+    world_model_evidence = state_transition_world_model_evidence(adapter_report)
     blocking_reasons = []
     if adapter_status != "promote":
         blocking_reasons.append("adapter-family quality gate did not promote")
@@ -354,8 +357,57 @@ def build_readiness_decision(
         "adapter_family_promoted": adapter_status == "promote",
         "performance_promoted": performance_status == "promote",
         "runtime_recommendation_promoted": runtime_status == "promote",
+        "state_transition_world_model_adapter": world_model_evidence.get("world_model_adapter"),
+        "state_transition_world_model_rule_count": world_model_evidence.get("world_model_rule_count"),
+        "state_transition_rule_based_world_model": world_model_evidence.get("rule_based_world_model"),
         "blocking_reasons": tuple(blocking_reasons),
     }
+
+
+def state_transition_world_model_evidence(adapter_report: Mapping[str, Any]) -> dict[str, Any]:
+    """Extract readiness-level world-model evidence for the state-transition route."""
+    family = _adapter_family_by_route(adapter_report, "state_transition")
+    if family is None:
+        return {
+            "route": "state_transition",
+            "present": False,
+            "status": None,
+            "world_model_adapter": None,
+            "world_model_rule_count": None,
+            "rule_based_world_model": False,
+        }
+    adapter = family.get("world_model_adapter")
+    rule_count = _optional_non_negative_int(family.get("world_model_rule_count"))
+    return {
+        "route": "state_transition",
+        "present": True,
+        "status": family.get("status"),
+        "world_model_adapter": adapter,
+        "world_model_rule_count": rule_count,
+        "rule_based_world_model": adapter == "RuleBasedWorldModelAdapter" and rule_count is not None and rule_count > 0,
+    }
+
+
+def _adapter_family_by_route(adapter_report: Mapping[str, Any], route: str) -> Mapping[str, Any] | None:
+    families = adapter_report.get("families")
+    if not isinstance(families, Sequence) or isinstance(families, (str, bytes)):
+        return None
+    for item in families:
+        if isinstance(item, Mapping) and item.get("route") == route:
+            return item
+    return None
+
+
+def _optional_non_negative_int(value: Any) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    if parsed < 0:
+        return None
+    return parsed
 
 
 def _runtime_budget_report(
@@ -398,6 +450,7 @@ def _write_artifact_manifest(
     decision = dict(report.get("readiness_decision") or {})
     runtime_recommendation = dict(report.get("runtime_recommendation") or {})
     runtime_budget = dict(report.get("runtime_budget") or {})
+    world_model_evidence = dict(report.get("adapter_family_world_model_evidence") or {})
     runtime_config = dict(runtime_recommendation.get("recommendation") or {})
     best_quality_signal = dict(runtime_config.get("best_quality_signal") or {})
     score_fusion = dict(runtime_config.get("score_fusion") or {})
@@ -434,6 +487,15 @@ def _write_artifact_manifest(
             "adapter_retriever_min_overlap": config.retriever_min_overlap,
             "adapter_retrieval_limit": config.retrieval_limit,
             "adapter_triple_min_slot_coverage": config.triple_min_slot_coverage,
+            "adapter_family_state_transition_world_model_adapter": world_model_evidence.get(
+                "world_model_adapter"
+            ),
+            "adapter_family_state_transition_world_model_rule_count": world_model_evidence.get(
+                "world_model_rule_count"
+            ),
+            "adapter_family_state_transition_rule_based_world_model": world_model_evidence.get(
+                "rule_based_world_model"
+            ),
             "max_runtime_total_seconds": config.max_runtime_total_seconds,
             "inside_sampling_report": None
             if config.inside_sampling_report_path is None

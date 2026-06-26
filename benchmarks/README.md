@@ -1671,7 +1671,10 @@ and trigger-budget sweep report when provided. The runtime recommendation is gen
 performance matrix without rerunning model work; when the matrix promotes it
 includes deployable layer, batch-size, token-budget, prefix-KV, worker flags,
 all available AUROC quality signals, optional sampling settings, and the best
-quality signal for the next run. Use `verify_artifact_manifest.py --recursive` and
+quality signal for the next run. The readiness report and manifest also lift the
+`state_transition` family world-model adapter and rule count into top-level
+metadata, so downstream release gates can require `RuleBasedWorldModelAdapter`
+evidence without reparsing route internals. Use `verify_artifact_manifest.py --recursive` and
 `promote_artifact_manifest.py` on that manifest to register a readiness
 baseline.
 
