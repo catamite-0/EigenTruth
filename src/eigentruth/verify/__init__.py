@@ -10,6 +10,11 @@ from eigentruth.verify.cache import (
     stable_cache_key,
     verifier_cache_key,
 )
+from eigentruth.verify.citations import (
+    CitationRecord,
+    CitationVerifier,
+    extract_citation_references,
+)
 from eigentruth.verify.claims import (
     ClaimExtractor,
     SentenceClaimExtractor,
@@ -61,6 +66,8 @@ __all__ = [
     "ClaimCoherenceReport",
     "ClaimDependency",
     "ClaimExtractor",
+    "CitationRecord",
+    "CitationVerifier",
     "ClaimTriple",
     "ClaimTripleExtractor",
     "ClaimVerificationPlan",
@@ -98,6 +105,7 @@ __all__ = [
     "default_verifier_routes",
     "enrich_claims_with_triples",
     "extract_calculation",
+    "extract_citation_references",
     "extract_claims",
     "extract_claim_triples",
     "estimate_verification_plan_cost",

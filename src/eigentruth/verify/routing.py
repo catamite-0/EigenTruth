@@ -7,6 +7,8 @@ from typing import Any, Mapping, Sequence
 from eigentruth.verify.composite import RoutedVerifier, VerifierRoute
 from eigentruth.verify.groundedness import EvidenceDocument, GroundednessVerifier
 from eigentruth.verify.planning import (
+    DEFAULT_CITATION_FEATURE_FLAGS,
+    DEFAULT_CITATION_METADATA_KEYS,
     DEFAULT_TRIPLE_EVIDENCE_FEATURE_FLAGS,
     DEFAULT_TRIPLE_EVIDENCE_METADATA_KEYS,
 )
@@ -14,6 +16,12 @@ from eigentruth.verify.protocols import VerificationStatus, Verifier
 from eigentruth.verify.triples import TripleEvidenceVerifier
 
 _CALCULATION_TEXT_PATTERNS = (r"\d\s*[+*/%-]\s*\d\s*(?:=|equals|is)",)
+_CITATION_TEXT_PATTERNS = (
+    r"\[[A-Za-z0-9_.:-]+\]",
+    r"\b(?:doi:\s*)?10\.\d{4,9}/[-._;()/:A-Z0-9]+",
+    r"\barxiv:\s*(?:\d{4}\.\d{4,5}(?:v\d+)?)",
+    r"\bhttps?://",
+)
 
 
 def default_verifier_routes(
@@ -26,8 +34,11 @@ def default_verifier_routes(
     transition_verifier: Verifier | None = None,
     world_model: Any | None = None,
     calculator_verifier: Verifier | None = None,
+    citation_verifier: Verifier | None = None,
+    citation_records: Sequence[Mapping[str, Any]] | None = None,
     triple_evidence_verifier: Verifier | None = None,
     include_calculator: bool = True,
+    include_citation: bool = True,
     include_triple_evidence: bool = True,
     include_groundedness: bool = True,
     min_groundedness_overlap: float = 0.65,
@@ -55,6 +66,22 @@ def default_verifier_routes(
                 metadata_keys=("calculation", "expression"),
                 context_keys=("calculation", "expression"),
                 text_patterns=_CALCULATION_TEXT_PATTERNS,
+            )
+        )
+
+    if include_citation and (citation_verifier is not None or citation_records is not None):
+        if citation_verifier is None:
+            from eigentruth.verify.citations import CitationVerifier
+
+            citation_verifier = CitationVerifier(records=tuple(citation_records or ()))
+        routes.append(
+            VerifierRoute(
+                "citation",
+                citation_verifier,
+                feature_flags=DEFAULT_CITATION_FEATURE_FLAGS,
+                metadata_keys=DEFAULT_CITATION_METADATA_KEYS,
+                text_patterns=_CITATION_TEXT_PATTERNS,
+                fallthrough_statuses=(VerificationStatus.NOT_APPLICABLE,),
             )
         )
 

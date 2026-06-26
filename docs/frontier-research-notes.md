@@ -13,6 +13,7 @@ EigenTruth should move from hallucination detection alone toward calibrated part
 - Layer-wise Semantic Dynamics (arXiv:2510.04933), Contextual Perturbation and Representation Drift (arXiv:2505.16894), and MultiHaluDet (arXiv:2605.24919) point in the same direction for trajectory-style hidden-state analysis: hallucination detection should examine representation dynamics, not only static final-layer embeddings. This justifies the E7 real-data replay harness. The limit-128 gpt2/SmolLM2 follow-up shows trajectory convergence is not yet robust enough as a standalone detector: gpt2 reaches AUROC 0.608, while SmolLM2 reaches only 0.560 and the fail-closed evidence gate remains blocked. The aligned ablation matrix is more nuanced: trajectory improves the best gpt2 fusion candidate but hurts the best SmolLM2 candidate. `SignalSelectionPolicy` and selected fusion artifacts now turn that result into an explicit conditional artifact path, so trajectory remains a model/run-specific fusion feature rather than a default release signal.
 - SelfCheckGPT (arXiv:2303.08896) and FactSelfCheck (arXiv:2503.17229, EACL 2026 findings) support the sampling/self-consistency route. FactSelfCheck moves from sentence-level to fact-level graph/triple checks, which is a strong next adapter direction but needs heavier extraction and multi-sample fixtures.
 - Semantic Energy (arXiv:2508.14496) supports energy-style uncertainty beyond entropy. EigenTruth already has lightweight semantic-energy proxies; a future step is to compare them against conformal abstention and route-cost gates.
+- CiteCheck (arXiv:2605.27700) shows that citation hallucinations often appear as small metadata drift rather than fully fabricated references. This supports a separate citation-integrity route before broad retrieval: DOI, arXiv id, URL, author/year, title, and local reference labels should be checked against a trusted citation catalog instead of treated as ordinary lexical groundedness.
 
 ## Implemented This Round
 
@@ -74,6 +75,12 @@ Added dependency-free fact-level claim metadata:
 - `extract_claims(..., include_triples=True)` and `SentenceClaimExtractor(include_triples=True)` can attach rule-based `claim_triples` metadata without requiring an external extractor.
 - `ClaimVerificationPlanner(include_extracted_triples=True)` routes those extracted triples into the existing `triple_evidence` path, so local fact-level audits can be planned before a stronger extractor is available.
 - The API keeps stronger extraction optional through the existing claim and triple extractor protocols. External or learned extractors can now hand local prediction files to the single-corpus workflow or to the cross-corpus fixture matrix with `--external-predictions CORPUS:NAME=PATH`, keeping the evaluation boundary dependency-free while testing cross-corpus/adversarial robustness.
+
+Added a dependency-free citation-integrity route:
+
+- `CitationRecord`, `CitationVerifier`, and `extract_citation_references(...)` validate citation references against caller-supplied local catalogs without network access or mandatory dependencies.
+- `ClaimVerificationPlanner` now emits `citation` route hints and `citation_checks` payloads for cited claims, and the relative cost estimate accounts for citation checks separately from retrieval.
+- `default_verifier_routes(..., citation_records=...)` can run citation catalog checks before triple evidence or groundedness, and it does not fall through on unresolved references or metadata drift. This keeps citation hallucinations from being masked by later broad lexical evidence.
 
 Added a geometry-calibrated score primitive:
 

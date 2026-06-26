@@ -74,6 +74,8 @@ from eigentruth.eval.conformal import (
 )
 from eigentruth.verify import (
     CachedVerifier,
+    CitationRecord,
+    CitationVerifier,
     Claim,
     ClaimDependency,
     ClaimTriple,
@@ -102,6 +104,7 @@ from eigentruth.verify import (
     default_routed_verifier,
     default_verifier_routes,
     extract_calculation,
+    extract_citation_references,
     extract_claim_triples,
     extract_claims,
     infer_claim_dependencies,
@@ -2304,6 +2307,119 @@ def test_routed_verifier_rejects_invalid_route_fanout_budget():
         RoutedVerifier((route,), max_attempted_routes=True)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="max_attempted_routes"):
         RoutedVerifier((route,), max_attempted_routes=1.5)  # type: ignore[arg-type]
+
+
+def test_citation_verifier_supports_catalog_matched_references():
+    record = CitationRecord(
+        citation_id="1",
+        title="Geometry-Calibrated Conformal Abstention for Language Models",
+        authors=("Nguyen", "Patel"),
+        year=2026,
+        doi="10.1234/eigentruth.2026",
+        url="https://example.org/eigentruth",
+    )
+    verifier = CitationVerifier(records=(record,))
+    claim = Claim(
+        "Geometry-calibrated abstention improved factual control [1].",
+        metadata={
+            "citation": {
+                "citation_id": "1",
+                "title": "Geometry Calibrated Conformal Abstention",
+                "author": "Nguyen",
+                "year": 2026,
+                "doi": "10.1234/EigenTruth.2026",
+            },
+            "features": {"has_citation": True},
+        },
+    )
+
+    refs = extract_citation_references(claim)
+    result = verifier.verify(claim)
+
+    assert refs[0]["citation_id"] == "1"
+    assert refs[1]["citation_id"] == "1"
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["matched_citation_ids"] == ("1",)
+    assert result.metadata["audits"][0]["status"] == "matched"
+    json.dumps(result.metadata)
+
+
+def test_citation_verifier_refutes_metadata_drift():
+    verifier = CitationVerifier(records=(
+        {
+            "id": "paper-a",
+            "title": "Reliable Citation Checking",
+            "authors": ["Rivera"],
+            "year": 2025,
+            "arxiv_id": "2501.12345",
+        },
+    ))
+    claim = Claim(
+        "Rivera (2026) introduced reliable citation checking.",
+        metadata={"citation": {"citation_id": "paper-a", "year": 2026, "arxiv_id": "2501.99999"}},
+    )
+
+    result = verifier.verify(claim)
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["mismatch_count"] >= 1
+    mismatched_fields = {
+        mismatch["field"]
+        for audit in result.metadata["audits"]
+        for mismatch in audit.get("mismatches", ())
+    }
+    assert {"year", "arxiv_id"} <= mismatched_fields
+
+
+def test_citation_verifier_reports_unresolved_references_fail_closed():
+    verifier = CitationVerifier(records=(
+        {"id": "known", "title": "Known Paper", "year": 2024},
+    ))
+
+    result = verifier.verify(Claim("A method was proposed in [missing]."))
+
+    assert result.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert result.metadata["unresolved_count"] == 1
+    assert result.explanation == "one or more citation references were not found in trusted catalog"
+
+
+def test_default_verifier_routes_can_fail_closed_on_citation_catalog_mismatch():
+    verifier = default_routed_verifier(
+        evidence=("Citation checking is a reliability method.",),
+        citation_records=(
+            {
+                "citation_id": "paper-a",
+                "title": "Citation Checking",
+                "authors": ["Rivera"],
+                "year": 2025,
+            },
+        ),
+    )
+
+    result = verifier.verify(
+        Claim(
+            "Citation checking is a reliability method [paper-a].",
+            metadata={"citation": {"citation_id": "paper-a", "year": 2026}, "features": {"has_citation": True}},
+        )
+    )
+
+    assert result.status is VerificationStatus.REFUTED
+    assert result.metadata["selected_route"] == "citation"
+    assert result.metadata["skipped_routes"] == ()
+    assert "groundedness" in result.metadata["matched_routes"]
+
+
+def test_default_verifier_routes_do_not_route_uncited_claims_only_because_catalog_exists():
+    verifier = default_routed_verifier(
+        evidence=("Paris is the capital of France.",),
+        citation_records=({"citation_id": "paper-a", "title": "Unrelated", "year": 2026},),
+    )
+
+    result = verifier.verify(Claim("Paris is the capital of France."))
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.metadata["selected_route"] == "groundedness"
+    assert "citation" not in result.metadata["matched_routes"]
 
 
 def test_default_verifier_routes_include_strict_triple_evidence_for_sensitive_claims():

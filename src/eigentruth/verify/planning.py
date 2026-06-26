@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from eigentruth.json_utils import to_jsonable
+from eigentruth.verify.citations import extract_citation_references
 from eigentruth.verify.claims import ClaimExtractor, extract_claims
 from eigentruth.verify.coherence import ClaimDependency, infer_claim_dependencies
 from eigentruth.verify.features import enabled_feature_names, metadata_path_enabled
@@ -20,6 +21,7 @@ from eigentruth.verify.protocols import Claim
 
 DEFAULT_VERIFICATION_ROUTE_COST_UNITS: Mapping[str, float] = {
     "groundedness": 0.25,
+    "citation": 0.30,
     "triple_evidence": 0.35,
     "calculator": 0.5,
     "state": 0.75,
@@ -28,6 +30,7 @@ DEFAULT_VERIFICATION_ROUTE_COST_UNITS: Mapping[str, float] = {
 }
 DEFAULT_VERIFICATION_TOOL_PAYLOAD_COST_UNITS: Mapping[str, float] = {
     "retrieval_queries": 0.5,
+    "citation_checks": 0.2,
     "calculation_checks": 0.25,
     "state_checks": 0.5,
     "world_model_checks": 0.75,
@@ -64,6 +67,13 @@ DEFAULT_RETRIEVAL_METADATA_KEYS = (
     "requires_verification",
     "retrieval_query",
     "retrieval_queries",
+)
+DEFAULT_CITATION_FEATURE_FLAGS = ("has_citation",)
+DEFAULT_CITATION_METADATA_KEYS = (
+    "citation",
+    "citations",
+    "citation_check",
+    "citation_checks",
 )
 DEFAULT_CALCULATOR_METADATA_KEYS = ("calculation",)
 DEFAULT_STATE_METADATA_KEYS = ("state_check", "state_checks")
@@ -202,6 +212,7 @@ class ClaimVerificationPlan:
     triggered_metadata: Mapping[str, Sequence[str]] = field(default_factory=dict)
     route_hints: Sequence[VerificationRouteHint | Mapping[str, Any]] = ()
     retrieval_queries: Sequence[Mapping[str, Any]] = ()
+    citation_checks: Sequence[Mapping[str, Any]] = ()
     calculation_checks: Sequence[Mapping[str, Any]] = ()
     state_checks: Sequence[Mapping[str, Any]] = ()
     world_model_checks: Sequence[Mapping[str, Any]] = ()
@@ -227,6 +238,7 @@ class ClaimVerificationPlan:
         )
         object.__setattr__(self, "route_hints", tuple(_route_hint_obj(item) for item in self.route_hints))
         object.__setattr__(self, "retrieval_queries", tuple(_jsonable_mapping(item) for item in self.retrieval_queries))
+        object.__setattr__(self, "citation_checks", tuple(_jsonable_mapping(item) for item in self.citation_checks))
         object.__setattr__(
             self,
             "calculation_checks",
@@ -287,6 +299,7 @@ class ClaimVerificationPlan:
             },
             "route_hints": tuple(item.to_dict() for item in self.route_hints),
             "retrieval_queries": tuple(dict(item) for item in self.retrieval_queries),
+            "citation_checks": tuple(dict(item) for item in self.citation_checks),
             "calculation_checks": tuple(dict(item) for item in self.calculation_checks),
             "state_checks": tuple(dict(item) for item in self.state_checks),
             "world_model_checks": tuple(dict(item) for item in self.world_model_checks),
@@ -307,6 +320,8 @@ class ClaimVerificationPlanner:
     verify_all_by_default: bool = True
     retrieval_feature_flags: Sequence[str] = DEFAULT_RETRIEVAL_FEATURE_FLAGS
     retrieval_metadata_keys: Sequence[str] = DEFAULT_RETRIEVAL_METADATA_KEYS
+    citation_feature_flags: Sequence[str] = DEFAULT_CITATION_FEATURE_FLAGS
+    citation_metadata_keys: Sequence[str] = DEFAULT_CITATION_METADATA_KEYS
     calculator_metadata_keys: Sequence[str] = DEFAULT_CALCULATOR_METADATA_KEYS
     state_metadata_keys: Sequence[str] = DEFAULT_STATE_METADATA_KEYS
     world_model_metadata_keys: Sequence[str] = DEFAULT_WORLD_MODEL_METADATA_KEYS
@@ -333,6 +348,8 @@ class ClaimVerificationPlanner:
         object.__setattr__(self, "verify_all_by_default", _strict_bool(self.verify_all_by_default))
         object.__setattr__(self, "retrieval_feature_flags", tuple(_non_empty_strings(self.retrieval_feature_flags)))
         object.__setattr__(self, "retrieval_metadata_keys", tuple(_non_empty_strings(self.retrieval_metadata_keys)))
+        object.__setattr__(self, "citation_feature_flags", tuple(_non_empty_strings(self.citation_feature_flags)))
+        object.__setattr__(self, "citation_metadata_keys", tuple(_non_empty_strings(self.citation_metadata_keys)))
         object.__setattr__(self, "calculator_metadata_keys", tuple(_non_empty_strings(self.calculator_metadata_keys)))
         object.__setattr__(self, "state_metadata_keys", tuple(_non_empty_strings(self.state_metadata_keys)))
         object.__setattr__(
@@ -391,6 +408,7 @@ class ClaimVerificationPlanner:
         triggered_metadata: dict[str, tuple[str, ...]] = {}
         route_hints: list[VerificationRouteHint] = []
         retrieval_queries: list[dict[str, Any]] = []
+        citation_checks: list[dict[str, Any]] = []
         calculation_checks: list[dict[str, Any]] = []
         state_checks: list[dict[str, Any]] = []
         world_model_checks: list[dict[str, Any]] = []
@@ -419,6 +437,13 @@ class ClaimVerificationPlanner:
                     claim_id=claim_id,
                     routes=routes,
                     metadata=metadata,
+                )
+            )
+            citation_checks.extend(
+                self._citation_checks_for_claim(
+                    claim,
+                    claim_id=claim_id,
+                    routes=routes,
                 )
             )
             calculation_checks.extend(_metadata_tool_payloads(claim_id, metadata, self.calculator_metadata_keys))
@@ -459,6 +484,7 @@ class ClaimVerificationPlanner:
             triggered_metadata=triggered_metadata,
             route_hints=tuple(route_hints),
             retrieval_queries=tuple(retrieval_queries),
+            citation_checks=tuple(citation_checks),
             calculation_checks=tuple(calculation_checks),
             state_checks=tuple(state_checks),
             world_model_checks=tuple(world_model_checks),
@@ -495,6 +521,13 @@ class ClaimVerificationPlanner:
             if metadata_path_enabled(metadata, key):
                 _append_unique(routes, "world_model")
                 reasons.append(f"metadata:{key}")
+        for key in self.citation_metadata_keys:
+            if metadata_path_enabled(metadata, key):
+                _append_unique(routes, "citation")
+                reasons.append(f"metadata:{key}")
+        for feature in enabled_feature_names(features, self.citation_feature_flags):
+            _append_unique(routes, "citation")
+            reasons.append(f"feature:{feature}")
         for key in self.retrieval_metadata_keys:
             if metadata_path_enabled(metadata, key):
                 _append_unique(routes, "retrieval")
@@ -533,6 +566,23 @@ class ClaimVerificationPlanner:
                 "source": "claim_text",
                 "claim_text": claim.text,
             },
+        },)
+
+    def _citation_checks_for_claim(
+        self,
+        claim: Claim,
+        *,
+        claim_id: str,
+        routes: Sequence[str],
+    ) -> tuple[dict[str, Any], ...]:
+        if "citation" not in set(routes):
+            return ()
+        references = extract_citation_references(claim)
+        return ({
+            "claim_id": claim_id,
+            "claim_text": claim.text,
+            "references": tuple(references),
+            "source": "claim_text" if references else "claim_metadata",
         },)
 
 
@@ -617,6 +667,7 @@ def _cost_estimate_payload(plan: ClaimVerificationPlan | Mapping[str, Any]) -> d
         "skipped_claim_ids": plan.skipped_claim_ids,
         "route_hints": plan.route_hints,
         "retrieval_queries": plan.retrieval_queries,
+        "citation_checks": plan.citation_checks,
         "calculation_checks": plan.calculation_checks,
         "state_checks": plan.state_checks,
         "world_model_checks": plan.world_model_checks,
