@@ -2,15 +2,27 @@
   "claim_scope": "gpt2 limit64 forced-answer trajectory mechanism check only; not a promoted hallucination detector.",
   "decision": {
     "detector_signal": "preliminary_positive",
-    "harness": "accepted_for_reproducible_real_model_smoke",
+    "harness": "accepted_for_reproducible_real_model_layer_sweep",
     "promotion_blocker": "requires larger sample and at least one additional model family before calibration or product routing use."
   },
   "notes": [
     "Both gpt2 limit64 layer checks pass the AUROC > 0.55 exploratory gate, but margins are modest.",
     "The best final-layer run reaches trajectory AUROC 0.6029 on 60 evaluated examples.",
     "NLL higher-is-false AUROC is 0.3515 on the same subset, so answer NLL is not a useful baseline direction here.",
-    "CPU rerun required ATEN_CPU_CAPABILITY=default OMP_NUM_THREADS=1 after an initial illegal-instruction exit."
+    "CPU rerun required ATEN_CPU_CAPABILITY=default OMP_NUM_THREADS=1 after an initial illegal-instruction exit.",
+    "The one-pass layer sweep reproduces the two single-layer summaries while running one model forward per record."
   ],
+  "one_pass_sweep": {
+    "best_layer": -1,
+    "layers": [
+      -1,
+      -6
+    ],
+    "manifest_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-limit64-layer-sweep-artifact-manifest.json",
+    "report_path": "artifacts/e7-truthfulqa-gpt2-trajectory/gpt2-qwen-l80-limit64-layer-sweep-report.json",
+    "trajectory_score_best_auroc": 0.6028921023359288,
+    "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep"
+  },
   "recommended_run": {
     "layer": -1,
     "limit": 64,

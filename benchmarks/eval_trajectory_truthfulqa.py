@@ -149,12 +149,142 @@ def trajectory_truthfulqa_report(
     }
 
 
+def trajectory_truthfulqa_layer_sweep_report(
+    records: Sequence[TrajectoryStatement],
+    *,
+    model: Any,
+    tokenizer: Any,
+    layers: Sequence[int],
+    min_answer_tokens: int = 3,
+    max_answer_tokens: int | None = None,
+    device: str | torch.device = "cpu",
+    min_abs_spearman: float = 0.3,
+    min_auroc: float = 0.55,
+    metadata: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate multiple hidden-state layers with one model forward per record."""
+    parsed_layers = _normalize_layers(layers)
+    if int(min_answer_tokens) < 3:
+        raise ValueError("min_answer_tokens must be >= 3.")
+    if max_answer_tokens is not None and int(max_answer_tokens) < int(min_answer_tokens):
+        raise ValueError("max_answer_tokens must be >= min_answer_tokens when provided.")
+    if not records:
+        raise ValueError("at least one trajectory record is required.")
+    target_device = torch.device(device)
+    if hasattr(model, "to"):
+        model = model.to(target_device)
+    if hasattr(model, "eval"):
+        model.eval()
+
+    evaluated: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    with torch.no_grad():
+        for record in records:
+            try:
+                evaluation = _evaluate_record_trajectory_sweep(
+                    record,
+                    model=model,
+                    tokenizer=tokenizer,
+                    layers=parsed_layers,
+                    min_answer_tokens=int(min_answer_tokens),
+                    max_answer_tokens=max_answer_tokens,
+                    device=target_device,
+                )
+            except ValueError as exc:
+                skipped.append({
+                    "index": int(record.index),
+                    "label": int(record.label),
+                    "reason": str(exc),
+                })
+                continue
+            evaluated.append(evaluation)
+
+    layer_summaries = []
+    for layer in parsed_layers:
+        layer_key = _layer_key(layer)
+        summary = _trajectory_summary_for_layer(
+            evaluated,
+            skipped,
+            layer_key=layer_key,
+            min_abs_spearman=float(min_abs_spearman),
+            min_auroc=float(min_auroc),
+        )
+        layer_summaries.append({
+            "layer": int(layer),
+            "layer_key": layer_key,
+            "resolved_layer": _resolved_layer_for(layer_key, evaluated),
+            **summary,
+        })
+    best_layer = _best_layer_summary(layer_summaries)
+    return {
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep",
+        "config": {
+            "layers": tuple(int(layer) for layer in parsed_layers),
+            "min_answer_tokens": int(min_answer_tokens),
+            "max_answer_tokens": None if max_answer_tokens is None else int(max_answer_tokens),
+            "min_abs_spearman": float(min_abs_spearman),
+            "min_auroc": float(min_auroc),
+        },
+        "summary": {
+            "status": best_layer["status"],
+            "n_total": len(evaluated) + len(skipped),
+            "n_evaluated": len(evaluated),
+            "n_skipped": len(skipped),
+            "skip_reasons": dict(Counter(str(item["reason"]) for item in skipped)),
+            "layer_count": len(layer_summaries),
+            "best_layer": best_layer["layer"],
+            "best_layer_key": best_layer["layer_key"],
+            "best_resolved_layer": best_layer["resolved_layer"],
+            "trajectory_score_best_auroc": best_layer["trajectory_score_best_auroc"],
+            "trajectory_score_direction_for_false": best_layer["trajectory_score_direction_for_false"],
+            "spearman_convergence_false_label": best_layer["spearman_convergence_false_label"],
+            "nll_answer_higher_is_false_auroc": best_layer["nll_answer_higher_is_false_auroc"],
+        },
+        "layer_summaries": layer_summaries,
+        "records": evaluated,
+        "skipped_records": skipped,
+        "metadata": dict(metadata or {}),
+    }
+
+
 def _evaluate_record_trajectory(
     record: TrajectoryStatement,
     *,
     model: Any,
     tokenizer: Any,
     layer: int,
+    min_answer_tokens: int,
+    max_answer_tokens: int | None,
+    device: torch.device,
+) -> dict[str, Any]:
+    evaluation = _evaluate_record_trajectory_sweep(
+        record,
+        model=model,
+        tokenizer=tokenizer,
+        layers=(layer,),
+        min_answer_tokens=min_answer_tokens,
+        max_answer_tokens=max_answer_tokens,
+        device=device,
+    )
+    layer_key = _layer_key(layer)
+    return {
+        "index": evaluation["index"],
+        "label": evaluation["label"],
+        "question": evaluation["question"],
+        "answer": evaluation["answer"],
+        "n_prompt_tokens": evaluation["n_prompt_tokens"],
+        "n_answer_tokens": evaluation["n_answer_tokens"],
+        "nll_answer": evaluation["nll_answer"],
+        "trajectory": evaluation["trajectories"][layer_key],
+    }
+
+
+def _evaluate_record_trajectory_sweep(
+    record: TrajectoryStatement,
+    *,
+    model: Any,
+    tokenizer: Any,
+    layers: Sequence[int],
     min_answer_tokens: int,
     max_answer_tokens: int | None,
     device: torch.device,
@@ -178,33 +308,36 @@ def _evaluate_record_trajectory(
     )
     hidden_states = _hidden_states_from_output(output)
     logits = _logits_from_output(output)
-    selected_layer = _resolve_layer(layer, len(hidden_states))
-    hidden = torch.as_tensor(hidden_states[selected_layer], dtype=torch.float32, device=device)
-    if hidden.ndim != 3 or int(hidden.shape[0]) != 1:
-        raise ValueError("selected hidden state must be shaped [1, sequence, hidden_dim]")
     predictor_positions = torch.arange(
         len(prompt_ids) - 1,
         len(prompt_ids) + len(answer_ids) - 1,
         dtype=torch.long,
         device=device,
     )
-    if int(predictor_positions[0].item()) < 0 or int(predictor_positions[-1].item()) >= int(hidden.shape[1]):
-        raise ValueError("answer predictor positions are outside the hidden-state sequence")
-    states = hidden[0, predictor_positions, :].detach().cpu()
-    metrics = trajectory_convergence_metrics(
-        states,
-        metadata={
-            "record_index": int(record.index),
-            "label": int(record.label),
-            "layer": int(layer),
-            "resolved_layer": int(selected_layer),
-        },
-    )
     answer_targets = torch.tensor(answer_ids, dtype=torch.long, device=device)
     selected_logits = torch.as_tensor(logits, dtype=torch.float32, device=device)[0, predictor_positions, :]
     log_probs = torch.log_softmax(selected_logits, dim=-1)
     token_nll = -log_probs.gather(dim=-1, index=answer_targets[:, None]).squeeze(-1)
     mean_nll = float(token_nll.mean().item())
+    trajectories: dict[str, Any] = {}
+    for layer in _normalize_layers(layers):
+        selected_layer = _resolve_layer(layer, len(hidden_states))
+        hidden = torch.as_tensor(hidden_states[selected_layer], dtype=torch.float32, device=device)
+        if hidden.ndim != 3 or int(hidden.shape[0]) != 1:
+            raise ValueError("selected hidden state must be shaped [1, sequence, hidden_dim]")
+        if int(predictor_positions[0].item()) < 0 or int(predictor_positions[-1].item()) >= int(hidden.shape[1]):
+            raise ValueError("answer predictor positions are outside the hidden-state sequence")
+        states = hidden[0, predictor_positions, :].detach().cpu()
+        metrics = trajectory_convergence_metrics(
+            states,
+            metadata={
+                "record_index": int(record.index),
+                "label": int(record.label),
+                "layer": int(layer),
+                "resolved_layer": int(selected_layer),
+            },
+        )
+        trajectories[_layer_key(layer)] = metrics.to_dict()
     return {
         "index": int(record.index),
         "label": int(record.label),
@@ -213,7 +346,7 @@ def _evaluate_record_trajectory(
         "n_prompt_tokens": len(prompt_ids),
         "n_answer_tokens": len(answer_ids),
         "nll_answer": mean_nll,
-        "trajectory": metrics.to_dict(),
+        "trajectories": trajectories,
     }
 
 
@@ -264,6 +397,49 @@ def _trajectory_summary(
             float(record["nll_answer"]) for record in evaluated if int(record["label"]) == 0
         ),
     }
+
+
+def _trajectory_summary_for_layer(
+    evaluated: Sequence[Mapping[str, Any]],
+    skipped: Sequence[Mapping[str, Any]],
+    *,
+    layer_key: str,
+    min_abs_spearman: float,
+    min_auroc: float,
+) -> dict[str, Any]:
+    layer_records = [
+        {
+            **dict(record),
+            "trajectory": record["trajectories"][layer_key],
+        }
+        for record in evaluated
+    ]
+    return _trajectory_summary(
+        layer_records,
+        skipped,
+        min_abs_spearman=min_abs_spearman,
+        min_auroc=min_auroc,
+    )
+
+
+def _best_layer_summary(layer_summaries: Sequence[Mapping[str, Any]]) -> Mapping[str, Any]:
+    if not layer_summaries:
+        raise ValueError("at least one layer summary is required.")
+    return max(
+        layer_summaries,
+        key=lambda row: (
+            float(row["trajectory_score_best_auroc"]),
+            abs(float(row["spearman_convergence_false_label"])),
+            -abs(int(row["layer"])),
+        ),
+    )
+
+
+def _resolved_layer_for(layer_key: str, evaluated: Sequence[Mapping[str, Any]]) -> int | None:
+    if not evaluated:
+        return None
+    metadata = evaluated[0]["trajectories"][layer_key]["metadata"]
+    return int(metadata["resolved_layer"])
 
 
 def _safe_roc_auc(scores: Sequence[float], labels: Sequence[int]) -> float:
@@ -327,6 +503,29 @@ def _resolve_layer(layer: int, n_layers: int) -> int:
     if normalized < 0 or normalized >= int(n_layers):
         raise ValueError(f"layer {layer} is outside hidden_states range with {n_layers} layers.")
     return normalized
+
+
+def _normalize_layers(layers: Sequence[int]) -> tuple[int, ...]:
+    normalized = tuple(int(layer) for layer in layers)
+    if not normalized:
+        raise ValueError("at least one layer is required.")
+    if len(set(normalized)) != len(normalized):
+        raise ValueError("layers must not contain duplicates.")
+    return normalized
+
+
+def _parse_layer_list(value: str | None) -> tuple[int, ...] | None:
+    if value is None:
+        return None
+    pieces = [piece.strip() for piece in str(value).split(",")]
+    layers = tuple(int(piece) for piece in pieces if piece)
+    if not layers:
+        raise ValueError("--layers must contain at least one integer layer.")
+    return _normalize_layers(layers)
+
+
+def _layer_key(layer: int) -> str:
+    return str(int(layer))
 
 
 class _OfflineTokenizer:
@@ -458,24 +657,40 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         }
     if args.limit is not None and args.offline:
         records = records[:int(args.limit)]
-    report = trajectory_truthfulqa_report(
-        records,
-        model=model,
-        tokenizer=tokenizer,
-        layer=args.layer,
-        min_answer_tokens=args.min_answer_tokens,
-        max_answer_tokens=args.max_answer_tokens,
-        device=args.device,
-        min_abs_spearman=args.min_abs_spearman,
-        min_auroc=args.min_auroc,
-        metadata={
-            **source_metadata,
-            "research_note": (
-                "Forced-answer hidden-state trajectory over answer-token prediction positions; "
-                "labels come from the source statement benchmark."
-            ),
-        },
-    )
+    layers = _parse_layer_list(getattr(args, "layers", None))
+    report_metadata = {
+        **source_metadata,
+        "research_note": (
+            "Forced-answer hidden-state trajectory over answer-token prediction positions; "
+            "labels come from the source statement benchmark."
+        ),
+    }
+    if layers is None:
+        report = trajectory_truthfulqa_report(
+            records,
+            model=model,
+            tokenizer=tokenizer,
+            layer=args.layer,
+            min_answer_tokens=args.min_answer_tokens,
+            max_answer_tokens=args.max_answer_tokens,
+            device=args.device,
+            min_abs_spearman=args.min_abs_spearman,
+            min_auroc=args.min_auroc,
+            metadata=report_metadata,
+        )
+    else:
+        report = trajectory_truthfulqa_layer_sweep_report(
+            records,
+            model=model,
+            tokenizer=tokenizer,
+            layers=layers,
+            min_answer_tokens=args.min_answer_tokens,
+            max_answer_tokens=args.max_answer_tokens,
+            device=args.device,
+            min_abs_spearman=args.min_abs_spearman,
+            min_auroc=args.min_auroc,
+            metadata=report_metadata,
+        )
     if args.json:
         output_path = Path(args.json)
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -491,7 +706,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             artifacts,
             root=manifest_path.parent,
             metadata={
-                "workflow": "truthfulqa_forced_answer_trajectory",
+                "workflow": report["workflow"],
                 "model": args.model if not args.offline else "offline",
             },
         )
@@ -509,6 +724,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--offline", action="store_true", help="run deterministic toy fixture without downloads")
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--layer", type=int, default=-1)
+    parser.add_argument(
+        "--layers",
+        default=None,
+        help="comma-separated layer sweep, e.g. --layers=-1,-6,-12; when set, --layer is ignored",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--min-answer-tokens", type=int, default=3)
     parser.add_argument("--max-answer-tokens", type=int, default=None)

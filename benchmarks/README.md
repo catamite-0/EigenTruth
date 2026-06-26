@@ -4481,12 +4481,16 @@ forced-answer proxy rather than open-generation evidence.
 python benchmarks/eval_trajectory_truthfulqa.py \
   --scores artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json \
   --model Qwen/Qwen2.5-0.5B-Instruct \
-  --layer -12 \
+  --layers=-1,-6,-12 \
   --limit 64 \
   --json artifacts/qwen-l80-trajectory-report.json \
   --artifact-manifest artifacts/qwen-l80-trajectory-manifest.json \
   --quiet
 ```
+
+Use `--layer` for the legacy single-layer report. Use `--layers` for a one-pass
+layer sweep; the script runs one model forward per record and scores each
+requested hidden-state layer from the same output.
 
 On CPU hosts that fail with an illegal-instruction exit while loading PyTorch or
 model kernels, rerun with `ATEN_CPU_CAPABILITY=default OMP_NUM_THREADS=1`.

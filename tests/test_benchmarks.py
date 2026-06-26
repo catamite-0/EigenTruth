@@ -4383,6 +4383,46 @@ def test_eval_trajectory_truthfulqa_offline_reports_forced_answer_signal(tmp_pat
     assert payload["records"][0]["trajectory"]["metadata"]["resolved_layer"] == 1
 
 
+def test_eval_trajectory_truthfulqa_layer_sweep_reports_best_layer(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.eval_trajectory_truthfulqa")
+    report_path = tmp_path / "trajectory-sweep.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.run(SimpleNamespace(
+        scores=None,
+        model=None,
+        offline=True,
+        device="cpu",
+        layer=-1,
+        layers="-1,0",
+        limit=None,
+        min_answer_tokens=3,
+        max_answer_tokens=None,
+        min_abs_spearman=0.3,
+        min_auroc=0.55,
+        json=str(report_path),
+        artifact_manifest=str(manifest_path),
+        quiet=True,
+    ))
+    captured = capsys.readouterr()
+    summary = payload["summary"]
+
+    assert captured.out == ""
+    assert report_path.exists()
+    assert manifest_path.exists()
+    assert payload["workflow"] == "truthfulqa_forced_answer_trajectory_layer_sweep"
+    assert payload["config"]["layers"] == (-1, 0)
+    assert summary["status"] == "pass"
+    assert summary["layer_count"] == 2
+    assert summary["best_layer"] in {-1, 0}
+    assert summary["trajectory_score_best_auroc"] == pytest.approx(1.0)
+    assert [row["layer_key"] for row in payload["layer_summaries"]] == ["-1", "0"]
+    assert {row["n_evaluated"] for row in payload["layer_summaries"]} == {8}
+    assert set(payload["records"][0]["trajectories"]) == {"-1", "0"}
+    assert payload["records"][0]["trajectories"]["-1"]["metadata"]["resolved_layer"] == 1
+    assert payload["records"][0]["trajectories"]["0"]["metadata"]["resolved_layer"] == 0
+
+
 def test_build_evidence_fixture_uses_local_corpus_for_verifier_ensemble(tmp_path):
     builder = importlib.import_module("benchmarks.build_evidence_fixture")
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
