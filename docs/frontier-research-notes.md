@@ -150,8 +150,28 @@ Added the missing direct selfcheck signal bridge:
 - Current committed l80 artifacts do not contain sampled response text, so this
   is an implementation bridge rather than a new l80 performance claim.
 
+Added spectrum-to-sweep layer-selection audit tooling:
+
+- `compare_spectrum_layers.py` consumes `eval_truthfulqa.py --include-layer-spectra`
+  reports plus saved layer/score sweep reports and checks whether dependency-free
+  spectrum heuristics such as `max_spike_count`, `max_effective_rank`,
+  `max_participation_ratio`, and `max_top_eigenvalue_to_mp_upper` land in the
+  calibrated AUROC top-k.
+- The report records per-heuristic top-k hit rates, exact-best rates, AUROC
+  regret, layer gap, and a transparent recommended heuristic when the evidence
+  supports one. This turns the Marchenko-Pastur/effective-rank idea into a
+  falsifiable post-hoc audit before using it as a layer-selection shortcut.
+- The cache-only l80 replay at
+  `artifacts/truthfulqa-frontier-spectrum-layer-selection/` fingerprints two
+  spectrum reports, two sweep reports, and the comparison report. The best
+  heuristic is `max_top_eigenvalue_to_mp_upper`, but it hits the `truth_proj`
+  AUROC top-2 layer in only 1/2 runs, with exact-best rate `0.5`, mean AUROC
+  regret `0.0077`, and report status `fail`. Current evidence does not justify
+  replacing calibrated layer sweeps with spectrum heuristics; spectrum is a
+  candidate layer-band prior only.
+
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Integrate stronger fact/triple extractors behind the existing protocols and benchmark them against the rule-based extractor.
-3. Use `eval_truthfulqa.py --include-layer-spectra` reports to test whether Marchenko-Pastur spikes/effective-rank predict layer selection, then extend the same fields into training telemetry for collapse experiments.
+3. Combine intrinsic-dimension peak evidence with spectrum heuristics into a conservative layer-band selector, then test whether it reduces sweep cost without losing the current `truth_proj` best-layer evidence.

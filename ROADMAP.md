@@ -12,6 +12,7 @@ The current packaged baseline is [`0.2.0`](docs/release-0.2.0.md): a calibrated-
 
 - Build stricter claim audit paths from structured triples and slot-level evidence coverage.
 - Replicate the strongest diagnostics on additional small and mid-sized models.
+- Combine intrinsic-dimension and spectrum-audit evidence into conservative layer-band selectors without replacing calibrated sweeps.
 - Promote only routes backed by artifact manifests, replay checks, and release gates.
 - Keep network retrieval, external databases, and rewrite LLMs behind optional adapters.
 - Convert more product traces into deterministic regression fixtures.

@@ -429,6 +429,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `compare_manifold_distances.py` | Builds a Gaussian 2-Wasserstein/Bures distance matrix from saved `TruthManifold` artifacts or `eval_truthfulqa.py` layer-stats caches for offline layer/checkpoint drift inspection. |
 | `eval_intrinsic_dimension.py` | Builds TwoNN intrinsic-dimension profiles from saved warmup checkpoints, including peak-layer and rise-then-fall shape summaries without reloading model weights. |
 | `compare_intrinsic_dimension_layers.py` | Compares intrinsic-dimension peak layers with saved layer/score sweep AUROC rankings, reporting top-k hits, rank, AUROC regret, and layer gap for cheap layer-selection validation. |
+| `compare_spectrum_layers.py` | Compares Marchenko-Pastur spike/effective-rank spectrum heuristics with saved layer/score sweep AUROC rankings, reporting per-heuristic top-k hits, rank, AUROC regret, and layer gap without rerunning models. |
 | `training_telemetry_sanity.py` | Runs a deterministic synthetic clean-vs-corrupt training telemetry sanity check, gating on distance-to-baseline growth and effective-rank collapse. |
 | `training_telemetry_tiny_finetune.py` | Runs a pure PyTorch tiny clean-vs-duplicate fine-tune comparison and checks whether representation-rank telemetry separates before eval-loss degradation. |
 | `model_collapse_early_warning.py` | Runs a deterministic pseudo-label self-training loop and checks whether representation diversity telemetry warns before visible quality loss. |

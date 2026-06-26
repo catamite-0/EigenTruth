@@ -2401,6 +2401,155 @@ def test_compare_intrinsic_dimension_layers_marks_missing_sweep(tmp_path):
     assert "no sweep report matched" in payload["runs"][0]["missing_reason"]
 
 
+def test_compare_spectrum_layers_reports_heuristic_alignment(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.compare_spectrum_layers")
+    spectrum_path = tmp_path / "spectrum.json"
+    sweep_path = tmp_path / "sweep.json"
+    output_path = tmp_path / "spectrum-comparison.json"
+    manifest_path = tmp_path / "manifest.json"
+    spectrum_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic/model"},
+            "layer_spectra": {
+                "-3": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "covariance_mode": "full",
+                    "source": "full",
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 0,
+                    "effective_rank": 3.0,
+                    "participation_ratio": 3.5,
+                    "stable_rank": 2.5,
+                    "condition_number": 4.0,
+                    "top_eigenvalues": [1.0],
+                },
+                "-2": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "covariance_mode": "full",
+                    "source": "full",
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 3,
+                    "effective_rank": 5.0,
+                    "participation_ratio": 5.5,
+                    "stable_rank": 4.5,
+                    "condition_number": 12.0,
+                    "top_eigenvalues": [6.0],
+                },
+                "-1": {
+                    "status": "ready",
+                    "sample_count": 12,
+                    "hidden_dim": 8,
+                    "covariance_mode": "full",
+                    "source": "full",
+                    "marchenko_pastur_upper": 2.0,
+                    "spike_count": 1,
+                    "effective_rank": 4.0,
+                    "participation_ratio": 4.5,
+                    "stable_rank": 3.5,
+                    "condition_number": 5.0,
+                    "top_eigenvalues": [2.5],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "synthetic/model",
+            "layers": [
+                {"layer": -3, "scores": [{"score_name": "truth_proj", "auroc": 0.61}]},
+                {"layer": -2, "scores": [{"score_name": "truth_proj", "auroc": 0.91}]},
+                {"layer": -1, "scores": [{"score_name": "truth_proj", "auroc": 0.80}]},
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(SimpleNamespace(
+        spectrum_report=(str(spectrum_path),),
+        sweep_report=(str(sweep_path),),
+        score="truth_proj",
+        top_k=1,
+        heuristic=("max_spike_count,max_effective_rank,min_condition_number",),
+        note=("synthetic spectrum test",),
+        json=str(output_path),
+        artifact_manifest=str(manifest_path),
+    ))
+    capsys.readouterr()
+
+    assert output_path.exists()
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["summary"]["artifact_count"] == 3
+    assert set(manifest["artifacts"]) == {
+        "spectrum_layer_prediction_report",
+        "spectrum_report_0_spectrum",
+        "sweep_report_0_sweep",
+    }
+    assert payload["recommended_heuristic"]["heuristic"] == "max_effective_rank"
+    assert payload["summary"]["max_spike_count"]["status"] == "pass"
+    assert payload["summary"]["max_spike_count"]["exact_best_layer_rate"] == pytest.approx(1.0)
+    assert payload["summary"]["min_condition_number"]["status"] == "fail"
+    selected = [
+        run for run in payload["runs"]
+        if run["heuristic"] == "max_spike_count"
+    ][0]
+    assert selected["matched"] is True
+    assert selected["selected_spectrum_layer"] == -2
+    assert selected["selected_metric_value"] == pytest.approx(3.0)
+    assert selected["selected_layer_rank"] == 1
+    assert selected["auroc_regret"] == pytest.approx(0.0)
+    assert selected["selected_layer_metrics"]["top_eigenvalue_to_mp_upper"] == pytest.approx(3.0)
+
+
+def test_compare_spectrum_layers_marks_missing_sweep_score(tmp_path):
+    module = importlib.import_module("benchmarks.compare_spectrum_layers")
+    spectrum_path = tmp_path / "spectrum.json"
+    sweep_path = tmp_path / "sweep.json"
+    spectrum_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic/model"},
+            "layer_spectra": {
+                "-2": {
+                    "status": "ready",
+                    "sample_count": 8,
+                    "hidden_dim": 4,
+                    "marchenko_pastur_upper": 1.0,
+                    "spike_count": 2,
+                    "effective_rank": 2.0,
+                    "participation_ratio": 2.0,
+                    "stable_rank": 1.5,
+                    "condition_number": 3.0,
+                    "top_eigenvalues": [2.0],
+                },
+            },
+        }),
+        encoding="utf-8",
+    )
+    sweep_path.write_text(
+        json.dumps({
+            "model_id": "synthetic/model",
+            "layers": [{"layer": -2, "scores": [{"score_name": "maha_last", "auroc": 0.8}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.compare_spectrum_layers(
+        [("spectrum", spectrum_path)],
+        [("sweep", sweep_path)],
+        score_name="truth_proj",
+        heuristics=("max_spike_count",),
+    )
+
+    assert payload["summary"]["max_spike_count"]["status"] == "no_evidence"
+    assert payload["runs"][0]["matched"] is False
+    assert "no 'truth_proj' scores" in payload["runs"][0]["missing_reason"]
+
+
 def test_training_telemetry_sanity_separates_clean_and_corrupt_runs(tmp_path, capsys):
     module = importlib.import_module("benchmarks.training_telemetry_sanity")
     report_path = tmp_path / "training-telemetry.json"

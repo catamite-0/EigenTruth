@@ -155,6 +155,18 @@ Marchenko-Pastur/effective-rank covariance diagnostics for each warmed layer.
 The report stores top eigenvalues only (`--layer-spectrum-top-k`, default 16) so
 large hidden dimensions do not inflate JSON artifacts; the flag is off by default
 because full eigendecomposition is extra post-processing cost.
+Use `compare_spectrum_layers.py` to test whether those spectrum heuristics
+actually predict the best calibrated sweep layer before using them as a
+layer-selection shortcut:
+
+```bash
+python benchmarks/compare_spectrum_layers.py \
+  --spectrum-report artifacts/tiny-spectrum-report.json \
+  --sweep-report artifacts/gpt2-sweep-report.json \
+  --score truth_proj --top-k 3 \
+  --json artifacts/tiny-spectrum-layer-comparison.json
+```
+
 Use `--layer-stats-cache path.pt` to load an existing warmup manifold/subspace
 bundle or create one when missing. The cache is validated against model, dtype,
 layer list, max length, subspace rank, covariance mode/rank, warmup mode, and
