@@ -183,7 +183,10 @@ def _is_route_record(record: RegistryRecord) -> bool:
     return (
         metadata.get("workflow") == "run_adapter_promotion_workflow"
         or metadata.get("workflow") == "adapter_promotion_workflow"
+        or metadata.get("workflow") == "wikidata_structured_qa_route_workflow"
         or manifest_metadata.get("runner") == "run_adapter_promotion_workflow"
+        or manifest_metadata.get("workflow") == "wikidata_structured_qa_route_workflow"
+        or manifest_metadata.get("promotes_covered_facts_route") is not None
         or metadata.get("route_promotion_status") is not None
     )
 
@@ -236,15 +239,32 @@ def _route_baseline_row(
         manifest,
         artifact_name="route_comparison_report",
     )
-    route_comparison, route_report_error = (
-        ({}, "route_comparison_report artifact missing")
-        if route_report_path is None
-        else _load_optional_json(
+    route_summary_path = _resolve_artifact_path(
+        manifest_path,
+        manifest,
+        artifact_name="route_summary",
+    )
+    if route_report_path is None:
+        route_summary, route_report_error = (
+            ({}, "route_comparison_report and route_summary artifacts missing")
+            if route_summary_path is None
+            else _load_optional_json(
+                route_summary_path,
+                json_cache=json_cache,
+                json_cache_stats=json_cache_stats,
+            )
+        )
+        route_comparison = (
+            {}
+            if route_report_error is not None
+            else _route_comparison_from_summary(route_summary, manifest_metadata)
+        )
+    else:
+        route_comparison, route_report_error = _load_optional_json(
             route_report_path,
             json_cache=json_cache,
             json_cache_stats=json_cache_stats,
         )
-    )
     claims_path = _resolve_artifact_path(
         manifest_path,
         manifest,
@@ -334,6 +354,7 @@ def _route_baseline_row(
         "version": record.version,
         "manifest_path": str(manifest_path),
         "route_report_path": None if route_report_path is None else str(route_report_path),
+        "route_summary_path": None if route_summary_path is None else str(route_summary_path),
         "claims_path": None if claims_path is None else str(claims_path),
         "verification": verification,
         "gate": gate,
@@ -387,6 +408,43 @@ def _recommended_route_metrics(
         "mean_attempted_route_count": manifest_metadata.get("recommended_mean_attempted_route_count"),
         "retrieval_use_rate": manifest_metadata.get("recommended_retrieval_use_rate"),
         "invalid_metric_counts": manifest_metadata.get("recommended_invalid_metric_counts"),
+    }
+
+
+def _route_comparison_from_summary(
+    route_summary: Mapping[str, Any],
+    manifest_metadata: Mapping[str, Any],
+) -> dict[str, Any]:
+    route = (
+        route_summary.get("route")
+        or manifest_metadata.get("route")
+        or manifest_metadata.get("recommended_route")
+    )
+    route_name = None if route is None else str(route)
+    metrics = dict(_mapping(route_summary.get("route_metrics")))
+    if not metrics and route_name:
+        metrics = dict(_mapping(route_summary.get(f"{route_name}_metrics")))
+    if route_name:
+        selected_counts = _mapping(route_summary.get("selected_route_counts"))
+        score_dump_summary = _mapping(route_summary.get("score_dump_summary"))
+        metrics.setdefault("selected", selected_counts.get(route_name))
+        if metrics.get("selected") is None:
+            metrics["selected"] = score_dump_summary.get("n_records")
+        metrics.setdefault("decision_accuracy", manifest_metadata.get(f"{route_name}_decision_accuracy"))
+        metrics.setdefault("false_supported_rate", manifest_metadata.get(f"{route_name}_false_supported_rate"))
+        metrics.setdefault("false_refuted_rate", manifest_metadata.get(f"{route_name}_false_refuted_rate"))
+        metrics.setdefault("verified_false_alarm", metrics.get("false_supported_rate"))
+        metrics.setdefault("verified_detection", metrics.get("false_refuted_rate"))
+    status = route_summary.get("status") or manifest_metadata.get("status")
+    return {
+        "schema_version": 1,
+        "workflow": "route_baseline_comparison_from_summary",
+        "source_workflow": route_summary.get("workflow") or manifest_metadata.get("workflow"),
+        "promotion_decision": {
+            "status": "promote" if status == "promote" else status,
+            "recommended_route": route_name,
+        },
+        "by_route": {} if route_name is None else {route_name: metrics},
     }
 
 

@@ -1507,9 +1507,11 @@ python benchmarks/compare_route_baselines.py \
 ```
 
 The comparison recursively verifies each registered manifest by default, reloads
-the saved `route_comparison_report`, fails closed on non-promoted route
-decisions or `invalid_metric_counts`, and recommends the passing baseline with
-the best quality/cost ordering. Optional runtime-budget flags read
+the saved `route_comparison_report`, or accepts a covered-facts `route_summary`
+manifest from `run_wikidata_structured_qa_route_workflow.py` when no route
+comparison report is present. It fails closed on non-promoted route decisions or
+`invalid_metric_counts`, and recommends the passing baseline with the best
+quality/cost ordering. Optional runtime-budget flags read
 `runtime_total_seconds`, `runtime_n_retrieval_hits`, claims-cache metadata, and
 verifier-trace-cache metadata from the route manifest or registry record; when a
 threshold is configured, missing or non-finite evidence blocks that baseline.
@@ -1802,7 +1804,9 @@ must also prove the answer-echo negative control fails as expected. Otherwise th
 release only checks the route's already-registered promotion status and manifest
 validity. This keeps selected product-route budgets such as
 `--max-retrieval-use-rate 0.0` separate from audit routes that intentionally use
-retrieval or world-model adapters.
+retrieval or world-model adapters. For `structured_fact`, use two required route
+keys to require both the canonical covered-facts route and the paraphrase
+robustness replay before a release can promote.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,

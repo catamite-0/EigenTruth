@@ -7821,6 +7821,70 @@ def _write_route_baseline_manifest(
     return manifest_path
 
 
+def _write_covered_fact_route_summary_manifest(
+    tmp_path: Path,
+    *,
+    name: str,
+    route: str = "structured_fact",
+    selected: int = 8,
+    decision_accuracy: float = 1.0,
+    false_supported_rate: float = 0.0,
+    false_refuted_rate: float = 1.0,
+    mean_duration_seconds: float = 0.001,
+    p99_duration_seconds: float = 0.002,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    route_summary_path = tmp_path / f"{name}-route-summary.json"
+    manifest_path = tmp_path / f"{name}-artifact-manifest.json"
+    route_summary_path.write_text(
+        json.dumps({
+            "schema_version": 1,
+            "workflow": "wikidata_structured_qa_route_workflow",
+            "status": "promote",
+            "route": route,
+            "selected_route_counts": {route: selected},
+            "score_dump_summary": {
+                "n_records": selected,
+                "n_true": selected // 2,
+                "n_false": selected - (selected // 2),
+            },
+            "route_metrics": {
+                "selected": selected,
+                "decision_accuracy": decision_accuracy,
+                "false_supported_rate": false_supported_rate,
+                "false_refuted_rate": false_refuted_rate,
+                "verified_false_alarm": false_supported_rate,
+                "verified_detection": false_refuted_rate,
+                "mean_duration_seconds": mean_duration_seconds,
+                "p95_duration_seconds": p99_duration_seconds,
+                "p99_duration_seconds": p99_duration_seconds,
+                "max_duration_seconds": p99_duration_seconds,
+                "mean_attempted_route_count": 1.0,
+                "retrieval_use_rate": 0.0,
+                "invalid_metric_counts": {},
+            },
+        }),
+        encoding="utf-8",
+    )
+    manifest = build_artifact_manifest(
+        {"route_summary": route_summary_path},
+        root=tmp_path,
+        metadata={
+            "workflow": "wikidata_structured_qa_route_workflow",
+            "status": "promote",
+            "route": route,
+            "promotes_covered_facts_route": True,
+            "n_records": selected,
+            f"{route}_decision_accuracy": decision_accuracy,
+            f"{route}_false_supported_rate": false_supported_rate,
+            f"{route}_false_refuted_rate": false_refuted_rate,
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest_path
+
+
 def _write_retrieval_stress_manifest(
     tmp_path: Path,
     *,
@@ -8060,6 +8124,44 @@ def test_compare_route_baselines_recommends_registered_route_manifest(tmp_path):
     assert gated["decision"]["recommended_record"] == "benchmark_manifest:fast-route:0.1"
     assert gated["leaderboard"][0]["p99_duration_seconds"] == pytest.approx(0.02)
     assert gated["leaderboard"][1]["gate"]["passed"] is False
+
+
+def test_compare_route_baselines_accepts_covered_fact_route_summary(tmp_path):
+    module = importlib.import_module("benchmarks.compare_route_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-fact-paraphrase-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    ).save_json()
+
+    payload = module.compare_route_baselines(
+        registry_path=registry_path,
+        min_selected=2000,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+    )
+    row = payload["leaderboard"][0]
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["decision"]["recommended_route"] == "structured_fact"
+    assert row["route_report_path"] is None
+    assert row["route_summary_path"].endswith("structured-fact-paraphrase-route-summary.json")
+    assert row["selected"] == 2868
+    assert row["decision_accuracy"] == pytest.approx(1.0)
 
 
 def test_compare_route_baselines_blocks_invalid_source_metrics(tmp_path):
@@ -10961,6 +11063,90 @@ def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):
     assert any(
         "evidence_audit: labels_copied_to_record_metadata must be false" in reason
         for reason in blocked_oracle["decision"]["blocking_reasons"][0]["reasons"]
+    )
+
+
+def test_compare_release_candidates_can_require_structured_fact_robustness_routes(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    canonical_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-canonical",
+        route="structured_fact",
+        selected=718,
+    )
+    paraphrase_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    registry.record_benchmark_manifest(
+        name="structured-fact-canonical-route",
+        path=canonical_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.record_benchmark_manifest(
+        name="structured-fact-paraphrase-route",
+        path=paraphrase_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.save_json()
+
+    payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+        required_route_baseline_keys=(
+            "benchmark_manifest:structured-fact-canonical-route:0.1",
+            "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+        ),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=700,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        required_route_min_selected=700,
+        required_route_min_decision_accuracy=0.99,
+        required_route_max_false_supported_rate=0.0,
+        required_route_min_false_refuted_rate=0.99,
+    )
+    required_gate = payload["required_route_baseline_gate"]
+    required_rows = {
+        row["record_key"]: row
+        for row in required_gate["rows"]
+    }
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["release_candidate"] is not None
+    assert payload["release_candidate"]["verifier_route"]["route"] == "structured_fact"
+    assert required_gate["gate"]["passed"] is True
+    assert set(required_rows) == {
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    }
+    assert required_rows["benchmark_manifest:structured-fact-canonical-route:0.1"]["selected"] == 718
+    assert required_rows["benchmark_manifest:structured-fact-paraphrase-route:0.1"]["selected"] == 2868
+    assert all(row["route_summary_path"] is not None for row in required_rows.values())
+    assert payload["release_candidate"]["required_route_baselines"]["routes"] == (
+        "structured_fact",
+        "structured_fact",
     )
 
 
