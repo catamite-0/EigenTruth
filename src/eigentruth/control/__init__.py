@@ -30,6 +30,12 @@ from eigentruth.control.feedback import (
     product_trace_fingerprint,
     write_feedback_jsonl,
 )
+from eigentruth.control.finalization import (
+    FinalAnswer,
+    FinalAnswerStatus,
+    finalize_answer,
+    finalize_loop_answer,
+)
 from eigentruth.control.loop import (
     EvidenceBundle,
     VerificationLoopResult,
@@ -82,6 +88,8 @@ __all__ = [
     "DryRunActionExecutor",
     "EvidenceBundle",
     "FeedbackOutcome",
+    "FinalAnswer",
+    "FinalAnswerStatus",
     "InMemoryActionExecutionLedger",
     "JsonActionExecutionLedger",
     "PolicyGuardedActionExecutor",
@@ -114,6 +122,8 @@ __all__ = [
     "VerificationLoopResult",
     "evidence_bundle_from_action_results",
     "evaluate_product_runtime_budget",
+    "finalize_answer",
+    "finalize_loop_answer",
     "first_existing_product_promotion_contract_path",
     "get_runtime_profile",
     "iter_feedback_jsonl",

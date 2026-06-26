@@ -10,11 +10,14 @@ from eigentruth.control import (
     ActionResult,
     ControlAction,
     EvidenceBundle,
+    FinalAnswer,
+    FinalAnswerStatus,
     PlanAwareCorrectionPolicy,
     RiskController,
     RiskLevel,
     StagedVerificationPolicy,
     evidence_bundle_from_action_results,
+    finalize_loop_answer,
     run_verification_loop,
 )
 from eigentruth.verify import (
@@ -80,6 +83,18 @@ def test_verification_loop_uses_retrieval_hits_for_final_accept():
     assert runtime_trace["summary"]["total_seconds"] >= runtime_trace["summary"]["accounted_seconds"]
     json.dumps(result.to_dict())
 
+    final = finalize_loop_answer(result, draft_answer="Paris is the capital of France.")
+
+    assert final.status is FinalAnswerStatus.ANSWERED
+    assert final.answerable is True
+    assert final.action is ControlAction.ACCEPT
+    assert final.text == "Paris is the capital of France."
+    assert final.claim_summary["supported_claim_ids"] == ("c1",)
+    assert final.evidence[0]["claim_id"] == "c1"
+    assert final.evidence[0]["status"] == "supported"
+    assert FinalAnswer.from_dict(final.to_dict()) == final
+    json.dumps(final.to_dict(), allow_nan=False)
+
 
 def test_verification_loop_maps_retrieval_hits_to_fallback_claim_ids():
     claims = (Claim("Paris is the capital of France."),)
@@ -120,6 +135,15 @@ def test_verification_loop_keeps_retrieve_decision_when_no_hits_are_found():
     assert result.final_decision.action is ControlAction.RETRIEVE
     assert result.final_decision.risk_level is RiskLevel.MEDIUM
     assert result.trace.to_dict()["risk_decision"]["action"] == "retrieve"
+
+    final = finalize_loop_answer(result, draft_answer="Paris is the capital of France.")
+
+    assert final.status is FinalAnswerStatus.NEEDS_RETRIEVAL
+    assert final.answerable is False
+    assert final.text == "I need more evidence before answering reliably."
+    assert final.claim_summary["unsupported_claim_ids"] == ("c1",)
+    assert final.followup["requires_followup"] is True
+    assert final.followup["retrieval_targets"][0]["claim_id"] == "c1"
 
 
 def test_verification_loop_fails_closed_when_initial_verifier_raises():
@@ -255,6 +279,15 @@ def test_verification_loop_does_not_override_refuted_claim_with_retrieval():
     assert result.retrieval_evidence.has_evidence() is False
     assert result.final_decision.action is ControlAction.ABSTAIN
     assert result.final_decision.risk_level is RiskLevel.HIGH
+
+    final = finalize_loop_answer(result, draft_answer="The moon is made of cheese.")
+
+    assert final.status is FinalAnswerStatus.ABSTAINED
+    assert final.answerable is False
+    assert final.text == "I cannot answer reliably with the available evidence."
+    assert final.claim_summary["refuted_claim_ids"] == ("c1",)
+    assert final.claim_summary["blocked_claims"][0]["status"] == "refuted"
+    assert final.followup["message"] == "I cannot answer reliably with the available evidence."
 
 
 def test_staged_verification_loop_fails_closed_when_low_risk_claim_skips_verifier():
