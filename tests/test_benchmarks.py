@@ -4456,6 +4456,150 @@ def test_build_trajectory_fusion_artifact_writes_report_and_artifact(tmp_path, c
     assert artifact["signals"][1]["name"] == "nll_answer"
 
 
+def test_build_trajectory_signal_score_dump_aligns_subset_and_direction(tmp_path, capsys):
+    module = importlib.import_module("benchmarks.build_trajectory_signal_score_dump")
+    scores_path = tmp_path / "scores.json"
+    trajectory_path = tmp_path / "trajectory.json"
+    output_path = tmp_path / "trajectory-scores.json"
+    report_path = tmp_path / "trajectory-score-report.json"
+    _write_trajectory_signal_source_scores(scores_path)
+    _write_trajectory_signal_source_report(trajectory_path)
+
+    payload = module.run(SimpleNamespace(
+        input_scores=str(scores_path),
+        trajectory_report=str(trajectory_path),
+        output=str(output_path),
+        output_format="json",
+        json=str(report_path),
+        layer="best",
+        keep_signals="truth_proj",
+        trajectory_signal="trajectory_convergence",
+        include_nll_answer=False,
+        trajectory_nll_signal="trajectory_nll_answer",
+        quiet=True,
+    ))
+    captured = capsys.readouterr()
+    enhanced = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert captured.out == ""
+    assert report_path.exists()
+    assert payload["n_total"] == 6
+    assert payload["directions"] == {"trajectory_convergence": "lower"}
+    assert payload["layer_key"] == "-1"
+    assert enhanced["labels"] == [0, 0, 0, 1, 1, 1]
+    assert enhanced["scores"]["trajectory_convergence"] == pytest.approx([0.9, 0.8, 0.7, 0.2, 0.1, 0.0])
+    assert enhanced["config"]["trajectory_signal_score_dump"]["directions"]["trajectory_convergence"] == "lower"
+
+
+def test_run_fusion_ablation_matrix_uses_trajectory_direction(tmp_path, capsys):
+    builder = importlib.import_module("benchmarks.build_trajectory_signal_score_dump")
+    matrix = importlib.import_module("benchmarks.run_fusion_ablation_matrix")
+    scores_path = tmp_path / "scores.json"
+    trajectory_path = tmp_path / "trajectory.json"
+    enhanced_path = tmp_path / "trajectory-scores.json"
+    matrix_path = tmp_path / "ablation.json"
+    _write_trajectory_signal_source_scores(scores_path)
+    _write_trajectory_signal_source_report(trajectory_path)
+    builder.build_report(
+        input_scores=scores_path,
+        trajectory_report=trajectory_path,
+        output=enhanced_path,
+        output_format="json",
+        layer="best",
+        keep_signals=("truth_proj",),
+        trajectory_signal="trajectory_convergence",
+        include_nll_answer=False,
+        trajectory_nll_signal="trajectory_nll_answer",
+    )
+
+    payload = matrix.run(SimpleNamespace(
+        scores=[f"synthetic={enhanced_path}"],
+        candidate=[
+            "geometry=truth_proj",
+            "trajectory=trajectory_convergence",
+            "combined=truth_proj,trajectory_convergence",
+        ],
+        methods="max_rank",
+        alphas="0.5",
+        repeats=2,
+        seed=0,
+        best_alpha=0.5,
+        json=str(matrix_path),
+        quiet=True,
+    ))
+    captured = capsys.readouterr()
+    run = payload["runs"][0]
+
+    assert captured.out == ""
+    assert matrix_path.exists()
+    assert payload["workflow"] == "fusion_ablation_matrix"
+    assert run["directions"]["trajectory_convergence"] == "lower"
+    assert run["candidate_results"]["trajectory"]["auroc"] == pytest.approx(1.0)
+    assert run["candidate_results"]["combined:max_rank"]["signals"] == [
+        "truth_proj",
+        "trajectory_convergence",
+    ]
+    assert run["best_at_alpha"]["name"] == "trajectory"
+
+
+def _write_trajectory_signal_source_scores(path: Path) -> None:
+    payload = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": [0, 0, 0, 1, 1, 1],
+        "scores": {
+            "truth_proj": [0.1, 0.2, 0.6, 0.4, 0.5, 0.3],
+        },
+        "statements": [
+            {"question": f"q{index}", "answer": f"a{index}"}
+            for index in range(6)
+        ],
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_trajectory_signal_source_report(path: Path) -> None:
+    labels = [0, 0, 0, 1, 1, 1]
+    scores = [0.9, 0.8, 0.7, 0.2, 0.1, 0.0]
+    payload = {
+        "workflow": "truthfulqa_forced_answer_trajectory_layer_sweep",
+        "config": {"layers": [-1]},
+        "summary": {
+            "status": "pass",
+            "n_total": 6,
+            "n_evaluated": 6,
+            "n_skipped": 0,
+            "best_layer": -1,
+            "best_layer_key": "-1",
+            "best_resolved_layer": 12,
+            "trajectory_score_best_auroc": 1.0,
+            "trajectory_score_direction_for_false": "lower",
+        },
+        "layer_summaries": [{
+            "layer": -1,
+            "layer_key": "-1",
+            "resolved_layer": 12,
+            "trajectory_score_best_auroc": 1.0,
+            "trajectory_score_direction_for_false": "lower",
+        }],
+        "records": [
+            {
+                "index": index,
+                "label": label,
+                "nll_answer": float(index + 1),
+                "trajectories": {
+                    "-1": {
+                        "convergence_score": scores[index],
+                        "metadata": {"layer": -1, "resolved_layer": 12},
+                    }
+                },
+            }
+            for index, label in enumerate(labels)
+        ],
+        "metadata": {"model": "synthetic"},
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def _write_trajectory_fusion_source_report(path: Path) -> None:
     labels = [0, 0, 0, 1, 1]
     scores = [0.1, 0.2, 0.3, 0.8, 0.9]

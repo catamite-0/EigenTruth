@@ -4543,6 +4543,43 @@ Use `--include-nll-answer` only for explicit ablations; the current gpt2
 trajectory evidence has a weak NLL baseline, so NLL is not the recommended
 default companion signal.
 
+## `build_trajectory_signal_score_dump.py`
+
+Writes a trajectory-enhanced score dump subset by aligning trajectory report
+records back to the original score dump `index`. The trajectory direction is
+stored in the output score dump config because the best anomaly direction can
+change by model and layer.
+
+```bash
+python benchmarks/build_trajectory_signal_score_dump.py \
+  --input-scores artifacts/truthfulqa-l80-text-baseline-comparison/qwen-l80-text-baseline-scores.manifest.json \
+  --trajectory-report artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-qwen-l80-limit128-layer-sweep-report.json \
+  --output artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-scores.manifest.json \
+  --output-format jsonl \
+  --keep-signals truth_proj,subspace_resid,nll_answer \
+  --quiet
+```
+
+## `run_fusion_ablation_matrix.py`
+
+Evaluates named signal combinations with repeated split conformal calibration.
+Use it to compare geometry-only, verifier/self-check-only, trajectory-only, and
+mixed fusion candidates over the same aligned rows before promoting any new
+route or default policy.
+
+```bash
+python benchmarks/run_fusion_ablation_matrix.py \
+  --scores gpt2=artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-scores.manifest.json \
+  --candidate geometry=truth_proj,subspace_resid \
+  --candidate trajectory=trajectory_convergence \
+  --candidate geometry_trajectory=truth_proj,subspace_resid,trajectory_convergence \
+  --methods max_rank \
+  --alphas 0.1 \
+  --best-alpha 0.1 \
+  --json artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-fusion-ablation-matrix.json \
+  --quiet
+```
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use
