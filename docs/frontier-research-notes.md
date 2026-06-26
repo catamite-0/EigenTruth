@@ -370,9 +370,16 @@ Added dependency-free triple extractor plug-ins and eval harness:
   rule-based/regex/composite reports, a promotion summary, and an artifact
   manifest. This makes the extractor slot auditable as a benchmarked route
   component rather than a hand-tested parser hook.
+- The fixture builder now covers a small second predicate family beyond
+  country-core facts: headquarters location (`P159`), manufacturer (`P176`),
+  and inception/founding date (`P571`). `benchmarks/run_triple_extraction_fixture_matrix.py`
+  runs the generated-fixture workflow across multiple corpora and blocks
+  promotion unless enough corpora promote and the combined fixtures meet a
+  predicate-diversity floor. This is the release-evidence bridge from a local
+  parser improvement to a cross-domain extractor slot.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
-2. Use `run_triple_extraction_fixture_workflow.py` on the country-core Wikidata corpus and at least one domain-specific fact corpus, then compare generated regex/composite reports against the default rule-based extractor before adding heavier extraction dependencies.
+2. Run `run_triple_extraction_fixture_matrix.py` on the country-core Wikidata corpus and at least one non-country external fact corpus, then use the matrix artifact as the gate before adding those predicate aliases to structured-fact verifier routes.
 3. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.

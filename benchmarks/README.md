@@ -1037,6 +1037,18 @@ python benchmarks/run_triple_extraction_fixture_workflow.py \
   --output-dir artifacts/triple-extraction-fixture-workflow
 ```
 
+Use `run_triple_extraction_fixture_matrix.py` when extractor templates need
+cross-corpus release evidence. The matrix runs the same workflow per corpus and
+blocks promotion unless enough corpora promote and the generated fixtures cover
+enough distinct predicates:
+
+```bash
+python benchmarks/run_triple_extraction_fixture_matrix.py \
+  --corpus country-core=artifacts/wikidata-country-core-facts-qa-corpus.json \
+  --corpus enterprise-product=artifacts/domain-specific-facts.json \
+  --output-dir artifacts/triple-extraction-fixture-matrix
+```
+
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented
 paths improve exact F1 before the benchmark gates pass:

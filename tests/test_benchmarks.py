@@ -230,6 +230,74 @@ def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_pat
     assert (tmp_path / "workflow" / "artifact-manifest.json").exists()
 
 
+def test_triple_extraction_fixture_matrix_promotes_cross_corpus_domain_templates(tmp_path):
+    module = importlib.import_module("benchmarks.run_triple_extraction_fixture_matrix")
+    country_corpus = tmp_path / "country-facts.json"
+    domain_corpus = tmp_path / "domain-facts.json"
+    country_corpus.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "answer": "Paris",
+                    "metadata": {
+                        "country": "France",
+                        "statement_property": "P36",
+                        "statement_property_label": "capital",
+                    },
+                },
+                {
+                    "answer": "Portuguese",
+                    "metadata": {
+                        "country": "Brazil",
+                        "statement_property": "P37",
+                        "statement_property_label": "official language",
+                    },
+                },
+                {
+                    "answer": "yen",
+                    "metadata": {
+                        "country": "Japan",
+                        "statement_property": "P38",
+                        "statement_property_label": "currency",
+                    },
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    domain_corpus.write_text(
+        json.dumps({
+            "facts": [
+                {"subject": "OpenAI", "predicate": "P159", "object": "San Francisco"},
+                {"subject": "Model S", "predicate": "P176", "object": "Tesla"},
+                {"subject": "OpenAI", "predicate": "P571", "object": "2015"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    config = module.TripleExtractionFixtureMatrixConfig(
+        corpora=(
+            module.TripleExtractionCorpusConfig("country-core", (country_corpus,)),
+            module.TripleExtractionCorpusConfig("enterprise-product", (domain_corpus,)),
+        ),
+        output_dir=tmp_path / "matrix",
+    )
+
+    matrix = module.run_triple_extraction_fixture_matrix(config)
+
+    assert matrix["status"] == "promote"
+    assert matrix["n_corpora"] == 2
+    assert matrix["promoted_corpora"] == 2
+    assert matrix["mean_best_f1"] == pytest.approx(1.0)
+    assert matrix["mean_baseline_f1"] < 1.0
+    assert matrix["distinct_predicate_count"] == 6
+    assert "headquarters_location_of" in matrix["distinct_predicates"]
+    assert "manufacturer_of" in matrix["distinct_predicates"]
+    assert "inception_of" in matrix["distinct_predicates"]
+    assert (tmp_path / "matrix" / "artifact-manifest.json").exists()
+    assert (tmp_path / "matrix" / "enterprise-product" / "artifact-manifest.json").exists()
+
+
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):
     module = importlib.import_module("benchmarks.eval_conformal")
     scores_path = tmp_path / "scores.json"

@@ -32,6 +32,23 @@ PREDICATE_OUTPUTS = {
     "currency": "currency_of",
     "currency_of": "currency_of",
     "p38": "currency_of",
+    "headquarters": "headquarters_location_of",
+    "headquarters_location": "headquarters_location_of",
+    "headquarters_location_of": "headquarters_location_of",
+    "headquarter_location": "headquarters_location_of",
+    "headquarter_location_of": "headquarters_location_of",
+    "p159": "headquarters_location_of",
+    "manufacturer": "manufacturer_of",
+    "manufacturer_of": "manufacturer_of",
+    "manufactured_by": "manufacturer_of",
+    "made_by": "manufacturer_of",
+    "p176": "manufacturer_of",
+    "founded": "inception_of",
+    "founded_in": "inception_of",
+    "founding_date": "inception_of",
+    "inception": "inception_of",
+    "inception_of": "inception_of",
+    "p571": "inception_of",
 }
 DEFAULT_REGEX_PATTERNS = (
     {
@@ -48,6 +65,66 @@ DEFAULT_REGEX_PATTERNS = (
         "pattern": r"^(?P<object>.+?) is (?P<subject>.+?)(?:'s|\u2019s) currency$",
         "predicate": "currency_of",
         "source": "currency_possessive_inverse_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?) is headquartered in (?P<object>.+)$",
+        "predicate": "headquarters_location_of",
+        "source": "headquarters_headquartered_in_template",
+    },
+    {
+        "pattern": r"^The headquarters of (?P<subject>.+?) (?:are|is) in (?P<object>.+)$",
+        "predicate": "headquarters_location_of",
+        "source": "headquarters_of_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?)(?:'s|\u2019s) headquarters (?:are|is) in (?P<object>.+)$",
+        "predicate": "headquarters_location_of",
+        "source": "headquarters_possessive_template",
+    },
+    {
+        "pattern": r"^(?P<object>.+?) is the headquarters location of (?P<subject>.+)$",
+        "predicate": "headquarters_location_of",
+        "source": "headquarters_object_first_template",
+    },
+    {
+        "pattern": r"^(?P<object>.+?) manufactures (?P<subject>.+)$",
+        "predicate": "manufacturer_of",
+        "source": "manufacturer_object_first_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?) is manufactured by (?P<object>.+)$",
+        "predicate": "manufacturer_of",
+        "source": "manufacturer_subject_first_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?) is made by (?P<object>.+)$",
+        "predicate": "manufacturer_of",
+        "source": "manufacturer_made_by_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?)(?:'s|\u2019s) manufacturer is (?P<object>.+)$",
+        "predicate": "manufacturer_of",
+        "source": "manufacturer_possessive_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?) was founded in (?P<object>.+)$",
+        "predicate": "inception_of",
+        "source": "inception_founded_in_template",
+    },
+    {
+        "pattern": r"^The inception date of (?P<subject>.+?) is (?P<object>.+)$",
+        "predicate": "inception_of",
+        "source": "inception_date_subject_template",
+    },
+    {
+        "pattern": r"^(?P<subject>.+?)(?:'s|\u2019s) inception date is (?P<object>.+)$",
+        "predicate": "inception_of",
+        "source": "inception_possessive_template",
+    },
+    {
+        "pattern": r"^(?P<object>.+?) is the inception date of (?P<subject>.+)$",
+        "predicate": "inception_of",
+        "source": "inception_object_first_template",
     },
 )
 
@@ -261,6 +338,31 @@ def _templates_for_fact(fact: StructuredFact, *, predicate: str) -> tuple[tuple[
             ("currency-subject-first", f"The currency of {subject} is {object_value}.", object_value),
             ("currency-uses", f"{subject} uses {object_value} as its currency.", object_value),
             ("currency-possessive-inverse", f"{object_value} is {subject}'s currency.", object_value),
+        )
+    if predicate == "headquarters_location_of":
+        return (
+            ("headquarters-headquartered-in", f"{subject} is headquartered in {object_value}.", object_value),
+            ("headquarters-of", f"The headquarters of {subject} are in {object_value}.", object_value),
+            ("headquarters-possessive", f"{subject}'s headquarters are in {object_value}.", object_value),
+            (
+                "headquarters-object-first",
+                f"{object_value} is the headquarters location of {subject}.",
+                object_value,
+            ),
+        )
+    if predicate == "manufacturer_of":
+        return (
+            ("manufacturer-object-first", f"{object_value} manufactures {subject}.", object_value),
+            ("manufacturer-subject-first", f"{subject} is manufactured by {object_value}.", object_value),
+            ("manufacturer-made-by", f"{subject} is made by {object_value}.", object_value),
+            ("manufacturer-possessive", f"{subject}'s manufacturer is {object_value}.", object_value),
+        )
+    if predicate == "inception_of":
+        return (
+            ("inception-founded-in", f"{subject} was founded in {object_value}.", object_value),
+            ("inception-date-subject", f"The inception date of {subject} is {object_value}.", object_value),
+            ("inception-possessive", f"{subject}'s inception date is {object_value}.", object_value),
+            ("inception-object-first", f"{object_value} is the inception date of {subject}.", object_value),
         )
     return ()
 
