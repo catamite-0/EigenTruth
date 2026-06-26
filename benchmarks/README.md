@@ -3211,11 +3211,12 @@ python benchmarks/build_verifier_signal_score_dump.py \
   --output-format jsonl
 ```
 
-When verified records include state-transition prediction metadata, the same
-converter also emits world-model uncertainty columns such as
-`world_model_disagreement`, `world_model_agreement_gap`, and
-`world_model_low_agreement`, so simulator/model disagreement can be swept or
-fused under the same conformal calibration path.
+When verified records include state-transition prediction metadata or direct
+world-model ensemble agreement metadata, the same converter also emits
+world-model uncertainty columns such as `world_model_disagreement`,
+`world_model_agreement_gap`, and `world_model_low_agreement`, so
+simulator/model disagreement can be swept or fused under the same conformal
+calibration path.
 
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is

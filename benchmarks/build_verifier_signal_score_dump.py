@@ -288,28 +288,123 @@ def _world_model_signal_features(
     for metadata in metadata_candidates:
         prediction_metadata = _mapping(metadata.get("prediction_metadata"))
         if prediction_metadata:
-            agreement_rate = _unit_interval(
-                prediction_metadata.get("agreement_rate", 1.0),
-                name="world_model.agreement_rate",
+            return _world_model_metadata_features(
+                prediction_metadata,
+                name_prefix="world_model.prediction",
             )
-            below_min_agreement = prediction_metadata.get("below_min_agreement") is True
-            disagreement = prediction_metadata.get("disagreement") is True
-            return {
-                "world_model_disagreement": 1.0 if disagreement else 0.0,
-                "world_model_agreement_gap": max(0.0, 1.0 - agreement_rate),
-                "world_model_low_agreement": 1.0 if below_min_agreement else 0.0,
-            }
-        if metadata.get("decision_rule") == "prediction_agreement_below_threshold":
-            return {
-                "world_model_disagreement": 1.0,
-                "world_model_agreement_gap": 1.0,
-                "world_model_low_agreement": 1.0,
-            }
+        if _is_direct_world_model_metadata(metadata):
+            return _world_model_metadata_features(
+                metadata,
+                name_prefix="world_model",
+            )
     return {
         "world_model_disagreement": 0.0,
         "world_model_agreement_gap": 0.0,
         "world_model_low_agreement": 0.0,
     }
+
+
+def _is_direct_world_model_metadata(metadata: Mapping[str, Any]) -> bool:
+    decision_rule = str(metadata.get("decision_rule", ""))
+    has_ensemble_agreement_shape = (
+        "member_world_models" in metadata
+        or (
+            any(
+                key in metadata
+                for key in (
+                    "agreement_rate",
+                    "agreement_count",
+                    "below_min_agreement",
+                )
+            )
+            and any(key in metadata for key in ("member_count", "min_agreement"))
+        )
+    )
+    return (
+        str(metadata.get("verifier", "")) == "world_model_ensemble"
+        or str(metadata.get("world_model", "")) == "EnsembleWorldModelAdapter"
+        or decision_rule
+        in {
+            "status_consensus",
+            "status_tie",
+            "status_agreement_below_threshold",
+            "prediction_consensus",
+            "prediction_agreement_below_threshold",
+            "all_members_failed",
+        }
+        or has_ensemble_agreement_shape
+    )
+
+
+def _world_model_metadata_features(
+    metadata: Mapping[str, Any],
+    *,
+    name_prefix: str,
+) -> dict[str, float]:
+    decision_rule = str(metadata.get("decision_rule", ""))
+    agreement_rate = _world_model_agreement_rate(metadata, name_prefix=name_prefix)
+    below_min_agreement = (
+        metadata.get("below_min_agreement") is True
+        or decision_rule
+        in {
+            "status_tie",
+            "status_agreement_below_threshold",
+            "prediction_agreement_below_threshold",
+            "all_members_failed",
+        }
+    )
+    disagreement = _world_model_disagreement(metadata, below_min_agreement=below_min_agreement)
+    return {
+        "world_model_disagreement": 1.0 if disagreement else 0.0,
+        "world_model_agreement_gap": max(0.0, 1.0 - agreement_rate),
+        "world_model_low_agreement": 1.0 if below_min_agreement else 0.0,
+    }
+
+
+def _world_model_agreement_rate(
+    metadata: Mapping[str, Any],
+    *,
+    name_prefix: str,
+) -> float:
+    if "agreement_rate" in metadata:
+        return _unit_interval(metadata.get("agreement_rate", 1.0), name=f"{name_prefix}.agreement_rate")
+    agreement_count = metadata.get("agreement_count")
+    member_count = metadata.get("member_count")
+    if agreement_count is not None and member_count is not None:
+        member_count_float = _finite_float(member_count, name=f"{name_prefix}.member_count")
+        if member_count_float <= 0:
+            raise ValueError(f"{name_prefix}.member_count must be positive.")
+        agreement_count_float = _finite_float(
+            agreement_count,
+            name=f"{name_prefix}.agreement_count",
+        )
+        if agreement_count_float < 0:
+            raise ValueError(f"{name_prefix}.agreement_count must be non-negative.")
+        return max(0.0, min(1.0, agreement_count_float / member_count_float))
+    if str(metadata.get("decision_rule", "")) in {
+        "status_tie",
+        "status_agreement_below_threshold",
+        "prediction_agreement_below_threshold",
+        "all_members_failed",
+    }:
+        return 0.0
+    return 1.0
+
+
+def _world_model_disagreement(
+    metadata: Mapping[str, Any],
+    *,
+    below_min_agreement: bool,
+) -> bool:
+    if "disagreement" in metadata:
+        return metadata.get("disagreement") is True
+    agreement_count = metadata.get("agreement_count")
+    member_count = metadata.get("member_count")
+    if agreement_count is not None and member_count is not None:
+        return float(agreement_count) < float(member_count)
+    if str(metadata.get("decision_rule", "")) == "status_tie":
+        return True
+    return bool(below_min_agreement)
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:

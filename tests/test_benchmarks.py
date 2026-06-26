@@ -25098,6 +25098,49 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert DEFAULT_SCORE_DIRECTIONS["world_model_low_agreement"] == "higher"
 
 
+def test_verifier_signal_features_extract_direct_world_model_ensemble_metadata():
+    module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+
+    consensus_features = module.verifier_signal_features({
+        "record": {
+            "final": {
+                "status": "supported",
+                "confidence": 0.8,
+                "metadata": {
+                    "verifier": "world_model_ensemble",
+                    "decision_rule": "status_consensus",
+                    "agreement_count": 3,
+                    "member_count": 4,
+                    "agreement_rate": 0.75,
+                    "below_min_agreement": False,
+                },
+            }
+        }
+    })
+    low_agreement_features = module.verifier_signal_features({
+        "record": {
+            "final": {
+                "status": "insufficient_evidence",
+                "confidence": 0.0,
+                "metadata": {
+                    "verifier": "world_model_ensemble",
+                    "decision_rule": "status_agreement_below_threshold",
+                    "agreement_count": 1,
+                    "member_count": 3,
+                    "below_min_agreement": True,
+                },
+            }
+        }
+    })
+
+    assert consensus_features["world_model_disagreement"] == pytest.approx(1.0)
+    assert consensus_features["world_model_agreement_gap"] == pytest.approx(0.25)
+    assert consensus_features["world_model_low_agreement"] == pytest.approx(0.0)
+    assert low_agreement_features["world_model_disagreement"] == pytest.approx(1.0)
+    assert low_agreement_features["world_model_agreement_gap"] == pytest.approx(2 / 3)
+    assert low_agreement_features["world_model_low_agreement"] == pytest.approx(1.0)
+
+
 def test_build_text_baseline_score_dump_from_statement_metadata(tmp_path):
     module = importlib.import_module("benchmarks.build_text_baseline_score_dump")
     from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
