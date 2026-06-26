@@ -36,6 +36,7 @@ class ProductPromotionContract:
     selfcheck_signal_fusion_workflow: Mapping[str, Any] = field(default_factory=dict)
     world_model_signal_workflow: Mapping[str, Any] = field(default_factory=dict)
     feedback_policy_workflow: Mapping[str, Any] = field(default_factory=dict)
+    triple_extraction_fixture_matrix: Mapping[str, Any] = field(default_factory=dict)
     release_efficiency: Mapping[str, Any] = field(default_factory=dict)
     metadata: Mapping[str, Any] = field(default_factory=dict)
     schema_version: int = 1
@@ -72,6 +73,11 @@ class ProductPromotionContract:
             "feedback_policy_workflow",
             dict(self.feedback_policy_workflow),
         )
+        object.__setattr__(
+            self,
+            "triple_extraction_fixture_matrix",
+            dict(self.triple_extraction_fixture_matrix),
+        )
         object.__setattr__(self, "release_efficiency", dict(self.release_efficiency))
         object.__setattr__(self, "metadata", dict(self.metadata))
         object.__setattr__(self, "schema_version", int(self.schema_version))
@@ -107,6 +113,9 @@ class ProductPromotionContract:
                     payload.get("world_model_signal_workflow")
                 ),
                 feedback_policy_workflow=_mapping(payload.get("feedback_policy_workflow")),
+                triple_extraction_fixture_matrix=_mapping(
+                    payload.get("triple_extraction_fixture_matrix")
+                ),
                 release_efficiency=_mapping(payload.get("release_efficiency")),
                 metadata=_mapping(payload.get("metadata")),
             )
@@ -153,6 +162,13 @@ class ProductPromotionContract:
         )
         world_model_signal_workflow = _mapping(candidate.get("world_model_signal_workflow"))
         feedback_policy_workflow = _mapping(candidate.get("feedback_policy_workflow"))
+        triple_extraction_fixture_matrix = _triple_extraction_fixture_matrix_metadata(
+            _first_mapping(
+                candidate.get("triple_extraction_fixture_matrix"),
+                comparison.get("triple_extraction_fixture_matrix_gate"),
+            ),
+            manifests=manifests,
+        )
         release_efficiency = _release_efficiency_metadata(
             _mapping(candidate.get("release_efficiency")),
             manifests=manifests,
@@ -225,6 +241,7 @@ class ProductPromotionContract:
                 feedback_policy_workflow,
                 manifests=manifests,
             ),
+            triple_extraction_fixture_matrix=triple_extraction_fixture_matrix,
             release_efficiency=release_efficiency,
             metadata={
                 "recommended_readiness_record": decision.get("recommended_readiness_record"),
@@ -286,6 +303,22 @@ class ProductPromotionContract:
                 ),
                 "recommended_world_model_signal_workflow_report": decision.get(
                     "recommended_world_model_signal_workflow_report"
+                ),
+                "triple_extraction_fixture_matrix_status": _first_present(
+                    decision.get("triple_extraction_fixture_matrix_status"),
+                    triple_extraction_fixture_matrix.get("status"),
+                ),
+                "recommended_triple_extraction_fixture_matrix_report": decision.get(
+                    "recommended_triple_extraction_fixture_matrix_report"
+                ),
+                **_triple_extraction_fixture_matrix_flat_metadata(
+                    triple_extraction_fixture_matrix
+                ),
+                "triple_extraction_fixture_matrix_min_corpora": config.get(
+                    "min_triple_extraction_corpora"
+                ),
+                "triple_extraction_fixture_matrix_min_distinct_predicates": config.get(
+                    "min_triple_extraction_distinct_predicates"
                 ),
                 "world_model_signal_workflow_report": (
                     world_model_signal_workflow.get("report_path")
@@ -623,6 +656,9 @@ class ProductPromotionContract:
             "selfcheck_signal_fusion_workflow": dict(self.selfcheck_signal_fusion_workflow),
             "world_model_signal_workflow": dict(self.world_model_signal_workflow),
             "feedback_policy_workflow": dict(self.feedback_policy_workflow),
+            "triple_extraction_fixture_matrix": dict(
+                self.triple_extraction_fixture_matrix
+            ),
             "release_efficiency": dict(self.release_efficiency),
             "metadata": dict(self.metadata),
         }
@@ -734,6 +770,20 @@ class ProductRuntimeEvidenceBundle:
         )
     )
     _world_model_signal_workflow_registry_record: RegistryRecord | None = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _triple_extraction_fixture_matrix_manifest_verification: (
+        ArtifactManifestVerification | None
+    ) = field(
+        default=None,
+        init=False,
+        compare=False,
+        repr=False,
+    )
+    _triple_extraction_fixture_matrix_registry_record: RegistryRecord | None = field(
         default=None,
         init=False,
         compare=False,
@@ -1048,6 +1098,124 @@ class ProductRuntimeEvidenceBundle:
             ),
         }
 
+    @property
+    def triple_extraction_fixture_matrix(self) -> Mapping[str, Any]:
+        """Return the triple-extraction fixture-matrix contract, if present."""
+        return self.contract.triple_extraction_fixture_matrix
+
+    @property
+    def triple_extraction_fixture_matrix_report_path(self) -> Path | None:
+        """Return the triple-extraction fixture-matrix report path."""
+        return _resolve_contract_metadata_path(
+            self.triple_extraction_fixture_matrix.get("report_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def triple_extraction_fixture_matrix_manifest_path(self) -> Path | None:
+        """Return the triple-extraction fixture-matrix manifest path."""
+        return _resolve_contract_metadata_path(
+            self.triple_extraction_fixture_matrix.get("manifest_path"),
+            contract_path=self.contract_path,
+        )
+
+    @property
+    def triple_extraction_fixture_matrix_registry_path(self) -> Path | None:
+        """Return the triple-extraction fixture-matrix registry path."""
+        return _resolve_contract_metadata_path(
+            self.triple_extraction_fixture_matrix.get("registry"),
+            contract_path=self.contract_path,
+        )
+
+    def verify_triple_extraction_fixture_matrix_manifest(
+        self,
+    ) -> ArtifactManifestVerification | None:
+        """Lazily verify the optional triple-extraction fixture-matrix manifest."""
+        manifest_path = self.triple_extraction_fixture_matrix_manifest_path
+        if manifest_path is None:
+            return None
+        if self._triple_extraction_fixture_matrix_manifest_verification is None:
+            object.__setattr__(
+                self,
+                "_triple_extraction_fixture_matrix_manifest_verification",
+                load_and_verify_artifact_manifest(
+                    manifest_path,
+                    recursive=self.manifest_recursive,
+                ),
+            )
+        return self._triple_extraction_fixture_matrix_manifest_verification
+
+    def triple_extraction_fixture_matrix_registry_record(self) -> RegistryRecord | None:
+        """Lazily resolve the optional triple-extraction fixture-matrix record."""
+        registry_path = self.triple_extraction_fixture_matrix_registry_path
+        record_key = self.triple_extraction_fixture_matrix.get("record_key")
+        if registry_path is None or record_key is None:
+            return None
+        if self._triple_extraction_fixture_matrix_registry_record is None:
+            registry = ArtifactRegistry.load_json(registry_path)
+            object.__setattr__(
+                self,
+                "_triple_extraction_fixture_matrix_registry_record",
+                registry.get(str(record_key)),
+            )
+        return self._triple_extraction_fixture_matrix_registry_record
+
+    def triple_extraction_fixture_matrix_evidence_metadata(
+        self,
+        *,
+        verify_manifest: bool = False,
+        include_registry_record: bool = False,
+    ) -> dict[str, Any]:
+        """Return JSON-ready triple-extraction fixture-matrix provenance metadata."""
+        matrix = self.triple_extraction_fixture_matrix
+        report_path = self.triple_extraction_fixture_matrix_report_path
+        manifest_path = self.triple_extraction_fixture_matrix_manifest_path
+        registry_path = self.triple_extraction_fixture_matrix_registry_path
+        manifest_verification = (
+            self.verify_triple_extraction_fixture_matrix_manifest()
+            if verify_manifest
+            else None
+        )
+        record_key = matrix.get("record_key")
+        registry_record = (
+            self.triple_extraction_fixture_matrix_registry_record()
+            if include_registry_record
+            else None
+        )
+        return {
+            "triple_extraction_fixture_matrix_report": (
+                None if report_path is None else str(report_path)
+            ),
+            "triple_extraction_fixture_matrix_manifest": (
+                None if manifest_path is None else str(manifest_path)
+            ),
+            "triple_extraction_fixture_matrix_manifest_verification": (
+                None if manifest_verification is None else manifest_verification.to_dict()
+            ),
+            "triple_extraction_fixture_matrix_registry": (
+                None if registry_path is None else str(registry_path)
+            ),
+            "triple_extraction_fixture_matrix_registry_key": (
+                None if record_key is None else str(record_key)
+            ),
+            "triple_extraction_fixture_matrix_registry_record": (
+                None if registry_record is None else registry_record.to_dict()
+            ),
+            "triple_extraction_fixture_matrix_status": matrix.get("status"),
+            "triple_extraction_fixture_matrix_n_corpora": matrix.get("n_corpora"),
+            "triple_extraction_fixture_matrix_promoted_corpora": matrix.get(
+                "promoted_corpora"
+            ),
+            "triple_extraction_fixture_matrix_distinct_predicate_count": matrix.get(
+                "distinct_predicate_count"
+            ),
+            "triple_extraction_fixture_matrix_distinct_predicates": matrix.get(
+                "distinct_predicates"
+            ),
+            "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
+            "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
+        }
+
     def runtime_metadata(
         self,
         *,
@@ -1058,6 +1226,8 @@ class ProductRuntimeEvidenceBundle:
         include_selfcheck_signal_fusion_record: bool = False,
         verify_world_model_signal_workflow_manifest: bool = False,
         include_world_model_signal_workflow_record: bool = False,
+        verify_triple_extraction_fixture_matrix_manifest: bool = False,
+        include_triple_extraction_fixture_matrix_record: bool = False,
     ) -> dict[str, Any]:
         """Return ProductTrace metadata for contract and provenance evidence."""
         return {
@@ -1073,6 +1243,10 @@ class ProductRuntimeEvidenceBundle:
             **self.world_model_signal_evidence_metadata(
                 verify_manifest=verify_world_model_signal_workflow_manifest,
                 include_registry_record=include_world_model_signal_workflow_record,
+            ),
+            **self.triple_extraction_fixture_matrix_evidence_metadata(
+                verify_manifest=verify_triple_extraction_fixture_matrix_manifest,
+                include_registry_record=include_triple_extraction_fixture_matrix_record,
             ),
         }
 
@@ -1141,6 +1315,9 @@ def product_promotion_contract_metadata(
         ),
         "promotion_contract_feedback_policy_workflow": dict(
             contract.feedback_policy_workflow
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix": dict(
+            contract.triple_extraction_fixture_matrix
         ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
@@ -1370,6 +1547,65 @@ def _feedback_policy_workflow_metadata(
     }
 
 
+def _triple_extraction_fixture_matrix_metadata(
+    matrix: Mapping[str, Any],
+    *,
+    manifests: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not matrix:
+        return {}
+    distinct_predicates = matrix.get("distinct_predicates")
+    return _drop_none_values({
+        "report_path": matrix.get("report_path"),
+        "manifest_path": (
+            matrix.get("manifest_path")
+            or manifests.get("triple_extraction_fixture_matrix_manifest")
+        ),
+        "source": matrix.get("source"),
+        "registry": matrix.get("registry"),
+        "record_key": matrix.get("record_key"),
+        "workflow": matrix.get("workflow"),
+        "status": _first_present(matrix.get("status"), matrix.get("report_status")),
+        "n_corpora": matrix.get("n_corpora"),
+        "promoted_corpora": matrix.get("promoted_corpora"),
+        "distinct_predicate_count": matrix.get("distinct_predicate_count"),
+        "distinct_predicates": (
+            None if distinct_predicates is None else list(distinct_predicates)
+        ),
+        "mean_baseline_f1": matrix.get("mean_baseline_f1"),
+        "mean_best_f1": matrix.get("mean_best_f1"),
+        "mean_f1_lift": matrix.get("mean_f1_lift"),
+    })
+
+
+def _triple_extraction_fixture_matrix_flat_metadata(
+    matrix: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "triple_extraction_fixture_matrix_report": matrix.get("report_path"),
+        "triple_extraction_fixture_matrix_manifest": matrix.get("manifest_path"),
+        "triple_extraction_fixture_matrix_source": matrix.get("source"),
+        "triple_extraction_fixture_matrix_registry": matrix.get("registry"),
+        "triple_extraction_fixture_matrix_record": matrix.get("record_key"),
+        "triple_extraction_fixture_matrix_status": matrix.get("status"),
+        "triple_extraction_fixture_matrix_n_corpora": matrix.get("n_corpora"),
+        "triple_extraction_fixture_matrix_promoted_corpora": matrix.get(
+            "promoted_corpora"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicate_count": matrix.get(
+            "distinct_predicate_count"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicates": matrix.get(
+            "distinct_predicates"
+        ),
+        "triple_extraction_fixture_matrix_mean_baseline_f1": matrix.get(
+            "mean_baseline_f1"
+        ),
+        "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
+        "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
+    })
+
+
 def _release_efficiency_metadata(
     report: Mapping[str, Any],
     *,
@@ -1438,6 +1674,13 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
 def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
+    return {}
+
+
+def _first_mapping(*values: Any) -> dict[str, Any]:
+    for value in values:
+        if isinstance(value, Mapping) and value:
+            return dict(value)
     return {}
 
 

@@ -15063,6 +15063,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "recommended_world_model_signal_workflow_report": (
                     "artifacts/world-model-signal/world-model-signal-workflow.json"
                 ),
+                "triple_extraction_fixture_matrix_status": "promote",
+                "recommended_triple_extraction_fixture_matrix_report": (
+                    "artifacts/triple-extraction-fixture-matrix/"
+                    "triple-extraction-fixture-matrix.json"
+                ),
                 "feedback_policy_workflow_status": "promote",
                 "recommended_feedback_policy_workflow_report": (
                     "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
@@ -15179,6 +15184,33 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "conflict_positive_count": 4,
                     "calibrated_conflict_signal_count": 1,
                 },
+                "triple_extraction_fixture_matrix": {
+                    "report_path": (
+                        "artifacts/triple-extraction-fixture-matrix/"
+                        "triple-extraction-fixture-matrix.json"
+                    ),
+                    "manifest_path": (
+                        "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
+                    ),
+                    "source": "registry",
+                    "registry": "artifacts/release-registry.json",
+                    "record_key": "report:triple-extraction-fixture-matrix:0.1",
+                    "workflow": "triple_extraction_fixture_matrix",
+                    "status": "promote",
+                    "n_corpora": 2,
+                    "promoted_corpora": 2,
+                    "distinct_predicate_count": 6,
+                    "distinct_predicates": [
+                        "capital_of",
+                        "currency_of",
+                        "headquarters_location_of",
+                        "inception_of",
+                        "manufacturer_of",
+                        "official_language_of",
+                    ],
+                    "mean_best_f1": 1.0,
+                    "mean_f1_lift": 0.5,
+                },
                 "feedback_policy_workflow": {
                     "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
                     "manifest_path": "artifacts/feedback-policy-workflow/artifact-manifest.json",
@@ -15223,6 +15255,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "world_model_signal_workflow_manifest": (
                         "artifacts/world-model-signal/artifact-manifest.json"
+                    ),
+                    "triple_extraction_fixture_matrix_manifest": (
+                        "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
                     ),
                 },
             },
@@ -15301,6 +15336,10 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
         "report:world-model-signal-workflow:0.1"
     )
     assert contract["world_model_signal_workflow"]["release_gate_status"] == "promote"
+    assert contract["triple_extraction_fixture_matrix"]["record_key"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert contract["triple_extraction_fixture_matrix"]["distinct_predicate_count"] == 6
     assert contract["selfcheck_signal_fusion_workflow"]["sample_quality_passed"] is True
     assert contract["feedback_policy_workflow"]["candidate_control_policy"].endswith(
         "candidate-control-policy.json"
@@ -15322,6 +15361,9 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert payload["contract"]["world_model_signal_workflow"]["report_path"] == (
         "artifacts/world-model-signal/world-model-signal-workflow.json"
     )
+    assert payload["contract"]["triple_extraction_fixture_matrix"]["report_path"] == (
+        "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
+    )
     assert payload["paths"]["release_efficiency_report"] == str(release_efficiency_path)
     assert payload["contract"]["release_efficiency"]["status"] == "promote"
     assert contract["metadata"]["recommended_selector_replay_candidate"] == "default"
@@ -15342,6 +15384,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract["metadata"]["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract["metadata"]["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
+    assert contract["metadata"]["recommended_triple_extraction_fixture_matrix_report"] == (
+        "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
+    )
+    assert contract["metadata"]["triple_extraction_fixture_matrix_report"] == (
+        "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
+    )
+    assert contract["metadata"]["triple_extraction_fixture_matrix_record"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert contract["metadata"]["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert contract["metadata"]["triple_extraction_fixture_matrix_mean_best_f1"] == pytest.approx(1.0)
+    assert contract["metadata"]["triple_extraction_fixture_matrix_mean_f1_lift"] == pytest.approx(0.5)
     assert contract["metadata"]["feedback_policy_workflow_status"] == "promote"
     assert contract["metadata"]["feedback_policy_workflow_report_status"] == "recommend"
     assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
@@ -15375,6 +15430,11 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     )
     assert manifest["summary"]["artifact_count"] == 3
     assert manifest["artifacts"]["release_efficiency_report"]["exists"] is True
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_status"] == "promote"
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
+        "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
     assert record.artifact_type == "product_promotion_contract"
     assert record.metadata["source_status"] == "promote"
     assert record.metadata["control_defaults"] == {"max_verifier_route_attempts": 2}
@@ -15403,6 +15463,16 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["world_model_signal_workflow_trace_gap_max"] == pytest.approx(0.0)
     assert record.metadata["world_model_signal_workflow_conflict_positive_count"] == pytest.approx(4)
     assert record.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert record.metadata["triple_extraction_fixture_matrix_source"] == "registry"
+    assert record.metadata["triple_extraction_fixture_matrix_record"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert record.metadata["triple_extraction_fixture_matrix_status"] == "promote"
+    assert record.metadata["triple_extraction_fixture_matrix_n_corpora"] == 2
+    assert record.metadata["triple_extraction_fixture_matrix_promoted_corpora"] == 2
+    assert record.metadata["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1"] == pytest.approx(1.0)
+    assert record.metadata["triple_extraction_fixture_matrix_mean_f1_lift"] == pytest.approx(0.5)
     assert record.metadata["feedback_policy_workflow_source"] == "registry"
     assert record.metadata["feedback_policy_workflow_record"] == (
         "report:feedback-policy-workflow:0.1"

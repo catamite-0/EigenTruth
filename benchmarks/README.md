@@ -2209,6 +2209,10 @@ promotion contract inherits the recommended runtime profile and efficiency score
 from the candidate. For older release-candidate reports, pass the
 release-efficiency report explicitly so the promotion contract, manifest, and
 registry record also carry the same handoff evidence:
+When the release candidate includes a cross-corpus triple-extraction fixture
+matrix, the exported contract and registry metadata keep the matrix
+report/manifest, registry record, corpus coverage, predicate diversity, and F1
+lift summary so triple-evidence routes can be audited from runtime traces.
 Performance-bundle provenance is preserved as well: exported contracts retain
 best quality signal, score-fusion status, and selected-fusion
 status/run/candidate/signal/AUROC/false-alarm/detection/artifact metadata when

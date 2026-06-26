@@ -54,8 +54,14 @@ def export_product_promotion_contract(
     selfcheck_signal_fusion_workflow = dict(contract.selfcheck_signal_fusion_workflow)
     world_model_signal_workflow = dict(contract.world_model_signal_workflow)
     feedback_policy_workflow = dict(contract.feedback_policy_workflow)
+    triple_extraction_fixture_matrix = dict(contract.triple_extraction_fixture_matrix)
     release_efficiency = dict(contract.release_efficiency)
     release_efficiency_metadata = _release_efficiency_flat_metadata(release_efficiency)
+    triple_extraction_fixture_matrix_metadata = (
+        _triple_extraction_fixture_matrix_flat_metadata(
+            triple_extraction_fixture_matrix
+        )
+    )
     export_metadata = dict(metadata or {})
     _write_json(output, payload, compact=compact_json)
 
@@ -75,6 +81,7 @@ def export_product_promotion_contract(
                 "source": str(source),
                 "compact_json": compact_json,
                 **release_efficiency_metadata,
+                **triple_extraction_fixture_matrix_metadata,
                 **export_metadata,
             },
         )
@@ -255,6 +262,42 @@ def export_product_promotion_contract(
                 "world_model_signal_workflow_calibrated_conflict_signal_count": (
                     world_model_signal_workflow.get("calibrated_conflict_signal_count")
                 ),
+                "triple_extraction_fixture_matrix_report": (
+                    triple_extraction_fixture_matrix.get("report_path")
+                ),
+                "triple_extraction_fixture_matrix_manifest": (
+                    triple_extraction_fixture_matrix.get("manifest_path")
+                ),
+                "triple_extraction_fixture_matrix_source": (
+                    triple_extraction_fixture_matrix.get("source")
+                ),
+                "triple_extraction_fixture_matrix_registry": (
+                    triple_extraction_fixture_matrix.get("registry")
+                ),
+                "triple_extraction_fixture_matrix_record": (
+                    triple_extraction_fixture_matrix.get("record_key")
+                ),
+                "triple_extraction_fixture_matrix_status": (
+                    triple_extraction_fixture_matrix.get("status")
+                ),
+                "triple_extraction_fixture_matrix_n_corpora": (
+                    triple_extraction_fixture_matrix.get("n_corpora")
+                ),
+                "triple_extraction_fixture_matrix_promoted_corpora": (
+                    triple_extraction_fixture_matrix.get("promoted_corpora")
+                ),
+                "triple_extraction_fixture_matrix_distinct_predicate_count": (
+                    triple_extraction_fixture_matrix.get("distinct_predicate_count")
+                ),
+                "triple_extraction_fixture_matrix_distinct_predicates": (
+                    triple_extraction_fixture_matrix.get("distinct_predicates")
+                ),
+                "triple_extraction_fixture_matrix_mean_best_f1": (
+                    triple_extraction_fixture_matrix.get("mean_best_f1")
+                ),
+                "triple_extraction_fixture_matrix_mean_f1_lift": (
+                    triple_extraction_fixture_matrix.get("mean_f1_lift")
+                ),
                 "feedback_policy_workflow_report": feedback_policy_workflow.get("report_path"),
                 "feedback_policy_workflow_manifest": feedback_policy_workflow.get(
                     "manifest_path"
@@ -318,6 +361,7 @@ def export_product_promotion_contract(
             "selfcheck_signal_fusion_workflow": selfcheck_signal_fusion_workflow,
             "world_model_signal_workflow": world_model_signal_workflow,
             "feedback_policy_workflow": feedback_policy_workflow,
+            "triple_extraction_fixture_matrix": triple_extraction_fixture_matrix,
             "release_efficiency": release_efficiency,
             "metadata": dict(contract.metadata),
         },
@@ -411,6 +455,31 @@ def _release_efficiency_flat_metadata(report: Mapping[str, Any]) -> dict[str, An
         "release_efficiency_trace_record_cache_hit_profile_count": report.get(
             "trace_record_cache_hit_profile_count"
         ),
+    })
+
+
+def _triple_extraction_fixture_matrix_flat_metadata(
+    matrix: Mapping[str, Any],
+) -> dict[str, Any]:
+    return _drop_none_values({
+        "triple_extraction_fixture_matrix_report": matrix.get("report_path"),
+        "triple_extraction_fixture_matrix_manifest": matrix.get("manifest_path"),
+        "triple_extraction_fixture_matrix_source": matrix.get("source"),
+        "triple_extraction_fixture_matrix_registry": matrix.get("registry"),
+        "triple_extraction_fixture_matrix_record": matrix.get("record_key"),
+        "triple_extraction_fixture_matrix_status": matrix.get("status"),
+        "triple_extraction_fixture_matrix_n_corpora": matrix.get("n_corpora"),
+        "triple_extraction_fixture_matrix_promoted_corpora": matrix.get(
+            "promoted_corpora"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicate_count": matrix.get(
+            "distinct_predicate_count"
+        ),
+        "triple_extraction_fixture_matrix_distinct_predicates": matrix.get(
+            "distinct_predicates"
+        ),
+        "triple_extraction_fixture_matrix_mean_best_f1": matrix.get("mean_best_f1"),
+        "triple_extraction_fixture_matrix_mean_f1_lift": matrix.get("mean_f1_lift"),
     })
 
 

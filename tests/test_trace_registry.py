@@ -1475,6 +1475,11 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
             "recommended_world_model_signal_workflow_report": (
                 "artifacts/world-model-signal/world-model-signal-workflow.json"
             ),
+            "triple_extraction_fixture_matrix_status": "promote",
+            "recommended_triple_extraction_fixture_matrix_report": (
+                "artifacts/triple-extraction-fixture-matrix/"
+                "triple-extraction-fixture-matrix.json"
+            ),
             "feedback_policy_workflow_status": "promote",
             "recommended_feedback_policy_workflow_report": (
                 "artifacts/feedback-policy-workflow/feedback-policy-workflow.json"
@@ -1580,6 +1585,34 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "conflict_positive_count": 4,
                 "calibrated_conflict_signal_count": 1,
                 "blocking_reasons": [],
+            },
+            "triple_extraction_fixture_matrix": {
+                "report_path": (
+                    "artifacts/triple-extraction-fixture-matrix/"
+                    "triple-extraction-fixture-matrix.json"
+                ),
+                "manifest_path": (
+                    "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
+                ),
+                "source": "registry",
+                "registry": "artifacts/release-registry.json",
+                "record_key": "report:triple-extraction-fixture-matrix:0.1",
+                "workflow": "triple_extraction_fixture_matrix",
+                "status": "promote",
+                "n_corpora": 2,
+                "promoted_corpora": 2,
+                "distinct_predicate_count": 6,
+                "distinct_predicates": [
+                    "capital_of",
+                    "currency_of",
+                    "headquarters_location_of",
+                    "inception_of",
+                    "manufacturer_of",
+                    "official_language_of",
+                ],
+                "mean_baseline_f1": 0.5,
+                "mean_best_f1": 1.0,
+                "mean_f1_lift": 0.5,
             },
             "feedback_policy_workflow": {
                 "report_path": "artifacts/feedback-policy-workflow/feedback-policy-workflow.json",
@@ -1701,6 +1734,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
                 "world_model_signal_workflow_manifest": (
                     "artifacts/world-model-signal/artifact-manifest.json"
                 ),
+                "triple_extraction_fixture_matrix_manifest": (
+                    "artifacts/triple-extraction-fixture-matrix/artifact-manifest.json"
+                ),
                 "feedback_policy_workflow_manifest": (
                     "artifacts/feedback-policy-workflow/artifact-manifest.json"
                 ),
@@ -1743,6 +1779,9 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
 
     assert contract.model_id == "Qwen/Qwen2.5-0.5B-Instruct"
     assert roundtrip.world_model_signal_workflow == contract.world_model_signal_workflow
+    assert roundtrip.triple_extraction_fixture_matrix == (
+        contract.triple_extraction_fixture_matrix
+    )
     assert contract.runtime["layer"] == -12
     assert contract.verifier_route["route"] == "structured_state"
     assert contract.metadata["runtime_profile"] == "balanced"
@@ -1834,6 +1873,24 @@ def test_product_promotion_contract_maps_release_candidate_budget(tmp_path):
     assert contract.metadata["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert contract.metadata["world_model_signal_workflow_conflict_positive_count"] == 4
     assert contract.metadata["world_model_signal_workflow_calibrated_conflict_signal_count"] == 1
+    assert contract.triple_extraction_fixture_matrix["record_key"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert contract.triple_extraction_fixture_matrix["distinct_predicate_count"] == 6
+    assert contract.metadata["triple_extraction_fixture_matrix_status"] == "promote"
+    assert contract.metadata["recommended_triple_extraction_fixture_matrix_report"].endswith(
+        "triple-extraction-fixture-matrix.json"
+    )
+    assert contract.metadata["triple_extraction_fixture_matrix_report"].endswith(
+        "triple-extraction-fixture-matrix.json"
+    )
+    assert contract.metadata["triple_extraction_fixture_matrix_record"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert contract.metadata["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
+    assert contract.metadata["triple_extraction_fixture_matrix_mean_best_f1"] == 1.0
+    assert contract.metadata["triple_extraction_fixture_matrix_mean_f1_lift"] == 0.5
+    assert contract.metadata["triple_extraction_fixture_matrix_min_corpora"] is None
     assert contract.control_policy_config["unsupported_action"] == "clarify"
     assert contract.control_policy_config["compound_verification_escalates"] is False
     assert contract.feedback_policy_workflow["record_key"] == "report:feedback-policy-workflow:0.1"
@@ -1983,6 +2040,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "record_key": "report:feedback-policy-workflow:0.1",
             "promotion_decision": "promote_candidate_policy",
         },
+        triple_extraction_fixture_matrix={
+            "report_path": "triple-extraction-fixture-matrix.json",
+            "record_key": "report:triple-extraction-fixture-matrix:0.1",
+            "status": "promote",
+            "distinct_predicate_count": 6,
+        },
         release_efficiency={
             "report_path": "release-efficiency.json",
             "recommended_profile": "balanced",
@@ -2029,6 +2092,12 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "record_key": "report:feedback-policy-workflow:0.1",
         "promotion_decision": "promote_candidate_policy",
     }
+    assert metadata["promotion_contract_triple_extraction_fixture_matrix"] == {
+        "report_path": "triple-extraction-fixture-matrix.json",
+        "record_key": "report:triple-extraction-fixture-matrix:0.1",
+        "status": "promote",
+        "distinct_predicate_count": 6,
+    }
     assert metadata["promotion_contract_release_efficiency"] == {
         "report_path": "release-efficiency.json",
         "recommended_profile": "balanced",
@@ -2054,6 +2123,11 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     world_model_report_path = world_model_dir / "workflow.json"
     world_model_manifest_path = world_model_dir / "artifact-manifest.json"
     world_model_registry_path = world_model_dir / "registry.json"
+    triple_matrix_dir = tmp_path / "triple-extraction-fixture-matrix"
+    triple_matrix_dir.mkdir()
+    triple_matrix_report_path = triple_matrix_dir / "matrix.json"
+    triple_matrix_manifest_path = triple_matrix_dir / "artifact-manifest.json"
+    triple_matrix_registry_path = triple_matrix_dir / "registry.json"
     selfcheck_report_path.write_text(
         json.dumps({
             "workflow": "selfcheck_signal_fusion_workflow",
@@ -2112,6 +2186,42 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
         version="0.1",
         metadata={"artifact_manifest": str(world_model_manifest_path)},
     ).save_json()
+    triple_matrix_report_path.write_text(
+        json.dumps({
+            "workflow": "triple_extraction_fixture_matrix",
+            "status": "promote",
+            "n_corpora": 2,
+            "promoted_corpora": 2,
+            "distinct_predicate_count": 6,
+            "distinct_predicates": [
+                "capital_of",
+                "currency_of",
+                "headquarters_location_of",
+                "inception_of",
+                "manufacturer_of",
+                "official_language_of",
+            ],
+            "mean_best_f1": 1.0,
+            "mean_f1_lift": 0.5,
+        }),
+        encoding="utf-8",
+    )
+    triple_matrix_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"triple_extraction_fixture_matrix": triple_matrix_report_path},
+                root=triple_matrix_dir,
+                metadata={"workflow": "triple_extraction_fixture_matrix"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(triple_matrix_registry_path).record_report(
+        name="triple-extraction-fixture-matrix",
+        path=triple_matrix_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(triple_matrix_manifest_path)},
+    ).save_json()
     ProductPromotionContract(
         model_id="demo-model",
         runtime={"layer": -2},
@@ -2146,6 +2256,18 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
             "trace_gap_max": 0.0,
             "conflict_positive_count": 4,
             "calibrated_conflict_signal_count": 1,
+        },
+        triple_extraction_fixture_matrix={
+            "report_path": "triple-extraction-fixture-matrix/matrix.json",
+            "manifest_path": "triple-extraction-fixture-matrix/artifact-manifest.json",
+            "registry": "triple-extraction-fixture-matrix/registry.json",
+            "record_key": "report:triple-extraction-fixture-matrix:0.1",
+            "status": "promote",
+            "n_corpora": 2,
+            "promoted_corpora": 2,
+            "distinct_predicate_count": 6,
+            "mean_best_f1": 1.0,
+            "mean_f1_lift": 0.5,
         },
         metadata={"product_runtime_drift_status": "promote"},
     ).save_json(contract_path)
@@ -2235,6 +2357,30 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_without_verification["world_model_signal_workflow_release_gate_status"] == "promote"
     assert metadata_without_verification["world_model_signal_workflow_trace_gap_max"] == 0.0
     assert metadata_without_verification["world_model_signal_workflow_conflict_positive_count"] == 4
+    assert metadata_without_verification["triple_extraction_fixture_matrix_report"] == str(
+        triple_matrix_report_path
+    )
+    assert metadata_without_verification["triple_extraction_fixture_matrix_manifest"] == str(
+        triple_matrix_manifest_path
+    )
+    assert (
+        metadata_without_verification[
+            "triple_extraction_fixture_matrix_manifest_verification"
+        ]
+        is None
+    )
+    assert metadata_without_verification["triple_extraction_fixture_matrix_registry"] == str(
+        triple_matrix_registry_path
+    )
+    assert metadata_without_verification["triple_extraction_fixture_matrix_registry_key"] == (
+        "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert metadata_without_verification["triple_extraction_fixture_matrix_registry_record"] is None
+    assert metadata_without_verification["triple_extraction_fixture_matrix_status"] == "promote"
+    assert metadata_without_verification["triple_extraction_fixture_matrix_n_corpora"] == 2
+    assert metadata_without_verification[
+        "triple_extraction_fixture_matrix_distinct_predicate_count"
+    ] == 6
 
     metadata_with_verification = bundle.runtime_metadata(
         budget_enabled=True,
@@ -2298,6 +2444,33 @@ def test_product_runtime_evidence_bundle_loads_manifest_and_registry_lazily(tmp_
     assert metadata_with_world_model_verification[
         "world_model_signal_workflow_registry_record"
     ]["metadata"] == {"artifact_manifest": str(world_model_manifest_path)}
+
+    metadata_with_triple_matrix_verification = bundle.runtime_metadata(
+        budget_enabled=True,
+        verify_triple_extraction_fixture_matrix_manifest=True,
+        include_triple_extraction_fixture_matrix_record=True,
+    )
+    assert (
+        metadata_with_triple_matrix_verification[
+            "triple_extraction_fixture_matrix_manifest_verification"
+        ]["passed"]
+        is True
+    )
+    assert (
+        metadata_with_triple_matrix_verification[
+            "triple_extraction_fixture_matrix_manifest_verification"
+        ]["checked"]
+        == 1
+    )
+    assert (
+        metadata_with_triple_matrix_verification[
+            "triple_extraction_fixture_matrix_registry_key"
+        ]
+        == "report:triple-extraction-fixture-matrix:0.1"
+    )
+    assert metadata_with_triple_matrix_verification[
+        "triple_extraction_fixture_matrix_registry_record"
+    ]["metadata"] == {"artifact_manifest": str(triple_matrix_manifest_path)}
 
 
 def test_artifact_registry_records_trace_report_and_action_result(tmp_path):
