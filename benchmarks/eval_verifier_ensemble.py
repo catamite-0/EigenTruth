@@ -31,6 +31,7 @@ from eigentruth.adapters import (
     InMemoryWorldModelAdapter,
     QuestionAnswerVerifier,
     RetrievalQuery,
+    RuleBasedWorldModelAdapter,
     SQLiteStateSource,
     StateTransitionVerifier,
     StructuredFactVerifier,
@@ -164,20 +165,43 @@ def _load_fact_verifier(path: Path | None) -> StructuredFactVerifier | None:
     return StructuredFactVerifier.from_corpus(payload)
 
 
-def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]:
+def _load_world_model_rules(raw: Any, *, field_name: str) -> tuple[Mapping[str, Any], ...]:
+    if raw is None:
+        return ()
+    if isinstance(raw, Mapping):
+        raw = tuple(raw.values())
+    if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes, bytearray)):
+        raise ValueError(f"{field_name} must be a JSON array or object.")
+    rules = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name}[{index}] must be a JSON object.")
+        rules.append(dict(item))
+    return tuple(rules)
+
+
+def _load_state_source(
+    path: Path | None,
+) -> tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any], tuple[Mapping[str, Any], ...]]:
     """Load a local structured state source.
 
     The file may be either a raw JSON object used as state, or an object with
     explicit ``state`` and optional ``state_checks`` / ``state_transitions``
     fields. It may also contain a ``sqlite`` state-source spec with
-    ``database_path`` and ``queries`` fields.
+    ``database_path`` and ``queries`` fields. Structured state-source objects
+    may provide ``world_model_rules`` for rule-based transition prediction.
     """
     if path is None:
-        return {}, {}, {}
+        return {}, {}, {}, ()
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
     if not isinstance(payload, Mapping):
         raise ValueError("state source must be a JSON object.")
+    raw_rules = payload.get("world_model_rules", payload.get("transition_rules"))
+    world_model_rules = _load_world_model_rules(
+        raw_rules,
+        field_name="state source 'world_model_rules'",
+    )
     if "sqlite" in payload:
         state = _load_sqlite_state_source(payload["sqlite"], base_path=path.parent)
         extra_state = payload.get("state", {})
@@ -193,6 +217,7 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
             dict(_merge_state_mappings(state, extra_state)),
             dict(raw_checks),
             dict(raw_transitions),
+            world_model_rules,
         )
     if "state" in payload:
         state = payload.get("state", {})
@@ -204,8 +229,8 @@ def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[st
         raw_transitions = payload.get("state_transitions", {})
         if not isinstance(raw_transitions, Mapping):
             raise ValueError("state source 'state_transitions' must be a JSON object.")
-        return dict(state), dict(raw_checks), dict(raw_transitions)
-    return dict(payload), {}, {}
+        return dict(state), dict(raw_checks), dict(raw_transitions), world_model_rules
+    return dict(payload), {}, {}, ()
 
 
 def _load_sqlite_state_source(spec: Any, *, base_path: Path) -> Mapping[str, Any]:
@@ -1077,6 +1102,16 @@ def _transition_routes_enabled(
     return any(record.state and _record_has_state_transition(record, state_transitions) for record in records)
 
 
+def _transition_world_model(
+    *,
+    global_state: Mapping[str, Any],
+    world_model_rules: Sequence[Mapping[str, Any]],
+) -> InMemoryWorldModelAdapter | RuleBasedWorldModelAdapter:
+    if world_model_rules:
+        return RuleBasedWorldModelAdapter(world_model_rules, state=global_state)
+    return InMemoryWorldModelAdapter(StructuredStateVerifier({}))
+
+
 def _state_routes_enabled(
     records: Sequence[ClaimEvidenceRecord],
     global_state: Mapping[str, Any],
@@ -1794,6 +1829,7 @@ def _verification_trace_cache_key(
     global_state: Mapping[str, Any],
     global_state_checks: Mapping[str, Any],
     global_state_transitions: Mapping[str, Any],
+    global_world_model_rules: Sequence[Mapping[str, Any]],
     verifier_min_overlap: float,
     retriever_min_overlap: float,
     retrieval_limit: int,
@@ -1826,6 +1862,7 @@ def _verification_trace_cache_key(
         "global_state": dict(global_state),
         "global_state_checks": dict(global_state_checks),
         "global_state_transitions": dict(global_state_transitions),
+        "global_world_model_rules": tuple(dict(rule) for rule in global_world_model_rules),
         "verifier": {
             "min_overlap": float(verifier_min_overlap),
         },
@@ -1850,6 +1887,12 @@ def _verification_trace_cache_key(
         },
         "transition_verifier": {
             "type": "StateTransitionVerifier",
+            "world_model_adapter": (
+                "RuleBasedWorldModelAdapter"
+                if global_world_model_rules
+                else "InMemoryWorldModelAdapter"
+            ),
+            "world_model_rule_count": len(global_world_model_rules),
             "min_prediction_confidence": float(min_world_model_confidence),
         },
         "staged_verification": {
@@ -2038,7 +2081,12 @@ def build_verifier_ensemble_report(
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
     fact_verifier = _load_fact_verifier(fact_corpus_path)
-    source_state, source_state_checks, source_state_transitions = _load_state_source(state_path)
+    (
+        source_state,
+        source_state_checks,
+        source_state_transitions,
+        source_world_model_rules,
+    ) = _load_state_source(state_path)
     fixture_state = fixture.get("state", {})
     if not isinstance(fixture_state, Mapping):
         raise ValueError("claim fixture 'state' must be a JSON object when present.")
@@ -2048,9 +2096,19 @@ def build_verifier_ensemble_report(
     fixture_state_transitions = fixture.get("state_transitions", {})
     if not isinstance(fixture_state_transitions, Mapping):
         raise ValueError("claim fixture 'state_transitions' must be a JSON object when present.")
+    fixture_world_model_rules = _load_world_model_rules(
+        fixture.get("world_model_rules"),
+        field_name="claim fixture 'world_model_rules'",
+    )
     global_state = _merge_state_mappings(source_state, fixture_state)
     global_state_checks = {**dict(source_state_checks), **dict(fixture_state_checks)}
     global_state_transitions = {**dict(source_state_transitions), **dict(fixture_state_transitions)}
+    global_world_model_rules = (*source_world_model_rules, *fixture_world_model_rules)
+    transition_world_model_type = (
+        "RuleBasedWorldModelAdapter"
+        if global_world_model_rules
+        else "InMemoryWorldModelAdapter"
+    )
     trace_cache = _verification_trace_cache(verification_cache_dir)
     stage_policy = (
         StagedVerificationPolicy(
@@ -2116,7 +2174,10 @@ def build_verifier_ensemble_report(
             any_triple_evidence_enabled = any_triple_evidence_enabled or triple_evidence_enabled
             transition_verifier = (
                 StateTransitionVerifier(
-                    world_model=InMemoryWorldModelAdapter(StructuredStateVerifier({})),
+                    world_model=_transition_world_model(
+                        global_state=global_state,
+                        world_model_rules=global_world_model_rules,
+                    ),
                     state=global_state,
                     min_prediction_confidence=float(min_world_model_confidence),
                 )
@@ -2137,6 +2198,7 @@ def build_verifier_ensemble_report(
                 global_state=global_state,
                 global_state_checks=global_state_checks,
                 global_state_transitions=global_state_transitions,
+                global_world_model_rules=global_world_model_rules,
                 verifier_min_overlap=verifier_min_overlap,
                 retriever_min_overlap=retriever_min_overlap,
                 retrieval_limit=retrieval_limit,
@@ -2312,6 +2374,8 @@ def build_verifier_ensemble_report(
                 },
                 "transition_verifier": {
                     "enabled": transition_enabled,
+                    "world_model_adapter": transition_world_model_type,
+                    "world_model_rule_count": len(global_world_model_rules),
                     "min_prediction_confidence": float(min_world_model_confidence),
                     "decided_records": sum(
                         1 for record in verified_records
@@ -2452,6 +2516,8 @@ def build_verifier_ensemble_report(
         "transition_verifier": {
             "type": "StateTransitionVerifier",
             "enabled": any_transition_enabled,
+            "world_model_adapter": transition_world_model_type,
+            "world_model_rule_count": len(global_world_model_rules),
             "min_prediction_confidence": float(min_world_model_confidence),
             "state_path": None if state_path is None else str(state_path),
             "fixture_has_state": bool(fixture_state),

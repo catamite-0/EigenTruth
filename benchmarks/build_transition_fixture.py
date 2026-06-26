@@ -18,6 +18,7 @@ def build_order_transition_fixture(
     *,
     n_records: int = 12,
     signal: str = "truth_proj",
+    rule_based_world_model: bool = False,
 ) -> dict[str, Any]:
     """Return score, claim, and state payloads for order-reservation transitions."""
     if n_records < 2:
@@ -31,6 +32,7 @@ def build_order_transition_fixture(
     scores: list[float] = []
     statements: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
+    world_model_rules: list[dict[str, Any]] = []
 
     for idx in range(n_records):
         item = _transition_record(idx)
@@ -56,11 +58,46 @@ def build_order_transition_fixture(
             f"After reserving order {order_id}, inventory for {sku} "
             f"will be {claimed_remaining} units."
         )
-        transition = {
-            "action": {
+        if rule_based_world_model:
+            action = {
+                "type": "reserve_order",
+                "order_id": order_id,
+                "sku": sku,
+            }
+            world_model_rules.append({
+                "name": f"reserve_{order_id}",
+                "action": dict(action),
+                "when": (
+                    {
+                        "path": f"inventory.{sku}.available",
+                        "operator": "gte",
+                        "value": quantity,
+                        "source": "order_reservation_precondition",
+                    },
+                    {
+                        "path": f"orders.{order_id}.status",
+                        "operator": "eq",
+                        "value": "pending",
+                        "source": "order_reservation_precondition",
+                    },
+                ),
                 "decrement": {f"inventory.{sku}.available": quantity},
                 "set": {f"orders.{order_id}.status": "reserved"},
-            },
+                "confidence": 0.95,
+                "explanation": "reserve pending order inventory",
+                "metadata": {
+                    "order_id": order_id,
+                    "sku": sku,
+                    "quantity": quantity,
+                },
+            })
+        else:
+            action = {
+                "decrement": {f"inventory.{sku}.available": quantity},
+                "set": {f"orders.{order_id}.status": "reserved"},
+            }
+        transition = {
+            "action": action,
             "postcondition": {
                 "path": f"inventory.{sku}.available",
                 "operator": "eq",
@@ -120,6 +157,9 @@ def build_order_transition_fixture(
                 "fixture_type": "order_reservation_transition",
                 "signal": signal,
                 "n_records": n_records,
+                "world_model_fixture": (
+                    "rule_based" if rule_based_world_model else "direct_action"
+                ),
                 "positive_label": "claim_refuted_by_predicted_transition",
             },
             "labels": labels,
@@ -139,15 +179,18 @@ def build_order_transition_fixture(
                 "n_records": n_records,
                 "n_true": labels.count(0),
                 "n_false": labels.count(1),
+                "n_world_model_rules": len(world_model_rules),
             },
         },
         "state": {
             "schema_version": 1,
             "fixture_type": "order_reservation_transition_state",
             "state": state,
+            **({"world_model_rules": world_model_rules} if rule_based_world_model else {}),
             "summary": {
                 "n_orders": n_records,
                 "n_inventory_items": len(state["inventory"]),
+                "n_world_model_rules": len(world_model_rules),
             },
         },
     }
@@ -158,6 +201,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     payload = build_order_transition_fixture(
         n_records=args.n_records,
         signal=args.signal,
+        rule_based_world_model=bool(getattr(args, "rule_based_world_model", False)),
     )
     _write_json(Path(args.scores_output), payload["scores"])
     _write_json(Path(args.claims_output), payload["claims"])
@@ -203,6 +247,11 @@ def main() -> None:
     parser.add_argument("--state-output", required=True, help="path to write structured state JSON")
     parser.add_argument("--n-records", type=int, default=12, help="number of synthetic order records")
     parser.add_argument("--signal", default="truth_proj", help="score signal name to emit")
+    parser.add_argument(
+        "--rule-based-world-model",
+        action="store_true",
+        help="emit typed actions plus world_model_rules for RuleBasedWorldModelAdapter",
+    )
     run(parser.parse_args())
 
 

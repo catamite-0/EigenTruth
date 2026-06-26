@@ -5746,8 +5746,12 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     route_impact = run["alphas"]["0.2"]["route_control_impact"]["state_transition"]
 
     assert report["transition_verifier"]["enabled"] is True
+    assert report["transition_verifier"]["world_model_adapter"] == "InMemoryWorldModelAdapter"
+    assert report["transition_verifier"]["world_model_rule_count"] == 0
     assert report["transition_verifier"]["min_prediction_confidence"] == pytest.approx(0.8)
     assert run["transition_verifier"]["enabled"] is True
+    assert run["transition_verifier"]["world_model_adapter"] == "InMemoryWorldModelAdapter"
+    assert run["transition_verifier"]["world_model_rule_count"] == 0
     assert run["transition_verifier"]["min_prediction_confidence"] == pytest.approx(0.8)
     assert run["transition_verifier"]["decided_records"] == 8
     assert run["cache_stats"]["transition_verifier"]["requests"] == 8
@@ -5778,6 +5782,66 @@ def test_build_transition_fixture_feeds_state_transition_verifier(tmp_path):
     assert quality["false_supported_rate"] == pytest.approx(0.0)
     assert run["alphas"]["0.2"]["verified"]["false_alarm"] == pytest.approx(0.0)
     assert run["alphas"]["0.2"]["verified"]["detection"] == pytest.approx(1.0)
+
+
+def test_build_transition_fixture_can_use_rule_based_world_model(tmp_path):
+    builder = importlib.import_module("benchmarks.build_transition_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    scores_path = tmp_path / "transition_scores.json"
+    claims_path = tmp_path / "transition_claims.json"
+    state_path = tmp_path / "transition_state.json"
+    verified_records_path = tmp_path / "verified_records.jsonl"
+
+    payload = builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+        rule_based_world_model=True,
+    ))
+
+    first_statement = payload["scores"]["statements"][0]
+    first_action = first_statement["state_transition"]["action"]
+    assert first_action == {
+        "type": "reserve_order",
+        "order_id": "ord_0001",
+        "sku": "sku_0001",
+    }
+    assert "decrement" not in first_action
+    assert payload["state"]["summary"]["n_world_model_rules"] == 8
+    assert len(payload["state"]["world_model_rules"]) == 8
+
+    report = verifier.build_verifier_ensemble_report(
+        [("transitions", scores_path)],
+        signal="truth_proj",
+        claims_path=claims_path,
+        state_path=state_path,
+        min_world_model_confidence=0.8,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verified_records_path=verified_records_path,
+    )
+
+    run = report["runs"][0]
+    assert report["transition_verifier"]["enabled"] is True
+    assert report["transition_verifier"]["world_model_adapter"] == "RuleBasedWorldModelAdapter"
+    assert report["transition_verifier"]["world_model_rule_count"] == 8
+    assert run["transition_verifier"]["world_model_adapter"] == "RuleBasedWorldModelAdapter"
+    assert run["transition_verifier"]["world_model_rule_count"] == 8
+    assert run["transition_verifier"]["decided_records"] == 8
+    assert run["route_summary"]["selected_counts"] == {"state_transition": 8}
+    assert run["route_quality"]["state_transition"]["decision_accuracy"] == pytest.approx(1.0)
+
+    sidecar_records = [
+        json.loads(line)["record"]
+        for line in verified_records_path.read_text(encoding="utf-8").splitlines()
+    ]
+    assert sidecar_records[0]["transition"]["metadata"]["world_model"] == "RuleBasedWorldModelAdapter"
+    prediction_metadata = sidecar_records[0]["transition"]["metadata"]["prediction_metadata"]
+    assert prediction_metadata["no_rule_matched"] is False
+    assert prediction_metadata["matched_rules"][0]["rule"] == "reserve_ord_0001"
 
 
 def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):

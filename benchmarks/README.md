@@ -1013,8 +1013,8 @@ python benchmarks/eval_verifier_ensemble.py \
 ```
 
 The state source may be a raw JSON object used as state, an object with `state`,
-optional `state_checks`, and optional `state_transitions` fields, or a SQLite
-state-source spec:
+optional `state_checks`, optional `state_transitions`, and optional
+`world_model_rules` fields, or a SQLite state-source spec:
 
 ```json
 {
@@ -1066,16 +1066,19 @@ Swap `--state-source artifacts/order_fulfillment_state.json` for
 same benchmark through read-only SQLite queries.
 
 For action-conditioned state checks, provide `state_transition` metadata. The
-runner routes these records through `StateTransitionVerifier`, which applies an
-in-memory world-model transition and checks the resulting postcondition before
-falling back to static state or lexical verification:
+runner routes these records through `StateTransitionVerifier`, which applies a
+world-model transition and checks the resulting postcondition before falling
+back to static state or lexical verification. When the state source includes
+`world_model_rules`, the runner uses `RuleBasedWorldModelAdapter`; otherwise it
+keeps the legacy in-memory `set` / `increment` / `decrement` action updates:
 
 ```bash
 python benchmarks/build_transition_fixture.py \
   --scores-output artifacts/order_transition_scores.json \
   --claims-output artifacts/order_transition_claims.json \
   --state-output artifacts/order_transition_state.json \
-  --n-records 12
+  --n-records 12 \
+  --rule-based-world-model
 
 python benchmarks/eval_verifier_ensemble.py \
   --scores transitions=artifacts/order_transition_scores.json \
@@ -1089,8 +1092,9 @@ python benchmarks/eval_verifier_ensemble.py \
 This fixture checks action-consequence verification: true labels match the
 predicted inventory after reservation, while false labels assert an off-by-one
 postcondition that the predicted state refutes. `--min-world-model-confidence`
-fails closed on low-confidence transition predictions and is recorded in the
-report and verified-record trace-cache key.
+fails closed on low-confidence transition predictions. The selected
+world-model adapter, rule count, confidence threshold, and rule payload are
+recorded in the report and verified-record trace-cache key.
 
 The current policy is deliberately simple and auditable: `refuted` always
 triggers, `supported` suppresses an internal trigger, and
@@ -1287,7 +1291,8 @@ python benchmarks/build_transition_fixture.py \
   --scores-output artifacts/order_transition_scores.json \
   --claims-output artifacts/order_transition_claims.json \
   --state-output artifacts/order_transition_state.json \
-  --n-records 12
+  --n-records 12 \
+  --rule-based-world-model
 
 python benchmarks/refresh_verifier_route_artifacts.py \
   --scores transitions=artifacts/order_transition_scores.json \
