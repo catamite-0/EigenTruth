@@ -321,6 +321,22 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         metadata={
             "artifact_source": "artifact.json",
             "promotion_contract_source": "contract.json",
+            "promotion_contract_verifier_route": {
+                "route": "structured_fact",
+                "covered_fact_property_count": 3,
+                "covered_fact_properties": ["P36", "P37", "P38"],
+            },
+            "promotion_contract_recommended_route_covered_fact_properties": [
+                "P36",
+                "P37",
+                "P38",
+            ],
+            "promotion_contract_required_route_baseline_covered_fact_property_counts": {
+                "benchmark_manifest:structured-fact:0.1": 3
+            },
+            "promotion_contract_structured_fact_robustness_property_counts": {
+                "benchmark_manifest:structured-fact:0.1": 3
+            },
             "promotion_contract_selfcheck_signal_fusion_workflow": {
                 "report_path": "selfcheck.json"
             },
@@ -392,6 +408,15 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert "large_unselected_metadata" not in payload["metadata"]
     assert payload["metadata"]["artifact_source"] == "artifact.json"
     assert payload["metadata"]["promotion_contract_source"] == "contract.json"
+    assert payload["metadata"]["promotion_contract_verifier_route"][
+        "covered_fact_property_count"
+    ] == 3
+    assert payload["metadata"][
+        "promotion_contract_recommended_route_covered_fact_properties"
+    ] == ["P36", "P37", {"_truncated": True, "_omitted_items": 1}]
+    assert payload["metadata"][
+        "promotion_contract_required_route_baseline_covered_fact_property_counts"
+    ] == {"benchmark_manifest:structured-fact:0.1": 3}
     assert payload["metadata"]["promotion_contract_selfcheck_signal_fusion_workflow"] == {
         "report_path": "selfcheck.json"
     }
@@ -413,6 +438,14 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     assert metrics["final_answer_evidence_count"] == 4.0
     assert metrics["promotion_contract_available"] is True
     assert metrics["promotion_contract_source"] == "contract.json"
+    assert metrics["promotion_contract_recommended_route_covered_fact_property_count"] == 3.0
+    assert metrics["promotion_contract_recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+    ]
+    assert metrics["promotion_contract_required_route_baseline_covered_fact_property_counts"] == {
+        "benchmark_manifest:structured-fact:0.1": 3
+    }
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_available"] is True
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_source"] == "registry"
     assert metrics["promotion_contract_triple_extraction_fixture_matrix_status"] == "promote"
@@ -2087,7 +2120,11 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     ProductPromotionContract(
         model_id="demo-model",
         runtime={"layer": -2},
-        verifier_route={"route": "structured_qa"},
+        verifier_route={
+            "route": "structured_qa",
+            "covered_fact_property_count": 3,
+            "covered_fact_properties": ["P36", "P37", "P38"],
+        },
         runtime_budget_policy=ProductRuntimeBudgetPolicy(max_mean_attempted_route_count=1.1),
         source_workflow="release_candidate_comparison",
         source_status="promote",
@@ -2121,7 +2158,15 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
             "recommended_profile": "balanced",
         },
         control_defaults={"max_verifier_route_attempts": 3},
-        metadata={"selector_replay_status": "promote"},
+        metadata={
+            "selector_replay_status": "promote",
+            "required_route_baseline_covered_fact_property_counts": {
+                "benchmark_manifest:structured-fact:0.1": 3
+            },
+            "required_route_baseline_covered_fact_properties": {
+                "benchmark_manifest:structured-fact:0.1": ["P36", "P37", "P38"]
+            },
+        },
     ).save_json(contract_path)
 
     assert first_existing_product_promotion_contract_path((missing_path, contract_path)) == contract_path
@@ -2139,7 +2184,20 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
     assert metadata["promotion_contract_budget_enabled"] is True
     assert metadata["promotion_contract_model_id"] == "demo-model"
     assert metadata["promotion_contract_runtime"] == {"layer": -2}
-    assert metadata["promotion_contract_verifier_route"] == {"route": "structured_qa"}
+    assert metadata["promotion_contract_verifier_route"] == {
+        "route": "structured_qa",
+        "covered_fact_property_count": 3,
+        "covered_fact_properties": ["P36", "P37", "P38"],
+    }
+    assert metadata["promotion_contract_recommended_route_covered_fact_property_count"] == 3
+    assert metadata["promotion_contract_recommended_route_covered_fact_properties"] == [
+        "P36",
+        "P37",
+        "P38",
+    ]
+    assert metadata[
+        "promotion_contract_required_route_baseline_covered_fact_property_counts"
+    ] == {"benchmark_manifest:structured-fact:0.1": 3}
     assert metadata["promotion_contract_control_policy_config"]["unsupported_action"] == "clarify"
     assert metadata["promotion_contract_control_policy_config"][
         "compound_verification_escalates"
@@ -2172,7 +2230,7 @@ def test_product_promotion_contract_loader_selects_default_and_metadata(tmp_path
         "report_path": "release-efficiency.json",
         "recommended_profile": "balanced",
     }
-    assert metadata["promotion_contract_metadata"] == {"selector_replay_status": "promote"}
+    assert metadata["promotion_contract_metadata"]["selector_replay_status"] == "promote"
     assert product_promotion_contract_metadata(None, source=None, budget_enabled=True) == {
         "promotion_contract_source": None,
         "promotion_contract_budget_enabled": False,

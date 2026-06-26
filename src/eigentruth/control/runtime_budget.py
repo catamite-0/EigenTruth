@@ -811,9 +811,15 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
     payload = trace.to_dict() if isinstance(trace, ProductTrace) else dict(trace)
     metadata = _mapping(payload.get("metadata"))
     contract_metadata = _mapping(metadata.get("promotion_contract_metadata"))
+    verifier_route = _mapping(metadata.get("promotion_contract_verifier_route"))
     nested_matrix = _mapping(metadata.get("promotion_contract_triple_extraction_fixture_matrix"))
     matrix = nested_matrix or _matrix_from_flat_metadata(metadata) or _matrix_from_flat_metadata(
         contract_metadata
+    )
+    covered_fact_scope = _covered_fact_scope_from_metadata(
+        metadata,
+        contract_metadata=contract_metadata,
+        verifier_route=verifier_route,
     )
     manifest_verification = _mapping(
         _first_present(
@@ -851,6 +857,7 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "source": source,
         "source_status": source_status,
         "budget_enabled": budget_enabled,
+        "covered_fact_properties": covered_fact_scope,
         "triple_extraction_fixture_matrix": {
             "available": matrix_available,
             "source": matrix_source,
@@ -900,6 +907,24 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         "promotion_contract_source_status": source_status,
         "promotion_contract_budget_enabled": budget_enabled,
         "promotion_contract_summary": summary,
+        "promotion_contract_recommended_route_covered_fact_property_count": (
+            covered_fact_scope.get("recommended_route_count")
+        ),
+        "promotion_contract_recommended_route_covered_fact_properties": (
+            covered_fact_scope.get("recommended_route_properties")
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_property_counts": (
+            covered_fact_scope.get("required_route_baseline_counts")
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_properties": (
+            covered_fact_scope.get("required_route_baseline_properties")
+        ),
+        "promotion_contract_structured_fact_robustness_property_counts": (
+            covered_fact_scope.get("structured_fact_robustness_counts")
+        ),
+        "promotion_contract_structured_fact_robustness_properties": (
+            covered_fact_scope.get("structured_fact_robustness_properties")
+        ),
         "promotion_contract_triple_extraction_fixture_matrix_available": matrix_available,
         "promotion_contract_triple_extraction_fixture_matrix_source": matrix_source,
         "promotion_contract_triple_extraction_fixture_matrix_status": matrix_status,
@@ -920,6 +945,58 @@ def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict
         ),
         "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
             "mean_f1_lift"
+        ),
+    }
+
+
+def _covered_fact_scope_from_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    contract_metadata: Mapping[str, Any],
+    verifier_route: Mapping[str, Any],
+) -> dict[str, Any]:
+    recommended_properties = _string_sequence(
+        _first_present(
+            metadata.get("promotion_contract_recommended_route_covered_fact_properties"),
+            contract_metadata.get("recommended_route_covered_fact_properties"),
+            verifier_route.get("covered_fact_properties"),
+        )
+    )
+    recommended_count = _finite_float(
+        _first_present(
+            metadata.get("promotion_contract_recommended_route_covered_fact_property_count"),
+            contract_metadata.get("recommended_route_covered_fact_property_count"),
+            verifier_route.get("covered_fact_property_count"),
+        )
+    )
+    if recommended_count is None and recommended_properties:
+        recommended_count = float(len(recommended_properties))
+    return {
+        "recommended_route_count": recommended_count,
+        "recommended_route_properties": list(recommended_properties),
+        "required_route_baseline_counts": _mapping(
+            _first_present(
+                metadata.get("promotion_contract_required_route_baseline_covered_fact_property_counts"),
+                contract_metadata.get("required_route_baseline_covered_fact_property_counts"),
+            )
+        ),
+        "required_route_baseline_properties": _string_sequence_mapping(
+            _first_present(
+                metadata.get("promotion_contract_required_route_baseline_covered_fact_properties"),
+                contract_metadata.get("required_route_baseline_covered_fact_properties"),
+            )
+        ),
+        "structured_fact_robustness_counts": _mapping(
+            _first_present(
+                metadata.get("promotion_contract_structured_fact_robustness_property_counts"),
+                contract_metadata.get("structured_fact_robustness_property_counts"),
+            )
+        ),
+        "structured_fact_robustness_properties": _string_sequence_mapping(
+            _first_present(
+                metadata.get("promotion_contract_structured_fact_robustness_properties"),
+                contract_metadata.get("structured_fact_robustness_properties"),
+            )
         ),
     }
 
@@ -1112,6 +1189,25 @@ def _mapping(value: Any) -> dict[str, Any]:
     if isinstance(value, Mapping):
         return dict(value)
     return {}
+
+
+def _string_sequence(value: Any) -> tuple[str, ...]:
+    values = []
+    for item in _sequence(value):
+        if isinstance(item, Mapping) and item.get("_truncated") is True:
+            continue
+        text = _optional_string(item)
+        if text is not None:
+            values.append(text)
+    return tuple(values)
+
+
+def _string_sequence_mapping(value: Any) -> dict[str, list[str]]:
+    return {
+        str(key): list(_string_sequence(items))
+        for key, items in _mapping(value).items()
+        if str(key)
+    }
 
 
 def _sequence(value: Any) -> tuple[Any, ...]:

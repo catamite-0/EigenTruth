@@ -1421,6 +1421,7 @@ def product_promotion_contract_metadata(
             "promotion_contract_source": None,
             "promotion_contract_budget_enabled": False,
         }
+    covered_fact_scope = _promotion_contract_covered_fact_scope_metadata(contract)
     return {
         "promotion_contract_source": source,
         "promotion_contract_budget_enabled": budget_enabled,
@@ -1448,6 +1449,40 @@ def product_promotion_contract_metadata(
         ),
         "promotion_contract_release_efficiency": dict(contract.release_efficiency),
         "promotion_contract_metadata": dict(contract.metadata),
+        **covered_fact_scope,
+    }
+
+
+def _promotion_contract_covered_fact_scope_metadata(
+    contract: ProductPromotionContract,
+) -> dict[str, Any]:
+    verifier_route = _mapping(contract.verifier_route)
+    metadata = _mapping(contract.metadata)
+    return {
+        "promotion_contract_recommended_route_covered_fact_property_count": (
+            _first_present(
+                metadata.get("recommended_route_covered_fact_property_count"),
+                verifier_route.get("covered_fact_property_count"),
+            )
+        ),
+        "promotion_contract_recommended_route_covered_fact_properties": (
+            _first_present(
+                metadata.get("recommended_route_covered_fact_properties"),
+                verifier_route.get("covered_fact_properties"),
+            )
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_property_counts": (
+            metadata.get("required_route_baseline_covered_fact_property_counts")
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_properties": (
+            metadata.get("required_route_baseline_covered_fact_properties")
+        ),
+        "promotion_contract_structured_fact_robustness_property_counts": (
+            metadata.get("structured_fact_robustness_property_counts")
+        ),
+        "promotion_contract_structured_fact_robustness_properties": (
+            metadata.get("structured_fact_robustness_properties")
+        ),
     }
 
 

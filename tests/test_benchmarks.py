@@ -23706,6 +23706,19 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "promotion_contract_source": "contract-a.json",
                 "promotion_contract_source_status": "promote",
                 "promotion_contract_budget_enabled": True,
+                "promotion_contract_verifier_route": {
+                    "route": "structured_fact",
+                    "covered_fact_property_count": 3,
+                    "covered_fact_properties": ["P36", "P37", "P38"],
+                },
+                "promotion_contract_metadata": {
+                    "required_route_baseline_covered_fact_property_counts": {
+                        "benchmark_manifest:structured-fact-canonical:0.1": 3
+                    },
+                    "structured_fact_robustness_property_counts": {
+                        "benchmark_manifest:structured-fact-canonical:0.1": 3
+                    },
+                },
                 "promotion_contract_triple_extraction_fixture_matrix": {
                     "source": "registry",
                     "status": "promote",
@@ -23760,6 +23773,14 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
             },
             "metadata": {
                 "cache": {"verifier": {"hits": 2, "misses": 0}},
+                "promotion_contract_recommended_route_covered_fact_property_count": 2,
+                "promotion_contract_recommended_route_covered_fact_properties": [
+                    "P36",
+                    "P37",
+                ],
+                "promotion_contract_required_route_baseline_covered_fact_property_counts": {
+                    "benchmark_manifest:structured-fact-paraphrase:0.1": 2
+                },
                 "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
                 "triple_extraction_fixture_matrix_status": "promote",
                 "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
@@ -23823,11 +23844,27 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "retrieve": 1,
     }
     promotion = payload["summary"]["promotion_contract"]
+    covered_properties = promotion["covered_fact_properties"]
     matrix = promotion["triple_extraction_fixture_matrix"]
     assert promotion["available_trace_count"] == 2
     assert promotion["source_counts"] == {"contract-a.json": 1}
     assert promotion["source_status_counts"] == {"promote": 1}
     assert promotion["budget_enabled_counts"] == {"True": 1}
+    assert covered_properties["recommended_route_observation_count"] == 2
+    assert covered_properties["recommended_route_coverage_rate"] == pytest.approx(1.0)
+    assert covered_properties["recommended_route_count"]["mean"] == pytest.approx(2.5)
+    assert covered_properties["recommended_route_properties"] == {
+        "P36": 2,
+        "P37": 2,
+        "P38": 1,
+    }
+    assert covered_properties["required_route_baseline_records"] == {
+        "benchmark_manifest:structured-fact-canonical:0.1": 1,
+        "benchmark_manifest:structured-fact-paraphrase:0.1": 1,
+    }
+    assert covered_properties["structured_fact_robustness_records"] == {
+        "benchmark_manifest:structured-fact-canonical:0.1": 1
+    }
     assert matrix["available_trace_count"] == 2
     assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
     assert matrix["status_counts"] == {"promote": 2}
@@ -23841,6 +23878,12 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
     assert payload["traces"][0]["metrics"]["final_answer_available"] is True
     assert payload["traces"][0]["metrics"]["final_answer_status"] == "answered"
     assert payload["traces"][0]["metrics"]["promotion_contract_available"] is True
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_recommended_route_covered_fact_property_count"
+    ] == 3.0
+    assert payload["traces"][0]["metrics"][
+        "promotion_contract_recommended_route_covered_fact_properties"
+    ] == ["P36", "P37", "P38"]
     assert (
         payload["traces"][0]["metrics"][
             "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"

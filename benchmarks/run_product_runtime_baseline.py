@@ -463,6 +463,30 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "promotion_contract_source": metrics.get("promotion_contract_source"),
         "promotion_contract_source_status": metrics.get("promotion_contract_source_status"),
         "promotion_contract_budget_enabled": metrics.get("promotion_contract_budget_enabled"),
+        "promotion_contract_recommended_route_covered_fact_property_count": metrics.get(
+            "promotion_contract_recommended_route_covered_fact_property_count"
+        ),
+        "promotion_contract_recommended_route_covered_fact_properties": list(
+            _sequence(metrics.get("promotion_contract_recommended_route_covered_fact_properties"))
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_property_counts": dict(
+            _mapping(metrics.get("promotion_contract_required_route_baseline_covered_fact_property_counts"))
+        ),
+        "promotion_contract_required_route_baseline_covered_fact_properties": {
+            str(key): list(_sequence(value))
+            for key, value in _mapping(
+                metrics.get("promotion_contract_required_route_baseline_covered_fact_properties")
+            ).items()
+        },
+        "promotion_contract_structured_fact_robustness_property_counts": dict(
+            _mapping(metrics.get("promotion_contract_structured_fact_robustness_property_counts"))
+        ),
+        "promotion_contract_structured_fact_robustness_properties": {
+            str(key): list(_sequence(value))
+            for key, value in _mapping(
+                metrics.get("promotion_contract_structured_fact_robustness_properties")
+            ).items()
+        },
         "promotion_contract_triple_extraction_fixture_matrix_available": bool(
             metrics.get("promotion_contract_triple_extraction_fixture_matrix_available")
         ),
@@ -1215,6 +1239,18 @@ def _aggregate_final_answer(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
 
 def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     available_count = sum(1 for item in metrics if bool(item.get("promotion_contract_available")))
+    property_count_values = [
+        item.get("promotion_contract_recommended_route_covered_fact_property_count")
+        for item in metrics
+    ]
+    property_sets = [
+        _string_sequence(item.get("promotion_contract_recommended_route_covered_fact_properties"))
+        for item in metrics
+    ]
+    property_scope_observations = sum(
+        (value is not None and _finite_float(value) is not None) or bool(properties)
+        for value, properties in zip(property_count_values, property_sets, strict=True)
+    )
     matrix_available_count = sum(
         1
         for item in metrics
@@ -1240,6 +1276,23 @@ def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[
         "summary_observations": sum(
             1 for item in metrics if _mapping(item.get("promotion_contract_summary"))
         ),
+        "covered_fact_properties": {
+            "recommended_route_observation_count": property_scope_observations,
+            "recommended_route_coverage_rate": _safe_div(
+                property_scope_observations,
+                len(metrics),
+            ),
+            "recommended_route_count": _numeric_summary(property_count_values),
+            "recommended_route_properties": _counts_from_sequence_items(property_sets),
+            "required_route_baseline_records": _counts_from_mapping_keys(
+                item.get("promotion_contract_required_route_baseline_covered_fact_property_counts")
+                for item in metrics
+            ),
+            "structured_fact_robustness_records": _counts_from_mapping_keys(
+                item.get("promotion_contract_structured_fact_robustness_property_counts")
+                for item in metrics
+            ),
+        },
         "triple_extraction_fixture_matrix": {
             "available_trace_count": matrix_available_count,
             "missing_trace_count": len(metrics) - matrix_available_count,
@@ -1752,6 +1805,36 @@ def _sequence(value: Any) -> tuple[Any, ...]:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
         return tuple(value)
     return (value,)
+
+
+def _string_sequence(value: Any) -> tuple[str, ...]:
+    values = []
+    for item in _sequence(value):
+        if isinstance(item, Mapping) and item.get("_truncated") is True:
+            continue
+        text = _optional_string(item)
+        if text is not None:
+            values.append(text)
+    return tuple(values)
+
+
+def _counts_from_sequence_items(values: Sequence[Sequence[Any]] | Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for sequence in values:
+        for item in set(_string_sequence(sequence)):
+            counts[item] = counts.get(item, 0) + 1
+    return counts
+
+
+def _counts_from_mapping_keys(values: Sequence[Any] | Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        for key in _mapping(value):
+            text = _optional_string(key)
+            if text is None:
+                continue
+            counts[text] = counts.get(text, 0) + 1
+    return counts
 
 
 def _safe_artifact_name(value: str) -> str:
