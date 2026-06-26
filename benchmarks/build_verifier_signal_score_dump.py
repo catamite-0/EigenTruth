@@ -20,6 +20,9 @@ DEFAULT_VERIFIER_SIGNALS = (
     "selfcheck_refute_rate",
     "selfcheck_disagreement",
     "selfcheck_insufficient",
+    "world_model_disagreement",
+    "world_model_agreement_gap",
+    "world_model_low_agreement",
 )
 
 
@@ -156,6 +159,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
     support_rate = _unit_interval(selfcheck_metadata.get("support_rate", 0.0), name="selfcheck.support_rate")
     refute_rate = _unit_interval(selfcheck_metadata.get("refute_rate", 0.0), name="selfcheck.refute_rate")
     selfcheck_executed = bool(selfcheck_payload)
+    world_model_features = _world_model_signal_features(record, final)
     return {
         "verifier_not_supported": 0.0 if final_status == "supported" else 1.0,
         "verifier_refuted": 1.0 if final_status == "refuted" else 0.0,
@@ -166,6 +170,7 @@ def verifier_signal_features(sidecar_record: Mapping[str, Any]) -> dict[str, flo
         "selfcheck_refute_rate": refute_rate if selfcheck_executed else 0.0,
         "selfcheck_disagreement": max(0.0, 1.0 - max(support_rate, refute_rate)) if selfcheck_executed else 0.0,
         "selfcheck_insufficient": 1.0 if selfcheck_status == "insufficient_evidence" else 0.0,
+        **world_model_features,
     }
 
 
@@ -181,6 +186,9 @@ def verifier_signal_definitions() -> dict[str, str]:
         "selfcheck_refute_rate": "self-consistency refute rate when selfcheck executed, else 0.",
         "selfcheck_disagreement": "1 - max(support_rate, refute_rate) when selfcheck executed, else 0.",
         "selfcheck_insufficient": "1 when selfcheck status is insufficient_evidence, else 0.",
+        "world_model_disagreement": "1 when world-model prediction metadata reports disagreement, else 0.",
+        "world_model_agreement_gap": "1 - world-model agreement_rate when reported, else 0.",
+        "world_model_low_agreement": "1 when world-model prediction agreement falls below its threshold, else 0.",
     }
 
 
@@ -267,6 +275,41 @@ def _verifier_uncertainty(status: str, confidence: float) -> float:
     if status in {"insufficient_evidence", "not_applicable", ""}:
         return 1.0
     return max(0.0, min(1.0, 1.0 - confidence))
+
+
+def _world_model_signal_features(
+    record: Mapping[str, Any],
+    final: Mapping[str, Any],
+) -> dict[str, float]:
+    metadata_candidates = [
+        _mapping(_mapping(record.get("transition")).get("metadata")),
+        _mapping(final.get("metadata")),
+    ]
+    for metadata in metadata_candidates:
+        prediction_metadata = _mapping(metadata.get("prediction_metadata"))
+        if prediction_metadata:
+            agreement_rate = _unit_interval(
+                prediction_metadata.get("agreement_rate", 1.0),
+                name="world_model.agreement_rate",
+            )
+            below_min_agreement = prediction_metadata.get("below_min_agreement") is True
+            disagreement = prediction_metadata.get("disagreement") is True
+            return {
+                "world_model_disagreement": 1.0 if disagreement else 0.0,
+                "world_model_agreement_gap": max(0.0, 1.0 - agreement_rate),
+                "world_model_low_agreement": 1.0 if below_min_agreement else 0.0,
+            }
+        if metadata.get("decision_rule") == "prediction_agreement_below_threshold":
+            return {
+                "world_model_disagreement": 1.0,
+                "world_model_agreement_gap": 1.0,
+                "world_model_low_agreement": 1.0,
+            }
+    return {
+        "world_model_disagreement": 0.0,
+        "world_model_agreement_gap": 0.0,
+        "world_model_low_agreement": 0.0,
+    }
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:

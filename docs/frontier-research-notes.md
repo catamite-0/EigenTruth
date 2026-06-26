@@ -89,12 +89,12 @@ Ran the current Qwen/SmolLM2 l80 geometry-fusion replay:
 
 Added verifier-signal score-dump conversion and replay:
 
-- `build_verifier_signal_score_dump.py` converts `eval_verifier_ensemble.py --verified-records-jsonl` sidecars into standard score columns such as `verifier_refuted`, `verifier_refute_confidence`, `verifier_uncertainty`, and `selfcheck_refute_rate`.
+- `build_verifier_signal_score_dump.py` converts `eval_verifier_ensemble.py --verified-records-jsonl` sidecars into standard score columns such as `verifier_refuted`, `verifier_refute_confidence`, `verifier_uncertainty`, `selfcheck_refute_rate`, and `world_model_disagreement`.
 - `run_verifier_signal_fusion_workflow.py` wraps local retrieval/selfcheck fixture construction, verifier sidecar writing, verifier-signal score-dump conversion, geometry-fusion reporting, geometry artifact export, and manifest verification into one no-model workflow for non-oracle evidence experiments.
 - `artifacts/truthfulqa-l80-staged-qa-verifier-signals/` applies this to the staged structured-QA l80 verifier route and saves per-model `GeometryScoreFusionArtifact` files.
 - At alpha `0.100`, Qwen `verifier_refuted` is the strongest single signal (`0.297` detection, zero false alarm), while geometry fusion reaches `0.285` detection at `0.089` false alarm.
 - At alpha `0.100`, SmolLM2 geometry fusion reaches `0.261` detection at `0.095` false alarm, beating both `truth_proj` (`0.229`) and `verifier_refuted` (`0.232`).
-- Current frontier direction: use LLM-internal geometry as the monitor/trigger, then feed structured verifier, retrieval, and selfcheck outputs back as calibrated final-correction signals.
+- Current frontier direction: use LLM-internal geometry as the monitor/trigger, then feed structured verifier, retrieval, selfcheck, and world-model disagreement outputs back as calibrated final-correction signals.
 
 The first no-model local retrieval workflow artifact is now at
 `artifacts/truthfulqa-l80-local-retrieval-verifier-signal-fusion/`. It uses the

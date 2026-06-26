@@ -2741,6 +2741,12 @@ python benchmarks/build_verifier_signal_score_dump.py \
   --output-format jsonl
 ```
 
+When verified records include state-transition prediction metadata, the same
+converter also emits world-model uncertainty columns such as
+`world_model_disagreement`, `world_model_agreement_gap`, and
+`world_model_low_agreement`, so simulator/model disagreement can be swept or
+fused under the same conformal calibration path.
+
 Simple text baselines can also be appended to statement-bearing dumps as
 redline controls. This is a post-hoc check for whether a proposed detector is
 actually beating answer length, claim length, lexical overlap, negation, and
@@ -2849,7 +2855,8 @@ The staged structured-QA verifier-signal replay at
 `artifacts/truthfulqa-l80-staged-qa-verifier-signals/` demonstrates that stronger
 external evidence can enter the same calibrated fusion path. It writes
 verified-record sidecars, converts them into `verifier_*` and `selfcheck_*`
-score columns, and saves per-model `GeometryScoreFusionArtifact` files. At
+score columns, with `world_model_*` columns available when transition metadata
+is present, and saves per-model `GeometryScoreFusionArtifact` files. At
 alpha 0.100, Qwen's best verifier single signal (`verifier_refuted`) detects
 0.297 with zero false alarm, while geometry fusion detects 0.285 at false alarm
 0.089; SmolLM2's geometry fusion detects 0.261 at false alarm 0.095, beating

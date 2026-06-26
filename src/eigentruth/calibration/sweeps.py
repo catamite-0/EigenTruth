@@ -54,6 +54,9 @@ DEFAULT_SCORE_DIRECTIONS: dict[str, str] = {
     "selfcheck_not_applicable": "higher",
     "selfcheck_sample_count": "lower",
     "selfcheck_best_overlap": "lower",
+    "world_model_disagreement": "higher",
+    "world_model_agreement_gap": "higher",
+    "world_model_low_agreement": "higher",
 }
 
 

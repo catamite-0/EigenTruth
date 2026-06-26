@@ -20826,6 +20826,7 @@ def test_eval_score_ensemble_saves_best_geometry_fusion_artifact(tmp_path):
 
 def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     module = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    from eigentruth.calibration import DEFAULT_SCORE_DIRECTIONS
     from eigentruth.eval.score_dump import load_score_dump
 
     scores_path = tmp_path / "scores.json"
@@ -20860,6 +20861,17 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             "record": {
                 "final": {"status": "supported", "confidence": 0.9},
                 "retrieval_hits": [{"id": "doc-1"}],
+                "transition": {
+                    "status": "supported",
+                    "confidence": 0.9,
+                    "metadata": {
+                        "prediction_metadata": {
+                            "agreement_rate": 1.0,
+                            "below_min_agreement": False,
+                            "disagreement": False,
+                        }
+                    },
+                },
             },
         },
         {
@@ -20870,6 +20882,17 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             "record": {
                 "final": {"status": "refuted", "confidence": 0.8},
                 "retrieval_hits": [],
+                "transition": {
+                    "status": "refuted",
+                    "confidence": 0.8,
+                    "metadata": {
+                        "prediction_metadata": {
+                            "agreement_rate": 0.75,
+                            "below_min_agreement": False,
+                            "disagreement": True,
+                        }
+                    },
+                },
                 "selfcheck": {
                     "status": "refuted",
                     "confidence": 0.8,
@@ -20885,6 +20908,18 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             "record": {
                 "final": {"status": "insufficient_evidence", "confidence": 0.4},
                 "retrieval_hits": [],
+                "transition": {
+                    "status": "insufficient_evidence",
+                    "confidence": 0.0,
+                    "metadata": {
+                        "decision_rule": "prediction_agreement_below_threshold",
+                        "prediction_metadata": {
+                            "agreement_rate": 0.5,
+                            "below_min_agreement": True,
+                            "disagreement": True,
+                        },
+                    },
+                },
                 "selfcheck": {
                     "status": "insufficient_evidence",
                     "confidence": 0.3,
@@ -20904,7 +20939,10 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
             verified_records_jsonl=str(verified_records_path),
             run_name="synthetic",
             keep_signals="truth_proj,subspace_resid",
-            verifier_signals="verifier_refuted,verifier_uncertainty,selfcheck_refute_rate,selfcheck_disagreement",
+            verifier_signals=(
+                "verifier_refuted,verifier_uncertainty,selfcheck_refute_rate,selfcheck_disagreement,"
+                "world_model_disagreement,world_model_agreement_gap,world_model_low_agreement"
+            ),
             output=str(output_path),
             output_format="jsonl",
             json=str(report_path),
@@ -20921,13 +20959,22 @@ def test_build_verifier_signal_score_dump_from_verified_records_jsonl(tmp_path):
     assert enhanced.scores["verifier_uncertainty"] == pytest.approx((0.1, 0.2, 1.0))
     assert enhanced.scores["selfcheck_refute_rate"] == pytest.approx((0.0, 0.7, 0.2))
     assert enhanced.scores["selfcheck_disagreement"] == pytest.approx((0.0, 0.3, 0.7))
+    assert enhanced.scores["world_model_disagreement"] == pytest.approx((0.0, 1.0, 1.0))
+    assert enhanced.scores["world_model_agreement_gap"] == pytest.approx((0.0, 0.25, 0.5))
+    assert enhanced.scores["world_model_low_agreement"] == pytest.approx((0.0, 0.0, 1.0))
     assert enhanced.config["verifier_signal_score_dump"]["run_name"] == "synthetic"
     assert enhanced.extras["verifier_signal_metadata"]["signals"] == [
         "verifier_refuted",
         "verifier_uncertainty",
         "selfcheck_refute_rate",
         "selfcheck_disagreement",
+        "world_model_disagreement",
+        "world_model_agreement_gap",
+        "world_model_low_agreement",
     ]
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_disagreement"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_agreement_gap"] == "higher"
+    assert DEFAULT_SCORE_DIRECTIONS["world_model_low_agreement"] == "higher"
 
 
 def test_build_text_baseline_score_dump_from_statement_metadata(tmp_path):
