@@ -23,6 +23,7 @@ CANDIDATE_SUMMARY_FIELDS = (
     "best_ensemble_at_alpha",
     "best_single_at_alpha",
 )
+DEFAULT_COVERED_FACT_ROUTES = ("structured_qa", "structured_fact", "retrieval_structured_qa")
 
 
 def compare_external_evidence_baselines(
@@ -47,6 +48,12 @@ def compare_external_evidence_baselines(
     retrieval_stress_manifest: str | Path | None = None,
     min_stress_false_supported_rate: float | None = None,
     max_stress_false_refuted_rate: float | None = None,
+    require_covered_facts_route: bool = False,
+    covered_fact_routes: Sequence[str] = DEFAULT_COVERED_FACT_ROUTES,
+    min_covered_fact_records: int | None = None,
+    min_covered_fact_source_documents: int | None = None,
+    min_covered_fact_true: int | None = None,
+    min_covered_fact_false: int | None = None,
     candidate_score_report_path: str | Path | None = None,
     text_baseline_report_path: str | Path | None = None,
     candidate_run: str | None = None,
@@ -96,7 +103,20 @@ def compare_external_evidence_baselines(
         min_candidate_detection=min_candidate_detection,
         min_candidate_auroc=min_candidate_auroc,
     )
-    decision = _decision(route_comparison=route_comparison, text_redline=text_redline)
+    covered_facts_gate = compare_covered_facts_route(
+        route_comparison=route_comparison,
+        require_covered_facts_route=require_covered_facts_route,
+        covered_fact_routes=covered_fact_routes,
+        min_covered_fact_records=min_covered_fact_records,
+        min_covered_fact_source_documents=min_covered_fact_source_documents,
+        min_covered_fact_true=min_covered_fact_true,
+        min_covered_fact_false=min_covered_fact_false,
+    )
+    decision = _decision(
+        route_comparison=route_comparison,
+        text_redline=text_redline,
+        covered_facts_gate=covered_facts_gate,
+    )
     return {
         "schema_version": 1,
         "workflow": "external_evidence_baseline_comparison",
@@ -123,6 +143,12 @@ def compare_external_evidence_baselines(
             else str(retrieval_stress_manifest),
             "min_stress_false_supported_rate": min_stress_false_supported_rate,
             "max_stress_false_refuted_rate": max_stress_false_refuted_rate,
+            "require_covered_facts_route": bool(require_covered_facts_route),
+            "covered_fact_routes": list(covered_fact_routes),
+            "min_covered_fact_records": min_covered_fact_records,
+            "min_covered_fact_source_documents": min_covered_fact_source_documents,
+            "min_covered_fact_true": min_covered_fact_true,
+            "min_covered_fact_false": min_covered_fact_false,
             "candidate_score_report_path": None
             if candidate_score_report_path is None
             else str(candidate_score_report_path),
@@ -142,11 +168,14 @@ def compare_external_evidence_baselines(
         "summary": {
             "route_enabled": bool(route_comparison["enabled"]),
             "route_passed": bool(route_comparison["passed"]),
+            "covered_facts_enabled": bool(covered_facts_gate["enabled"]),
+            "covered_facts_passed": bool(covered_facts_gate["passed"]),
             "text_redline_enabled": bool(text_redline["enabled"]),
             "text_redline_passed": bool(text_redline["passed"]),
         },
         "decision": decision,
         "route_baseline_comparison": route_comparison,
+        "covered_facts_gate": covered_facts_gate,
         "text_redline_comparison": text_redline,
         "notes": list(notes),
     }
@@ -307,6 +336,126 @@ def _route_comparison(
         "blocking_reasons": [] if passed else list(decision.get("blocking_reasons", ())),
         "comparison": comparison,
     }
+
+
+def compare_covered_facts_route(
+    *,
+    route_comparison: Mapping[str, Any],
+    require_covered_facts_route: bool = False,
+    covered_fact_routes: Sequence[str] = DEFAULT_COVERED_FACT_ROUTES,
+    min_covered_fact_records: int | None = None,
+    min_covered_fact_source_documents: int | None = None,
+    min_covered_fact_true: int | None = None,
+    min_covered_fact_false: int | None = None,
+) -> dict[str, Any]:
+    """Gate the recommended route on covered-facts structured evidence."""
+    enabled = bool(
+        require_covered_facts_route
+        or tuple(covered_fact_routes) != DEFAULT_COVERED_FACT_ROUTES
+        or min_covered_fact_records is not None
+        or min_covered_fact_source_documents is not None
+        or min_covered_fact_true is not None
+        or min_covered_fact_false is not None
+    )
+    allowed_routes = tuple(str(route) for route in covered_fact_routes if str(route).strip())
+    result: dict[str, Any] = {
+        "enabled": enabled,
+        "passed": True,
+        "blocking_reasons": [],
+        "allowed_routes": list(allowed_routes),
+        "record_key": None,
+        "route": None,
+        "route_summary_path": None,
+        "score_dump_summary": {},
+    }
+    if not enabled:
+        return result
+    failures: list[str] = []
+    if not route_comparison.get("enabled"):
+        failures.append("route baseline comparison is required")
+        result.update({"passed": False, "blocking_reasons": failures})
+        return result
+    comparison = _mapping(route_comparison.get("comparison"))
+    decision = _mapping(comparison.get("decision"))
+    record_key = decision.get("recommended_record")
+    if record_key is None:
+        failures.append("route comparison recommended record is missing")
+        result.update({"passed": False, "blocking_reasons": failures})
+        return result
+    row = _route_row_for_record(comparison, str(record_key))
+    if row is None:
+        failures.append(f"route comparison row for {record_key!r} is missing")
+        result.update({"passed": False, "blocking_reasons": failures, "record_key": str(record_key)})
+        return result
+    route_summary_path = row.get("route_summary_path")
+    if route_summary_path is None:
+        failures.append("recommended route does not expose a covered-facts route summary")
+        result.update({
+            "passed": False,
+            "blocking_reasons": failures,
+            "record_key": str(record_key),
+            "route": row.get("recommended_route"),
+        })
+        return result
+    route_summary, route_summary_error = _load_json_mapping_or_error(Path(str(route_summary_path)))
+    if route_summary_error is not None:
+        failures.append(f"covered-facts route summary could not be loaded: {route_summary_error}")
+        result.update({
+            "passed": False,
+            "blocking_reasons": failures,
+            "record_key": str(record_key),
+            "route_summary_path": str(route_summary_path),
+        })
+        return result
+    route = route_summary.get("route") or row.get("recommended_route")
+    route_name = None if route is None else str(route)
+    score_dump_summary = _mapping(route_summary.get("score_dump_summary"))
+    result.update({
+        "record_key": str(record_key),
+        "route": route_name,
+        "route_summary_path": str(route_summary_path),
+        "workflow": route_summary.get("workflow"),
+        "status": route_summary.get("status"),
+        "scope": route_summary.get("scope"),
+        "score_dump_summary": dict(score_dump_summary),
+    })
+    if route_summary.get("workflow") != "wikidata_structured_qa_route_workflow":
+        failures.append("covered-facts route summary workflow is not wikidata_structured_qa_route_workflow")
+    if route_summary.get("status") != "promote":
+        failures.append(f"covered-facts route status is {route_summary.get('status')!r}, expected 'promote'")
+    if route_name is None:
+        failures.append("covered-facts route is missing")
+    elif allowed_routes and route_name not in set(allowed_routes):
+        failures.append(f"covered-facts route {route_name!r} is not in allowed routes {list(allowed_routes)!r}")
+    _check_min(
+        failures,
+        "covered_fact_records",
+        _int_or_none(score_dump_summary.get("n_records")),
+        min_covered_fact_records,
+    )
+    _check_min(
+        failures,
+        "covered_fact_source_documents",
+        _int_or_none(score_dump_summary.get("n_source_documents")),
+        min_covered_fact_source_documents,
+    )
+    _check_min(
+        failures,
+        "covered_fact_true",
+        _int_or_none(score_dump_summary.get("n_true")),
+        min_covered_fact_true,
+    )
+    _check_min(
+        failures,
+        "covered_fact_false",
+        _int_or_none(score_dump_summary.get("n_false")),
+        min_covered_fact_false,
+    )
+    result.update({
+        "passed": not failures,
+        "blocking_reasons": failures,
+    })
+    return result
 
 
 def _text_redline_row(
@@ -526,10 +675,13 @@ def _decision(
     *,
     route_comparison: Mapping[str, Any],
     text_redline: Mapping[str, Any],
+    covered_facts_gate: Mapping[str, Any],
 ) -> dict[str, Any]:
     failures: list[str] = []
     if route_comparison.get("enabled") and not route_comparison.get("passed"):
         failures.extend(f"route_baseline: {reason}" for reason in route_comparison.get("blocking_reasons", ()))
+    if covered_facts_gate.get("enabled") and not covered_facts_gate.get("passed"):
+        failures.extend(f"covered_facts: {reason}" for reason in covered_facts_gate.get("blocking_reasons", ()))
     if text_redline.get("enabled") and not text_redline.get("passed"):
         failures.extend(f"text_redline: {reason}" for reason in text_redline.get("blocking_reasons", ()))
     if not failures:
@@ -549,12 +701,29 @@ def _decision(
     }
 
 
+def _route_row_for_record(comparison: Mapping[str, Any], record_key: str) -> dict[str, Any] | None:
+    leaderboard = comparison.get("leaderboard")
+    if not isinstance(leaderboard, Sequence) or isinstance(leaderboard, (str, bytes, bytearray)):
+        return None
+    for row in leaderboard:
+        if isinstance(row, Mapping) and row.get("record_key") == record_key:
+            return dict(row)
+    return None
+
+
 def _load_json_mapping(path: Path) -> dict[str, Any]:
     with open(path, encoding="utf-8") as f:
         payload = json.load(f)
     if not isinstance(payload, Mapping):
         raise ValueError(f"{path} must contain a JSON object.")
     return dict(payload)
+
+
+def _load_json_mapping_or_error(path: Path) -> tuple[dict[str, Any], str | None]:
+    try:
+        return _load_json_mapping(path), None
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return {}, str(exc)
 
 
 def _mapping(value: Any) -> dict[str, Any]:
@@ -571,6 +740,16 @@ def _float_or_none(value: Any) -> float | None:
     except (TypeError, ValueError):
         return None
     if not math.isfinite(numeric):
+        return None
+    return numeric
+
+
+def _int_or_none(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    try:
+        numeric = int(value)
+    except (OverflowError, TypeError, ValueError):
         return None
     return numeric
 
@@ -645,7 +824,9 @@ def _write_artifact_manifest(
     max_workers: int = 1,
 ) -> dict[str, Any]:
     route_comparison = _mapping(payload.get("route_baseline_comparison"))
+    route_comparison_payload = _mapping(route_comparison.get("comparison"))
     text_redline = _mapping(payload.get("text_redline_comparison"))
+    covered_facts = _mapping(payload.get("covered_facts_gate"))
     config = _mapping(payload.get("config"))
     artifacts: dict[str, str | Path | None] = {
         "external_evidence_baseline_comparison_report": report_path,
@@ -653,8 +834,9 @@ def _write_artifact_manifest(
         "candidate_score_report": config.get("candidate_score_report_path"),
         "text_baseline_report": config.get("text_baseline_report_path"),
         "retrieval_stress_manifest": config.get("retrieval_stress_manifest"),
+        "covered_fact_route_summary": covered_facts.get("route_summary_path"),
     }
-    route_rows = route_comparison.get("rows")
+    route_rows = route_comparison_payload.get("leaderboard")
     if isinstance(route_rows, Sequence) and not isinstance(route_rows, (str, bytes)):
         for idx, row in enumerate(route_rows, start=1):
             if not isinstance(row, Mapping):
@@ -669,6 +851,10 @@ def _write_artifact_manifest(
         "recommended_route": decision.get("recommended_route"),
         "recommended_route_record": decision.get("recommended_route_record"),
         "route_passed": route_comparison.get("passed"),
+        "covered_facts_passed": covered_facts.get("passed"),
+        "covered_facts_route": covered_facts.get("route"),
+        "covered_facts_record": covered_facts.get("record_key"),
+        "covered_facts_route_summary": covered_facts.get("route_summary_path"),
         "text_redline_passed": text_redline.get("passed"),
         "text_redline_run_count": (
             len(text_runs)
@@ -726,6 +912,7 @@ def _record_registry(
         raise ValueError("--registry requires --name and --version.")
     decision = _mapping(payload.get("decision"))
     route_comparison = _mapping(payload.get("route_baseline_comparison"))
+    covered_facts = _mapping(payload.get("covered_facts_gate"))
     text_redline = _mapping(payload.get("text_redline_comparison"))
     metadata = {
         "workflow": "compare_external_evidence_baselines",
@@ -734,6 +921,10 @@ def _record_registry(
         "recommended_route_record": decision.get("recommended_route_record"),
         "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
         "route_passed": route_comparison.get("passed"),
+        "covered_facts_passed": covered_facts.get("passed"),
+        "covered_facts_route": covered_facts.get("route"),
+        "covered_facts_record": covered_facts.get("record_key"),
+        "covered_facts_route_summary": covered_facts.get("route_summary_path"),
         "text_redline_passed": text_redline.get("passed"),
         "text_redline_run_count": text_redline.get("run_count"),
         "artifact_manifest": None if manifest_path is None else str(manifest_path),
@@ -822,6 +1013,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         retrieval_stress_manifest=args.retrieval_stress_manifest,
         min_stress_false_supported_rate=args.min_stress_false_supported_rate,
         max_stress_false_refuted_rate=args.max_stress_false_refuted_rate,
+        require_covered_facts_route=bool(args.require_covered_facts_route),
+        covered_fact_routes=_parse_csv(args.covered_fact_route) or DEFAULT_COVERED_FACT_ROUTES,
+        min_covered_fact_records=args.min_covered_fact_records,
+        min_covered_fact_source_documents=args.min_covered_fact_source_documents,
+        min_covered_fact_true=args.min_covered_fact_true,
+        min_covered_fact_false=args.min_covered_fact_false,
         candidate_score_report_path=args.candidate_score_report,
         text_baseline_report_path=args.text_baseline_report,
         candidate_run=args.candidate_run,
@@ -976,6 +1173,24 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-stress-false-refuted-rate", type=lambda value: _parse_non_negative_float(
         value,
         flag="--max-stress-false-refuted-rate",
+    ), default=None)
+    parser.add_argument("--require-covered-facts-route", action="store_true")
+    parser.add_argument("--covered-fact-route", action="append", default=None)
+    parser.add_argument("--min-covered-fact-records", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-records",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-source-documents", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-source-documents",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-true", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-true",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-false", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-false",
     ), default=None)
     parser.add_argument("--candidate-score-report", default=None)
     parser.add_argument("--text-baseline-report", default=None)

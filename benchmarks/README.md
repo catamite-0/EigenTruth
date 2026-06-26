@@ -1768,6 +1768,13 @@ ambiguous run pairing, or non-finite metrics block the comparison. With
 manifest over the route, stress-control, score-ensemble, and comparison reports,
 verifies it, and registers the comparison as a reusable `report:*:*` release
 gate input.
+When external evidence is a structured KG correction route rather than lexical
+retrieval, add `--require-covered-facts-route`, optional repeated
+`--covered-fact-route structured_qa` / `structured_fact`, and
+`--min-covered-fact-*` thresholds. That gate requires the selected route
+baseline to expose a promoted `wikidata_structured_qa_route_workflow` summary,
+records the covered source-document/true/false counts, and keeps the claim
+scoped to covered facts instead of broad open-domain retrieval coverage.
 
 ## `run_adapter_family_matrix.py`
 
@@ -3026,6 +3033,9 @@ natural-language claim rows (`1434` true / `1434` false), selects
 false-supported rate `0.0`; it is a
 surface-form robustness check for covered KG facts, not a broad open-domain
 claim.
+Use `compare_external_evidence_baselines.py --require-covered-facts-route`
+when one of these registered covered-facts route manifests should become the
+external-evidence comparator input for release gating.
 
 ## `analyze_retrieval_route_gaps.py`
 

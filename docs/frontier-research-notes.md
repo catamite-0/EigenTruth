@@ -476,6 +476,12 @@ Added the first stdlib-only external retrieval service shell:
   missing reports, ambiguous run pairing, or underperforming candidate signals
   block the comparison. It can now write and verify a recursive artifact
   manifest and register the comparison as a reusable `report:*:*` handoff.
+- The same comparator now has an optional covered-facts gate for structured
+  Wikidata/KG correction evidence: `--require-covered-facts-route` requires the
+  selected route to expose a promoted `wikidata_structured_qa_route_workflow`
+  summary, validates allowed routes plus source/true/false record counts, and
+  records that scope in the manifest/registry metadata. This separates
+  property-level correction evidence from broad retrieval-grounding claims.
 - `compare_release_candidates.py` and
   `run_release_candidate_registry_workflow.py` can now require that promoted
   external-evidence comparison artifact by direct path or registry key as a
@@ -485,6 +491,6 @@ Added the first stdlib-only external retrieval service shell:
 
 ## Next Research-to-Code Candidates
 
-1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, rerun `run_verifier_signal_fusion_workflow.py`, then gate the result with `compare_external_evidence_baselines.py` against answer-echo stress and text/length redlines before passing the registered `report:*:*` artifact into `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
+1. Run the registered Wikidata structured-fact canonical/paraphrase route manifests through `compare_external_evidence_baselines.py --require-covered-facts-route`, then use the registered comparator report as the structured KG correction input to `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
 3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

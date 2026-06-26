@@ -9479,6 +9479,7 @@ def _write_covered_fact_route_summary_manifest(
     name: str,
     route: str = "structured_fact",
     selected: int = 8,
+    source_documents: int | None = None,
     decision_accuracy: float = 1.0,
     false_supported_rate: float = 0.0,
     false_refuted_rate: float = 1.0,
@@ -9498,6 +9499,7 @@ def _write_covered_fact_route_summary_manifest(
             "selected_route_counts": {route: selected},
             "score_dump_summary": {
                 "n_records": selected,
+                "n_source_documents": selected // 2 if source_documents is None else source_documents,
                 "n_true": selected // 2,
                 "n_false": selected - (selected // 2),
             },
@@ -9528,6 +9530,7 @@ def _write_covered_fact_route_summary_manifest(
             "route": route,
             "promotes_covered_facts_route": True,
             "n_records": selected,
+            "n_source_documents": selected // 2 if source_documents is None else source_documents,
             f"{route}_decision_accuracy": decision_accuracy,
             f"{route}_false_supported_rate": false_supported_rate,
             f"{route}_false_refuted_rate": false_refuted_rate,
@@ -10885,6 +10888,123 @@ def test_compare_external_evidence_baselines_verification_requires_manifest(tmp_
             "--verification-report",
             str(tmp_path / "external-evidence-manifest-verification.json"),
         ])
+
+
+def test_compare_external_evidence_baselines_can_require_covered_facts_route(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    manifest_path = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="wikidata-structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+        source_documents=359,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="wikidata-structured-fact-paraphrase-route",
+        path=manifest_path,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    ).save_json()
+
+    payload = module.compare_external_evidence_baselines(
+        route_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:wikidata-structured-fact-paraphrase-route:0.1",),
+        require_route_baseline=True,
+        min_selected=2000,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        require_covered_facts_route=True,
+        covered_fact_routes=("structured_fact",),
+        min_covered_fact_records=2800,
+        min_covered_fact_source_documents=300,
+        min_covered_fact_true=1400,
+        min_covered_fact_false=1400,
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["summary"]["covered_facts_enabled"] is True
+    assert payload["covered_facts_gate"]["passed"] is True
+    assert payload["covered_facts_gate"]["route"] == "structured_fact"
+    assert payload["covered_facts_gate"]["score_dump_summary"]["n_source_documents"] == 359
+
+    blocked = module.compare_external_evidence_baselines(
+        route_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:wikidata-structured-fact-paraphrase-route:0.1",),
+        require_route_baseline=True,
+        require_covered_facts_route=True,
+        covered_fact_routes=("structured_qa",),
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["covered_facts_gate"]["passed"] is False
+    assert any(
+        "covered-facts route 'structured_fact' is not in allowed routes" in reason
+        for reason in blocked["decision"]["blocking_reasons"]
+    )
+
+
+def test_compare_external_evidence_baselines_manifest_includes_covered_facts(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    route_manifest_path = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="wikidata-structured-qa",
+        route="structured_qa",
+        selected=718,
+        source_documents=359,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="wikidata-structured-qa-route",
+        path=route_manifest_path,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    ).save_json()
+    report_path = tmp_path / "external-evidence-baseline-comparison.json"
+    manifest_path = tmp_path / "external-evidence-baseline-comparison-manifest.json"
+    registry_out = tmp_path / "external-evidence-comparison-registry.json"
+
+    module.main([
+        "--route-registry",
+        str(registry_path),
+        "--route-baseline-key",
+        "benchmark_manifest:wikidata-structured-qa-route:0.1",
+        "--require-route-baseline",
+        "--require-covered-facts-route",
+        "--covered-fact-route",
+        "structured_qa",
+        "--min-covered-fact-records",
+        "700",
+        "--min-covered-fact-source-documents",
+        "300",
+        "--json",
+        str(report_path),
+        "--artifact-manifest",
+        str(manifest_path),
+        "--registry",
+        str(registry_out),
+        "--name",
+        "external-covered-facts-comparison",
+        "--version",
+        "0.1",
+    ])
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_out).get(
+        "report:external-covered-facts-comparison:0.1"
+    )
+
+    assert report["decision"]["status"] == "promote"
+    assert manifest["artifacts"]["covered_fact_route_summary"]["exists"] is True
+    assert manifest["artifacts"]["route_manifest_1"]["exists"] is True
+    assert manifest["metadata"]["covered_facts_route"] == "structured_qa"
+    assert record.metadata["covered_facts_passed"] is True
+    assert record.metadata["covered_facts_route"] == "structured_qa"
 
 
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
