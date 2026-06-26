@@ -689,6 +689,15 @@ def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
     assert object_slot["missing_tokens"] == ("10",)
 
 
+def test_rule_based_claim_triples_reject_explicit_negation():
+    claims = extract_claims(
+        "The capital of France is not Paris. OpenAI is not headquartered in San Francisco."
+    )
+
+    assert extract_claim_triples(claims[0]) == ()
+    assert extract_claim_triples(claims[1]) == ()
+
+
 def test_triple_evidence_audit_can_combine_slots_across_documents():
     claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
     verifier = TripleEvidenceVerifier(

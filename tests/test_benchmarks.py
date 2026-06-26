@@ -227,8 +227,8 @@ def test_build_triple_extraction_fixture_can_include_adversarial_negatives(tmp_p
     assert negative_records[0]["expected_triples"] == []
     adversarial = regex["report"]["by_record_type"]["adversarial_negative"]
     assert adversarial["record_count"] == 1
-    assert adversarial["false_positive_rate"] == pytest.approx(1.0)
-    assert regex["report"]["precision"] < 1.0
+    assert adversarial["false_positive_rate"] == pytest.approx(0.0)
+    assert regex["report"]["precision"] == pytest.approx(1.0)
 
 
 def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_path):
@@ -280,7 +280,7 @@ def test_triple_extraction_fixture_workflow_promotes_augmented_extractor(tmp_pat
     assert (tmp_path / "workflow" / "artifact-manifest.json").exists()
 
 
-def test_triple_extraction_fixture_workflow_blocks_adversarial_false_positives(tmp_path):
+def test_triple_extraction_fixture_workflow_promotes_when_adversarial_negatives_are_rejected(tmp_path):
     module = importlib.import_module("benchmarks.run_triple_extraction_fixture_workflow")
     fact_corpus = tmp_path / "facts.json"
     fact_corpus.write_text(
@@ -308,18 +308,10 @@ def test_triple_extraction_fixture_workflow_blocks_adversarial_false_positives(t
 
     summary = module.run_triple_extraction_fixture_workflow(config)
 
-    assert summary["status"] == "blocked"
+    assert summary["status"] == "promote"
     assert summary["fixture_summary"]["n_adversarial_negative_records"] == 1
-    assert summary["best_adversarial_report"]["false_positive_rate"] == pytest.approx(1.0)
-    assert summary["promotion_gate"]["failures"] == (
-        {
-            "gate": "max_adversarial_false_positive_rate",
-            "observed": 1.0,
-            "threshold": 0.0,
-            "false_positive_record_count": 1,
-            "zero_expected_record_count": 1,
-        },
-    )
+    assert summary["best_adversarial_report"]["false_positive_rate"] == pytest.approx(0.0)
+    assert summary["promotion_gate"]["failures"] == ()
 
 
 def test_triple_extraction_fixture_matrix_promotes_cross_corpus_domain_templates(tmp_path):
@@ -431,10 +423,10 @@ def test_triple_extraction_fixture_matrix_reports_adversarial_gate(tmp_path):
 
     matrix = module.run_triple_extraction_fixture_matrix(config)
 
-    assert matrix["status"] == "blocked"
-    assert matrix["mean_best_adversarial_false_positive_rate"] == pytest.approx(1.0)
-    assert matrix["max_best_adversarial_false_positive_rate"] == pytest.approx(1.0)
-    assert {item["status"] for item in matrix["corpora"]} == {"blocked"}
+    assert matrix["status"] == "promote"
+    assert matrix["mean_best_adversarial_false_positive_rate"] == pytest.approx(0.0)
+    assert matrix["max_best_adversarial_false_positive_rate"] == pytest.approx(0.0)
+    assert {item["status"] for item in matrix["corpora"]} == {"promote"}
 
 
 def test_eval_conformal_rejects_invalid_split_config(tmp_path):

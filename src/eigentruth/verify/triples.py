@@ -191,6 +191,8 @@ class RuleBasedTripleExtractor:
         text = _clean_sentence(claim.text)
         if not text:
             return ()
+        if _contains_explicit_negation(text):
+            return ()
 
         capital = _CAPITAL_OF_RE.match(text)
         if capital is not None:
@@ -1298,6 +1300,11 @@ def _tokens(text: str) -> tuple[str, ...]:
 
 def _clean_sentence(value: str) -> str:
     return re.sub(r"\s+", " ", str(value).strip(_BOUNDARY_CHARS))
+
+
+def _contains_explicit_negation(value: str) -> bool:
+    tokens = set(_tokens(value))
+    return "not" in tokens or "never" in tokens
 
 
 def _clean_slot(value: Any) -> str:

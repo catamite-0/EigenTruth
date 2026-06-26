@@ -404,15 +404,16 @@ Added dependency-free triple extractor plug-ins and eval harness:
   `eval_triple_extraction.py` reports subgroup false-positive rates by
   `record_type`. The adversarial cross-corpus matrix at
   `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/`
-  deliberately blocks: the same country-core plus organization/product corpora
-  add `367` total adversarial negatives, both workflows drop to best F1 `0.889`,
-  and the best extractor has adversarial false-positive rate `1.000`. This is
-  the correct fail-closed evidence boundary: current regex-with-rule fallback is
-  acceptable only for covered positive/paraphrase KG templates, not for
-  negation-robust open-domain claim extraction.
+  first exposed a real false-positive failure: the rule-based fallback extracted
+  `not ...` phrases as positive triples. After adding explicit negation
+  rejection, the same country-core plus organization/product corpora add `367`
+  total adversarial negatives, both workflows promote, best F1 remains `1.000`,
+  and the best adversarial false-positive rate is `0.000`. This promotes
+  negated near-miss robustness for covered KG templates while preserving the
+  broader open-domain extraction boundary.
 
 ## Next Research-to-Code Candidates
 
 1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, then rerun `run_verifier_signal_fusion_workflow.py` and compare against both the answer-echo retrieval stress control and the text/length redline artifact.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Add explicit negation and near-miss rejection to the triple extractor, then rerun the adversarial cross-corpus matrix before claiming broader extractor robustness.
+3. Add predicate-confusion and non-template negative controls to the triple-extraction matrix before claiming broader extractor robustness.

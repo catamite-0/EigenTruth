@@ -8,10 +8,10 @@
       "adversarial_negative": {
         "exact_match_count": 0,
         "expected_triple_count": 0,
-        "extracted_triple_count": 8,
+        "extracted_triple_count": 0,
         "f1": 0.0,
-        "false_positive_rate": 1.0,
-        "false_positive_record_count": 8,
+        "false_positive_rate": 0.0,
+        "false_positive_record_count": 0,
         "precision": 0.0,
         "recall": 0.0,
         "record_count": 8,
@@ -192,34 +192,6 @@
         "text": "Cupertino is the headquarters location of Apple Inc."
       },
       {
-        "claim_id": "0001-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
-        "expected": [],
-        "extra": [
-          {
-            "object": "not headquartered in cupertino",
-            "predicate": "is",
-            "subject": "apple inc"
-          }
-        ],
-        "extracted": [
-          {
-            "claim_id": "0001-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
-            "confidence": 0.55,
-            "metadata": {
-              "extractor": "rule_based_triple_extractor",
-              "source": "is_rule"
-            },
-            "object": "not headquartered in Cupertino",
-            "predicate": "is",
-            "source_text": "Apple Inc is not headquartered in Cupertino.",
-            "subject": "Apple Inc"
-          }
-        ],
-        "index": 4,
-        "missing": [],
-        "text": "Apple Inc is not headquartered in Cupertino."
-      },
-      {
         "claim_id": "0002-inception_of-inception-founded-in",
         "expected": [
           {
@@ -378,34 +350,6 @@
           }
         ],
         "text": "1976-04-01T00:00:00Z is the inception date of Apple Inc."
-      },
-      {
-        "claim_id": "0002-inception_of-adversarial-negative-inception-negated-founded-in",
-        "expected": [],
-        "extra": [
-          {
-            "object": "not founded in 1976-04-01t00:00:00z",
-            "predicate": "is",
-            "subject": "apple inc"
-          }
-        ],
-        "extracted": [
-          {
-            "claim_id": "0002-inception_of-adversarial-negative-inception-negated-founded-in",
-            "confidence": 0.55,
-            "metadata": {
-              "extractor": "rule_based_triple_extractor",
-              "source": "is_rule"
-            },
-            "object": "not founded in 1976-04-01T00:00:00Z",
-            "predicate": "is",
-            "source_text": "Apple Inc was not founded in 1976-04-01T00:00:00Z.",
-            "subject": "Apple Inc"
-          }
-        ],
-        "index": 9,
-        "missing": [],
-        "text": "Apple Inc was not founded in 1976-04-01T00:00:00Z."
       },
       {
         "claim_id": "0003-headquarters_location_of-headquarters-headquartered-in",
@@ -568,34 +512,6 @@
         "text": "San Francisco is the headquarters location of OpenAI."
       },
       {
-        "claim_id": "0003-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
-        "expected": [],
-        "extra": [
-          {
-            "object": "not headquartered in san francisco",
-            "predicate": "is",
-            "subject": "openai"
-          }
-        ],
-        "extracted": [
-          {
-            "claim_id": "0003-headquarters_location_of-adversarial-negative-headquarters-negated-headquartered-in",
-            "confidence": 0.55,
-            "metadata": {
-              "extractor": "rule_based_triple_extractor",
-              "source": "is_rule"
-            },
-            "object": "not headquartered in San Francisco",
-            "predicate": "is",
-            "source_text": "OpenAI is not headquartered in San Francisco.",
-            "subject": "OpenAI"
-          }
-        ],
-        "index": 14,
-        "missing": [],
-        "text": "OpenAI is not headquartered in San Francisco."
-      },
-      {
         "claim_id": "0004-inception_of-inception-founded-in",
         "expected": [
           {
@@ -756,40 +672,172 @@
         "text": "2015-12-08T00:00:00Z is the inception date of OpenAI."
       },
       {
-        "claim_id": "0004-inception_of-adversarial-negative-inception-negated-founded-in",
-        "expected": [],
+        "claim_id": "0005-headquarters_location_of-headquarters-headquartered-in",
+        "expected": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
         "extra": [
           {
-            "object": "not founded in 2015-12-08t00:00:00z",
+            "object": "headquartered in austin",
             "predicate": "is",
-            "subject": "openai"
+            "subject": "tesla"
           }
         ],
         "extracted": [
           {
-            "claim_id": "0004-inception_of-adversarial-negative-inception-negated-founded-in",
+            "claim_id": "0005-headquarters_location_of-headquarters-headquartered-in",
             "confidence": 0.55,
             "metadata": {
               "extractor": "rule_based_triple_extractor",
               "source": "is_rule"
             },
-            "object": "not founded in 2015-12-08T00:00:00Z",
+            "object": "headquartered in Austin",
             "predicate": "is",
-            "source_text": "OpenAI was not founded in 2015-12-08T00:00:00Z.",
-            "subject": "OpenAI"
+            "source_text": "Tesla is headquartered in Austin.",
+            "subject": "Tesla"
           }
         ],
-        "index": 19,
-        "missing": [],
-        "text": "OpenAI was not founded in 2015-12-08T00:00:00Z."
+        "index": 20,
+        "missing": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "text": "Tesla is headquartered in Austin."
+      },
+      {
+        "claim_id": "0005-headquarters_location_of-headquarters-of",
+        "expected": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "extra": [
+          {
+            "object": "in austin",
+            "predicate": "is",
+            "subject": "the headquarters of tesla"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0005-headquarters_location_of-headquarters-of",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "in Austin",
+            "predicate": "is",
+            "source_text": "The headquarters of Tesla are in Austin.",
+            "subject": "The headquarters of Tesla"
+          }
+        ],
+        "index": 21,
+        "missing": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "text": "The headquarters of Tesla are in Austin."
+      },
+      {
+        "claim_id": "0005-headquarters_location_of-headquarters-possessive",
+        "expected": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "extra": [
+          {
+            "object": "in austin",
+            "predicate": "is",
+            "subject": "tesla's headquarters"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0005-headquarters_location_of-headquarters-possessive",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "in Austin",
+            "predicate": "is",
+            "source_text": "Tesla's headquarters are in Austin.",
+            "subject": "Tesla's headquarters"
+          }
+        ],
+        "index": 22,
+        "missing": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "text": "Tesla's headquarters are in Austin."
+      },
+      {
+        "claim_id": "0005-headquarters_location_of-headquarters-object-first",
+        "expected": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "extra": [
+          {
+            "object": "the headquarters location of tesla",
+            "predicate": "is",
+            "subject": "austin"
+          }
+        ],
+        "extracted": [
+          {
+            "claim_id": "0005-headquarters_location_of-headquarters-object-first",
+            "confidence": 0.55,
+            "metadata": {
+              "extractor": "rule_based_triple_extractor",
+              "source": "is_rule"
+            },
+            "object": "the headquarters location of Tesla",
+            "predicate": "is",
+            "source_text": "Austin is the headquarters location of Tesla.",
+            "subject": "Austin"
+          }
+        ],
+        "index": 23,
+        "missing": [
+          {
+            "object": "austin",
+            "predicate": "headquarters_location_of",
+            "subject": "tesla"
+          }
+        ],
+        "text": "Austin is the headquarters location of Tesla."
       }
     ],
     "exact_match_count": 0,
     "expected_triple_count": 32,
-    "extracted_triple_count": 38,
+    "extracted_triple_count": 30,
     "f1": 0.0,
-    "false_positive_rate": 1.0,
-    "false_positive_record_count": 8,
+    "false_positive_rate": 0.0,
+    "false_positive_record_count": 0,
     "precision": 0.0,
     "recall": 0.0,
     "record_count": 40,

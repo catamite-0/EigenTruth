@@ -29,46 +29,46 @@
       "file_count": 1,
       "kind": "file",
       "path": "composite-triple-extraction-report.json",
-      "sha256": "6b22c7d70b66482a746b933dcd3d9d936305577775644b1880a7f178cc320bd0",
-      "size_bytes": 20933
+      "sha256": "3f58e66fc1d7410b1b6e2f5fe930f6f51d58a8a15e8ac37c81f64ad1a58777fa",
+      "size_bytes": 1459
     },
     "report.regex_rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "regex_rule_based-triple-extraction-report.json",
-      "sha256": "98ccdb57cf0a562f7419de18e88e91a0f0717d561f8888cd0edd1f4bff00cbb5",
-      "size_bytes": 20940
+      "sha256": "8ed6dfae3ee028c0bd324fc6acf270172adae3f364a3a6ef5108f127e4523bbf",
+      "size_bytes": 1466
     },
     "report.rule_based": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "rule_based-triple-extraction-report.json",
-      "sha256": "96384e07995237660668fca47b14c6dd0d10b9c5408676e7d9859d27b64de0cd",
-      "size_bytes": 23467
+      "sha256": "7f7e7f2efb6048d0a195388b62c9610405d7a47dec513a5260d78bca5dba1f6c",
+      "size_bytes": 25288
     },
     "workflow_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-workflow-summary.json",
-      "sha256": "fd8db3b91d2ecb067418c9346f05e8a8fe7a5301d5c359e1f1785895a41c61e8",
-      "size_bytes": 114221
+      "sha256": "219f122661afaae8cd22900bbd33928a4f151d953e465204f032951893262edb",
+      "size_bytes": 57206
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
-    "baseline_f1": 0.6666666666666665,
-    "best_adversarial_false_positive_rate": 1.0,
+    "baseline_f1": 0.75,
+    "best_adversarial_false_positive_rate": 0.0,
     "best_extractor": "regex_rule_based",
-    "best_f1": 0.888888888888889,
-    "f1_lift": 0.22222222222222243,
+    "best_f1": 1.0,
+    "f1_lift": 0.25,
     "n_adversarial_negative_records": 359,
     "n_records": 1795,
     "pattern_count": 15,
-    "promotes_augmented_extractor": false,
-    "status": "blocked",
+    "promotes_augmented_extractor": true,
+    "status": "promote",
     "workflow": "triple_extraction_fixture_workflow"
   },
   "schema_version": 1,

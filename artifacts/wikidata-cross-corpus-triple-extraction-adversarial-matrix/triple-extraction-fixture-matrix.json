@@ -2,12 +2,12 @@
   "corpora": [
     {
       "artifact_manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/artifact-manifest.json",
-      "baseline_f1": 0.6666666666666665,
-      "best_adversarial_false_positive_rate": 1.0,
-      "best_adversarial_false_positive_record_count": 359,
+      "baseline_f1": 0.75,
+      "best_adversarial_false_positive_rate": 0.0,
+      "best_adversarial_false_positive_record_count": 0,
       "best_extractor": "regex_rule_based",
-      "best_f1": 0.888888888888889,
-      "f1_lift": 0.22222222222222243,
+      "best_f1": 1.0,
+      "f1_lift": 0.25,
       "fact_corpus_paths": [
         "artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-source.jsonl"
       ],
@@ -23,17 +23,17 @@
       ],
       "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/triple-extraction-records.json",
       "slug": "country-core",
-      "status": "blocked",
+      "status": "promote",
       "workflow_summary_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/country-core/triple-extraction-workflow-summary.json"
     },
     {
       "artifact_manifest_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/artifact-manifest.json",
       "baseline_f1": 0.0,
-      "best_adversarial_false_positive_rate": 1.0,
-      "best_adversarial_false_positive_record_count": 8,
+      "best_adversarial_false_positive_rate": 0.0,
+      "best_adversarial_false_positive_record_count": 0,
       "best_extractor": "regex_rule_based",
-      "best_f1": 0.888888888888889,
-      "f1_lift": 0.888888888888889,
+      "best_f1": 1.0,
+      "f1_lift": 1.0,
       "fact_corpus_paths": [
         "artifacts/wikidata-organization-product-core-facts/wikidata-organization-product-source.jsonl"
       ],
@@ -49,7 +49,7 @@
       ],
       "records_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/triple-extraction-records.json",
       "slug": "organization-product",
-      "status": "blocked",
+      "status": "promote",
       "workflow_summary_path": "artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/organization-product/triple-extraction-workflow-summary.json"
     }
   ],
@@ -62,34 +62,21 @@
     "manufacturer_of",
     "official_language_of"
   ],
-  "max_best_adversarial_false_positive_rate": 1.0,
-  "mean_baseline_f1": 0.33333333333333326,
-  "mean_best_adversarial_false_positive_rate": 1.0,
-  "mean_best_f1": 0.888888888888889,
-  "mean_f1_lift": 0.5555555555555557,
+  "max_best_adversarial_false_positive_rate": 0.0,
+  "mean_baseline_f1": 0.375,
+  "mean_best_adversarial_false_positive_rate": 0.0,
+  "mean_best_f1": 1.0,
+  "mean_f1_lift": 0.625,
   "n_corpora": 2,
-  "promoted_corpora": 0,
+  "promoted_corpora": 2,
   "promotion_gate": {
-    "failures": [
-      {
-        "gate": "promoted_corpora",
-        "observed": 0,
-        "threshold": 2
-      },
-      {
-        "blocked_corpora": [
-          "country-core",
-          "organization-product"
-        ],
-        "gate": "all_corpora_promote"
-      }
-    ],
-    "min_augmented_f1": 0.0,
+    "failures": [],
+    "min_augmented_f1": 1.0,
     "min_corpora": 2,
     "min_distinct_predicates": 6,
-    "require_f1_lift": false
+    "require_f1_lift": true
   },
   "schema_version": 1,
-  "status": "blocked",
+  "status": "promote",
   "workflow": "triple_extraction_fixture_matrix"
 }

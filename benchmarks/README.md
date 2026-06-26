@@ -1065,12 +1065,12 @@ manifest verification.
 
 The adversarial companion matrix at
 `artifacts/wikidata-cross-corpus-triple-extraction-adversarial-matrix/` enables
-one negated near-miss per fact and intentionally blocks promotion: country-core
-adds `359` adversarial negatives, organization/product adds `8`, both corpora
-drop to best F1 `0.889`, and the best extractor has adversarial false-positive
-rate `1.000`. This is a required negative result: the current dependency-free
-extractor is release evidence for covered positive/paraphrase templates, not
-for negation-robust open-domain claim extraction.
+one negated near-miss per fact and now promotes after explicit negation
+rejection in the rule-based fallback: country-core adds `359` adversarial
+negatives, organization/product adds `8`, both corpora keep best F1 `1.000`,
+and best adversarial false-positive rate is `0.000`. This is still covered-KG
+template evidence, not a broad open-domain extractor claim; broader predicate
+confusion and non-template negatives remain separate gates.
 
 `triple_extraction_smoke.py` runs the bundled fixture through `rule_based`,
 `regex_rule_based`, and `composite` extractors and asserts that the augmented

@@ -5,8 +5,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/artifact-manifest.json",
-      "sha256": "19e0a673d17eccbb7a1efe60c5a266c08468cc02a59aaf71a56eb38c10d0b0cb",
-      "size_bytes": 2570
+      "sha256": "68dbc2f6715779e9edd10f778e0458a306dc2f62985111ccaa3296153c29d868",
+      "size_bytes": 2523
     },
     "corpus.country-core.source.1.wikidata-country-core-facts-source": {
       "exists": true,
@@ -21,16 +21,16 @@
       "file_count": 1,
       "kind": "file",
       "path": "country-core/triple-extraction-workflow-summary.json",
-      "sha256": "fd8db3b91d2ecb067418c9346f05e8a8fe7a5301d5c359e1f1785895a41c61e8",
-      "size_bytes": 114221
+      "sha256": "219f122661afaae8cd22900bbd33928a4f151d953e465204f032951893262edb",
+      "size_bytes": 57206
     },
     "corpus.organization-product.artifact_manifest": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/artifact-manifest.json",
-      "sha256": "ca8362fb8377bce41b20a89663f2148c81bac52cd98783c83e2fdfd892b67eae",
-      "size_bytes": 2543
+      "sha256": "235aba9af78bfb8732ef9e6ab32247bada4ce79960e27ddc3403d30289d70008",
+      "size_bytes": 2514
     },
     "corpus.organization-product.source.1.wikidata-organization-product-source": {
       "exists": true,
@@ -45,31 +45,31 @@
       "file_count": 1,
       "kind": "file",
       "path": "organization-product/triple-extraction-workflow-summary.json",
-      "sha256": "40694f2b1dac6372033e9513a10981a82e62850194a2959b7a041da3ee9bf5b7",
-      "size_bytes": 79555
+      "sha256": "dd562cbf3bc0d184f5b3620068a52ae997703413a4b5cd3646b780378dad751c",
+      "size_bytes": 57483
     },
     "matrix_summary": {
       "exists": true,
       "file_count": 1,
       "kind": "file",
       "path": "triple-extraction-fixture-matrix.json",
-      "sha256": "befd5fdad03065f85786c63d07d93c737fd0f599d85aba2bfa7da2db65752369",
-      "size_bytes": 3616
+      "sha256": "cdc97e936f6d757fab72a1d59e79c66c4fab4fa8321ee030bfc5803ebe5f0767",
+      "size_bytes": 3244
     }
   },
   "digest_algorithm": "sha256",
   "metadata": {
     "distinct_predicate_count": 6,
-    "max_best_adversarial_false_positive_rate": 1.0,
-    "mean_baseline_f1": 0.33333333333333326,
-    "mean_best_adversarial_false_positive_rate": 1.0,
-    "mean_best_f1": 0.888888888888889,
-    "mean_f1_lift": 0.5555555555555557,
+    "max_best_adversarial_false_positive_rate": 0.0,
+    "mean_baseline_f1": 0.375,
+    "mean_best_adversarial_false_positive_rate": 0.0,
+    "mean_best_f1": 1.0,
+    "mean_f1_lift": 0.625,
     "min_distinct_predicates": 6,
     "n_corpora": 2,
-    "promoted_corpora": 0,
-    "promotes_cross_corpus_extractor": false,
-    "status": "blocked",
+    "promoted_corpora": 2,
+    "promotes_cross_corpus_extractor": true,
+    "status": "promote",
     "workflow": "triple_extraction_fixture_matrix"
   },
   "schema_version": 1,
