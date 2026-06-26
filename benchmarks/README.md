@@ -263,6 +263,19 @@ python benchmarks/export_inside_diagnostics_samples.py \
   --artifact-manifest artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples-manifest.json
 ```
 
+Before promoting direct selfcheck signals, run
+`plan_selfcheck_sample_collection.py` to fail closed on insufficient aligned
+samples and get a machine-readable rerun plan:
+
+```bash
+python benchmarks/plan_selfcheck_sample_collection.py \
+  --scores artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json \
+  --samples artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json \
+  --output artifacts/smollm2-l20-direct-selfcheck-signal-fusion/sample-collection-plan.json \
+  --min-samples 2 \
+  --target-samples-per-record 3
+```
+
 Use `--inside-embedding-threshold` to tune the cosine-similarity cluster
 threshold for `inside_embedding_entropy`. It defaults to `0.90`; higher values
 split sampled embeddings into more clusters, while lower values merge more
@@ -1343,6 +1356,9 @@ and not-applicable rate `0.890`. At alpha 0.10, `truth_proj` remains best
 geometry-by-selfcheck fusion reaches only `AUROC 0.561` and detection `0.096`.
 Treat this as a sample-quality gate failure, not as evidence against
 self-consistency with better sampled responses.
+Use `plan_selfcheck_sample_collection.py` on that same score dump and samples
+payload to record the exact missing-record list and minimum new-sample budget
+before rerunning INSIDE sampling or external sample generation.
 
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops

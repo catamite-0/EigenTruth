@@ -263,6 +263,11 @@ Added a direct selfcheck-signal fusion workflow:
   `eval_truthfulqa.py --inside-diagnostics-cache` artifact when the score dump
   was not written with `--dump-inside-samples`, and writes a manifest
   fingerprinting the score dump, cache, and exported samples.
+- `plan_selfcheck_sample_collection.py` preflights the same aligned samples
+  before fusion, listing records below the target sample count, total deficit,
+  sample-quality gate projection, and rerun commands. This turns the current
+  sample-quality failure into an explicit collection plan instead of another
+  ambiguous negative result.
 - This is the preferred next replay path when aligned multi-sample generations
   are available, because it tests self-consistency as a calibrated signal before
   mixing it into verifier sidecars or product policy.

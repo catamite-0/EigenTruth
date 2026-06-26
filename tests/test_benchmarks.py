@@ -6340,6 +6340,126 @@ def test_run_selfcheck_signal_fusion_workflow_blocks_low_quality_samples(tmp_pat
     assert manifest["artifacts"]["sample_quality_report"]["exists"] is True
 
 
+def test_plan_selfcheck_sample_collection_reports_deficits(tmp_path):
+    module = importlib.import_module("benchmarks.plan_selfcheck_sample_collection")
+
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    output_path = tmp_path / "sample-plan.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -4},
+            "labels": [0, 1, 0],
+            "scores": {"truth_proj": [0.1, 0.8, 0.2]},
+            "statements": [
+                {"text": "Paris is the capital of France.", "claim_id": "paris"},
+                {"text": "Lyon is the capital of France in 2024.", "claim_id": "lyon"},
+                {"text": "Water boils at 100 degrees Celsius.", "claim_id": "water"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(
+        json.dumps({
+            "paris": [
+                "Paris is the capital of France.",
+                "Paris remains the capital of France.",
+            ],
+            "lyon": ["Lyon is not the capital of France in 2024."],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            samples=[str(samples_path)],
+            output=str(output_path),
+            min_samples=2,
+            target_samples_per_record=3,
+            max_records=None,
+            include_ready_records=False,
+            sample_quality_min_coverage=0.75,
+            sample_quality_min_average_samples_per_record=1.5,
+            sample_quality_min_records_meeting_min_samples=2,
+            compact_json=False,
+        )
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert payload["status"] == "needs_samples"
+    assert saved["summary"]["records_meeting_min_samples"] == 1
+    assert saved["summary"]["records_below_target_samples"] == 3
+    assert saved["summary"]["sample_deficit_total"] == 6
+    assert saved["sample_quality_gate_projection"]["status"] == "fail"
+    assert {failure["metric"] for failure in saved["sample_quality_gate_projection"]["failures"]} >= {
+        "coverage",
+        "average_samples_per_record",
+        "records_meeting_min_samples",
+    }
+    assert [record["claim_id"] for record in saved["records"]] == ["paris", "lyon", "water"]
+    assert [record["sample_deficit"] for record in saved["records"]] == [1, 2, 3]
+    assert "score_label" not in saved["records"][0]
+    assert saved["collection_plan"]["rerun"]["export_inside_diagnostics_samples"][1].endswith(
+        "export_inside_diagnostics_samples.py"
+    )
+
+
+def test_plan_selfcheck_sample_collection_ready_when_target_met(tmp_path):
+    module = importlib.import_module("benchmarks.plan_selfcheck_sample_collection")
+
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    output_path = tmp_path / "sample-plan.json"
+    scores_path.write_text(
+        json.dumps({
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [
+                {"text": "Paris is the capital of France.", "claim_id": "paris"},
+                {"text": "The moon is made of cheese.", "claim_id": "moon"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(
+        json.dumps({
+            "paris": [
+                "Paris is the capital of France.",
+                "Paris remains the capital of France.",
+            ],
+            "moon": [
+                "The moon is not made of cheese.",
+                "Lunar samples show the moon is not cheese.",
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            samples=[str(samples_path)],
+            output=str(output_path),
+            min_samples=2,
+            target_samples_per_record=None,
+            max_records=0,
+            include_ready_records=True,
+            sample_quality_min_coverage=1.0,
+            sample_quality_min_average_samples_per_record=2.0,
+            sample_quality_min_records_meeting_min_samples=2,
+            compact_json=True,
+        )
+    )
+
+    assert payload["status"] == "ready"
+    assert payload["summary"]["sample_deficit_total"] == 0
+    assert payload["sample_quality_gate_projection"]["status"] == "pass"
+    assert payload["records"] == []
+    assert payload["records_truncated_count"] == 2
+    assert output_path.read_text(encoding="utf-8").startswith("{\"collection_plan\"")
+
+
 def test_export_inside_diagnostics_samples_reconstructs_statement_cache_keys(tmp_path):
     exporter = importlib.import_module("benchmarks.export_inside_diagnostics_samples")
     truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
