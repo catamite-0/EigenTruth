@@ -4607,6 +4607,25 @@ The committed selector report enables trajectory for gpt2 and disables it for
 SmolLM2, preserving trajectory as model-conditional evidence rather than a
 global product default.
 
+`build_selected_fusion_artifacts.py` then turns the selector output into
+deployable `RankScoreFusionArtifact` files for each run, using the selected
+signals and directions from the report.
+
+```bash
+python benchmarks/build_selected_fusion_artifacts.py \
+  --selection-report artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-fusion-signal-selection-report.json \
+  --scores gpt2=artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json \
+  --scores smollm2=artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json \
+  --output-dir artifacts/e7-truthfulqa-trajectory-multimodel \
+  --json artifacts/e7-truthfulqa-trajectory-multimodel/selected-fusion-artifact-build-report.json \
+  --quiet
+```
+
+The committed build report writes `gpt2-selected-fusion-artifact.json` with
+`truth_proj,subspace_resid,eigenscore,maha_last,trajectory_convergence` and
+`smollm2-selected-fusion-artifact.json` with the geometry-only bundle. Both use
+`mean_rank` and alpha 0.1.
+
 ## `compare_transfer.py`
 
 Compares saved layer/score sweep reports across runs without loading a model. Use

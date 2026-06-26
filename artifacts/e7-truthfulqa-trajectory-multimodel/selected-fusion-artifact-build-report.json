@@ -1,0 +1,120 @@
+{
+  "artifacts": {
+    "gpt2": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-selected-fusion-artifact.json",
+    "smollm2": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json"
+  },
+  "output_dir": "artifacts/e7-truthfulqa-trajectory-multimodel",
+  "policy": {
+    "alpha": 0.1,
+    "max_false_alarm_delta": 0.03,
+    "min_auroc_delta": 0.0,
+    "min_detection_delta": 0.0,
+    "tracked_signal": "trajectory_convergence"
+  },
+  "runs": [
+    {
+      "artifact_method": "mean_rank",
+      "artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-selected-fusion-artifact.json",
+      "calibration_size": 57,
+      "conformal_alpha": 0.1,
+      "directions": {
+        "eigenscore": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "trajectory_convergence": "higher",
+        "truth_proj": "higher"
+      },
+      "run_name": "gpt2",
+      "score_dump_path": "artifacts/e7-truthfulqa-trajectory-multimodel/gpt2-trajectory-enhanced-scores.manifest.json",
+      "selected_candidate": "geometry_trajectory:mean_rank",
+      "selected_method": "mean_rank",
+      "selected_metrics": {
+        "alpha": 0.1,
+        "auroc": 0.7013294956140351,
+        "coverage": 0.9465517241379311,
+        "detection": 0.22890625,
+        "false_alarm": 0.05344827586206896
+      },
+      "selected_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last",
+        "trajectory_convergence"
+      ],
+      "threshold": 0.7298245614035088,
+      "tracked_signal": "trajectory_convergence",
+      "tracked_signal_enabled": true
+    },
+    {
+      "artifact_method": "mean_rank",
+      "artifact_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-selected-fusion-artifact.json",
+      "calibration_size": 57,
+      "conformal_alpha": 0.1,
+      "directions": {
+        "eigenscore": "higher",
+        "maha_last": "higher",
+        "subspace_resid": "higher",
+        "truth_proj": "higher"
+      },
+      "run_name": "smollm2",
+      "score_dump_path": "artifacts/e7-truthfulqa-trajectory-multimodel/smollm2-trajectory-enhanced-scores.manifest.json",
+      "selected_candidate": "geometry:mean_rank",
+      "selected_method": "mean_rank",
+      "selected_metrics": {
+        "alpha": 0.1,
+        "auroc": 0.6923519736842105,
+        "coverage": 0.9706896551724138,
+        "detection": 0.22421875,
+        "false_alarm": 0.029310344827586203
+      },
+      "selected_signals": [
+        "truth_proj",
+        "subspace_resid",
+        "eigenscore",
+        "maha_last"
+      ],
+      "threshold": 0.7412280701754386,
+      "tracked_signal": "trajectory_convergence",
+      "tracked_signal_enabled": false
+    }
+  ],
+  "schema_version": 1,
+  "score_dump_cache": {
+    "cache_entries": 10,
+    "enabled": true,
+    "fingerprint": {
+      "attempts": 4,
+      "hit_rate": 0.5,
+      "hits": 2,
+      "misses": 2,
+      "writes": 4
+    },
+    "jsonl_manifest": {
+      "attempts": 4,
+      "hit_rate": 0.5,
+      "hits": 2,
+      "misses": 2,
+      "writes": 2
+    },
+    "jsonl_summary": {
+      "attempts": 2,
+      "hit_rate": 1.0,
+      "hits": 2,
+      "misses": 0,
+      "writes": 2
+    },
+    "jsonl_view": {
+      "attempts": 2,
+      "hit_rate": 0.0,
+      "hits": 0,
+      "misses": 2,
+      "writes": 2
+    }
+  },
+  "selection_report_path": "artifacts/e7-truthfulqa-trajectory-multimodel/trajectory-fusion-signal-selection-report.json",
+  "selection_status": "complete",
+  "selection_workflow": "fusion_signal_selection",
+  "status": "complete",
+  "workflow": "selected_fusion_artifact_build"
+}

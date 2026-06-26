@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from eigentruth.calibration import RankScoreFusionArtifact
 from eigentruth.eval import (
     SignalSelectionPolicy,
     SignalSelectionReport,
@@ -162,3 +163,51 @@ def test_select_fusion_signals_cli_writes_report(tmp_path):
     assert saved["workflow"] == "fusion_signal_selection"
     assert saved["decisions"][0]["tracked_signal_enabled"] is True
     assert saved["decisions"][1]["tracked_signal_enabled"] is False
+
+
+def test_build_selected_fusion_artifacts_cli_writes_per_run_artifacts(tmp_path):
+    selection = select_signals_from_fusion_ablation_matrix(_matrix())
+    selection_path = tmp_path / "selection.json"
+    output_dir = tmp_path / "artifacts"
+    report_path = tmp_path / "build-report.json"
+    gpt2_scores = tmp_path / "gpt2-scores.json"
+    smollm2_scores = tmp_path / "smollm2-scores.json"
+    selection.save_json(selection_path)
+    labels = [0, 0, 1, 1]
+    score_payload = {
+        "config": {"model": "synthetic", "layer": -1},
+        "labels": labels,
+        "scores": {
+            "truth_proj": [0.1, 0.2, 0.8, 0.9],
+            "subspace_resid": [0.2, 0.3, 0.9, 1.0],
+            "trajectory_convergence": [0.1, 0.2, 0.7, 0.8],
+        },
+    }
+    gpt2_scores.write_text(json.dumps(score_payload), encoding="utf-8")
+    smollm2_scores.write_text(json.dumps(score_payload), encoding="utf-8")
+
+    module = __import__("benchmarks.build_selected_fusion_artifacts", fromlist=["run"])
+    payload = module.run(SimpleNamespace(
+        selection_report=str(selection_path),
+        scores=[f"gpt2={gpt2_scores}", f"smollm2={smollm2_scores}"],
+        output_dir=str(output_dir),
+        json=str(report_path),
+        alpha=None,
+        created_at=None,
+        commit_sha=None,
+        quiet=True,
+    ))
+    saved = json.loads(report_path.read_text(encoding="utf-8"))
+    gpt2_artifact = RankScoreFusionArtifact.load_json(output_dir / "gpt2-selected-fusion-artifact.json")
+    smollm2_artifact = RankScoreFusionArtifact.load_json(output_dir / "smollm2-selected-fusion-artifact.json")
+
+    assert saved == payload
+    assert payload["workflow"] == "selected_fusion_artifact_build"
+    assert gpt2_artifact.signal_names() == ("truth_proj", "subspace_resid", "trajectory_convergence")
+    assert smollm2_artifact.signal_names() == ("truth_proj", "subspace_resid")
+    assert gpt2_artifact.method == "mean_rank"
+    assert smollm2_artifact.method == "mean_rank"
+    assert gpt2_artifact.calibration_size() == 2
+    assert smollm2_artifact.calibration_size() == 2
+    assert gpt2_artifact.score_dump_metadata["selection_decision"]["tracked_signal_enabled"] is True
+    assert smollm2_artifact.score_dump_metadata["selection_decision"]["tracked_signal_enabled"] is False
