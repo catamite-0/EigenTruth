@@ -3802,6 +3802,11 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
             refute_threshold=0.50,
             early_stop=False,
             max_samples=None,
+            sample_quality_min_coverage=0.50,
+            sample_quality_max_not_applicable_rate=0.50,
+            sample_quality_min_average_samples_per_record=1.0,
+            sample_quality_min_records_meeting_min_samples=None,
+            sample_quality_min_best_overlap_mean=0.0,
             compact_json=False,
             no_verify_manifest=False,
         )
@@ -3816,6 +3821,8 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
 
     assert payload["manifest_verification"]["passed"] is True
     assert payload["selfcheck_summary"]["synthetic"]["n_total"] == 4
+    assert payload["sample_quality"]["status"] == "pass"
+    assert payload["sample_quality"]["runs"]["synthetic"]["coverage"] == pytest.approx(1.0)
     assert enhanced.scores["selfcheck_support_rate"] == pytest.approx((1.0, 1.0, 0.0, 0.0))
     assert enhanced.scores["selfcheck_refute_rate"] == pytest.approx((0.0, 0.0, 1.0, 1.0))
     assert ensemble["runs"][0]["best_geometry_fusion_at_alpha"]["name"] == "interaction"
@@ -3823,8 +3830,92 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
         "synthetic-selfcheck-geometry-fusion-artifact.json"
     )
     assert manifest["metadata"]["workflow"] == "selfcheck_signal_fusion_workflow"
+    assert manifest["metadata"]["sample_quality"]["status"] == "pass"
+    assert manifest["artifacts"]["sample_quality_report"]["exists"] is True
     assert manifest["artifacts"]["selfcheck_samples.1.samples"]["exists"] is True
     assert manifest["artifacts"]["enhanced_records.synthetic"]["exists"] is True
+
+
+def test_run_selfcheck_signal_fusion_workflow_blocks_low_quality_samples(tmp_path):
+    module = importlib.import_module("benchmarks.run_selfcheck_signal_fusion_workflow")
+
+    scores_path = tmp_path / "scores.json"
+    samples_path = tmp_path / "samples.json"
+    output_dir = tmp_path / "selfcheck-fusion"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -4},
+            "labels": [0, 0, 1, 1],
+            "scores": {
+                "truth_proj": [0.1, 0.2, 0.8, 0.9],
+                "subspace_resid": [0.2, 0.1, 0.7, 0.8],
+                "eigenscore": [0.1, 0.1, 0.6, 0.7],
+            },
+            "statements": [
+                {"text": "Paris is the capital of France.", "claim_id": "paris"},
+                {"text": "Water boils at 100 degrees Celsius.", "claim_id": "water"},
+                {"text": "Lyon is the capital of France in 2024.", "claim_id": "lyon"},
+                {"text": "The moon is made of cheese.", "claim_id": "moon"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    samples_path.write_text(
+        json.dumps({
+            "paris": [
+                "Paris is the capital of France.",
+                "Paris is the capital of France and a city.",
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    payload = module.run(
+        SimpleNamespace(
+            scores=[f"synthetic={scores_path}"],
+            output_dir=str(output_dir),
+            samples=[str(samples_path)],
+            keep_signals="truth_proj,subspace_resid,eigenscore",
+            selfcheck_signals=None,
+            fusion_signals="truth_proj,subspace_resid,eigenscore,selfcheck_not_applicable",
+            methods="mean_rank",
+            geometry_signals="truth_proj,subspace_resid,eigenscore",
+            uncertainty_signals="selfcheck_not_applicable",
+            geometry_method="mean_rank",
+            uncertainty_method="mean_rank",
+            geometry_fusion_methods="interaction",
+            alphas="0.1",
+            repeats=1,
+            seed=0,
+            best_alpha=0.1,
+            min_samples=2,
+            min_overlap=0.50,
+            support_threshold=0.60,
+            refute_threshold=0.50,
+            early_stop=False,
+            max_samples=None,
+            sample_quality_min_coverage=0.75,
+            sample_quality_max_not_applicable_rate=0.25,
+            sample_quality_min_average_samples_per_record=1.5,
+            sample_quality_min_records_meeting_min_samples=3,
+            sample_quality_min_best_overlap_mean=0.0,
+            compact_json=False,
+            no_verify_manifest=False,
+        )
+    )
+    quality = payload["sample_quality"]
+    manifest = json.loads(Path(payload["artifact_manifest_path"]).read_text(encoding="utf-8"))
+
+    assert quality["status"] == "fail"
+    assert quality["failed_runs"] == ["synthetic"]
+    assert quality["runs"]["synthetic"]["coverage"] == pytest.approx(0.25)
+    assert {failure["metric"] for failure in quality["runs"]["synthetic"]["failures"]} >= {
+        "coverage",
+        "not_applicable_rate",
+        "records_meeting_min_samples",
+    }
+    assert manifest["metadata"]["sample_quality"]["status"] == "fail"
+    assert manifest["artifacts"]["sample_quality_report"]["exists"] is True
 
 
 def test_export_inside_diagnostics_samples_reconstructs_statement_cache_keys(tmp_path):

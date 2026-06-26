@@ -1,0 +1,54 @@
+{
+  "failed_runs": [
+    "smollm2-l20"
+  ],
+  "passed": false,
+  "recommendation": "collect better aligned samples before promoting selfcheck signals",
+  "report_type": "selfcheck_sample_quality_gate",
+  "runs": {
+    "smollm2-l20": {
+      "average_samples_per_record": 0.4155844155844156,
+      "best_overlap_mean": 0.0017086448904630725,
+      "coverage": 0.11038961038961038,
+      "failures": [
+        {
+          "metric": "coverage",
+          "rule": "value >= threshold",
+          "threshold": 0.5,
+          "value": 0.11038961038961038
+        },
+        {
+          "metric": "average_samples_per_record",
+          "rule": "value >= threshold",
+          "threshold": 1.0,
+          "value": 0.4155844155844156
+        },
+        {
+          "metric": "not_applicable_rate",
+          "rule": "value <= threshold",
+          "threshold": 0.5,
+          "value": 0.8896103896103896
+        }
+      ],
+      "n_total": 154,
+      "name": "smollm2-l20",
+      "not_applicable_rate": 0.8896103896103896,
+      "passed": false,
+      "records_meeting_min_samples": 17,
+      "records_with_samples": 47,
+      "sample_count_mean": 0.4155844155844156,
+      "sample_presence_rate": 0.3051948051948052,
+      "status": "fail",
+      "total_samples": 64
+    }
+  },
+  "schema_version": 1,
+  "status": "fail",
+  "thresholds": {
+    "max_not_applicable_rate": 0.5,
+    "min_average_samples_per_record": 1.0,
+    "min_best_overlap_mean": 0.0,
+    "min_coverage": 0.5,
+    "min_records_meeting_min_samples": null
+  }
+}

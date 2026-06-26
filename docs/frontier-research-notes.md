@@ -154,8 +154,8 @@ Added a direct selfcheck-signal fusion workflow:
 
 - `run_selfcheck_signal_fusion_workflow.py` wraps the direct bridge into one
   no-model workflow: sampled responses -> selfcheck-enhanced score dumps ->
-  `eval_score_ensemble.py` report -> optional geometry-by-selfcheck fusion
-  artifacts -> artifact manifest verification.
+  sample-quality gate -> `eval_score_ensemble.py` report -> optional
+  geometry-by-selfcheck fusion artifacts -> artifact manifest verification.
 - `export_inside_diagnostics_samples.py` recovers sampled texts from an existing
   `eval_truthfulqa.py --inside-diagnostics-cache` artifact when the score dump
   was not written with `--dump-inside-samples`, and writes a manifest
@@ -166,10 +166,13 @@ Added a direct selfcheck-signal fusion workflow:
 - The current SmolLM2 l20 replay at
   `artifacts/smollm2-l20-direct-selfcheck-signal-fusion/` is a negative result:
   cache export matches 77/154 triggered records, only 25 records have at least
-  two non-empty samples, direct selfcheck rates collapse to mostly
-  `not_applicable`, and at alpha 0.10 `truth_proj` remains stronger
-  (`AUROC 0.682`, detection `0.178`) than the best geometry-by-selfcheck fusion
-  (`AUROC 0.561`, detection `0.096`). This is a sample-quality gate failure.
+  two non-empty samples before alignment/deduplication, and the workflow
+  sample-quality gate fails after alignment/deduplication with only 17/154
+  usable two-sample records, coverage `0.110`, average samples per record
+  `0.416`, and not-applicable rate `0.890`. At alpha 0.10 `truth_proj` remains
+  stronger (`AUROC 0.682`, detection `0.178`) than the best
+  geometry-by-selfcheck fusion (`AUROC 0.561`, detection `0.096`). This is a
+  sample-quality gate failure.
 
 Added spectrum-to-sweep layer-selection audit tooling:
 

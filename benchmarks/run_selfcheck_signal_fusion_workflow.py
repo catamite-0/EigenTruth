@@ -82,6 +82,11 @@ class SelfcheckSignalFusionWorkflowConfig:
     refute_threshold: float = 0.50
     early_stop: bool = False
     max_samples: int | None = None
+    sample_quality_min_coverage: float = 0.50
+    sample_quality_max_not_applicable_rate: float = 0.50
+    sample_quality_min_average_samples_per_record: float = 1.0
+    sample_quality_min_records_meeting_min_samples: int | None = None
+    sample_quality_min_best_overlap_mean: float = 0.0
     compact_json: bool = False
     verify_manifest: bool = True
 
@@ -115,11 +120,33 @@ class SelfcheckSignalFusionWorkflowConfig:
             raise ValueError("min_samples must be >= 1.")
         if self.max_samples is not None and int(self.max_samples) < 1:
             raise ValueError("max_samples must be >= 1 when set.")
+        if self.sample_quality_min_records_meeting_min_samples is not None:
+            min_records = int(self.sample_quality_min_records_meeting_min_samples)
+            if min_records < 0:
+                raise ValueError("sample_quality_min_records_meeting_min_samples must be >= 0 when set.")
+            object.__setattr__(self, "sample_quality_min_records_meeting_min_samples", min_records)
         for name in ("min_overlap", "support_threshold", "refute_threshold"):
             value = float(getattr(self, name))
             if not 0.0 <= value <= 1.0:
                 raise ValueError(f"{name} must be in [0, 1].")
             object.__setattr__(self, name, value)
+        for name in (
+            "sample_quality_min_coverage",
+            "sample_quality_max_not_applicable_rate",
+            "sample_quality_min_best_overlap_mean",
+        ):
+            value = float(getattr(self, name))
+            if not 0.0 <= value <= 1.0:
+                raise ValueError(f"{name} must be in [0, 1].")
+            object.__setattr__(self, name, value)
+        min_average_samples = float(self.sample_quality_min_average_samples_per_record)
+        if min_average_samples < 0.0:
+            raise ValueError("sample_quality_min_average_samples_per_record must be >= 0.")
+        object.__setattr__(
+            self,
+            "sample_quality_min_average_samples_per_record",
+            min_average_samples,
+        )
         if any(not (0.0 < float(alpha) < 1.0) for alpha in self.alphas):
             raise ValueError("alphas must be in (0, 1).")
         if not (0.0 < float(self.best_alpha) < 1.0):
@@ -136,6 +163,10 @@ class SelfcheckSignalFusionWorkflowConfig:
     @property
     def score_ensemble_report_path(self) -> Path:
         return self.output_dir / "score-ensemble-report.json"
+
+    @property
+    def sample_quality_report_path(self) -> Path:
+        return self.output_dir / "sample-quality-report.json"
 
     @property
     def artifact_manifest_path(self) -> Path:
@@ -185,8 +216,13 @@ def run_selfcheck_signal_fusion_workflow(
             enhanced_summaries[run_name] = {
                 "n_total": report.get("n_total"),
                 "selfcheck_signals": report.get("selfcheck_signals"),
+                "fixture_summary": report.get("fixture_summary"),
                 "summary": report.get("summary"),
             }
+
+    with _profile_phase(profile, "write_sample_quality_report"):
+        sample_quality_report = _sample_quality_report(config, enhanced_summaries)
+        _write_json(config.sample_quality_report_path, sample_quality_report, compact=config.compact_json)
 
     with _profile_phase(profile, "build_score_ensemble_report"):
         score_ensemble_report = build_ensemble_report(
@@ -262,6 +298,8 @@ def run_selfcheck_signal_fusion_workflow(
         "config": _config_payload(config),
         "enhanced_score_dumps": {name: str(path) for name, path in enhanced_score_dumps},
         "enhanced_score_reports": enhanced_reports,
+        "sample_quality_report_path": str(config.sample_quality_report_path),
+        "sample_quality": sample_quality_report,
         "score_ensemble_report_path": str(config.score_ensemble_report_path),
         "geometry_fusion_artifacts": geometry_artifacts,
         "artifact_manifest_path": str(config.artifact_manifest_path),
@@ -287,6 +325,7 @@ def _write_artifact_manifest(
     metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
     artifacts: dict[str, str | Path | None] = {
+        "sample_quality_report": config.sample_quality_report_path,
         "score_ensemble_report": config.score_ensemble_report_path,
     }
     for idx, path in enumerate(config.sample_paths, start=1):
@@ -338,6 +377,8 @@ def _manifest_metadata(
             "early_stop": bool(config.early_stop),
             "max_samples": config.max_samples,
         },
+        "sample_quality_gate": _sample_quality_gate_config(config),
+        "sample_quality": _sample_quality_report(config, enhanced_summaries),
         "selfcheck_summary": dict(enhanced_summaries),
         "fusion_summary": _fusion_summary(score_ensemble_report),
         "geometry_artifact_count": len(geometry_artifacts),
@@ -391,6 +432,7 @@ def _config_payload(config: SelfcheckSignalFusionWorkflowConfig) -> dict[str, An
         "refute_threshold": float(config.refute_threshold),
         "early_stop": bool(config.early_stop),
         "max_samples": config.max_samples,
+        "sample_quality_gate": _sample_quality_gate_config(config),
         "verify_manifest": bool(config.verify_manifest),
     }
 
@@ -411,6 +453,139 @@ def _write_json(path: Path, payload: Mapping[str, Any], *, compact: bool) -> Non
     else:
         text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     path.write_text(text, encoding="utf-8")
+
+
+def _sample_quality_gate_config(config: SelfcheckSignalFusionWorkflowConfig) -> dict[str, Any]:
+    return {
+        "min_coverage": float(config.sample_quality_min_coverage),
+        "max_not_applicable_rate": float(config.sample_quality_max_not_applicable_rate),
+        "min_average_samples_per_record": float(config.sample_quality_min_average_samples_per_record),
+        "min_records_meeting_min_samples": config.sample_quality_min_records_meeting_min_samples,
+        "min_best_overlap_mean": float(config.sample_quality_min_best_overlap_mean),
+    }
+
+
+def _sample_quality_report(
+    config: SelfcheckSignalFusionWorkflowConfig,
+    enhanced_summaries: Mapping[str, Any],
+) -> dict[str, Any]:
+    thresholds = _sample_quality_gate_config(config)
+    runs = {}
+    failed_runs = []
+    for run_name, summary in enhanced_summaries.items():
+        run_report = _sample_quality_run_report(str(run_name), _mapping(summary), thresholds)
+        runs[str(run_name)] = run_report
+        if not run_report["passed"]:
+            failed_runs.append(str(run_name))
+    passed = not failed_runs
+    return {
+        "schema_version": 1,
+        "report_type": "selfcheck_sample_quality_gate",
+        "status": "pass" if passed else "fail",
+        "passed": passed,
+        "thresholds": thresholds,
+        "runs": runs,
+        "failed_runs": failed_runs,
+        "recommendation": (
+            "selfcheck signals have enough sample coverage for calibrated replay"
+            if passed else
+            "collect better aligned samples before promoting selfcheck signals"
+        ),
+    }
+
+
+def _sample_quality_run_report(
+    run_name: str,
+    summary: Mapping[str, Any],
+    thresholds: Mapping[str, Any],
+) -> dict[str, Any]:
+    fixture = _mapping(summary.get("fixture_summary"))
+    signals = _mapping(summary.get("summary"))
+    n_total = int(_number(summary.get("n_total"), default=fixture.get("n_records", 0.0)))
+    records_with_samples = int(_number(fixture.get("records_with_samples"), default=0.0))
+    records_meeting_min = int(_number(fixture.get("records_meeting_min_samples"), default=0.0))
+    total_samples = int(_number(fixture.get("total_samples"), default=0.0))
+    average_samples = _number(fixture.get("average_samples_per_record"), default=0.0)
+    coverage = (float(records_meeting_min) / float(n_total)) if n_total else 0.0
+    sample_presence_rate = (float(records_with_samples) / float(n_total)) if n_total else 0.0
+    not_applicable_rate = _signal_mean(signals, "selfcheck_not_applicable")
+    best_overlap_mean = _signal_mean(signals, "selfcheck_best_overlap")
+    sample_count_mean = _signal_mean(signals, "selfcheck_sample_count")
+
+    failures = []
+    if coverage < float(thresholds["min_coverage"]):
+        failures.append({
+            "metric": "coverage",
+            "value": coverage,
+            "threshold": float(thresholds["min_coverage"]),
+            "rule": "value >= threshold",
+        })
+    if average_samples < float(thresholds["min_average_samples_per_record"]):
+        failures.append({
+            "metric": "average_samples_per_record",
+            "value": average_samples,
+            "threshold": float(thresholds["min_average_samples_per_record"]),
+            "rule": "value >= threshold",
+        })
+    min_records = thresholds.get("min_records_meeting_min_samples")
+    if min_records is not None and records_meeting_min < int(min_records):
+        failures.append({
+            "metric": "records_meeting_min_samples",
+            "value": records_meeting_min,
+            "threshold": int(min_records),
+            "rule": "value >= threshold",
+        })
+    if not_applicable_rate is not None and not_applicable_rate > float(thresholds["max_not_applicable_rate"]):
+        failures.append({
+            "metric": "not_applicable_rate",
+            "value": not_applicable_rate,
+            "threshold": float(thresholds["max_not_applicable_rate"]),
+            "rule": "value <= threshold",
+        })
+    if best_overlap_mean is not None and best_overlap_mean < float(thresholds["min_best_overlap_mean"]):
+        failures.append({
+            "metric": "best_overlap_mean",
+            "value": best_overlap_mean,
+            "threshold": float(thresholds["min_best_overlap_mean"]),
+            "rule": "value >= threshold",
+        })
+
+    return {
+        "name": run_name,
+        "passed": not failures,
+        "status": "pass" if not failures else "fail",
+        "n_total": n_total,
+        "records_with_samples": records_with_samples,
+        "records_meeting_min_samples": records_meeting_min,
+        "total_samples": total_samples,
+        "coverage": coverage,
+        "sample_presence_rate": sample_presence_rate,
+        "average_samples_per_record": average_samples,
+        "not_applicable_rate": not_applicable_rate,
+        "best_overlap_mean": best_overlap_mean,
+        "sample_count_mean": sample_count_mean,
+        "failures": failures,
+    }
+
+
+def _signal_mean(signals: Mapping[str, Any], name: str) -> float | None:
+    payload = signals.get(name)
+    if not isinstance(payload, Mapping) or payload.get("mean") is None:
+        return None
+    return _number(payload.get("mean"), default=0.0)
+
+
+def _number(value: Any, *, default: Any) -> float:
+    if isinstance(value, bool) or value is None:
+        return float(default)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
 
 
 def _parse_named_path(value: str) -> tuple[str, Path]:
@@ -466,6 +641,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         refute_threshold=args.refute_threshold,
         early_stop=args.early_stop,
         max_samples=args.max_samples,
+        sample_quality_min_coverage=args.sample_quality_min_coverage,
+        sample_quality_max_not_applicable_rate=args.sample_quality_max_not_applicable_rate,
+        sample_quality_min_average_samples_per_record=args.sample_quality_min_average_samples_per_record,
+        sample_quality_min_records_meeting_min_samples=args.sample_quality_min_records_meeting_min_samples,
+        sample_quality_min_best_overlap_mean=args.sample_quality_min_best_overlap_mean,
         compact_json=args.compact_json,
         verify_manifest=not bool(args.no_verify_manifest),
     )
@@ -503,6 +683,11 @@ def main() -> None:
     parser.add_argument("--refute-threshold", type=float, default=0.50)
     parser.add_argument("--early-stop", action="store_true")
     parser.add_argument("--max-samples", type=int, default=None)
+    parser.add_argument("--sample-quality-min-coverage", type=float, default=0.50)
+    parser.add_argument("--sample-quality-max-not-applicable-rate", type=float, default=0.50)
+    parser.add_argument("--sample-quality-min-average-samples-per-record", type=float, default=1.0)
+    parser.add_argument("--sample-quality-min-records-meeting-min-samples", type=int, default=None)
+    parser.add_argument("--sample-quality-min-best-overlap-mean", type=float, default=0.0)
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--no-verify-manifest", action="store_true")
     run(parser.parse_args())

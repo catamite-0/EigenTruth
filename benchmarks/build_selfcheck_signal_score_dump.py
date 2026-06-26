@@ -240,6 +240,7 @@ def build_report(
         "signals": list(enhanced.scores),
         "selfcheck_signals": list(selfcheck_signals),
         "selfcheck_config": dict(enhanced.config["selfcheck_signal_score_dump"]),
+        "fixture_summary": dict(enhanced.extras["selfcheck_signal_metadata"].get("fixture_summary", {})),
         "summary": {
             signal: {
                 "min": min(enhanced.scores[signal]),

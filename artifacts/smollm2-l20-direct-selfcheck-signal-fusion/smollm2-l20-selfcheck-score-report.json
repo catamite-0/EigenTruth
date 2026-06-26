@@ -1,4 +1,12 @@
 {
+  "fixture_summary": {
+    "average_samples_per_record": 0.4155844155844156,
+    "n_records": 154,
+    "records_dropped_below_min_samples": 0,
+    "records_meeting_min_samples": 17,
+    "records_with_samples": 47,
+    "total_samples": 64
+  },
   "input_scores": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
   "n_total": 154,
   "output": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.json",

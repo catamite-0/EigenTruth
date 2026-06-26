@@ -1153,11 +1153,14 @@ python benchmarks/run_selfcheck_signal_fusion_workflow.py \
 The current SmolLM2 l20 direct selfcheck replay at
 `artifacts/smollm2-l20-direct-selfcheck-signal-fusion/` is a negative result:
 the exporter recovers 77/154 triggered records from the inside diagnostics cache,
-but only 25 records meet the two-nonempty-sample threshold. At alpha 0.10,
-`truth_proj` remains best (`AUROC 0.682`, detection `0.178`, false alarm
-`0.091`), while the best geometry-by-selfcheck fusion reaches only `AUROC 0.561`
-and detection `0.096`. Treat this as a sample-quality gate failure, not as
-evidence against self-consistency with better sampled responses.
+but after alignment and deduplication only 17/154 records meet the two-sample
+selfcheck threshold. The workflow's `sample-quality-report.json` therefore
+fails the default gate: coverage `0.110`, average samples per record `0.416`,
+and not-applicable rate `0.890`. At alpha 0.10, `truth_proj` remains best
+(`AUROC 0.682`, detection `0.178`, false alarm `0.091`), while the best
+geometry-by-selfcheck fusion reaches only `AUROC 0.561` and detection `0.096`.
+Treat this as a sample-quality gate failure, not as evidence against
+self-consistency with better sampled responses.
 
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops

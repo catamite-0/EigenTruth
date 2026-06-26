@@ -13,8 +13,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "smollm2-l20-selfcheck-score-report.json",
-      "sha256": "373d45ab44f3dc96547ca7320d57821edf2f8425dae0dffca4928cd0d776b783",
-      "size_bytes": 2549
+      "sha256": "f214bd6bf69fc2dd4fbc3609dfd83ba3a490b22a0808ee76e72f728c8188bdf1",
+      "size_bytes": 2792
     },
     "enhanced_scores.smollm2-l20": {
       "exists": true,
@@ -31,6 +31,14 @@
       "path": "smollm2-l20-selfcheck-geometry-fusion-artifact.json",
       "sha256": "407b394c103f50c3861d1c58673fe6cea1ef7cd82f115e8c48b9d1eac4a1e905",
       "size_bytes": 15104
+    },
+    "sample_quality_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "sample-quality-report.json",
+      "sha256": "9f9c79707f7c28a7b33b01b484cc68722cc95efe2f56f82f97284d4be9e6d941",
+      "size_bytes": 1520
     },
     "score_ensemble_report": {
       "exists": true,
@@ -115,15 +123,77 @@
       "nll_answer"
     ],
     "profile": {
-      "build_geometry_fusion_artifacts": 0.01300380800239509,
-      "build_score_ensemble_report": 0.5599020940062474,
-      "build_selfcheck_signal_score_dumps": 0.017093654001655523,
-      "write_score_ensemble_report": 0.001611591003893409
+      "build_geometry_fusion_artifacts": 0.01320355299685616,
+      "build_score_ensemble_report": 0.6251267640036531,
+      "build_selfcheck_signal_score_dumps": 0.018838110998331103,
+      "write_sample_quality_report": 0.0004176360016572289,
+      "write_score_ensemble_report": 0.0016975160033325665
     },
     "runner": "run_selfcheck_signal_fusion_workflow",
     "sample_paths": [
       "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json"
     ],
+    "sample_quality": {
+      "failed_runs": [
+        "smollm2-l20"
+      ],
+      "passed": false,
+      "recommendation": "collect better aligned samples before promoting selfcheck signals",
+      "report_type": "selfcheck_sample_quality_gate",
+      "runs": {
+        "smollm2-l20": {
+          "average_samples_per_record": 0.4155844155844156,
+          "best_overlap_mean": 0.0017086448904630725,
+          "coverage": 0.11038961038961038,
+          "failures": [
+            {
+              "metric": "coverage",
+              "rule": "value >= threshold",
+              "threshold": 0.5,
+              "value": 0.11038961038961038
+            },
+            {
+              "metric": "average_samples_per_record",
+              "rule": "value >= threshold",
+              "threshold": 1.0,
+              "value": 0.4155844155844156
+            },
+            {
+              "metric": "not_applicable_rate",
+              "rule": "value <= threshold",
+              "threshold": 0.5,
+              "value": 0.8896103896103896
+            }
+          ],
+          "n_total": 154,
+          "name": "smollm2-l20",
+          "not_applicable_rate": 0.8896103896103896,
+          "passed": false,
+          "records_meeting_min_samples": 17,
+          "records_with_samples": 47,
+          "sample_count_mean": 0.4155844155844156,
+          "sample_presence_rate": 0.3051948051948052,
+          "status": "fail",
+          "total_samples": 64
+        }
+      },
+      "schema_version": 1,
+      "status": "fail",
+      "thresholds": {
+        "max_not_applicable_rate": 0.5,
+        "min_average_samples_per_record": 1.0,
+        "min_best_overlap_mean": 0.0,
+        "min_coverage": 0.5,
+        "min_records_meeting_min_samples": null
+      }
+    },
+    "sample_quality_gate": {
+      "max_not_applicable_rate": 0.5,
+      "min_average_samples_per_record": 1.0,
+      "min_best_overlap_mean": 0.0,
+      "min_coverage": 0.5,
+      "min_records_meeting_min_samples": null
+    },
     "score_names": [
       "smollm2-l20"
     ],
@@ -146,6 +216,14 @@
     ],
     "selfcheck_summary": {
       "smollm2-l20": {
+        "fixture_summary": {
+          "average_samples_per_record": 0.4155844155844156,
+          "n_records": 154,
+          "records_dropped_below_min_samples": 0,
+          "records_meeting_min_samples": 17,
+          "records_with_samples": 47,
+          "total_samples": 64
+        },
         "n_total": 154,
         "selfcheck_signals": [
           "selfcheck_support_rate",
@@ -195,7 +273,7 @@
         }
       }
     },
-    "total_seconds": 0.5917086059998837,
+    "total_seconds": 0.6593938709993381,
     "uncertainty_signals": [
       "selfcheck_support_rate",
       "selfcheck_refute_rate",
@@ -208,9 +286,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 7,
+    "artifact_count": 8,
     "directory_count": 0,
-    "file_count": 7,
+    "file_count": 8,
     "missing_count": 0
   }
 }
