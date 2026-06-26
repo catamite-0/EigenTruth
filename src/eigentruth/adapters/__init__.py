@@ -13,6 +13,7 @@ from eigentruth.adapters.qa import QuestionAnswerFact, QuestionAnswerVerifier
 from eigentruth.adapters.retrieval import (
     HTTPJSONRetriever,
     InMemoryRetriever,
+    ProvenanceFilteredRetriever,
     RetrievalActionExecutor,
     RetrievalHit,
     RetrievalQuery,
@@ -53,6 +54,7 @@ __all__ = [
     "StructuredFactVerifier",
     "HTTPJSONRetriever",
     "InMemoryRetriever",
+    "ProvenanceFilteredRetriever",
     "RetrievalActionExecutor",
     "RetrievalHit",
     "RetrievalQuery",

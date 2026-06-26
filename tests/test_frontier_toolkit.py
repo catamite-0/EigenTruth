@@ -16,6 +16,7 @@ from eigentruth.adapters import (
     HTTPJSONRetriever,
     InMemoryRetriever,
     InMemoryWorldModelAdapter,
+    ProvenanceFilteredRetriever,
     QuestionAnswerFact,
     QuestionAnswerVerifier,
     RetrievalActionExecutor,
@@ -1569,6 +1570,84 @@ def test_retrieval_action_executor_fails_closed_when_retriever_errors():
     assert result.metadata["retriever"] == "FailingRetriever"
     assert result.metadata["fail_closed"] is True
     assert result.metadata["side_effects"] is False
+
+
+def test_provenance_filtered_retriever_enforces_source_score_and_metadata():
+    retriever = ProvenanceFilteredRetriever(
+        InMemoryRetriever((
+            {
+                "text": "Paris is the capital of France.",
+                "source": "external:wiki:france",
+                "score": 0.95,
+                "corpus_role": "grounding",
+            },
+            {
+                "text": "The answer says Paris, so Paris must be correct.",
+                "source": "answer_echo:truthfulqa",
+                "score": 1.0,
+                "corpus_role": "stress_control",
+            },
+            {
+                "text": "Paris is often mentioned in travel guides.",
+                "source": "external:blog",
+                "score": 0.7,
+                "corpus_role": "grounding",
+            },
+            {
+                "text": "France has Paris as its capital city.",
+                "source": "external:wiki:france",
+                "score": 0.9,
+                "corpus_role": "grounding",
+            },
+        ), min_overlap=0.2),
+        min_score=0.8,
+        require_source=True,
+        allowed_source_prefixes=("external:wiki",),
+        denied_source_prefixes=("answer_echo:",),
+        required_metadata={"corpus_role": "grounding"},
+        max_hits_per_source=1,
+    )
+
+    hits = retriever.retrieve(RetrievalQuery(query="Paris capital France"), limit=3)
+
+    assert len(hits) == 1
+    assert hits[0].text == "Paris is the capital of France."
+    assert hits[0].source == "external:wiki:france"
+    assert hits[0].metadata["provenance_filter"]["wrapped_retriever"] == "InMemoryRetriever"
+    assert hits[0].metadata["provenance_filter"]["allowed_source_prefixes"] == ("external:wiki",)
+    assert hits[0].metadata["provenance_filter"]["required_metadata"] == {"corpus_role": "grounding"}
+
+
+def test_provenance_filtered_retriever_blocks_untrusted_hits_from_action_result():
+    retriever = ProvenanceFilteredRetriever(
+        InMemoryRetriever((
+            {
+                "text": "The answer itself says Paris is correct.",
+                "source": "answer_echo:truthfulqa",
+                "score": 1.0,
+                "corpus_role": "stress_control",
+            },
+        ), min_overlap=0.2),
+        require_source=True,
+        allowed_source_prefixes=("external:",),
+        required_metadata={"corpus_role": "grounding"},
+    )
+    request = ActionRequest(
+        action=ControlAction.RETRIEVE,
+        reason="unsupported claim",
+        payload={"retrieval_targets": ({"claim_id": "c1", "text": "Paris capital France"},)},
+        request_id="req-filter",
+    )
+    executor = RetrievalActionExecutor(retriever)
+
+    result = executor.execute(request)
+
+    assert result.status is ActionExecutionStatus.SUCCEEDED
+    assert result.output["hits"] == ()
+    assert result.output["hits_by_query"][0]["hits"] == ()
+    assert result.output["errors"] == ()
+    assert result.metadata["retriever"] == "ProvenanceFilteredRetriever"
+    assert result.metadata["fail_closed"] is False
 
 
 def test_question_answer_verifier_checks_structured_question_answers():

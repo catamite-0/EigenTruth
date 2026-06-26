@@ -433,6 +433,14 @@ Added the first stdlib-only external retrieval service shell:
   adapter exceptions escape the control loop. That keeps future RAG/search
   service failures visible in product traces and prevents failed retrieval from
   being mistaken for supported evidence.
+- `ProvenanceFilteredRetriever` wraps any local, SQLite, or HTTP retriever and
+  enforces the first evidence trust boundary before hits become verifier
+  context: source can be required, source prefixes can be allow/deny-listed,
+  low-score hits can be dropped, required metadata tags can be checked, and
+  per-source caps can reduce single-source dominance. Accepted hits carry the
+  filter policy in metadata for trace/replay audits. This still makes no
+  external-RAG quality claim; it only prevents untrusted retrieval plumbing from
+  silently becoming support evidence.
 
 ## Next Research-to-Code Candidates
 

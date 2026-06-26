@@ -361,6 +361,103 @@ class HTTPJSONRetriever:
 
 
 @dataclass(frozen=True)
+class ProvenanceFilteredRetriever:
+    """Filter retriever hits before they become verifier evidence.
+
+    This wrapper keeps external retrieval integrations dependency-free while
+    making the evidence trust boundary explicit: callers can require source
+    provenance, source allow/deny prefixes, minimum score, metadata tags, and a
+    per-source hit cap before hits are exposed to the control loop.
+    """
+
+    retriever: Retriever
+    min_score: float = 0.0
+    require_source: bool = False
+    allowed_source_prefixes: Sequence[str] = ()
+    denied_source_prefixes: Sequence[str] = ()
+    required_metadata: Mapping[str, Any] = field(default_factory=dict)
+    max_hits_per_source: int | None = None
+    fetch_multiplier: int = 3
+
+    def __post_init__(self) -> None:
+        min_score = float(self.min_score)
+        if not (0.0 <= min_score <= 1.0):
+            raise ValueError("min_score must be in [0, 1].")
+        fetch_multiplier = int(self.fetch_multiplier)
+        if fetch_multiplier <= 0:
+            raise ValueError("fetch_multiplier must be positive.")
+        max_hits_per_source = self.max_hits_per_source
+        if max_hits_per_source is not None:
+            max_hits_per_source = int(max_hits_per_source)
+            if max_hits_per_source <= 0:
+                raise ValueError("max_hits_per_source must be positive when set.")
+        object.__setattr__(self, "min_score", min_score)
+        object.__setattr__(
+            self,
+            "allowed_source_prefixes",
+            _non_empty_strings_or_empty(self.allowed_source_prefixes, name="allowed_source_prefixes"),
+        )
+        object.__setattr__(
+            self,
+            "denied_source_prefixes",
+            _non_empty_strings_or_empty(self.denied_source_prefixes, name="denied_source_prefixes"),
+        )
+        object.__setattr__(self, "required_metadata", dict(self.required_metadata))
+        object.__setattr__(self, "max_hits_per_source", max_hits_per_source)
+        object.__setattr__(self, "fetch_multiplier", fetch_multiplier)
+
+    def retrieve(self, query: RetrievalQuery, *, limit: int = 5) -> tuple[RetrievalHit, ...]:
+        """Return filtered hits from the wrapped retriever."""
+        if limit <= 0:
+            return ()
+        candidate_limit = max(limit, limit * self.fetch_multiplier)
+        candidates = tuple(self.retriever.retrieve(query, limit=candidate_limit))
+        accepted: list[RetrievalHit] = []
+        source_counts: dict[str, int] = {}
+        for hit in candidates:
+            if not self._accepts(hit):
+                continue
+            source_key = hit.source or "<missing-source>"
+            if self.max_hits_per_source is not None:
+                source_count = source_counts.get(source_key, 0)
+                if source_count >= self.max_hits_per_source:
+                    continue
+                source_counts[source_key] = source_count + 1
+            metadata = {
+                **dict(hit.metadata),
+                "provenance_filter": {
+                    "retriever": type(self).__name__,
+                    "wrapped_retriever": type(self.retriever).__name__,
+                    "min_score": self.min_score,
+                    "require_source": self.require_source,
+                    "allowed_source_prefixes": self.allowed_source_prefixes,
+                    "denied_source_prefixes": self.denied_source_prefixes,
+                    "required_metadata": dict(self.required_metadata),
+                    "max_hits_per_source": self.max_hits_per_source,
+                },
+            }
+            accepted.append(RetrievalHit(hit.text, hit.source, hit.score, metadata))
+            if len(accepted) >= limit:
+                break
+        return tuple(accepted)
+
+    def _accepts(self, hit: RetrievalHit) -> bool:
+        if hit.score < self.min_score:
+            return False
+        source = hit.source
+        if self.require_source and not source:
+            return False
+        if source and any(source.startswith(prefix) for prefix in self.denied_source_prefixes):
+            return False
+        if self.allowed_source_prefixes and (not source or not any(
+            source.startswith(prefix) for prefix in self.allowed_source_prefixes
+        )):
+            return False
+        metadata = dict(hit.metadata)
+        return all(metadata.get(str(key)) == value for key, value in self.required_metadata.items())
+
+
+@dataclass(frozen=True)
 class RetrievalActionExecutor:
     """Execute retrieve actions against a dependency-free retriever."""
 
@@ -633,6 +730,13 @@ def _is_hit_sequence(value: Any) -> bool:
 def _non_empty_strings(values: Sequence[Any], *, name: str) -> tuple[str, ...]:
     strings = tuple(str(value).strip() for value in values)
     if not strings or any(not value for value in strings):
+        raise ValueError(f"{name} must contain non-empty strings.")
+    return strings
+
+
+def _non_empty_strings_or_empty(values: Sequence[Any], *, name: str) -> tuple[str, ...]:
+    strings = tuple(str(value).strip() for value in values)
+    if any(not value for value in strings):
         raise ValueError(f"{name} must contain non-empty strings.")
     return strings
 
