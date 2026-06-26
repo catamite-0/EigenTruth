@@ -156,6 +156,8 @@ def compare_release_candidates(
                 "required_route_min_decision_accuracy": required_route_min_decision_accuracy,
                 "required_route_max_false_supported_rate": required_route_max_false_supported_rate,
                 "required_route_min_false_refuted_rate": required_route_min_false_refuted_rate,
+                "adapter_family_profile": adapter_family_profile,
+                "require_state_transition_world_model": require_state_transition_world_model,
             },
         )
     )
@@ -172,6 +174,10 @@ def compare_release_candidates(
     required_route_min_decision_accuracy = release_policy_values["required_route_min_decision_accuracy"]
     required_route_max_false_supported_rate = release_policy_values["required_route_max_false_supported_rate"]
     required_route_min_false_refuted_rate = release_policy_values["required_route_min_false_refuted_rate"]
+    adapter_family_profile = release_policy_values["adapter_family_profile"]
+    require_state_transition_world_model = bool(
+        release_policy_values["require_state_transition_world_model"]
+    )
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)
     if require_structured_fact_robustness and (

@@ -11243,6 +11243,11 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         route="structured_fact",
         selected=2868,
     )
+    adapter_matrix_path = _write_adapter_family_matrix(
+        tmp_path / "frontier-audit-adapter-family-matrix.json",
+        routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
+        state_transition_world_model=True,
+    )
     registry = ArtifactRegistry.load_json(registry_path)
     registry.record_benchmark_manifest(
         name="structured-fact-canonical-route",
@@ -11264,6 +11269,14 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         release_policy_profile="strict-structured-fact",
         structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
         structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
+    frontier_payload = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+        release_policy_profile="frontier-audit",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+        adapter_family_matrix_path=adapter_matrix_path,
     )
     required_gate = payload["required_route_baseline_gate"]
     required_rows = {
@@ -11296,6 +11309,21 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         "structured_fact",
         "structured_fact",
     )
+    assert frontier_payload["decision"]["status"] == "promote"
+    assert frontier_payload["config"]["release_policy_profile"] == "frontier_audit"
+    assert frontier_payload["config"]["adapter_family_profile"] == "strict_audit"
+    assert frontier_payload["config"]["require_state_transition_world_model"] is True
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "adapter_family_profile"
+    ] == "strict_audit"
+    assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert frontier_payload["release_candidate"]["adapter_family_matrix"]["required_routes"] == (
+        "structured_state",
+        "state_transition",
+        "triple_evidence",
+    )
 
     with pytest.raises(ValueError, match="structured_fact robustness requires both"):
         module.compare_release_candidates(
@@ -11303,6 +11331,14 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
             route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
             release_policy_profile="strict_structured_fact",
             structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        )
+    with pytest.raises(ValueError, match="adapter_family_profile requires adapter_family_matrix_path"):
+        module.compare_release_candidates(
+            readiness_registry_path=registry_path,
+            route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+            release_policy_profile="frontier_audit",
+            structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+            structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
         )
 
 
@@ -12245,6 +12281,27 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert profile_config.release_policy_profile_applied_defaults["require_structured_fact_robustness"] is True
     assert profile_config.release_policy_profile_applied_defaults["required_route_min_selected"] == 700
     assert "min_decision_accuracy" not in profile_config.release_policy_profile_applied_defaults
+
+    frontier_profile_config = module.ReleaseCandidateRegistryWorkflowConfig(
+        readiness_registry_path=tmp_path / "readiness-registry.json",
+        release_registry_path=tmp_path / "release-registry.json",
+        name="unit-release",
+        version="0.1",
+        release_policy_profile="frontier-audit",
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
+
+    assert frontier_profile_config.release_policy_profile == "frontier_audit"
+    assert frontier_profile_config.require_structured_fact_robustness is True
+    assert frontier_profile_config.adapter_family_profile == "strict_audit"
+    assert frontier_profile_config.require_state_transition_world_model is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
+        "strict_audit"
+    )
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_state_transition_world_model"
+    ] is True
 
     with pytest.raises(ValueError, match="release_policy_profile"):
         module.ReleaseCandidateRegistryWorkflowConfig(

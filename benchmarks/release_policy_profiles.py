@@ -13,22 +13,29 @@ _CANDIDATE_RELEASE_POLICY_DEFAULTS: Mapping[str, Any] = {
     "min_false_refuted_rate": 0.50,
 }
 
+_STRICT_STRUCTURED_FACT_DEFAULTS: Mapping[str, Any] = {
+    **_CANDIDATE_RELEASE_POLICY_DEFAULTS,
+    "require_structured_fact_robustness": True,
+    "min_decision_accuracy": 0.99,
+    "max_false_supported_rate": 0.0,
+    "min_false_refuted_rate": 0.99,
+    "required_route_min_selected": 700,
+    "required_route_min_decision_accuracy": 0.99,
+    "required_route_max_false_supported_rate": 0.0,
+    "required_route_min_false_refuted_rate": 0.99,
+}
+
 RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
     "research_smoke": {
         "min_best_quality_auroc": 0.50,
         "min_selected": 1,
     },
     "candidate_release": _CANDIDATE_RELEASE_POLICY_DEFAULTS,
-    "strict_structured_fact": {
-        **_CANDIDATE_RELEASE_POLICY_DEFAULTS,
-        "require_structured_fact_robustness": True,
-        "min_decision_accuracy": 0.99,
-        "max_false_supported_rate": 0.0,
-        "min_false_refuted_rate": 0.99,
-        "required_route_min_selected": 700,
-        "required_route_min_decision_accuracy": 0.99,
-        "required_route_max_false_supported_rate": 0.0,
-        "required_route_min_false_refuted_rate": 0.99,
+    "strict_structured_fact": _STRICT_STRUCTURED_FACT_DEFAULTS,
+    "frontier_audit": {
+        **_STRICT_STRUCTURED_FACT_DEFAULTS,
+        "adapter_family_profile": "strict_audit",
+        "require_state_transition_world_model": True,
     },
 }
 RELEASE_POLICY_PROFILE_NAMES = tuple(sorted(RELEASE_POLICY_PROFILES))

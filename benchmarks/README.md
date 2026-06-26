@@ -1818,8 +1818,8 @@ keys, or `--release-policy-profile strict_structured_fact` with
 `--structured-fact-paraphrase-route-key`, to require both the canonical
 covered-facts route and the paraphrase robustness replay before a release can
 promote. Available release policy profiles are `research_smoke`,
-`candidate_release`, and `strict_structured_fact`; profile defaults only fill
-unset values, so explicit thresholds still win. Direct
+`candidate_release`, `strict_structured_fact`, and `frontier_audit`; profile
+defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
 `release_policy_profile_applied_defaults` in `config`.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
@@ -1959,9 +1959,12 @@ named defaults while registering the promoted manifest. `strict_structured_fact`
 enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
 and adds stricter route/required-route quality thresholds for covered-fact
-release evidence. The workflow records `release_policy_profile` and
-`release_policy_profile_applied_defaults` in the comparison report, final
-manifest, and registry metadata.
+release evidence. `frontier_audit` adds the same structured-fact defaults and
+also defaults `adapter_family_profile=strict_audit`, so the release must carry
+the strict adapter-family matrix and rule-based state-transition world-model
+evidence unless explicitly overridden. The workflow records
+`release_policy_profile` and `release_policy_profile_applied_defaults` in the
+comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest
