@@ -1931,6 +1931,16 @@ canonical and paraphrase `structured_fact` covered-facts evidence. The workflow
 adds those two records to the required-route gate and records
 `structured_fact_robustness_*` fields in the comparison report, final manifest,
 and release registry metadata.
+Use `--release-policy-profile` to apply a named set of release-gate defaults
+without losing explicit CLI control. Available profiles are `research_smoke`,
+`candidate_release`, and `strict_structured_fact`; profile defaults only fill
+unset values, so explicit thresholds still win. `strict_structured_fact` enables
+the structured-fact robustness requirement, requires both configured
+canonical/paraphrase route keys, applies the baseline candidate quality gates,
+and adds stricter route/required-route quality thresholds for covered-fact
+release evidence. The workflow records `release_policy_profile` and
+`release_policy_profile_applied_defaults` in the comparison report, final
+manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest
@@ -1955,10 +1965,10 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --release-registry artifacts/release-registry.json \
   --name qwen05-local-release-candidate \
   --version 0.7 \
+  --release-policy-profile strict_structured_fact \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
   --max-covariance-maha-last-auroc-drop 0.05 \
-  --require-structured-fact-robustness \
   --structured-fact-canonical-route-key benchmark_manifest:structured-fact-canonical-route:0.1 \
   --structured-fact-paraphrase-route-key benchmark_manifest:structured-fact-paraphrase-route:0.1 \
   --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \

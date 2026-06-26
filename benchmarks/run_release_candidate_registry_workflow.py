@@ -7,7 +7,7 @@ import json
 import math
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -32,6 +32,35 @@ from eigentruth.registry import (  # noqa: E402
     save_json_cache,
 )
 
+_CANDIDATE_RELEASE_POLICY_DEFAULTS: Mapping[str, Any] = {
+    "min_best_quality_auroc": 0.70,
+    "max_uncached_forward_seconds": 20.0,
+    "min_selected": 4,
+    "min_decision_accuracy": 0.95,
+    "max_false_supported_rate": 0.05,
+    "min_false_refuted_rate": 0.50,
+}
+
+RELEASE_POLICY_PROFILES: Mapping[str, Mapping[str, Any]] = {
+    "research_smoke": {
+        "min_best_quality_auroc": 0.50,
+        "min_selected": 1,
+    },
+    "candidate_release": _CANDIDATE_RELEASE_POLICY_DEFAULTS,
+    "strict_structured_fact": {
+        **_CANDIDATE_RELEASE_POLICY_DEFAULTS,
+        "require_structured_fact_robustness": True,
+        "min_decision_accuracy": 0.99,
+        "max_false_supported_rate": 0.0,
+        "min_false_refuted_rate": 0.99,
+        "required_route_min_selected": 700,
+        "required_route_min_decision_accuracy": 0.99,
+        "required_route_max_false_supported_rate": 0.0,
+        "required_route_min_false_refuted_rate": 0.99,
+    },
+}
+RELEASE_POLICY_PROFILE_NAMES = tuple(sorted(RELEASE_POLICY_PROFILES))
+
 
 def _clean_optional_key(value: str | None) -> str | None:
     if value is None:
@@ -52,6 +81,40 @@ def _append_unique(existing: Sequence[str], additions: Sequence[str | None]) -> 
     return tuple(values)
 
 
+def _normalize_release_policy_profile(value: str | None) -> str | None:
+    if value is None:
+        return None
+    profile = str(value).strip().lower().replace("-", "_")
+    if profile not in RELEASE_POLICY_PROFILES:
+        choices = ", ".join(RELEASE_POLICY_PROFILE_NAMES)
+        raise ValueError(f"release_policy_profile must be one of: {choices}")
+    return profile
+
+
+def _profile_default_is_unset(current: Any, default: Any) -> bool:
+    if isinstance(default, bool):
+        return current is False and default is True
+    if isinstance(default, (tuple, list)):
+        return not tuple(current or ())
+    return current is None
+
+
+def _apply_release_policy_profile_defaults(
+    config: "ReleaseCandidateRegistryWorkflowConfig",
+) -> None:
+    profile = _normalize_release_policy_profile(config.release_policy_profile)
+    object.__setattr__(config, "release_policy_profile", profile)
+    applied: dict[str, Any] = {}
+    if profile is not None:
+        for key, default in RELEASE_POLICY_PROFILES[profile].items():
+            current = getattr(config, key)
+            if not _profile_default_is_unset(current, default):
+                continue
+            object.__setattr__(config, key, default)
+            applied[key] = default
+    object.__setattr__(config, "release_policy_profile_applied_defaults", applied)
+
+
 @dataclass(frozen=True)
 class ReleaseCandidateRegistryWorkflowConfig:
     """Configuration for registering a promoted release-candidate manifest."""
@@ -60,6 +123,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     release_registry_path: Path
     name: str
     version: str
+    release_policy_profile: str | None = None
     route_registry_path: Path | None = None
     performance_registry_path: Path | None = None
     readiness_baseline_keys: Sequence[str] = ()
@@ -154,8 +218,15 @@ class ReleaseCandidateRegistryWorkflowConfig:
     promotion_metadata: Mapping[str, Any] | None = None
     allow_non_promote: bool = False
     allow_promotion_failures: bool = False
+    release_policy_profile_applied_defaults: Mapping[str, Any] = field(
+        default_factory=dict,
+        init=False,
+        repr=False,
+        compare=False,
+    )
 
     def __post_init__(self) -> None:
+        _apply_release_policy_profile_defaults(self)
         object.__setattr__(self, "readiness_registry_path", Path(self.readiness_registry_path))
         object.__setattr__(self, "release_registry_path", Path(self.release_registry_path))
         if self.route_registry_path is not None:
@@ -482,6 +553,8 @@ def run_release_candidate_registry_workflow(
             "readiness_registry": str(config.readiness_registry_path),
             "route_registry": str(config.route_registry_path or config.readiness_registry_path),
             "performance_registry": str(config.performance_registry_path or config.readiness_registry_path),
+            "release_policy_profile": config.release_policy_profile,
+            "release_policy_profile_applied_defaults": dict(config.release_policy_profile_applied_defaults),
             "readiness_baseline_keys": tuple(config.readiness_baseline_keys),
             "route_baseline_keys": tuple(config.route_baseline_keys),
             "performance_baseline_key": config.performance_baseline_key,
@@ -684,6 +757,8 @@ def _comparison_with_registry_config(
     payload = dict(comparison)
     comparison_config = dict(payload.get("config") or {})
     comparison_config.update({
+        "release_policy_profile": config.release_policy_profile,
+        "release_policy_profile_applied_defaults": dict(config.release_policy_profile_applied_defaults),
         "required_route_baseline_keys": list(config.required_route_baseline_keys),
         "require_structured_fact_robustness": config.require_structured_fact_robustness,
         "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
@@ -839,6 +914,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
             "product_trace_replay_workflow_status"
         ),
         "release_feedback_policy_workflow_status": decision.get("feedback_policy_workflow_status"),
+        "release_policy_profile": config.get("release_policy_profile"),
+        "release_policy_profile_applied_defaults": config.get(
+            "release_policy_profile_applied_defaults"
+        ),
         "release_runtime_profile": config.get("runtime_profile"),
         "release_runtime_profile_defaults": config.get("runtime_profile_defaults"),
         "release_runtime_profile_applied_defaults": config.get("runtime_profile_applied_defaults"),
@@ -1283,6 +1362,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         release_registry_path=Path(args.release_registry),
         name=args.name,
         version=args.version,
+        release_policy_profile=args.release_policy_profile,
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
@@ -1454,6 +1534,12 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--release-registry", required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument(
+        "--release-policy-profile",
+        default=None,
+        choices=RELEASE_POLICY_PROFILE_NAMES,
+        help="optional named release gate defaults; explicit CLI thresholds override profile values",
+    )
     parser.add_argument("--readiness-baseline-key", action="append", default=[])
     parser.add_argument("--route-baseline-key", action="append", default=[])
     parser.add_argument("--required-route-baseline-key", action="append", default=[],
