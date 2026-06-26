@@ -572,26 +572,108 @@ def _audit_triple(
         )
     scored = [_score_document(triple, document, min_slot_coverage=min_slot_coverage) for document in documents]
     best = max(scored, key=lambda item: (len(item.covered_slots), sum(item.slot_coverage.values())))
+    aggregate = _aggregate_scored_documents(scored, min_slot_coverage=min_slot_coverage)
+    if _aggregate_is_better(aggregate, best):
+        return aggregate
+    return _audit_from_scored_document(triple, best)
+
+
+def _audit_from_scored_document(
+    triple: ClaimTriple,
+    scored: "_ScoredDocument",
+) -> TripleEvidenceAudit:
     return TripleEvidenceAudit(
         triple=triple,
-        passed=not best.missing_slots,
-        evidence=(_evidence_label(best.document),),
-        covered_slots=best.covered_slots,
-        missing_slots=best.missing_slots,
-        slot_coverage=best.slot_coverage,
+        passed=not scored.missing_slots,
+        evidence=(_evidence_label(scored.document),),
+        covered_slots=scored.covered_slots,
+        missing_slots=scored.missing_slots,
+        slot_coverage=scored.slot_coverage,
         metadata={
             "decision_rule": "single_document_slot_coverage",
-            "best_source": best.document.source,
+            "best_source": scored.document.source,
         },
     )
 
 
 @dataclass(frozen=True)
 class _ScoredDocument:
+    triple: ClaimTriple
     document: EvidenceDocument
     covered_slots: tuple[str, ...]
     missing_slots: tuple[str, ...]
     slot_coverage: Mapping[str, float]
+
+
+def _aggregate_scored_documents(
+    scored: Sequence[_ScoredDocument],
+    *,
+    min_slot_coverage: float,
+) -> TripleEvidenceAudit:
+    slot_coverage: dict[str, float] = {}
+    slot_documents: dict[str, EvidenceDocument] = {}
+    for slot in ("subject", "predicate", "object"):
+        best_for_slot = max(scored, key=lambda item: item.slot_coverage.get(slot, 0.0))
+        slot_coverage[slot] = best_for_slot.slot_coverage.get(slot, 0.0)
+        slot_documents[slot] = best_for_slot.document
+    covered = tuple(slot for slot, value in slot_coverage.items() if value >= min_slot_coverage)
+    missing = tuple(slot for slot in ("subject", "predicate", "object") if slot not in covered)
+    evidence_documents = _unique_slot_documents(
+        slot_documents[slot]
+        for slot, value in slot_coverage.items()
+        if value > 0.0
+    )
+    if not evidence_documents:
+        evidence_documents = (max(scored, key=lambda item: sum(item.slot_coverage.values())).document,)
+    return TripleEvidenceAudit(
+        triple=scored[0].triple,
+        passed=not missing,
+        evidence=tuple(_evidence_label(document) for document in evidence_documents),
+        covered_slots=covered,
+        missing_slots=missing,
+        slot_coverage=slot_coverage,
+        metadata={
+            "decision_rule": (
+                "multi_document_slot_coverage"
+                if len(evidence_documents) > 1
+                else "single_document_slot_coverage"
+            ),
+            "slot_sources": {
+                slot: slot_documents[slot].source
+                for slot in ("subject", "predicate", "object")
+            },
+            "slot_evidence": {
+                slot: _evidence_label(slot_documents[slot])
+                for slot in ("subject", "predicate", "object")
+            },
+            "evidence_document_count": len(evidence_documents),
+        },
+    )
+
+
+def _aggregate_is_better(
+    aggregate: TripleEvidenceAudit,
+    best: _ScoredDocument,
+) -> bool:
+    aggregate_covered = len(aggregate.covered_slots)
+    best_covered = len(best.covered_slots)
+    if aggregate_covered > best_covered:
+        return True
+    if aggregate_covered < best_covered:
+        return False
+    return sum(aggregate.slot_coverage.values()) > sum(best.slot_coverage.values())
+
+
+def _unique_slot_documents(documents: Sequence[EvidenceDocument]) -> tuple[EvidenceDocument, ...]:
+    unique: list[EvidenceDocument] = []
+    seen: set[tuple[str | None, str]] = set()
+    for document in documents:
+        key = (document.source, document.text)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(document)
+    return tuple(unique)
 
 
 def _score_document(
@@ -609,6 +691,7 @@ def _score_document(
     covered = tuple(slot for slot, value in coverage.items() if value >= min_slot_coverage)
     missing = tuple(slot for slot in ("subject", "predicate", "object") if slot not in covered)
     return _ScoredDocument(
+        triple=triple,
         document=document,
         covered_slots=covered,
         missing_slots=missing,

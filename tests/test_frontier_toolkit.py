@@ -676,6 +676,33 @@ def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
     assert results[1].metadata["audit_report"]["audits"][0]["slot_coverage"]["object"] < 1.0
 
 
+def test_triple_evidence_audit_can_combine_slots_across_documents():
+    claim = extract_claims("AlphaCorp has 10 offices in Europe.")[0]
+    verifier = TripleEvidenceVerifier(
+        evidence=(
+            EvidenceDocument("AlphaCorp has offices.", source="company-profile"),
+            EvidenceDocument("The annual report lists 10 offices in Europe.", source="annual-report"),
+        )
+    )
+
+    result = verifier.verify(claim)
+    audit = result.metadata["audit_report"]["audits"][0]
+
+    assert result.status is VerificationStatus.SUPPORTED
+    assert result.evidence == (
+        "company-profile: AlphaCorp has offices.",
+        "annual-report: The annual report lists 10 offices in Europe.",
+    )
+    assert audit["covered_slots"] == ("subject", "predicate", "object")
+    assert audit["missing_slots"] == ()
+    assert audit["metadata"]["decision_rule"] == "multi_document_slot_coverage"
+    assert audit["metadata"]["slot_sources"] == {
+        "subject": "company-profile",
+        "predicate": "company-profile",
+        "object": "annual-report",
+    }
+
+
 def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
     verifier = StructuredFactVerifier.from_corpus({
         "documents": [
