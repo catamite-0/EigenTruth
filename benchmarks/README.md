@@ -2435,6 +2435,32 @@ answer corpus. `compare_route_baselines.py --require-retrieval-stress-control`
 and `compare_release_candidates.py --required-route-require-retrieval-stress-control`
 turn this negative control into a fail-closed route/release gate.
 
+## `build_external_retrieval_corpus.py`
+
+Builds an explicit external-candidate retrieval corpus from caller-supplied
+JSON, JSONL, or text source files. This is the ingestion boundary to use before
+local retrieval fixtures when the source is not derived from the score dump or
+TruthfulQA labels. The builder fingerprints input files, sets
+`corpus_type=external_evidence_candidate`, sets label-use flags to false, and
+rejects document metadata keys such as `claim_id`, `score_label`, `label`, and
+`row_index` so source files cannot silently smuggle evaluation labels or
+score-dump row links into retrieval.
+
+```bash
+python benchmarks/build_external_retrieval_corpus.py \
+  --source data/external_reference_docs.jsonl \
+  --output artifacts/external_reference_corpus.json \
+  --corpus-name external_reference \
+  --source-kind licensed_reference_dump \
+  --artifact-manifest artifacts/external_reference_corpus.manifest.json
+```
+
+Run `audit_retrieval_corpus_provenance.py --audit-role grounding` on the
+resulting corpus before treating it as external evidence. Synthetic smoke
+fixtures can prove the ingestion path, but they should not be registered as
+open-domain grounding evidence until the underlying source files are real,
+licensed, and domain-shifted from the evaluated answers.
+
 ## `audit_retrieval_corpus_provenance.py`
 
 Audits whether a retrieval corpus can be treated as external grounding evidence,
@@ -2449,6 +2475,11 @@ python benchmarks/audit_retrieval_corpus_provenance.py \
   --audit-role grounding \
   --output artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/correct-answer-grounding-audit.json
 ```
+
+Grounding mode is fail-closed: a corpus must carry a recognized explicit
+external type such as `external_evidence_candidate`; untyped local text corpora
+are classified as `untyped_local_corpus` and fail promotion even when they have
+no label metadata or answer-copy matches.
 
 The current provenance matrix at
 `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies four

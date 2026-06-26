@@ -2556,6 +2556,7 @@ def test_audit_retrieval_corpus_provenance_classifies_external_and_controlled_co
     )
     external_corpus_path.write_text(
         json.dumps({
+            "corpus_type": "external_evidence_candidate",
             "documents": [
                 {
                     "text": "France's national government is seated in Paris according to a reference source.",
@@ -2637,6 +2638,179 @@ def test_audit_retrieval_corpus_provenance_classifies_external_and_controlled_co
     assert controlled_grounding["gate"]["external_domain_shift_ready"] is False
     assert controlled_baseline["status"] == "pass"
     assert controlled_baseline["gate"]["external_domain_shift_ready"] is False
+
+
+def test_audit_retrieval_corpus_provenance_rejects_untyped_grounding_corpus(tmp_path):
+    module = importlib.import_module("benchmarks.audit_retrieval_corpus_provenance")
+    scores_path = tmp_path / "scores.json"
+    corpus_path = tmp_path / "untyped-corpus.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0],
+            "scores": {"truth_proj": [0.1]},
+            "statements": [
+                {
+                    "claim_id": "paris",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Paris.",
+                    "text": "The capital of France is Paris.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    corpus_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "France's national government is seated in Paris according to a reference source.",
+                    "source": "reference:france-capital",
+                    "metadata": {"publisher": "synthetic-reference"},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    report = module.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(corpus_path)],
+            output=str(tmp_path / "report.json"),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+
+    assert report["status"] == "fail"
+    assert report["evidence_class"] == "untyped_local_corpus"
+    assert report["gate"]["external_domain_shift_ready"] is False
+    assert "expected 'external_candidate'" in " ".join(report["gate"]["blocking_reasons"])
+
+
+def test_build_external_retrieval_corpus_outputs_auditable_external_candidate(tmp_path):
+    builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
+    audit = importlib.import_module("benchmarks.audit_retrieval_corpus_provenance")
+    scores_path = tmp_path / "scores.json"
+    source_path = tmp_path / "reference.jsonl"
+    corpus_path = tmp_path / "external-corpus.json"
+    manifest_path = tmp_path / "external-corpus.manifest.json"
+    scores_path.write_text(
+        json.dumps({
+            "config": {"model": "synthetic", "layer": -1},
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.2, 0.8]},
+            "statements": [
+                {
+                    "claim_id": "paris",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Paris.",
+                    "text": "The capital of France is Paris.",
+                },
+                {
+                    "claim_id": "lyon",
+                    "question": "What is the capital of France?",
+                    "answer": "The capital of France is Lyon.",
+                    "text": "The capital of France is Lyon.",
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    source_path.write_text(
+        "\n".join([
+            json.dumps({
+                "text": "An external gazetteer lists Paris as France's seat of national government.",
+                "source": "gazetteer:france:capital",
+                "metadata": {"publisher": "synthetic-gazetteer", "url": "https://example.test/france"},
+            }),
+            json.dumps({
+                "text": "A separate reference describes Lyon as a city in the Auvergne-Rhone-Alpes region.",
+                "source": "gazetteer:france:lyon",
+                "metadata": {"publisher": "synthetic-gazetteer", "timestamp": "2026-01-01T00:00:00Z"},
+            }),
+        ]) + "\n",
+        encoding="utf-8",
+    )
+
+    corpus = builder.run(
+        SimpleNamespace(
+            source=[str(source_path)],
+            output=str(corpus_path),
+            corpus_name="synthetic_external_smoke",
+            source_kind="synthetic_external_fixture",
+            min_chars=10,
+            allow_missing_source=False,
+            trusted_source=["example.test"],
+            default_timestamp=None,
+            artifact_manifest=str(manifest_path),
+        )
+    )
+    report = audit.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            corpus=[str(corpus_path)],
+            output=str(tmp_path / "audit.json"),
+            audit_role="grounding",
+            max_exact_answer_copy_rate=0.8,
+            max_claim_id_link_rate=0.0,
+            max_label_metadata_rate=0.0,
+            artifact_manifest=None,
+        )
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert corpus["corpus_type"] == "external_evidence_candidate"
+    assert corpus["label_usage"] == {
+        "labels_used_for_documents": False,
+        "labels_copied_to_document_metadata": False,
+    }
+    assert corpus["summary"]["n_documents"] == 2
+    assert corpus["input_provenance"]["sources"][0]["exists"] is True
+    assert corpus["documents"][0]["metadata"]["external_source"] is True
+    assert "claim_id" not in corpus["documents"][0]["metadata"]
+    assert "score_label" not in corpus["documents"][0]["metadata"]
+    assert manifest["artifacts"]["corpus"]["exists"] is True
+    assert manifest["artifacts"]["source.1.reference"]["exists"] is True
+    assert report["status"] == "pass"
+    assert report["evidence_class"] == "external_candidate"
+    assert report["gate"]["external_domain_shift_ready"] is True
+
+
+def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):
+    builder = importlib.import_module("benchmarks.build_external_retrieval_corpus")
+    source_path = tmp_path / "bad-reference.json"
+    source_path.write_text(
+        json.dumps({
+            "documents": [
+                {
+                    "text": "This source carries forbidden audit metadata.",
+                    "source": "bad:source",
+                    "metadata": {"claim_id": "c1", "score_label": 1},
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="reserved score-dump metadata keys"):
+        builder.run(
+            SimpleNamespace(
+                source=[str(source_path)],
+                output=str(tmp_path / "external-corpus.json"),
+                corpus_name="bad",
+                source_kind="bad_fixture",
+                min_chars=1,
+                allow_missing_source=False,
+                trusted_source=[],
+                default_timestamp=None,
+                artifact_manifest=None,
+            )
+        )
 
 
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):

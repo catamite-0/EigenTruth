@@ -26,6 +26,11 @@ from eigentruth.registry import build_artifact_manifest  # noqa: E402
 AUDIT_ROLES = ("grounding", "controlled_baseline", "stress_control")
 ANSWER_ECHO_CORPUS_TYPE = "retrieval_stress_answer_echo"
 CONTROLLED_DATASET_CORPUS_TYPES = {"truthfulqa_correct_answer_evidence"}
+EXTERNAL_CORPUS_TYPES = {
+    "external_evidence_candidate",
+    "external_grounding_corpus",
+    "external_retrieval_evidence",
+}
 _TOKEN_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+")
 _TEXT_FIELDS = ("text", "content", "document", "answer", "question_answer")
 _LABEL_METADATA_KEYS = ("score_label", "label", "labels")
@@ -333,7 +338,11 @@ def _evidence_class(summary: Mapping[str, Any]) -> str:
         return "answer_echo_stress_control"
     if corpus_types & CONTROLLED_DATASET_CORPUS_TYPES:
         return "controlled_dataset_baseline"
-    return "external_candidate"
+    if corpus_types and corpus_types <= EXTERNAL_CORPUS_TYPES:
+        return "external_candidate"
+    if not corpus_types:
+        return "untyped_local_corpus"
+    return "unrecognized_corpus"
 
 
 def _gate(
@@ -365,6 +374,10 @@ def _gate(
         warnings.append("corpus is an answer-echo stress control, not grounding evidence")
     if evidence_class == "controlled_dataset_baseline":
         warnings.append("corpus is a controlled dataset-derived baseline, not external/domain-shifted evidence")
+    if evidence_class == "untyped_local_corpus":
+        warnings.append("corpus has no explicit external corpus_type; it cannot be promoted as grounding evidence")
+    if evidence_class == "unrecognized_corpus":
+        warnings.append("corpus_type is not recognized as external, controlled, or stress evidence")
     exact_answer_copy_rate = float(summary.get("exact_answer_copy_rate", 0.0))
     if audit_role == "grounding" and exact_answer_copy_rate > float(thresholds["max_exact_answer_copy_rate"]):
         blocking.append(f"exact_answer_copy_rate above {thresholds['max_exact_answer_copy_rate']}")

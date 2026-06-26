@@ -126,6 +126,14 @@ Added a retrieval corpus provenance audit gate:
 - `audit_retrieval_corpus_provenance.py` scans statement-bearing score dumps
   against local corpus files and separates `external_candidate`,
   `controlled_dataset_baseline`, and `answer_echo_stress_control` evidence.
+- `build_external_retrieval_corpus.py` is now the explicit no-network ingestion
+  boundary for caller-supplied external source files. It writes
+  `corpus_type=external_evidence_candidate`, fingerprints input sources, and
+  rejects label, claim-id, or score-dump row-link metadata before a corpus can
+  enter grounding audit.
+- Grounding audit is fail-closed for untyped local corpora: absence of answer
+  copies or labels is no longer enough to mark a local text dump as external
+  evidence.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role
