@@ -9530,6 +9530,9 @@ def _write_triple_extraction_fixture_matrix_report(
     ),
     mean_best_f1: float = 1.0,
     mean_baseline_f1: float = 0.5,
+    external_prediction_count: int = 0,
+    external_prediction_corpora: tuple[str, ...] = (),
+    mean_best_external_f1: float | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
@@ -9548,6 +9551,9 @@ def _write_triple_extraction_fixture_matrix_report(
         "mean_baseline_f1": mean_baseline_f1,
         "mean_best_f1": mean_best_f1,
         "mean_f1_lift": mean_best_f1 - mean_baseline_f1,
+        "external_prediction_count": external_prediction_count,
+        "external_prediction_corpora": external_prediction_corpora,
+        "mean_best_external_f1": mean_best_external_f1,
         "promotion_gate": {
             "min_corpora": 2,
             "min_distinct_predicates": 4,
@@ -9587,6 +9593,9 @@ def _write_triple_extraction_fixture_matrix_report(
             "n_corpora": n_corpora,
             "promoted_corpora": promoted_corpora,
             "distinct_predicate_count": len(distinct_predicates),
+            "external_prediction_count": external_prediction_count,
+            "external_prediction_corpora": external_prediction_corpora,
+            "mean_best_external_f1": mean_best_external_f1,
         },
     )
     manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -12730,6 +12739,18 @@ def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix
     matrix_path = _write_triple_extraction_fixture_matrix_report(
         tmp_path / "triple-extraction-matrix",
     )
+    external_matrix_path = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "external-triple-extraction-matrix",
+        external_prediction_count=2,
+        external_prediction_corpora=("country-core", "enterprise-product"),
+        mean_best_external_f1=0.96,
+    )
+    malformed_external_matrix_path = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "malformed-external-triple-extraction-matrix",
+        external_prediction_count=1,
+        external_prediction_corpora="country-core",  # type: ignore[arg-type]
+        mean_best_external_f1=0.96,
+    )
     narrow_matrix_path = _write_triple_extraction_fixture_matrix_report(
         tmp_path / "narrow-triple-extraction-matrix",
         distinct_predicates=("capital_of", "currency_of", "official_language_of"),
@@ -12748,6 +12769,22 @@ def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix
         min_triple_extraction_corpora=2,
         min_triple_extraction_distinct_predicates=6,
     )
+    promoted_external = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        triple_extraction_fixture_matrix_path=external_matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
+        min_triple_extraction_external_prediction_count=2,
+        min_triple_extraction_external_prediction_corpora=2,
+        min_triple_extraction_mean_best_external_f1=0.95,
+    )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
@@ -12760,6 +12797,38 @@ def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix
         triple_extraction_fixture_matrix_path=narrow_matrix_path,
         min_triple_extraction_corpora=2,
         min_triple_extraction_distinct_predicates=6,
+    )
+    blocked_external = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        triple_extraction_fixture_matrix_path=matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
+        min_triple_extraction_external_prediction_count=1,
+        min_triple_extraction_external_prediction_corpora=1,
+        min_triple_extraction_mean_best_external_f1=0.95,
+    )
+    blocked_malformed_external = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        triple_extraction_fixture_matrix_path=malformed_external_matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
+        min_triple_extraction_external_prediction_count=1,
+        min_triple_extraction_external_prediction_corpora=1,
+        min_triple_extraction_mean_best_external_f1=0.95,
     )
 
     assert promoted["decision"]["status"] == "promote"
@@ -12774,6 +12843,23 @@ def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix
     assert candidate["manifests"]["triple_extraction_fixture_matrix_manifest"].endswith(
         "triple-extraction-matrix/artifact-manifest.json"
     )
+    assert promoted_external["decision"]["status"] == "promote"
+    external_candidate = promoted_external["release_candidate"]
+    assert external_candidate["triple_extraction_fixture_matrix"]["external_prediction_count"] == 2
+    assert external_candidate["triple_extraction_fixture_matrix"]["external_prediction_corpora"] == (
+        "country-core",
+        "enterprise-product",
+    )
+    assert external_candidate["triple_extraction_fixture_matrix"][
+        "mean_best_external_f1"
+    ] == pytest.approx(0.96)
+    assert promoted_external["triple_extraction_fixture_matrix_gate"]["gate"]["policy"] == {
+        "min_corpora": 2,
+        "min_distinct_predicates": 6,
+        "min_external_prediction_count": 2,
+        "min_external_prediction_corpora": 2,
+        "min_mean_best_external_f1": 0.95,
+    }
 
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["release_candidate"] is None
@@ -12782,6 +12868,15 @@ def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix
         "distinct predicate count below 6" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
     )
+    assert blocked_external["decision"]["status"] == "blocked"
+    assert blocked_external["release_candidate"] is None
+    external_reasons = blocked_external["decision"]["blocking_reasons"][0]["reasons"]
+    assert any("external prediction count below 1" in reason for reason in external_reasons)
+    assert any("external prediction corpus count below 1" in reason for reason in external_reasons)
+    assert any("mean_best_external_f1 is missing" in reason for reason in external_reasons)
+    assert blocked_malformed_external["decision"]["status"] == "blocked"
+    malformed_reasons = blocked_malformed_external["decision"]["blocking_reasons"][0]["reasons"]
+    assert any("external prediction corpus count below 1" in reason for reason in malformed_reasons)
 
 
 def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):

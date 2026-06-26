@@ -104,6 +104,9 @@ def compare_release_candidates(
     triple_extraction_fixture_matrix_key: str | None = None,
     min_triple_extraction_corpora: int | None = None,
     min_triple_extraction_distinct_predicates: int | None = None,
+    min_triple_extraction_external_prediction_count: int | None = None,
+    min_triple_extraction_external_prediction_corpora: int | None = None,
+    min_triple_extraction_mean_best_external_f1: float | None = None,
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
     performance_drift_baseline_key: str | None = None,
@@ -277,6 +280,18 @@ def compare_release_candidates(
     max_performance_score_dump_cache_jsonl_view_hit_rate_drop = _validate_optional_unit_float(
         max_performance_score_dump_cache_jsonl_view_hit_rate_drop,
         name="max_performance_score_dump_cache_jsonl_view_hit_rate_drop",
+    )
+    min_triple_extraction_external_prediction_count = _validate_optional_non_negative_int(
+        min_triple_extraction_external_prediction_count,
+        name="min_triple_extraction_external_prediction_count",
+    )
+    min_triple_extraction_external_prediction_corpora = _validate_optional_non_negative_int(
+        min_triple_extraction_external_prediction_corpora,
+        name="min_triple_extraction_external_prediction_corpora",
+    )
+    min_triple_extraction_mean_best_external_f1 = _validate_optional_unit_float(
+        min_triple_extraction_mean_best_external_f1,
+        name="min_triple_extraction_mean_best_external_f1",
     )
     feedback_policy_min_matched_feedback_count = _validate_optional_non_negative_int(
         feedback_policy_min_matched_feedback_count,
@@ -515,6 +530,9 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         min_corpora=min_triple_extraction_corpora,
         min_distinct_predicates=min_triple_extraction_distinct_predicates,
+        min_external_prediction_count=min_triple_extraction_external_prediction_count,
+        min_external_prediction_corpora=min_triple_extraction_external_prediction_corpora,
+        min_mean_best_external_f1=min_triple_extraction_mean_best_external_f1,
         verification_context=verification_context,
     )
     performance = _performance_baseline_gate(
@@ -742,6 +760,15 @@ def compare_release_candidates(
             "triple_extraction_fixture_matrix_key": triple_extraction_fixture_matrix_key,
             "min_triple_extraction_corpora": min_triple_extraction_corpora,
             "min_triple_extraction_distinct_predicates": min_triple_extraction_distinct_predicates,
+            "min_triple_extraction_external_prediction_count": (
+                min_triple_extraction_external_prediction_count
+            ),
+            "min_triple_extraction_external_prediction_corpora": (
+                min_triple_extraction_external_prediction_corpora
+            ),
+            "min_triple_extraction_mean_best_external_f1": (
+                min_triple_extraction_mean_best_external_f1
+            ),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1487,6 +1514,9 @@ def _triple_extraction_fixture_matrix_gate(
     manifest_fingerprint_workers: int,
     min_corpora: int | None,
     min_distinct_predicates: int | None,
+    min_external_prediction_count: int | None,
+    min_external_prediction_corpora: int | None,
+    min_mean_best_external_f1: float | None,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if triple_extraction_fixture_matrix_source is None:
@@ -1509,6 +1539,9 @@ def _triple_extraction_fixture_matrix_gate(
         allow_unverified=allow_unverified,
         min_corpora=min_corpora,
         min_distinct_predicates=min_distinct_predicates,
+        min_external_prediction_count=min_external_prediction_count,
+        min_external_prediction_corpora=min_external_prediction_corpora,
+        min_mean_best_external_f1=min_mean_best_external_f1,
     )
     return {
         "schema_version": 1,
@@ -1528,6 +1561,11 @@ def _triple_extraction_fixture_matrix_gate(
         "mean_baseline_f1": _float_or_none(report.get("mean_baseline_f1")),
         "mean_best_f1": _float_or_none(report.get("mean_best_f1")),
         "mean_f1_lift": _float_or_none(report.get("mean_f1_lift")),
+        "external_prediction_count": _float_or_none(report.get("external_prediction_count")),
+        "external_prediction_corpora": _tuple_or_empty_sequence(
+            report.get("external_prediction_corpora", ())
+        ),
+        "mean_best_external_f1": _float_or_none(report.get("mean_best_external_f1")),
         "verification": verification,
         "gate": gate,
     }
@@ -1542,6 +1580,9 @@ def _triple_extraction_fixture_matrix_report_gate(
     allow_unverified: bool,
     min_corpora: int | None,
     min_distinct_predicates: int | None,
+    min_external_prediction_count: int | None,
+    min_external_prediction_corpora: int | None,
+    min_mean_best_external_f1: float | None,
 ) -> dict[str, Any]:
     failures = []
     if report_error is not None:
@@ -1592,9 +1633,43 @@ def _triple_extraction_fixture_matrix_report_gate(
         failures.append("triple extraction fixture matrix mean_best_f1 is missing")
     elif mean_best_f1 <= 0.0:
         failures.append(f"triple extraction fixture matrix mean_best_f1 is non-positive: {mean_best_f1!r}")
+    external_prediction_count = _float_or_none(report.get("external_prediction_count"))
+    if min_external_prediction_count is not None:
+        if external_prediction_count is None:
+            failures.append("triple extraction fixture matrix external prediction count is missing")
+        elif external_prediction_count < min_external_prediction_count:
+            failures.append(
+                "triple extraction fixture matrix external prediction count below "
+                f"{min_external_prediction_count}: {report.get('external_prediction_count')!r}"
+            )
+    external_prediction_corpus_count = len(
+        _tuple_or_empty_sequence(report.get("external_prediction_corpora", ()))
+    )
+    if min_external_prediction_corpora is not None:
+        if external_prediction_corpus_count < min_external_prediction_corpora:
+            failures.append(
+                "triple extraction fixture matrix external prediction corpus count below "
+                f"{min_external_prediction_corpora}: {external_prediction_corpus_count!r}"
+            )
+    mean_best_external_f1 = _float_or_none(report.get("mean_best_external_f1"))
+    if min_mean_best_external_f1 is not None:
+        if mean_best_external_f1 is None:
+            failures.append("triple extraction fixture matrix mean_best_external_f1 is missing")
+        elif mean_best_external_f1 < min_mean_best_external_f1:
+            failures.append(
+                "triple extraction fixture matrix mean_best_external_f1 below "
+                f"{min_mean_best_external_f1}: {mean_best_external_f1!r}"
+            )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
+        "policy": {
+            "min_corpora": min_corpora,
+            "min_distinct_predicates": min_distinct_predicates,
+            "min_external_prediction_count": min_external_prediction_count,
+            "min_external_prediction_corpora": min_external_prediction_corpora,
+            "min_mean_best_external_f1": min_mean_best_external_f1,
+        },
     }
 
 
@@ -3749,6 +3824,15 @@ def _candidate_with_gates(
             ),
             "mean_best_f1": triple_extraction_fixture_matrix.get("mean_best_f1"),
             "mean_f1_lift": triple_extraction_fixture_matrix.get("mean_f1_lift"),
+            "external_prediction_count": triple_extraction_fixture_matrix.get(
+                "external_prediction_count"
+            ),
+            "external_prediction_corpora": tuple(
+                triple_extraction_fixture_matrix.get("external_prediction_corpora", ())
+            ),
+            "mean_best_external_f1": triple_extraction_fixture_matrix.get(
+                "mean_best_external_f1"
+            ),
         }
         manifests["triple_extraction_fixture_matrix_report"] = (
             triple_extraction_fixture_matrix.get("report_path")
@@ -3999,6 +4083,15 @@ def _float_or_none(value: Any) -> float | None:
     return numeric if math.isfinite(numeric) else None
 
 
+def _tuple_or_empty_sequence(value: Any) -> tuple[Any, ...]:
+    if value is None or isinstance(value, str):
+        return ()
+    try:
+        return tuple(value)
+    except TypeError:
+        return ()
+
+
 def _validate_optional_non_negative_float(value: Any, *, name: str) -> float | None:
     if value is None:
         return None
@@ -4182,6 +4275,15 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         triple_extraction_fixture_matrix_key=args.triple_extraction_fixture_matrix_key,
         min_triple_extraction_corpora=args.min_triple_extraction_corpora,
         min_triple_extraction_distinct_predicates=args.min_triple_extraction_distinct_predicates,
+        min_triple_extraction_external_prediction_count=(
+            args.min_triple_extraction_external_prediction_count
+        ),
+        min_triple_extraction_external_prediction_corpora=(
+            args.min_triple_extraction_external_prediction_corpora
+        ),
+        min_triple_extraction_mean_best_external_f1=(
+            args.min_triple_extraction_mean_best_external_f1
+        ),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -4405,6 +4507,26 @@ def main(argv: Sequence[str] | None = None) -> None:
                             flag="--min-triple-extraction-distinct-predicates",
                         ), default=None,
                         help="optional minimum distinct predicate count for the triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-external-prediction-count",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-external-prediction-count",
+                        ), default=None,
+                        help="optional minimum external prediction file count for the "
+                             "triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-external-prediction-corpora",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-external-prediction-corpora",
+                        ), default=None,
+                        help="optional minimum number of corpora with external prediction files")
+    parser.add_argument("--min-triple-extraction-mean-best-external-f1",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-triple-extraction-mean-best-external-f1",
+                        ), default=None,
+                        help="optional minimum mean best external prediction F1 for the "
+                             "triple-extraction fixture matrix")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")

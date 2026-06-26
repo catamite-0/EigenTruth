@@ -126,6 +126,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     triple_extraction_fixture_matrix_key: str | None = None
     min_triple_extraction_corpora: int | None = None
     min_triple_extraction_distinct_predicates: int | None = None
+    min_triple_extraction_external_prediction_count: int | None = None
+    min_triple_extraction_external_prediction_corpora: int | None = None
+    min_triple_extraction_mean_best_external_f1: float | None = None
     require_performance_score_dump_cache: bool = False
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
     performance_drift_baseline_key: str | None = None
@@ -471,6 +474,15 @@ def run_release_candidate_registry_workflow(
         min_triple_extraction_distinct_predicates=(
             config.min_triple_extraction_distinct_predicates
         ),
+        min_triple_extraction_external_prediction_count=(
+            config.min_triple_extraction_external_prediction_count
+        ),
+        min_triple_extraction_external_prediction_corpora=(
+            config.min_triple_extraction_external_prediction_corpora
+        ),
+        min_triple_extraction_mean_best_external_f1=(
+            config.min_triple_extraction_mean_best_external_f1
+        ),
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -716,6 +728,15 @@ def run_release_candidate_registry_workflow(
             "min_triple_extraction_distinct_predicates": (
                 config.min_triple_extraction_distinct_predicates
             ),
+            "min_triple_extraction_external_prediction_count": (
+                config.min_triple_extraction_external_prediction_count
+            ),
+            "min_triple_extraction_external_prediction_corpora": (
+                config.min_triple_extraction_external_prediction_corpora
+            ),
+            "min_triple_extraction_mean_best_external_f1": (
+                config.min_triple_extraction_mean_best_external_f1
+            ),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -888,6 +909,15 @@ def _comparison_with_registry_config(
         "min_triple_extraction_corpora": config.min_triple_extraction_corpora,
         "min_triple_extraction_distinct_predicates": (
             config.min_triple_extraction_distinct_predicates
+        ),
+        "min_triple_extraction_external_prediction_count": (
+            config.min_triple_extraction_external_prediction_count
+        ),
+        "min_triple_extraction_external_prediction_corpora": (
+            config.min_triple_extraction_external_prediction_corpora
+        ),
+        "min_triple_extraction_mean_best_external_f1": (
+            config.min_triple_extraction_mean_best_external_f1
         ),
     })
     payload["config"] = comparison_config
@@ -1457,11 +1487,29 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "triple_extraction_fixture_matrix_mean_f1_lift": (
             triple_extraction_fixture_matrix.get("mean_f1_lift")
         ),
+        "triple_extraction_fixture_matrix_external_prediction_count": (
+            triple_extraction_fixture_matrix.get("external_prediction_count")
+        ),
+        "triple_extraction_fixture_matrix_external_prediction_corpora": (
+            triple_extraction_fixture_matrix.get("external_prediction_corpora")
+        ),
+        "triple_extraction_fixture_matrix_mean_best_external_f1": (
+            triple_extraction_fixture_matrix.get("mean_best_external_f1")
+        ),
         "triple_extraction_fixture_matrix_min_corpora": config.get(
             "min_triple_extraction_corpora"
         ),
         "triple_extraction_fixture_matrix_min_distinct_predicates": config.get(
             "min_triple_extraction_distinct_predicates"
+        ),
+        "triple_extraction_fixture_matrix_min_external_prediction_count": config.get(
+            "min_triple_extraction_external_prediction_count"
+        ),
+        "triple_extraction_fixture_matrix_min_external_prediction_corpora": config.get(
+            "min_triple_extraction_external_prediction_corpora"
+        ),
+        "triple_extraction_fixture_matrix_min_mean_best_external_f1": config.get(
+            "min_triple_extraction_mean_best_external_f1"
         ),
         "required_route_baseline_registry": required_route_baselines.get("registry"),
         "required_route_baseline_routes": required_route_baselines.get("routes"),
@@ -1770,6 +1818,15 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         triple_extraction_fixture_matrix_key=args.triple_extraction_fixture_matrix_key,
         min_triple_extraction_corpora=args.min_triple_extraction_corpora,
         min_triple_extraction_distinct_predicates=args.min_triple_extraction_distinct_predicates,
+        min_triple_extraction_external_prediction_count=(
+            args.min_triple_extraction_external_prediction_count
+        ),
+        min_triple_extraction_external_prediction_corpora=(
+            args.min_triple_extraction_external_prediction_corpora
+        ),
+        min_triple_extraction_mean_best_external_f1=(
+            args.min_triple_extraction_mean_best_external_f1
+        ),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1999,6 +2056,26 @@ def main(argv: Sequence[str] | None = None) -> None:
                             flag="--min-triple-extraction-distinct-predicates",
                         ), default=None,
                         help="optional minimum distinct predicate count for the triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-external-prediction-count",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-external-prediction-count",
+                        ), default=None,
+                        help="optional minimum external prediction file count for the "
+                             "triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-external-prediction-corpora",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-external-prediction-corpora",
+                        ), default=None,
+                        help="optional minimum number of corpora with external prediction files")
+    parser.add_argument("--min-triple-extraction-mean-best-external-f1",
+                        type=lambda value: _parse_unit_float(
+                            value,
+                            flag="--min-triple-extraction-mean-best-external-f1",
+                        ), default=None,
+                        help="optional minimum mean best external prediction F1 for the "
+                             "triple-extraction fixture matrix")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")

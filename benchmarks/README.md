@@ -1928,6 +1928,9 @@ python benchmarks/compare_release_candidates.py \
   --triple-extraction-fixture-matrix artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json \
   --min-triple-extraction-corpora 2 \
   --min-triple-extraction-distinct-predicates 6 \
+  --min-triple-extraction-external-prediction-count 2 \
+  --min-triple-extraction-external-prediction-corpora 2 \
+  --min-triple-extraction-mean-best-external-f1 0.90 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -2089,7 +2092,12 @@ promoted cross-corpus extractor benchmark from
 `--min-triple-extraction-corpora` and
 `--min-triple-extraction-distinct-predicates` to fail closed unless the matrix
 covers enough promoted corpora and predicate diversity before extractor
-templates become release evidence.
+templates become release evidence. When the matrix includes learned/OpenIE/LLM
+external-prediction files, add
+`--min-triple-extraction-external-prediction-count`,
+`--min-triple-extraction-external-prediction-corpora`, and
+`--min-triple-extraction-mean-best-external-f1` to require explicit external
+extractor evidence before treating it as release support.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.
@@ -2128,6 +2136,8 @@ promotes. Required-route budget settings are also copied into manifest metadata
 as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
 label-free local retrieval claims.
+Triple-extraction external-prediction gates are copied into the comparison,
+manifest, and registry metadata when configured.
 Use `--require-structured-fact-robustness` with
 `--structured-fact-canonical-route-key` and
 `--structured-fact-paraphrase-route-key` when the release must carry both
@@ -2189,6 +2199,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --triple-extraction-fixture-matrix artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json \
   --min-triple-extraction-corpora 2 \
   --min-triple-extraction-distinct-predicates 6 \
+  --min-triple-extraction-external-prediction-count 2 \
+  --min-triple-extraction-external-prediction-corpora 2 \
+  --min-triple-extraction-mean-best-external-f1 0.90 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
