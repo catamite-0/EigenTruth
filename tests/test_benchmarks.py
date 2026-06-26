@@ -6253,6 +6253,12 @@ def test_build_transition_fixture_can_use_rule_based_world_model(tmp_path):
         for line in verified_records_path.read_text(encoding="utf-8").splitlines()
     ]
     assert sidecar_records[0]["transition"]["metadata"]["world_model"] == "RuleBasedWorldModelAdapter"
+    assert sidecar_records[0]["transition"]["metadata"]["world_model_reference"]["adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert sidecar_records[0]["transition"]["metadata"]["world_model_view"]["postcondition"]["path"] == (
+        "inventory.sku_0001.available"
+    )
     prediction_metadata = sidecar_records[0]["transition"]["metadata"]["prediction_metadata"]
     assert prediction_metadata["no_rule_matched"] is False
     assert prediction_metadata["matched_rules"][0]["rule"] == "reserve_ord_0001"

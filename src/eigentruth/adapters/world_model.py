@@ -25,6 +25,107 @@ class WorldModelPrediction:
             raise ValueError("confidence must be in [0, 1].")
 
 
+@dataclass(frozen=True)
+class WorldModelReference:
+    """Auditable description of the reference world used by a verifier.
+
+    The reference makes the implicit world-model contract explicit: which
+    adapter/source defines the reference world, which state paths are viewed,
+    and which assumptions are in force for the judgment.
+    """
+
+    reference_id: str = "world_model"
+    adapter: str | None = None
+    source: str | None = None
+    view_paths: Sequence[str] = ()
+    assumptions: Sequence[str] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        reference_id = str(self.reference_id).strip()
+        if not reference_id:
+            raise ValueError("world model reference_id must be non-empty.")
+        object.__setattr__(self, "reference_id", reference_id)
+        object.__setattr__(self, "adapter", None if self.adapter is None else str(self.adapter))
+        object.__setattr__(self, "source", None if self.source is None else str(self.source))
+        object.__setattr__(self, "view_paths", tuple(str(path) for path in self.view_paths if str(path)))
+        object.__setattr__(
+            self,
+            "assumptions",
+            tuple(str(assumption) for assumption in self.assumptions if str(assumption)),
+        )
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    @classmethod
+    def from_mapping(cls, data: Mapping[str, Any]) -> "WorldModelReference":
+        """Build a reference contract from JSON-like metadata."""
+        raw_view_paths = data.get("view_paths", data.get("view", ()))
+        if isinstance(raw_view_paths, str):
+            raw_view_paths = (raw_view_paths,)
+        if not isinstance(raw_view_paths, Sequence):
+            raise ValueError("world model reference view_paths must be a sequence or string.")
+        raw_assumptions = data.get("assumptions", ())
+        if isinstance(raw_assumptions, str):
+            raw_assumptions = (raw_assumptions,)
+        if not isinstance(raw_assumptions, Sequence):
+            raise ValueError("world model reference assumptions must be a sequence or string.")
+        return cls(
+            reference_id=str(data.get("reference_id", data.get("id", data.get("name", "world_model")))),
+            adapter=None if data.get("adapter") is None else str(data.get("adapter")),
+            source=None if data.get("source") is None else str(data.get("source")),
+            view_paths=tuple(str(path) for path in raw_view_paths),
+            assumptions=tuple(str(assumption) for assumption in raw_assumptions),
+            metadata=dict(data.get("metadata", {})),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready reference contract."""
+        return {
+            "reference_id": self.reference_id,
+            "adapter": self.adapter,
+            "source": self.source,
+            "view_paths": tuple(self.view_paths),
+            "assumptions": tuple(self.assumptions),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+
+@dataclass(frozen=True)
+class WorldModelView:
+    """Serializable view function used for one world-model judgment."""
+
+    action: Mapping[str, Any]
+    postcondition: StateCheck | Mapping[str, Any]
+    base_state_fingerprint: str
+    predicted_state_fingerprint: str
+    inspected_paths: Sequence[str] = ()
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        postcondition = (
+            self.postcondition
+            if isinstance(self.postcondition, StateCheck)
+            else StateCheck.from_mapping(self.postcondition)
+        )
+        object.__setattr__(self, "action", dict(self.action))
+        object.__setattr__(self, "postcondition", postcondition)
+        object.__setattr__(self, "base_state_fingerprint", str(self.base_state_fingerprint))
+        object.__setattr__(self, "predicted_state_fingerprint", str(self.predicted_state_fingerprint))
+        object.__setattr__(self, "inspected_paths", tuple(str(path) for path in self.inspected_paths if str(path)))
+        object.__setattr__(self, "metadata", dict(self.metadata))
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-ready view summary."""
+        return {
+            "action": to_jsonable(dict(self.action)),
+            "postcondition": _state_check_to_dict(self.postcondition),
+            "base_state_fingerprint": self.base_state_fingerprint,
+            "predicted_state_fingerprint": self.predicted_state_fingerprint,
+            "inspected_paths": tuple(self.inspected_paths),
+            "metadata": to_jsonable(dict(self.metadata)),
+        }
+
+
 @runtime_checkable
 class WorldModelAdapter(Protocol):
     """Adapter for stateful, causal, physical, or domain-specific verification."""
@@ -208,10 +309,15 @@ class StateTransitionVerifier:
     world_model: WorldModelAdapter
     state: Mapping[str, Any] = field(default_factory=dict)
     min_prediction_confidence: float = 0.0
+    reference: WorldModelReference | Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.min_prediction_confidence <= 1.0):
             raise ValueError("min_prediction_confidence must be in [0, 1].")
+        reference = self.reference
+        if reference is not None and not isinstance(reference, WorldModelReference):
+            reference = WorldModelReference.from_mapping(reference)
+        object.__setattr__(self, "reference", reference)
 
     def verify(self, claim: Claim, context: Mapping[str, Any] | None = None) -> VerificationResult:
         """Verify one claim against a predicted state transition."""
@@ -252,21 +358,45 @@ class StateTransitionVerifier:
                 explanation=f"world model prediction failed: {exc}",
                 metadata={"verifier": "state_transition", "decision_rule": "prediction_error"},
             )
+        world_model_name = type(self.world_model).__name__
+        reference = _resolved_world_model_reference(
+            self.reference,
+            adapter_name=world_model_name,
+            transition=transition,
+            postcondition=postcondition,
+            prediction=prediction,
+        )
+        view = WorldModelView(
+            action=transition.action,
+            postcondition=postcondition,
+            base_state_fingerprint=stable_cache_key(base_state),
+            predicted_state_fingerprint=stable_cache_key(prediction.state),
+            inspected_paths=reference.view_paths or (postcondition.path,),
+            metadata={
+                "claim_id": claim.claim_id,
+                "prediction_decision_rule": prediction.metadata.get("decision_rule"),
+            },
+        )
+        transition_metadata = {
+            "verifier": "state_transition",
+            "world_model": world_model_name,
+            "world_model_reference": reference.to_dict(),
+            "world_model_view": view.to_dict(),
+            "action": dict(transition.action),
+            "prediction_confidence": prediction.confidence,
+            "min_prediction_confidence": self.min_prediction_confidence,
+            "prediction_explanation": prediction.explanation,
+            "prediction_metadata": dict(prediction.metadata),
+            "source": transition.source,
+        }
         if prediction.metadata.get("below_min_agreement") is True:
             return VerificationResult(
                 status=VerificationStatus.INSUFFICIENT_EVIDENCE,
                 confidence=prediction.confidence,
                 explanation="world model prediction agreement below threshold",
                 metadata={
-                    "verifier": "state_transition",
+                    **transition_metadata,
                     "decision_rule": "prediction_agreement_below_threshold",
-                    "world_model": type(self.world_model).__name__,
-                    "action": dict(transition.action),
-                    "prediction_confidence": prediction.confidence,
-                    "min_prediction_confidence": self.min_prediction_confidence,
-                    "prediction_explanation": prediction.explanation,
-                    "prediction_metadata": dict(prediction.metadata),
-                    "source": transition.source,
                 },
             )
         if prediction.metadata.get("no_rule_matched") is True:
@@ -275,15 +405,8 @@ class StateTransitionVerifier:
                 confidence=prediction.confidence,
                 explanation="world model found no matching transition rule",
                 metadata={
-                    "verifier": "state_transition",
+                    **transition_metadata,
                     "decision_rule": "prediction_no_matching_rule",
-                    "world_model": type(self.world_model).__name__,
-                    "action": dict(transition.action),
-                    "prediction_confidence": prediction.confidence,
-                    "min_prediction_confidence": self.min_prediction_confidence,
-                    "prediction_explanation": prediction.explanation,
-                    "prediction_metadata": dict(prediction.metadata),
-                    "source": transition.source,
                 },
             )
         if prediction.confidence < self.min_prediction_confidence:
@@ -292,15 +415,8 @@ class StateTransitionVerifier:
                 confidence=prediction.confidence,
                 explanation="world model prediction confidence below threshold",
                 metadata={
-                    "verifier": "state_transition",
+                    **transition_metadata,
                     "decision_rule": "prediction_confidence_below_threshold",
-                    "world_model": type(self.world_model).__name__,
-                    "action": dict(transition.action),
-                    "prediction_confidence": prediction.confidence,
-                    "min_prediction_confidence": self.min_prediction_confidence,
-                    "prediction_explanation": prediction.explanation,
-                    "prediction_metadata": dict(prediction.metadata),
-                    "source": transition.source,
                 },
             )
 
@@ -314,13 +430,7 @@ class StateTransitionVerifier:
         confidence = min(state_result.confidence, prediction.confidence)
         metadata = {
             **dict(state_result.metadata),
-            "verifier": "state_transition",
-            "world_model": type(self.world_model).__name__,
-            "action": dict(transition.action),
-            "prediction_confidence": prediction.confidence,
-            "prediction_explanation": prediction.explanation,
-            "prediction_metadata": dict(prediction.metadata),
-            "source": transition.source,
+            **transition_metadata,
         }
         if state_result.status is VerificationStatus.SUPPORTED:
             decision_rule = "transition_postcondition_passed"
@@ -328,6 +438,11 @@ class StateTransitionVerifier:
         elif state_result.status is VerificationStatus.REFUTED:
             decision_rule = "transition_postcondition_failed"
             explanation = "predicted state transition refutes postcondition"
+            metadata["world_model_conflict"] = _world_model_conflict_summary(
+                state_result=state_result,
+                reference=reference,
+                view=view,
+            )
         else:
             decision_rule = f"transition_{state_result.metadata.get('decision_rule', 'undecided')}"
             explanation = state_result.explanation
@@ -502,6 +617,53 @@ def _condition_result_summary(result: VerificationResult, *, index: int) -> dict
         "operator": result.metadata.get("operator"),
         "expected": result.metadata.get("expected"),
         "actual": result.metadata.get("actual"),
+    }
+
+
+def _resolved_world_model_reference(
+    reference: WorldModelReference | None,
+    *,
+    adapter_name: str,
+    transition: StateTransitionCheck,
+    postcondition: StateCheck,
+    prediction: WorldModelPrediction,
+) -> WorldModelReference:
+    if reference is None:
+        reference = WorldModelReference(
+            reference_id=adapter_name,
+            adapter=adapter_name,
+            source=transition.source or postcondition.source,
+            view_paths=(postcondition.path,),
+        )
+    metadata = dict(reference.metadata)
+    metadata.setdefault("prediction_decision_rule", prediction.metadata.get("decision_rule"))
+    return WorldModelReference(
+        reference_id=reference.reference_id,
+        adapter=reference.adapter or adapter_name,
+        source=reference.source or transition.source or postcondition.source,
+        view_paths=reference.view_paths or (postcondition.path,),
+        assumptions=reference.assumptions,
+        metadata=metadata,
+    )
+
+
+def _world_model_conflict_summary(
+    *,
+    state_result: VerificationResult,
+    reference: WorldModelReference,
+    view: WorldModelView,
+) -> dict[str, Any]:
+    return {
+        "reference_id": reference.reference_id,
+        "adapter": reference.adapter,
+        "source": reference.source,
+        "path": state_result.metadata.get("path"),
+        "operator": state_result.metadata.get("operator"),
+        "expected": to_jsonable(state_result.metadata.get("expected")),
+        "actual": to_jsonable(state_result.metadata.get("actual")),
+        "decision_rule": state_result.metadata.get("decision_rule"),
+        "base_state_fingerprint": view.base_state_fingerprint,
+        "predicted_state_fingerprint": view.predicted_state_fingerprint,
     }
 
 

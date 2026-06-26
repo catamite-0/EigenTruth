@@ -1120,6 +1120,11 @@ predicted inventory after reservation, while false labels assert an off-by-one
 postcondition that the predicted state refutes. `--min-world-model-confidence`
 fails closed on low-confidence transition predictions. The selected
 world-model adapter, rule count, confidence threshold, and rule payload are
+reported with each run. Verified-record sidecars also include
+`world_model_reference`, `world_model_view`, and refuted-postcondition
+`world_model_conflict` metadata, so downstream audits can see which reference
+world, state paths, action, predicted state fingerprint, and expected/actual
+postcondition values drove the transition decision.
 recorded in the report and verified-record trace-cache key.
 
 The current policy is deliberately simple and auditable: `refuted` always

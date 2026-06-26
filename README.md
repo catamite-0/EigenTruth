@@ -434,7 +434,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | Maps local tool or action execution outputs into structured verifier state for post-tool checks. |
 | `RuleBasedWorldModelAdapter` / `WorldModelRule` | Applies auditable dependency-free domain/world-model transition rules with explicit action matches, structured-state preconditions, state updates, and fail-closed no-match metadata. |
 | `EnsembleWorldModelAdapter` | Aggregates multiple world-model adapters, degrades prediction confidence by agreement rate, and fail-closes state-transition checks when consensus falls below `min_agreement`. |
-| `StateTransitionVerifier` / `StateTransitionCheck` | Uses a world-model adapter to predict next state after an action, then checks structured postconditions; `min_prediction_confidence` can fail closed on low-confidence predictions. |
+| `WorldModelReference` / `WorldModelView` | Serializes the reference world-model contract and per-claim view used by state-transition verification, including viewed paths, state fingerprints, and assumptions. |
+| `StateTransitionVerifier` / `StateTransitionCheck` | Uses a world-model adapter to predict next state after an action, then checks structured postconditions; `min_prediction_confidence` can fail closed on low-confidence predictions, and verifier metadata includes `world_model_reference`, `world_model_view`, and refuted-postcondition `world_model_conflict` summaries. |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | Adds request-scoped in-memory caching and hit/miss stats for repeated verifier, retrieval, and state-source calls. |
 | `CompositeVerifier` / `RoutedVerifier` / `default_routed_verifier` | Compose deterministic tools with lexical, retrieval, database, triple-evidence, or world-model verifiers; routing can use claim metadata, context, feature flags, or text patterns, cap route fanout, and record match reasons. The default route stack runs deterministic tools first, strict triple audits for sensitive factual claims next, and lexical groundedness as fallback. |
 | `GroundednessVerifier` / `ClaimExtractor` | Extracts claim metadata and checks claims against lexical evidence snippets and explicit refutations without extra dependencies. |
@@ -567,7 +568,8 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `ToolOutputStateSource` / `ToolOutputMapping` | 将本地工具或 action 执行输出映射成结构化 verifier state，用于工具调用后的校验。 |
 | `RuleBasedWorldModelAdapter` / `WorldModelRule` | 用显式 action match、结构化 state precondition、状态更新和 fail-closed no-match metadata 执行可审计、无依赖的 domain/world-model transition rule。 |
 | `EnsembleWorldModelAdapter` | 聚合多个 world-model adapter，按一致率降低预测置信度，并在共识低于 `min_agreement` 时让 state-transition check fail closed。 |
-| `StateTransitionVerifier` / `StateTransitionCheck` | 通过 world-model adapter 预测 action 后的下一状态，再校验结构化 postcondition；`min_prediction_confidence` 可在预测置信度不足时 fail closed。 |
+| `WorldModelReference` / `WorldModelView` | 序列化 state-transition verification 使用的 reference world-model contract 和逐 claim view，包括被观察路径、状态指纹和假设。 |
+| `StateTransitionVerifier` / `StateTransitionCheck` | 通过 world-model adapter 预测 action 后的下一状态，再校验结构化 postcondition；`min_prediction_confidence` 可在预测置信度不足时 fail closed，verifier metadata 会包含 `world_model_reference`、`world_model_view` 和 refuted postcondition 的 `world_model_conflict` 摘要。 |
 | `CachedVerifier` / `CachedRetriever` / `CachedStateSource` | 为重复 verifier、retrieval 和 state-source 调用提供 request-scoped 内存缓存与 hit/miss 统计。 |
 | `CompositeVerifier` / `RoutedVerifier` / `default_routed_verifier` | 组合确定性工具与词面、检索、数据库、triple-evidence 或 world-model verifier；路由可依据 claim metadata、context、feature flags 或文本模式，可限制 route fanout，并记录匹配原因。默认路由栈会先跑确定性工具，再对敏感事实 claim 进行严格 triple audit，最后用 lexical groundedness 兜底。 |
 | `GroundednessVerifier` / `ClaimExtractor` | 抽取 claim metadata，并用词面证据片段和显式反证检查 claim，不增加核心依赖。 |

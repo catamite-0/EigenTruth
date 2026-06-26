@@ -35,7 +35,9 @@ from eigentruth.adapters.world_model import (
     StateTransitionVerifier,
     WorldModelAdapter,
     WorldModelPrediction,
+    WorldModelReference,
     WorldModelRule,
+    WorldModelView,
 )
 
 __all__ = [
@@ -68,6 +70,8 @@ __all__ = [
     "StateTransitionVerifier",
     "WorldModelAdapter",
     "WorldModelPrediction",
+    "WorldModelReference",
     "WorldModelRule",
+    "WorldModelView",
     "combine_cache_stats",
 ]

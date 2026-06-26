@@ -31,6 +31,7 @@ from eigentruth.adapters import (
     ToolOutputMapping,
     ToolOutputStateSource,
     WorldModelPrediction,
+    WorldModelReference,
     WorldModelRule,
 )
 from eigentruth.calibration import CalibrationArtifact, CalibrationScore
@@ -2257,6 +2258,12 @@ def test_state_transition_verifier_checks_predicted_postconditions():
     verifier = StateTransitionVerifier(
         world_model=adapter,
         state={"inventory": {"sku_123": {"available": 10}}, "orders": {"ord_1": {"status": "pending"}}},
+        reference=WorldModelReference(
+            reference_id="order_reservation_world",
+            source="order_world_model",
+            view_paths=("inventory.sku_123.available", "orders.ord_1.status"),
+            assumptions=("reservation actions decrement available inventory",),
+        ),
     )
     supported = verifier.verify(
         Claim(
@@ -2290,8 +2297,26 @@ def test_state_transition_verifier_checks_predicted_postconditions():
     assert supported.metadata["decision_rule"] == "transition_postcondition_passed"
     assert supported.metadata["world_model"] == "InMemoryWorldModelAdapter"
     assert supported.metadata["actual"] == 7
+    assert supported.metadata["world_model_reference"]["reference_id"] == "order_reservation_world"
+    assert supported.metadata["world_model_reference"]["adapter"] == "InMemoryWorldModelAdapter"
+    assert supported.metadata["world_model_reference"]["source"] == "order_world_model"
+    assert supported.metadata["world_model_reference"]["view_paths"] == (
+        "inventory.sku_123.available",
+        "orders.ord_1.status",
+    )
+    assert supported.metadata["world_model_view"]["postcondition"]["path"] == "inventory.sku_123.available"
+    assert supported.metadata["world_model_view"]["inspected_paths"] == (
+        "inventory.sku_123.available",
+        "orders.ord_1.status",
+    )
+    assert supported.metadata["world_model_view"]["base_state_fingerprint"]
+    assert supported.metadata["world_model_view"]["predicted_state_fingerprint"]
     assert refuted.status is VerificationStatus.REFUTED
     assert refuted.metadata["decision_rule"] == "transition_postcondition_failed"
+    assert refuted.metadata["world_model_conflict"]["reference_id"] == "order_reservation_world"
+    assert refuted.metadata["world_model_conflict"]["path"] == "inventory.sku_123.available"
+    assert refuted.metadata["world_model_conflict"]["expected"] == 10
+    assert refuted.metadata["world_model_conflict"]["actual"] == 7
     assert verifier.state["inventory"]["sku_123"]["available"] == 10
 
 
