@@ -458,6 +458,38 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "final_answer_total_claims": metrics.get("final_answer_total_claims"),
         "final_answer_blocked_claim_count": metrics.get("final_answer_blocked_claim_count"),
         "final_answer_requires_followup": metrics.get("final_answer_requires_followup"),
+        "promotion_contract_summary": dict(_mapping(metrics.get("promotion_contract_summary"))),
+        "promotion_contract_available": bool(metrics.get("promotion_contract_available")),
+        "promotion_contract_source": metrics.get("promotion_contract_source"),
+        "promotion_contract_source_status": metrics.get("promotion_contract_source_status"),
+        "promotion_contract_budget_enabled": metrics.get("promotion_contract_budget_enabled"),
+        "promotion_contract_triple_extraction_fixture_matrix_available": bool(
+            metrics.get("promotion_contract_triple_extraction_fixture_matrix_available")
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_source": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_source"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_status": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_status"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_manifest_verified": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_manifest_verified"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_n_corpora": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_n_corpora"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_promoted_corpora": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_promoted_corpora"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_mean_best_f1": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_mean_best_f1"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": metrics.get(
+            "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift"
+        ),
     }
 
 
@@ -506,6 +538,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
         "final_answer": _aggregate_final_answer(metrics),
+        "promotion_contract": _aggregate_promotion_contract(metrics),
         "phases": _aggregate_phases(metrics),
         "routes": _aggregate_routes(metrics),
         "profiles": _aggregate_contexts(contexts),
@@ -1177,6 +1210,75 @@ def _aggregate_final_answer(metrics: Sequence[Mapping[str, Any]]) -> dict[str, A
             item.get("final_answer_blocked_claim_count") for item in metrics
         ),
         "summary_observations": sum(1 for item in metrics if _mapping(item.get("final_answer_summary"))),
+    }
+
+
+def _aggregate_promotion_contract(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    available_count = sum(1 for item in metrics if bool(item.get("promotion_contract_available")))
+    matrix_available_count = sum(
+        1
+        for item in metrics
+        if bool(item.get("promotion_contract_triple_extraction_fixture_matrix_available"))
+    )
+    manifest_values = [
+        item.get("promotion_contract_triple_extraction_fixture_matrix_manifest_verified")
+        for item in metrics
+    ]
+    manifest_observations = sum(value is not None for value in manifest_values)
+    return {
+        "source_trace_count": len(metrics),
+        "available_trace_count": available_count,
+        "missing_trace_count": len(metrics) - available_count,
+        "coverage_rate": _safe_div(available_count, len(metrics)),
+        "source_counts": _counts(item.get("promotion_contract_source") for item in metrics),
+        "source_status_counts": _counts(
+            item.get("promotion_contract_source_status") for item in metrics
+        ),
+        "budget_enabled_counts": _counts(
+            item.get("promotion_contract_budget_enabled") for item in metrics
+        ),
+        "summary_observations": sum(
+            1 for item in metrics if _mapping(item.get("promotion_contract_summary"))
+        ),
+        "triple_extraction_fixture_matrix": {
+            "available_trace_count": matrix_available_count,
+            "missing_trace_count": len(metrics) - matrix_available_count,
+            "coverage_rate": _safe_div(matrix_available_count, len(metrics)),
+            "source_counts": _counts(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_source")
+                for item in metrics
+            ),
+            "status_counts": _counts(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_status")
+                for item in metrics
+            ),
+            "manifest_verification_observations": manifest_observations,
+            "manifest_verified_count": sum(value is True for value in manifest_values),
+            "manifest_failed_count": sum(value is False for value in manifest_values),
+            "manifest_unknown_count": len(metrics) - manifest_observations,
+            "n_corpora": _numeric_summary(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_n_corpora")
+                for item in metrics
+            ),
+            "promoted_corpora": _numeric_summary(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_promoted_corpora")
+                for item in metrics
+            ),
+            "distinct_predicate_count": _numeric_summary(
+                item.get(
+                    "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"
+                )
+                for item in metrics
+            ),
+            "mean_best_f1": _numeric_summary(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_mean_best_f1")
+                for item in metrics
+            ),
+            "mean_f1_lift": _numeric_summary(
+                item.get("promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift")
+                for item in metrics
+            ),
+        },
     }
 
 

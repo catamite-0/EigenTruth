@@ -21522,7 +21522,21 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "evidence": [{"claim_id": "c1", "text": "Paris capital evidence."}],
                 "followup": {"requires_followup": False},
             },
-            "metadata": {"cache": {"verifier": {"hits": 1, "misses": 1}}},
+            "metadata": {
+                "cache": {"verifier": {"hits": 1, "misses": 1}},
+                "promotion_contract_source": "contract-a.json",
+                "promotion_contract_source_status": "promote",
+                "promotion_contract_budget_enabled": True,
+                "promotion_contract_triple_extraction_fixture_matrix": {
+                    "source": "registry",
+                    "status": "promote",
+                    "n_corpora": 2,
+                    "promoted_corpora": 2,
+                    "distinct_predicate_count": 6,
+                    "mean_best_f1": 1.0,
+                    "mean_f1_lift": 0.5,
+                },
+            },
         }),
         encoding="utf-8",
     )
@@ -21565,7 +21579,17 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
                 "evidence": [],
                 "followup": {"requires_followup": True},
             },
-            "metadata": {"cache": {"verifier": {"hits": 2, "misses": 0}}},
+            "metadata": {
+                "cache": {"verifier": {"hits": 2, "misses": 0}},
+                "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
+                "triple_extraction_fixture_matrix_status": "promote",
+                "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
+                "triple_extraction_fixture_matrix_n_corpora": 2,
+                "triple_extraction_fixture_matrix_promoted_corpora": 1,
+                "triple_extraction_fixture_matrix_distinct_predicate_count": 4,
+                "triple_extraction_fixture_matrix_mean_best_f1": 0.8,
+                "triple_extraction_fixture_matrix_mean_f1_lift": 0.2,
+            },
         }),
         encoding="utf-8",
     )
@@ -21619,11 +21643,39 @@ def test_run_product_runtime_baseline_aggregates_traces_and_registers(tmp_path):
         "accept": 1,
         "retrieve": 1,
     }
+    promotion = payload["summary"]["promotion_contract"]
+    matrix = promotion["triple_extraction_fixture_matrix"]
+    assert promotion["available_trace_count"] == 2
+    assert promotion["source_counts"] == {"contract-a.json": 1}
+    assert promotion["source_status_counts"] == {"promote": 1}
+    assert promotion["budget_enabled_counts"] == {"True": 1}
+    assert matrix["available_trace_count"] == 2
+    assert matrix["source_counts"] == {"registry": 1, "runtime_evidence_bundle": 1}
+    assert matrix["status_counts"] == {"promote": 2}
+    assert matrix["manifest_verified_count"] == 1
+    assert matrix["manifest_unknown_count"] == 1
+    assert matrix["distinct_predicate_count"]["mean"] == pytest.approx(5.0)
+    assert matrix["promoted_corpora"]["mean"] == pytest.approx(1.5)
+    assert matrix["mean_best_f1"]["mean"] == pytest.approx(0.9)
+    assert matrix["mean_f1_lift"]["mean"] == pytest.approx(0.35)
     assert payload["traces"][0]["metrics"]["verification_plan_available"] is True
     assert payload["traces"][0]["metrics"]["final_answer_available"] is True
     assert payload["traces"][0]["metrics"]["final_answer_status"] == "answered"
+    assert payload["traces"][0]["metrics"]["promotion_contract_available"] is True
+    assert (
+        payload["traces"][0]["metrics"][
+            "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"
+        ]
+        == 6.0
+    )
     assert payload["traces"][1]["metrics"]["verification_plan_available"] is False
     assert payload["traces"][1]["metrics"]["final_answer_requires_followup"] is True
+    assert (
+        payload["traces"][1]["metrics"][
+            "promotion_contract_triple_extraction_fixture_matrix_manifest_verified"
+        ]
+        is True
+    )
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert saved["artifact_manifest_summary"]["artifact_count"] == 3
     assert manifest["metadata"]["runner"] == "run_product_runtime_baseline"

@@ -451,6 +451,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
         metrics.update(_verification_stage_metrics(trace))
         metrics.update(_verification_plan_metrics(trace))
         metrics.update(_final_answer_metrics(trace))
+        metrics.update(_promotion_contract_metrics(trace))
         return metrics
     summary = _runtime_summary(runtime_trace)
     phase_seconds = _mapping(summary.get("phase_seconds"))
@@ -486,6 +487,7 @@ def product_runtime_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str
     metrics.update(_verification_stage_metrics(trace))
     metrics.update(_verification_plan_metrics(trace))
     metrics.update(_final_answer_metrics(trace))
+    metrics.update(_promotion_contract_metrics(trace))
     return metrics
 
 
@@ -805,6 +807,138 @@ def _final_answer_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, 
     }
 
 
+def _promotion_contract_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, Any]:
+    payload = trace.to_dict() if isinstance(trace, ProductTrace) else dict(trace)
+    metadata = _mapping(payload.get("metadata"))
+    contract_metadata = _mapping(metadata.get("promotion_contract_metadata"))
+    nested_matrix = _mapping(metadata.get("promotion_contract_triple_extraction_fixture_matrix"))
+    matrix = nested_matrix or _matrix_from_flat_metadata(metadata) or _matrix_from_flat_metadata(
+        contract_metadata
+    )
+    manifest_verification = _mapping(
+        _first_present(
+            metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
+            contract_metadata.get("triple_extraction_fixture_matrix_manifest_verification"),
+        )
+    )
+    source = _optional_string(metadata.get("promotion_contract_source"))
+    source_status = _optional_string(metadata.get("promotion_contract_source_status"))
+    budget_enabled = _optional_bool(metadata.get("promotion_contract_budget_enabled"))
+    matrix_source = _optional_string(
+        _first_present(
+            matrix.get("source"),
+            metadata.get("triple_extraction_fixture_matrix_source"),
+            contract_metadata.get("triple_extraction_fixture_matrix_source"),
+        )
+    )
+    matrix_status = _optional_string(
+        _first_present(
+            matrix.get("status"),
+            metadata.get("triple_extraction_fixture_matrix_status"),
+            contract_metadata.get("triple_extraction_fixture_matrix_status"),
+        )
+    )
+    matrix_available = bool(matrix)
+    available = bool(
+        source is not None
+        or budget_enabled is not None
+        or metadata.get("promotion_contract_runtime") is not None
+        or contract_metadata
+        or matrix_available
+    )
+    summary = {
+        "available": available,
+        "source": source,
+        "source_status": source_status,
+        "budget_enabled": budget_enabled,
+        "triple_extraction_fixture_matrix": {
+            "available": matrix_available,
+            "source": matrix_source,
+            "status": matrix_status,
+            "manifest_verified": _optional_bool(manifest_verification.get("passed")),
+            "n_corpora": _finite_float(
+                _first_present(
+                    matrix.get("n_corpora"),
+                    metadata.get("triple_extraction_fixture_matrix_n_corpora"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_n_corpora"),
+                )
+            ),
+            "promoted_corpora": _finite_float(
+                _first_present(
+                    matrix.get("promoted_corpora"),
+                    metadata.get("triple_extraction_fixture_matrix_promoted_corpora"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_promoted_corpora"),
+                )
+            ),
+            "distinct_predicate_count": _finite_float(
+                _first_present(
+                    matrix.get("distinct_predicate_count"),
+                    metadata.get("triple_extraction_fixture_matrix_distinct_predicate_count"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_distinct_predicate_count"),
+                )
+            ),
+            "mean_best_f1": _finite_float(
+                _first_present(
+                    matrix.get("mean_best_f1"),
+                    metadata.get("triple_extraction_fixture_matrix_mean_best_f1"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_mean_best_f1"),
+                )
+            ),
+            "mean_f1_lift": _finite_float(
+                _first_present(
+                    matrix.get("mean_f1_lift"),
+                    metadata.get("triple_extraction_fixture_matrix_mean_f1_lift"),
+                    contract_metadata.get("triple_extraction_fixture_matrix_mean_f1_lift"),
+                )
+            ),
+        },
+    }
+    matrix_summary = _mapping(summary["triple_extraction_fixture_matrix"])
+    return {
+        "promotion_contract_available": available,
+        "promotion_contract_source": source,
+        "promotion_contract_source_status": source_status,
+        "promotion_contract_budget_enabled": budget_enabled,
+        "promotion_contract_summary": summary,
+        "promotion_contract_triple_extraction_fixture_matrix_available": matrix_available,
+        "promotion_contract_triple_extraction_fixture_matrix_source": matrix_source,
+        "promotion_contract_triple_extraction_fixture_matrix_status": matrix_status,
+        "promotion_contract_triple_extraction_fixture_matrix_manifest_verified": matrix_summary.get(
+            "manifest_verified"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_n_corpora": matrix_summary.get(
+            "n_corpora"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_promoted_corpora": matrix_summary.get(
+            "promoted_corpora"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count": matrix_summary.get(
+            "distinct_predicate_count"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_mean_best_f1": matrix_summary.get(
+            "mean_best_f1"
+        ),
+        "promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift": matrix_summary.get(
+            "mean_f1_lift"
+        ),
+    }
+
+
+def _matrix_from_flat_metadata(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    matrix = {
+        "source": metadata.get("triple_extraction_fixture_matrix_source"),
+        "status": metadata.get("triple_extraction_fixture_matrix_status"),
+        "n_corpora": metadata.get("triple_extraction_fixture_matrix_n_corpora"),
+        "promoted_corpora": metadata.get("triple_extraction_fixture_matrix_promoted_corpora"),
+        "distinct_predicate_count": metadata.get(
+            "triple_extraction_fixture_matrix_distinct_predicate_count"
+        ),
+        "mean_best_f1": metadata.get("triple_extraction_fixture_matrix_mean_best_f1"),
+        "mean_f1_lift": metadata.get("triple_extraction_fixture_matrix_mean_f1_lift"),
+    }
+    return {key: value for key, value in matrix.items() if value is not None}
+
+
 def _route_counts_from_plan(plan: Mapping[str, Any]) -> dict[str, int]:
     route_counts: dict[str, int] = {}
     for hint in _sequence(plan.get("route_hints")):
@@ -957,6 +1091,20 @@ def _optional_bool(value: Any) -> bool | None:
         return True
     if normalized in {"0", "false", "no", "off"}:
         return False
+    return None
+
+
+def _optional_string(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None:
+            return value
     return None
 
 

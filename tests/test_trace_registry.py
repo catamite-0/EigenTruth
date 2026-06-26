@@ -331,6 +331,12 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
                 "status": "promote",
                 "distinct_predicate_count": 6,
             },
+            "triple_extraction_fixture_matrix_source": "registry",
+            "triple_extraction_fixture_matrix_manifest_verification": {"passed": True},
+            "triple_extraction_fixture_matrix_n_corpora": 2,
+            "triple_extraction_fixture_matrix_promoted_corpora": 2,
+            "triple_extraction_fixture_matrix_mean_best_f1": 1.0,
+            "triple_extraction_fixture_matrix_mean_f1_lift": 0.5,
             "runtime_budget": {"passed": True},
             "large_unselected_metadata": tuple(range(100)),
         },
@@ -396,12 +402,28 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
         "status": "promote",
         "distinct_predicate_count": 6,
     }
+    assert payload["metadata"]["triple_extraction_fixture_matrix_manifest_verification"] == {
+        "passed": True
+    }
     metrics = product_runtime_metrics(payload)
     assert metrics["final_answer_available"] is True
     assert metrics["final_answer_source"] == "bounded_summary"
     assert metrics["final_answer_status"] == "answered"
     assert metrics["final_answer_answerable"] is True
     assert metrics["final_answer_evidence_count"] == 4.0
+    assert metrics["promotion_contract_available"] is True
+    assert metrics["promotion_contract_source"] == "contract.json"
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_available"] is True
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_source"] == "registry"
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_status"] == "promote"
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_manifest_verified"] is True
+    assert (
+        metrics["promotion_contract_triple_extraction_fixture_matrix_distinct_predicate_count"]
+        == 6.0
+    )
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_n_corpora"] == 2.0
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_mean_best_f1"] == 1.0
+    assert metrics["promotion_contract_triple_extraction_fixture_matrix_mean_f1_lift"] == 0.5
     json.dumps(payload)
 
 
