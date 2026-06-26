@@ -48,6 +48,10 @@ def compare_product_runtime_baselines(
     max_retrieval_use_rate_delta: float | None = None,
     max_cache_hit_rate_drop: float | None = None,
     max_verification_skip_rate_drop: float | None = None,
+    min_promotion_contract_coverage: float | None = None,
+    min_triple_extraction_fixture_matrix_coverage: float | None = None,
+    max_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None,
+    max_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None,
     min_current_trace_count: int | None = None,
     metadata: Mapping[str, Any] | None = None,
     compact_json: bool = False,
@@ -82,6 +86,16 @@ def compare_product_runtime_baselines(
         "max_retrieval_use_rate_delta": _optional_non_negative_float(max_retrieval_use_rate_delta),
         "max_cache_hit_rate_drop": _optional_non_negative_float(max_cache_hit_rate_drop),
         "max_verification_skip_rate_drop": _optional_non_negative_float(max_verification_skip_rate_drop),
+        "min_promotion_contract_coverage": _optional_rate_float(min_promotion_contract_coverage),
+        "min_triple_extraction_fixture_matrix_coverage": _optional_rate_float(
+            min_triple_extraction_fixture_matrix_coverage
+        ),
+        "max_triple_extraction_fixture_matrix_mean_best_f1_drop": _optional_non_negative_float(
+            max_triple_extraction_fixture_matrix_mean_best_f1_drop
+        ),
+        "max_triple_extraction_fixture_matrix_mean_f1_lift_drop": _optional_non_negative_float(
+            max_triple_extraction_fixture_matrix_mean_f1_lift_drop
+        ),
         "min_current_trace_count": _optional_non_negative_int(min_current_trace_count),
     }
     metrics = _comparison_metrics(
@@ -229,6 +243,68 @@ def _comparison_metrics(
             _nested_float(current_summary, ("verification_skip_rate", "mean")),
             gates.get("max_verification_skip_rate_drop"),
         ),
+        _min_current_metric(
+            "promotion_contract.coverage_rate",
+            _nested_float(baseline_summary, ("promotion_contract", "coverage_rate")),
+            _nested_float(current_summary, ("promotion_contract", "coverage_rate")),
+            gates.get("min_promotion_contract_coverage"),
+        ),
+        _min_current_metric(
+            "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+            _nested_float(
+                baseline_summary,
+                ("promotion_contract", "triple_extraction_fixture_matrix", "coverage_rate"),
+            ),
+            _nested_float(
+                current_summary,
+                ("promotion_contract", "triple_extraction_fixture_matrix", "coverage_rate"),
+            ),
+            gates.get("min_triple_extraction_fixture_matrix_coverage"),
+        ),
+        _drop_metric(
+            "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+            _nested_float(
+                baseline_summary,
+                (
+                    "promotion_contract",
+                    "triple_extraction_fixture_matrix",
+                    "mean_best_f1",
+                    "mean",
+                ),
+            ),
+            _nested_float(
+                current_summary,
+                (
+                    "promotion_contract",
+                    "triple_extraction_fixture_matrix",
+                    "mean_best_f1",
+                    "mean",
+                ),
+            ),
+            gates.get("max_triple_extraction_fixture_matrix_mean_best_f1_drop"),
+        ),
+        _drop_metric(
+            "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+            _nested_float(
+                baseline_summary,
+                (
+                    "promotion_contract",
+                    "triple_extraction_fixture_matrix",
+                    "mean_f1_lift",
+                    "mean",
+                ),
+            ),
+            _nested_float(
+                current_summary,
+                (
+                    "promotion_contract",
+                    "triple_extraction_fixture_matrix",
+                    "mean_f1_lift",
+                    "mean",
+                ),
+            ),
+            gates.get("max_triple_extraction_fixture_matrix_mean_f1_lift_drop"),
+        ),
         _min_metric(
             "n_traces",
             _finite_float(current_summary.get("n_traces")),
@@ -318,6 +394,20 @@ def _min_metric(name: str, current: float | None, minimum: int | None) -> dict[s
         threshold=None if minimum is None else float(minimum),
         fail=lambda value, threshold: value < threshold,
     )
+
+
+def _min_current_metric(
+    name: str,
+    baseline: float | None,
+    current: float | None,
+    minimum: float | None,
+) -> dict[str, Any]:
+    row = _base_metric(name, baseline=baseline, current=current)
+    row.update({
+        "comparison": "min_current",
+        "threshold": minimum,
+    })
+    return _gate_metric(row, value=current, threshold=minimum, fail=lambda value, threshold: value < threshold)
 
 
 def _base_metric(name: str, *, baseline: float | None, current: float | None) -> dict[str, Any]:
@@ -888,6 +978,13 @@ def _optional_non_negative_float(value: float | None) -> float | None:
     return numeric
 
 
+def _optional_rate_float(value: float | None) -> float | None:
+    numeric = _optional_non_negative_float(value)
+    if numeric is not None and numeric > 1.0:
+        raise ValueError("rate drift gate values must be between 0 and 1.")
+    return numeric
+
+
 def _optional_non_negative_int(value: int | None) -> int | None:
     if value is None:
         return None
@@ -944,6 +1041,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         max_retrieval_use_rate_delta=args.max_retrieval_use_rate_delta,
         max_cache_hit_rate_drop=args.max_cache_hit_rate_drop,
         max_verification_skip_rate_drop=args.max_verification_skip_rate_drop,
+        min_promotion_contract_coverage=args.min_promotion_contract_coverage,
+        min_triple_extraction_fixture_matrix_coverage=(
+            args.min_triple_extraction_fixture_matrix_coverage
+        ),
+        max_triple_extraction_fixture_matrix_mean_best_f1_drop=(
+            args.max_triple_extraction_fixture_matrix_mean_best_f1_drop
+        ),
+        max_triple_extraction_fixture_matrix_mean_f1_lift_drop=(
+            args.max_triple_extraction_fixture_matrix_mean_f1_lift_drop
+        ),
         min_current_trace_count=args.min_current_trace_count,
         metadata=_parse_metadata(args.metadata or ()),
         compact_json=bool(args.compact_json),
@@ -979,6 +1086,10 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-retrieval-use-rate-delta", type=float, default=None)
     parser.add_argument("--max-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-verification-skip-rate-drop", type=float, default=None)
+    parser.add_argument("--min-promotion-contract-coverage", type=float, default=None)
+    parser.add_argument("--min-triple-extraction-fixture-matrix-coverage", type=float, default=None)
+    parser.add_argument("--max-triple-extraction-fixture-matrix-mean-best-f1-drop", type=float, default=None)
+    parser.add_argument("--max-triple-extraction-fixture-matrix-mean-f1-lift-drop", type=float, default=None)
     parser.add_argument("--min-current-trace-count", type=int, default=None)
     parser.add_argument("--compact-json", action="store_true",
                         help="write minified drift report and manifest JSON")

@@ -4164,10 +4164,11 @@ coverage/safety thresholds pass.
 Use `compare_product_runtime_baselines.py` after a fresh trace baseline has been
 built. It compares that current baseline against a file path or a registered
 `product_runtime_baseline:*:*` record and can fail closed on latency, route cost,
-retrieval-use, cache-hit-rate, verifier-skip-rate, and trace-count drift. When a
-saved `ProductRuntimeBudgetPolicy` is supplied with `--runtime-budget-policy` or
-`--runtime-budget-policy-key`, the current baseline summary is also checked
-against the reusable budget using p95/aggregate metrics. When a
+retrieval-use, cache-hit-rate, verifier-skip-rate, promotion-contract coverage,
+triple-extraction fixture-matrix coverage/quality drift, and trace-count drift.
+When a saved `ProductRuntimeBudgetPolicy` is supplied with
+`--runtime-budget-policy` or `--runtime-budget-policy-key`, the current baseline
+summary is also checked against the reusable budget using p95/aggregate metrics. When a
 file baseline is used, `--registry` can still be supplied to register only the
 new drift report:
 
@@ -4188,6 +4189,10 @@ python benchmarks/compare_product_runtime_baselines.py \
   --max-retrieval-use-rate-delta 0.0 \
   --max-cache-hit-rate-drop 0.0 \
   --max-verification-skip-rate-drop 0.0 \
+  --min-promotion-contract-coverage 1.0 \
+  --min-triple-extraction-fixture-matrix-coverage 1.0 \
+  --max-triple-extraction-fixture-matrix-mean-best-f1-drop 0.05 \
+  --max-triple-extraction-fixture-matrix-mean-f1-lift-drop 0.05 \
   --min-current-trace-count 12 \
   --metadata evidence=smollm2_product_runtime_drift_refresh_v1_6 \
   --fail-on-drift
@@ -4247,7 +4252,11 @@ to the workflow report. Add `--fingerprint-cache` when repeating local checks,
 observed baseline's candidate budget thresholds, and
 `--runtime-drift-baseline` plus optional `--runtime-drift-budget-policy` when
 the workflow should immediately validate the current runtime baseline against
-the previous promoted baseline/policy gate. Add
+the previous promoted baseline/policy gate. The runtime-drift pass-through also
+accepts promotion evidence gates such as
+`--min-runtime-drift-promotion-contract-coverage`,
+`--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, and the two
+`--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates. Add
 `--selector-trace-inputs-json` when replaying
 selector policies repeatedly over unchanged standardized traces:
 
@@ -4272,6 +4281,8 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --runtime-drift-baseline artifacts/smollm2_product_runtime_profile_sweep/baselines/auto/product-runtime-baseline.json \
   --runtime-drift-budget-policy artifacts/product-runtime-baseline-recommended-policy.json \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
+  --min-runtime-drift-promotion-contract-coverage 1.0 \
+  --min-runtime-drift-triple-extraction-fixture-matrix-coverage 1.0 \
   --min-runtime-drift-current-trace-count 12 \
   --selector-trace-inputs-json artifacts/smollm2_product_trace_replay_workflow/selector-replay/trace-inputs.json \
   --fail-on-blocked

@@ -76,6 +76,10 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_retrieval_use_rate_delta: float | None = None
     max_runtime_drift_cache_hit_rate_drop: float | None = None
     max_runtime_drift_verification_skip_rate_drop: float | None = None
+    min_runtime_drift_promotion_contract_coverage: float | None = None
+    min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
+    max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
+    max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
@@ -135,6 +139,10 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_retrieval_use_rate_delta,
                 self.max_runtime_drift_cache_hit_rate_drop,
                 self.max_runtime_drift_verification_skip_rate_drop,
+                self.min_runtime_drift_promotion_contract_coverage,
+                self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
+                self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
+                self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
                 self.min_runtime_drift_current_trace_count,
             )
         )
@@ -957,6 +965,10 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_retrieval_use_rate_delta,
             config.max_runtime_drift_cache_hit_rate_drop,
             config.max_runtime_drift_verification_skip_rate_drop,
+            config.min_runtime_drift_promotion_contract_coverage,
+            config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
+            config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
+            config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
             config.min_runtime_drift_current_trace_count,
         )
     )
@@ -972,6 +984,16 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_retrieval_use_rate_delta": config.max_runtime_drift_retrieval_use_rate_delta,
         "max_cache_hit_rate_drop": config.max_runtime_drift_cache_hit_rate_drop,
         "max_verification_skip_rate_drop": config.max_runtime_drift_verification_skip_rate_drop,
+        "min_promotion_contract_coverage": config.min_runtime_drift_promotion_contract_coverage,
+        "min_triple_extraction_fixture_matrix_coverage": (
+            config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
+        ),
+        "max_triple_extraction_fixture_matrix_mean_best_f1_drop": (
+            config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop
+        ),
+        "max_triple_extraction_fixture_matrix_mean_f1_lift_drop": (
+            config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop
+        ),
         "min_current_trace_count": config.min_runtime_drift_current_trace_count,
     }
 
@@ -1774,6 +1796,16 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_retrieval_use_rate_delta=args.max_runtime_drift_retrieval_use_rate_delta,
         max_runtime_drift_cache_hit_rate_drop=args.max_runtime_drift_cache_hit_rate_drop,
         max_runtime_drift_verification_skip_rate_drop=args.max_runtime_drift_verification_skip_rate_drop,
+        min_runtime_drift_promotion_contract_coverage=args.min_runtime_drift_promotion_contract_coverage,
+        min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
+            args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
+        ),
+        max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop=(
+            args.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop
+        ),
+        max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop=(
+            args.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop
+        ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
@@ -1852,6 +1884,18 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-runtime-drift-retrieval-use-rate-delta", type=float, default=None)
     parser.add_argument("--max-runtime-drift-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-runtime-drift-verification-skip-rate-drop", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-promotion-contract-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-triple-extraction-fixture-matrix-coverage", type=float, default=None)
+    parser.add_argument(
+        "--max-runtime-drift-triple-extraction-fixture-matrix-mean-best-f1-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-triple-extraction-fixture-matrix-mean-f1-lift-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)

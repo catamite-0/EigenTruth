@@ -22928,6 +22928,102 @@ def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp
     assert trace_metric["reason"] == "n_traces: 1 below gate 2"
 
 
+def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_path):
+    baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
+    compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    baseline_trace = tmp_path / "baseline-trace.json"
+    current_trace = tmp_path / "current-trace.json"
+    baseline_report = tmp_path / "baseline.json"
+    current_report = tmp_path / "current.json"
+    _write_product_runtime_trace(
+        baseline_trace,
+        request_id="baseline",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_source": "contract.json",
+            "promotion_contract_source_status": "promote",
+            "promotion_contract_triple_extraction_fixture_matrix": {
+                "source": "registry",
+                "status": "promote",
+                "n_corpora": 2,
+                "promoted_corpora": 2,
+                "distinct_predicate_count": 6,
+                "mean_best_f1": 1.0,
+                "mean_f1_lift": 0.5,
+            },
+        },
+    )
+    _write_product_runtime_trace(
+        current_trace,
+        request_id="current",
+        total_seconds=0.10,
+        route_seconds=0.02,
+        attempted_route_count=1,
+        used_retrieval=False,
+        cache_hits=1,
+        cache_misses=0,
+        metadata={
+            "promotion_contract_source": "contract.json",
+            "promotion_contract_source_status": "promote",
+            "triple_extraction_fixture_matrix_source": "runtime_evidence_bundle",
+            "triple_extraction_fixture_matrix_status": "promote",
+            "triple_extraction_fixture_matrix_n_corpora": 2,
+            "triple_extraction_fixture_matrix_promoted_corpora": 1,
+            "triple_extraction_fixture_matrix_distinct_predicate_count": 4,
+            "triple_extraction_fixture_matrix_mean_best_f1": 0.70,
+            "triple_extraction_fixture_matrix_mean_f1_lift": 0.20,
+        },
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(baseline_trace,),
+            report_path=baseline_report,
+        )
+    )
+    baseline_module.build_product_runtime_baseline(
+        baseline_module.ProductRuntimeBaselineConfig(
+            trace_paths=(current_trace,),
+            report_path=current_report,
+        )
+    )
+
+    payload = compare_module.compare_product_runtime_baselines(
+        baseline_path=baseline_report,
+        current_path=current_report,
+        min_promotion_contract_coverage=1.0,
+        min_triple_extraction_fixture_matrix_coverage=1.0,
+        max_triple_extraction_fixture_matrix_mean_best_f1_drop=0.10,
+        max_triple_extraction_fixture_matrix_mean_f1_lift_drop=0.10,
+    )
+    contract_metric = _metric_by_name(payload, "promotion_contract.coverage_rate")
+    matrix_metric = _metric_by_name(
+        payload,
+        "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+    )
+    best_f1_metric = _metric_by_name(
+        payload,
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+    )
+    lift_metric = _metric_by_name(
+        payload,
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+    )
+
+    assert payload["status"] == "blocked"
+    assert contract_metric["status"] == "pass"
+    assert matrix_metric["status"] == "pass"
+    assert best_f1_metric["status"] == "blocked"
+    assert best_f1_metric["absolute_drop"] == pytest.approx(0.30)
+    assert lift_metric["status"] == "blocked"
+    assert lift_metric["absolute_drop"] == pytest.approx(0.30)
+    assert payload["summary"]["blocked_metric_count"] == 2
+
+
 def test_compare_product_runtime_baselines_registers_file_baseline_report(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
@@ -23183,7 +23279,13 @@ def _write_product_runtime_trace(
     route_budget_exhausted: bool = False,
     unattempted_routes: Sequence[str] = (),
     max_verifier_route_attempts: int | None = None,
+    metadata: Mapping[str, Any] | None = None,
 ) -> None:
+    trace_metadata = {
+        "cache": {"verifier": {"hits": cache_hits, "misses": cache_misses}},
+        "max_verifier_route_attempts": max_verifier_route_attempts,
+    }
+    trace_metadata.update(dict(metadata or {}))
     path.write_text(
         json.dumps({
             "request_id": request_id,
@@ -23211,10 +23313,7 @@ def _write_product_runtime_trace(
                     },
                 }
             ],
-            "metadata": {
-                "cache": {"verifier": {"hits": cache_hits, "misses": cache_misses}},
-                "max_verifier_route_attempts": max_verifier_route_attempts,
-            },
+            "metadata": trace_metadata,
         }),
         encoding="utf-8",
     )
@@ -24754,6 +24853,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             runtime_drift_baseline_path=prior_baseline_path,
             runtime_drift_budget_policy_path=drift_policy_path,
             max_runtime_drift_total_seconds_p95_ratio=1.2,
+            min_runtime_drift_promotion_contract_coverage=0.0,
             min_runtime_drift_current_trace_count=2,
             registry_path=registry_path,
             name="trace-replay-with-drift",
@@ -24779,6 +24879,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
     assert payload["config"]["runtime_drift_budget_policy"] == str(drift_policy_path)
     assert payload["config"]["runtime_drift_gates"]["max_total_seconds_p95_ratio"] == pytest.approx(1.2)
+    assert payload["config"]["runtime_drift_gates"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
+    assert drift_report["config"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
     assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
         "source": "unit-test-runtime-drift"
     }
