@@ -4187,18 +4187,27 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     assert summary["structured_qa_metrics"]["decision_accuracy"] == pytest.approx(1.0)
     assert summary["structured_qa_metrics"]["false_refuted_rate"] == pytest.approx(1.0)
     assert summary["structured_qa_metrics"]["false_supported_rate"] == pytest.approx(0.0)
-    assert score_dump["summary"] == {
-        "n_false": 5,
-        "n_records": 10,
-        "n_skipped_false_answer": 0,
-        "n_source_documents": 5,
-        "n_true": 5,
-    }
+    assert score_dump["summary"]["n_false"] == 5
+    assert score_dump["summary"]["n_records"] == 10
+    assert score_dump["summary"]["n_skipped_false_answer"] == 0
+    assert score_dump["summary"]["n_source_documents"] == 5
+    assert score_dump["summary"]["n_true"] == 5
+    assert score_dump["summary"]["property_count"] == 2
+    assert score_dump["summary"]["by_property"]["P36"]["n_source_documents"] == 2
+    assert score_dump["summary"]["by_property"]["P36"]["n_records"] == 4
+    assert score_dump["summary"]["by_property"]["P37"]["n_source_documents"] == 3
+    assert score_dump["summary"]["by_property"]["P37"]["n_records"] == 6
     assert belgium_known == {"Dutch", "French"}
     assert belgium_false
     assert all(answer not in belgium_known for answer in belgium_false)
     assert report["qa_verifier"]["enabled"] is True
     assert manifest["metadata"]["promotes_covered_facts_route"] is True
+    assert manifest["metadata"]["property_count"] == 2
+    assert summary["property_count"] == 2
+    assert summary["property_metrics"]["P36"]["decision_accuracy"] == pytest.approx(1.0)
+    assert summary["property_metrics"]["P36"]["false_supported_rate"] == pytest.approx(0.0)
+    assert summary["property_metrics"]["P37"]["n_source_documents"] == 3
+    assert summary["property_metrics"]["P37"]["false_refuted_rate"] == pytest.approx(1.0)
     assert (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").count("\n") == 10
 
     fact_output_dir = tmp_path / "fact-workflow"
@@ -9485,11 +9494,13 @@ def _write_covered_fact_route_summary_manifest(
     false_refuted_rate: float = 1.0,
     mean_duration_seconds: float = 0.001,
     p99_duration_seconds: float = 0.002,
+    property_metrics: Mapping[str, Any] | None = None,
 ) -> Path:
     from eigentruth.registry import build_artifact_manifest
 
     route_summary_path = tmp_path / f"{name}-route-summary.json"
     manifest_path = tmp_path / f"{name}-artifact-manifest.json"
+    property_metrics_payload = dict(property_metrics or {})
     route_summary_path.write_text(
         json.dumps({
             "schema_version": 1,
@@ -9497,6 +9508,8 @@ def _write_covered_fact_route_summary_manifest(
             "status": "promote",
             "route": route,
             "selected_route_counts": {route: selected},
+            "property_count": len(property_metrics_payload),
+            "property_metrics": property_metrics_payload,
             "score_dump_summary": {
                 "n_records": selected,
                 "n_source_documents": selected // 2 if source_documents is None else source_documents,
@@ -9531,6 +9544,7 @@ def _write_covered_fact_route_summary_manifest(
             "promotes_covered_facts_route": True,
             "n_records": selected,
             "n_source_documents": selected // 2 if source_documents is None else source_documents,
+            "property_count": len(property_metrics_payload),
             f"{route}_decision_accuracy": decision_accuracy,
             f"{route}_false_supported_rate": false_supported_rate,
             f"{route}_false_refuted_rate": false_refuted_rate,
@@ -10901,6 +10915,41 @@ def test_compare_external_evidence_baselines_can_require_covered_facts_route(tmp
         route="structured_fact",
         selected=2868,
         source_documents=359,
+        property_metrics={
+            "P36": {
+                "statement_property": "P36",
+                "statement_property_label": "capital",
+                "n_source_documents": 120,
+                "n_records": 960,
+                "n_true": 480,
+                "n_false": 480,
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+            },
+            "P37": {
+                "statement_property": "P37",
+                "statement_property_label": "official language",
+                "n_source_documents": 120,
+                "n_records": 960,
+                "n_true": 480,
+                "n_false": 480,
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+            },
+            "P38": {
+                "statement_property": "P38",
+                "statement_property_label": "currency",
+                "n_source_documents": 119,
+                "n_records": 948,
+                "n_true": 474,
+                "n_false": 474,
+                "decision_accuracy": 1.0,
+                "false_supported_rate": 0.0,
+                "false_refuted_rate": 1.0,
+            },
+        },
     )
     ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
         name="wikidata-structured-fact-paraphrase-route",
@@ -10923,6 +10972,12 @@ def test_compare_external_evidence_baselines_can_require_covered_facts_route(tmp
         min_covered_fact_source_documents=300,
         min_covered_fact_true=1400,
         min_covered_fact_false=1400,
+        min_covered_fact_properties=3,
+        min_covered_fact_property_records=900,
+        min_covered_fact_property_source_documents=100,
+        min_covered_fact_property_decision_accuracy=0.99,
+        max_covered_fact_property_false_supported_rate=0.0,
+        min_covered_fact_property_false_refuted_rate=0.99,
     )
 
     assert payload["decision"]["status"] == "promote"
@@ -10930,6 +10985,8 @@ def test_compare_external_evidence_baselines_can_require_covered_facts_route(tmp
     assert payload["covered_facts_gate"]["passed"] is True
     assert payload["covered_facts_gate"]["route"] == "structured_fact"
     assert payload["covered_facts_gate"]["score_dump_summary"]["n_source_documents"] == 359
+    assert payload["covered_facts_gate"]["property_count"] == 3
+    assert payload["covered_facts_gate"]["property_metrics"]["P38"]["n_records"] == 948
 
     blocked = module.compare_external_evidence_baselines(
         route_registry_path=registry_path,
@@ -10944,6 +11001,22 @@ def test_compare_external_evidence_baselines_can_require_covered_facts_route(tmp
     assert any(
         "covered-facts route 'structured_fact' is not in allowed routes" in reason
         for reason in blocked["decision"]["blocking_reasons"]
+    )
+
+    blocked_property = module.compare_external_evidence_baselines(
+        route_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:wikidata-structured-fact-paraphrase-route:0.1",),
+        require_route_baseline=True,
+        require_covered_facts_route=True,
+        covered_fact_routes=("structured_fact",),
+        min_covered_fact_property_records=1000,
+    )
+
+    assert blocked_property["decision"]["status"] == "blocked"
+    assert blocked_property["covered_facts_gate"]["passed"] is False
+    assert any(
+        "covered_fact_property[P38].records below 1000" in reason
+        for reason in blocked_property["decision"]["blocking_reasons"]
     )
 
 

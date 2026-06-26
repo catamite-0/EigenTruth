@@ -54,6 +54,12 @@ def compare_external_evidence_baselines(
     min_covered_fact_source_documents: int | None = None,
     min_covered_fact_true: int | None = None,
     min_covered_fact_false: int | None = None,
+    min_covered_fact_properties: int | None = None,
+    min_covered_fact_property_records: int | None = None,
+    min_covered_fact_property_source_documents: int | None = None,
+    min_covered_fact_property_decision_accuracy: float | None = None,
+    max_covered_fact_property_false_supported_rate: float | None = None,
+    min_covered_fact_property_false_refuted_rate: float | None = None,
     candidate_score_report_path: str | Path | None = None,
     text_baseline_report_path: str | Path | None = None,
     candidate_run: str | None = None,
@@ -111,6 +117,12 @@ def compare_external_evidence_baselines(
         min_covered_fact_source_documents=min_covered_fact_source_documents,
         min_covered_fact_true=min_covered_fact_true,
         min_covered_fact_false=min_covered_fact_false,
+        min_covered_fact_properties=min_covered_fact_properties,
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
     )
     decision = _decision(
         route_comparison=route_comparison,
@@ -149,6 +161,12 @@ def compare_external_evidence_baselines(
             "min_covered_fact_source_documents": min_covered_fact_source_documents,
             "min_covered_fact_true": min_covered_fact_true,
             "min_covered_fact_false": min_covered_fact_false,
+            "min_covered_fact_properties": min_covered_fact_properties,
+            "min_covered_fact_property_records": min_covered_fact_property_records,
+            "min_covered_fact_property_source_documents": min_covered_fact_property_source_documents,
+            "min_covered_fact_property_decision_accuracy": min_covered_fact_property_decision_accuracy,
+            "max_covered_fact_property_false_supported_rate": max_covered_fact_property_false_supported_rate,
+            "min_covered_fact_property_false_refuted_rate": min_covered_fact_property_false_refuted_rate,
             "candidate_score_report_path": None
             if candidate_score_report_path is None
             else str(candidate_score_report_path),
@@ -347,6 +365,12 @@ def compare_covered_facts_route(
     min_covered_fact_source_documents: int | None = None,
     min_covered_fact_true: int | None = None,
     min_covered_fact_false: int | None = None,
+    min_covered_fact_properties: int | None = None,
+    min_covered_fact_property_records: int | None = None,
+    min_covered_fact_property_source_documents: int | None = None,
+    min_covered_fact_property_decision_accuracy: float | None = None,
+    max_covered_fact_property_false_supported_rate: float | None = None,
+    min_covered_fact_property_false_refuted_rate: float | None = None,
 ) -> dict[str, Any]:
     """Gate the recommended route on covered-facts structured evidence."""
     enabled = bool(
@@ -356,6 +380,12 @@ def compare_covered_facts_route(
         or min_covered_fact_source_documents is not None
         or min_covered_fact_true is not None
         or min_covered_fact_false is not None
+        or min_covered_fact_properties is not None
+        or min_covered_fact_property_records is not None
+        or min_covered_fact_property_source_documents is not None
+        or min_covered_fact_property_decision_accuracy is not None
+        or max_covered_fact_property_false_supported_rate is not None
+        or min_covered_fact_property_false_refuted_rate is not None
     )
     allowed_routes = tuple(str(route) for route in covered_fact_routes if str(route).strip())
     result: dict[str, Any] = {
@@ -367,6 +397,8 @@ def compare_covered_facts_route(
         "route": None,
         "route_summary_path": None,
         "score_dump_summary": {},
+        "property_count": None,
+        "property_metrics": {},
     }
     if not enabled:
         return result
@@ -410,6 +442,7 @@ def compare_covered_facts_route(
     route = route_summary.get("route") or row.get("recommended_route")
     route_name = None if route is None else str(route)
     score_dump_summary = _mapping(route_summary.get("score_dump_summary"))
+    property_metrics = _mapping(route_summary.get("property_metrics"))
     result.update({
         "record_key": str(record_key),
         "route": route_name,
@@ -418,6 +451,8 @@ def compare_covered_facts_route(
         "status": route_summary.get("status"),
         "scope": route_summary.get("scope"),
         "score_dump_summary": dict(score_dump_summary),
+        "property_count": route_summary.get("property_count"),
+        "property_metrics": dict(property_metrics),
     })
     if route_summary.get("workflow") != "wikidata_structured_qa_route_workflow":
         failures.append("covered-facts route summary workflow is not wikidata_structured_qa_route_workflow")
@@ -451,11 +486,79 @@ def compare_covered_facts_route(
         _int_or_none(score_dump_summary.get("n_false")),
         min_covered_fact_false,
     )
+    _check_min(
+        failures,
+        "covered_fact_properties",
+        _int_or_none(route_summary.get("property_count")),
+        min_covered_fact_properties,
+    )
+    if _property_gate_enabled(
+        min_covered_fact_property_records=min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=min_covered_fact_property_false_refuted_rate,
+    ):
+        if not property_metrics:
+            failures.append("covered-facts property metrics are missing")
+        for property_id, metrics in sorted(property_metrics.items()):
+            metric_payload = _mapping(metrics)
+            prefix = f"covered_fact_property[{property_id}]"
+            _check_min(
+                failures,
+                f"{prefix}.records",
+                _int_or_none(metric_payload.get("n_records")),
+                min_covered_fact_property_records,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.source_documents",
+                _int_or_none(metric_payload.get("n_source_documents")),
+                min_covered_fact_property_source_documents,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.decision_accuracy",
+                _float_or_none(metric_payload.get("decision_accuracy")),
+                min_covered_fact_property_decision_accuracy,
+            )
+            _check_max(
+                failures,
+                f"{prefix}.false_supported_rate",
+                _float_or_none(metric_payload.get("false_supported_rate")),
+                max_covered_fact_property_false_supported_rate,
+            )
+            _check_min(
+                failures,
+                f"{prefix}.false_refuted_rate",
+                _float_or_none(metric_payload.get("false_refuted_rate")),
+                min_covered_fact_property_false_refuted_rate,
+            )
     result.update({
         "passed": not failures,
         "blocking_reasons": failures,
     })
     return result
+
+
+def _property_gate_enabled(
+    *,
+    min_covered_fact_property_records: int | None,
+    min_covered_fact_property_source_documents: int | None,
+    min_covered_fact_property_decision_accuracy: float | None,
+    max_covered_fact_property_false_supported_rate: float | None,
+    min_covered_fact_property_false_refuted_rate: float | None,
+) -> bool:
+    return any(
+        value is not None
+        for value in (
+            min_covered_fact_property_records,
+            min_covered_fact_property_source_documents,
+            min_covered_fact_property_decision_accuracy,
+            max_covered_fact_property_false_supported_rate,
+            min_covered_fact_property_false_refuted_rate,
+        )
+    )
 
 
 def _text_redline_row(
@@ -766,6 +869,18 @@ def _check_min(
         failures.append(f"{metric} below {limit}")
 
 
+def _check_max(
+    failures: list[str],
+    metric: str,
+    value: float | int | None,
+    limit: float | int | None,
+) -> None:
+    if limit is None:
+        return
+    if value is None or value > limit:
+        failures.append(f"{metric} above {limit}")
+
+
 def _parse_non_negative_float(value: str, *, flag: str) -> float:
     numeric = float(value)
     if not math.isfinite(numeric) or numeric < 0:
@@ -855,6 +970,7 @@ def _write_artifact_manifest(
         "covered_facts_route": covered_facts.get("route"),
         "covered_facts_record": covered_facts.get("record_key"),
         "covered_facts_route_summary": covered_facts.get("route_summary_path"),
+        "covered_facts_property_count": covered_facts.get("property_count"),
         "text_redline_passed": text_redline.get("passed"),
         "text_redline_run_count": (
             len(text_runs)
@@ -925,6 +1041,7 @@ def _record_registry(
         "covered_facts_route": covered_facts.get("route"),
         "covered_facts_record": covered_facts.get("record_key"),
         "covered_facts_route_summary": covered_facts.get("route_summary_path"),
+        "covered_facts_property_count": covered_facts.get("property_count"),
         "text_redline_passed": text_redline.get("passed"),
         "text_redline_run_count": text_redline.get("run_count"),
         "artifact_manifest": None if manifest_path is None else str(manifest_path),
@@ -1019,6 +1136,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_covered_fact_source_documents=args.min_covered_fact_source_documents,
         min_covered_fact_true=args.min_covered_fact_true,
         min_covered_fact_false=args.min_covered_fact_false,
+        min_covered_fact_properties=args.min_covered_fact_properties,
+        min_covered_fact_property_records=args.min_covered_fact_property_records,
+        min_covered_fact_property_source_documents=args.min_covered_fact_property_source_documents,
+        min_covered_fact_property_decision_accuracy=args.min_covered_fact_property_decision_accuracy,
+        max_covered_fact_property_false_supported_rate=args.max_covered_fact_property_false_supported_rate,
+        min_covered_fact_property_false_refuted_rate=args.min_covered_fact_property_false_refuted_rate,
         candidate_score_report_path=args.candidate_score_report,
         text_baseline_report_path=args.text_baseline_report,
         candidate_run=args.candidate_run,
@@ -1191,6 +1314,34 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--min-covered-fact-false", type=lambda value: _parse_non_negative_int(
         value,
         flag="--min-covered-fact-false",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-properties", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-properties",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-records", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-records",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-source-documents", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-covered-fact-property-source-documents",
+    ), default=None)
+    parser.add_argument("--min-covered-fact-property-decision-accuracy", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-covered-fact-property-decision-accuracy",
+    ), default=None)
+    parser.add_argument(
+        "--max-covered-fact-property-false-supported-rate",
+        type=lambda value: _parse_non_negative_float(
+            value,
+            flag="--max-covered-fact-property-false-supported-rate",
+        ),
+        default=None,
+    )
+    parser.add_argument("--min-covered-fact-property-false-refuted-rate", type=lambda value: _parse_non_negative_float(
+        value,
+        flag="--min-covered-fact-property-false-refuted-rate",
     ), default=None)
     parser.add_argument("--candidate-score-report", default=None)
     parser.add_argument("--text-baseline-report", default=None)

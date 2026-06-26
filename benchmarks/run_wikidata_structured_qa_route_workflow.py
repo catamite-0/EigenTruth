@@ -96,6 +96,11 @@ def build_wikidata_covered_fact_score_dump(
     if not any(label == 1 for label in labels):
         raise ValueError("no false-answer rows could be generated.")
 
+    property_summary = _score_dump_property_summary(
+        documents=documents,
+        statements=statements,
+        labels=labels,
+    )
     return {
         "config": {
             "model": "wikidata-covered-facts",
@@ -122,6 +127,8 @@ def build_wikidata_covered_fact_score_dump(
             "n_true": sum(1 for label in labels if label == 0),
             "n_false": sum(1 for label in labels if label == 1),
             "n_skipped_false_answer": skipped_false_answer,
+            "property_count": len(property_summary),
+            "by_property": property_summary,
         },
     }
 
@@ -196,6 +203,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "n_records": score_dump["summary"]["n_records"],
             "n_true": score_dump["summary"]["n_true"],
             "n_false": score_dump["summary"]["n_false"],
+            "property_count": summary["property_count"],
+            f"{route}_property_count": summary["property_count"],
             f"{route}_decision_accuracy": summary[f"{route}_metrics"].get("decision_accuracy"),
             f"{route}_false_supported_rate": summary[f"{route}_metrics"].get("false_supported_rate"),
             f"{route}_false_refuted_rate": summary[f"{route}_metrics"].get("false_refuted_rate"),
@@ -239,6 +248,11 @@ def _summary_payload(
         )
         else "blocked"
     )
+    property_metrics = _property_metrics_from_verified_records(
+        statements=score_dump["statements"],
+        verified_records_path=verified_records_path,
+        score_property_summary=_mapping(score_dump["summary"].get("by_property")),
+    )
     return {
         "schema_version": 1,
         "workflow": "wikidata_structured_qa_route_workflow",
@@ -255,6 +269,8 @@ def _summary_payload(
         "selected_route_counts": dict(selected_counts),
         "route_metrics": dict(route_metrics),
         f"{route}_metrics": dict(route_metrics),
+        "property_count": len(property_metrics),
+        "property_metrics": property_metrics,
         "verification_status_counts": dict(_mapping(run.get("verification_status_counts"))),
         "qa_verifier": _mapping(run.get("qa")),
         "fact_verifier": _mapping(run.get("fact")),
@@ -263,6 +279,171 @@ def _summary_payload(
             "keep lexical retrieval gated separately for broad open-domain coverage."
         ),
     }
+
+
+def _score_dump_property_summary(
+    *,
+    documents: Sequence[Mapping[str, Any]],
+    statements: Sequence[Mapping[str, Any]],
+    labels: Sequence[int],
+) -> dict[str, dict[str, Any]]:
+    by_property: dict[str, dict[str, Any]] = {}
+    for document in documents:
+        metadata = _mapping(document.get("metadata"))
+        payload = by_property.setdefault(
+            _statement_property_id(metadata),
+            _empty_property_summary(metadata),
+        )
+        payload["n_source_documents"] += 1
+    for statement, label in zip(statements, labels):
+        metadata = _mapping(_mapping(statement.get("metadata")))
+        payload = by_property.setdefault(
+            _statement_property_id(metadata),
+            _empty_property_summary(metadata),
+        )
+        payload["n_records"] += 1
+        if int(label) == 1:
+            payload["n_false"] += 1
+        else:
+            payload["n_true"] += 1
+    return {
+        key: by_property[key]
+        for key in sorted(by_property)
+    }
+
+
+def _property_metrics_from_verified_records(
+    *,
+    statements: Sequence[Mapping[str, Any]],
+    verified_records_path: Path,
+    score_property_summary: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    verified_records = _load_verified_records_jsonl(verified_records_path)
+    if len(verified_records) != len(statements):
+        raise ValueError(
+            "verified records and score dump statements must have the same length "
+            f"({len(verified_records)} != {len(statements)})."
+        )
+    by_property: dict[str, dict[str, Any]] = {}
+    for statement, verified in zip(statements, verified_records):
+        metadata = _mapping(_mapping(statement.get("metadata")))
+        property_id = _statement_property_id(metadata)
+        payload = by_property.setdefault(
+            property_id,
+            _empty_property_metrics(
+                metadata,
+                score_summary=_mapping(score_property_summary.get(property_id)),
+            ),
+        )
+        label = int(verified.get("label", 0))
+        record = _mapping(verified.get("record"))
+        final = _mapping(record.get("final"))
+        route = _mapping(record.get("route"))
+        status = str(final.get("status", "unknown"))
+        selected_route = str(route.get("selected_route", "unknown"))
+        payload["n_records"] += 1
+        payload["status_counts"][status] = payload["status_counts"].get(status, 0) + 1
+        payload["selected_route_counts"][selected_route] = (
+            payload["selected_route_counts"].get(selected_route, 0) + 1
+        )
+        label_key = "false" if label == 1 else "true"
+        payload["label_status_matrix"][label_key][status] = (
+            payload["label_status_matrix"][label_key].get(status, 0) + 1
+        )
+        if label == 1:
+            payload["n_false"] += 1
+        else:
+            payload["n_true"] += 1
+    for payload in by_property.values():
+        _finalize_property_metrics(payload)
+    return {
+        key: by_property[key]
+        for key in sorted(by_property)
+    }
+
+
+def _load_verified_records_jsonl(path: Path) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            text = line.strip()
+            if not text:
+                continue
+            payload = json.loads(text)
+            if not isinstance(payload, Mapping):
+                raise ValueError(f"{path}:{line_number} must contain a JSON object.")
+            records.append(dict(payload))
+    return records
+
+
+def _empty_property_summary(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "statement_property": _statement_property_id(metadata),
+        "statement_property_label": metadata.get("statement_property_label"),
+        "n_source_documents": 0,
+        "n_records": 0,
+        "n_true": 0,
+        "n_false": 0,
+    }
+
+
+def _empty_property_metrics(
+    metadata: Mapping[str, Any],
+    *,
+    score_summary: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "statement_property": _statement_property_id(metadata),
+        "statement_property_label": metadata.get("statement_property_label")
+        or score_summary.get("statement_property_label"),
+        "n_source_documents": score_summary.get("n_source_documents", 0),
+        "n_records": 0,
+        "n_true": 0,
+        "n_false": 0,
+        "status_counts": {},
+        "selected_route_counts": {},
+        "label_status_matrix": {
+            "true": {},
+            "false": {},
+        },
+    }
+
+
+def _finalize_property_metrics(payload: dict[str, Any]) -> None:
+    matrix = payload["label_status_matrix"]
+    true_total = int(payload["n_true"])
+    false_total = int(payload["n_false"])
+    true_supported = int(matrix["true"].get("supported", 0))
+    true_refuted = int(matrix["true"].get("refuted", 0))
+    false_supported = int(matrix["false"].get("supported", 0))
+    false_refuted = int(matrix["false"].get("refuted", 0))
+    insufficient = (
+        int(matrix["true"].get("insufficient_evidence", 0))
+        + int(matrix["false"].get("insufficient_evidence", 0))
+    )
+    decided = true_supported + true_refuted + false_supported + false_refuted
+    correct = true_supported + false_refuted
+    wrong = true_refuted + false_supported
+    payload.update({
+        "true_supported_rate": _safe_div(true_supported, true_total),
+        "true_refuted_rate": _safe_div(true_refuted, true_total),
+        "false_refuted_rate": _safe_div(false_refuted, false_total),
+        "false_supported_rate": _safe_div(false_supported, false_total),
+        "insufficient_evidence_rate": _safe_div(insufficient, int(payload["n_records"])),
+        "decision_accuracy": _safe_div(correct, decided),
+        "decision_error_rate": _safe_div(wrong, decided),
+        "n_decided_supported_or_refuted": decided,
+    })
+
+
+def _statement_property_id(metadata: Mapping[str, Any]) -> str:
+    return _clean_text(metadata.get("statement_property")) or "unknown"
+
+
+def _safe_div(numerator: int | float, denominator: int | float) -> float | None:
+    if denominator == 0:
+        return None
+    return float(numerator) / float(denominator)
 
 
 def _qa_documents(qa_corpus: Mapping[str, Any]) -> list[dict[str, Any]]:

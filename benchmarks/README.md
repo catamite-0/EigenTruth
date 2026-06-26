@@ -1773,8 +1773,14 @@ retrieval, add `--require-covered-facts-route`, optional repeated
 `--covered-fact-route structured_qa` / `structured_fact`, and
 `--min-covered-fact-*` thresholds. That gate requires the selected route
 baseline to expose a promoted `wikidata_structured_qa_route_workflow` summary,
-records the covered source-document/true/false counts, and keeps the claim
-scoped to covered facts instead of broad open-domain retrieval coverage.
+records the covered source-document/true/false counts, and can also require
+per-property minima with `--min-covered-fact-properties`,
+`--min-covered-fact-property-records`,
+`--min-covered-fact-property-decision-accuracy`,
+`--max-covered-fact-property-false-supported-rate`, and
+`--min-covered-fact-property-false-refuted-rate`. This keeps the claim scoped
+to covered facts and prevents a strong aggregate score from hiding a weak
+predicate/property slice.
 
 ## `run_adapter_family_matrix.py`
 
@@ -2976,6 +2982,11 @@ question/answer and one false row per question by swapping in an answer from a
 different question while avoiding known same-question answers. It then runs the
 existing verifier ensemble with `--qa-corpus` or `--fact-corpus`, writes
 per-record verifier traces, and emits a route summary plus artifact manifest.
+The route summary includes `property_metrics`, keyed by Wikidata property id,
+with per-property source-document counts, true/false record counts, selected
+route counts, decision accuracy, false-supported rate, and false-refuted rate.
+Those fields are consumed by `compare_external_evidence_baselines.py` when a
+release gate needs predicate-level covered-facts evidence.
 
 ```bash
 python benchmarks/run_wikidata_structured_qa_route_workflow.py \
@@ -3035,7 +3046,10 @@ surface-form robustness check for covered KG facts, not a broad open-domain
 claim.
 Use `compare_external_evidence_baselines.py --require-covered-facts-route`
 when one of these registered covered-facts route manifests should become the
-external-evidence comparator input for release gating.
+external-evidence comparator input for release gating. Add the per-property
+covered-fact thresholds there when a release should fail closed if any covered
+property has too few records or weaker support/refutation quality than the
+aggregate route.
 
 ## `analyze_retrieval_route_gaps.py`
 

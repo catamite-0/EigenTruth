@@ -194,6 +194,10 @@ Added a retrieval corpus provenance audit gate:
   balanced `718`-row true/false score dump, selects `structured_qa` for all
   rows, supports all `359` true facts, refutes all `359` swapped-answer false
   facts, and records decision accuracy `1.0` with false-supported rate `0.0`.
+  Route summaries now include `property_metrics` keyed by Wikidata property id,
+  and the external-evidence comparator can fail closed on per-property record
+  count and support/refutation quality gates. This prevents aggregate covered
+  fact metrics from hiding a weak predicate slice.
   This promotes structured QA as the correction route for KG-covered facts, not
   as evidence of broad open-domain retrieval coverage.
 - `StructuredFactVerifier` adds the next property-level route: natural-language
