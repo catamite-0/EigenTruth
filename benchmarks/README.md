@@ -984,10 +984,23 @@ python benchmarks/eval_verifier_ensemble.py \
   --json artifacts/truthfulqa_l80_structured_qa_verifier_ensemble_report.json
 ```
 
+For natural-language claims backed by subject-predicate-object facts, pass
+`--fact-corpus`. `StructuredFactVerifier` extracts simple claim triples, supports
+matching known facts, and refutes object mismatches when the subject/predicate
+pair is covered by the fact corpus:
+
+```bash
+python benchmarks/eval_verifier_ensemble.py \
+  --scores facts=artifacts/wikidata-country-core-facts-structured-fact-route/covered-facts-scores.json \
+  --fact-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
+  --signal truth_proj \
+  --json artifacts/wikidata-country-core-facts-structured-fact-route/structured-fact-verifier-report.json
+```
+
 For structured state, business rules, policy checks, or tool-output checks,
 provide explicit `state_check` metadata in the claim fixture and pass a local
 state JSON file. `StructuredStateVerifier` checks these deterministic rules
-after structured QA and before lexical retrieval:
+after structured QA/fact routes and before lexical retrieval:
 
 ```bash
 python benchmarks/eval_verifier_ensemble.py \
@@ -2569,18 +2582,34 @@ coverage by itself.
 
 ## `run_wikidata_structured_qa_route_workflow.py`
 
-Builds a covered-facts structured QA route benchmark from a Wikidata QA corpus.
+Builds a covered-facts structured QA or structured-fact route benchmark from a
+Wikidata QA corpus.
 The workflow creates a balanced score dump with one true row per known
 question/answer and one false row per question by swapping in an answer from a
 different question while avoiding known same-question answers. It then runs the
-existing verifier ensemble with `--qa-corpus`, writes per-record verifier traces,
-and emits a route summary plus artifact manifest.
+existing verifier ensemble with `--qa-corpus` or `--fact-corpus`, writes
+per-record verifier traces, and emits a route summary plus artifact manifest.
 
 ```bash
 python benchmarks/run_wikidata_structured_qa_route_workflow.py \
   --qa-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
   --output-dir artifacts/wikidata-country-core-facts-structured-qa-route \
   --score-name wikidata-country-core-facts-structured-qa \
+  --alpha 0.10 \
+  --compact-json
+```
+
+Use `--route structured_fact` when the score dump should contain natural-language
+claims such as `Paris is the capital of France.` and route through
+`StructuredFactVerifier` instead of requiring question/answer statement
+metadata:
+
+```bash
+python benchmarks/run_wikidata_structured_qa_route_workflow.py \
+  --qa-corpus artifacts/wikidata-country-core-facts-external-corpus/wikidata-country-core-facts-qa-corpus.json \
+  --output-dir artifacts/wikidata-country-core-facts-structured-fact-route \
+  --score-name wikidata-country-core-facts-structured-fact \
+  --route structured_fact \
   --alpha 0.10 \
   --compact-json
 ```
@@ -2592,6 +2621,10 @@ supported true facts, `359` refuted swapped-answer false facts, decision accurac
 `1.0`, and false-supported rate `0.0`. The scope is intentionally narrow:
 structured QA is the property-level correction path for covered facts, while
 lexical retrieval remains gated separately for broad open-domain coverage.
+The matching structured-fact artifact promotes the same `718` covered-fact rows
+as natural-language claims, selects `structured_fact` for all rows, supports all
+`359` true facts, refutes all `359` swapped-answer false facts, and records
+decision accuracy `1.0` with false-supported rate `0.0`.
 
 ## `analyze_retrieval_route_gaps.py`
 

@@ -24,6 +24,8 @@ from eigentruth.adapters import (
     StateCheck,
     StateTransitionCheck,
     StateTransitionVerifier,
+    StructuredFact,
+    StructuredFactVerifier,
     StructuredStateVerifier,
     ToolOutputMapping,
     ToolOutputStateSource,
@@ -670,6 +672,72 @@ def test_rule_based_claim_triples_and_slot_audit_are_stricter_than_overlap():
     assert results[1].status is VerificationStatus.INSUFFICIENT_EVIDENCE
     assert results[1].metadata["audit_report"]["audits"][0]["missing_slots"] == ("object",)
     assert results[1].metadata["audit_report"]["audits"][0]["slot_coverage"]["object"] < 1.0
+
+
+def test_structured_fact_verifier_supports_and_refutes_wikidata_claims():
+    verifier = StructuredFactVerifier.from_corpus({
+        "documents": [
+            {
+                "question": "What is the capital of France?",
+                "answer": "Paris",
+                "source": "wikidata:Q142:P36:Q90",
+                "metadata": {
+                    "country": "France",
+                    "statement_property": "P36",
+                    "statement_property_label": "capital",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "Dutch",
+                "source": "wikidata:Q31:P37:Q7411",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "French",
+                "source": "wikidata:Q31:P37:Q150",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+            {
+                "question": "What is the currency of Japan?",
+                "answer": "Japanese yen",
+                "source": "wikidata:Q17:P38:Q8146",
+                "metadata": {
+                    "country": "Japan",
+                    "statement_property": "P38",
+                    "statement_property_label": "currency",
+                },
+            },
+        ]
+    })
+
+    supported_capital = verifier.verify(Claim("Paris is the capital of France."))
+    refuted_capital = verifier.verify(Claim("Berlin is the capital of France."))
+    supported_language = verifier.verify(Claim("Dutch is an official language of Belgium."))
+    refuted_language = verifier.verify(Claim("German is an official language of Belgium."))
+    supported_currency = verifier.verify(Claim("The Japanese yen is the currency of Japan."))
+    missing_subject = verifier.verify(Claim("Ottawa is the capital of Canada."))
+    not_applicable = verifier.verify(Claim("Maybe."))
+
+    assert isinstance(StructuredFact("France", "P36", "Paris"), StructuredFact)
+    assert supported_capital.status is VerificationStatus.SUPPORTED
+    assert supported_capital.metadata["decision_rule"] == "all_triples_match"
+    assert refuted_capital.status is VerificationStatus.REFUTED
+    assert refuted_capital.metadata["decision_rule"] == "object_mismatch"
+    assert supported_language.status is VerificationStatus.SUPPORTED
+    assert refuted_language.status is VerificationStatus.REFUTED
+    assert supported_currency.status is VerificationStatus.SUPPORTED
+    assert missing_subject.status is VerificationStatus.INSUFFICIENT_EVIDENCE
+    assert not_applicable.status is VerificationStatus.NOT_APPLICABLE
 
 
 def test_claim_triple_audit_uses_metadata_triples_and_context_evidence():

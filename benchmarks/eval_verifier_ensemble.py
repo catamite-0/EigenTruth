@@ -33,6 +33,7 @@ from eigentruth.adapters import (
     RetrievalQuery,
     SQLiteStateSource,
     StateTransitionVerifier,
+    StructuredFactVerifier,
     StructuredStateVerifier,
     combine_cache_stats,
 )
@@ -149,6 +150,18 @@ def _load_qa_verifier(path: Path | None) -> QuestionAnswerVerifier | None:
     if not isinstance(payload, Mapping):
         raise ValueError("QA corpus must be a JSON object or list.")
     return QuestionAnswerVerifier.from_corpus(payload)
+
+
+def _load_fact_verifier(path: Path | None) -> StructuredFactVerifier | None:
+    if path is None:
+        return None
+    with open(path, encoding="utf-8") as f:
+        payload = json.load(f)
+    if isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
+        payload = {"documents": payload}
+    if not isinstance(payload, Mapping):
+        raise ValueError("fact corpus must be a JSON object or list.")
+    return StructuredFactVerifier.from_corpus(payload)
 
 
 def _load_state_source(path: Path | None) -> tuple[Mapping[str, Any], Mapping[str, Any], Mapping[str, Any]]:
@@ -456,6 +469,7 @@ def _verify_records(
     enable_triple_evidence: bool = False,
     triple_min_slot_coverage: float = 1.0,
     qa_verifier: QuestionAnswerVerifier | None = None,
+    fact_verifier: StructuredFactVerifier | None = None,
     state_verifier: StructuredStateVerifier | None = None,
     state_checks: Mapping[str, Any] | None = None,
     transition_verifier: StateTransitionVerifier | None = None,
@@ -477,6 +491,7 @@ def _verify_records(
     state_checks = {} if state_checks is None else state_checks
     state_transitions = {} if state_transitions is None else state_transitions
     qa_runner = CachedVerifier(qa_verifier) if qa_verifier is not None else None
+    fact_runner = CachedVerifier(fact_verifier) if fact_verifier is not None else None
     state_runner = CachedVerifier(state_verifier) if state_verifier is not None else None
     transition_runner = CachedVerifier(transition_verifier) if transition_verifier is not None else None
     groundedness_runners: dict[str, CachedVerifier] = {}
@@ -601,6 +616,7 @@ def _verify_records(
                 verified.append(_staged_skip_record(record, stage_payload))
                 continue
         qa_result = None
+        fact_result = None
         state_result = None
         selfcheck_result = None
         retrieval_qa_result = None
@@ -632,6 +648,41 @@ def _verify_records(
                     "route": _route_metadata(
                         selected_route="structured_qa",
                         selected_verifier="QuestionAnswerVerifier",
+                        attempted_routes=attempted_routes,
+                        used_retrieval=False,
+                        route_timings=route_timings,
+                    ),
+                    "metadata": _record_metadata(record, stage_payload),
+                })
+                continue
+
+        if fact_runner is not None:
+            attempted_routes.append("structured_fact")
+            fact_result = _timed_verify(
+                route_timings,
+                route="structured_fact",
+                runner=fact_runner,
+                claim=record.claim,
+                context={"statement": record.metadata.get("statement", {})},
+            )
+            if fact_result.status in {VerificationStatus.SUPPORTED, VerificationStatus.REFUTED}:
+                verified.append({
+                    "claim": {
+                        "text": record.claim.text,
+                        "claim_id": record.claim.claim_id,
+                        "metadata": dict(record.claim.metadata),
+                    },
+                    "initial": _verification_to_dict(fact_result),
+                    "final": _verification_to_dict(fact_result),
+                    "qa": None if qa_result is None else _verification_to_dict(qa_result),
+                    "fact": _verification_to_dict(fact_result),
+                    "state": None,
+                    "transition": None,
+                    "selfcheck": None,
+                    "retrieval_hits": (),
+                    "route": _route_metadata(
+                        selected_route="structured_fact",
+                        selected_verifier="StructuredFactVerifier",
                         attempted_routes=attempted_routes,
                         used_retrieval=False,
                         route_timings=route_timings,
@@ -866,6 +917,7 @@ def _verify_records(
             "initial": _verification_to_dict(initial),
             "final": _verification_to_dict(final),
             "qa": None if qa_result is None else _verification_to_dict(qa_result),
+            "fact": None if fact_result is None else _verification_to_dict(fact_result),
             "state": None if state_result is None else _verification_to_dict(state_result),
             "transition": None,
             "triple_evidence": None if triple_result is None else _verification_to_dict(triple_result),
@@ -883,6 +935,7 @@ def _verify_records(
         })
     if cache_stats is not None:
         qa_stats = {} if qa_runner is None else qa_runner.stats.to_dict()
+        fact_stats = {} if fact_runner is None else fact_runner.stats.to_dict()
         state_stats = {} if state_runner is None else state_runner.stats.to_dict()
         transition_stats = {} if transition_runner is None else transition_runner.stats.to_dict()
         groundedness_stats = combine_cache_stats(
@@ -900,6 +953,7 @@ def _verify_records(
         retriever_stats = combine_cache_stats(*(retriever.stats.to_dict() for retriever in retrievers.values()))
         cache_stats.update({
             "qa_verifier": qa_stats,
+            "fact_verifier": fact_stats,
             "state_verifier": state_stats,
             "transition_verifier": transition_stats,
             "groundedness_verifiers": {
@@ -1734,6 +1788,7 @@ def _verification_trace_cache_key(
     signal: str,
     claims_path: Path | None,
     qa_corpus_path: Path | None,
+    fact_corpus_path: Path | None,
     state_path: Path | None,
     records: Sequence[ClaimEvidenceRecord],
     global_state: Mapping[str, Any],
@@ -1765,6 +1820,7 @@ def _verification_trace_cache_key(
         "score_dump": _path_fingerprint(score_path),
         "claims_fixture": _path_fingerprint(claims_path),
         "qa_corpus": _path_fingerprint(qa_corpus_path),
+        "fact_corpus": _path_fingerprint(fact_corpus_path),
         "state_source": _path_fingerprint(state_path),
         "records": tuple(_record_cache_material(record) for record in records),
         "global_state": dict(global_state),
@@ -1918,6 +1974,7 @@ def build_verifier_ensemble_report(
     signal: str,
     claims_path: Path | None = None,
     qa_corpus_path: Path | None = None,
+    fact_corpus_path: Path | None = None,
     state_path: Path | None = None,
     direction: str | None = None,
     alphas: Sequence[float] = ALPHAS,
@@ -1980,6 +2037,7 @@ def build_verifier_ensemble_report(
 
     fixture = _load_fixture(claims_path)
     qa_verifier = _load_qa_verifier(qa_corpus_path)
+    fact_verifier = _load_fact_verifier(fact_corpus_path)
     source_state, source_state_checks, source_state_transitions = _load_state_source(state_path)
     fixture_state = fixture.get("state", {})
     if not isinstance(fixture_state, Mapping):
@@ -2010,6 +2068,7 @@ def build_verifier_ensemble_report(
     any_transition_enabled = False
     any_selfcheck_enabled = False
     any_triple_evidence_enabled = False
+    any_fact_enabled = fact_verifier is not None
     verified_record_counts: dict[str, int] = {}
     verified_record_total = 0
     verified_records_sidecar_path = None if verified_records_path is None else Path(verified_records_path)
@@ -2072,6 +2131,7 @@ def build_verifier_ensemble_report(
                 signal=signal,
                 claims_path=claims_path,
                 qa_corpus_path=qa_corpus_path,
+                fact_corpus_path=fact_corpus_path,
                 state_path=state_path,
                 records=records,
                 global_state=global_state,
@@ -2119,6 +2179,7 @@ def build_verifier_ensemble_report(
                     enable_triple_evidence=bool(enable_triple_evidence),
                     triple_min_slot_coverage=float(triple_min_slot_coverage),
                     qa_verifier=qa_verifier,
+                    fact_verifier=fact_verifier,
                     state_verifier=state_verifier,
                     state_checks=global_state_checks,
                     transition_verifier=transition_verifier,
@@ -2210,6 +2271,17 @@ def build_verifier_ensemble_report(
                         1 for record in verified_records
                         if record.get("qa") is not None
                         and record["qa"]["status"] in {
+                            VerificationStatus.SUPPORTED.value,
+                            VerificationStatus.REFUTED.value,
+                        }
+                    ),
+                },
+                "fact": {
+                    "enabled": fact_verifier is not None,
+                    "decided_records": sum(
+                        1 for record in verified_records
+                        if record.get("fact") is not None
+                        and record["fact"]["status"] in {
                             VerificationStatus.SUPPORTED.value,
                             VerificationStatus.REFUTED.value,
                         }
@@ -2356,6 +2428,11 @@ def build_verifier_ensemble_report(
             "enabled": qa_verifier is not None,
             "corpus_path": None if qa_corpus_path is None else str(qa_corpus_path),
         },
+        "fact_verifier": {
+            "type": "StructuredFactVerifier",
+            "enabled": any_fact_enabled,
+            "corpus_path": None if fact_corpus_path is None else str(fact_corpus_path),
+        },
         "retrieval_qa_verifier": {
             "type": "QuestionAnswerVerifier",
             "enabled": any(
@@ -2406,6 +2483,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         signal=args.signal,
         claims_path=None if args.claims is None else Path(args.claims),
         qa_corpus_path=None if args.qa_corpus is None else Path(args.qa_corpus),
+        fact_corpus_path=(
+            None
+            if getattr(args, "fact_corpus", None) is None
+            else Path(args.fact_corpus)
+        ),
         state_path=None if args.state_source is None else Path(args.state_source),
         direction=args.direction,
         alphas=_parse_alphas(args.alphas),
@@ -2484,6 +2566,11 @@ def main() -> None:
                         help="optional claim/evidence fixture JSON; otherwise use score dump statements")
     parser.add_argument("--qa-corpus", default=None,
                         help="optional structured question/answer corpus JSON checked before lexical retrieval")
+    parser.add_argument(
+        "--fact-corpus",
+        default=None,
+        help="optional structured subject/predicate/object fact corpus checked before lexical retrieval",
+    )
     parser.add_argument("--state-source", default=None,
                         help="optional structured state JSON checked by state_check claims before lexical retrieval")
     parser.add_argument("--signal", default="truth_proj")

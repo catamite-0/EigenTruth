@@ -179,6 +179,13 @@ Added a retrieval corpus provenance audit gate:
   facts, and records decision accuracy `1.0` with false-supported rate `0.0`.
   This promotes structured QA as the correction route for KG-covered facts, not
   as evidence of broad open-domain retrieval coverage.
+- `StructuredFactVerifier` adds the next property-level route: natural-language
+  claims are first projected into simple triples, then checked against the same
+  structured Wikidata facts. The current structured-fact artifact again covers
+  `718` balanced rows, selects `structured_fact` for all rows, supports all
+  `359` true natural-language facts, refutes all `359` swapped-answer false
+  facts, and keeps false-supported rate `0.0`. This closes the gap between
+  QA-shaped metadata and normal generated claims for KG-covered properties.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

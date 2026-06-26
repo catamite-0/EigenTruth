@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from eigentruth.adapters.cache import AdapterCacheStats, CachedRetriever, CachedStateSource, combine_cache_stats
 from eigentruth.adapters.calculator import CalculationResult, CalculatorVerifier
+from eigentruth.adapters.facts import StructuredFact, StructuredFactVerifier
 from eigentruth.adapters.qa import QuestionAnswerFact, QuestionAnswerVerifier
 from eigentruth.adapters.retrieval import (
     InMemoryRetriever,
@@ -43,6 +44,8 @@ __all__ = [
     "CachedStateSource",
     "QuestionAnswerFact",
     "QuestionAnswerVerifier",
+    "StructuredFact",
+    "StructuredFactVerifier",
     "InMemoryRetriever",
     "RetrievalActionExecutor",
     "RetrievalHit",

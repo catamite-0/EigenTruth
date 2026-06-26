@@ -410,6 +410,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RetrievalActionExecutor` / `InMemoryRetriever` | Provides a dependency-free retrieval executor shell for unsupported-claim evidence gathering. |
 | `CalculatorVerifier` | Provides a dependency-free deterministic calculator verifier for structured arithmetic claims, simple symbolic equations, and calculation metadata extracted from limited arithmetic text. |
 | `QuestionAnswerVerifier` | Provides a dependency-free structured QA/domain-state verifier adapter for exact question and candidate-answer facts. |
+| `StructuredFactVerifier` | Verifies natural-language claims against structured subject-predicate-object facts, supporting matching KG-covered claims and refuting object mismatches for known subject/predicate pairs. |
 | `StructuredStateVerifier` / `StateCheck` | Provides a dependency-free structured state and business-rule verifier for database, policy, and domain-state checks. |
 | `SQLiteStateSource` / `SQLiteStateQuery` | Loads read-only SQLite query results into structured verifier state without adding non-stdlib dependencies. |
 | `ToolOutputStateSource` / `ToolOutputMapping` | Maps local tool or action execution outputs into structured verifier state for post-tool checks. |
@@ -431,7 +432,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_external_retrieval_corpus.py` | Normalizes caller-supplied JSON/JSONL/text source files into an explicit `external_evidence_candidate` retrieval corpus and rejects score labels, claim ids, or score-dump row links in document metadata. |
 | `audit_retrieval_corpus_provenance.py` | Audits retrieval corpora against statement-bearing score dumps, separating external grounding candidates from controlled dataset baselines and answer-echo/oracle-risk stress corpora. |
 | `build_wikidata_qa_corpus.py` | Converts structured Wikidata facts such as `P36` country-capital records, or a multi-property template set, into label-free `QuestionAnswerVerifier` corpora for `retrieval_structured_qa` route smoke tests. |
-| `run_wikidata_structured_qa_route_workflow.py` | Builds a balanced covered-facts score dump from a Wikidata QA corpus, runs the structured QA verifier route, and writes a manifest-backed route artifact for property-level correction evidence. |
+| `run_wikidata_structured_qa_route_workflow.py` | Builds a balanced covered-facts score dump from a Wikidata QA corpus, runs either the structured QA route or natural-language structured-fact route, and writes a manifest-backed property-level correction artifact. |
 | `analyze_retrieval_route_gaps.py` | Reads verifier verified-record JSONL sidecars and summarizes retrieval coverage, final statuses, gap buckets, hit sources, and examples for blocked retrieval routes. |
 | `run_verifier_signal_fusion_workflow.py` | Runs the no-model local evidence loop end to end: retrieval/selfcheck fixture, verifier sidecar, verifier-signal score dumps, geometry-fusion report, deployable geometry artifacts, and manifest verification. |
 | `run_selfcheck_signal_fusion_workflow.py` | Runs the direct no-model selfcheck signal loop end to end: sampled responses, selfcheck score dumps, sample-quality gate, score ensemble report, optional geometry-by-selfcheck fusion artifacts, and manifest verification. |
@@ -490,7 +491,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fetch_wikidata_reference_docs.py` | Fetches or replays Wikidata country-capital or country-core-fact SPARQL results into JSONL source docs for external evidence smoke gates; the core-facts audit artifact remains blocked for lexical route promotion. |
 | `build_external_retrieval_corpus.py` | Builds explicit external-candidate retrieval corpora from local source files before provenance audit and local retrieval fixture construction. |
 | `build_wikidata_qa_corpus.py` | Converts Wikidata fact documents into template-driven structured QA corpora consumed by `QuestionAnswerVerifier` and `retrieval_structured_qa`. |
-| `run_wikidata_structured_qa_route_workflow.py` | Runs the covered-facts structured QA route workflow and records support/refutation metrics for Wikidata properties present in the QA corpus. |
+| `run_wikidata_structured_qa_route_workflow.py` | Runs covered-facts structured QA or structured-fact route workflows and records support/refutation metrics for Wikidata properties present in the QA corpus. |
 | `analyze_retrieval_route_gaps.py` | Explains blocked retrieval routes from verified-record sidecars by coverage, status, gap bucket, source, and example records. |
 | `build_evidence_fixture.py` | Builds non-oracle claim/evidence fixtures from statement-bearing score dumps and local JSON/JSONL/text corpora. |
 | `backfill_truthfulqa_statements.py` | Rebuilds deterministic TruthfulQA statement metadata for older score dumps and can emit label-derived oracle evidence for verifier upper-bound checks. |
@@ -535,6 +536,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `RetrievalActionExecutor` / `InMemoryRetriever` | 为 unsupported claim 的取证流程提供无依赖 retrieval executor shell。 |
 | `CalculatorVerifier` | 提供无依赖确定性计算器 verifier，用于结构化算术 claim、简单符号等式，以及从有限算术文本中抽取出的 calculation metadata。 |
 | `QuestionAnswerVerifier` | 提供无依赖结构化 QA/领域状态 verifier adapter，用于精确问题与候选答案事实。 |
+| `StructuredFactVerifier` | 用结构化 subject-predicate-object facts 校验自然语言 claim：KG 覆盖内匹配则 supported，已知 subject/predicate 但 object 不匹配则 refuted。 |
 | `StructuredStateVerifier` / `StateCheck` | 提供无依赖结构化状态与业务规则 verifier，用于数据库、策略和领域状态校验。 |
 | `SQLiteStateSource` / `SQLiteStateQuery` | 将只读 SQLite 查询结果加载为 verifier 可消费的结构化状态，不增加非标准库依赖。 |
 | `ToolOutputStateSource` / `ToolOutputMapping` | 将本地工具或 action 执行输出映射成结构化 verifier state，用于工具调用后的校验。 |
@@ -556,7 +558,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `build_external_retrieval_corpus.py` | 将调用方提供的 JSON/JSONL/text 来源文件规范化为显式 `external_evidence_candidate` retrieval corpus，并拒绝 document metadata 中的 score label、claim id 或 score-dump row link。 |
 | `audit_retrieval_corpus_provenance.py` | 对 statement-bearing score dump 和 retrieval corpus 做 provenance 审计，区分外部 grounding 候选、受控数据集基线和 answer-echo/oracle-risk stress corpus。 |
 | `build_wikidata_qa_corpus.py` | 将 Wikidata `P36` 或多属性模板结构化事实转换为无 label 的 `QuestionAnswerVerifier` corpus，用于 `retrieval_structured_qa` route smoke test。 |
-| `run_wikidata_structured_qa_route_workflow.py` | 从 Wikidata QA corpus 构建平衡 covered-facts score dump，运行 structured QA verifier route，并写出带 manifest 的属性级校正证据。 |
+| `run_wikidata_structured_qa_route_workflow.py` | 从 Wikidata QA corpus 构建平衡 covered-facts score dump，可运行 structured QA route 或自然语言 structured-fact route，并写出带 manifest 的属性级校正证据。 |
 | `analyze_retrieval_route_gaps.py` | 读取 verifier verified-record JSONL sidecar，按检索覆盖、最终状态、gap bucket、命中来源和样例解释 blocked retrieval route。 |
 | `run_verifier_signal_fusion_workflow.py` | 端到端运行无模型本地证据闭环：retrieval/selfcheck fixture、verifier sidecar、verifier-signal score dump、geometry-fusion report、可部署 geometry artifact 和 manifest verification。 |
 | `run_selfcheck_signal_fusion_workflow.py` | 端到端运行无模型 direct selfcheck signal 闭环：sampled responses、自一致性 score dump、sample-quality gate、score ensemble report、可选 geometry-by-selfcheck fusion artifact 和 manifest verification。 |
@@ -614,7 +616,7 @@ See [`docs/methodology.md`](docs/methodology.md) for the mathematical framing, c
 | `fetch_wikidata_reference_docs.py` | 拉取或重放 Wikidata country-capital / country-core-fact SPARQL 结果，输出外部证据 smoke gate 可用的 JSONL source docs；core-facts route audit 仍阻止 lexical route promotion。 |
 | `build_external_retrieval_corpus.py` | 从本地来源文件构建显式外部候选 retrieval corpus，再进入 provenance audit 和本地 retrieval fixture 构建。 |
 | `build_wikidata_qa_corpus.py` | 将 Wikidata fact document 转成模板驱动的 structured QA corpus，供 `QuestionAnswerVerifier` / `retrieval_structured_qa` 消费。 |
-| `run_wikidata_structured_qa_route_workflow.py` | 执行 covered-facts structured QA route workflow，并记录 QA corpus 覆盖属性的支持/反证指标。 |
+| `run_wikidata_structured_qa_route_workflow.py` | 执行 covered-facts structured QA 或 structured-fact route workflow，并记录 QA corpus 覆盖属性的支持/反证指标。 |
 | `analyze_retrieval_route_gaps.py` | 基于 verified-record sidecar 解释 blocked retrieval route 的覆盖、状态、gap bucket、证据来源和具体样例。 |
 | `build_evidence_fixture.py` | 从带 statement 的 score dump 和本地 JSON/JSONL/text 文档库构建非 oracle claim/evidence fixture。 |
 | `backfill_truthfulqa_statements.py` | 为旧版 TruthfulQA score dump 重建确定性 statement metadata，并可输出标签派生 oracle evidence 用于 verifier 上界测试。 |

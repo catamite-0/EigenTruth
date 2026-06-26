@@ -32,8 +32,10 @@ def build_wikidata_covered_fact_score_dump(
     *,
     limit: int | None = None,
     signal: str = DEFAULT_SIGNAL,
+    statement_style: str = "qa",
 ) -> dict[str, Any]:
     """Return a balanced true/false score dump from a Wikidata QA corpus."""
+    statement_style = _normalize_statement_style(statement_style)
     documents = _qa_documents(qa_corpus)
     if limit is not None:
         if int(limit) < 1:
@@ -58,6 +60,7 @@ def build_wikidata_covered_fact_score_dump(
             source=None if source is None else str(source),
             metadata=metadata,
             label_generation="wikidata_known_answer",
+            statement_style=statement_style,
         )
         statements.append(true_statement)
         labels.append(0)
@@ -81,6 +84,7 @@ def build_wikidata_covered_fact_score_dump(
                 "false_answer_statement_property": false_answer.get("statement_property"),
             },
             label_generation="wikidata_known_answer_mismatch",
+            statement_style=statement_style,
         )
         statements.append(false_statement)
         labels.append(1)
@@ -95,6 +99,7 @@ def build_wikidata_covered_fact_score_dump(
             "layer": -1,
             "workflow": "wikidata_structured_qa_route_workflow",
             "signal": signal,
+            "statement_style": statement_style,
             "label_semantics": {
                 "0": "known Wikidata QA answer",
                 "1": "answer mismatches known Wikidata QA answer(s) for the same question",
@@ -125,6 +130,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     signal = str(args.signal)
     alpha = float(args.alpha)
+    route = _normalize_route(args.route)
     if not (0.0 < alpha < 1.0):
         raise ValueError("alpha must be in (0, 1).")
 
@@ -135,18 +141,21 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         qa_corpus,
         limit=args.limit,
         signal=signal,
+        statement_style="natural_fact" if route == "structured_fact" else "qa",
     )
+    route_stem = route.replace("_", "-")
     score_dump_path = Path(args.score_dump_json or output_dir / "covered-facts-scores.json")
-    verifier_report_path = Path(args.verifier_report_json or output_dir / "structured-qa-verifier-report.json")
+    verifier_report_path = Path(args.verifier_report_json or output_dir / f"{route_stem}-verifier-report.json")
     verified_records_path = Path(args.verified_records_jsonl or output_dir / "verified-records.jsonl")
-    summary_path = Path(args.json or output_dir / "structured-qa-route-summary.json")
+    summary_path = Path(args.json or output_dir / f"{route_stem}-route-summary.json")
     manifest_path = Path(args.artifact_manifest or output_dir / "artifact-manifest.json")
 
     _write_json(score_dump_path, score_dump, compact=bool(args.compact_json))
     verifier_report = build_verifier_ensemble_report(
         ((str(args.score_name), score_dump_path),),
         signal=signal,
-        qa_corpus_path=qa_corpus_path,
+        qa_corpus_path=qa_corpus_path if route == "structured_qa" else None,
+        fact_corpus_path=qa_corpus_path if route == "structured_fact" else None,
         alphas=(alpha,),
         repeats=1,
         seed=int(args.seed),
@@ -162,6 +171,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         verifier_report=verifier_report,
         signal=signal,
         alpha=alpha,
+        route=route,
     )
     _write_json(summary_path, summary, compact=bool(args.compact_json))
     manifest = build_artifact_manifest(
@@ -175,6 +185,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         root=manifest_path.parent,
         metadata={
             "workflow": "wikidata_structured_qa_route_workflow",
+            "route": route,
             "status": summary["status"],
             "score_name": str(args.score_name),
             "signal": signal,
@@ -182,16 +193,16 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             "n_records": score_dump["summary"]["n_records"],
             "n_true": score_dump["summary"]["n_true"],
             "n_false": score_dump["summary"]["n_false"],
-            "structured_qa_decision_accuracy": summary["structured_qa_metrics"].get("decision_accuracy"),
-            "structured_qa_false_supported_rate": summary["structured_qa_metrics"].get("false_supported_rate"),
-            "structured_qa_false_refuted_rate": summary["structured_qa_metrics"].get("false_refuted_rate"),
+            f"{route}_decision_accuracy": summary[f"{route}_metrics"].get("decision_accuracy"),
+            f"{route}_false_supported_rate": summary[f"{route}_metrics"].get("false_supported_rate"),
+            f"{route}_false_refuted_rate": summary[f"{route}_metrics"].get("false_refuted_rate"),
             "promotes_covered_facts_route": summary["status"] == "promote",
         },
     )
     _write_json(manifest_path, manifest, compact=False)
     print(
         "wikidata_structured_qa_route_workflow_ok "
-        f"status={summary['status']} records={score_dump['summary']['n_records']} output={summary_path}"
+        f"route={route} status={summary['status']} records={score_dump['summary']['n_records']} output={summary_path}"
     )
     return summary
 
@@ -206,21 +217,22 @@ def _summary_payload(
     verifier_report: Mapping[str, Any],
     signal: str,
     alpha: float,
+    route: str,
 ) -> dict[str, Any]:
     runs = verifier_report.get("runs", ())
     if not runs:
         raise ValueError("verifier report did not contain any runs.")
     run = _mapping(runs[0])
     route_quality = _mapping(run.get("route_quality"))
-    structured_metrics = _mapping(route_quality.get("structured_qa"))
+    route_metrics = _mapping(route_quality.get(route))
     selected_counts = _mapping(_mapping(run.get("route_summary")).get("selected_counts"))
     status = (
         "promote"
         if (
-            structured_metrics.get("decision_accuracy") == 1.0
-            and structured_metrics.get("true_supported_rate") == 1.0
-            and structured_metrics.get("false_refuted_rate") == 1.0
-            and structured_metrics.get("false_supported_rate") == 0.0
+            route_metrics.get("decision_accuracy") == 1.0
+            and route_metrics.get("true_supported_rate") == 1.0
+            and route_metrics.get("false_refuted_rate") == 1.0
+            and route_metrics.get("false_supported_rate") == 0.0
         )
         else "blocked"
     )
@@ -228,6 +240,7 @@ def _summary_payload(
         "schema_version": 1,
         "workflow": "wikidata_structured_qa_route_workflow",
         "status": status,
+        "route": route,
         "scope": "covered Wikidata QA facts, not open-domain TruthfulQA route coverage",
         "signal": signal,
         "alpha": alpha,
@@ -237,9 +250,11 @@ def _summary_payload(
         "verified_records_jsonl_path": str(verified_records_path),
         "score_dump_summary": dict(score_dump["summary"]),
         "selected_route_counts": dict(selected_counts),
-        "structured_qa_metrics": dict(structured_metrics),
+        "route_metrics": dict(route_metrics),
+        f"{route}_metrics": dict(route_metrics),
         "verification_status_counts": dict(_mapping(run.get("verification_status_counts"))),
         "qa_verifier": _mapping(run.get("qa")),
+        "fact_verifier": _mapping(run.get("fact")),
         "next_step": (
             "Use this covered-facts route as the property-level correction path; "
             "keep lexical retrieval gated separately for broad open-domain coverage."
@@ -338,15 +353,22 @@ def _statement(
     source: str | None,
     metadata: Mapping[str, Any],
     label_generation: str,
+    statement_style: str,
 ) -> dict[str, Any]:
+    text = (
+        _natural_fact_statement(answer=answer, metadata=metadata)
+        if statement_style == "natural_fact"
+        else f"{question} {answer}"
+    )
     return {
         "question": question,
         "answer": answer,
-        "text": f"{question} {answer}",
+        "text": text,
         "metadata": {
             "provider": "wikidata",
             "source": source,
             "label_generation": label_generation,
+            "statement_style": statement_style,
             "statement_property": metadata.get("statement_property"),
             "statement_property_label": metadata.get("statement_property_label"),
             "question_template": metadata.get("question_template"),
@@ -360,6 +382,36 @@ def _statement(
             },
         },
     }
+
+
+def _natural_fact_statement(*, answer: str, metadata: Mapping[str, Any]) -> str:
+    country = _clean_text(metadata.get("country"))
+    if country is None:
+        raise ValueError("natural_fact statements require metadata.country.")
+    property_id = _clean_text(metadata.get("statement_property"))
+    property_label = _clean_text(metadata.get("statement_property_label"))
+    property_key = normalize_claim_text(property_id or property_label or "")
+    if property_key == "p36" or property_key == "capital":
+        return f"{answer} is the capital of {country}."
+    if property_key == "p37" or property_key == "official language":
+        return f"{answer} is an official language of {country}."
+    if property_key == "p38" or property_key == "currency":
+        return f"{answer} is a currency of {country}."
+    raise ValueError(f"unsupported natural_fact Wikidata property: {property_id or property_label!r}")
+
+
+def _normalize_route(value: Any) -> str:
+    route = str(value).strip()
+    if route not in {"structured_qa", "structured_fact"}:
+        raise ValueError("route must be structured_qa or structured_fact.")
+    return route
+
+
+def _normalize_statement_style(value: Any) -> str:
+    style = str(value).strip()
+    if style not in {"qa", "natural_fact"}:
+        raise ValueError("statement_style must be qa or natural_fact.")
+    return style
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -389,6 +441,12 @@ def main() -> None:
     parser.add_argument("--qa-corpus", required=True, help="Wikidata structured QA corpus JSON")
     parser.add_argument("--output-dir", required=True, help="directory for generated workflow artifacts")
     parser.add_argument("--score-name", default="wikidata-covered-facts")
+    parser.add_argument(
+        "--route",
+        choices=("structured_qa", "structured_fact"),
+        default="structured_qa",
+        help="route to benchmark; structured_fact emits natural-language fact claims",
+    )
     parser.add_argument("--signal", default=DEFAULT_SIGNAL)
     parser.add_argument("--alpha", type=float, default=DEFAULT_ALPHA)
     parser.add_argument("--seed", type=int, default=0)

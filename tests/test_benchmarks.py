@@ -3342,6 +3342,7 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
             qa_corpus=str(qa_path),
             output_dir=str(output_dir),
             score_name="wikidata-covered-facts",
+            route="structured_qa",
             signal="truth_proj",
             alpha=0.2,
             seed=0,
@@ -3388,6 +3389,110 @@ def test_wikidata_structured_qa_route_workflow_promotes_covered_facts(tmp_path):
     assert report["qa_verifier"]["enabled"] is True
     assert manifest["metadata"]["promotes_covered_facts_route"] is True
     assert (output_dir / "verified-records.jsonl").read_text(encoding="utf-8").count("\n") == 10
+
+    fact_output_dir = tmp_path / "fact-workflow"
+    fact_summary = module.run(
+        SimpleNamespace(
+            qa_corpus=str(qa_path),
+            output_dir=str(fact_output_dir),
+            score_name="wikidata-covered-facts",
+            route="structured_fact",
+            signal="truth_proj",
+            alpha=0.2,
+            seed=0,
+            limit=None,
+            score_dump_json=None,
+            verifier_report_json=None,
+            verified_records_jsonl=None,
+            artifact_manifest=None,
+            json=None,
+            compact_json=False,
+        )
+    )
+    fact_score_dump = json.loads((fact_output_dir / "covered-facts-scores.json").read_text(encoding="utf-8"))
+
+    assert fact_summary["status"] == "promote"
+    assert fact_summary["route"] == "structured_fact"
+    assert fact_summary["selected_route_counts"] == {"structured_fact": 10}
+    assert fact_summary["structured_fact_metrics"]["decision_accuracy"] == pytest.approx(1.0)
+    assert fact_summary["structured_fact_metrics"]["false_supported_rate"] == pytest.approx(0.0)
+    assert fact_score_dump["config"]["statement_style"] == "natural_fact"
+    assert any(
+        statement["text"] == "Paris is the capital of France."
+        for statement in fact_score_dump["statements"]
+    )
+
+
+def test_eval_verifier_ensemble_routes_natural_claims_to_structured_fact_corpus(tmp_path):
+    module = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    score_path = tmp_path / "natural-claim-scores.json"
+    fact_corpus_path = tmp_path / "wikidata-facts.json"
+    fact_corpus = {
+        "documents": [
+            {
+                "question": "What is the capital of France?",
+                "answer": "Paris",
+                "source": "wikidata:Q142:P36:Q90",
+                "metadata": {
+                    "country": "France",
+                    "statement_property": "P36",
+                    "statement_property_label": "capital",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "Dutch",
+                "source": "wikidata:Q31:P37:Q7411",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+            {
+                "question": "What is an official language of Belgium?",
+                "answer": "French",
+                "source": "wikidata:Q31:P37:Q150",
+                "metadata": {
+                    "country": "Belgium",
+                    "statement_property": "P37",
+                    "statement_property_label": "official language",
+                },
+            },
+        ]
+    }
+    score_dump = {
+        "config": {"model": "structured-fact-smoke", "layer": -1},
+        "labels": [0, 1, 0, 1],
+        "scores": {"truth_proj": [0.0, 0.0, 0.0, 0.0]},
+        "statements": [
+            {"text": "Paris is the capital of France.", "metadata": {}},
+            {"text": "Berlin is the capital of France.", "metadata": {}},
+            {"text": "Dutch is an official language of Belgium.", "metadata": {}},
+            {"text": "German is an official language of Belgium.", "metadata": {}},
+        ],
+    }
+    score_path.write_text(json.dumps(score_dump), encoding="utf-8")
+    fact_corpus_path.write_text(json.dumps(fact_corpus), encoding="utf-8")
+
+    report = module.build_verifier_ensemble_report(
+        (("natural_claims", score_path),),
+        signal="truth_proj",
+        fact_corpus_path=fact_corpus_path,
+        alphas=(0.1,),
+        repeats=1,
+        seed=0,
+    )
+    run = report["runs"][0]
+
+    assert report["fact_verifier"]["enabled"] is True
+    assert run["fact"]["enabled"] is True
+    assert run["fact"]["decided_records"] == 4
+    assert run["route_summary"]["selected_counts"] == {"structured_fact": 4}
+    assert run["route_quality"]["structured_fact"]["decision_accuracy"] == pytest.approx(1.0)
+    assert run["route_quality"]["structured_fact"]["true_supported_rate"] == pytest.approx(1.0)
+    assert run["route_quality"]["structured_fact"]["false_refuted_rate"] == pytest.approx(1.0)
+    assert run["route_quality"]["structured_fact"]["false_supported_rate"] == pytest.approx(0.0)
 
 
 def test_build_external_retrieval_corpus_rejects_score_dump_metadata(tmp_path):

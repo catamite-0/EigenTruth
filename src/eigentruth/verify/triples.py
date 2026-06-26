@@ -16,6 +16,14 @@ _CAPITAL_OF_RE = re.compile(
     r"^(?P<object>.+?)\s+(?:is|was)\s+(?:the\s+)?capital\s+of\s+(?P<subject>.+)$",
     re.IGNORECASE,
 )
+_OFFICIAL_LANGUAGE_OF_RE = re.compile(
+    r"^(?P<object>.+?)\s+(?:is|are|was|were)\s+(?:an?\s+|the\s+)?official\s+language\s+of\s+(?P<subject>.+)$",
+    re.IGNORECASE,
+)
+_CURRENCY_OF_RE = re.compile(
+    r"^(?P<object>.+?)\s+(?:is|are|was|were)\s+(?:a\s+|the\s+)?currency\s+of\s+(?P<subject>.+)$",
+    re.IGNORECASE,
+)
 _LOCATED_IN_RE = re.compile(
     r"^(?P<subject>.+?)\s+(?:is|are|was|were)\s+(?:located\s+in|based\s+in)\s+(?P<object>.+)$",
     re.IGNORECASE,
@@ -58,6 +66,8 @@ _STOPWORDS = {
 }
 _PREDICATE_ALIASES = {
     "capital_of": ("capital",),
+    "official_language_of": ("official", "language"),
+    "currency_of": ("currency",),
     "located_in": ("located",),
     "is": (),
 }
@@ -154,6 +164,26 @@ class RuleBasedTripleExtractor:
                 predicate="capital_of",
                 object_value=capital.group("object"),
                 source="capital_of_rule",
+            ),)
+
+        official_language = _OFFICIAL_LANGUAGE_OF_RE.match(text)
+        if official_language is not None:
+            return (_triple(
+                claim,
+                subject=official_language.group("subject"),
+                predicate="official_language_of",
+                object_value=official_language.group("object"),
+                source="official_language_of_rule",
+            ),)
+
+        currency = _CURRENCY_OF_RE.match(text)
+        if currency is not None:
+            return (_triple(
+                claim,
+                subject=currency.group("subject"),
+                predicate="currency_of",
+                object_value=currency.group("object"),
+                source="currency_of_rule",
             ),)
 
         located = _LOCATED_IN_RE.match(text)
