@@ -12448,6 +12448,12 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
         structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
     )
+    frontier_drift_report = _write_product_runtime_drift_report(
+        tmp_path / "frontier-runtime-drift",
+        status="promote",
+        blocked_metric_count=0,
+        promotion_evidence=True,
+    )
     frontier_payload = module.compare_release_candidates(
         readiness_registry_path=registry_path,
         route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
@@ -12455,6 +12461,7 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
         structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
         structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
         adapter_family_matrix_path=adapter_matrix_path,
+        product_runtime_drift_report_path=frontier_drift_report,
     )
     required_gate = payload["required_route_baseline_gate"]
     required_rows = {
@@ -12491,9 +12498,14 @@ def test_compare_release_candidates_can_require_structured_fact_robustness_route
     assert frontier_payload["config"]["release_policy_profile"] == "frontier_audit"
     assert frontier_payload["config"]["adapter_family_profile"] == "strict_audit"
     assert frontier_payload["config"]["require_state_transition_world_model"] is True
+    assert frontier_payload["config"]["require_product_runtime_drift_promotion_evidence"] is True
     assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
         "adapter_family_profile"
     ] == "strict_audit"
+    assert frontier_payload["config"]["release_policy_profile_applied_defaults"][
+        "require_product_runtime_drift_promotion_evidence"
+    ] is True
+    assert frontier_payload["product_runtime_drift_gate"]["summary"]["promotion_evidence_metric_count"] == 4
     assert frontier_payload["adapter_family_matrix_gate"]["state_transition_world_model_adapter"] == (
         "RuleBasedWorldModelAdapter"
     )
@@ -13474,11 +13486,15 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
     assert frontier_profile_config.require_structured_fact_robustness is True
     assert frontier_profile_config.adapter_family_profile == "strict_audit"
     assert frontier_profile_config.require_state_transition_world_model is True
+    assert frontier_profile_config.require_product_runtime_drift_promotion_evidence is True
     assert frontier_profile_config.release_policy_profile_applied_defaults["adapter_family_profile"] == (
         "strict_audit"
     )
     assert frontier_profile_config.release_policy_profile_applied_defaults[
         "require_state_transition_world_model"
+    ] is True
+    assert frontier_profile_config.release_policy_profile_applied_defaults[
+        "require_product_runtime_drift_promotion_evidence"
     ] is True
 
     with pytest.raises(ValueError, match="release_policy_profile"):

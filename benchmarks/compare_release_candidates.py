@@ -185,6 +185,9 @@ def compare_release_candidates(
                 "required_route_min_false_refuted_rate": required_route_min_false_refuted_rate,
                 "adapter_family_profile": adapter_family_profile,
                 "require_state_transition_world_model": require_state_transition_world_model,
+                "require_product_runtime_drift_promotion_evidence": (
+                    require_product_runtime_drift_promotion_evidence
+                ),
             },
         )
     )
@@ -204,6 +207,9 @@ def compare_release_candidates(
     adapter_family_profile = release_policy_values["adapter_family_profile"]
     require_state_transition_world_model = bool(
         release_policy_values["require_state_transition_world_model"]
+    )
+    require_product_runtime_drift_promotion_evidence = bool(
+        release_policy_values["require_product_runtime_drift_promotion_evidence"]
     )
     structured_fact_canonical_route_key = clean_optional_key(structured_fact_canonical_route_key)
     structured_fact_paraphrase_route_key = clean_optional_key(structured_fact_paraphrase_route_key)

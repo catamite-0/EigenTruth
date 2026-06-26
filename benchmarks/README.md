@@ -1915,7 +1915,10 @@ promote. Available release policy profiles are `research_smoke`,
 `candidate_release`, `strict_structured_fact`, and `frontier_audit`; profile
 defaults only fill unset values, so explicit thresholds still win. Direct
 `compare_release_candidates.py` reports record `release_policy_profile` and
-`release_policy_profile_applied_defaults` in `config`.
+`release_policy_profile_applied_defaults` in `config`. `frontier_audit` also
+defaults `--require-product-runtime-drift-promotion-evidence` so strict local
+releases fail closed when runtime drift lacks promotion-contract and
+triple-extraction fixture-matrix evidence.
 Add `--performance-baseline-key performance_baseline:<name>:<version>` when the
 final candidate must match a registered performance handoff. The comparison
 verifies that performance baseline manifest, reloads its runtime recommendation,
@@ -2063,9 +2066,11 @@ enables the structured-fact robustness requirement, requires both configured
 canonical/paraphrase route keys, applies the baseline candidate quality gates,
 and adds stricter route/required-route quality thresholds for covered-fact
 release evidence. `frontier_audit` adds the same structured-fact defaults and
-also defaults `adapter_family_profile=strict_audit`, so the release must carry
-the strict adapter-family matrix and rule-based state-transition world-model
-evidence unless explicitly overridden. The workflow records
+also defaults `adapter_family_profile=strict_audit` and
+`require_product_runtime_drift_promotion_evidence=true`, so the release must
+carry the strict adapter-family matrix, rule-based state-transition world-model
+evidence, and promotion-backed runtime-drift evidence unless explicitly
+overridden. The workflow records
 `release_policy_profile` and `release_policy_profile_applied_defaults` in the
 comparison report, final manifest, and registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying

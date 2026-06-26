@@ -66,6 +66,9 @@ def _apply_release_policy_profile_to_config(
             "required_route_min_false_refuted_rate": config.required_route_min_false_refuted_rate,
             "adapter_family_profile": config.adapter_family_profile,
             "require_state_transition_world_model": config.require_state_transition_world_model,
+            "require_product_runtime_drift_promotion_evidence": (
+                config.require_product_runtime_drift_promotion_evidence
+            ),
         },
     )
     object.__setattr__(config, "release_policy_profile", profile)
