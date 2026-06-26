@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.build_text_baseline_score_dump import DEFAULT_TEXT_BASELINE_SIGNALS  # noqa: E402
 from benchmarks.compare_route_baselines import compare_route_baselines  # noqa: E402
+from eigentruth.registry import ArtifactRegistry, ArtifactVerificationContext  # noqa: E402
 
 CANDIDATE_SUMMARY_FIELDS = (
     "best_geometry_fusion_at_alpha",
@@ -600,6 +601,13 @@ def _parse_non_negative_int(value: str, *, flag: str) -> int:
     return numeric
 
 
+def _parse_positive_int(value: str, *, flag: str) -> int:
+    numeric = int(value)
+    if numeric < 1:
+        raise ValueError(f"{flag} must be a positive integer.")
+    return numeric
+
+
 def _parse_csv(values: Sequence[str] | None) -> tuple[str, ...]:
     if not values:
         return ()
@@ -628,8 +636,163 @@ def _parse_key_values(values: Sequence[str] | None) -> dict[str, str]:
     return parsed
 
 
+def _write_artifact_manifest(
+    *,
+    context: ArtifactVerificationContext,
+    report_path: Path,
+    output_path: Path,
+    payload: Mapping[str, Any],
+    max_workers: int = 1,
+) -> dict[str, Any]:
+    route_comparison = _mapping(payload.get("route_baseline_comparison"))
+    text_redline = _mapping(payload.get("text_redline_comparison"))
+    config = _mapping(payload.get("config"))
+    artifacts: dict[str, str | Path | None] = {
+        "external_evidence_baseline_comparison_report": report_path,
+        "route_registry": config.get("route_registry_path"),
+        "candidate_score_report": config.get("candidate_score_report_path"),
+        "text_baseline_report": config.get("text_baseline_report_path"),
+        "retrieval_stress_manifest": config.get("retrieval_stress_manifest"),
+    }
+    route_rows = route_comparison.get("rows")
+    if isinstance(route_rows, Sequence) and not isinstance(route_rows, (str, bytes)):
+        for idx, row in enumerate(route_rows, start=1):
+            if not isinstance(row, Mapping):
+                continue
+            artifacts[f"route_manifest_{idx}"] = row.get("manifest_path")
+    text_runs = text_redline.get("runs")
+    decision = _mapping(payload.get("decision"))
+    metadata = {
+        "runner": "compare_external_evidence_baselines",
+        "workflow": payload.get("workflow"),
+        "decision_status": decision.get("status"),
+        "recommended_route": decision.get("recommended_route"),
+        "recommended_route_record": decision.get("recommended_route_record"),
+        "route_passed": route_comparison.get("passed"),
+        "text_redline_passed": text_redline.get("passed"),
+        "text_redline_run_count": (
+            len(text_runs)
+            if isinstance(text_runs, Sequence) and not isinstance(text_runs, (str, bytes))
+            else text_redline.get("run_count")
+        ),
+    }
+    manifest = context.build_artifact_manifest(
+        artifacts,
+        root=output_path.parent,
+        metadata=metadata,
+        max_workers=max_workers,
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return manifest
+
+
+def _verify_manifest(
+    *,
+    context: ArtifactVerificationContext,
+    manifest_path: Path,
+    output_path: Path,
+    recursive: bool,
+    max_workers: int = 1,
+) -> dict[str, Any]:
+    verification = context.load_and_verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=max_workers,
+    ).to_dict()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(verification, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return verification
+
+
+def _record_registry(
+    *,
+    registry_path: Path | None,
+    name: str | None,
+    version: str | None,
+    report_path: Path,
+    manifest_path: Path | None,
+    verification_path: Path | None,
+    payload: Mapping[str, Any],
+    manifest: Mapping[str, Any] | None,
+    verification: Mapping[str, Any] | None,
+) -> None:
+    if registry_path is None:
+        return
+    if not name or not version:
+        raise ValueError("--registry requires --name and --version.")
+    decision = _mapping(payload.get("decision"))
+    route_comparison = _mapping(payload.get("route_baseline_comparison"))
+    text_redline = _mapping(payload.get("text_redline_comparison"))
+    metadata = {
+        "workflow": "compare_external_evidence_baselines",
+        "status": decision.get("status"),
+        "recommended_route": decision.get("recommended_route"),
+        "recommended_route_record": decision.get("recommended_route_record"),
+        "blocking_reasons": tuple(decision.get("blocking_reasons", ())),
+        "route_passed": route_comparison.get("passed"),
+        "text_redline_passed": text_redline.get("passed"),
+        "text_redline_run_count": text_redline.get("run_count"),
+        "artifact_manifest": None if manifest_path is None else str(manifest_path),
+        "manifest_verification_report": None if verification_path is None else str(verification_path),
+        "manifest_verified": None if verification is None else bool(verification.get("passed")),
+    }
+    registry = ArtifactRegistry.load_json(registry_path)
+    registry.record_report(
+        name=name,
+        path=report_path,
+        version=version,
+        metadata=metadata,
+    )
+    if manifest_path is not None and manifest is not None:
+        registry.record_benchmark_manifest(
+            name=name,
+            path=manifest_path,
+            version=version,
+            metadata={
+                **metadata,
+                "manifest_summary": _mapping(manifest.get("summary")),
+                "manifest_metadata": _mapping(manifest.get("metadata")),
+                "checked": None if verification is None else verification.get("checked"),
+                "failure_count": None
+                if verification is None
+                else len(tuple(verification.get("failures", ()))),
+            },
+        )
+    if verification_path is not None and verification is not None:
+        registry.record_manifest_verification(
+            name=f"{name}-verification",
+            path=verification_path,
+            version=version,
+            metadata={
+                "manifest_name": name,
+                "manifest_path": None if manifest_path is None else str(manifest_path),
+                "passed": bool(verification.get("passed")),
+            },
+        )
+    registry.save_json()
+
+
 def run(args: argparse.Namespace) -> dict[str, Any]:
     """Run from parsed CLI arguments."""
+    if (
+        args.json is None
+        and (
+            args.artifact_manifest is not None
+            or args.verification_report is not None
+            or args.registry is not None
+        )
+    ):
+        raise ValueError("--artifact-manifest, --verification-report, and --registry require --json.")
+    if args.verification_report is not None and args.artifact_manifest is None:
+        raise ValueError("--verification-report requires --artifact-manifest.")
+    output_path = None if args.json is None else Path(args.json)
+    manifest_path = None if args.artifact_manifest is None else Path(args.artifact_manifest)
+    verification_path = None if args.verification_report is None else Path(args.verification_report)
+    context = ArtifactVerificationContext()
     text_baseline_signals = (
         _parse_csv(args.text_baseline_signal)
         or tuple(DEFAULT_TEXT_BASELINE_SIGNALS)
@@ -672,11 +835,59 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         min_candidate_auroc=args.min_candidate_auroc,
         notes=args.note,
     )
-    if args.json:
-        output_path = Path(args.json)
+    if output_path is not None:
+        if manifest_path is not None:
+            payload["paths"] = {
+                "external_evidence_baseline_comparison_report": str(output_path),
+                "artifact_manifest": str(manifest_path),
+                "manifest_verification": None
+                if verification_path is None
+                else str(verification_path),
+            }
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(f"Wrote external evidence baseline comparison to {output_path}")
+        manifest = None
+        verification = None
+        if manifest_path is not None:
+            manifest = _write_artifact_manifest(
+                context=context,
+                report_path=output_path,
+                output_path=manifest_path,
+                payload=payload,
+                max_workers=args.manifest_fingerprint_workers,
+            )
+            payload["artifact_manifest_summary"] = manifest.get("summary")
+            output_path.write_text(
+                json.dumps(payload, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            manifest = _write_artifact_manifest(
+                context=context,
+                report_path=output_path,
+                output_path=manifest_path,
+                payload=payload,
+                max_workers=args.manifest_fingerprint_workers,
+            )
+            if verification_path is not None:
+                verification = _verify_manifest(
+                    context=context,
+                    manifest_path=manifest_path,
+                    output_path=verification_path,
+                    recursive=not args.no_recursive,
+                    max_workers=args.manifest_fingerprint_workers,
+                )
+        _record_registry(
+            registry_path=None if args.registry is None else Path(args.registry),
+            name=args.name,
+            version=args.version,
+            report_path=output_path,
+            manifest_path=manifest_path,
+            verification_path=verification_path,
+            payload=payload,
+            manifest=manifest,
+            verification=verification,
+        )
     decision = payload["decision"]
     print(
         "external_evidence_baseline_comparison="
@@ -696,6 +907,31 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--route-baseline-key", action="append", default=[])
     parser.add_argument("--require-route-baseline", action="store_true")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
+    parser.add_argument(
+        "--artifact-manifest",
+        default=None,
+        help="optional artifact manifest path for the comparison report and inputs",
+    )
+    parser.add_argument(
+        "--verification-report",
+        default=None,
+        help="optional recursive manifest verification report path",
+    )
+    parser.add_argument(
+        "--registry",
+        default=None,
+        help="optional ArtifactRegistry JSON path to record the comparison report",
+    )
+    parser.add_argument("--name", default=None, help="registry artifact name")
+    parser.add_argument("--version", default=None, help="registry artifact version")
+    parser.add_argument(
+        "--manifest-fingerprint-workers",
+        type=lambda value: _parse_positive_int(
+            value,
+            flag="--manifest-fingerprint-workers",
+        ),
+        default=1,
+    )
     parser.add_argument("--note", action="append", default=[])
     parser.add_argument("--no-recursive", action="store_true")
     parser.add_argument("--allow-unverified", action="store_true")

@@ -474,15 +474,17 @@ Added the first stdlib-only external retrieval service shell:
   answer-echo retrieval stress control, and text/length redline score-ensemble
   comparison. It is intentionally dependency-free and does not rerun models;
   missing reports, ambiguous run pairing, or underperforming candidate signals
-  block the comparison.
+  block the comparison. It can now write and verify a recursive artifact
+  manifest and register the comparison as a reusable `report:*:*` handoff.
 - `compare_release_candidates.py` and
   `run_release_candidate_registry_workflow.py` can now require that promoted
-  external-evidence comparison artifact as a release gate and carry its report,
-  recommended route, route-gate status, and text-redline status into manifest
-  and registry metadata.
+  external-evidence comparison artifact by direct path or registry key as a
+  release gate and carry its report, source/record provenance, recommended
+  route, route-gate status, and text-redline status into manifest and registry
+  metadata.
 
 ## Next Research-to-Code Candidates
 
-1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, rerun `run_verifier_signal_fusion_workflow.py`, then gate the result with `compare_external_evidence_baselines.py` against answer-echo stress and text/length redlines before passing the artifact into `compare_release_candidates.py --external-evidence-baseline-comparison`.
+1. Replace the local TruthfulQA correct-answer corpus with external/domain-shifted retrieval evidence and aligned selfcheck samples, rerun `run_verifier_signal_fusion_workflow.py`, then gate the result with `compare_external_evidence_baselines.py` against answer-echo stress and text/length redlines before passing the registered `report:*:*` artifact into `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
 3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

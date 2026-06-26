@@ -78,6 +78,8 @@ def compare_release_candidates(
     require_product_runtime_drift_promotion_evidence: bool = False,
     release_efficiency_report_path: str | Path | None = None,
     external_evidence_baseline_comparison_path: str | Path | None = None,
+    external_evidence_baseline_comparison_registry_path: str | Path | None = None,
+    external_evidence_baseline_comparison_key: str | None = None,
     frontier_release_evidence_path: str | Path | None = None,
     frontier_release_evidence_registry_path: str | Path | None = None,
     frontier_release_evidence_key: str | None = None,
@@ -593,8 +595,18 @@ def compare_release_candidates(
         manifest_fingerprint_workers=manifest_fingerprint_workers,
         verification_context=verification_context,
     )
+    external_evidence_baseline_comparison_source = (
+        _resolve_external_evidence_baseline_comparison_source(
+            external_evidence_baseline_comparison_path=external_evidence_baseline_comparison_path,
+            external_evidence_baseline_comparison_registry_path=(
+                external_evidence_baseline_comparison_registry_path
+            ),
+            external_evidence_baseline_comparison_key=external_evidence_baseline_comparison_key,
+            default_registry_path=readiness_registry_path,
+        )
+    )
     external_evidence_baseline_comparison = _external_evidence_baseline_comparison_gate(
-        external_evidence_baseline_comparison_path=external_evidence_baseline_comparison_path,
+        external_evidence_baseline_comparison_source=external_evidence_baseline_comparison_source,
         verification_context=verification_context,
     )
     frontier_release_evidence_source = _resolve_frontier_release_evidence_source(
@@ -706,8 +718,16 @@ def compare_release_candidates(
             ),
             "external_evidence_baseline_comparison": (
                 None
-                if external_evidence_baseline_comparison_path is None
-                else str(external_evidence_baseline_comparison_path)
+                if external_evidence_baseline_comparison_source is None
+                else str(external_evidence_baseline_comparison_source["path"])
+            ),
+            "external_evidence_baseline_comparison_registry": (
+                None
+                if external_evidence_baseline_comparison_source is None
+                else external_evidence_baseline_comparison_source.get("registry")
+            ),
+            "external_evidence_baseline_comparison_key": (
+                external_evidence_baseline_comparison_key
             ),
             "frontier_release_evidence": (
                 None
@@ -2626,14 +2646,53 @@ def _selector_replay_gate(
     }
 
 
-def _external_evidence_baseline_comparison_gate(
+def _resolve_external_evidence_baseline_comparison_source(
     *,
     external_evidence_baseline_comparison_path: str | Path | None,
+    external_evidence_baseline_comparison_registry_path: str | Path | None,
+    external_evidence_baseline_comparison_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if external_evidence_baseline_comparison_path is not None:
+        if external_evidence_baseline_comparison_key is not None:
+            raise ValueError(
+                "external_evidence_baseline_comparison_path is mutually exclusive with "
+                "external_evidence_baseline_comparison_key."
+            )
+        return {"source": "file", "path": Path(external_evidence_baseline_comparison_path)}
+    if external_evidence_baseline_comparison_key is None:
+        if external_evidence_baseline_comparison_registry_path is not None:
+            raise ValueError(
+                "external_evidence_baseline_comparison_registry_path requires "
+                "external_evidence_baseline_comparison_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if external_evidence_baseline_comparison_registry_path is None
+        else external_evidence_baseline_comparison_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(external_evidence_baseline_comparison_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
+
+
+def _external_evidence_baseline_comparison_gate(
+    *,
+    external_evidence_baseline_comparison_source: Mapping[str, Any] | None,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
-    if external_evidence_baseline_comparison_path is None:
+    if external_evidence_baseline_comparison_source is None:
         return None
-    report_path = Path(external_evidence_baseline_comparison_path)
+    report_path = Path(external_evidence_baseline_comparison_source["path"])
     report, report_error = verification_context.load_json_object(report_path)
     decision = _mapping(report.get("decision"))
     route_comparison = _mapping(report.get("route_baseline_comparison"))
@@ -2646,6 +2705,10 @@ def _external_evidence_baseline_comparison_gate(
         "schema_version": 1,
         "status": "promote" if gate["passed"] else "blocked",
         "report_path": str(report_path),
+        "source": external_evidence_baseline_comparison_source.get("source"),
+        "registry": external_evidence_baseline_comparison_source.get("registry"),
+        "record_key": external_evidence_baseline_comparison_source.get("record_key"),
+        "record": external_evidence_baseline_comparison_source.get("record"),
         "workflow": report.get("workflow"),
         "decision_status": decision.get("status"),
         "recommended_route": decision.get("recommended_route"),
@@ -4063,6 +4126,9 @@ def _candidate_with_gates(
     if external_evidence_baseline_comparison is not None:
         payload["external_evidence_baseline_comparison"] = {
             "report_path": external_evidence_baseline_comparison.get("report_path"),
+            "source": external_evidence_baseline_comparison.get("source"),
+            "registry": external_evidence_baseline_comparison.get("registry"),
+            "record_key": external_evidence_baseline_comparison.get("record_key"),
             "workflow": external_evidence_baseline_comparison.get("workflow"),
             "decision_status": external_evidence_baseline_comparison.get("decision_status"),
             "recommended_route": external_evidence_baseline_comparison.get("recommended_route"),
@@ -4444,6 +4510,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         ),
         release_efficiency_report_path=args.release_efficiency_report,
         external_evidence_baseline_comparison_path=args.external_evidence_baseline_comparison,
+        external_evidence_baseline_comparison_registry_path=(
+            args.external_evidence_baseline_comparison_registry
+        ),
+        external_evidence_baseline_comparison_key=args.external_evidence_baseline_comparison_key,
         frontier_release_evidence_path=args.frontier_release_evidence,
         frontier_release_evidence_registry_path=args.frontier_release_evidence_registry,
         frontier_release_evidence_key=args.frontier_release_evidence_key,
@@ -4635,6 +4705,13 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,
                         help="optional compare_external_evidence_baselines.py report that must promote")
+    parser.add_argument("--external-evidence-baseline-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--external-evidence-baseline-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--external-evidence-baseline-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for an external "
+                             "evidence baseline comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,

@@ -100,6 +100,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
     require_product_runtime_drift_promotion_evidence: bool = False
     release_efficiency_report_path: Path | None = None
     external_evidence_baseline_comparison_path: Path | None = None
+    external_evidence_baseline_comparison_registry_path: Path | None = None
+    external_evidence_baseline_comparison_key: str | None = None
     frontier_release_evidence_path: Path | None = None
     frontier_release_evidence_registry_path: Path | None = None
     frontier_release_evidence_key: str | None = None
@@ -239,6 +241,12 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 self,
                 "external_evidence_baseline_comparison_path",
                 Path(self.external_evidence_baseline_comparison_path),
+            )
+        if self.external_evidence_baseline_comparison_registry_path is not None:
+            object.__setattr__(
+                self,
+                "external_evidence_baseline_comparison_registry_path",
+                Path(self.external_evidence_baseline_comparison_registry_path),
             )
         if self.frontier_release_evidence_path is not None:
             object.__setattr__(
@@ -479,6 +487,12 @@ def run_release_candidate_registry_workflow(
         external_evidence_baseline_comparison_path=(
             config.external_evidence_baseline_comparison_path
         ),
+        external_evidence_baseline_comparison_registry_path=(
+            config.external_evidence_baseline_comparison_registry_path
+        ),
+        external_evidence_baseline_comparison_key=(
+            config.external_evidence_baseline_comparison_key
+        ),
         frontier_release_evidence_path=config.frontier_release_evidence_path,
         frontier_release_evidence_registry_path=config.frontier_release_evidence_registry_path,
         frontier_release_evidence_key=config.frontier_release_evidence_key,
@@ -692,6 +706,14 @@ def run_release_candidate_registry_workflow(
                 None
                 if config.external_evidence_baseline_comparison_path is None
                 else str(config.external_evidence_baseline_comparison_path)
+            ),
+            "external_evidence_baseline_comparison_registry": (
+                None
+                if config.external_evidence_baseline_comparison_registry_path is None
+                else str(config.external_evidence_baseline_comparison_registry_path)
+            ),
+            "external_evidence_baseline_comparison_key": (
+                config.external_evidence_baseline_comparison_key
             ),
             "frontier_release_evidence": (
                 None
@@ -994,6 +1016,16 @@ def _comparison_with_registry_config(
             comparison_config.get("external_evidence_baseline_comparison")
             if config.external_evidence_baseline_comparison_path is None
             else str(config.external_evidence_baseline_comparison_path)
+        ),
+        "external_evidence_baseline_comparison_registry": (
+            comparison_config.get("external_evidence_baseline_comparison_registry")
+            if config.external_evidence_baseline_comparison_registry_path is None
+            else str(config.external_evidence_baseline_comparison_registry_path)
+        ),
+        "external_evidence_baseline_comparison_key": (
+            comparison_config.get("external_evidence_baseline_comparison_key")
+            if config.external_evidence_baseline_comparison_key is None
+            else config.external_evidence_baseline_comparison_key
         ),
     })
     payload["config"] = comparison_config
@@ -1467,6 +1499,15 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "external_evidence_baseline_comparison_report": (
             external_evidence_baseline_comparison.get("report_path")
         ),
+        "external_evidence_baseline_comparison_source": (
+            external_evidence_baseline_comparison.get("source")
+        ),
+        "external_evidence_baseline_comparison_registry": (
+            external_evidence_baseline_comparison.get("registry")
+        ),
+        "external_evidence_baseline_comparison_record": (
+            external_evidence_baseline_comparison.get("record_key")
+        ),
         "external_evidence_baseline_comparison_decision_status": (
             external_evidence_baseline_comparison.get("decision_status")
         ),
@@ -1902,6 +1943,14 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
             if args.external_evidence_baseline_comparison is None
             else Path(args.external_evidence_baseline_comparison)
         ),
+        external_evidence_baseline_comparison_registry_path=(
+            None
+            if args.external_evidence_baseline_comparison_registry is None
+            else Path(args.external_evidence_baseline_comparison_registry)
+        ),
+        external_evidence_baseline_comparison_key=(
+            args.external_evidence_baseline_comparison_key
+        ),
         frontier_release_evidence_path=(
             None
             if args.frontier_release_evidence is None
@@ -2146,6 +2195,13 @@ def main(argv: Sequence[str] | None = None) -> None:
                         help="optional release efficiency report that must promote and verify")
     parser.add_argument("--external-evidence-baseline-comparison", default=None,
                         help="optional compare_external_evidence_baselines.py report that must promote")
+    parser.add_argument("--external-evidence-baseline-comparison-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--external-evidence-baseline-comparison-key; defaults to "
+                             "--readiness-registry")
+    parser.add_argument("--external-evidence-baseline-comparison-key", default=None,
+                        help="optional report:<name>:<version> registry key for an external "
+                             "evidence baseline comparison")
     parser.add_argument("--frontier-release-evidence", default=None,
                         help="optional frontier release-evidence report that must promote and verify")
     parser.add_argument("--frontier-release-evidence-registry", default=None,

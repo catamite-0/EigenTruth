@@ -1750,6 +1750,11 @@ python benchmarks/compare_external_evidence_baselines.py \
   --min-text-detection-margin 0.10 \
   --min-text-auroc-margin 0.10 \
   --json artifacts/external-evidence-baseline-comparison.json \
+  --artifact-manifest artifacts/external-evidence-baseline-comparison-manifest.json \
+  --verification-report artifacts/external-evidence-baseline-comparison-verification.json \
+  --registry artifacts/registry.json \
+  --name external-evidence-comparison \
+  --version 0.1 \
   --fail-on-blocked
 ```
 
@@ -1758,7 +1763,11 @@ answer-echo stress-control audit. The text-redline side pairs runs by name,
 selects the best non-text candidate signal/fusion at the report `best_alpha`,
 selects the best cheap text baseline from `single_results`, and blocks unless
 the candidate clears the configured detection/AUROC margins. Missing reports,
-ambiguous run pairing, or non-finite metrics block the comparison.
+ambiguous run pairing, or non-finite metrics block the comparison. With
+`--artifact-manifest` and `--registry`, the comparator writes a recursive
+manifest over the route, stress-control, score-ensemble, and comparison reports,
+verifies it, and registers the comparison as a reusable `report:*:*` release
+gate input.
 
 ## `run_adapter_family_matrix.py`
 
@@ -2208,8 +2217,11 @@ To write, verify, and register that release candidate as its own manifest, use
 `--feedback-policy-workflow`, `--feedback-policy-workflow-registry`,
 feedback-policy threshold options, `--selector-replay-report`,
 `--product-runtime-drift-report`, `--release-efficiency-report`,
-`--external-evidence-baseline-comparison`, `--adapter-family-matrix`, and
-`--triple-extraction-fixture-matrix` options and includes those
+`--external-evidence-baseline-comparison`,
+`--external-evidence-baseline-comparison-key`,
+`--external-evidence-baseline-comparison-registry`,
+`--adapter-family-matrix`, and `--triple-extraction-fixture-matrix` options and
+includes those
 route/workflow/feedback-policy/selector/drift/efficiency/external-evidence
 comparison/adapter and extractor manifests in the final release-candidate
 manifest when the gate promotes. Required-route budget settings are also copied
@@ -2218,8 +2230,10 @@ into manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-retrieval-provenance-filter` when the audit route must
 prove label-free local retrieval claims and a recorded evidence provenance
 filter.
-External-evidence baseline comparison gates are copied into the comparison,
-manifest, and registry metadata when configured.
+External-evidence baseline comparison gates can be supplied by direct JSON path
+or by a registered `report:*:*` key, and the resolved source, record key, status,
+recommended route, route-gate status, and text-redline status are copied into the
+comparison, manifest, and registry metadata when configured.
 Triple-extraction external-prediction gates are copied into the comparison,
 manifest, and registry metadata when configured.
 Use `--require-structured-fact-robustness` with

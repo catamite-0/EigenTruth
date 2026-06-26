@@ -10776,6 +10776,50 @@ def test_compare_external_evidence_baselines_promotes_route_and_text_redline(tmp
     assert row["text_best"]["name"] == "answer_token_count"
     assert row["detection_margin"] == pytest.approx(0.35)
 
+    report_path = tmp_path / "external-evidence-baseline-comparison.json"
+    manifest_path = tmp_path / "external-evidence-artifact-manifest.json"
+    verification_path = tmp_path / "external-evidence-manifest-verification.json"
+    comparison_registry_path = tmp_path / "external-evidence-registry.json"
+    module.main([
+        "--candidate-score-report",
+        str(candidate_report),
+        "--text-baseline-report",
+        str(text_report),
+        "--require-text-redline",
+        "--min-text-detection-margin",
+        "0.20",
+        "--min-text-auroc-margin",
+        "0.20",
+        "--json",
+        str(report_path),
+        "--artifact-manifest",
+        str(manifest_path),
+        "--verification-report",
+        str(verification_path),
+        "--registry",
+        str(comparison_registry_path),
+        "--name",
+        "external-evidence-comparison",
+        "--version",
+        "0.1",
+    ])
+    report_payload = json.loads(report_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    verification = json.loads(verification_path.read_text(encoding="utf-8"))
+    registry = ArtifactRegistry.load_json(comparison_registry_path)
+    record = registry.get("report:external-evidence-comparison:0.1")
+
+    assert report_payload["paths"]["artifact_manifest"] == str(manifest_path)
+    assert report_payload["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest["artifacts"]["candidate_score_report"]["exists"] is True
+    assert manifest["artifacts"]["text_baseline_report"]["exists"] is True
+    assert manifest["metadata"]["decision_status"] == "promote"
+    assert manifest["metadata"]["text_redline_passed"] is True
+    assert verification["passed"] is True
+    assert record.path == str(report_path)
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["manifest_verified"] is True
+
 
 def test_compare_external_evidence_baselines_blocks_text_redline_underperformance(tmp_path):
     module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
@@ -10829,6 +10873,18 @@ def test_compare_external_evidence_baselines_requires_text_redline_report(tmp_pa
     assert payload["decision"]["status"] == "blocked"
     assert payload["text_redline_comparison"]["passed"] is False
     assert "text_redline: text baseline report is required" in payload["decision"]["blocking_reasons"]
+
+
+def test_compare_external_evidence_baselines_verification_requires_manifest(tmp_path):
+    module = importlib.import_module("benchmarks.compare_external_evidence_baselines")
+
+    with pytest.raises(ValueError, match="--verification-report requires --artifact-manifest"):
+        module.main([
+            "--json",
+            str(tmp_path / "external-evidence-baseline-comparison.json"),
+            "--verification-report",
+            str(tmp_path / "external-evidence-manifest-verification.json"),
+        ])
 
 
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
@@ -12892,6 +12948,12 @@ def test_compare_release_candidates_can_require_external_evidence_baseline_compa
     comparison_report = _write_external_evidence_baseline_comparison_report(
         tmp_path / "external-evidence-baseline-comparison.json"
     )
+    ArtifactRegistry.load_json(registry_path).record_report(
+        name="external-evidence-comparison",
+        path=comparison_report,
+        version="0.1",
+        metadata={"workflow": "compare_external_evidence_baselines"},
+    ).save_json()
     blocked_report = _write_external_evidence_baseline_comparison_report(
         tmp_path / "blocked-external-evidence-baseline-comparison.json",
         status="blocked",
@@ -12907,6 +12969,16 @@ def test_compare_release_candidates_can_require_external_evidence_baseline_compa
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
         external_evidence_baseline_comparison_path=comparison_report,
+    )
+    promoted_from_key = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        external_evidence_baseline_comparison_key="report:external-evidence-comparison:0.1",
     )
     blocked = module.compare_release_candidates(
         readiness_registry_path=registry_path,
@@ -12935,6 +13007,14 @@ def test_compare_release_candidates_can_require_external_evidence_baseline_compa
     assert promoted["release_candidate"]["manifests"][
         "external_evidence_baseline_comparison_report"
     ] == str(comparison_report)
+    key_gate = promoted_from_key["release_candidate"]["external_evidence_baseline_comparison"]
+    assert promoted_from_key["decision"]["status"] == "promote"
+    assert promoted_from_key["config"]["external_evidence_baseline_comparison_key"] == (
+        "report:external-evidence-comparison:0.1"
+    )
+    assert key_gate["source"] == "registry"
+    assert key_gate["registry"] == str(registry_path)
+    assert key_gate["record_key"] == "report:external-evidence-comparison:0.1"
 
     assert blocked["decision"]["status"] == "blocked"
     assert blocked["decision"]["external_evidence_baseline_comparison_status"] == "blocked"
@@ -12947,6 +13027,20 @@ def test_compare_release_candidates_can_require_external_evidence_baseline_compa
         "external evidence baseline comparison status is 'blocked'" in reason
         for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
     )
+    with pytest.raises(
+        ValueError,
+        match="external_evidence_baseline_comparison_registry_path requires",
+    ):
+        module.compare_release_candidates(
+            readiness_registry_path=registry_path,
+            min_best_quality_auroc=0.70,
+            max_uncached_forward_seconds=20.0,
+            min_selected=4,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            external_evidence_baseline_comparison_registry_path=registry_path,
+        )
 
 
 def test_compare_release_candidates_consumes_product_trace_replay_workflow(tmp_path):
