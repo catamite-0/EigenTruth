@@ -104,6 +104,7 @@ class VerifierSignalFusionWorkflowConfig:
     selfcheck_max_samples: int | None = None
     staged_verification: bool = False
     staged_alpha: float = 0.10
+    min_world_model_confidence: float = 0.0
     compact_json: bool = False
     verify_manifest: bool = True
 
@@ -152,6 +153,8 @@ class VerifierSignalFusionWorkflowConfig:
             raise ValueError("retriever_index_path is only supported with sqlite_fts or auto backends.")
         if self.claims_path is not None and (self.corpus_paths or self.sample_paths):
             raise ValueError("claims_path cannot be combined with corpus_paths or sample_paths.")
+        if not (0.0 <= float(self.min_world_model_confidence) <= 1.0):
+            raise ValueError("min_world_model_confidence must be in [0, 1].")
 
     @property
     def resolved_claims_path(self) -> Path | None:
@@ -219,6 +222,7 @@ def run_verifier_signal_fusion_workflow(
             selfcheck_max_samples=config.selfcheck_max_samples,
             staged_verification=bool(config.staged_verification),
             staged_alpha=float(config.staged_alpha),
+            min_world_model_confidence=float(config.min_world_model_confidence),
             verified_records_path=config.verified_records_path,
         )
     with _profile_phase(profile, "write_verifier_report"):
@@ -699,6 +703,7 @@ def _config_payload(config: VerifierSignalFusionWorkflowConfig) -> dict[str, Any
         "selfcheck_max_samples": config.selfcheck_max_samples,
         "staged_verification": bool(config.staged_verification),
         "staged_alpha": float(config.staged_alpha),
+        "min_world_model_confidence": float(config.min_world_model_confidence),
         "verify_manifest": bool(config.verify_manifest),
     }
 
@@ -789,6 +794,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         selfcheck_max_samples=args.selfcheck_max_samples,
         staged_verification=args.staged_verification,
         staged_alpha=args.staged_alpha,
+        min_world_model_confidence=args.min_world_model_confidence,
         compact_json=args.compact_json,
         verify_manifest=not bool(args.no_verify_manifest),
     )
@@ -843,6 +849,7 @@ def main() -> None:
     parser.add_argument("--selfcheck-max-samples", type=int, default=None)
     parser.add_argument("--staged-verification", action="store_true")
     parser.add_argument("--staged-alpha", type=float, default=0.10)
+    parser.add_argument("--min-world-model-confidence", type=float, default=0.0)
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--no-verify-manifest", action="store_true")
     run(parser.parse_args())

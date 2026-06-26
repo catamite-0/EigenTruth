@@ -25308,6 +25308,55 @@ def test_run_verifier_signal_fusion_workflow_builds_non_oracle_signal_artifacts(
     assert (output_dir / "synthetic-geometry-fusion-artifact.json").exists()
 
 
+def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_signal_calibration_workflow")
+    from eigentruth.eval.score_dump import load_score_dump
+    from eigentruth.registry import ArtifactRegistry
+
+    output_dir = tmp_path / "world-model-workflow"
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.run_world_model_signal_calibration_workflow(
+        module.WorldModelSignalCalibrationWorkflowConfig(
+            output_dir=output_dir,
+            n_records=12,
+            alphas=(0.2,),
+            repeats=2,
+            seed=0,
+            best_alpha=0.2,
+            registry_path=registry_path,
+            registry_name="synthetic-world-model-calibration",
+            registry_version="test",
+            compact_json=True,
+        )
+    )
+    enhanced = load_score_dump(
+        output_dir / "verifier-signal-fusion" / "synthetic-world-model-enhanced-scores.manifest.json",
+        required_scores=(
+            "verifier_refuted",
+            "world_model_disagreement",
+            "world_model_agreement_gap",
+            "world_model_low_agreement",
+        ),
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get("report:synthetic-world-model-calibration:test")
+
+    assert payload["workflow"] == "world_model_signal_calibration_workflow"
+    assert payload["manifest_summary"]["missing_count"] == 0
+    assert payload["manifest_verification"]["passed"] is True
+    assert payload["world_model_summary"]["adapter"] == "RuleBasedWorldModelAdapter"
+    assert payload["world_model_summary"]["rule_count"] == 12
+    assert payload["registry_record_key"] == "report:synthetic-world-model-calibration:test"
+    assert record.path == str(output_dir / "world-model-signal-calibration-workflow.json")
+    assert record.metadata["world_model_rule_count"] == 12
+    assert enhanced.scores["verifier_refuted"] == pytest.approx(tuple(float(label) for label in enhanced.labels))
+    assert max(enhanced.scores["world_model_disagreement"]) == pytest.approx(0.0)
+    assert max(enhanced.scores["world_model_agreement_gap"]) == pytest.approx(0.0)
+    assert max(enhanced.scores["world_model_low_agreement"]) == pytest.approx(0.0)
+    assert (output_dir / "verifier-signal-fusion" / "synthetic-world-model-geometry-fusion-artifact.json").exists()
+
+
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):
     module = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

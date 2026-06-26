@@ -3282,6 +3282,31 @@ The workflow is intentionally post-hoc and dependency-free. It is the preferred
 entry point when testing whether local retrieval and self-consistency evidence
 improves a calibrated geometry monitor without rerunning model scoring.
 
+For world-model correction specifically,
+`run_world_model_signal_calibration_workflow.py` builds a deterministic
+state-transition fixture, runs the world-model verifier route, converts the
+verified-record sidecar into verifier/world-model score columns, evaluates the
+same score/geometry-fusion calibration path, verifies nested manifests, and can
+record the workflow in a local registry:
+
+```bash
+python benchmarks/run_world_model_signal_calibration_workflow.py \
+  --output-dir artifacts/world-model-signal-calibration-smoke \
+  --n-records 24 \
+  --alphas 0.05,0.1,0.2 \
+  --best-alpha 0.1 \
+  --repeats 20 \
+  --registry artifacts/local-release-registry.json \
+  --registry-name world-model-signal-calibration-smoke \
+  --registry-version 0.1
+```
+
+The default fixture uses `RuleBasedWorldModelAdapter` rules. Its single-model
+agreement-gap columns are expected to be zero; the calibrated correction signal
+is the world-model route's final verifier outcome, such as `verifier_refuted`.
+Direct ensemble agreement metadata from multi-world-model adapters is still
+preserved by `build_verifier_signal_score_dump.py` when present in sidecars.
+
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
 signal per item; `mean_rank` averages normalized anomaly ranks. The ensemble is
