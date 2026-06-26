@@ -251,6 +251,17 @@ sampling settings, and seed, but not by trigger threshold/top fraction. This let
 nested budgets reuse diagnostics for statements already sampled by an earlier
 budget while preserving a cache miss for changed sampling settings. Use
 `--refresh-inside-diagnostics-cache` to rebuild it intentionally.
+If a score dump was not created with `--dump-inside-samples`, use
+`export_inside_diagnostics_samples.py` to recover cached sampled texts into a
+standard samples payload for selfcheck replay:
+
+```bash
+python benchmarks/export_inside_diagnostics_samples.py \
+  --scores artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json \
+  --inside-diagnostics-cache artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/shared-caches/inside-diagnostics.json \
+  --output artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json \
+  --artifact-manifest artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples-manifest.json
+```
 
 Use `--inside-embedding-threshold` to tune the cosine-similarity cluster
 threshold for `inside_embedding_entropy`. It defaults to `0.90`; higher values
@@ -1138,6 +1149,15 @@ python benchmarks/run_selfcheck_signal_fusion_workflow.py \
   --uncertainty-signals selfcheck_support_rate,selfcheck_refute_rate,selfcheck_disagreement,selfcheck_best_overlap \
   --alphas 0.05,0.1,0.2
 ```
+
+The current SmolLM2 l20 direct selfcheck replay at
+`artifacts/smollm2-l20-direct-selfcheck-signal-fusion/` is a negative result:
+the exporter recovers 77/154 triggered records from the inside diagnostics cache,
+but only 25 records meet the two-nonempty-sample threshold. At alpha 0.10,
+`truth_proj` remains best (`AUROC 0.682`, detection `0.178`, false alarm
+`0.091`), while the best geometry-by-selfcheck fusion reaches only `AUROC 0.561`
+and detection `0.096`. Treat this as a sample-quality gate failure, not as
+evidence against self-consistency with better sampled responses.
 
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops

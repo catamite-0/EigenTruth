@@ -1,0 +1,193 @@
+{
+  "artifact_manifest_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/artifact-manifest.json",
+  "config": {
+    "alphas": [
+      0.05,
+      0.1,
+      0.2
+    ],
+    "best_alpha": 0.1,
+    "early_stop": false,
+    "fusion_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore",
+      "inside_eigenscore",
+      "inside_semantic_entropy",
+      "inside_embedding_entropy",
+      "selfcheck_support_rate",
+      "selfcheck_refute_rate",
+      "selfcheck_disagreement",
+      "selfcheck_not_applicable",
+      "selfcheck_best_overlap"
+    ],
+    "geometry_fusion_methods": [
+      "interaction",
+      "product",
+      "weighted_mean",
+      "noisy_or"
+    ],
+    "geometry_method": "mean_rank",
+    "geometry_signals": [
+      "truth_proj",
+      "subspace_resid",
+      "eigenscore"
+    ],
+    "keep_signals": [
+      "truth_proj",
+      "maha_last",
+      "subspace_resid",
+      "eigenscore",
+      "inside_eigenscore",
+      "inside_semantic_entropy",
+      "inside_embedding_entropy",
+      "nll_answer"
+    ],
+    "max_samples": null,
+    "methods": [
+      "max_rank",
+      "mean_rank"
+    ],
+    "min_overlap": 0.5,
+    "min_samples": 2,
+    "refute_threshold": 0.5,
+    "repeats": 20,
+    "sample_paths": [
+      "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json"
+    ],
+    "score_dumps": {
+      "smollm2-l20": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json"
+    },
+    "seed": 0,
+    "selfcheck_signals": [
+      "selfcheck_support_rate",
+      "selfcheck_refute_rate",
+      "selfcheck_disagreement",
+      "selfcheck_insufficient",
+      "selfcheck_not_applicable",
+      "selfcheck_sample_count",
+      "selfcheck_best_overlap"
+    ],
+    "support_threshold": 0.6,
+    "uncertainty_method": "mean_rank",
+    "uncertainty_signals": [
+      "selfcheck_support_rate",
+      "selfcheck_refute_rate",
+      "selfcheck_disagreement",
+      "selfcheck_not_applicable",
+      "selfcheck_best_overlap"
+    ],
+    "verify_manifest": true
+  },
+  "enhanced_score_dumps": {
+    "smollm2-l20": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.json"
+  },
+  "enhanced_score_reports": {
+    "smollm2-l20": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-score-report.json"
+  },
+  "fusion_summary": {
+    "runs": [
+      {
+        "best_ensemble_at_alpha": {
+          "auroc": 0.5193648763853368,
+          "detection": 0.058235294117647066,
+          "false_alarm": 0.022857142857142857,
+          "name": "mean_rank"
+        },
+        "best_geometry_fusion_at_alpha": {
+          "auroc": 0.5608653026427962,
+          "detection": 0.09647058823529411,
+          "false_alarm": 0.041428571428571426,
+          "name": "interaction"
+        },
+        "best_single_at_alpha": {
+          "auroc": 0.6823529411764706,
+          "detection": 0.17823529411764708,
+          "false_alarm": 0.09142857142857143,
+          "name": "truth_proj"
+        },
+        "name": "smollm2-l20"
+      }
+    ]
+  },
+  "geometry_fusion_artifacts": {
+    "smollm2-l20": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-geometry-fusion-artifact.json"
+  },
+  "manifest_summary": {
+    "artifact_count": 7,
+    "directory_count": 0,
+    "file_count": 7,
+    "missing_count": 0
+  },
+  "manifest_verification": {
+    "checked": 7,
+    "failures": [],
+    "manifest_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/artifact-manifest.json",
+    "nested": [],
+    "passed": true
+  },
+  "manifest_verification_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/manifest-verification.json",
+  "profile": {
+    "build_geometry_fusion_artifacts": 0.01300380800239509,
+    "build_score_ensemble_report": 0.5599020940062474,
+    "build_selfcheck_signal_score_dumps": 0.017093654001655523,
+    "total_seconds": 0.5997366419978789,
+    "verify_artifact_manifest": 0.00401785100257257,
+    "write_artifact_manifest": 0.003970434001530521,
+    "write_score_ensemble_report": 0.001611591003893409
+  },
+  "schema_version": 1,
+  "score_ensemble_report_path": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/score-ensemble-report.json",
+  "selfcheck_summary": {
+    "smollm2-l20": {
+      "n_total": 154,
+      "selfcheck_signals": [
+        "selfcheck_support_rate",
+        "selfcheck_refute_rate",
+        "selfcheck_disagreement",
+        "selfcheck_insufficient",
+        "selfcheck_not_applicable",
+        "selfcheck_sample_count",
+        "selfcheck_best_overlap"
+      ],
+      "summary": {
+        "selfcheck_best_overlap": {
+          "max": 0.1388888888888889,
+          "mean": 0.0017086448904630725,
+          "min": 0.0
+        },
+        "selfcheck_disagreement": {
+          "max": 1.0,
+          "mean": 1.0,
+          "min": 1.0
+        },
+        "selfcheck_insufficient": {
+          "max": 1.0,
+          "mean": 0.11038961038961038,
+          "min": 0.0
+        },
+        "selfcheck_not_applicable": {
+          "max": 1.0,
+          "mean": 0.8896103896103896,
+          "min": 0.0
+        },
+        "selfcheck_refute_rate": {
+          "max": 0.0,
+          "mean": 0.0,
+          "min": 0.0
+        },
+        "selfcheck_sample_count": {
+          "max": 2.0,
+          "mean": 0.4155844155844156,
+          "min": 0.0
+        },
+        "selfcheck_support_rate": {
+          "max": 0.0,
+          "mean": 0.0,
+          "min": 0.0
+        }
+      }
+    }
+  },
+  "workflow": "selfcheck_signal_fusion_workflow"
+}

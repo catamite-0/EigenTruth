@@ -3827,6 +3827,101 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
     assert manifest["artifacts"]["enhanced_records.synthetic"]["exists"] is True
 
 
+def test_export_inside_diagnostics_samples_reconstructs_statement_cache_keys(tmp_path):
+    exporter = importlib.import_module("benchmarks.export_inside_diagnostics_samples")
+    truthfulqa = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    scores_path = tmp_path / "scores.json"
+    cache_path = tmp_path / "inside-diagnostics.json"
+    samples_path = tmp_path / "samples.json"
+    manifest_path = tmp_path / "samples-manifest.json"
+    config = {
+        "model": "synthetic/model",
+        "dtype": "float32",
+        "layer": -4,
+        "max_length": 64,
+        "hidden_state_capture": "outputs",
+        "seed": 7,
+        "inside_samples": 3,
+        "inside_min_samples": 2,
+        "inside_sample_step": 1,
+        "inside_stability_delta": 0.05,
+        "inside_selfcheck_min_overlap": 0.65,
+        "inside_selfcheck_support_threshold": 0.60,
+        "inside_selfcheck_refute_threshold": 0.50,
+        "inside_max_new_tokens": 4,
+        "inside_temperature": 0.7,
+        "inside_top_p": 0.9,
+        "inside_pooling": "last",
+        "inside_embedding_threshold": 0.9,
+        "inside_adaptive_sampling": True,
+        "inside_selfcheck_early_stop": True,
+        "eigenscore_alpha": 0.001,
+        "sweep_layers": None,
+    }
+    scores_path.write_text(
+        json.dumps({
+            "config": config,
+            "labels": [0, 1],
+            "scores": {"truth_proj": [0.1, 0.9]},
+            "statements": [
+                {"question": "Capital?", "answer": "Paris.", "text": "Capital? Paris.", "is_false": 0},
+                {"question": "Capital?", "answer": "Lyon.", "text": "Capital? Lyon.", "is_false": 1},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    args = SimpleNamespace(**config)
+    cache = truthfulqa.InsideDiagnosticsCache(cache_path)
+    stmt = truthfulqa.Statement("Capital?", "Paris.", 0)
+    key = truthfulqa._inside_diagnostics_cache_key(
+        stmt,
+        args,
+        layers=(-4,),
+        adaptive=True,
+        selfcheck_early_stop=True,
+    )
+    cache.put(
+        key,
+        truthfulqa.SampledInsideDiagnostics(
+            eigenscore_by_layer={-4: 0.1},
+            semantic_entropy=0.2,
+            embedding_entropy_by_layer={-4: 0.3},
+            semantic_energy=0.4,
+            sample_texts=("Paris is the capital.", "Paris remains the capital."),
+            n_samples=2,
+        ),
+    )
+    cache.save()
+
+    payload = exporter.run(
+        SimpleNamespace(
+            scores=str(scores_path),
+            inside_diagnostics_cache=str(cache_path),
+            output=str(samples_path),
+            min_samples=2,
+            drop_empty_records=False,
+            artifact_manifest=str(manifest_path),
+        )
+    )
+    saved = json.loads(samples_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["summary"]["matched_records"] == 1
+    assert payload["summary"]["missing_records"] == 1
+    assert saved["records"][0]["sampled_responses"] == [
+        "Paris is the capital.",
+        "Paris remains the capital.",
+    ]
+    assert saved["records"][0]["metadata"]["cache_hit"] is True
+    assert saved["records"][1]["metadata"]["cache_hit"] is False
+    assert saved["records"][0]["metadata"]["inside_diagnostics_cache_key"] == key
+    assert manifest["artifacts"]["scores"]["exists"] is True
+    assert manifest["artifacts"]["inside_diagnostics_cache"]["exists"] is True
+    assert manifest["artifacts"]["samples"]["exists"] is True
+    assert manifest["metadata"]["summary"]["matched_records"] == 1
+
+
 def test_eval_verifier_ensemble_uses_self_consistency_samples(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"

@@ -1,0 +1,95 @@
+{
+  "input_scores": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+  "n_total": 154,
+  "output": "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/smollm2-l20-selfcheck-scores.manifest.json",
+  "output_format": "jsonl",
+  "sample_paths": [
+    "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json"
+  ],
+  "schema_version": 1,
+  "selfcheck_config": {
+    "builder": "build_selfcheck_signal_score_dump",
+    "early_stop": false,
+    "max_samples": null,
+    "min_overlap": 0.5,
+    "min_samples": 2,
+    "refute_threshold": 0.5,
+    "sample_paths": [
+      "artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples.json"
+    ],
+    "signals": [
+      "selfcheck_support_rate",
+      "selfcheck_refute_rate",
+      "selfcheck_disagreement",
+      "selfcheck_insufficient",
+      "selfcheck_not_applicable",
+      "selfcheck_sample_count",
+      "selfcheck_best_overlap"
+    ],
+    "source_scores_path": "artifacts/smollm2_l20_inside_trigger_budget_sweep_derived/top_0p4/scores-adaptive_selfcheck.json",
+    "support_threshold": 0.6
+  },
+  "selfcheck_signals": [
+    "selfcheck_support_rate",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
+    "selfcheck_insufficient",
+    "selfcheck_not_applicable",
+    "selfcheck_sample_count",
+    "selfcheck_best_overlap"
+  ],
+  "signals": [
+    "truth_proj",
+    "maha_last",
+    "subspace_resid",
+    "eigenscore",
+    "inside_eigenscore",
+    "inside_semantic_entropy",
+    "inside_embedding_entropy",
+    "nll_answer",
+    "selfcheck_support_rate",
+    "selfcheck_refute_rate",
+    "selfcheck_disagreement",
+    "selfcheck_insufficient",
+    "selfcheck_not_applicable",
+    "selfcheck_sample_count",
+    "selfcheck_best_overlap"
+  ],
+  "summary": {
+    "selfcheck_best_overlap": {
+      "max": 0.1388888888888889,
+      "mean": 0.0017086448904630725,
+      "min": 0.0
+    },
+    "selfcheck_disagreement": {
+      "max": 1.0,
+      "mean": 1.0,
+      "min": 1.0
+    },
+    "selfcheck_insufficient": {
+      "max": 1.0,
+      "mean": 0.11038961038961038,
+      "min": 0.0
+    },
+    "selfcheck_not_applicable": {
+      "max": 1.0,
+      "mean": 0.8896103896103896,
+      "min": 0.0
+    },
+    "selfcheck_refute_rate": {
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0
+    },
+    "selfcheck_sample_count": {
+      "max": 2.0,
+      "mean": 0.4155844155844156,
+      "min": 0.0
+    },
+    "selfcheck_support_rate": {
+      "max": 0.0,
+      "mean": 0.0,
+      "min": 0.0
+    }
+  }
+}

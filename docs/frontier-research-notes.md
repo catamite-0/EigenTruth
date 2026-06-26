@@ -156,9 +156,20 @@ Added a direct selfcheck-signal fusion workflow:
   no-model workflow: sampled responses -> selfcheck-enhanced score dumps ->
   `eval_score_ensemble.py` report -> optional geometry-by-selfcheck fusion
   artifacts -> artifact manifest verification.
+- `export_inside_diagnostics_samples.py` recovers sampled texts from an existing
+  `eval_truthfulqa.py --inside-diagnostics-cache` artifact when the score dump
+  was not written with `--dump-inside-samples`, and writes a manifest
+  fingerprinting the score dump, cache, and exported samples.
 - This is the preferred next replay path when aligned multi-sample generations
   are available, because it tests self-consistency as a calibrated signal before
   mixing it into verifier sidecars or product policy.
+- The current SmolLM2 l20 replay at
+  `artifacts/smollm2-l20-direct-selfcheck-signal-fusion/` is a negative result:
+  cache export matches 77/154 triggered records, only 25 records have at least
+  two non-empty samples, direct selfcheck rates collapse to mostly
+  `not_applicable`, and at alpha 0.10 `truth_proj` remains stronger
+  (`AUROC 0.682`, detection `0.178`) than the best geometry-by-selfcheck fusion
+  (`AUROC 0.561`, detection `0.096`). This is a sample-quality gate failure.
 
 Added spectrum-to-sweep layer-selection audit tooling:
 
