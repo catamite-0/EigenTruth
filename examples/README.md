@@ -164,7 +164,9 @@ python examples/calibrated_control_demo.py \
 python examples/calibrated_control_demo.py \
   --promotion-contract artifacts/smollm2_product_promotion_contract_v1_5/product-promotion-contract.json \
   --promotion-contract-registry artifacts/local-release-registry.json \
-  --verify-promotion-contract-manifest
+  --verify-promotion-contract-manifest \
+  --verify-selfcheck-signal-fusion-manifest \
+  --include-selfcheck-signal-fusion-record
 python examples/calibrated_control_demo.py \
   --cache-verifier \
   --min-cache-hit-rate 0.5
@@ -189,6 +191,10 @@ low-latency product-route gates `max_retrieval_use_rate=0.0` and
 `ProductRuntimeEvidenceBundle` to infer the sibling artifact manifest and can
 optionally attach manifest verification plus local registry provenance with
 `--verify-promotion-contract-manifest` and `--promotion-contract-registry`.
+When the contract carries selfcheck-signal-fusion evidence, the demo can also
+verify that child workflow manifest and attach its registry record with
+`--verify-selfcheck-signal-fusion-manifest` and
+`--include-selfcheck-signal-fusion-record`.
 Staged-verification runs also emit
 `verification_stage_summary`, so low-risk fast-path savings can be gated with
 `--min-verification-skip-rate` and `--max-verified-claim-count`. The latency

@@ -693,6 +693,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         else runtime_evidence_bundle.runtime_metadata(
             budget_enabled=explicit_promotion_contract,
             verify_manifest=bool(getattr(args, "verify_promotion_contract_manifest", False)),
+            verify_selfcheck_signal_fusion_manifest=bool(
+                getattr(args, "verify_selfcheck_signal_fusion_manifest", False)
+            ),
+            include_selfcheck_signal_fusion_record=bool(
+                getattr(args, "include_selfcheck_signal_fusion_record", False)
+            ),
         )
     )
     setattr(args, "_promotion_contract", promotion_contract)
@@ -983,6 +989,10 @@ def main() -> None:
                         help="optional product_promotion_contract registry key")
     parser.add_argument("--verify-promotion-contract-manifest", action="store_true",
                         help="verify the promotion contract artifact manifest before recording metadata")
+    parser.add_argument("--verify-selfcheck-signal-fusion-manifest", action="store_true",
+                        help="verify the selfcheck-signal-fusion workflow manifest from the promotion contract")
+    parser.add_argument("--include-selfcheck-signal-fusion-record", action="store_true",
+                        help="attach the selfcheck-signal-fusion registry record referenced by the promotion contract")
     parser.add_argument("--cache-verifier", action="store_true",
                         help="wrap the selected verifier in request-local CachedVerifier and report cache stats")
     parser.add_argument("--cache-retriever", action="store_true",

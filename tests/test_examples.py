@@ -641,6 +641,102 @@ def test_calibrated_control_demo_can_use_promotion_contract_budget(tmp_path):
     assert runtime_budget["failures"][0]["metric"] == "mean_attempted_route_count"
 
 
+def test_calibrated_control_demo_records_selfcheck_promotion_evidence(tmp_path):
+    demo = importlib.import_module("examples.calibrated_control_demo")
+    from eigentruth.control import ProductPromotionContract
+    from eigentruth.registry import ArtifactRegistry, build_artifact_manifest
+
+    contract_path = tmp_path / "promotion-contract.json"
+    selfcheck_dir = tmp_path / "selfcheck"
+    selfcheck_dir.mkdir()
+    selfcheck_report_path = selfcheck_dir / "workflow.json"
+    selfcheck_manifest_path = selfcheck_dir / "artifact-manifest.json"
+    selfcheck_registry_path = selfcheck_dir / "registry.json"
+    selfcheck_report_path.write_text(
+        json.dumps({
+            "workflow": "selfcheck_signal_fusion_workflow",
+            "status": "promote",
+            "sample_quality": {"status": "pass", "passed": True},
+            "fusion_summary": {"runs": [{"name": "tiny", "auroc": 0.7}]},
+        }),
+        encoding="utf-8",
+    )
+    selfcheck_manifest_path.write_text(
+        json.dumps(
+            build_artifact_manifest(
+                {"selfcheck_signal_fusion_workflow": selfcheck_report_path},
+                root=selfcheck_dir,
+                metadata={"workflow": "selfcheck_signal_fusion_workflow"},
+            )
+        ),
+        encoding="utf-8",
+    )
+    ArtifactRegistry.load_json(selfcheck_registry_path).record_report(
+        name="selfcheck-signal-fusion-workflow",
+        path=selfcheck_report_path,
+        version="0.1",
+        metadata={"artifact_manifest": str(selfcheck_manifest_path)},
+    ).save_json()
+    ProductPromotionContract(
+        model_id="demo-model",
+        runtime={"layer": -1},
+        verifier_route={"route": "fallback"},
+        source_status="promote",
+        selfcheck_signal_fusion_workflow={
+            "report_path": "selfcheck/workflow.json",
+            "manifest_path": "selfcheck/artifact-manifest.json",
+            "registry": "selfcheck/registry.json",
+            "record_key": "report:selfcheck-signal-fusion-workflow:0.1",
+            "status": "promote",
+            "sample_quality_status": "pass",
+            "sample_quality_passed": True,
+            "fusion_run_count": 1,
+        },
+    ).save_json(contract_path)
+
+    payload = demo.run(
+        SimpleNamespace(
+            artifact=None,
+            diagnostics='{"truth_proj": 0.0}',
+            text="Paris is the capital of France.",
+            facts='{"Paris is the capital of France": "supported"}',
+            evidence=None,
+            refutations=None,
+            retrieval_evidence=None,
+            enable_calculator=False,
+            calculator_context=None,
+            runtime_profile=None,
+            staged_verification=None,
+            runtime_trace=True,
+            promotion_contract=str(contract_path),
+            verify_selfcheck_signal_fusion_manifest=True,
+            include_selfcheck_signal_fusion_record=True,
+            request_id="test-selfcheck-promotion-evidence",
+            output=None,
+            registry=None,
+        )
+    )
+
+    metadata = payload["metadata"]
+    assert metadata["selfcheck_signal_fusion_workflow_report"] == str(selfcheck_report_path)
+    assert metadata["selfcheck_signal_fusion_workflow_manifest"] == str(
+        selfcheck_manifest_path
+    )
+    assert metadata["selfcheck_signal_fusion_workflow_manifest_verification"]["passed"] is True
+    assert metadata["selfcheck_signal_fusion_workflow_manifest_verification"]["checked"] == 1
+    assert metadata["selfcheck_signal_fusion_workflow_registry"] == str(
+        selfcheck_registry_path
+    )
+    assert metadata["selfcheck_signal_fusion_workflow_registry_key"] == (
+        "report:selfcheck-signal-fusion-workflow:0.1"
+    )
+    assert metadata["selfcheck_signal_fusion_workflow_registry_record"]["metadata"] == {
+        "artifact_manifest": str(selfcheck_manifest_path)
+    }
+    assert metadata["selfcheck_signal_fusion_workflow_sample_quality_passed"] is True
+    assert metadata["selfcheck_signal_fusion_workflow_fusion_run_count"] == 1
+
+
 def test_calibrated_control_demo_applies_promotion_contract_control_defaults(tmp_path):
     demo = importlib.import_module("examples.calibrated_control_demo")
     from eigentruth.control import ProductPromotionContract
