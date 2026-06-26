@@ -6229,20 +6229,28 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
             sample_quality_min_average_samples_per_record=1.0,
             sample_quality_min_records_meeting_min_samples=None,
             sample_quality_min_best_overlap_mean=0.0,
+            no_sample_collection_plan=False,
+            sample_collection_target_samples_per_record=None,
+            sample_collection_plan_max_records=None,
             compact_json=False,
             no_verify_manifest=False,
         )
     )
     enhanced_path = Path(payload["enhanced_score_dumps"]["synthetic"])
+    sample_plan_path = Path(payload["sample_collection_plans"]["synthetic"])
     enhanced = load_score_dump(
         enhanced_path,
         required_scores=("selfcheck_support_rate", "selfcheck_refute_rate", "selfcheck_best_overlap"),
     )
     ensemble = json.loads(Path(payload["score_ensemble_report_path"]).read_text(encoding="utf-8"))
     manifest = json.loads(Path(payload["artifact_manifest_path"]).read_text(encoding="utf-8"))
+    sample_plan = json.loads(sample_plan_path.read_text(encoding="utf-8"))
 
     assert payload["manifest_verification"]["passed"] is True
     assert payload["selfcheck_summary"]["synthetic"]["n_total"] == 4
+    assert payload["sample_collection_summary"]["synthetic"]["status"] == "ready"
+    assert payload["sample_collection_summary"]["synthetic"]["sample_deficit_total"] == 0
+    assert sample_plan["status"] == "ready"
     assert payload["sample_quality"]["status"] == "pass"
     assert payload["sample_quality"]["runs"]["synthetic"]["coverage"] == pytest.approx(1.0)
     assert enhanced.scores["selfcheck_support_rate"] == pytest.approx((1.0, 1.0, 0.0, 0.0))
@@ -6253,7 +6261,9 @@ def test_run_selfcheck_signal_fusion_workflow_writes_manifest_and_artifacts(tmp_
     )
     assert manifest["metadata"]["workflow"] == "selfcheck_signal_fusion_workflow"
     assert manifest["metadata"]["sample_quality"]["status"] == "pass"
+    assert manifest["metadata"]["sample_collection_summary"]["synthetic"]["status"] == "ready"
     assert manifest["artifacts"]["sample_quality_report"]["exists"] is True
+    assert manifest["artifacts"]["sample_collection_plan.synthetic"]["exists"] is True
     assert manifest["artifacts"]["selfcheck_samples.1.samples"]["exists"] is True
     assert manifest["artifacts"]["enhanced_records.synthetic"]["exists"] is True
 
@@ -6321,23 +6331,32 @@ def test_run_selfcheck_signal_fusion_workflow_blocks_low_quality_samples(tmp_pat
             sample_quality_min_average_samples_per_record=1.5,
             sample_quality_min_records_meeting_min_samples=3,
             sample_quality_min_best_overlap_mean=0.0,
+            no_sample_collection_plan=False,
+            sample_collection_target_samples_per_record=None,
+            sample_collection_plan_max_records=None,
             compact_json=False,
             no_verify_manifest=False,
         )
     )
     quality = payload["sample_quality"]
     manifest = json.loads(Path(payload["artifact_manifest_path"]).read_text(encoding="utf-8"))
+    sample_plan = json.loads(Path(payload["sample_collection_plans"]["synthetic"]).read_text(encoding="utf-8"))
 
     assert quality["status"] == "fail"
     assert quality["failed_runs"] == ["synthetic"]
     assert quality["runs"]["synthetic"]["coverage"] == pytest.approx(0.25)
+    assert payload["sample_collection_summary"]["synthetic"]["status"] == "needs_samples"
+    assert payload["sample_collection_summary"]["synthetic"]["sample_deficit_total"] == 6
+    assert sample_plan["summary"]["records_below_target_samples"] == 3
     assert {failure["metric"] for failure in quality["runs"]["synthetic"]["failures"]} >= {
         "coverage",
         "not_applicable_rate",
         "records_meeting_min_samples",
     }
     assert manifest["metadata"]["sample_quality"]["status"] == "fail"
+    assert manifest["metadata"]["sample_collection_summary"]["synthetic"]["status"] == "needs_samples"
     assert manifest["artifacts"]["sample_quality_report"]["exists"] is True
+    assert manifest["artifacts"]["sample_collection_plan.synthetic"]["exists"] is True
 
 
 def test_plan_selfcheck_sample_collection_reports_deficits(tmp_path):

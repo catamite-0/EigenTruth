@@ -34,6 +34,10 @@ from benchmarks.eval_score_ensemble import (  # noqa: E402
     build_ensemble_report,
     build_geometry_fusion_artifact_from_score_dump,
 )
+from benchmarks.plan_selfcheck_sample_collection import (  # noqa: E402
+    SelfcheckSampleCollectionPlanConfig,
+    write_selfcheck_sample_collection_plan,
+)
 from eigentruth.registry import ArtifactVerificationContext, build_artifact_manifest  # noqa: E402
 
 DEFAULT_FUSION_SIGNALS = (
@@ -87,6 +91,9 @@ class SelfcheckSignalFusionWorkflowConfig:
     sample_quality_min_average_samples_per_record: float = 1.0
     sample_quality_min_records_meeting_min_samples: int | None = None
     sample_quality_min_best_overlap_mean: float = 0.0
+    write_sample_collection_plans: bool = True
+    sample_collection_target_samples_per_record: int | None = None
+    sample_collection_plan_max_records: int | None = None
     compact_json: bool = False
     verify_manifest: bool = True
 
@@ -120,6 +127,16 @@ class SelfcheckSignalFusionWorkflowConfig:
             raise ValueError("min_samples must be >= 1.")
         if self.max_samples is not None and int(self.max_samples) < 1:
             raise ValueError("max_samples must be >= 1 when set.")
+        if self.sample_collection_target_samples_per_record is not None:
+            target = int(self.sample_collection_target_samples_per_record)
+            if target < int(self.min_samples):
+                raise ValueError("sample_collection_target_samples_per_record must be >= min_samples.")
+            object.__setattr__(self, "sample_collection_target_samples_per_record", target)
+        if self.sample_collection_plan_max_records is not None:
+            max_records = int(self.sample_collection_plan_max_records)
+            if max_records < 0:
+                raise ValueError("sample_collection_plan_max_records must be >= 0 when set.")
+            object.__setattr__(self, "sample_collection_plan_max_records", max_records)
         if self.sample_quality_min_records_meeting_min_samples is not None:
             min_records = int(self.sample_quality_min_records_meeting_min_samples)
             if min_records < 0:
@@ -180,6 +197,9 @@ class SelfcheckSignalFusionWorkflowConfig:
     def workflow_report_path(self) -> Path:
         return self.output_dir / "selfcheck-signal-fusion-workflow.json"
 
+    def sample_collection_plan_path(self, run_name: str) -> Path:
+        return self.output_dir / f"{run_name}-selfcheck-sample-collection-plan.json"
+
 
 def run_selfcheck_signal_fusion_workflow(
     config: SelfcheckSignalFusionWorkflowConfig,
@@ -188,6 +208,34 @@ def run_selfcheck_signal_fusion_workflow(
     started = time.perf_counter()
     profile: dict[str, float] = {}
     config.output_dir.mkdir(parents=True, exist_ok=True)
+
+    sample_collection_plans: dict[str, str] = {}
+    sample_collection_summaries: dict[str, Any] = {}
+    if config.write_sample_collection_plans:
+        with _profile_phase(profile, "write_sample_collection_plans"):
+            for run_name, source_path in config.score_dumps:
+                plan_path = config.sample_collection_plan_path(run_name)
+                plan = write_selfcheck_sample_collection_plan(
+                    SelfcheckSampleCollectionPlanConfig(
+                        scores=source_path,
+                        output=plan_path,
+                        sample_paths=config.sample_paths,
+                        min_samples=int(config.min_samples),
+                        target_samples_per_record=config.sample_collection_target_samples_per_record,
+                        max_records=config.sample_collection_plan_max_records,
+                        include_ready_records=False,
+                        sample_quality_min_coverage=float(config.sample_quality_min_coverage),
+                        sample_quality_min_average_samples_per_record=float(
+                            config.sample_quality_min_average_samples_per_record
+                        ),
+                        sample_quality_min_records_meeting_min_samples=(
+                            config.sample_quality_min_records_meeting_min_samples
+                        ),
+                        compact_json=config.compact_json,
+                    )
+                )
+                sample_collection_plans[run_name] = str(plan_path)
+                sample_collection_summaries[run_name] = _sample_collection_summary(plan)
 
     enhanced_score_dumps: list[tuple[str, Path]] = []
     enhanced_reports: dict[str, str] = {}
@@ -267,6 +315,7 @@ def run_selfcheck_signal_fusion_workflow(
     manifest_metadata = _manifest_metadata(
         config,
         enhanced_summaries=enhanced_summaries,
+        sample_collection_summaries=sample_collection_summaries,
         score_ensemble_report=score_ensemble_report,
         geometry_artifacts=geometry_artifacts,
         profile=profile,
@@ -277,6 +326,7 @@ def run_selfcheck_signal_fusion_workflow(
             config,
             enhanced_score_dumps=enhanced_score_dumps,
             enhanced_reports=enhanced_reports,
+            sample_collection_plans=sample_collection_plans,
             geometry_artifacts=geometry_artifacts,
             metadata=manifest_metadata,
         )
@@ -298,6 +348,8 @@ def run_selfcheck_signal_fusion_workflow(
         "config": _config_payload(config),
         "enhanced_score_dumps": {name: str(path) for name, path in enhanced_score_dumps},
         "enhanced_score_reports": enhanced_reports,
+        "sample_collection_plans": sample_collection_plans,
+        "sample_collection_summary": sample_collection_summaries,
         "sample_quality_report_path": str(config.sample_quality_report_path),
         "sample_quality": sample_quality_report,
         "score_ensemble_report_path": str(config.score_ensemble_report_path),
@@ -321,6 +373,7 @@ def _write_artifact_manifest(
     *,
     enhanced_score_dumps: Sequence[tuple[str, Path]],
     enhanced_reports: Mapping[str, str],
+    sample_collection_plans: Mapping[str, str],
     geometry_artifacts: Mapping[str, str],
     metadata: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -337,6 +390,8 @@ def _write_artifact_manifest(
         artifacts[f"enhanced_records.{run_name}"] = path.with_suffix(".records.jsonl")
     for run_name, path in enhanced_reports.items():
         artifacts[f"enhanced_report.{run_name}"] = path
+    for run_name, path in sample_collection_plans.items():
+        artifacts[f"sample_collection_plan.{run_name}"] = path
     for run_name, path in geometry_artifacts.items():
         artifacts[f"geometry_fusion_artifact.{run_name}"] = path
 
@@ -353,6 +408,7 @@ def _manifest_metadata(
     config: SelfcheckSignalFusionWorkflowConfig,
     *,
     enhanced_summaries: Mapping[str, Any],
+    sample_collection_summaries: Mapping[str, Any],
     score_ensemble_report: Mapping[str, Any],
     geometry_artifacts: Mapping[str, str],
     profile: Mapping[str, float],
@@ -378,6 +434,12 @@ def _manifest_metadata(
             "max_samples": config.max_samples,
         },
         "sample_quality_gate": _sample_quality_gate_config(config),
+        "sample_collection_plans_enabled": bool(config.write_sample_collection_plans),
+        "sample_collection_target_samples_per_record": (
+            config.sample_collection_target_samples_per_record
+        ),
+        "sample_collection_plan_max_records": config.sample_collection_plan_max_records,
+        "sample_collection_summary": dict(sample_collection_summaries),
         "sample_quality": _sample_quality_report(config, enhanced_summaries),
         "selfcheck_summary": dict(enhanced_summaries),
         "fusion_summary": _fusion_summary(score_ensemble_report),
@@ -433,7 +495,32 @@ def _config_payload(config: SelfcheckSignalFusionWorkflowConfig) -> dict[str, An
         "early_stop": bool(config.early_stop),
         "max_samples": config.max_samples,
         "sample_quality_gate": _sample_quality_gate_config(config),
+        "write_sample_collection_plans": bool(config.write_sample_collection_plans),
+        "sample_collection_target_samples_per_record": (
+            config.sample_collection_target_samples_per_record
+        ),
+        "sample_collection_plan_max_records": config.sample_collection_plan_max_records,
         "verify_manifest": bool(config.verify_manifest),
+    }
+
+
+def _sample_collection_summary(plan: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(plan.get("summary"))
+    quality = _mapping(plan.get("sample_quality_gate_projection"))
+    collection_plan = _mapping(plan.get("collection_plan"))
+    return {
+        "status": plan.get("status"),
+        "records_to_collect_count": collection_plan.get("records_to_collect_count"),
+        "recommended_min_new_samples": collection_plan.get("recommended_min_new_samples"),
+        "n_records": summary.get("n_records"),
+        "records_meeting_min_samples": summary.get("records_meeting_min_samples"),
+        "records_below_min_samples": summary.get("records_below_min_samples"),
+        "records_below_target_samples": summary.get("records_below_target_samples"),
+        "sample_deficit_total": summary.get("sample_deficit_total"),
+        "coverage": summary.get("min_sample_coverage"),
+        "average_samples_per_record": summary.get("average_samples_per_record"),
+        "sample_quality_gate_status": quality.get("status"),
+        "sample_quality_gate_passed": quality.get("passed"),
     }
 
 
@@ -646,6 +733,9 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         sample_quality_min_average_samples_per_record=args.sample_quality_min_average_samples_per_record,
         sample_quality_min_records_meeting_min_samples=args.sample_quality_min_records_meeting_min_samples,
         sample_quality_min_best_overlap_mean=args.sample_quality_min_best_overlap_mean,
+        write_sample_collection_plans=not bool(args.no_sample_collection_plan),
+        sample_collection_target_samples_per_record=args.sample_collection_target_samples_per_record,
+        sample_collection_plan_max_records=args.sample_collection_plan_max_records,
         compact_json=args.compact_json,
         verify_manifest=not bool(args.no_verify_manifest),
     )
@@ -688,6 +778,12 @@ def main() -> None:
     parser.add_argument("--sample-quality-min-average-samples-per-record", type=float, default=1.0)
     parser.add_argument("--sample-quality-min-records-meeting-min-samples", type=int, default=None)
     parser.add_argument("--sample-quality-min-best-overlap-mean", type=float, default=0.0)
+    parser.add_argument("--no-sample-collection-plan", action="store_true",
+                        help="do not write per-run selfcheck sample collection preflight plans")
+    parser.add_argument("--sample-collection-target-samples-per-record", type=int, default=None,
+                        help="desired samples per record in preflight plans; defaults to --min-samples")
+    parser.add_argument("--sample-collection-plan-max-records", type=int, default=None,
+                        help="maximum missing-record details per plan; 0 keeps only plan summaries")
     parser.add_argument("--compact-json", action="store_true")
     parser.add_argument("--no-verify-manifest", action="store_true")
     run(parser.parse_args())

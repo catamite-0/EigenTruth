@@ -268,6 +268,10 @@ Added a direct selfcheck-signal fusion workflow:
   sample-quality gate projection, and rerun commands. This turns the current
   sample-quality failure into an explicit collection plan instead of another
   ambiguous negative result.
+- `run_selfcheck_signal_fusion_workflow.py` writes those per-run collection
+  plans into the workflow report and artifact manifest by default, so selfcheck
+  promotion evidence now includes both the fusion outcome and the concrete
+  sample-deficit rerun plan.
 - This is the preferred next replay path when aligned multi-sample generations
   are available, because it tests self-consistency as a calibrated signal before
   mixing it into verifier sidecars or product policy.

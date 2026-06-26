@@ -263,9 +263,11 @@ python benchmarks/export_inside_diagnostics_samples.py \
   --artifact-manifest artifacts/smollm2-l20-direct-selfcheck-signal-fusion/inside-diagnostics-samples-manifest.json
 ```
 
-Before promoting direct selfcheck signals, run
+Before promoting direct selfcheck signals, use
 `plan_selfcheck_sample_collection.py` to fail closed on insufficient aligned
-samples and get a machine-readable rerun plan:
+samples and get a machine-readable rerun plan. The direct workflow below writes
+the same per-run plan artifacts by default; the standalone command is useful
+when planning generation before running score fusion:
 
 ```bash
 python benchmarks/plan_selfcheck_sample_collection.py \
@@ -1330,8 +1332,8 @@ python benchmarks/eval_score_ensemble.py \
 
 Use `run_selfcheck_signal_fusion_workflow.py` to run that direct selfcheck-signal
 path in one reproducible no-model command, including enhanced score dumps,
-ensemble report, optional geometry-by-selfcheck fusion artifacts, and artifact
-manifest verification:
+sample-collection preflight plans, ensemble report, optional
+geometry-by-selfcheck fusion artifacts, and artifact manifest verification:
 
 ```bash
 python benchmarks/run_selfcheck_signal_fusion_workflow.py \
@@ -1356,9 +1358,9 @@ and not-applicable rate `0.890`. At alpha 0.10, `truth_proj` remains best
 geometry-by-selfcheck fusion reaches only `AUROC 0.561` and detection `0.096`.
 Treat this as a sample-quality gate failure, not as evidence against
 self-consistency with better sampled responses.
-Use `plan_selfcheck_sample_collection.py` on that same score dump and samples
-payload to record the exact missing-record list and minimum new-sample budget
-before rerunning INSIDE sampling or external sample generation.
+The workflow now writes per-run sample-collection plan artifacts, so that same
+negative replay records the exact missing-record list and minimum new-sample
+budget before rerunning INSIDE sampling or external sample generation.
 
 `--selfcheck-early-stop` is opt-in and preserves the default historical
 benchmark behavior when omitted. When enabled, `SelfConsistencyVerifier` stops
