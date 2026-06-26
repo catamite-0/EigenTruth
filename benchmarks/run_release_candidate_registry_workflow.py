@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from benchmarks.compare_release_candidates import (  # noqa: E402
     ADAPTER_FAMILY_PROFILE_NAMES,
+    adapter_family_profile_requires_state_transition_world_model,
     compare_release_candidates,
 )
 from benchmarks.config_utils import strict_positive_int  # noqa: E402
@@ -273,6 +274,8 @@ class ReleaseCandidateRegistryWorkflowConfig:
                 choices = ", ".join(ADAPTER_FAMILY_PROFILE_NAMES)
                 raise ValueError(f"adapter_family_profile must be one of: {choices}")
             object.__setattr__(self, "adapter_family_profile", profile)
+            if adapter_family_profile_requires_state_transition_world_model(profile):
+                object.__setattr__(self, "require_state_transition_world_model", True)
         if self.inside_trigger_budget_policy is not None:
             policy = str(self.inside_trigger_budget_policy).strip().lower().replace("-", "_")
             if policy not in INSIDE_TRIGGER_BUDGET_POLICIES:
@@ -1584,12 +1587,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-family-profile", default=None,
                         choices=ADAPTER_FAMILY_PROFILE_NAMES,
                         help="optional adapter-family route profile; strict_audit requires structured_state, "
-                             "state_transition, and triple_evidence routes")
+                             "state_transition, triple_evidence, and rule-based state-transition "
+                             "world-model evidence")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--require-state-transition-world-model", action="store_true",
                         help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
-                             "with at least one rule")
+                             "with at least one rule; enabled automatically by strict_audit")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")

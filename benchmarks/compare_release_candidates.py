@@ -40,6 +40,9 @@ ADAPTER_FAMILY_PROFILES: Mapping[str, tuple[str, ...]] = {
     "strict_audit": ("structured_state", "state_transition", "triple_evidence"),
 }
 ADAPTER_FAMILY_PROFILE_NAMES = tuple(sorted(ADAPTER_FAMILY_PROFILES))
+ADAPTER_FAMILY_PROFILES_REQUIRING_STATE_TRANSITION_WORLD_MODEL: frozenset[str] = frozenset({
+    "strict_audit",
+})
 
 
 def compare_release_candidates(
@@ -288,6 +291,12 @@ def compare_release_candidates(
     )
     adapter_profile_name, adapter_profile_routes = _adapter_family_profile_routes(adapter_family_profile)
     required_adapter_routes = _merge_routes(adapter_profile_routes, required_adapter_routes)
+    adapter_profile_requires_world_model = adapter_family_profile_requires_state_transition_world_model(
+        adapter_profile_name
+    )
+    require_state_transition_world_model = bool(
+        require_state_transition_world_model or adapter_profile_requires_world_model
+    )
     if adapter_profile_name is not None and adapter_family_matrix_path is None:
         raise ValueError("adapter_family_profile requires adapter_family_matrix_path.")
     product_trace_replay_workflow_source = _resolve_product_trace_replay_workflow_source(
@@ -583,6 +592,9 @@ def compare_release_candidates(
             "adapter_family_matrix": None if adapter_family_matrix_path is None else str(adapter_family_matrix_path),
             "adapter_family_profile": adapter_profile_name,
             "adapter_family_profile_required_routes": list(adapter_profile_routes),
+            "adapter_family_profile_requires_state_transition_world_model": (
+                adapter_profile_requires_world_model
+            ),
             "required_adapter_routes": list(required_adapter_routes),
             "require_state_transition_world_model": bool(require_state_transition_world_model),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
@@ -3154,6 +3166,13 @@ def _adapter_family_profile_routes(profile: str | None) -> tuple[str | None, tup
     return normalized, ADAPTER_FAMILY_PROFILES[normalized]
 
 
+def adapter_family_profile_requires_state_transition_world_model(profile: str | None) -> bool:
+    if profile is None:
+        return False
+    normalized = str(profile).strip().lower().replace("-", "_")
+    return normalized in ADAPTER_FAMILY_PROFILES_REQUIRING_STATE_TRANSITION_WORLD_MODEL
+
+
 def _merge_routes(*route_groups: Sequence[str]) -> tuple[str, ...]:
     routes = []
     seen = set()
@@ -3413,12 +3432,13 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--adapter-family-profile", default=None,
                         choices=ADAPTER_FAMILY_PROFILE_NAMES,
                         help="optional adapter-family route profile; strict_audit requires structured_state, "
-                             "state_transition, and triple_evidence routes")
+                             "state_transition, triple_evidence, and rule-based state-transition "
+                             "world-model evidence")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
     parser.add_argument("--require-state-transition-world-model", action="store_true",
                         help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
-                             "with at least one rule")
+                             "with at least one rule; enabled automatically by strict_audit")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")

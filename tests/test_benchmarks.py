@@ -10915,7 +10915,7 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         min_decision_accuracy=0.99,
         max_false_supported_rate=0.0,
         min_false_refuted_rate=0.99,
-        adapter_family_matrix_path=matrix_path,
+        adapter_family_matrix_path=world_model_matrix_path,
         adapter_family_profile="strict_audit",
     )
     blocked = module.compare_release_candidates(
@@ -10962,7 +10962,6 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         min_false_refuted_rate=0.99,
         adapter_family_matrix_path=matrix_path,
         adapter_family_profile="strict_audit",
-        require_state_transition_world_model=True,
     )
 
     assert promoted["decision"]["status"] == "promote"
@@ -10984,6 +10983,8 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         "state_transition",
         "triple_evidence",
     ]
+    assert profiled["config"]["adapter_family_profile_requires_state_transition_world_model"] is True
+    assert profiled["config"]["require_state_transition_world_model"] is True
     assert profiled["decision"]["required_adapter_routes"] == (
         "structured_state",
         "state_transition",
@@ -11013,6 +11014,7 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         "state_transition_world_model_adapter"
     ] == "RuleBasedWorldModelAdapter"
     assert blocked_world_model["decision"]["status"] == "blocked"
+    assert blocked_world_model["config"]["require_state_transition_world_model"] is True
     assert blocked_world_model["release_candidate"] is None
     assert blocked_world_model["decision"]["blocking_reasons"][0]["gate"] == "adapter_family_matrix"
     assert any(
@@ -12169,6 +12171,7 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
 
     assert config.manifest_fingerprint_workers == 2
     assert config.adapter_family_profile == "strict_audit"
+    assert config.require_state_transition_world_model is True
     assert config.required_route_baseline_keys == (
         "benchmark_manifest:retrieval-route:0.7",
         "benchmark_manifest:structured-fact-canonical-route:0.1",
@@ -12298,9 +12301,11 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert captured["manifest_fingerprint_workers"] == 3
     assert compare_captured["manifest_fingerprint_workers"] == 3
     assert compare_captured["adapter_family_profile"] == "strict_audit"
+    assert compare_captured["require_state_transition_world_model"] is True
     assert payload["config"]["recursive"] is False
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
+    assert payload["config"]["require_state_transition_world_model"] is True
     assert payload["decision"]["status"] == "promote"
 
 

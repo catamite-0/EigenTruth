@@ -1904,9 +1904,11 @@ require `structured_state`, `state_transition`, and `triple_evidence` together.
 The matrix's `state_transition` fixture uses typed actions plus
 `world_model_rules`, so the promoted world-model evidence exercises
 `RuleBasedWorldModelAdapter` rather than only the legacy in-memory update path.
-Add `--require-state-transition-world-model` to make the release gate fail
-closed unless that `state_transition` family reports
-`RuleBasedWorldModelAdapter` and a positive rule count.
+`strict_audit` also makes the release gate fail closed unless that
+`state_transition` family reports `RuleBasedWorldModelAdapter` and a positive
+rule count. Use `--require-state-transition-world-model` when a custom adapter
+route set should enforce the same rule-based evidence without using
+`strict_audit`.
 This keeps retrieval/database/world-model/audit adapter work inside the same
 fail-closed release gate instead of treating it as a separate benchmark note.
 Release-candidate runtime-budget flags are delegated to the route-baseline
