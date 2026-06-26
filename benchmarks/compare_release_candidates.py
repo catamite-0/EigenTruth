@@ -73,6 +73,7 @@ def compare_release_candidates(
     adapter_family_matrix_path: str | Path | None = None,
     adapter_family_profile: str | None = None,
     required_adapter_routes: Sequence[str] = (),
+    require_state_transition_world_model: bool = False,
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
     performance_drift_baseline_key: str | None = None,
@@ -421,6 +422,7 @@ def compare_release_candidates(
     adapter_family = _adapter_family_matrix_gate(
         adapter_family_matrix_path=adapter_family_matrix_path,
         required_routes=required_adapter_routes,
+        require_state_transition_world_model=bool(require_state_transition_world_model),
         verification_context=verification_context,
     )
     performance = _performance_baseline_gate(
@@ -582,6 +584,7 @@ def compare_release_candidates(
             "adapter_family_profile": adapter_profile_name,
             "adapter_family_profile_required_routes": list(adapter_profile_routes),
             "required_adapter_routes": list(required_adapter_routes),
+            "require_state_transition_world_model": bool(require_state_transition_world_model),
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1103,6 +1106,7 @@ def _adapter_family_matrix_gate(
     *,
     adapter_family_matrix_path: str | Path | None,
     required_routes: Sequence[str],
+    require_state_transition_world_model: bool,
     verification_context: ArtifactVerificationContext,
 ) -> dict[str, Any] | None:
     if adapter_family_matrix_path is None:
@@ -1112,6 +1116,7 @@ def _adapter_family_matrix_gate(
     routes = tuple(str(route) for route in report.get("routes", ()) if str(route))
     required = tuple(str(route) for route in required_routes if str(route))
     family_statuses = _adapter_family_statuses(report)
+    family_details = _adapter_family_details(report)
     promotion_decision = _mapping(report.get("promotion_decision"))
     route_comparison = _mapping(report.get("route_comparison"))
     quality_gate = _mapping(route_comparison.get("quality_gate"))
@@ -1123,8 +1128,11 @@ def _adapter_family_matrix_gate(
         quality_gate=quality_gate,
         routes=routes,
         family_statuses=family_statuses,
+        family_details=family_details,
         required_routes=required,
+        require_state_transition_world_model=bool(require_state_transition_world_model),
     )
+    state_transition = _mapping(family_details.get("state_transition"))
     return {
         "schema_version": 1,
         "status": "promote" if gate["passed"] else "blocked",
@@ -1138,6 +1146,9 @@ def _adapter_family_matrix_gate(
         "audit_routes": audit_routes,
         "promoted_routes": tuple(route for route, status in family_statuses.items() if status == "promote"),
         "family_statuses": family_statuses,
+        "require_state_transition_world_model": bool(require_state_transition_world_model),
+        "state_transition_world_model_adapter": state_transition.get("world_model_adapter"),
+        "state_transition_world_model_rule_count": state_transition.get("world_model_rule_count"),
         "promotion_status": promotion_decision.get("status"),
         "quality_gate_passed": quality_gate.get("passed"),
         "gate": gate,
@@ -1151,7 +1162,9 @@ def _adapter_family_gate(
     quality_gate: Mapping[str, Any],
     routes: Sequence[str],
     family_statuses: Mapping[str, str],
+    family_details: Mapping[str, Mapping[str, Any]],
     required_routes: Sequence[str],
+    require_state_transition_world_model: bool,
 ) -> dict[str, Any]:
     failures = []
     if report_error is not None:
@@ -1170,10 +1183,37 @@ def _adapter_family_gate(
         status = family_statuses.get(route)
         if status != "promote":
             failures.append(f"required adapter route {route!r} status is {status!r}, expected 'promote'")
+    if require_state_transition_world_model:
+        if "state_transition" not in route_set:
+            failures.append("state_transition world-model evidence requires a state_transition route")
+        else:
+            transition = _mapping(family_details.get("state_transition"))
+            adapter = transition.get("world_model_adapter")
+            if adapter != "RuleBasedWorldModelAdapter":
+                failures.append(
+                    "state_transition world-model adapter is "
+                    f"{adapter!r}, expected 'RuleBasedWorldModelAdapter'"
+                )
+            rule_count = _float_or_none(transition.get("world_model_rule_count"))
+            if rule_count is None or rule_count <= 0:
+                failures.append(
+                    "state_transition world-model rule count must be positive "
+                    f"for rule-based evidence, got {transition.get('world_model_rule_count')!r}"
+                )
     return {
         "passed": not failures,
         "blocking_reasons": failures,
     }
+
+
+def _adapter_family_details(report: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    details = {}
+    for item in report.get("families", ()):
+        family = _mapping(item)
+        route = family.get("route")
+        if route is not None:
+            details[str(route)] = family
+    return details
 
 
 def _adapter_family_statuses(report: Mapping[str, Any]) -> dict[str, str]:
@@ -2844,6 +2884,15 @@ def _candidate_with_gates(
             "retrieval_routes": tuple(adapter_family.get("retrieval_routes", ())),
             "audit_routes": tuple(adapter_family.get("audit_routes", ())),
             "promoted_routes": tuple(adapter_family.get("promoted_routes", ())),
+            "require_state_transition_world_model": adapter_family.get(
+                "require_state_transition_world_model"
+            ),
+            "state_transition_world_model_adapter": adapter_family.get(
+                "state_transition_world_model_adapter"
+            ),
+            "state_transition_world_model_rule_count": adapter_family.get(
+                "state_transition_world_model_rule_count"
+            ),
             "promotion_status": adapter_family.get("promotion_status"),
         }
         manifests["adapter_family_matrix_report"] = adapter_family.get("matrix_path")
@@ -3188,6 +3237,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         adapter_family_matrix_path=args.adapter_family_matrix,
         adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
+        require_state_transition_world_model=bool(args.require_state_transition_world_model),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -3366,6 +3416,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "state_transition, and triple_evidence routes")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
+    parser.add_argument("--require-state-transition-world-model", action="store_true",
+                        help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
+                             "with at least one rule")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")

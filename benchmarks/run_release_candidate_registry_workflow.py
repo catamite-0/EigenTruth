@@ -100,6 +100,7 @@ class ReleaseCandidateRegistryWorkflowConfig:
     adapter_family_matrix_path: Path | None = None
     adapter_family_profile: str | None = None
     required_adapter_routes: Sequence[str] = ()
+    require_state_transition_world_model: bool = False
     require_performance_score_dump_cache: bool = False
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None
     performance_drift_baseline_key: str | None = None
@@ -386,6 +387,7 @@ def run_release_candidate_registry_workflow(
         adapter_family_matrix_path=config.adapter_family_matrix_path,
         adapter_family_profile=config.adapter_family_profile,
         required_adapter_routes=config.required_adapter_routes,
+        require_state_transition_world_model=bool(config.require_state_transition_world_model),
         require_performance_score_dump_cache=config.require_performance_score_dump_cache,
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -587,6 +589,7 @@ def run_release_candidate_registry_workflow(
             ),
             "adapter_family_profile": config.adapter_family_profile,
             "required_adapter_routes": tuple(config.required_adapter_routes),
+            "require_state_transition_world_model": bool(config.require_state_transition_world_model),
             "require_performance_score_dump_cache": config.require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 config.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1151,6 +1154,15 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "adapter_family_audit_routes": adapter_family.get("audit_routes"),
         "adapter_family_promoted_routes": adapter_family.get("promoted_routes"),
         "adapter_family_required_routes": adapter_family.get("required_routes"),
+        "adapter_family_require_state_transition_world_model": adapter_family.get(
+            "require_state_transition_world_model"
+        ),
+        "adapter_family_state_transition_world_model_adapter": adapter_family.get(
+            "state_transition_world_model_adapter"
+        ),
+        "adapter_family_state_transition_world_model_rule_count": adapter_family.get(
+            "state_transition_world_model_rule_count"
+        ),
         "required_route_baseline_registry": required_route_baselines.get("registry"),
         "required_route_baseline_routes": required_route_baselines.get("routes"),
         "required_route_baseline_manifests": required_route_baselines.get("manifest_paths"),
@@ -1387,6 +1399,7 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         adapter_family_matrix_path=None if args.adapter_family_matrix is None else Path(args.adapter_family_matrix),
         adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
+        require_state_transition_world_model=bool(args.require_state_transition_world_model),
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -1574,6 +1587,9 @@ def main(argv: Sequence[str] | None = None) -> None:
                              "state_transition, and triple_evidence routes")
     parser.add_argument("--required-adapter-route", action="append", default=[],
                         help="route that must be present and promoted in --adapter-family-matrix; repeatable")
+    parser.add_argument("--require-state-transition-world-model", action="store_true",
+                        help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
+                             "with at least one rule")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional registry workflow report path")

@@ -8096,19 +8096,24 @@ def _write_adapter_family_matrix(
     routes: tuple[str, ...] = ("structured_qa", "structured_state", "state_transition"),
     blocked_route: str | None = None,
     promotion_status: str = "promote",
+    state_transition_world_model: bool = False,
 ) -> Path:
     families = []
     by_route = {}
     for route in routes:
         status = "blocked" if route == blocked_route else "promote"
-        families.append({
+        family = {
             "route": route,
             "status": status,
             "selected": 8,
             "decision_accuracy": 1.0,
             "false_supported_rate": 0.0,
             "false_refuted_rate": 1.0,
-        })
+        }
+        if route == "state_transition" and state_transition_world_model:
+            family["world_model_adapter"] = "RuleBasedWorldModelAdapter"
+            family["world_model_rule_count"] = 8
+        families.append(family)
         by_route[route] = {
             "selected": 8,
             "decision_accuracy": 1.0,
@@ -10853,6 +10858,11 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         tmp_path / "adapter-family-matrix.json",
         routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
     )
+    world_model_matrix_path = _write_adapter_family_matrix(
+        tmp_path / "world-model-adapter-family-matrix.json",
+        routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
+        state_transition_world_model=True,
+    )
     blocked_matrix_path = _write_adapter_family_matrix(
         tmp_path / "blocked-adapter-family-matrix.json",
         blocked_route="retrieval_groundedness",
@@ -10907,6 +10917,30 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
         adapter_family_matrix_path=missing_audit_matrix_path,
         adapter_family_profile="strict-audit",
     )
+    world_model_promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        adapter_family_matrix_path=world_model_matrix_path,
+        adapter_family_profile="strict_audit",
+        require_state_transition_world_model=True,
+    )
+    blocked_world_model = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        adapter_family_matrix_path=matrix_path,
+        adapter_family_profile="strict_audit",
+        require_state_transition_world_model=True,
+    )
 
     assert promoted["decision"]["status"] == "promote"
     assert promoted["decision"]["adapter_family_status"] == "promote"
@@ -10943,6 +10977,24 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
     assert any(
         "required adapter route 'triple_evidence' is missing from matrix" in reason
         for reason in blocked_profile["decision"]["blocking_reasons"][0]["reasons"]
+    )
+    assert world_model_promoted["decision"]["status"] == "promote"
+    assert world_model_promoted["config"]["require_state_transition_world_model"] is True
+    assert world_model_promoted["adapter_family_matrix_gate"][
+        "state_transition_world_model_adapter"
+    ] == "RuleBasedWorldModelAdapter"
+    assert world_model_promoted["adapter_family_matrix_gate"][
+        "state_transition_world_model_rule_count"
+    ] == 8
+    assert world_model_promoted["release_candidate"]["adapter_family_matrix"][
+        "state_transition_world_model_adapter"
+    ] == "RuleBasedWorldModelAdapter"
+    assert blocked_world_model["decision"]["status"] == "blocked"
+    assert blocked_world_model["release_candidate"] is None
+    assert blocked_world_model["decision"]["blocking_reasons"][0]["gate"] == "adapter_family_matrix"
+    assert any(
+        "state_transition world-model adapter is None" in reason
+        for reason in blocked_world_model["decision"]["blocking_reasons"][0]["reasons"]
     )
     with pytest.raises(ValueError, match="adapter_family_profile requires adapter_family_matrix_path"):
         module.compare_release_candidates(
@@ -12522,6 +12574,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
     adapter_family_matrix_path = _write_adapter_family_matrix(
         tmp_path / "adapter-family-matrix.json",
         routes=("structured_qa", "structured_state", "state_transition", "triple_evidence"),
+        state_transition_world_model=True,
     )
     original_sha256_file = provenance_module._sha256_file
     fingerprint_calls_by_path: dict[str, int] = {}
@@ -12564,6 +12617,7 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
         adapter_family_matrix_path=adapter_family_matrix_path,
         required_adapter_routes=("structured_state", "state_transition", "triple_evidence"),
+        require_state_transition_world_model=True,
         runtime_profile="balanced",
         inside_trigger_budget_policy="cost_first",
         min_best_quality_auroc=0.70,
@@ -12748,6 +12802,11 @@ def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tm
         "state_transition",
         "triple_evidence",
     ]
+    assert manifest["metadata"]["adapter_family_require_state_transition_world_model"] is True
+    assert manifest["metadata"]["adapter_family_state_transition_world_model_adapter"] == (
+        "RuleBasedWorldModelAdapter"
+    )
+    assert manifest["metadata"]["adapter_family_state_transition_world_model_rule_count"] == 8
     assert manifest["metadata"]["adapter_family_audit_routes"] == ["triple_evidence"]
     assert manifest["metadata"]["required_route_baseline_routes"] == ["retrieval_groundedness"]
     assert manifest["metadata"]["required_route_baseline_manifests"] == [str(retrieval_manifest)]
