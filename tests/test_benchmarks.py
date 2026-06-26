@@ -8942,6 +8942,85 @@ def _write_world_model_signal_workflow_report(
     return report_path
 
 
+def _write_triple_extraction_fixture_matrix_report(
+    output_dir: Path,
+    *,
+    status: str = "promote",
+    n_corpora: int = 2,
+    promoted_corpora: int = 2,
+    distinct_predicates: tuple[str, ...] = (
+        "capital_of",
+        "currency_of",
+        "headquarters_location_of",
+        "inception_of",
+        "manufacturer_of",
+        "official_language_of",
+    ),
+    mean_best_f1: float = 1.0,
+    mean_baseline_f1: float = 0.5,
+) -> Path:
+    from eigentruth.registry import build_artifact_manifest
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    report_path = output_dir / "triple-extraction-fixture-matrix.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    payload = {
+        "schema_version": 1,
+        "workflow": "triple_extraction_fixture_matrix",
+        "status": status,
+        "artifact_manifest_path": str(manifest_path),
+        "n_corpora": n_corpora,
+        "promoted_corpora": promoted_corpora,
+        "distinct_predicates": distinct_predicates,
+        "distinct_predicate_count": len(distinct_predicates),
+        "mean_baseline_f1": mean_baseline_f1,
+        "mean_best_f1": mean_best_f1,
+        "mean_f1_lift": mean_best_f1 - mean_baseline_f1,
+        "promotion_gate": {
+            "min_corpora": 2,
+            "min_distinct_predicates": 4,
+            "min_augmented_f1": 1.0,
+            "require_f1_lift": True,
+            "failures": [] if status == "promote" else ["synthetic blocked matrix"],
+        },
+        "corpora": [
+            {
+                "name": "country-core",
+                "status": "promote",
+                "predicates": ("capital_of", "currency_of", "official_language_of"),
+                "best_f1": mean_best_f1,
+                "f1_lift": mean_best_f1 - mean_baseline_f1,
+            },
+            {
+                "name": "enterprise-product",
+                "status": "promote" if status == "promote" else "blocked",
+                "predicates": tuple(
+                    predicate
+                    for predicate in distinct_predicates
+                    if predicate not in {"capital_of", "currency_of", "official_language_of"}
+                ),
+                "best_f1": mean_best_f1,
+                "f1_lift": mean_best_f1 - mean_baseline_f1,
+            },
+        ],
+    }
+    report_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    manifest = build_artifact_manifest(
+        {"triple_extraction_fixture_matrix": report_path},
+        root=output_dir,
+        metadata={
+            "runner": "run_triple_extraction_fixture_matrix",
+            "workflow": "triple_extraction_fixture_matrix",
+            "status": status,
+            "n_corpora": n_corpora,
+            "promoted_corpora": promoted_corpora,
+            "distinct_predicate_count": len(distinct_predicates),
+        },
+    )
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _local_retrieval_claims_payload(
     *,
     labels_copied_to_record_metadata: bool,
@@ -11995,6 +12074,95 @@ def test_compare_release_candidates_can_require_adapter_family_matrix(tmp_path):
             max_false_supported_rate=0.0,
             min_false_refuted_rate=0.99,
         )
+
+
+def test_compare_release_candidates_can_require_triple_extraction_fixture_matrix(tmp_path):
+    module = importlib.import_module("benchmarks.compare_release_candidates")
+    from eigentruth.registry import ArtifactRegistry
+
+    registry_path = tmp_path / "registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    route_manifest = _write_route_baseline_manifest(
+        tmp_path,
+        name="structured",
+        route="structured_state",
+        decision_accuracy=1.0,
+        false_supported_rate=0.0,
+        false_refuted_rate=1.0,
+        mean_duration_seconds=0.01,
+        p99_duration_seconds=0.02,
+    )
+    ArtifactRegistry.load_json(registry_path).record_benchmark_manifest(
+        name="structured-route",
+        path=route_manifest,
+        version="0.6",
+        metadata={"manifest_metadata": {"runner": "run_adapter_promotion_workflow"}},
+    ).save_json()
+    matrix_path = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "triple-extraction-matrix",
+    )
+    narrow_matrix_path = _write_triple_extraction_fixture_matrix_report(
+        tmp_path / "narrow-triple-extraction-matrix",
+        distinct_predicates=("capital_of", "currency_of", "official_language_of"),
+    )
+
+    promoted = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        triple_extraction_fixture_matrix_path=matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
+    )
+    blocked = module.compare_release_candidates(
+        readiness_registry_path=registry_path,
+        route_baseline_keys=("benchmark_manifest:structured-route:0.6",),
+        min_best_quality_auroc=0.70,
+        max_uncached_forward_seconds=20.0,
+        min_selected=4,
+        min_decision_accuracy=0.99,
+        max_false_supported_rate=0.0,
+        min_false_refuted_rate=0.99,
+        triple_extraction_fixture_matrix_path=narrow_matrix_path,
+        min_triple_extraction_corpora=2,
+        min_triple_extraction_distinct_predicates=6,
+    )
+
+    assert promoted["decision"]["status"] == "promote"
+    assert promoted["decision"]["triple_extraction_fixture_matrix_status"] == "promote"
+    assert promoted["decision"]["recommended_triple_extraction_fixture_matrix_report"] == str(matrix_path)
+    assert promoted["triple_extraction_fixture_matrix_gate"]["gate"]["passed"] is True
+    assert promoted["triple_extraction_fixture_matrix_gate"]["distinct_predicate_count"] == 6
+    candidate = promoted["release_candidate"]
+    assert candidate["triple_extraction_fixture_matrix"]["distinct_predicate_count"] == 6
+    assert candidate["triple_extraction_fixture_matrix"]["mean_best_f1"] == pytest.approx(1.0)
+    assert candidate["manifests"]["triple_extraction_fixture_matrix_report"] == str(matrix_path)
+    assert candidate["manifests"]["triple_extraction_fixture_matrix_manifest"].endswith(
+        "triple-extraction-matrix/artifact-manifest.json"
+    )
+
+    assert blocked["decision"]["status"] == "blocked"
+    assert blocked["release_candidate"] is None
+    assert blocked["decision"]["blocking_reasons"][0]["gate"] == "triple_extraction_fixture_matrix"
+    assert any(
+        "distinct predicate count below 6" in reason
+        for reason in blocked["decision"]["blocking_reasons"][0]["reasons"]
+    )
 
 
 def test_compare_release_candidates_can_require_extra_route_baselines(tmp_path):

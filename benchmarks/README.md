@@ -1850,6 +1850,9 @@ python benchmarks/compare_release_candidates.py \
   --required-route-baseline-key benchmark_manifest:<local-retrieval-route-name>:<version> \
   --adapter-family-matrix artifacts/adapter_family_matrix/adapter-family-matrix.json \
   --adapter-family-profile strict_audit \
+  --triple-extraction-fixture-matrix artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json \
+  --min-triple-extraction-corpora 2 \
+  --min-triple-extraction-distinct-predicates 6 \
   --runtime-profile balanced \
   --min-best-quality-auroc 0.60 \
   --max-uncached-forward-seconds 40 \
@@ -2002,6 +2005,13 @@ route set should enforce the same rule-based evidence without using
 `strict_audit`.
 This keeps retrieval/database/world-model/audit adapter work inside the same
 fail-closed release gate instead of treating it as a separate benchmark note.
+Add `--triple-extraction-fixture-matrix` when release should also require a
+promoted cross-corpus extractor benchmark from
+`run_triple_extraction_fixture_matrix.py`. Use
+`--min-triple-extraction-corpora` and
+`--min-triple-extraction-distinct-predicates` to fail closed unless the matrix
+covers enough promoted corpora and predicate diversity before extractor
+templates become release evidence.
 Release-candidate runtime-budget flags are delegated to the route-baseline
 comparison, so the final release blocks when the selected route baseline exceeds
 the configured total runtime, retrieval-hit, or cache-reuse budgets.

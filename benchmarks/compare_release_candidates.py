@@ -83,6 +83,11 @@ def compare_release_candidates(
     adapter_family_profile: str | None = None,
     required_adapter_routes: Sequence[str] = (),
     require_state_transition_world_model: bool = False,
+    triple_extraction_fixture_matrix_path: str | Path | None = None,
+    triple_extraction_fixture_matrix_registry_path: str | Path | None = None,
+    triple_extraction_fixture_matrix_key: str | None = None,
+    min_triple_extraction_corpora: int | None = None,
+    min_triple_extraction_distinct_predicates: int | None = None,
     require_performance_score_dump_cache: bool = False,
     min_performance_score_dump_cache_jsonl_view_hit_rate: float | None = None,
     performance_drift_baseline_key: str | None = None,
@@ -311,6 +316,14 @@ def compare_release_candidates(
     )
     if adapter_profile_name is not None and adapter_family_matrix_path is None:
         raise ValueError("adapter_family_profile requires adapter_family_matrix_path.")
+    min_triple_extraction_corpora = _validate_optional_non_negative_int(
+        min_triple_extraction_corpora,
+        name="min_triple_extraction_corpora",
+    )
+    min_triple_extraction_distinct_predicates = _validate_optional_non_negative_int(
+        min_triple_extraction_distinct_predicates,
+        name="min_triple_extraction_distinct_predicates",
+    )
     product_trace_replay_workflow_source = _resolve_product_trace_replay_workflow_source(
         product_trace_replay_workflow_path=product_trace_replay_workflow_path,
         product_trace_replay_workflow_registry_path=(
@@ -463,6 +476,25 @@ def compare_release_candidates(
         require_state_transition_world_model=bool(require_state_transition_world_model),
         verification_context=verification_context,
     )
+    triple_extraction_fixture_matrix_source = _resolve_triple_extraction_fixture_matrix_source(
+        triple_extraction_fixture_matrix_path=triple_extraction_fixture_matrix_path,
+        triple_extraction_fixture_matrix_registry_path=(
+            triple_extraction_fixture_matrix_registry_path
+            if triple_extraction_fixture_matrix_key is not None
+            else None
+        ),
+        triple_extraction_fixture_matrix_key=triple_extraction_fixture_matrix_key,
+        default_registry_path=readiness_registry_path,
+    )
+    triple_extraction_fixture_matrix = _triple_extraction_fixture_matrix_gate(
+        triple_extraction_fixture_matrix_source=triple_extraction_fixture_matrix_source,
+        recursive=recursive,
+        allow_unverified=allow_unverified,
+        manifest_fingerprint_workers=manifest_fingerprint_workers,
+        min_corpora=min_triple_extraction_corpora,
+        min_distinct_predicates=min_triple_extraction_distinct_predicates,
+        verification_context=verification_context,
+    )
     performance = _performance_baseline_gate(
         performance_registry_path=performance_registry_path,
         performance_baseline_key=performance_baseline_key,
@@ -543,6 +575,7 @@ def compare_release_candidates(
         raw_candidate,
         performance,
         adapter_family,
+        triple_extraction_fixture_matrix,
         required_routes,
         product_trace_replay_workflow,
         selector_replay,
@@ -558,6 +591,7 @@ def compare_release_candidates(
             raw_candidate,
             performance,
             adapter_family,
+            triple_extraction_fixture_matrix,
             required_routes,
             product_trace_replay_workflow,
             selector_replay,
@@ -669,6 +703,19 @@ def compare_release_candidates(
             ),
             "required_adapter_routes": list(required_adapter_routes),
             "require_state_transition_world_model": bool(require_state_transition_world_model),
+            "triple_extraction_fixture_matrix": (
+                None
+                if triple_extraction_fixture_matrix_source is None
+                else str(triple_extraction_fixture_matrix_source["path"])
+            ),
+            "triple_extraction_fixture_matrix_registry": (
+                None
+                if triple_extraction_fixture_matrix_source is None
+                else triple_extraction_fixture_matrix_source.get("registry")
+            ),
+            "triple_extraction_fixture_matrix_key": triple_extraction_fixture_matrix_key,
+            "min_triple_extraction_corpora": min_triple_extraction_corpora,
+            "min_triple_extraction_distinct_predicates": min_triple_extraction_distinct_predicates,
             "require_performance_score_dump_cache": require_performance_score_dump_cache,
             "min_performance_score_dump_cache_jsonl_view_hit_rate": (
                 min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -757,6 +804,7 @@ def compare_release_candidates(
         "frontier_release_evidence_gate": frontier_release_evidence,
         "world_model_signal_workflow_gate": world_model_signal_workflow,
         "adapter_family_matrix_gate": adapter_family,
+        "triple_extraction_fixture_matrix_gate": triple_extraction_fixture_matrix,
         "release_candidate": candidate,
         "decision": decision,
         "notes": list(notes),
@@ -885,6 +933,7 @@ def _decision(
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None = None,
     adapter_family: Mapping[str, Any] | None = None,
+    triple_extraction_fixture_matrix: Mapping[str, Any] | None = None,
     required_routes: Mapping[str, Any] | None = None,
     product_trace_replay_workflow: Mapping[str, Any] | None = None,
     selector_replay: Mapping[str, Any] | None = None,
@@ -903,6 +952,16 @@ def _decision(
     performance_status = None if performance is None else performance.get("status")
     adapter_family_gate = _mapping(None if adapter_family is None else adapter_family.get("gate"))
     adapter_family_status = None if adapter_family is None else adapter_family.get("status")
+    triple_extraction_fixture_matrix_gate = _mapping(
+        None
+        if triple_extraction_fixture_matrix is None
+        else triple_extraction_fixture_matrix.get("gate")
+    )
+    triple_extraction_fixture_matrix_status = (
+        None
+        if triple_extraction_fixture_matrix is None
+        else triple_extraction_fixture_matrix.get("status")
+    )
     required_routes_gate = _mapping(None if required_routes is None else required_routes.get("gate"))
     required_route_status = None if required_routes is None else required_routes.get("status")
     product_trace_replay_workflow_gate = _mapping(
@@ -981,6 +1040,15 @@ def _decision(
             "gate": "adapter_family_matrix",
             "status": adapter_family_status,
             "reasons": list(adapter_family_gate.get("blocking_reasons", ())),
+        })
+    if (
+        triple_extraction_fixture_matrix is not None
+        and triple_extraction_fixture_matrix_gate.get("passed") is not True
+    ):
+        blocking_reasons.append({
+            "gate": "triple_extraction_fixture_matrix",
+            "status": triple_extraction_fixture_matrix_status,
+            "reasons": list(triple_extraction_fixture_matrix_gate.get("blocking_reasons", ())),
         })
     if required_routes is not None and required_routes_gate.get("passed") is not True:
         blocking_reasons.append({
@@ -1066,6 +1134,7 @@ def _decision(
         "route_status": route_status,
         "performance_status": performance_status,
         "adapter_family_status": adapter_family_status,
+        "triple_extraction_fixture_matrix_status": triple_extraction_fixture_matrix_status,
         "required_route_baseline_status": required_route_status,
         "product_trace_replay_workflow_status": product_trace_replay_workflow_status,
         "selector_replay_status": selector_replay_status,
@@ -1084,6 +1153,14 @@ def _decision(
             ()
             if adapter_family is None or adapter_family_gate.get("passed") is not True
             else tuple(adapter_family.get("required_routes", ()))
+        ),
+        "recommended_triple_extraction_fixture_matrix_report": (
+            None
+            if (
+                triple_extraction_fixture_matrix is None
+                or triple_extraction_fixture_matrix_gate.get("passed") is not True
+            )
+            else triple_extraction_fixture_matrix.get("report_path")
         ),
         "required_route_baseline_records": (
             ()
@@ -1374,6 +1451,179 @@ def _adapter_family_statuses(report: Mapping[str, Any]) -> dict[str, str]:
             if status is not None:
                 statuses[str(route)] = str(status)
     return statuses
+
+
+def _triple_extraction_fixture_matrix_gate(
+    *,
+    triple_extraction_fixture_matrix_source: Mapping[str, Any] | None,
+    recursive: bool,
+    allow_unverified: bool,
+    manifest_fingerprint_workers: int,
+    min_corpora: int | None,
+    min_distinct_predicates: int | None,
+    verification_context: ArtifactVerificationContext,
+) -> dict[str, Any] | None:
+    if triple_extraction_fixture_matrix_source is None:
+        return None
+    report_path = Path(triple_extraction_fixture_matrix_source["path"])
+    report, report_error = verification_context.load_json_object(report_path)
+    manifest_path = _triple_extraction_fixture_matrix_manifest_path(report, report_path=report_path)
+    verification = _verify_artifact_manifest(
+        manifest_path,
+        recursive=recursive,
+        max_workers=manifest_fingerprint_workers,
+        artifact_name="triple_extraction_fixture_matrix_manifest",
+        verification_context=verification_context,
+    )
+    gate = _triple_extraction_fixture_matrix_report_gate(
+        report=report,
+        report_error=report_error,
+        manifest_path=manifest_path,
+        verification=verification,
+        allow_unverified=allow_unverified,
+        min_corpora=min_corpora,
+        min_distinct_predicates=min_distinct_predicates,
+    )
+    return {
+        "schema_version": 1,
+        "status": "promote" if gate["passed"] else "blocked",
+        "report_path": str(report_path),
+        "manifest_path": None if manifest_path is None else str(manifest_path),
+        "source": triple_extraction_fixture_matrix_source.get("source"),
+        "registry": triple_extraction_fixture_matrix_source.get("registry"),
+        "record_key": triple_extraction_fixture_matrix_source.get("record_key"),
+        "record": triple_extraction_fixture_matrix_source.get("record"),
+        "workflow": report.get("workflow"),
+        "report_status": report.get("status"),
+        "n_corpora": report.get("n_corpora"),
+        "promoted_corpora": report.get("promoted_corpora"),
+        "distinct_predicate_count": report.get("distinct_predicate_count"),
+        "distinct_predicates": tuple(report.get("distinct_predicates", ())),
+        "mean_baseline_f1": _float_or_none(report.get("mean_baseline_f1")),
+        "mean_best_f1": _float_or_none(report.get("mean_best_f1")),
+        "mean_f1_lift": _float_or_none(report.get("mean_f1_lift")),
+        "verification": verification,
+        "gate": gate,
+    }
+
+
+def _triple_extraction_fixture_matrix_report_gate(
+    *,
+    report: Mapping[str, Any],
+    report_error: str | None,
+    manifest_path: Path | None,
+    verification: Mapping[str, Any],
+    allow_unverified: bool,
+    min_corpora: int | None,
+    min_distinct_predicates: int | None,
+) -> dict[str, Any]:
+    failures = []
+    if report_error is not None:
+        failures.append(f"triple extraction fixture matrix could not be loaded: {report_error}")
+    if manifest_path is None:
+        failures.append("triple extraction fixture matrix artifact manifest is missing")
+    if not bool(verification.get("passed", False)) and not allow_unverified:
+        failures.append("triple extraction fixture matrix manifest verification failed")
+    if report.get("workflow") != "triple_extraction_fixture_matrix":
+        failures.append(
+            "triple extraction fixture matrix workflow is "
+            f"{report.get('workflow')!r}, expected 'triple_extraction_fixture_matrix'"
+        )
+    if report.get("status") != "promote":
+        failures.append(
+            f"triple extraction fixture matrix status is {report.get('status')!r}, expected 'promote'"
+        )
+    n_corpora = _float_or_none(report.get("n_corpora"))
+    promoted_corpora = _float_or_none(report.get("promoted_corpora"))
+    if n_corpora is None:
+        failures.append("triple extraction fixture matrix n_corpora is missing")
+    if promoted_corpora is None:
+        failures.append("triple extraction fixture matrix promoted_corpora is missing")
+    if min_corpora is not None:
+        if n_corpora is None or n_corpora < min_corpora:
+            failures.append(
+                "triple extraction fixture matrix corpus count below "
+                f"{min_corpora}: {report.get('n_corpora')!r}"
+            )
+        if promoted_corpora is None or promoted_corpora < min_corpora:
+            failures.append(
+                "triple extraction fixture matrix promoted corpus count below "
+                f"{min_corpora}: {report.get('promoted_corpora')!r}"
+            )
+    distinct_predicate_count = _float_or_none(report.get("distinct_predicate_count"))
+    if distinct_predicate_count is None:
+        failures.append("triple extraction fixture matrix distinct predicate count is missing")
+    if min_distinct_predicates is not None and (
+        distinct_predicate_count is None
+        or distinct_predicate_count < min_distinct_predicates
+    ):
+        failures.append(
+            "triple extraction fixture matrix distinct predicate count below "
+            f"{min_distinct_predicates}: {report.get('distinct_predicate_count')!r}"
+        )
+    mean_best_f1 = _float_or_none(report.get("mean_best_f1"))
+    if mean_best_f1 is None:
+        failures.append("triple extraction fixture matrix mean_best_f1 is missing")
+    elif mean_best_f1 <= 0.0:
+        failures.append(f"triple extraction fixture matrix mean_best_f1 is non-positive: {mean_best_f1!r}")
+    return {
+        "passed": not failures,
+        "blocking_reasons": failures,
+    }
+
+
+def _triple_extraction_fixture_matrix_manifest_path(
+    report: Mapping[str, Any],
+    *,
+    report_path: Path,
+) -> Path | None:
+    raw_path = _first_present(
+        report.get("artifact_manifest_path"),
+        _nested(report, "paths", "artifact_manifest"),
+    )
+    if raw_path is None:
+        sibling = report_path.parent / "artifact-manifest.json"
+        return sibling if sibling.exists() else None
+    return _resolve_path(raw_path, base_path=report_path)
+
+
+def _resolve_triple_extraction_fixture_matrix_source(
+    *,
+    triple_extraction_fixture_matrix_path: str | Path | None,
+    triple_extraction_fixture_matrix_registry_path: str | Path | None,
+    triple_extraction_fixture_matrix_key: str | None,
+    default_registry_path: str | Path,
+) -> dict[str, Any] | None:
+    if triple_extraction_fixture_matrix_path is not None:
+        if triple_extraction_fixture_matrix_key is not None:
+            raise ValueError(
+                "triple_extraction_fixture_matrix_path is mutually exclusive with "
+                "triple_extraction_fixture_matrix_key."
+            )
+        return {"source": "file", "path": Path(triple_extraction_fixture_matrix_path)}
+    if triple_extraction_fixture_matrix_key is None:
+        if triple_extraction_fixture_matrix_registry_path is not None:
+            raise ValueError(
+                "triple_extraction_fixture_matrix_registry_path requires "
+                "triple_extraction_fixture_matrix_key."
+            )
+        return None
+    registry_path = Path(
+        default_registry_path
+        if triple_extraction_fixture_matrix_registry_path is None
+        else triple_extraction_fixture_matrix_registry_path
+    )
+    registry = ArtifactRegistry.load_json(registry_path)
+    record = registry.get(str(triple_extraction_fixture_matrix_key))
+    if record.artifact_type != "report":
+        raise ValueError(f"registry record {record.key()!r} is not a report.")
+    return {
+        "source": "registry",
+        "registry": str(registry_path),
+        "record_key": record.key(),
+        "record": record.to_dict(),
+        "path": _resolve_registry_record_path(registry_path, record),
+    }
 
 
 def _performance_baseline_gate(
@@ -3330,6 +3580,7 @@ def _candidate_with_gates(
     candidate: Mapping[str, Any] | None,
     performance: Mapping[str, Any] | None,
     adapter_family: Mapping[str, Any] | None,
+    triple_extraction_fixture_matrix: Mapping[str, Any] | None,
     required_routes: Mapping[str, Any] | None,
     product_trace_replay_workflow: Mapping[str, Any] | None,
     selector_replay: Mapping[str, Any] | None,
@@ -3370,6 +3621,29 @@ def _candidate_with_gates(
             "promotion_status": adapter_family.get("promotion_status"),
         }
         manifests["adapter_family_matrix_report"] = adapter_family.get("matrix_path")
+    if triple_extraction_fixture_matrix is not None:
+        payload["triple_extraction_fixture_matrix"] = {
+            "report_path": triple_extraction_fixture_matrix.get("report_path"),
+            "manifest_path": triple_extraction_fixture_matrix.get("manifest_path"),
+            "source": triple_extraction_fixture_matrix.get("source"),
+            "registry": triple_extraction_fixture_matrix.get("registry"),
+            "record_key": triple_extraction_fixture_matrix.get("record_key"),
+            "status": triple_extraction_fixture_matrix.get("report_status"),
+            "n_corpora": triple_extraction_fixture_matrix.get("n_corpora"),
+            "promoted_corpora": triple_extraction_fixture_matrix.get("promoted_corpora"),
+            "distinct_predicate_count": triple_extraction_fixture_matrix.get("distinct_predicate_count"),
+            "distinct_predicates": tuple(
+                triple_extraction_fixture_matrix.get("distinct_predicates", ())
+            ),
+            "mean_best_f1": triple_extraction_fixture_matrix.get("mean_best_f1"),
+            "mean_f1_lift": triple_extraction_fixture_matrix.get("mean_f1_lift"),
+        }
+        manifests["triple_extraction_fixture_matrix_report"] = (
+            triple_extraction_fixture_matrix.get("report_path")
+        )
+        manifests["triple_extraction_fixture_matrix_manifest"] = (
+            triple_extraction_fixture_matrix.get("manifest_path")
+        )
     if required_routes is not None:
         required_rows = tuple(_mapping(row) for row in required_routes.get("rows", ()))
         required_records = tuple(row.get("record_key") for row in required_rows if row.get("record_key") is not None)
@@ -3788,6 +4062,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         adapter_family_profile=args.adapter_family_profile,
         required_adapter_routes=tuple(args.required_adapter_route or ()),
         require_state_transition_world_model=bool(args.require_state_transition_world_model),
+        triple_extraction_fixture_matrix_path=args.triple_extraction_fixture_matrix,
+        triple_extraction_fixture_matrix_registry_path=args.triple_extraction_fixture_matrix_registry,
+        triple_extraction_fixture_matrix_key=args.triple_extraction_fixture_matrix_key,
+        min_triple_extraction_corpora=args.min_triple_extraction_corpora,
+        min_triple_extraction_distinct_predicates=args.min_triple_extraction_distinct_predicates,
         require_performance_score_dump_cache=bool(args.require_performance_score_dump_cache),
         min_performance_score_dump_cache_jsonl_view_hit_rate=(
             args.min_performance_score_dump_cache_jsonl_view_hit_rate
@@ -3876,7 +4155,8 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         f"release_efficiency={decision.get('recommended_release_efficiency_profile')} "
         f"frontier_release_evidence={decision.get('frontier_release_evidence_status')} "
         f"world_model_signal={decision.get('world_model_signal_workflow_status')} "
-        f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')}"
+        f"selfcheck_signal_fusion={decision.get('selfcheck_signal_fusion_workflow_status')} "
+        f"triple_extraction_matrix={decision.get('triple_extraction_fixture_matrix_status')}"
     )
     if args.fail_on_blocked and decision["status"] != "promote":
         raise SystemExit(1)
@@ -3988,6 +4268,25 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--require-state-transition-world-model", action="store_true",
                         help="require adapter-family state_transition evidence to use RuleBasedWorldModelAdapter "
                              "with at least one rule; enabled automatically by strict_audit")
+    parser.add_argument("--triple-extraction-fixture-matrix", default=None,
+                        help="optional triple-extraction fixture matrix report that must promote and verify")
+    parser.add_argument("--triple-extraction-fixture-matrix-registry", default=None,
+                        help="optional ArtifactRegistry JSON path for "
+                             "--triple-extraction-fixture-matrix-key; defaults to --readiness-registry")
+    parser.add_argument("--triple-extraction-fixture-matrix-key", default=None,
+                        help="optional report:<name>:<version> registry key for a triple-extraction matrix")
+    parser.add_argument("--min-triple-extraction-corpora", type=lambda value: _parse_non_negative_int(
+        value,
+        flag="--min-triple-extraction-corpora",
+    ), default=None,
+                        help="optional minimum corpus count and promoted corpus count for the "
+                             "triple-extraction fixture matrix")
+    parser.add_argument("--min-triple-extraction-distinct-predicates",
+                        type=lambda value: _parse_non_negative_int(
+                            value,
+                            flag="--min-triple-extraction-distinct-predicates",
+                        ), default=None,
+                        help="optional minimum distinct predicate count for the triple-extraction fixture matrix")
     parser.add_argument("--require-performance-score-dump-cache", action="store_true",
                         help="require the selected performance baseline to include score-dump cache evidence")
     parser.add_argument("--json", default=None, help="optional path to write JSON report")
