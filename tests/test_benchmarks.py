@@ -12007,10 +12007,19 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
         version="0.1",
         manifest_fingerprint_workers="2",
         adapter_family_profile="strict-audit",
+        required_route_baseline_keys=("benchmark_manifest:retrieval-route:0.7",),
+        require_structured_fact_robustness=True,
+        structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
     )
 
     assert config.manifest_fingerprint_workers == 2
     assert config.adapter_family_profile == "strict_audit"
+    assert config.required_route_baseline_keys == (
+        "benchmark_manifest:retrieval-route:0.7",
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
 
     with pytest.raises(ValueError, match="manifest_fingerprint_workers"):
         module.ReleaseCandidateRegistryWorkflowConfig(
@@ -12035,6 +12044,24 @@ def test_release_candidate_registry_workflow_config_parses_manifest_workers(tmp_
             name="unit-release",
             version="0.1",
             adapter_family_profile="unknown",
+        )
+    with pytest.raises(ValueError, match="structured_fact robustness requires both"):
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            require_structured_fact_robustness=True,
+            structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+        )
+    with pytest.raises(ValueError, match="route keys require require_structured_fact_robustness"):
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=tmp_path / "readiness-registry.json",
+            release_registry_path=tmp_path / "release-registry.json",
+            name="unit-release",
+            version="0.1",
+            structured_fact_canonical_route_key="benchmark_manifest:structured-fact-canonical-route:0.1",
+            structured_fact_paraphrase_route_key="benchmark_manifest:structured-fact-paraphrase-route:0.1",
         )
 
 
@@ -12087,6 +12114,130 @@ def test_release_candidate_registry_workflow_passes_recursive_to_promotion(tmp_p
     assert payload["config"]["manifest_fingerprint_workers"] == 3
     assert payload["config"]["adapter_family_profile"] == "strict_audit"
     assert payload["decision"]["status"] == "promote"
+
+
+def test_run_release_candidate_registry_workflow_records_structured_fact_robustness_evidence(tmp_path):
+    module = importlib.import_module("benchmarks.run_release_candidate_registry_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    baseline_registry_path = tmp_path / "baseline-registry.json"
+    release_registry_path = tmp_path / "release-registry.json"
+    _write_readiness_baseline_manifest(
+        tmp_path / "readiness",
+        registry_path=baseline_registry_path,
+        name="qwen-readiness",
+        version="0.6",
+        model="Qwen/Qwen2.5-0.5B-Instruct",
+        layer=-12,
+        quality_signals={"truth_proj": 0.72},
+        uncached_forward_seconds=18.0,
+        cache_only_seconds=0.20,
+    )
+    canonical_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-canonical",
+        route="structured_fact",
+        selected=718,
+    )
+    paraphrase_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+    )
+    registry = ArtifactRegistry.load_json(baseline_registry_path)
+    registry.record_benchmark_manifest(
+        name="structured-fact-canonical-route",
+        path=canonical_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.record_benchmark_manifest(
+        name="structured-fact-paraphrase-route",
+        path=paraphrase_manifest,
+        version="0.1",
+        metadata={"workflow": "wikidata_structured_qa_route_workflow"},
+    )
+    registry.save_json()
+
+    payload = module.run_release_candidate_registry_workflow(
+        module.ReleaseCandidateRegistryWorkflowConfig(
+            readiness_registry_path=baseline_registry_path,
+            release_registry_path=release_registry_path,
+            name="qwen-structured-fact-release",
+            version="0.1",
+            workflow_report_path=tmp_path / "workflow.json",
+            release_report_path=tmp_path / "release-candidate.json",
+            artifact_manifest_path=tmp_path / "release-manifest.json",
+            verification_report_path=tmp_path / "release-verification.json",
+            route_baseline_keys=("benchmark_manifest:structured-fact-canonical-route:0.1",),
+            require_structured_fact_robustness=True,
+            structured_fact_canonical_route_key=(
+                "benchmark_manifest:structured-fact-canonical-route:0.1"
+            ),
+            structured_fact_paraphrase_route_key=(
+                "benchmark_manifest:structured-fact-paraphrase-route:0.1"
+            ),
+            min_best_quality_auroc=0.70,
+            max_uncached_forward_seconds=20.0,
+            min_selected=700,
+            min_decision_accuracy=0.99,
+            max_false_supported_rate=0.0,
+            min_false_refuted_rate=0.99,
+            required_route_min_selected=700,
+            required_route_min_decision_accuracy=0.99,
+            required_route_max_false_supported_rate=0.0,
+            required_route_min_false_refuted_rate=0.99,
+        )
+    )
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["config"]["required_route_baseline_keys"] == (
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    )
+    assert payload["config"]["require_structured_fact_robustness"] is True
+    assert (
+        payload["release_candidate_comparison"]["config"]["require_structured_fact_robustness"]
+        is True
+    )
+    assert payload["release_candidate_comparison"]["config"]["required_route_baseline_keys"] == [
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    ]
+    manifest = json.loads((tmp_path / "release-manifest.json").read_text(encoding="utf-8"))
+    assert {
+        "required_route_manifest_1",
+        "required_route_manifest_2",
+    }.issubset(manifest["artifacts"])
+    assert manifest["metadata"]["structured_fact_robustness_required"] is True
+    assert manifest["metadata"]["structured_fact_robustness_records"] == [
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    ]
+    assert manifest["metadata"]["structured_fact_robustness_routes"] == [
+        "structured_fact",
+        "structured_fact",
+    ]
+    assert manifest["metadata"]["structured_fact_robustness_manifests"] == [
+        str(canonical_manifest),
+        str(paraphrase_manifest),
+    ]
+
+    record = ArtifactRegistry.load_json(release_registry_path).get(
+        "benchmark_manifest:qwen-structured-fact-release:0.1"
+    )
+    assert record.metadata["release_candidate_status"] == "promote"
+    assert record.metadata["release_required_route_baseline_status"] == "promote"
+    assert record.metadata["structured_fact_robustness_required"] is True
+    assert record.metadata["structured_fact_robustness_records"] == [
+        "benchmark_manifest:structured-fact-canonical-route:0.1",
+        "benchmark_manifest:structured-fact-paraphrase-route:0.1",
+    ]
+    assert record.metadata["structured_fact_robustness_manifests"] == [
+        str(canonical_manifest),
+        str(paraphrase_manifest),
+    ]
 
 
 def test_run_release_candidate_registry_workflow_registers_promoted_candidate(tmp_path, monkeypatch):

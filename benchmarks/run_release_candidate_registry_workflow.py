@@ -33,6 +33,25 @@ from eigentruth.registry import (  # noqa: E402
 )
 
 
+def _clean_optional_key(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
+
+
+def _append_unique(existing: Sequence[str], additions: Sequence[str | None]) -> tuple[str, ...]:
+    values = list(existing)
+    seen = set(values)
+    for raw in additions:
+        value = _clean_optional_key(raw)
+        if value is None or value in seen:
+            continue
+        values.append(value)
+        seen.add(value)
+    return tuple(values)
+
+
 @dataclass(frozen=True)
 class ReleaseCandidateRegistryWorkflowConfig:
     """Configuration for registering a promoted release-candidate manifest."""
@@ -46,6 +65,9 @@ class ReleaseCandidateRegistryWorkflowConfig:
     readiness_baseline_keys: Sequence[str] = ()
     route_baseline_keys: Sequence[str] = ()
     required_route_baseline_keys: Sequence[str] = ()
+    require_structured_fact_robustness: bool = False
+    structured_fact_canonical_route_key: str | None = None
+    structured_fact_paraphrase_route_key: str | None = None
     performance_baseline_key: str | None = None
     selector_replay_report_path: Path | None = None
     product_runtime_drift_report_path: Path | None = None
@@ -238,10 +260,26 @@ class ReleaseCandidateRegistryWorkflowConfig:
             object.__setattr__(self, "inside_trigger_budget_policy", policy)
         object.__setattr__(self, "readiness_baseline_keys", tuple(str(key) for key in self.readiness_baseline_keys))
         object.__setattr__(self, "route_baseline_keys", tuple(str(key) for key in self.route_baseline_keys))
+        canonical_key = _clean_optional_key(self.structured_fact_canonical_route_key)
+        paraphrase_key = _clean_optional_key(self.structured_fact_paraphrase_route_key)
+        object.__setattr__(self, "structured_fact_canonical_route_key", canonical_key)
+        object.__setattr__(self, "structured_fact_paraphrase_route_key", paraphrase_key)
+        if self.require_structured_fact_robustness and (canonical_key is None or paraphrase_key is None):
+            raise ValueError(
+                "structured_fact robustness requires both "
+                "structured_fact_canonical_route_key and structured_fact_paraphrase_route_key."
+            )
+        if not self.require_structured_fact_robustness and (canonical_key is not None or paraphrase_key is not None):
+            raise ValueError(
+                "structured_fact route keys require require_structured_fact_robustness=True."
+            )
+        required_route_keys = tuple(str(key) for key in self.required_route_baseline_keys)
+        if self.require_structured_fact_robustness:
+            required_route_keys = _append_unique(required_route_keys, (canonical_key, paraphrase_key))
         object.__setattr__(
             self,
             "required_route_baseline_keys",
-            tuple(str(key) for key in self.required_route_baseline_keys),
+            required_route_keys,
         )
         object.__setattr__(self, "required_adapter_routes", tuple(str(route) for route in self.required_adapter_routes))
 
@@ -393,6 +431,7 @@ def run_release_candidate_registry_workflow(
         json_cache_stats=json_cache_stats,
         manifest_fingerprint_workers=config.manifest_fingerprint_workers,
     )
+    comparison = _comparison_with_registry_config(comparison, config)
     _record_phase_seconds("compare", phase_timings, phase_started)
     phase_started = time.perf_counter()
     _write_json_payload(config.comparison_path, comparison)
@@ -500,6 +539,9 @@ def run_release_candidate_registry_workflow(
                 config.feedback_policy_max_unknown_safety_issue_rate
             ),
             "required_route_baseline_keys": tuple(config.required_route_baseline_keys),
+            "require_structured_fact_robustness": config.require_structured_fact_robustness,
+            "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
+            "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
             "adapter_family_matrix": (
                 None
                 if config.adapter_family_matrix_path is None
@@ -635,6 +677,22 @@ def _write_json_payload(path: Path, payload: Mapping[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _comparison_with_registry_config(
+    comparison: Mapping[str, Any],
+    config: ReleaseCandidateRegistryWorkflowConfig,
+) -> dict[str, Any]:
+    payload = dict(comparison)
+    comparison_config = dict(payload.get("config") or {})
+    comparison_config.update({
+        "required_route_baseline_keys": list(config.required_route_baseline_keys),
+        "require_structured_fact_robustness": config.require_structured_fact_robustness,
+        "structured_fact_canonical_route_key": config.structured_fact_canonical_route_key,
+        "structured_fact_paraphrase_route_key": config.structured_fact_paraphrase_route_key,
+    })
+    payload["config"] = comparison_config
+    return payload
+
+
 def _round_seconds(value: float) -> float:
     return round(max(0.0, float(value)), 6)
 
@@ -739,6 +797,10 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     manifests = dict(candidate.get("manifests") or {})
     adapter_family = dict(candidate.get("adapter_family_matrix") or {})
     required_route_baselines = dict(candidate.get("required_route_baselines") or {})
+    structured_fact_robustness = _structured_fact_robustness_metadata(
+        config,
+        required_route_baselines,
+    )
     selector_replay = dict(candidate.get("selector_replay") or {})
     selector_replay_recommended = dict(selector_replay.get("recommended") or {})
     product_runtime_drift = dict(candidate.get("product_runtime_drift") or {})
@@ -947,6 +1009,16 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
         "release_route_max_stress_false_refuted_rate": config.get(
             "max_stress_false_refuted_rate"
         ),
+        "structured_fact_robustness_required": structured_fact_robustness["required"],
+        "structured_fact_robustness_canonical_route_key": (
+            structured_fact_robustness["canonical_route_key"]
+        ),
+        "structured_fact_robustness_paraphrase_route_key": (
+            structured_fact_robustness["paraphrase_route_key"]
+        ),
+        "structured_fact_robustness_records": structured_fact_robustness["records"],
+        "structured_fact_robustness_routes": structured_fact_robustness["routes"],
+        "structured_fact_robustness_manifests": structured_fact_robustness["manifests"],
         "selector_replay_report": selector_replay.get("report_path"),
         "selector_replay_recommended_policy_path": selector_replay.get("recommended_policy_path"),
         "selector_replay_estimated_cost_units_mean": selector_replay_recommended.get(
@@ -1089,6 +1161,47 @@ def _manifest_metadata(comparison: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _structured_fact_robustness_metadata(
+    config: Mapping[str, Any],
+    required_route_baselines: Mapping[str, Any],
+) -> dict[str, Any]:
+    canonical_key = config.get("structured_fact_canonical_route_key")
+    paraphrase_key = config.get("structured_fact_paraphrase_route_key")
+    target_keys = tuple(
+        str(key)
+        for key in (canonical_key, paraphrase_key)
+        if key is not None
+    )
+    records = list(required_route_baselines.get("records") or ())
+    routes = list(required_route_baselines.get("routes") or ())
+    manifests = list(required_route_baselines.get("manifest_paths") or ())
+    by_record: dict[str, dict[str, Any]] = {}
+    for idx, record in enumerate(records):
+        key = str(record)
+        by_record[key] = {
+            "route": routes[idx] if idx < len(routes) else None,
+            "manifest": manifests[idx] if idx < len(manifests) else None,
+        }
+    selected_records: list[str] = []
+    selected_routes: list[Any] = []
+    selected_manifests: list[Any] = []
+    for key in target_keys:
+        entry = by_record.get(key)
+        if entry is None:
+            continue
+        selected_records.append(key)
+        selected_routes.append(entry["route"])
+        selected_manifests.append(entry["manifest"])
+    return {
+        "required": bool(config.get("require_structured_fact_robustness")),
+        "canonical_route_key": canonical_key,
+        "paraphrase_route_key": paraphrase_key,
+        "records": selected_records,
+        "routes": selected_routes,
+        "manifests": selected_manifests,
+    }
+
+
 def _promotion_metadata(
     config: ReleaseCandidateRegistryWorkflowConfig,
     comparison: Mapping[str, Any],
@@ -1173,6 +1286,9 @@ def _config_from_args(args: argparse.Namespace) -> ReleaseCandidateRegistryWorkf
         readiness_baseline_keys=tuple(args.readiness_baseline_key or ()),
         route_baseline_keys=tuple(args.route_baseline_key or ()),
         required_route_baseline_keys=tuple(args.required_route_baseline_key or ()),
+        require_structured_fact_robustness=bool(args.require_structured_fact_robustness),
+        structured_fact_canonical_route_key=args.structured_fact_canonical_route_key,
+        structured_fact_paraphrase_route_key=args.structured_fact_paraphrase_route_key,
         performance_baseline_key=args.performance_baseline_key,
         selector_replay_report_path=(
             None if args.selector_replay_report is None else Path(args.selector_replay_report)
@@ -1343,6 +1459,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--required-route-baseline-key", action="append", default=[],
                         help="additional promoted route benchmark_manifest key that must verify without "
                              "becoming the selected product route; repeatable")
+    parser.add_argument("--require-structured-fact-robustness", action="store_true",
+                        help="require both canonical and paraphrase structured_fact covered-facts route "
+                             "baselines as additional release evidence")
+    parser.add_argument("--structured-fact-canonical-route-key", default=None,
+                        help="benchmark_manifest:<name>:<version> key for the canonical structured_fact route")
+    parser.add_argument("--structured-fact-paraphrase-route-key", default=None,
+                        help="benchmark_manifest:<name>:<version> key for the paraphrase robustness "
+                             "structured_fact route")
     parser.add_argument("--performance-baseline-key", default=None,
                         help="optional performance_baseline registry key that must match the selected runtime")
     parser.add_argument("--performance-drift-baseline-key", default=None,

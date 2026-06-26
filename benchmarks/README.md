@@ -1924,6 +1924,13 @@ when the gate promotes. Required-route budget settings are also copied into
 manifest metadata as `required_route_budget_policy`, including
 `--required-route-require-non-oracle-evidence` when the audit route must prove
 label-free local retrieval claims.
+Use `--require-structured-fact-robustness` with
+`--structured-fact-canonical-route-key` and
+`--structured-fact-paraphrase-route-key` when the release must carry both
+canonical and paraphrase `structured_fact` covered-facts evidence. The workflow
+adds those two records to the required-route gate and records
+`structured_fact_robustness_*` fields in the comparison report, final manifest,
+and release registry metadata.
 It also forwards `--max-covariance-maha-last-auroc-drop` to the underlying
 readiness and performance-baseline covariance tradeoff gates. Add
 `--fingerprint-cache` for repeated local release checks so recursive manifest
@@ -1951,6 +1958,9 @@ python benchmarks/run_release_candidate_registry_workflow.py \
   --performance-baseline-key performance_baseline:qwen05-performance-baseline:0.1 \
   --performance-drift-baseline-key performance_baseline:qwen05-performance-baseline:0.0 \
   --max-covariance-maha-last-auroc-drop 0.05 \
+  --require-structured-fact-robustness \
+  --structured-fact-canonical-route-key benchmark_manifest:structured-fact-canonical-route:0.1 \
+  --structured-fact-paraphrase-route-key benchmark_manifest:structured-fact-paraphrase-route:0.1 \
   --product-trace-replay-workflow-key report:qwen05-product-trace-replay-workflow:0.1 \
   --feedback-policy-workflow-key report:<feedback-policy-workflow-name>:<version> \
   --feedback-policy-min-matched-feedback-count 20 \
