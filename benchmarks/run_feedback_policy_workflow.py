@@ -72,6 +72,8 @@ class FeedbackPolicyWorkflowConfig:
     recommendation_max_accepted_but_wrong_rate: float = 0.05
     recommendation_max_retrieved_failure_rate: float = 0.10
     recommendation_max_abstain_false_positive_rate: float = 0.20
+    recommendation_max_final_answered_but_wrong_rate: float | None = None
+    recommendation_max_final_answer_false_block_rate: float | None = None
     replay_min_matched_feedback_count: int = 20
     min_safety_coverage: float = 0.50
     max_unknown_safety_issue_rate: float = 0.50
@@ -177,6 +179,22 @@ class FeedbackPolicyWorkflowConfig:
             _unit_float(
                 self.recommendation_max_abstain_false_positive_rate,
                 name="recommendation_max_abstain_false_positive_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "recommendation_max_final_answered_but_wrong_rate",
+            _optional_unit_float(
+                self.recommendation_max_final_answered_but_wrong_rate,
+                name="recommendation_max_final_answered_but_wrong_rate",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "recommendation_max_final_answer_false_block_rate",
+            _optional_unit_float(
+                self.recommendation_max_final_answer_false_block_rate,
+                name="recommendation_max_final_answer_false_block_rate",
             ),
         )
         object.__setattr__(
@@ -291,6 +309,10 @@ def run_feedback_policy_workflow(config: FeedbackPolicyWorkflowConfig) -> dict[s
             max_accepted_but_wrong_rate=config.recommendation_max_accepted_but_wrong_rate,
             max_retrieved_failure_rate=config.recommendation_max_retrieved_failure_rate,
             max_abstain_false_positive_rate=config.recommendation_max_abstain_false_positive_rate,
+            max_final_answered_but_wrong_rate=(
+                config.recommendation_max_final_answered_but_wrong_rate
+            ),
+            max_final_answer_false_block_rate=config.recommendation_max_final_answer_false_block_rate,
             rate_statistic=config.rate_statistic,
             compact_json=config.compact_json,
         )
@@ -356,6 +378,12 @@ def run_feedback_policy_workflow(config: FeedbackPolicyWorkflowConfig) -> dict[s
                 "max_accepted_but_wrong_rate": config.recommendation_max_accepted_but_wrong_rate,
                 "max_retrieved_failure_rate": config.recommendation_max_retrieved_failure_rate,
                 "max_abstain_false_positive_rate": config.recommendation_max_abstain_false_positive_rate,
+                "max_final_answered_but_wrong_rate": (
+                    config.recommendation_max_final_answered_but_wrong_rate
+                ),
+                "max_final_answer_false_block_rate": (
+                    config.recommendation_max_final_answer_false_block_rate
+                ),
                 "rate_statistic": config.rate_statistic,
             },
             "replay_gates": {
@@ -716,6 +744,12 @@ def _config_from_args(args: argparse.Namespace) -> FeedbackPolicyWorkflowConfig:
         recommendation_max_accepted_but_wrong_rate=args.recommendation_max_accepted_but_wrong_rate,
         recommendation_max_retrieved_failure_rate=args.recommendation_max_retrieved_failure_rate,
         recommendation_max_abstain_false_positive_rate=args.recommendation_max_abstain_false_positive_rate,
+        recommendation_max_final_answered_but_wrong_rate=(
+            args.recommendation_max_final_answered_but_wrong_rate
+        ),
+        recommendation_max_final_answer_false_block_rate=(
+            args.recommendation_max_final_answer_false_block_rate
+        ),
         replay_min_matched_feedback_count=args.replay_min_matched_feedback_count,
         min_safety_coverage=args.min_safety_coverage,
         max_unknown_safety_issue_rate=args.max_unknown_safety_issue_rate,
@@ -781,6 +815,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--recommendation-max-accepted-but-wrong-rate", type=float, default=0.05)
     parser.add_argument("--recommendation-max-retrieved-failure-rate", type=float, default=0.10)
     parser.add_argument("--recommendation-max-abstain-false-positive-rate", type=float, default=0.20)
+    parser.add_argument("--recommendation-max-final-answered-but-wrong-rate", type=float, default=None)
+    parser.add_argument("--recommendation-max-final-answer-false-block-rate", type=float, default=None)
     parser.add_argument("--replay-min-matched-feedback-count", type=int, default=20)
     parser.add_argument("--min-safety-coverage", type=float, default=0.50)
     parser.add_argument("--max-unknown-safety-issue-rate", type=float, default=0.50)

@@ -52,6 +52,8 @@ class FeedbackPolicyRecommendationConfig:
     max_accepted_but_wrong_rate: float = 0.05
     max_retrieved_failure_rate: float = 0.10
     max_abstain_false_positive_rate: float = 0.20
+    max_final_answered_but_wrong_rate: float | None = None
+    max_final_answer_false_block_rate: float | None = None
     rate_statistic: str = "upper"
     compact_json: bool = False
 
@@ -105,6 +107,32 @@ class FeedbackPolicyRecommendationConfig:
                 name="max_abstain_false_positive_rate",
             ),
         )
+        final_answered_threshold = (
+            self.max_accepted_but_wrong_rate
+            if self.max_final_answered_but_wrong_rate is None
+            else self.max_final_answered_but_wrong_rate
+        )
+        object.__setattr__(
+            self,
+            "max_final_answered_but_wrong_rate",
+            _unit_float(
+                final_answered_threshold,
+                name="max_final_answered_but_wrong_rate",
+            ),
+        )
+        final_block_threshold = (
+            self.max_abstain_false_positive_rate
+            if self.max_final_answer_false_block_rate is None
+            else self.max_final_answer_false_block_rate
+        )
+        object.__setattr__(
+            self,
+            "max_final_answer_false_block_rate",
+            _unit_float(
+                final_block_threshold,
+                name="max_final_answer_false_block_rate",
+            ),
+        )
         object.__setattr__(self, "rate_statistic", rate_statistic)
         object.__setattr__(self, "compact_json", strict_bool(self.compact_json, name="compact_json"))
 
@@ -152,6 +180,8 @@ def build_feedback_policy_recommendation(
             "max_accepted_but_wrong_rate": config.max_accepted_but_wrong_rate,
             "max_retrieved_failure_rate": config.max_retrieved_failure_rate,
             "max_abstain_false_positive_rate": config.max_abstain_false_positive_rate,
+            "max_final_answered_but_wrong_rate": config.max_final_answered_but_wrong_rate,
+            "max_final_answer_false_block_rate": config.max_final_answer_false_block_rate,
             "rate_statistic": config.rate_statistic,
             "metadata": dict(config.metadata),
         },
@@ -206,6 +236,18 @@ def _recommend_policy(
             threshold=config.max_abstain_false_positive_rate,
             statistic=config.rate_statistic,
         ),
+        "final_answered_but_wrong": _rate_signal(
+            rates,
+            "final_answered_but_wrong_rate",
+            threshold=config.max_final_answered_but_wrong_rate,
+            statistic=config.rate_statistic,
+        ),
+        "final_answer_false_block": _rate_signal(
+            rates,
+            "final_answer_false_block_rate",
+            threshold=config.max_final_answer_false_block_rate,
+            statistic=config.rate_statistic,
+        ),
     }
     insufficient_evidence = matched_count < config.min_matched_feedback_count
     policy = base_policy.to_dict()
@@ -216,6 +258,10 @@ def _recommend_policy(
     accepted_high = bool(signals["accepted_but_wrong"]["triggered"])
     retrieved_high = bool(signals["retrieved_failure"]["triggered"])
     abstain_fp_high = bool(signals["abstain_false_positive"]["triggered"])
+    final_answered_high = bool(signals["final_answered_but_wrong"]["triggered"])
+    final_block_high = bool(signals["final_answer_false_block"]["triggered"])
+    safety_high = accepted_high or retrieved_high or final_answered_high
+    overblock_high = abstain_fp_high or final_block_high
 
     if insufficient_evidence:
         reasons.append(
@@ -224,6 +270,9 @@ def _recommend_policy(
 
     if accepted_high:
         reasons.append("accepted answers have excessive wrong/unsupported feedback")
+    if final_answered_high:
+        reasons.append("final answered responses have excessive wrong/unsupported feedback")
+    if accepted_high or final_answered_high:
         policy["compound_verification_escalates"] = True
         policy["compound_risk_action"] = ControlAction.ABSTAIN.value
         policy["compound_risk_level"] = RiskLevel.HIGH.value
@@ -246,8 +295,11 @@ def _recommend_policy(
             int(control_defaults.get("max_verifier_route_attempts", 0)),
         )
 
-    if abstain_fp_high and not (accepted_high or retrieved_high):
+    if abstain_fp_high:
         reasons.append("abstain actions have excessive correct/unnecessary-block feedback")
+    if final_block_high:
+        reasons.append("final blocking responses have excessive correct/unnecessary-block feedback")
+    if overblock_high and not safety_high:
         policy["compound_verification_escalates"] = False
         policy["compound_risk_action"] = ControlAction.RETRIEVE.value
         policy["unsupported_action"] = ControlAction.RETRIEVE.value
@@ -259,9 +311,9 @@ def _recommend_policy(
             "stage_verify_triggered_claims_only": True,
             "max_verifier_route_attempts": 1,
         })
-    elif abstain_fp_high:
+    elif overblock_high:
         tradeoffs.append(
-            "abstain false positives are elevated, but safety feedback is also elevated; "
+            "block false positives are elevated, but safety feedback is also elevated; "
             "recommendation keeps the stricter safety posture"
         )
 
@@ -270,7 +322,7 @@ def _recommend_policy(
 
     if insufficient_evidence:
         status = "needs_evidence"
-    elif accepted_high or retrieved_high or abstain_fp_high:
+    elif safety_high or overblock_high:
         status = "recommend"
     else:
         status = "observed"
@@ -304,15 +356,26 @@ def _aggregate_feedback_summaries(reports: Sequence[Mapping[str, Any]]) -> dict[
         "retrieved_but_still_unsupported_count": 0,
         "abstain_feedback_count": 0,
         "abstain_false_positive_count": 0,
+        "final_answer_available_feedback_count": 0,
+        "final_answer_unavailable_feedback_count": 0,
+        "final_answered_feedback_count": 0,
+        "final_answerable_feedback_count": 0,
+        "final_answer_block_feedback_count": 0,
+        "final_answered_but_wrong_count": 0,
+        "final_answer_false_block_count": 0,
     }
     outcome_counts: dict[str, int] = {}
     action_counts: dict[str, int] = {}
+    final_answer_status_counts: dict[str, int] = {}
+    final_answer_action_counts: dict[str, int] = {}
     for report in reports:
         summary = _mapping(report.get("summary"))
         for key in counts:
             counts[key] += _int_value(summary.get(key))
         _merge_counts(outcome_counts, _mapping(summary.get("outcome_counts")))
         _merge_counts(action_counts, _mapping(summary.get("decision_action_counts")))
+        _merge_counts(final_answer_status_counts, _mapping(summary.get("final_answer_status_counts")))
+        _merge_counts(final_answer_action_counts, _mapping(summary.get("final_answer_action_counts")))
     return {
         **counts,
         "match_rate": binomial_confidence_interval(
@@ -321,6 +384,8 @@ def _aggregate_feedback_summaries(reports: Sequence[Mapping[str, Any]]) -> dict[
         ),
         "outcome_counts": outcome_counts,
         "decision_action_counts": action_counts,
+        "final_answer_status_counts": final_answer_status_counts,
+        "final_answer_action_counts": final_answer_action_counts,
         "rates": {
             "accepted_but_wrong_rate": binomial_confidence_interval(
                 counts["accepted_but_wrong_count"],
@@ -337,6 +402,14 @@ def _aggregate_feedback_summaries(reports: Sequence[Mapping[str, Any]]) -> dict[
             "abstain_false_positive_rate": binomial_confidence_interval(
                 counts["abstain_false_positive_count"],
                 counts["abstain_feedback_count"],
+            ),
+            "final_answered_but_wrong_rate": binomial_confidence_interval(
+                counts["final_answered_but_wrong_count"],
+                counts["final_answered_feedback_count"],
+            ),
+            "final_answer_false_block_rate": binomial_confidence_interval(
+                counts["final_answer_false_block_count"],
+                counts["final_answer_block_feedback_count"],
             ),
         },
     }
@@ -456,6 +529,20 @@ def _record_registry(
                 "abstain_false_positive_rate",
                 "estimate",
             ),
+            "final_answered_but_wrong_rate": _nested(
+                report,
+                "aggregate_feedback",
+                "rates",
+                "final_answered_but_wrong_rate",
+                "estimate",
+            ),
+            "final_answer_false_block_rate": _nested(
+                report,
+                "aggregate_feedback",
+                "rates",
+                "final_answer_false_block_rate",
+                "estimate",
+            ),
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "saved_control_policy": (
                 None
@@ -519,6 +606,8 @@ def _config_from_args(args: argparse.Namespace) -> FeedbackPolicyRecommendationC
         max_accepted_but_wrong_rate=args.max_accepted_but_wrong_rate,
         max_retrieved_failure_rate=args.max_retrieved_failure_rate,
         max_abstain_false_positive_rate=args.max_abstain_false_positive_rate,
+        max_final_answered_but_wrong_rate=args.max_final_answered_but_wrong_rate,
+        max_final_answer_false_block_rate=args.max_final_answer_false_block_rate,
         rate_statistic=args.rate_statistic,
         compact_json=bool(args.compact_json),
     )
@@ -561,6 +650,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-accepted-but-wrong-rate", type=float, default=0.05)
     parser.add_argument("--max-retrieved-failure-rate", type=float, default=0.10)
     parser.add_argument("--max-abstain-false-positive-rate", type=float, default=0.20)
+    parser.add_argument("--max-final-answered-but-wrong-rate", type=float, default=None)
+    parser.add_argument("--max-final-answer-false-block-rate", type=float, default=None)
     parser.add_argument("--rate-statistic", choices=sorted(_RATE_STATISTICS), default="upper",
                         help="rate field used for recommendation triggers")
     parser.add_argument("--compact-json", action="store_true", help="write compact JSON")

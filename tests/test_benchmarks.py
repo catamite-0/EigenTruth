@@ -19967,8 +19967,17 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
                 "retrieved_but_still_unsupported_count": 2,
                 "abstain_feedback_count": 5,
                 "abstain_false_positive_count": 0,
+                "final_answer_available_feedback_count": 25,
+                "final_answer_unavailable_feedback_count": 5,
+                "final_answered_feedback_count": 20,
+                "final_answerable_feedback_count": 25,
+                "final_answer_block_feedback_count": 5,
+                "final_answered_but_wrong_count": 4,
+                "final_answer_false_block_count": 0,
                 "outcome_counts": {"incorrect": 4, "unsupported": 2, "correct": 24},
                 "decision_action_counts": {"accept": 20, "retrieve": 5, "abstain": 5},
+                "final_answer_status_counts": {"answered": 20, "needs_retrieval": 5},
+                "final_answer_action_counts": {"accept": 20, "retrieve": 5},
             },
         }),
         encoding="utf-8",
@@ -19994,6 +20003,8 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
             max_accepted_but_wrong_rate=0.05,
             max_retrieved_failure_rate=0.10,
             max_abstain_false_positive_rate=0.20,
+            max_final_answered_but_wrong_rate=0.05,
+            max_final_answer_false_block_rate=1.0,
             rate_statistic="estimate",
         )
     )
@@ -20004,8 +20015,11 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
 
     assert report["status"] == "recommend"
     assert report["aggregate_feedback"]["trace_matched_feedback_count"] == 30
+    assert report["aggregate_feedback"]["final_answered_but_wrong_count"] == 4
+    assert report["aggregate_feedback"]["rates"]["final_answered_but_wrong_rate"]["estimate"] == pytest.approx(0.2)
     assert report["recommendation"]["rate_signals"]["accepted_but_wrong"]["triggered"] is True
     assert report["recommendation"]["rate_signals"]["retrieved_failure"]["triggered"] is True
+    assert report["recommendation"]["rate_signals"]["final_answered_but_wrong"]["triggered"] is True
     assert saved_policy["unsupported_action"] == "clarify"
     assert saved_policy["compound_risk_action"] == "abstain"
     assert saved_policy["compound_verification_escalates"] is True
@@ -20016,6 +20030,7 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
     assert saved_defaults["max_verifier_route_attempts"] == 2
     assert record.metadata["workflow"] == "feedback_policy_recommendation"
     assert record.metadata["saved_control_policy"] == str(policy_path)
+    assert record.metadata["final_answered_but_wrong_rate"] == pytest.approx(0.2)
     assert record.metadata["suite"] == "unit"
     assert registry_module.load_and_verify_artifact_manifest(manifest_path).passed is True
 
@@ -20035,6 +20050,77 @@ def test_feedback_policy_recommendation_uses_feedback_report_and_registers(tmp_p
             output_path=tmp_path / "invalid-policy-recommendation.json",
             max_accepted_but_wrong_rate=False,
         )
+    with pytest.raises(ValueError, match="not bool"):
+        module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report,),
+            output_path=tmp_path / "invalid-final-policy-recommendation.json",
+            max_final_answer_false_block_rate=True,
+        )
+
+
+def test_feedback_policy_recommendation_uses_final_answer_false_block_signal(tmp_path):
+    module = importlib.import_module("benchmarks.recommend_control_policy_from_feedback")
+
+    feedback_report = tmp_path / "feedback-report.json"
+    feedback_report.write_text(
+        json.dumps({
+            "workflow": "product_feedback_report",
+            "status": "passed",
+            "summary": {
+                "trace_matched_feedback_count": 20,
+                "unmatched_feedback_count": 0,
+                "feedback_count": 20,
+                "claim_level_feedback_count": 0,
+                "accepted_feedback_count": 10,
+                "accepted_but_wrong_count": 0,
+                "retrieved_feedback_count": 0,
+                "retrieved_failure_count": 0,
+                "retrieved_but_still_unsupported_count": 0,
+                "abstain_feedback_count": 0,
+                "abstain_false_positive_count": 0,
+                "final_answer_available_feedback_count": 20,
+                "final_answer_unavailable_feedback_count": 0,
+                "final_answered_feedback_count": 10,
+                "final_answerable_feedback_count": 20,
+                "final_answer_block_feedback_count": 10,
+                "final_answered_but_wrong_count": 0,
+                "final_answer_false_block_count": 4,
+                "outcome_counts": {"correct": 20},
+                "decision_action_counts": {"accept": 20},
+                "final_answer_status_counts": {"answered": 10, "abstained": 10},
+                "final_answer_action_counts": {"accept": 10, "abstain": 10},
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    report = module.build_feedback_policy_recommendation(
+        module.FeedbackPolicyRecommendationConfig(
+            feedback_report_paths=(feedback_report,),
+            output_path=tmp_path / "policy-recommendation.json",
+            min_matched_feedback_count=10,
+            max_accepted_but_wrong_rate=0.05,
+            max_retrieved_failure_rate=0.10,
+            max_abstain_false_positive_rate=0.20,
+            max_final_answered_but_wrong_rate=0.05,
+            max_final_answer_false_block_rate=0.20,
+            rate_statistic="estimate",
+        )
+    )
+
+    policy = report["recommendation"]["candidate_control_policy_config"]
+    defaults = report["recommendation"]["candidate_control_defaults"]
+
+    assert report["status"] == "recommend"
+    assert report["aggregate_feedback"]["rates"]["final_answer_false_block_rate"]["estimate"] == pytest.approx(0.4)
+    assert report["recommendation"]["rate_signals"]["accepted_but_wrong"]["triggered"] is False
+    assert report["recommendation"]["rate_signals"]["final_answer_false_block"]["triggered"] is True
+    assert policy["unsupported_action"] == "retrieve"
+    assert policy["unsupported_risk_level"] == "medium"
+    assert policy["compound_risk_action"] == "retrieve"
+    assert policy["compound_verification_escalates"] is False
+    assert defaults["staged_verification"] is True
+    assert defaults["max_verifier_route_attempts"] == 1
 
 
 def test_feedback_policy_replay_audit_covers_counterfactual_effects(tmp_path):
@@ -20224,6 +20310,8 @@ def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
             recommendation_max_accepted_but_wrong_rate=0.05,
             recommendation_max_retrieved_failure_rate=0.10,
             recommendation_max_abstain_false_positive_rate=1.0,
+            recommendation_max_final_answered_but_wrong_rate=0.05,
+            recommendation_max_final_answer_false_block_rate=1.0,
             rate_statistic="estimate",
             replay_min_matched_feedback_count=3,
             min_safety_coverage=1.0,
@@ -20247,6 +20335,8 @@ def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
     assert report["children"]["feedback_policy_recommendation"]["status"] == "recommend"
     assert report["children"]["feedback_policy_replay_audit"]["status"] == "passed"
     assert saved["artifact_manifest_summary"]["artifact_count"] == 9
+    assert saved["config"]["recommendation_gates"]["max_final_answered_but_wrong_rate"] == pytest.approx(0.05)
+    assert saved["config"]["recommendation_gates"]["max_final_answer_false_block_rate"] == pytest.approx(1.0)
     assert (output_dir / "candidate-control-policy.json").exists()
     assert (output_dir / "candidate-control-defaults.json").exists()
     assert saved["decision"]["candidate_control_policy_config"]["unsupported_action"] == "clarify"
@@ -20277,6 +20367,14 @@ def test_feedback_policy_workflow_runs_end_to_end_and_registers(tmp_path):
             feedback_paths=(feedback_path,),
             output_dir=tmp_path / "invalid-bool-workflow",
             compact_json="maybe",
+        )
+
+    with pytest.raises(ValueError, match="not bool"):
+        module.FeedbackPolicyWorkflowConfig(
+            trace_paths=trace_paths,
+            feedback_paths=(feedback_path,),
+            output_dir=tmp_path / "invalid-final-rate-workflow",
+            recommendation_max_final_answer_false_block_rate=True,
         )
 
 
