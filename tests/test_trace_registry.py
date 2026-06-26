@@ -327,6 +327,10 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
             "promotion_contract_world_model_signal_workflow": {
                 "release_gate_status": "promote"
             },
+            "promotion_contract_triple_extraction_fixture_matrix": {
+                "status": "promote",
+                "distinct_predicate_count": 6,
+            },
             "runtime_budget": {"passed": True},
             "large_unselected_metadata": tuple(range(100)),
         },
@@ -387,6 +391,10 @@ def test_product_trace_bounded_payload_summarizes_large_fields():
     }
     assert payload["metadata"]["promotion_contract_world_model_signal_workflow"] == {
         "release_gate_status": "promote"
+    }
+    assert payload["metadata"]["promotion_contract_triple_extraction_fixture_matrix"] == {
+        "status": "promote",
+        "distinct_predicate_count": 6,
     }
     metrics = product_runtime_metrics(payload)
     assert metrics["final_answer_available"] is True

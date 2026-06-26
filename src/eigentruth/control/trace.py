@@ -718,6 +718,7 @@ DEFAULT_BOUNDED_TRACE_METADATA_KEYS = (
     "promotion_contract_selfcheck_signal_fusion_workflow",
     "promotion_contract_world_model_signal_workflow",
     "promotion_contract_feedback_policy_workflow",
+    "promotion_contract_triple_extraction_fixture_matrix",
     "promotion_contract_release_efficiency",
     "runtime_profile",
     "runtime_profile_requested",
