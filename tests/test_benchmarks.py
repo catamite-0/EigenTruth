@@ -6258,6 +6258,79 @@ def test_build_transition_fixture_can_use_rule_based_world_model(tmp_path):
     assert prediction_metadata["matched_rules"][0]["rule"] == "reserve_ord_0001"
 
 
+def test_build_transition_fixture_can_use_world_model_ensemble(tmp_path):
+    builder = importlib.import_module("benchmarks.build_transition_fixture")
+    verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
+    signal_builder = importlib.import_module("benchmarks.build_verifier_signal_score_dump")
+    scores_path = tmp_path / "transition_scores.json"
+    claims_path = tmp_path / "transition_claims.json"
+    state_path = tmp_path / "transition_state.json"
+    verified_records_path = tmp_path / "verified_records.jsonl"
+    enhanced_path = tmp_path / "enhanced_scores.json"
+
+    payload = builder.run(SimpleNamespace(
+        scores_output=str(scores_path),
+        claims_output=str(claims_path),
+        state_output=str(state_path),
+        n_records=8,
+        signal="truth_proj",
+        world_model_ensemble=True,
+        world_model_ensemble_min_agreement=0.75,
+    ))
+
+    assert payload["state"]["summary"]["n_world_model_rules"] == 24
+    assert payload["state"]["summary"]["n_world_model_ensemble_members"] == 3
+    assert "world_model_ensemble" in payload["state"]
+    assert "world_model_rules" not in payload["state"]
+
+    report = verifier.build_verifier_ensemble_report(
+        [("transitions", scores_path)],
+        signal="truth_proj",
+        claims_path=claims_path,
+        state_path=state_path,
+        alphas=(0.2,),
+        repeats=1,
+        seed=0,
+        verified_records_path=verified_records_path,
+    )
+    run = report["runs"][0]
+    assert report["transition_verifier"]["world_model_adapter"] == "EnsembleWorldModelAdapter"
+    assert report["transition_verifier"]["world_model_rule_count"] == 24
+    assert report["transition_verifier"]["world_model_member_count"] == 3
+    assert report["transition_verifier"]["world_model_min_agreement"] == pytest.approx(0.75)
+    assert run["transition_verifier"]["world_model_adapter"] == "EnsembleWorldModelAdapter"
+    assert run["transition_verifier"]["world_model_rule_count"] == 24
+    assert run["transition_verifier"]["world_model_member_count"] == 3
+    assert run["transition_verifier"]["decided_records"] == 4
+
+    sidecar_records = [
+        json.loads(line)["record"]
+        for line in verified_records_path.read_text(encoding="utf-8").splitlines()
+    ]
+    true_prediction = sidecar_records[0]["transition"]["metadata"]["prediction_metadata"]
+    false_prediction = sidecar_records[1]["transition"]["metadata"]["prediction_metadata"]
+    assert true_prediction["agreement_rate"] == pytest.approx(1.0)
+    assert true_prediction["below_min_agreement"] is False
+    assert false_prediction["agreement_rate"] == pytest.approx(2 / 3)
+    assert false_prediction["below_min_agreement"] is True
+    assert sidecar_records[1]["transition"]["status"] == "insufficient_evidence"
+
+    signal_builder.run(SimpleNamespace(
+        scores=str(scores_path),
+        verified_records_jsonl=str(verified_records_path),
+        output=str(enhanced_path),
+        output_format="json",
+        run_name="transitions",
+        keep_signals="truth_proj",
+        verifier_signals="world_model_disagreement,world_model_agreement_gap,world_model_low_agreement",
+        json=None,
+    ))
+    enhanced = json.loads(enhanced_path.read_text(encoding="utf-8"))
+    assert enhanced["scores"]["world_model_disagreement"] == pytest.approx([0.0, 1.0] * 4)
+    assert enhanced["scores"]["world_model_agreement_gap"] == pytest.approx([0.0, 1 / 3] * 4)
+    assert enhanced["scores"]["world_model_low_agreement"] == pytest.approx([0.0, 1.0] * 4)
+
+
 def test_eval_verifier_ensemble_uses_structured_qa_corpus(tmp_path):
     verifier = importlib.import_module("benchmarks.eval_verifier_ensemble")
     scores_path = tmp_path / "scores.json"
@@ -25355,6 +25428,50 @@ def test_world_model_signal_calibration_workflow_builds_manifest_and_registry(tm
     assert max(enhanced.scores["world_model_agreement_gap"]) == pytest.approx(0.0)
     assert max(enhanced.scores["world_model_low_agreement"]) == pytest.approx(0.0)
     assert (output_dir / "verifier-signal-fusion" / "synthetic-world-model-geometry-fusion-artifact.json").exists()
+
+
+def test_world_model_signal_calibration_workflow_can_emit_ensemble_agreement_signals(tmp_path):
+    module = importlib.import_module("benchmarks.run_world_model_signal_calibration_workflow")
+    from eigentruth.eval.score_dump import load_score_dump
+
+    output_dir = tmp_path / "world-model-ensemble-workflow"
+
+    payload = module.run_world_model_signal_calibration_workflow(
+        module.WorldModelSignalCalibrationWorkflowConfig(
+            output_dir=output_dir,
+            run_name="synthetic-world-model-ensemble",
+            n_records=12,
+            world_model_ensemble=True,
+            world_model_ensemble_min_agreement=0.75,
+            alphas=(0.2,),
+            repeats=2,
+            seed=0,
+            best_alpha=0.2,
+            compact_json=True,
+        )
+    )
+    enhanced = load_score_dump(
+        output_dir
+        / "verifier-signal-fusion"
+        / "synthetic-world-model-ensemble-enhanced-scores.manifest.json",
+        required_scores=(
+            "world_model_disagreement",
+            "world_model_agreement_gap",
+            "world_model_low_agreement",
+        ),
+    )
+
+    assert payload["manifest_summary"]["missing_count"] == 0
+    assert payload["manifest_verification"]["passed"] is True
+    assert payload["world_model_summary"]["adapter"] == "EnsembleWorldModelAdapter"
+    assert payload["world_model_summary"]["member_count"] == 3
+    assert payload["world_model_summary"]["min_agreement"] == pytest.approx(0.75)
+    expected_labels = tuple(float(label) for label in enhanced.labels)
+    assert enhanced.scores["world_model_disagreement"] == pytest.approx(expected_labels)
+    assert enhanced.scores["world_model_agreement_gap"] == pytest.approx(
+        tuple((1 / 3) if label else 0.0 for label in enhanced.labels)
+    )
+    assert enhanced.scores["world_model_low_agreement"] == pytest.approx(expected_labels)
 
 
 def test_eval_verifier_ensemble_suppresses_supported_and_rescues_refuted_claims(tmp_path):

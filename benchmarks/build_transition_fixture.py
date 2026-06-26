@@ -19,6 +19,8 @@ def build_order_transition_fixture(
     n_records: int = 12,
     signal: str = "truth_proj",
     rule_based_world_model: bool = False,
+    world_model_ensemble: bool = False,
+    world_model_ensemble_min_agreement: float = 0.75,
 ) -> dict[str, Any]:
     """Return score, claim, and state payloads for order-reservation transitions."""
     if n_records < 2:
@@ -26,6 +28,8 @@ def build_order_transition_fixture(
     signal = signal.strip()
     if not signal:
         raise ValueError("signal must be non-empty.")
+    if not (0.0 < float(world_model_ensemble_min_agreement) <= 1.0):
+        raise ValueError("world_model_ensemble_min_agreement must be in (0, 1].")
 
     state: dict[str, Any] = {"orders": {}, "inventory": {}}
     labels: list[int] = []
@@ -33,6 +37,23 @@ def build_order_transition_fixture(
     statements: list[dict[str, Any]] = []
     records: list[dict[str, Any]] = []
     world_model_rules: list[dict[str, Any]] = []
+    ensemble_members = (
+        {
+            "name": "baseline_a",
+            "world_model_rules": [],
+            "metadata": {"role": "correct_transition_member"},
+        },
+        {
+            "name": "baseline_b",
+            "world_model_rules": [],
+            "metadata": {"role": "correct_transition_member"},
+        },
+        {
+            "name": "stress_member",
+            "world_model_rules": [],
+            "metadata": {"role": "label-correlated_divergence_stress_member"},
+        },
+    )
 
     for idx in range(n_records):
         item = _transition_record(idx)
@@ -58,39 +79,39 @@ def build_order_transition_fixture(
             f"After reserving order {order_id}, inventory for {sku} "
             f"will be {claimed_remaining} units."
         )
-        if rule_based_world_model:
+        if rule_based_world_model or world_model_ensemble:
             action = {
                 "type": "reserve_order",
                 "order_id": order_id,
                 "sku": sku,
             }
-            world_model_rules.append({
-                "name": f"reserve_{order_id}",
-                "action": dict(action),
-                "when": (
-                    {
-                        "path": f"inventory.{sku}.available",
-                        "operator": "gte",
-                        "value": quantity,
-                        "source": "order_reservation_precondition",
-                    },
-                    {
-                        "path": f"orders.{order_id}.status",
-                        "operator": "eq",
-                        "value": "pending",
-                        "source": "order_reservation_precondition",
-                    },
-                ),
-                "decrement": {f"inventory.{sku}.available": quantity},
-                "set": {f"orders.{order_id}.status": "reserved"},
-                "confidence": 0.95,
-                "explanation": "reserve pending order inventory",
-                "metadata": {
-                    "order_id": order_id,
-                    "sku": sku,
-                    "quantity": quantity,
-                },
-            })
+            base_rule = _reservation_rule(
+                order_id=order_id,
+                sku=sku,
+                quantity=quantity,
+                action=action,
+                member="baseline" if world_model_ensemble else "single",
+            )
+            if rule_based_world_model and not world_model_ensemble:
+                world_model_rules.append(base_rule)
+            if world_model_ensemble:
+                ensemble_members[0]["world_model_rules"].append(dict(base_rule))
+                ensemble_members[1]["world_model_rules"].append(dict(base_rule))
+                stress_quantity = max(0, quantity - 1) if is_false else quantity
+                ensemble_members[2]["world_model_rules"].append(
+                    _reservation_rule(
+                        order_id=order_id,
+                        sku=sku,
+                        quantity=stress_quantity,
+                        action=action,
+                        member="stress",
+                        explanation=(
+                            "stress member under-reserves false-labeled fixture records"
+                            if is_false
+                            else "stress member agrees on true-labeled fixture records"
+                        ),
+                    )
+                )
         else:
             action = {
                 "decrement": {f"inventory.{sku}.available": quantity},
@@ -148,6 +169,30 @@ def build_order_transition_fixture(
         statements.append(statement)
         records.append(record)
 
+    world_model_ensemble_payload = None
+    if world_model_ensemble:
+        world_model_ensemble_payload = {
+            "type": "rule_based",
+            "min_agreement": float(world_model_ensemble_min_agreement),
+            "members": [
+                {
+                    "name": str(member["name"]),
+                    "world_model_rules": list(member["world_model_rules"]),
+                    "metadata": dict(member["metadata"]),
+                }
+                for member in ensemble_members
+            ],
+            "metadata": {
+                "fixture": "order_reservation_transition",
+                "divergence_pattern": "stress_member_under_reserves_false_records",
+            },
+        }
+    world_model_rule_count = (
+        sum(len(member["world_model_rules"]) for member in ensemble_members)
+        if world_model_ensemble
+        else len(world_model_rules)
+    )
+
     return {
         "scores": {
             "schema_version": 1,
@@ -158,7 +203,11 @@ def build_order_transition_fixture(
                 "signal": signal,
                 "n_records": n_records,
                 "world_model_fixture": (
-                    "rule_based" if rule_based_world_model else "direct_action"
+                    "ensemble"
+                    if world_model_ensemble
+                    else "rule_based"
+                    if rule_based_world_model
+                    else "direct_action"
                 ),
                 "positive_label": "claim_refuted_by_predicted_transition",
             },
@@ -179,19 +228,68 @@ def build_order_transition_fixture(
                 "n_records": n_records,
                 "n_true": labels.count(0),
                 "n_false": labels.count(1),
-                "n_world_model_rules": len(world_model_rules),
+                "n_world_model_rules": world_model_rule_count,
+                "n_world_model_ensemble_members": len(ensemble_members) if world_model_ensemble else 0,
+                "world_model_ensemble_min_agreement": (
+                    float(world_model_ensemble_min_agreement) if world_model_ensemble else None
+                ),
             },
         },
         "state": {
             "schema_version": 1,
             "fixture_type": "order_reservation_transition_state",
             "state": state,
-            **({"world_model_rules": world_model_rules} if rule_based_world_model else {}),
+            **({"world_model_rules": world_model_rules} if rule_based_world_model and not world_model_ensemble else {}),
+            **({"world_model_ensemble": world_model_ensemble_payload} if world_model_ensemble else {}),
             "summary": {
                 "n_orders": n_records,
                 "n_inventory_items": len(state["inventory"]),
-                "n_world_model_rules": len(world_model_rules),
+                "n_world_model_rules": world_model_rule_count,
+                "n_world_model_ensemble_members": len(ensemble_members) if world_model_ensemble else 0,
+                "world_model_ensemble_min_agreement": (
+                    float(world_model_ensemble_min_agreement) if world_model_ensemble else None
+                ),
             },
+        },
+    }
+
+
+def _reservation_rule(
+    *,
+    order_id: str,
+    sku: str,
+    quantity: int,
+    action: dict[str, Any],
+    member: str,
+    explanation: str = "reserve pending order inventory",
+) -> dict[str, Any]:
+    name = f"reserve_{order_id}" if member == "single" else f"{member}_reserve_{order_id}"
+    return {
+        "name": name,
+        "action": dict(action),
+        "when": (
+            {
+                "path": f"inventory.{sku}.available",
+                "operator": "gte",
+                "value": quantity,
+                "source": "order_reservation_precondition",
+            },
+            {
+                "path": f"orders.{order_id}.status",
+                "operator": "eq",
+                "value": "pending",
+                "source": "order_reservation_precondition",
+            },
+        ),
+        "decrement": {f"inventory.{sku}.available": quantity},
+        "set": {f"orders.{order_id}.status": "reserved"},
+        "confidence": 0.95,
+        "explanation": explanation,
+        "metadata": {
+            "order_id": order_id,
+            "sku": sku,
+            "quantity": quantity,
+            "member": member,
         },
     }
 
@@ -202,6 +300,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         n_records=args.n_records,
         signal=args.signal,
         rule_based_world_model=bool(getattr(args, "rule_based_world_model", False)),
+        world_model_ensemble=bool(getattr(args, "world_model_ensemble", False)),
+        world_model_ensemble_min_agreement=float(
+            getattr(args, "world_model_ensemble_min_agreement", 0.75)
+        ),
     )
     _write_json(Path(args.scores_output), payload["scores"])
     _write_json(Path(args.claims_output), payload["claims"])
@@ -251,6 +353,17 @@ def main() -> None:
         "--rule-based-world-model",
         action="store_true",
         help="emit typed actions plus world_model_rules for RuleBasedWorldModelAdapter",
+    )
+    parser.add_argument(
+        "--world-model-ensemble",
+        action="store_true",
+        help="emit a rule-based EnsembleWorldModelAdapter fixture with controlled member disagreement",
+    )
+    parser.add_argument(
+        "--world-model-ensemble-min-agreement",
+        type=float,
+        default=0.75,
+        help="minimum ensemble agreement required before transition verification can decide",
     )
     run(parser.parse_args())
 

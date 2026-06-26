@@ -1091,6 +1091,24 @@ python benchmarks/eval_verifier_ensemble.py \
   --json artifacts/order_transition_verifier_ensemble_report.json
 ```
 
+To exercise world-model disagreement explicitly, generate an ensemble fixture.
+This writes a `world_model_ensemble` state-source block with three rule-based
+members: two baseline members and one controlled stress member that diverges on
+the false-labeled transition records. The verifier uses
+`EnsembleWorldModelAdapter`, and the verified-record sidecar preserves
+`agreement_rate`, `below_min_agreement`, and related metadata for score-dump
+conversion:
+
+```bash
+python benchmarks/build_transition_fixture.py \
+  --scores-output artifacts/order_transition_ensemble_scores.json \
+  --claims-output artifacts/order_transition_ensemble_claims.json \
+  --state-output artifacts/order_transition_ensemble_state.json \
+  --n-records 12 \
+  --world-model-ensemble \
+  --world-model-ensemble-min-agreement 0.75
+```
+
 This fixture checks action-consequence verification: true labels match the
 predicted inventory after reservation, while false labels assert an off-by-one
 postcondition that the predicted state refutes. `--min-world-model-confidence`
@@ -3293,6 +3311,8 @@ record the workflow in a local registry:
 python benchmarks/run_world_model_signal_calibration_workflow.py \
   --output-dir artifacts/world-model-signal-calibration-smoke \
   --n-records 24 \
+  --world-model-ensemble \
+  --world-model-ensemble-min-agreement 0.75 \
   --alphas 0.05,0.1,0.2 \
   --best-alpha 0.1 \
   --repeats 20 \
@@ -3301,11 +3321,15 @@ python benchmarks/run_world_model_signal_calibration_workflow.py \
   --registry-version 0.1
 ```
 
-The default fixture uses `RuleBasedWorldModelAdapter` rules. Its single-model
-agreement-gap columns are expected to be zero; the calibrated correction signal
-is the world-model route's final verifier outcome, such as `verifier_refuted`.
-Direct ensemble agreement metadata from multi-world-model adapters is still
-preserved by `build_verifier_signal_score_dump.py` when present in sidecars.
+Without `--world-model-ensemble`, the default fixture uses a single
+`RuleBasedWorldModelAdapter`; its agreement-gap columns are expected to be zero,
+and the calibrated correction signal is the world-model route's final verifier
+outcome, such as `verifier_refuted`. With `--world-model-ensemble`, the workflow
+produces nonzero `world_model_disagreement`, `world_model_agreement_gap`, and
+`world_model_low_agreement` columns from controlled member disagreement.
+Direct ensemble agreement metadata from external multi-world-model adapters is
+also preserved by `build_verifier_signal_score_dump.py` when present in
+sidecars.
 
 Each selected signal is converted to a direction-aware anomaly percentile using
 the split calibration true set. `max_rank` takes the most anomalous normalized
