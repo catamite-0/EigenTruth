@@ -2947,6 +2947,99 @@ def test_build_external_retrieval_corpus_cli_accepts_trusted_source(tmp_path, mo
     assert payload["config"]["trusted_source"] == ["wikidata.org"]
 
 
+def test_analyze_retrieval_route_gaps_summarizes_verified_records(tmp_path):
+    module = importlib.import_module("benchmarks.analyze_retrieval_route_gaps")
+    records_path = tmp_path / "verified-records.jsonl"
+    output_path = tmp_path / "gap-report.json"
+    manifest_path = tmp_path / "gap-report.manifest.json"
+    rows = [
+        {
+            "schema_version": 1,
+            "record_index": 0,
+            "label": 0,
+            "score": 0.1,
+            "record": {
+                "claim": {"text": "Paris is the capital of France.", "claim_id": "c1", "metadata": {}},
+                "final": {
+                    "status": "supported",
+                    "explanation": "exact evidence matched",
+                    "metadata": {"decision_rule": "exact_match"},
+                },
+                "route": {"selected_route": "retrieval_groundedness", "used_retrieval": True},
+                "retrieval_hits": [
+                    {
+                        "text": "The capital of France is Paris.",
+                        "source": "wikidata:Q142:P36:Q90",
+                        "score": 0.9,
+                        "metadata": {"statement_property": "P36"},
+                    },
+                ],
+            },
+        },
+        {
+            "schema_version": 1,
+            "record_index": 1,
+            "label": 1,
+            "score": 0.9,
+            "record": {
+                "claim": {"text": "Lyon is the capital of France.", "claim_id": "c2", "metadata": {}},
+                "final": {
+                    "status": "insufficient_evidence",
+                    "explanation": "no evidence snippets were provided",
+                    "metadata": {"decision_rule": "no_evidence"},
+                },
+                "route": {"selected_route": "groundedness", "used_retrieval": False},
+                "retrieval_hits": [],
+            },
+        },
+        {
+            "schema_version": 1,
+            "record_index": 2,
+            "label": 0,
+            "score": 0.3,
+            "record": {
+                "claim": {"text": "Tokyo is the capital of Japan.", "claim_id": "c3", "metadata": {}},
+                "final": {
+                    "status": "insufficient_evidence",
+                    "explanation": "best evidence did not cover enough claim tokens",
+                    "metadata": {"decision_rule": "low_overlap"},
+                },
+                "route": {"selected_route": "retrieval_groundedness", "used_retrieval": True},
+                "retrieval_hits": [
+                    {
+                        "text": "The capital of Japan is Tokyo.",
+                        "source": "wikidata:Q17:P36:Q1490",
+                        "score": 0.4,
+                        "metadata": {"statement_property": "P36"},
+                    },
+                ],
+            },
+        },
+    ]
+    records_path.write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+    report = module.run(
+        SimpleNamespace(
+            verified_records_jsonl=str(records_path),
+            output=str(output_path),
+            max_examples_per_bucket=2,
+            artifact_manifest=str(manifest_path),
+        )
+    )
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert report["summary"]["n_records"] == 3
+    assert report["summary"]["records_with_retrieval_hits"] == 2
+    assert report["gap_buckets"]["true_supported"]["count"] == 1
+    assert report["gap_buckets"]["no_retrieval_hits"]["count"] == 1
+    assert report["gap_buckets"]["low_overlap_after_retrieval"]["count"] == 1
+    assert report["hit_property_counts"] == {"P36": 2}
+    assert saved["gap_buckets"]["no_retrieval_hits"]["examples"][0]["claim"] == "Lyon is the capital of France."
+    assert manifest["artifacts"]["verified_records_jsonl"]["exists"] is True
+    assert manifest["artifacts"]["gap_report"]["exists"] is True
+
+
 def test_compare_manifold_distances_outputs_layer_matrix(tmp_path, capsys):
     module = importlib.import_module("benchmarks.compare_manifold_distances")
     eval_module = importlib.import_module("benchmarks.eval_truthfulqa")

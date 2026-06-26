@@ -146,6 +146,12 @@ Added a retrieval corpus provenance audit gate:
   254/556 records, but `retrieval_groundedness` verified false alarm is `0.149`
   against a `0.05` gate, so the route remains blocked. This is the desired
   distinction: source provenance can pass while route quality still fails.
+- `analyze_retrieval_route_gaps.py` reads the verified-record sidecar for that
+  blocked route and records why: all 556 records end as `insufficient_evidence`,
+  302 have no retrieval hits, and 254 use retrieval but never reach supported or
+  refuted status. All 925 hits come from Wikidata `P36` capital facts, so the
+  next iteration should expand source predicates or add a structured Wikidata
+  verifier rather than only tuning lexical overlap thresholds.
 - The l80 provenance matrix at
   `artifacts/truthfulqa-l80-retrieval-corpus-provenance-audit/` verifies both
   current local corpora. The correct-answer corpus fails the `grounding` role

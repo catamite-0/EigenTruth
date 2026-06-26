@@ -1,8 +1,15 @@
 {
-  "checked": 10,
+  "checked": 14,
   "failures": [],
   "manifest_path": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/artifact-manifest.json",
   "nested": [
+    {
+      "checked": 2,
+      "failures": [],
+      "manifest_path": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-gap-analysis-manifest.json",
+      "nested": [],
+      "passed": true
+    },
     {
       "checked": 7,
       "failures": [],

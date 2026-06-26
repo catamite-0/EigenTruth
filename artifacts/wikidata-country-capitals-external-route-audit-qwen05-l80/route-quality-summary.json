@@ -12,6 +12,26 @@
     "records_with_hits": 254,
     "total_hits": 925
   },
+  "gap_analysis": {
+    "final_status_counts": {
+      "insufficient_evidence": 556
+    },
+    "gap_counts": {
+      "false_negative": 140,
+      "low_overlap_after_retrieval": 114,
+      "no_retrieval_hits": 302
+    },
+    "hit_property_counts": {
+      "P36": 925
+    },
+    "records_using_retrieval_rate": 0.4568345323741007,
+    "records_with_retrieval_hit_rate": 0.4568345323741007,
+    "selected_route_counts": {
+      "groundedness": 302,
+      "retrieval_groundedness": 254
+    }
+  },
+  "gap_analysis_path": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-gap-analysis.json",
   "lexical_groundedness_metrics": {
     "false_refuted_rate": 0.0,
     "false_supported_rate": 0.0,
@@ -112,6 +132,7 @@
   "schema_version": 1,
   "source_artifact": "artifacts/wikidata-country-capitals-external-corpus/artifact-manifest.json",
   "status": "blocked",
+  "verified_records_jsonl_path": "artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/verified-records.jsonl",
   "workflow": "wikidata_external_route_quality_summary",
   "workflow_decision": {
     "adapter_promotion_status": "blocked",

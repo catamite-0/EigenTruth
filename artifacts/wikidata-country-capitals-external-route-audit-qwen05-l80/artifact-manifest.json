@@ -1,5 +1,21 @@
 {
   "artifacts": {
+    "gap_analysis_manifest": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-gap-analysis-manifest.json",
+      "sha256": "633715662a6c75c7e76f4cb259c562a645a416bcb67a8212c85bbbce5c44e56f",
+      "size_bytes": 1602
+    },
+    "gap_analysis_report": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-route-gap-analysis.json",
+      "sha256": "a4572beef3f5c5e54610c882903764de42a79fe0e8c868e20acba9baf0f2ffee",
+      "size_bytes": 14070
+    },
     "promotion_report": {
       "exists": true,
       "file_count": 1,
@@ -29,8 +45,8 @@
       "file_count": 1,
       "kind": "file",
       "path": "route-quality-summary.json",
-      "sha256": "6163b5969c0cc064cb4e8f005d34f7ff4167b3db6d16b0be1fd60cec32fc0b5d",
-      "size_bytes": 4134
+      "sha256": "6e53ca115f9ea890905341b28004f25d02ca530681a701ccfe129fa52c31c7ba",
+      "size_bytes": 4882
     },
     "score_dump": {
       "exists": true,
@@ -48,6 +64,14 @@
       "sha256": "38ce9f4a557c54a5a161b19478590b141741ef27b50edf4932a3427366f81454",
       "size_bytes": 2610
     },
+    "verified_records_jsonl": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "verified-records.jsonl",
+      "sha256": "167f23eb7a1f0e7ee0762fc97b28ca2b30e4c59909d0054b5ed992a8166f38fa",
+      "size_bytes": 2572745
+    },
     "verifier_report": {
       "exists": true,
       "file_count": 1,
@@ -55,6 +79,14 @@
       "path": "retrieval-verifier-report.json",
       "sha256": "95bb67e8e8ef218a5a6076ee1e0443bbe7b4ba4388476724bb55c4fb1d3d65f3",
       "size_bytes": 18699
+    },
+    "verifier_report_with_records": {
+      "exists": true,
+      "file_count": 1,
+      "kind": "file",
+      "path": "retrieval-verifier-report-with-records.json",
+      "sha256": "1c7d726909e6a551a76ae3e083e2b58adb7e195f4a257fee7eacac9daa6a0483",
+      "size_bytes": 18880
     },
     "workflow_manifest": {
       "exists": true,
@@ -85,6 +117,14 @@
   "metadata": {
     "blocking_reason": "Wikidata country-capital corpus is real external evidence but too narrow/noisy for route promotion.",
     "coverage_rate": 0.4568345323741007,
+    "final_status_counts": {
+      "insufficient_evidence": 556
+    },
+    "gap_counts": {
+      "false_negative": 140,
+      "low_overlap_after_retrieval": 114,
+      "no_retrieval_hits": 302
+    },
     "n_records": 556,
     "promotes_verifier_route": false,
     "records_with_hits": 254,
@@ -97,9 +137,9 @@
   },
   "schema_version": 1,
   "summary": {
-    "artifact_count": 10,
+    "artifact_count": 14,
     "directory_count": 0,
-    "file_count": 10,
+    "file_count": 14,
     "missing_count": 0
   }
 }

@@ -2489,6 +2489,28 @@ above the `0.05` gate, with verified detection `0.286`. This makes the current
 Wikidata country-capital corpus a useful external-source smoke gate, not a
 deployable TruthfulQA verifier route.
 
+## `analyze_retrieval_route_gaps.py`
+
+Explains blocked retrieval routes from `eval_verifier_ensemble.py
+--verified-records-jsonl` sidecars. It reports final status counts, selected
+routes, retrieval-hit coverage, gap buckets, hit source/property counts, and
+bounded examples per bucket.
+
+```bash
+python benchmarks/analyze_retrieval_route_gaps.py \
+  --verified-records-jsonl artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/verified-records.jsonl \
+  --output artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-gap-analysis.json \
+  --artifact-manifest artifacts/wikidata-country-capitals-external-route-audit-qwen05-l80/retrieval-route-gap-analysis-manifest.json
+```
+
+For the Wikidata country-capital route audit, gap analysis shows all `556`
+records finish as `insufficient_evidence`: `302` have no retrieval hits, `254`
+use retrieval, and `114` true records hit the corpus but fail lexical overlap.
+All `925` retrieval hits come from property `P36` (`capital`), so the next
+useful source expansion must add broader fact predicates or a more structured
+Wikidata verifier; tuning lexical thresholds alone would not create refutation
+coverage.
+
 ## `build_external_retrieval_corpus.py`
 
 Builds an explicit external-candidate retrieval corpus from caller-supplied
