@@ -25,6 +25,22 @@ from benchmarks.config_utils import planned_artifact_manifest_summary, strict_bo
 from eigentruth.control import ProductRuntimeBudgetPolicy  # noqa: E402
 from eigentruth.registry import ArtifactRegistry, RegistryRecord, build_artifact_manifest  # noqa: E402
 
+_PROMOTION_EVIDENCE_METADATA_FIELDS: tuple[tuple[str, str], ...] = (
+    ("promotion_contract.coverage_rate", "promotion_contract_coverage_rate"),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.coverage_rate",
+        "triple_extraction_fixture_matrix_coverage_rate",
+    ),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.mean_best_f1.mean",
+        "triple_extraction_fixture_matrix_mean_best_f1",
+    ),
+    (
+        "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
+        "triple_extraction_fixture_matrix_mean_f1_lift",
+    ),
+)
+
 
 def compare_product_runtime_baselines(
     *,
@@ -871,6 +887,7 @@ def _write_outputs(
     }
     if runtime_budget_policy_path is not None:
         artifacts["runtime_budget_policy"] = Path(str(runtime_budget_policy_path))
+    drift_metadata = _drift_metadata(report)
     manifest_summary = planned_artifact_manifest_summary(
         artifacts,
         assume_file_paths=(report_path,),
@@ -892,6 +909,7 @@ def _write_outputs(
                 "runtime_budget_policy_passed": runtime_budget_policy_gate.get("passed"),
                 "runtime_budget_policy_failed_count": runtime_budget_policy_gate.get("failed_count"),
                 "compact_json": compact,
+                **drift_metadata,
             },
         )
         _write_json(artifact_manifest_path, manifest, compact=compact)
@@ -911,10 +929,48 @@ def _write_outputs(
                 "runtime_budget_policy_passed": runtime_budget_policy_gate.get("passed"),
                 "runtime_budget_policy_failed_count": runtime_budget_policy_gate.get("failed_count"),
                 "compact_json": compact,
+                **drift_metadata,
             },
         )
         registry.save_json()
     return output
+
+
+def _drift_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(report.get("summary"))
+    return {
+        "gate_enabled": summary.get("gate_enabled"),
+        "drift_gate_enabled": summary.get("drift_gate_enabled"),
+        "compared_metric_count": summary.get("compared_metric_count"),
+        "blocked_metric_count": summary.get("blocked_metric_count"),
+        "observed_metric_count": summary.get("observed_metric_count"),
+        **_promotion_evidence_metadata(report),
+    }
+
+
+def _promotion_evidence_metadata(report: Mapping[str, Any]) -> dict[str, Any]:
+    metrics = _metrics_by_name(report.get("metrics"))
+    metadata: dict[str, Any] = {
+        "promotion_evidence_blocked_metric_count": 0,
+    }
+    for metric_name, prefix in _PROMOTION_EVIDENCE_METADATA_FIELDS:
+        metric = metrics.get(metric_name)
+        metadata[f"{prefix}_baseline"] = _finite_float(None if metric is None else metric.get("baseline"))
+        metadata[f"{prefix}_current"] = _finite_float(None if metric is None else metric.get("current"))
+        metadata[f"{prefix}_status"] = None if metric is None else metric.get("status")
+        if metric is not None and metric.get("status") == "blocked":
+            metadata["promotion_evidence_blocked_metric_count"] += 1
+    return metadata
+
+
+def _metrics_by_name(value: Any) -> dict[str, Mapping[str, Any]]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+        return {}
+    rows: dict[str, Mapping[str, Any]] = {}
+    for item in value:
+        if isinstance(item, Mapping) and isinstance(item.get("metric"), str):
+            rows[str(item["metric"])] = item
+    return rows
 
 
 def _artifact_manifest_path(

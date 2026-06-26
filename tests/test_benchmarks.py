@@ -22870,8 +22870,12 @@ def test_compare_product_runtime_baselines_blocks_drift_and_registers(tmp_path):
     assert _metric_by_name(payload, "retrieval_use_rate.mean")["status"] == "blocked"
     assert saved["artifact_manifest_summary"] == manifest["summary"]
     assert manifest["metadata"]["runner"] == "compare_product_runtime_baselines"
+    assert manifest["metadata"]["blocked_metric_count"] == 5
+    assert manifest["metadata"]["compared_metric_count"] == 13
     assert record.artifact_type == "product_runtime_drift_report"
     assert record.metadata["status"] == "blocked"
+    assert record.metadata["blocked_metric_count"] == 5
+    assert record.metadata["compared_metric_count"] == 13
     assert record.metadata["compact_json"] is True
     assert "\n  " not in saved_text
 
@@ -22931,10 +22935,13 @@ def test_compare_product_runtime_baselines_reports_minimum_trace_gate_reason(tmp
 def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_path):
     baseline_module = importlib.import_module("benchmarks.run_product_runtime_baseline")
     compare_module = importlib.import_module("benchmarks.compare_product_runtime_baselines")
+    registry_module = importlib.import_module("eigentruth.registry")
     baseline_trace = tmp_path / "baseline-trace.json"
     current_trace = tmp_path / "current-trace.json"
     baseline_report = tmp_path / "baseline.json"
     current_report = tmp_path / "current.json"
+    drift_report = tmp_path / "drift.json"
+    registry_path = tmp_path / "registry.json"
     _write_product_runtime_trace(
         baseline_trace,
         request_id="baseline",
@@ -22995,6 +23002,10 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
     payload = compare_module.compare_product_runtime_baselines(
         baseline_path=baseline_report,
         current_path=current_report,
+        report_path=drift_report,
+        registry_path=registry_path,
+        name="runtime-drift-promotion-evidence",
+        version="0.1",
         min_promotion_contract_coverage=1.0,
         min_triple_extraction_fixture_matrix_coverage=1.0,
         max_triple_extraction_fixture_matrix_mean_best_f1_drop=0.10,
@@ -23013,6 +23024,9 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
         payload,
         "promotion_contract.triple_extraction_fixture_matrix.mean_f1_lift.mean",
     )
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+    registry = registry_module.ArtifactRegistry.load_json(registry_path)
+    record = registry.get("product_runtime_drift_report:runtime-drift-promotion-evidence:0.1")
 
     assert payload["status"] == "blocked"
     assert contract_metric["status"] == "pass"
@@ -23022,6 +23036,23 @@ def test_compare_product_runtime_baselines_gates_promotion_evidence_drift(tmp_pa
     assert lift_metric["status"] == "blocked"
     assert lift_metric["absolute_drop"] == pytest.approx(0.30)
     assert payload["summary"]["blocked_metric_count"] == 2
+    assert manifest["metadata"]["promotion_evidence_blocked_metric_count"] == 2
+    assert manifest["metadata"]["promotion_contract_coverage_rate_current"] == pytest.approx(1.0)
+    assert manifest["metadata"]["promotion_contract_coverage_rate_status"] == "pass"
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_coverage_rate_current"] == pytest.approx(
+        1.0
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_best_f1_current"] == pytest.approx(
+        0.70
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_best_f1_status"] == "blocked"
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_f1_lift_current"] == pytest.approx(
+        0.20
+    )
+    assert manifest["metadata"]["triple_extraction_fixture_matrix_mean_f1_lift_status"] == "blocked"
+    assert record.metadata["promotion_evidence_blocked_metric_count"] == 2
+    assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_current"] == pytest.approx(0.70)
+    assert record.metadata["triple_extraction_fixture_matrix_mean_best_f1_status"] == "blocked"
 
 
 def test_compare_product_runtime_baselines_registers_file_baseline_report(tmp_path):
