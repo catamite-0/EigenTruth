@@ -356,13 +356,11 @@ def _add_prediction_record(
 def _prediction_triples_from_value(value: Any, *, source: str) -> tuple[Mapping[str, Any], ...]:
     raw = value
     if isinstance(value, Mapping):
-        raw = (
-            value.get("triples")
-            or value.get("claim_triples")
-            or value.get("predicted_triples")
-            or value.get("prediction_triples")
-            or value
-        )
+        raw = value
+        for key in ("triples", "claim_triples", "predicted_triples", "prediction_triples"):
+            if key in value:
+                raw = value[key]
+                break
     if isinstance(raw, Mapping):
         items = (raw,)
     elif isinstance(raw, Sequence) and not isinstance(raw, (str, bytes, bytearray)):

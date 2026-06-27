@@ -1113,6 +1113,31 @@ local file boundary. If the external system extracts triples from negated,
 quoted, temporal, ambiguous, or metalinguistic controls, the same evaluation
 counts those outputs as false positives.
 
+Use `run_external_triple_extractor_handoff.py` when the external extractor is a
+local command rather than a prewritten prediction file. The workflow writes a
+label-free request JSONL with `claim_id` and `text` by default, invokes the
+command without a shell, evaluates the generated predictions, gates precision,
+recall, F1, and false-positive rate, and can write a manifest plus verification
+report:
+
+```bash
+python benchmarks/run_external_triple_extractor_handoff.py \
+  --records artifacts/my-triple-fixture-records.json \
+  --extractor-command "python path/to/extractor.py --input {input} --output {output}" \
+  --output-dir artifacts/external-triple-extractor-handoff \
+  --json artifacts/external-triple-extractor-handoff/external-triple-extractor-handoff.json \
+  --artifact-manifest artifacts/external-triple-extractor-handoff/artifact-manifest.json \
+  --verification-report artifacts/external-triple-extractor-handoff/manifest-verification.json
+```
+
+The request file intentionally excludes expected triples unless
+`--include-metadata` is set, so a learned/OpenIE/LLM extractor is not handed the
+labels it is being evaluated against. Prediction rows may use `triples: []` to
+represent no extracted triples, which is the expected output for adversarial
+negative controls. The generated prediction file can then be passed to
+`run_triple_extraction_fixture_workflow.py --external-predictions NAME=PATH` or
+to the matrix form `--external-predictions CORPUS:NAME=PATH`.
+
 Use `build_triple_extraction_fixture.py` to turn structured fact corpora, such
 as the output of `build_wikidata_qa_corpus.py`, into larger labeled extraction
 fixtures plus matching default regex patterns:

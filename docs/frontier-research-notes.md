@@ -432,7 +432,16 @@ Added dependency-free triple extractor plug-ins and eval harness:
 - `benchmarks/eval_triple_extraction.py` compares rule-based, regex,
   regex-with-rule-based fallback, composite, and offline external-prediction
   lookup extractors on labeled triples with exact precision, recall, F1, and
-  bounded error examples.
+  bounded error examples. External prediction parsing now preserves explicit
+  empty `triples: []` outputs, so adversarial negative controls can represent
+  "no extraction" without being coerced into malformed triple predictions.
+- `benchmarks/run_external_triple_extractor_handoff.py` adds the command
+  boundary for actual learned/OpenIE/LLM-json extractors: it writes label-free
+  `claim_id`/`text` requests, invokes a local command with `{input}` and
+  `{output}` placeholders, evaluates the returned offline predictions through
+  the same exact and subgroup false-positive gates, and can register a verified
+  handoff manifest. This still makes no quality claim for any specific learned
+  extractor until a real extractor run promotes on the matrix.
 - `benchmarks/fixtures/triple_extraction_records.json`,
   `benchmarks/fixtures/triple_extraction_regex_patterns.json`, and
   `benchmarks/triple_extraction_smoke.py` add a versioned extractor fixture and
@@ -591,5 +600,5 @@ Added the first monitor-first tool-selection audit layer:
 ## Next Research-to-Code Candidates
 
 1. Run denser layer-grid calibrated-observability replays through `audit_layer_band_replication.py`; only promote a selector preset after the audit passes across at least two model families.
-2. Run an actual learned or external triple extractor through the offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+2. Run an actual learned/OpenIE/LLM-json extractor command through `run_external_triple_extractor_handoff.py` on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
 3. Feed the registered covered-facts external-evidence handoff into `compare_release_candidates.py --external-evidence-baseline-comparison-key` so KG correction evidence participates in the full release gate.

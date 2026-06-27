@@ -269,6 +269,155 @@ def test_eval_triple_extraction_uses_external_prediction_lookup(tmp_path):
     assert report["report"]["f1"] == pytest.approx(1.0)
 
 
+def test_external_triple_extractor_handoff_runs_command_and_registers(tmp_path):
+    module = importlib.import_module("benchmarks.run_external_triple_extractor_handoff")
+    from eigentruth.registry import ArtifactRegistry
+
+    records_path = _write_external_triple_handoff_records(tmp_path / "triple-records.json")
+    extractor_script = _write_external_triple_extractor_script(tmp_path / "extractor.py")
+    output_dir = tmp_path / "handoff"
+    registry_path = tmp_path / "registry.json"
+
+    payload = module.run_external_triple_extractor_handoff(
+        records_path=records_path,
+        extractor_command=(
+            sys.executable,
+            str(extractor_script),
+            "--input",
+            "{input}",
+            "--output",
+            "{output}",
+        ),
+        output_dir=output_dir,
+        artifact_manifest_path=output_dir / "artifact-manifest.json",
+        verification_report_path=output_dir / "manifest-verification.json",
+        registry_path=registry_path,
+        name="external-triple-handoff",
+        version="0.1",
+        min_f1=1.0,
+        min_precision=1.0,
+        min_recall=1.0,
+        max_false_positive_rate=0.0,
+    )
+    request_rows = [
+        json.loads(line)
+        for line in (output_dir / "external-triple-extractor-requests.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip()
+    ]
+    manifest = json.loads((output_dir / "artifact-manifest.json").read_text(encoding="utf-8"))
+    verification = json.loads((output_dir / "manifest-verification.json").read_text(encoding="utf-8"))
+    record = ArtifactRegistry.load_json(registry_path).get("report:external-triple-handoff:0.1")
+
+    assert payload["status"] == "promote"
+    assert payload["request_summary"]["contains_expected_triples"] is False
+    assert request_rows
+    assert all("expected_triples" not in row for row in request_rows)
+    assert all("metadata" not in row for row in request_rows)
+    assert payload["gate"]["metrics"]["f1"] == pytest.approx(1.0)
+    assert payload["gate"]["metrics"]["false_positive_rate"] == pytest.approx(0.0)
+    assert manifest["metadata"]["status"] == "promote"
+    assert verification["passed"] is True
+    assert record.metadata["status"] == "promote"
+    assert record.metadata["manifest_verified"] is True
+
+
+def test_external_triple_extractor_handoff_blocks_false_positive(tmp_path):
+    module = importlib.import_module("benchmarks.run_external_triple_extractor_handoff")
+    records_path = _write_external_triple_handoff_records(tmp_path / "triple-records.json")
+    extractor_script = _write_external_triple_extractor_script(
+        tmp_path / "leaky-extractor.py",
+        emit_false_positive=True,
+    )
+
+    payload = module.run_external_triple_extractor_handoff(
+        records_path=records_path,
+        extractor_command=(
+            sys.executable,
+            str(extractor_script),
+            "--input",
+            "{input}",
+            "--output",
+            "{output}",
+        ),
+        output_dir=tmp_path / "blocked-handoff",
+        min_f1=0.0,
+        min_precision=0.0,
+        min_recall=0.0,
+        max_false_positive_rate=0.0,
+    )
+
+    assert payload["status"] == "blocked"
+    assert payload["gate"]["metrics"]["false_positive_rate"] == pytest.approx(1.0)
+    assert any("false_positive_rate above 0.0" in reason for reason in payload["gate"]["blocking_reasons"])
+
+
+def _write_external_triple_handoff_records(path: Path) -> Path:
+    path.write_text(
+        json.dumps({
+            "records": [
+                {
+                    "id": "capital-france",
+                    "text": "Paris is the capital of France.",
+                    "metadata": {"record_type": "positive"},
+                    "expected_triples": [
+                        {"subject": "Paris", "predicate": "capital_of", "object": "France"},
+                    ],
+                },
+                {
+                    "id": "capital-germany",
+                    "text": "Berlin is the capital of Germany.",
+                    "metadata": {"record_type": "positive"},
+                    "expected_triples": [
+                        {"subject": "Berlin", "predicate": "capital_of", "object": "Germany"},
+                    ],
+                },
+                {
+                    "id": "negated-france",
+                    "text": "Paris is not the capital of France.",
+                    "metadata": {"record_type": "adversarial_negative"},
+                    "expected_triples": [],
+                },
+            ],
+        }),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_external_triple_extractor_script(path: Path, *, emit_false_positive: bool = False) -> Path:
+    path.write_text(
+        f"""
+import argparse
+import json
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--input", required=True)
+parser.add_argument("--output", required=True)
+args = parser.parse_args()
+
+emit_false_positive = {str(bool(emit_false_positive))}
+
+with open(args.output, "w", encoding="utf-8") as out:
+    with open(args.input, encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            text = row["text"]
+            triples = []
+            if "capital of " in text and (" not " not in text or emit_false_positive):
+                subject = text.split(" is ", 1)[0]
+                obj = text.split("capital of ", 1)[1].strip().rstrip(".")
+                triples.append({{"subject": subject, "predicate": "capital_of", "object": obj}})
+            out.write(json.dumps({{"claim_id": row["claim_id"], "triples": triples}}, sort_keys=True) + "\\n")
+""".lstrip(),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_triple_extraction_smoke_uses_versioned_fixture(tmp_path):
     module = importlib.import_module("benchmarks.triple_extraction_smoke")
 
