@@ -208,8 +208,11 @@ representation-observability toolkit spanning **training and inference**.
   and use `pathway_intervention_effect(...)` to record direction-aware
   before/after score deltas; use `benchmarks/eval_pathway_intervention.py` to
   compare row-aligned baseline and intervention score dumps as a manifest-backed
-  evidence artifact. Run the standard layer/score conformal sweep before
-  treating any pathway metric as evidence.
+  evidence artifact. Use `benchmarks/run_pathway_intervention_workflow.py` when
+  the baseline, activation-ablation, source-token patch, comparison reports, and
+  top-level manifest should be produced as one reproducible local bundle. Run the
+  standard layer/score conformal sweep before treating any pathway metric as
+  evidence.
 - **Accept:** at least one pathway signal improves held-out calibrated detection
   or selected fusion over the current best baseline without increasing false
   alarm beyond the release gate, and attention-based runs must fail closed when
@@ -217,7 +220,8 @@ representation-observability toolkit spanning **training and inference**.
 - **Deliverable:** `PromptAnswerPathwayMetrics`, `AttentionPathwayMetrics`,
   activation-intervention forced-answer reruns, source-token activation patching
   forced-answer reruns, attention-pathway knockout/effect helpers, rerun
-  intervention comparator, score-dump/layer-sweep wiring, docs, and CPU smoke tests.
+  intervention comparator, pathway intervention workflow wrapper,
+  score-dump/layer-sweep wiring, docs, and CPU smoke tests.
   **Status:** implementation landed as dependency-free exploratory signals plus
   mechanism-experiment evidence scaffolding; true attention-kernel replication,
   paper-faithful larger-model patch suites, and larger model evidence are still required.

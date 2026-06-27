@@ -37695,3 +37695,120 @@ def test_eval_pathway_intervention_respects_lower_direction_and_blocks_bad_gate(
     assert payload["signals"]["support_score"]["false_mean_risk_reduction"] == pytest.approx(0.4)
     assert payload["summary"]["gate"]["status"] == "blocked"
     assert payload["summary"]["gate"]["reason"] == "no signal met intervention evidence floor"
+
+
+def test_pathway_intervention_workflow_dry_run_writes_plan(tmp_path):
+    module = importlib.import_module("benchmarks.run_pathway_intervention_workflow")
+
+    config = module.PathwayInterventionWorkflowConfig(
+        output_dir=tmp_path / "workflow",
+        model="fake-model",
+        layer=-4,
+        intervention_layer=-5,
+        patch_layer=-6,
+        limit=2,
+        manifold_questions=1,
+        dump_scores_format="json",
+        signals=("pathway_disagreement", "truth_proj"),
+        dry_run=True,
+    )
+
+    payload = module.run_pathway_intervention_workflow(config)
+    report_path = tmp_path / "workflow" / "pathway-intervention-workflow.json"
+    manifest_path = tmp_path / "workflow" / "artifact-manifest.json"
+    ablation_command = payload["execution"]["commands"]["activation_ablation"]
+    patch_command = payload["execution"]["commands"]["source_patch"]
+
+    assert payload["status"] == "needs_evidence"
+    assert payload["evidence_bundle"]["release_ready"] is False
+    assert "--activation-intervention-layer" in ablation_command
+    assert "-5" in ablation_command
+    assert "--activation-patch-layer" in patch_command
+    assert "-6" in patch_command
+    assert payload["artifact_manifest_summary"]["missing_count"] > 0
+    assert report_path.exists()
+    assert manifest_path.exists()
+
+
+def test_pathway_intervention_workflow_runs_fake_score_dumps_and_reports(tmp_path):
+    module = importlib.import_module("benchmarks.run_pathway_intervention_workflow")
+    from eigentruth.eval.score_dump import ScoreDump
+    from eigentruth.registry import ArtifactRegistry, ArtifactVerificationContext
+
+    calls = []
+
+    def fake_command_runner(command):
+        calls.append(tuple(command))
+        score_path = Path(command[command.index("--dump-scores") + 1])
+        report_path = Path(command[command.index("--json") + 1])
+        if "--activation-intervention-layer" in command:
+            scores = {
+                "pathway_disagreement": (0.02, 0.05, 0.30, 0.25),
+                "truth_proj": (0.04, 0.06, 0.35, 0.30),
+                "nll_answer": (0.05, 0.08, 0.40, 0.35),
+            }
+            run_name = "activation_ablation"
+        elif "--activation-patch-layer" in command:
+            scores = {
+                "pathway_disagreement": (0.03, 0.04, 0.20, 0.18),
+                "truth_proj": (0.05, 0.05, 0.30, 0.22),
+                "nll_answer": (0.06, 0.07, 0.34, 0.28),
+            }
+            run_name = "source_patch"
+        else:
+            scores = {
+                "pathway_disagreement": (0.10, 0.20, 0.90, 0.80),
+                "truth_proj": (0.11, 0.18, 0.70, 0.65),
+                "nll_answer": (0.12, 0.19, 0.75, 0.60),
+            }
+            run_name = "baseline"
+        dump = ScoreDump(
+            labels=(0, 0, 1, 1),
+            scores=scores,
+            statements=(
+                {"id": "0", "text": "true-a"},
+                {"id": "1", "text": "true-b"},
+                {"id": "2", "text": "false-a"},
+                {"id": "3", "text": "false-b"},
+            ),
+            config={"model": "fake-model", "run": run_name},
+        )
+        score_path.parent.mkdir(parents=True, exist_ok=True)
+        score_path.write_text(json.dumps(dump.to_mapping()), encoding="utf-8")
+        report_path.write_text(
+            json.dumps({"status": "complete", "run": run_name, "score_dump": str(score_path)}),
+            encoding="utf-8",
+        )
+
+    config = module.PathwayInterventionWorkflowConfig(
+        output_dir=tmp_path / "workflow",
+        registry_path=tmp_path / "registry.json",
+        name="pathway-workflow-smoke",
+        model="fake-model",
+        layer=-4,
+        limit=4,
+        manifold_questions=2,
+        dump_scores_format="json",
+        signals=("pathway_disagreement", "truth_proj", "nll_answer"),
+        min_mean_risk_reduction=0.05,
+        min_improved_fraction=1.0,
+    )
+
+    payload = module.run_pathway_intervention_workflow(config, command_runner=fake_command_runner)
+    manifest_verification = ArtifactVerificationContext().load_and_verify_artifact_manifest(
+        payload["paths"]["artifact_manifest"],
+        recursive=True,
+    )
+    registry_record = ArtifactRegistry.load_json(tmp_path / "registry.json").get(
+        "report:pathway-workflow-smoke:0.1",
+    )
+
+    assert len(calls) == 3
+    assert payload["status"] == "complete"
+    assert payload["comparisons"]["activation_ablation"]["gate"]["status"] == "promote"
+    assert payload["comparisons"]["source_patch"]["gate"]["status"] == "promote"
+    assert payload["evidence_bundle"]["release_ready"] is True
+    assert payload["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest_verification.passed
+    assert registry_record.metadata["workflow"] == "run_pathway_intervention_workflow"
+    assert registry_record.metadata["release_ready"] is True

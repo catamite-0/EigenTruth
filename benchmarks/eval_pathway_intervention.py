@@ -180,12 +180,28 @@ def run_pathway_intervention_eval(
     if output_path is not None:
         output = Path(output_path)
         output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(strict_json_dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         paths["report"] = str(output)
 
     if artifact_manifest_path is not None:
         manifest_path = Path(artifact_manifest_path)
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        paths["artifact_manifest"] = str(manifest_path)
+
+    registry_record = None
+    if registry_path is not None and register_name:
+        if output_path is None:
+            raise ValueError("output_path is required when registering the intervention report.")
+        registry_record = f"report:{register_name}:{register_version}"
+        paths["registry"] = str(registry_path)
+
+    payload = dict(report)
+    payload["paths"] = paths
+    if registry_record is not None:
+        payload["registry_record"] = registry_record
+    if output_path is not None:
+        Path(output_path).write_text(strict_json_dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    if artifact_manifest_path is not None:
         manifest = build_artifact_manifest(
             {
                 "baseline_scores": baseline_path,
@@ -202,12 +218,8 @@ def run_pathway_intervention_eval(
             },
         )
         manifest_path.write_text(strict_json_dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        paths["artifact_manifest"] = str(manifest_path)
 
-    registry_record = None
     if registry_path is not None and register_name:
-        if output_path is None:
-            raise ValueError("output_path is required when registering the intervention report.")
         registry = ArtifactRegistry.load_json(registry_path)
         registry.record_report(
             name=register_name,
@@ -222,15 +234,6 @@ def run_pathway_intervention_eval(
                 "n_total": report["summary"]["n_total"],
             },
         ).save_json()
-        registry_record = f"report:{register_name}:{register_version}"
-        paths["registry"] = str(registry_path)
-
-    payload = dict(report)
-    payload["paths"] = paths
-    if registry_record is not None:
-        payload["registry_record"] = registry_record
-    if output_path is not None:
-        Path(output_path).write_text(strict_json_dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return payload
 
 

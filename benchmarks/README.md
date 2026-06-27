@@ -988,6 +988,25 @@ python benchmarks/eval_truthfulqa.py \
   --dump-scores-format jsonl
 ```
 
+To run the full mechanism-evidence chain in one command, use the workflow
+wrapper. It writes the baseline, activation-ablation, source-patch, both
+comparison reports, and a top-level artifact manifest under one output
+directory:
+
+```bash
+python benchmarks/run_pathway_intervention_workflow.py \
+  --output-dir artifacts/pathway-answer-mechanism \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 \
+  --intervention-layer -8 \
+  --patch-layer -8 \
+  --limit 200 \
+  --signals pathway_disagreement,truth_proj,nll_answer \
+  --registry artifacts/local-release-registry.json \
+  --name pathway-answer-mechanism \
+  --version 0.1
+```
+
 The two score dumps must cover the same examples in the same order with
 identical labels. The report uses score directions to compute positive
 `risk_reduction` when the intervention lowers anomaly under that signal; it is
