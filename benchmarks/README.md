@@ -619,6 +619,20 @@ python benchmarks/run_pre_generation_probe_workflow.py \
 records and torch artifacts. Promote only compact reports or manifests when they
 are part of a maintained baseline.
 
+After running several workflow reports, aggregate the compact evidence without
+loading the large records:
+
+```bash
+python benchmarks/compare_pre_generation_probe_workflows.py \
+  --workflow-report smollm2=artifacts/runtime_evidence/pre-generation-smollm2-l12-workflow/pre-generation-probe-workflow.json \
+  --workflow-report qwen05=artifacts/runtime_evidence/pre-generation-qwen05-l12-workflow/pre-generation-probe-workflow.json \
+  --json artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/comparison.json \
+  --artifact-manifest artifacts/runtime_evidence/pre-generation-qwen-smollm2-l12-comparison/artifact-manifest.json \
+  --min-model-count 2 \
+  --min-record-count 80 \
+  --min-test-label-auroc 0.7
+```
+
 By default, that export writes one prompt-level record per question and uses the
 question's candidate false-answer rate as the soft target. Use
 `--pre-generation-record-grain candidate` for candidate-level records with hard

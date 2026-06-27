@@ -204,6 +204,12 @@ def run_pre_generation_probe_workflow(config: PreGenerationProbeWorkflowConfig) 
         _run_command(probe_command)
         truthfulqa_payload = _load_json_if_exists(config.truthfulqa_report_path)
         probe_payload = _load_json_if_exists(config.probe_report_path)
+    records_summary = _records_summary(config.resolved_records_path)
+    effective_model = _effective_model(
+        config,
+        truthfulqa_payload=truthfulqa_payload,
+        records_summary=records_summary,
+    )
 
     artifacts = _artifact_paths(
         config,
@@ -219,6 +225,8 @@ def run_pre_generation_probe_workflow(config: PreGenerationProbeWorkflowConfig) 
         "status": _workflow_status(dry_run=config.dry_run, probe_payload=probe_payload),
         "paths": _paths_payload(config),
         "config": _config_payload(config),
+        "effective_model": effective_model,
+        "records": records_summary,
         "execution": {
             "records_reused": records_reused,
             "truthfulqa_command": truthfulqa_command,
@@ -246,6 +254,7 @@ def run_pre_generation_probe_workflow(config: PreGenerationProbeWorkflowConfig) 
                 "workflow": "pre_generation_probe_workflow",
                 "status": report["status"],
                 "records_reused": records_reused,
+                "effective_model": effective_model,
                 "recommended_layer": _nested(probe_payload, "recommended", "layer"),
                 "candidate_count": _nested(probe_payload, "candidate_count"),
             },
@@ -424,6 +433,62 @@ def _truthfulqa_summary(payload: Mapping[str, Any] | None) -> dict[str, Any] | N
         "records": _mapping(payload.get("pre_generation_probe_records")),
         "best_signal": best_signal,
     }
+
+
+def _records_summary(path: str | Path) -> dict[str, Any] | None:
+    records_path = Path(path)
+    if not records_path.exists():
+        return None
+    first_record: Mapping[str, Any] | None = None
+    record_count = 0
+    if records_path.suffix.lower() == ".jsonl":
+        with records_path.open(encoding="utf-8") as f:
+            for line_number, line in enumerate(f, start=1):
+                if not line.strip():
+                    continue
+                payload = json.loads(line)
+                if not isinstance(payload, Mapping):
+                    raise ValueError(f"records JSONL line {line_number} must be an object.")
+                if first_record is None:
+                    first_record = payload
+                record_count += 1
+    else:
+        payload = json.loads(records_path.read_text(encoding="utf-8"))
+        raw_records = payload.get("records") if isinstance(payload, Mapping) else payload
+        if not isinstance(raw_records, Sequence) or isinstance(raw_records, (str, bytes, bytearray)):
+            raise ValueError("records JSON must be a list or an object with a records list.")
+        record_count = len(raw_records)
+        if record_count:
+            first = raw_records[0]
+            if not isinstance(first, Mapping):
+                raise ValueError("records JSON entries must be objects.")
+            first_record = first
+    metadata = _mapping(first_record.get("metadata")) if first_record is not None else {}
+    return {
+        "path": str(records_path),
+        "record_count": int(record_count),
+        "metadata_model": metadata.get("model"),
+        "metadata_dataset": metadata.get("dataset"),
+        "metadata_layers": metadata.get("layers"),
+        "metadata_record_grain": metadata.get("record_grain"),
+        "metadata_offline": metadata.get("offline"),
+        "metadata_source": metadata.get("source"),
+    }
+
+
+def _effective_model(
+    config: PreGenerationProbeWorkflowConfig,
+    *,
+    truthfulqa_payload: Mapping[str, Any] | None,
+    records_summary: Mapping[str, Any] | None,
+) -> str:
+    truthfulqa_model = _nested(truthfulqa_payload, "config", "model")
+    if truthfulqa_model:
+        return str(truthfulqa_model)
+    records_model = _nested(records_summary, "metadata_model")
+    if records_model:
+        return str(records_model)
+    return str(config.model)
 
 
 def _probe_summary(payload: Mapping[str, Any] | None) -> dict[str, Any] | None:

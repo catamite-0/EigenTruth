@@ -287,6 +287,12 @@ def test_eval_pre_generation_probe_selects_layered_records(tmp_path):
             "attention_mask": [True, True],
             "label": label,
             "soft_target": 0.9 if label else 0.1,
+            "metadata": {
+                "dataset": "synthetic",
+                "layers": [-1, -2],
+                "model": "synthetic-pre-generation-model",
+                "record_grain": "candidate",
+            },
         })
     records_path = tmp_path / "layered-pre-generation-records.json"
     records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
@@ -327,6 +333,12 @@ def test_eval_pre_generation_probe_layer_sweep_saves_best_artifacts(tmp_path):
             "attention_mask": [True, True],
             "label": label,
             "soft_target": 0.9 if label else 0.1,
+            "metadata": {
+                "dataset": "synthetic",
+                "layers": [-1, -2],
+                "model": "synthetic-pre-generation-model",
+                "record_grain": "candidate",
+            },
         })
     records_path = tmp_path / "layered-records.json"
     report_path = tmp_path / "sweep-report.json"
@@ -370,7 +382,7 @@ def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tm
     for index in range(18):
         label = 1 if index >= 9 else 0
         sign = 3.0 if label else -3.0
-        records.append({
+        record = {
             "id": f"r{index}",
             "layer_hidden_states": {
                 "-1": [[0.0, 0.0], [0.0, 0.0]],
@@ -379,7 +391,14 @@ def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tm
             "attention_mask": [True, True],
             "label": label,
             "soft_target": 0.9 if label else 0.1,
-        })
+            "metadata": {
+                "dataset": "synthetic",
+                "layers": [-1, -2],
+                "model": "synthetic-pre-generation-model",
+                "record_grain": "candidate",
+            },
+        }
+        records.append(record)
     records_path = tmp_path / "layered-records.json"
     output_dir = tmp_path / "workflow"
     records_path.write_text(json.dumps({"records": records}), encoding="utf-8")
@@ -401,6 +420,9 @@ def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tm
 
     assert payload["workflow"] == "pre_generation_probe_workflow"
     assert payload["status"] == "ready"
+    assert payload["effective_model"] == "synthetic-pre-generation-model"
+    assert payload["records"]["metadata_model"] == "synthetic-pre-generation-model"
+    assert payload["records"]["metadata_layers"] == [-1, -2]
     assert payload["execution"]["records_reused"] is True
     assert payload["truthfulqa"] is None
     assert payload["probe"]["candidate_count"] == 2
@@ -411,9 +433,75 @@ def test_run_pre_generation_probe_workflow_reuses_records_and_writes_manifest(tm
     assert saved_report["probe"]["recommended_layer"] == -2
     assert manifest["metadata"]["workflow"] == "pre_generation_probe_workflow"
     assert manifest["metadata"]["status"] == "ready"
+    assert manifest["metadata"]["effective_model"] == "synthetic-pre-generation-model"
     assert manifest["summary"]["missing_count"] == 0
     assert (output_dir / "best-pre-generation-probe.pt").exists()
     assert (output_dir / "best-pre-generation-calibration.json").exists()
+
+
+def test_compare_pre_generation_probe_workflows_gates_multimodel_reports(tmp_path):
+    module = importlib.import_module("benchmarks.compare_pre_generation_probe_workflows")
+
+    report_paths = {}
+    for name, model, auroc, layer in (
+        ("smollm2", "HuggingFaceTB/SmolLM2-135M-Instruct", 0.72, -12),
+        ("qwen05", "Qwen/Qwen2.5-0.5B-Instruct", 0.81, -4),
+    ):
+        path = tmp_path / f"{name}-workflow.json"
+        path.write_text(
+            json.dumps({
+                "workflow": "pre_generation_probe_workflow",
+                "status": "ready",
+                "effective_model": model,
+                "records": {
+                    "metadata_dataset": "truthfulqa",
+                    "metadata_layers": [-12, -8, -4],
+                    "metadata_record_grain": "candidate",
+                    "record_count": 94,
+                },
+                "execution": {"records_reused": True},
+                "artifact_manifest_summary": {"artifact_count": 5, "missing_count": 0},
+                "probe": {
+                    "candidate_count": 3,
+                    "conformal_available": True,
+                    "conformal_threshold": 0.7,
+                    "recommended_layer": layer,
+                    "selection_metric": "label_auroc",
+                    "selection_value": auroc,
+                    "test_label_auroc": auroc,
+                    "test_selective_accuracy": 0.61,
+                    "test_selective_coverage": 0.83,
+                    "test_target_bce": 0.59,
+                },
+            }),
+            encoding="utf-8",
+        )
+        report_paths[name] = path
+    comparison_path = tmp_path / "comparison.json"
+    manifest_path = tmp_path / "artifact-manifest.json"
+
+    payload = module.compare_pre_generation_probe_workflows(
+        module.PreGenerationProbeWorkflowComparisonConfig(
+            workflow_reports=report_paths,
+            output_path=comparison_path,
+            artifact_manifest_path=manifest_path,
+            min_model_count=2,
+            min_record_count=80,
+            min_test_label_auroc=0.7,
+        )
+    )
+    saved = json.loads(comparison_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["workflow"] == "pre_generation_probe_workflow_comparison"
+    assert payload["status"] == "ready"
+    assert payload["promotion_gate"]["failures"] == []
+    assert payload["promotion_gate"]["model_count"] == 2
+    assert payload["leaderboard"][0]["name"] == "qwen05"
+    assert payload["leaderboard"][0]["recommended_layer"] == -4
+    assert saved["artifact_manifest_summary"]["missing_count"] == 0
+    assert manifest["metadata"]["workflow"] == "pre_generation_probe_workflow_comparison"
+    assert manifest["metadata"]["status"] == "ready"
 
 
 def test_eval_truthfulqa_exports_pre_generation_probe_records(tmp_path):
