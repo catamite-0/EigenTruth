@@ -81,6 +81,14 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_cache_hit_rate_drop: float | None = None
     max_runtime_drift_verification_skip_rate_drop: float | None = None
     min_runtime_drift_promotion_contract_coverage: float | None = None
+    min_runtime_drift_pre_generation_probe_comparison_coverage: float | None = None
+    min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate: float | None = None
+    min_runtime_drift_pre_generation_probe_comparison_model_count: float | None = None
+    min_runtime_drift_pre_generation_probe_comparison_run_count: float | None = None
+    min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate: float | None = None
+    max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop: float | None = None
+    max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop: float | None = None
+    max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop: float | None = None
     min_runtime_drift_triple_extraction_fixture_matrix_coverage: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop: float | None = None
     max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop: float | None = None
@@ -175,6 +183,14 @@ class ProductTraceReplayWorkflowConfig:
                 self.max_runtime_drift_cache_hit_rate_drop,
                 self.max_runtime_drift_verification_skip_rate_drop,
                 self.min_runtime_drift_promotion_contract_coverage,
+                self.min_runtime_drift_pre_generation_probe_comparison_coverage,
+                self.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate,
+                self.min_runtime_drift_pre_generation_probe_comparison_model_count,
+                self.min_runtime_drift_pre_generation_probe_comparison_run_count,
+                self.min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate,
+                self.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
+                self.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
+                self.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
                 self.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
                 self.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1296,6 +1312,14 @@ def _runtime_drift_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
             config.max_runtime_drift_cache_hit_rate_drop,
             config.max_runtime_drift_verification_skip_rate_drop,
             config.min_runtime_drift_promotion_contract_coverage,
+            config.min_runtime_drift_pre_generation_probe_comparison_coverage,
+            config.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate,
+            config.min_runtime_drift_pre_generation_probe_comparison_model_count,
+            config.min_runtime_drift_pre_generation_probe_comparison_run_count,
+            config.min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate,
+            config.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop,
+            config.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop,
+            config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop,
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_best_f1_drop,
             config.max_runtime_drift_triple_extraction_fixture_matrix_mean_f1_lift_drop,
@@ -1335,6 +1359,30 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
         "max_cache_hit_rate_drop": config.max_runtime_drift_cache_hit_rate_drop,
         "max_verification_skip_rate_drop": config.max_runtime_drift_verification_skip_rate_drop,
         "min_promotion_contract_coverage": config.min_runtime_drift_promotion_contract_coverage,
+        "min_pre_generation_probe_comparison_coverage": (
+            config.min_runtime_drift_pre_generation_probe_comparison_coverage
+        ),
+        "min_pre_generation_probe_comparison_manifest_verified_rate": (
+            config.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate
+        ),
+        "min_pre_generation_probe_comparison_model_count": (
+            config.min_runtime_drift_pre_generation_probe_comparison_model_count
+        ),
+        "min_pre_generation_probe_comparison_run_count": (
+            config.min_runtime_drift_pre_generation_probe_comparison_run_count
+        ),
+        "min_pre_generation_probe_comparison_redline_pass_rate": (
+            config.min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate
+        ),
+        "max_pre_generation_probe_comparison_best_test_label_auroc_drop": (
+            config.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop
+        ),
+        "max_pre_generation_probe_comparison_best_redline_auroc_drop": (
+            config.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop
+        ),
+        "max_pre_generation_probe_comparison_best_redline_margin_drop": (
+            config.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
+        ),
         "min_triple_extraction_fixture_matrix_coverage": (
             config.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -1716,6 +1764,7 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
     budget_gate = _mapping(runtime_drift.get("runtime_budget_policy_gate"))
     covered_fact_property = _covered_fact_property_metric_summary(runtime_drift)
     product_trace_action_gate = _product_trace_action_gate_metric_summary(runtime_drift)
+    pre_generation_probe_comparison = _pre_generation_probe_comparison_metric_summary(runtime_drift)
     return {
         "status": runtime_drift.get("status"),
         "gate_enabled": summary.get("gate_enabled"),
@@ -1730,6 +1779,10 @@ def _runtime_drift_summary(runtime_drift: Mapping[str, Any]) -> dict[str, Any]:
         "covered_fact_property_blocked_metric_count": covered_fact_property["blocked_metric_count"],
         "product_trace_action_gate_metric_count": product_trace_action_gate["metric_count"],
         "product_trace_action_gate_blocked_metric_count": product_trace_action_gate["blocked_metric_count"],
+        "pre_generation_probe_comparison_metric_count": pre_generation_probe_comparison["metric_count"],
+        "pre_generation_probe_comparison_blocked_metric_count": (
+            pre_generation_probe_comparison["blocked_metric_count"]
+        ),
         "baseline_path": _nested(runtime_drift, "baseline", "path"),
         "current_path": _nested(runtime_drift, "current", "path"),
         "report_path": _nested(runtime_drift, "paths", "report"),
@@ -1745,6 +1798,20 @@ def _covered_fact_property_metric_summary(runtime_drift: Mapping[str, Any]) -> d
         for metric in _sequence(runtime_drift.get("metrics"))
         if str(_mapping(metric).get("metric") or "").startswith(
             "promotion_contract.covered_fact_properties."
+        )
+    )
+    return {
+        "metric_count": len(metrics),
+        "blocked_metric_count": sum(1 for metric in metrics if metric.get("status") == "blocked"),
+    }
+
+
+def _pre_generation_probe_comparison_metric_summary(runtime_drift: Mapping[str, Any]) -> dict[str, int]:
+    metrics = tuple(
+        _mapping(metric)
+        for metric in _sequence(runtime_drift.get("metrics"))
+        if str(_mapping(metric).get("metric") or "").startswith(
+            "promotion_contract.pre_generation_probe_comparison."
         )
     )
     return {
@@ -2154,6 +2221,16 @@ def _write_artifact_manifest(
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
             ),
+            "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_probe_comparison_metric_count",
+            ),
+            "runtime_drift_pre_generation_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_probe_comparison_blocked_metric_count",
+            ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
             "compact_json": config.compact_json,
@@ -2400,6 +2477,16 @@ def _record_registry(
                 report,
                 "runtime_drift",
                 "product_trace_action_gate_blocked_metric_count",
+            ),
+            "runtime_drift_pre_generation_probe_comparison_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_probe_comparison_metric_count",
+            ),
+            "runtime_drift_pre_generation_probe_comparison_blocked_metric_count": _nested(
+                report,
+                "runtime_drift",
+                "pre_generation_probe_comparison_blocked_metric_count",
             ),
             "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
             "runtime_drift_artifact_manifest": _nested(report, "paths", "runtime_drift_manifest"),
@@ -2731,6 +2818,30 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
         max_runtime_drift_cache_hit_rate_drop=args.max_runtime_drift_cache_hit_rate_drop,
         max_runtime_drift_verification_skip_rate_drop=args.max_runtime_drift_verification_skip_rate_drop,
         min_runtime_drift_promotion_contract_coverage=args.min_runtime_drift_promotion_contract_coverage,
+        min_runtime_drift_pre_generation_probe_comparison_coverage=(
+            args.min_runtime_drift_pre_generation_probe_comparison_coverage
+        ),
+        min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate=(
+            args.min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate
+        ),
+        min_runtime_drift_pre_generation_probe_comparison_model_count=(
+            args.min_runtime_drift_pre_generation_probe_comparison_model_count
+        ),
+        min_runtime_drift_pre_generation_probe_comparison_run_count=(
+            args.min_runtime_drift_pre_generation_probe_comparison_run_count
+        ),
+        min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate=(
+            args.min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate
+        ),
+        max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop=(
+            args.max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop
+        ),
+        max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop=(
+            args.max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop
+        ),
+        max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop=(
+            args.max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop
+        ),
         min_runtime_drift_triple_extraction_fixture_matrix_coverage=(
             args.min_runtime_drift_triple_extraction_fixture_matrix_coverage
         ),
@@ -2890,6 +3001,42 @@ def main(argv: Sequence[str] | None = None) -> None:
     parser.add_argument("--max-runtime-drift-cache-hit-rate-drop", type=float, default=None)
     parser.add_argument("--max-runtime-drift-verification-skip-rate-drop", type=float, default=None)
     parser.add_argument("--min-runtime-drift-promotion-contract-coverage", type=float, default=None)
+    parser.add_argument("--min-runtime-drift-pre-generation-probe-comparison-coverage", type=float, default=None)
+    parser.add_argument(
+        "--min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-pre-generation-probe-comparison-model-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-pre-generation-probe-comparison-run-count",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--min-runtime-drift-pre-generation-probe-comparison-redline-pass-rate",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-probe-comparison-best-test-label-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-probe-comparison-best-redline-auroc-drop",
+        type=float,
+        default=None,
+    )
+    parser.add_argument(
+        "--max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop",
+        type=float,
+        default=None,
+    )
     parser.add_argument("--min-runtime-drift-triple-extraction-fixture-matrix-coverage", type=float, default=None)
     parser.add_argument(
         "--max-runtime-drift-triple-extraction-fixture-matrix-mean-best-f1-drop",

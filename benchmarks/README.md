@@ -4869,6 +4869,11 @@ the workflow should immediately validate the current runtime baseline against
 the previous promoted baseline/policy gate. The runtime-drift pass-through also
 accepts promotion evidence gates such as
 `--min-runtime-drift-promotion-contract-coverage`,
+pre-generation probe comparison gates such as
+`--min-runtime-drift-pre-generation-probe-comparison-coverage`,
+`--min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate`,
+`--min-runtime-drift-pre-generation-probe-comparison-redline-pass-rate`, and
+`--max-runtime-drift-pre-generation-probe-comparison-best-*-drop`,
 `--min-runtime-drift-triple-extraction-fixture-matrix-coverage`, the two
 `--max-runtime-drift-triple-extraction-fixture-matrix-mean-*` drop gates, and
 covered-fact property gates such as
@@ -4910,6 +4915,14 @@ python benchmarks/run_product_trace_replay_workflow.py \
   --max-action-execution-request-id-mismatch-rate 0.0 \
   --max-runtime-drift-total-seconds-p95-ratio 1.6 \
   --min-runtime-drift-promotion-contract-coverage 1.0 \
+  --min-runtime-drift-pre-generation-probe-comparison-coverage 1.0 \
+  --min-runtime-drift-pre-generation-probe-comparison-manifest-verified-rate 1.0 \
+  --min-runtime-drift-pre-generation-probe-comparison-model-count 2 \
+  --min-runtime-drift-pre-generation-probe-comparison-run-count 2 \
+  --min-runtime-drift-pre-generation-probe-comparison-redline-pass-rate 1.0 \
+  --max-runtime-drift-pre-generation-probe-comparison-best-test-label-auroc-drop 0.02 \
+  --max-runtime-drift-pre-generation-probe-comparison-best-redline-auroc-drop 0.02 \
+  --max-runtime-drift-pre-generation-probe-comparison-best-redline-margin-drop 0.02 \
   --min-runtime-drift-covered-fact-property-metric-count 3 \
   --min-runtime-drift-covered-fact-min-records 8 \
   --min-runtime-drift-covered-fact-min-source-documents 100 \

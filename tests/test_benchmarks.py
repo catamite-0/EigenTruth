@@ -31465,6 +31465,23 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
         "promotion_contract_product_trace_action_execution_unexpected_result_rate": 0.0,
         "promotion_contract_product_trace_action_execution_request_id_mismatch_rate": 0.0,
     }
+    pre_generation_probe_comparison_rollup = {
+        "pre_generation_probe_comparison_source": "registry",
+        "pre_generation_probe_comparison_record": "report:pre-generation-probe-comparison:0.1",
+        "pre_generation_probe_comparison_status": "promote",
+        "pre_generation_probe_comparison_manifest_verification": {"passed": True},
+        "pre_generation_probe_comparison_model_count": 2,
+        "pre_generation_probe_comparison_run_count": 2,
+        "pre_generation_probe_comparison_redline_passed": True,
+        "pre_generation_probe_comparison_redline_run_count": 2,
+        "pre_generation_probe_comparison_best_run": "qwen05",
+        "pre_generation_probe_comparison_best_model": "Qwen/Qwen2.5-0.5B",
+        "pre_generation_probe_comparison_best_layer": -12,
+        "pre_generation_probe_comparison_best_test_label_auroc": 0.86,
+        "pre_generation_probe_comparison_best_redline_signal": "claim_token_count",
+        "pre_generation_probe_comparison_best_redline_auroc": 0.70,
+        "pre_generation_probe_comparison_best_redline_margin": 0.08,
+    }
     trace_payloads = (
         {
             "request_id": "latency-low-supported",
@@ -31482,6 +31499,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 ),
                 **covered_fact_rollup,
                 **product_trace_action_gate_rollup,
+                **pre_generation_probe_comparison_rollup,
             },
             "runtime_trace": {"total_seconds": 0.10, "phases": []},
         },
@@ -31501,6 +31519,7 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
                 ),
                 **covered_fact_rollup,
                 **product_trace_action_gate_rollup,
+                **pre_generation_probe_comparison_rollup,
             },
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
@@ -31546,6 +31565,14 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
             max_runtime_drift_covered_fact_min_false_refuted_rate_drop=0.0,
             max_runtime_drift_product_trace_action_audit_error_rate_increase=0.0,
             max_runtime_drift_product_trace_action_execution_request_id_mismatch_rate_increase=0.0,
+            min_runtime_drift_pre_generation_probe_comparison_coverage=1.0,
+            min_runtime_drift_pre_generation_probe_comparison_manifest_verified_rate=1.0,
+            min_runtime_drift_pre_generation_probe_comparison_model_count=2,
+            min_runtime_drift_pre_generation_probe_comparison_run_count=2,
+            min_runtime_drift_pre_generation_probe_comparison_redline_pass_rate=1.0,
+            max_runtime_drift_pre_generation_probe_comparison_best_test_label_auroc_drop=0.0,
+            max_runtime_drift_pre_generation_probe_comparison_best_redline_auroc_drop=0.0,
+            max_runtime_drift_pre_generation_probe_comparison_best_redline_margin_drop=0.0,
             min_runtime_drift_current_trace_count=2,
             registry_path=registry_path,
             name="trace-replay-with-drift",
@@ -31570,6 +31597,8 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["runtime_drift"]["covered_fact_property_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["product_trace_action_gate_metric_count"] == 10
     assert payload["runtime_drift"]["product_trace_action_gate_blocked_metric_count"] == 0
+    assert payload["runtime_drift"]["pre_generation_probe_comparison_metric_count"] == 8
+    assert payload["runtime_drift"]["pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert payload["runtime_drift"]["runtime_budget_policy_path"] == str(drift_policy_path)
     assert payload["paths"]["runtime_drift_manifest"] is not None
     assert payload["config"]["runtime_drift_baseline"] == str(prior_baseline_path)
@@ -31585,6 +31614,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert payload["config"]["runtime_drift_gates"][
         "max_product_trace_action_execution_request_id_mismatch_rate_increase"
     ] == pytest.approx(0.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "min_pre_generation_probe_comparison_coverage"
+    ] == pytest.approx(1.0)
+    assert payload["config"]["runtime_drift_gates"][
+        "max_pre_generation_probe_comparison_best_redline_margin_drop"
+    ] == pytest.approx(0.0)
     assert drift_report["config"]["min_promotion_contract_coverage"] == pytest.approx(0.0)
     assert drift_report["config"]["min_promotion_contract_covered_fact_property_metric_count"] == (
         pytest.approx(2.0)
@@ -31596,6 +31631,12 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_report["config"][
         "max_product_trace_action_execution_request_id_mismatch_rate_increase"
     ] == pytest.approx(0.0)
+    assert drift_report["config"]["min_pre_generation_probe_comparison_manifest_verified_rate"] == (
+        pytest.approx(1.0)
+    )
+    assert drift_report["config"]["max_pre_generation_probe_comparison_best_test_label_auroc_drop"] == (
+        pytest.approx(0.0)
+    )
     covered_fact_statuses = {
         metric["metric"]: metric["status"]
         for metric in drift_report["metrics"]
@@ -31626,6 +31667,16 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert action_gate_statuses[
         "promotion_contract.product_trace_replay.action_execution_gate.request_id_mismatch_rate.mean"
     ] == "pass"
+    pre_generation_statuses = {
+        metric["metric"]: metric["status"]
+        for metric in drift_report["metrics"]
+        if metric["metric"].startswith("promotion_contract.pre_generation_probe_comparison.")
+    }
+    assert len(pre_generation_statuses) == 8
+    assert set(pre_generation_statuses.values()) == {"pass"}
+    assert pre_generation_statuses[
+        "promotion_contract.pre_generation_probe_comparison.redline_pass_rate"
+    ] == "pass"
     assert drift_report["runtime_budget_policy_gate"]["policy_metadata"] == {
         "source": "unit-test-runtime-drift"
     }
@@ -31636,16 +31687,21 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert manifest["metadata"]["runtime_drift_covered_fact_property_blocked_metric_count"] == 0
     assert manifest["metadata"]["runtime_drift_product_trace_action_gate_metric_count"] == 10
     assert manifest["metadata"]["runtime_drift_product_trace_action_gate_blocked_metric_count"] == 0
+    assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
+    assert manifest["metadata"]["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert record.metadata["runtime_drift_status"] == "promote"
     assert record.metadata["runtime_drift_budget_policy_passed"] is True
     assert record.metadata["runtime_drift_covered_fact_property_metric_count"] == 6
     assert record.metadata["runtime_drift_product_trace_action_gate_metric_count"] == 10
     assert record.metadata["runtime_drift_product_trace_action_gate_blocked_metric_count"] == 0
+    assert record.metadata["runtime_drift_pre_generation_probe_comparison_metric_count"] == 8
+    assert record.metadata["runtime_drift_pre_generation_probe_comparison_blocked_metric_count"] == 0
     assert drift_record.path == payload["paths"]["runtime_drift_report"]
     assert drift_record.metadata["workflow"] == "compare_product_runtime_baselines"
     assert drift_record.metadata["runtime_budget_policy_passed"] is True
     assert drift_record.metadata["covered_fact_property_blocked_metric_count"] == 0
     assert drift_record.metadata["product_trace_action_gate_blocked_metric_count"] == 0
+    assert drift_record.metadata["pre_generation_probe_comparison_blocked_metric_count"] == 0
 
 
 def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
