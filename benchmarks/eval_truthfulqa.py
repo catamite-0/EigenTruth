@@ -90,6 +90,11 @@ from eigentruth.eval.metrics import (
     topk_normalized_entropy,
 )
 from eigentruth.eval.score_dump import write_score_dump_jsonl_mapping
+from eigentruth.intervention import (
+    ACTIVATION_INTERVENTION_MODES,
+    ACTIVATION_INTERVENTION_SPANS,
+    TemporaryActivationIntervention,
+)
 from eigentruth.intervention.hooks import TruthProbe
 from eigentruth.verify import Claim, SelfConsistencyVerifier
 
@@ -2884,6 +2889,7 @@ def batched_statement_reps(
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
+    activation_intervention: Mapping[str, object] | None = None,
 ) -> list[Optional[dict]]:
     """Batch forced-answer forwards while preserving per-statement result shape."""
     encoded: list[tuple[int, list[int], int]] = []
@@ -2934,15 +2940,49 @@ def batched_statement_reps(
         input_ids[row, :len(ids)] = ids_t
         attention_mask[row, :len(ids)] = 1
 
-    out, hidden_by_layer = _forward_with_selected_hidden_states(
-        model,
-        input_ids=input_ids,
-        attention_mask=attention_mask,
-        layers=capture_layers,
-        hidden_state_capture=hidden_state_capture,
-        need_logits=compute_answer_metrics,
-        output_attentions=bool(capture_attention_pathways),
-    )
+    activation_summary = None
+    if activation_intervention is None:
+        out, hidden_by_layer = _forward_with_selected_hidden_states(
+            model,
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            layers=capture_layers,
+            hidden_state_capture=hidden_state_capture,
+            need_logits=compute_answer_metrics,
+            output_attentions=bool(capture_attention_pathways),
+        )
+    else:
+        sequence_lengths = [len(ids) for _, ids, _ in encoded]
+        answer_starts = [len(ids) - int(n_ans) for _, ids, n_ans in encoded]
+        requested_intervention_layer = int(activation_intervention.get("layer_idx", layers[0]))
+        intervention_layer = _hook_capture_layer_map(model, [requested_intervention_layer])[
+            requested_intervention_layer
+        ]
+        intervention_metadata = dict(activation_intervention.get("metadata") or {})
+        intervention_metadata.update({
+            "requested_hidden_state_layer_idx": requested_intervention_layer,
+            "module_layer_idx": intervention_layer,
+        })
+        with TemporaryActivationIntervention(
+            model,
+            layer_idx=intervention_layer,
+            sequence_lengths=sequence_lengths,
+            answer_starts=answer_starts,
+            span=str(activation_intervention.get("span", "answer")),
+            mode=str(activation_intervention.get("mode", "zero")),
+            scale=float(activation_intervention.get("scale", 0.0)),
+            metadata=intervention_metadata,
+        ) as intervention:
+            out, hidden_by_layer = _forward_with_selected_hidden_states(
+                model,
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                layers=capture_layers,
+                hidden_state_capture=hidden_state_capture,
+                need_logits=compute_answer_metrics,
+                output_attentions=bool(capture_attention_pathways),
+            )
+            activation_summary = intervention.summary.to_dict()
     if capture_attention_pathways and getattr(out, "attentions", None) is None:
         raise ValueError(
             "--attention-pathway requested model attentions, but the model backend did not return them. "
@@ -3020,6 +3060,8 @@ def batched_statement_reps(
             "first_token_entropy": first_token_entropy,
             "nll": nll,
         }
+        if activation_summary is not None:
+            result["activation_intervention"] = activation_summary
         if prompt_hs_by_layer is not None and prompt_attention_mask is not None:
             result["prompt_hs_by_layer"] = prompt_hs_by_layer
             result["prompt_attention_mask"] = prompt_attention_mask
@@ -3215,6 +3257,7 @@ def _batched_statement_reps_for_pairs(
     first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
     capture_prompt_hidden_states: bool = False,
     capture_attention_pathways: bool = False,
+    activation_intervention: Mapping[str, object] | None = None,
 ) -> list[Optional[dict]]:
     """Run forced-answer forwards for statement pairs with optional memory fallback."""
 
@@ -3236,6 +3279,7 @@ def _batched_statement_reps_for_pairs(
             first_token_top_k=first_token_top_k,
             capture_prompt_hidden_states=capture_prompt_hidden_states,
             capture_attention_pathways=capture_attention_pathways,
+            activation_intervention=activation_intervention,
         )
 
     return _run_with_batch_size_fallback(
@@ -3254,7 +3298,8 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
                    hidden_state_capture: str = "outputs",
                    prefix_kv_cache: bool = False,
                    first_token_top_k: int = FIRST_TOKEN_TOP_K_DEFAULT,
-                   capture_attention_pathways: bool = False) -> Optional[dict]:
+                   capture_attention_pathways: bool = False,
+                   activation_intervention: Mapping[str, object] | None = None) -> Optional[dict]:
     """Single-statement compatibility wrapper around batched_statement_reps."""
     return batched_statement_reps(
         model,
@@ -3270,6 +3315,7 @@ def statement_reps(model, tokenizer, stmt: Statement, layers: List[int],
         prefix_kv_cache=prefix_kv_cache,
         first_token_top_k=first_token_top_k,
         capture_attention_pathways=capture_attention_pathways,
+        activation_intervention=activation_intervention,
     )[0]
 
 
@@ -4165,6 +4211,24 @@ def build_layer_stats(model, tokenizer, true_texts: List[str], false_texts: List
     return manifolds, subspaces
 
 
+def _activation_intervention_config(args) -> dict[str, object] | None:
+    """Return forced-answer activation intervention config from CLI args."""
+    layer_idx = getattr(args, "activation_intervention_layer", None)
+    if layer_idx is None:
+        return None
+    return {
+        "layer_idx": int(layer_idx),
+        "span": str(getattr(args, "activation_intervention_span", "answer")),
+        "mode": str(getattr(args, "activation_intervention_mode", "zero")),
+        "scale": float(getattr(args, "activation_intervention_scale", 0.0)),
+        "metadata": {
+            "source": "eval_truthfulqa_forced_answer",
+            "description": "temporary activation intervention during forced-answer scoring",
+            "layer_index_semantics": "hf_hidden_states_index",
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # 主流程 / Main
 # ---------------------------------------------------------------------------
@@ -4192,6 +4256,7 @@ def run(args) -> dict:
     inside_selfcheck_min_overlap = float(getattr(args, "inside_selfcheck_min_overlap", 0.65))
     inside_selfcheck_support_threshold = float(getattr(args, "inside_selfcheck_support_threshold", 0.60))
     inside_selfcheck_refute_threshold = float(getattr(args, "inside_selfcheck_refute_threshold", 0.50))
+    activation_intervention = _activation_intervention_config(args)
 
     stats_cache_path = Path(args.layer_stats_cache) if args.layer_stats_cache else None
     eval_reps_cache_path = Path(args.eval_reps_cache) if args.eval_reps_cache else None
@@ -4514,6 +4579,7 @@ def run(args) -> dict:
                     first_token_top_k=int(getattr(args, "first_token_top_k", FIRST_TOKEN_TOP_K_DEFAULT)),
                     capture_prompt_hidden_states=dump_pre_generation_probe_records,
                     capture_attention_pathways=bool(getattr(args, "attention_pathway", False)),
+                    activation_intervention=activation_intervention,
                 )
             if eval_reps_writer is not None:
                 with _profile_phase(profile, "write_eval_reps_cache_batch"):
@@ -4860,6 +4926,8 @@ def run(args) -> dict:
                    "attention_pathway_schema": (
                        1 if bool(getattr(args, "attention_pathway", False)) else None
                    ),
+                   "activation_intervention": activation_intervention,
+                   "activation_intervention_schema": 1 if activation_intervention is not None else None,
                    "batch_size": args.batch_size,
                    "max_batch_tokens": max_batch_tokens,
                    "auto_batch_size": args.auto_batch_size,
@@ -5136,6 +5204,16 @@ def main():
                    help="optional: request model attentions and emit question-vs-answer attention-flow "
                         "pathway signals; off by default because it increases memory and may require "
                         "attention support from the model backend")
+    p.add_argument("--activation-intervention-layer", type=int, default=None,
+                   help="optional forced-answer model-side activation intervention HF hidden_states layer index; "
+                        "use a separate run and compare the resulting score dump with "
+                        "benchmarks/eval_pathway_intervention.py")
+    p.add_argument("--activation-intervention-span", default="answer", choices=ACTIVATION_INTERVENTION_SPANS,
+                   help="token span to modify during --activation-intervention-layer")
+    p.add_argument("--activation-intervention-mode", default="zero", choices=ACTIVATION_INTERVENTION_MODES,
+                   help="activation intervention operation")
+    p.add_argument("--activation-intervention-scale", type=float, default=0.0,
+                   help="scale value used when --activation-intervention-mode scale")
     p.add_argument("--inside-samples", type=int, default=0,
                    help="enable multi-sample INSIDE proxy with this many sampled continuations; "
                         "0 disables it, values >=2 enable inside_eigenscore, inside_semantic_entropy, "
@@ -5322,6 +5400,14 @@ def main():
         p.error("--prefix-kv-cache requires --hidden-state-capture outputs")
     if args.prefix_kv_cache and args.attention_pathway:
         p.error("--attention-pathway cannot be combined with --prefix-kv-cache")
+    if args.activation_intervention_layer is not None:
+        if not math.isfinite(float(args.activation_intervention_scale)):
+            p.error("--activation-intervention-scale must be finite")
+        if args.prefix_kv_cache:
+            p.error("--activation-intervention-layer cannot be combined with --prefix-kv-cache")
+        if args.eval_reps_cache:
+            p.error("--activation-intervention-layer cannot be combined with --eval-reps-cache; "
+                    "write the intervention score dump directly and compare it post-hoc")
     if args.cache_only:
         if not args.layer_stats_cache or not args.eval_reps_cache:
             p.error("--cache-only requires --layer-stats-cache and --eval-reps-cache")

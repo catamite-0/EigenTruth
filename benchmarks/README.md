@@ -941,25 +941,42 @@ When a mechanism intervention has been rerun as a separate row-aligned score
 dump, compare it with the baseline run before making a pathway-causality claim:
 
 ```bash
+python benchmarks/eval_truthfulqa.py \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 --limit 200 --hidden-state-capture hooks \
+  --dump-scores artifacts/pathway-baseline/scores.manifest.json \
+  --dump-scores-format jsonl
+
+python benchmarks/eval_truthfulqa.py \
+  --model Qwen/Qwen2.5-0.5B-Instruct \
+  --layer -8 --limit 200 --hidden-state-capture hooks \
+  --activation-intervention-layer -8 \
+  --activation-intervention-span answer \
+  --activation-intervention-mode zero \
+  --dump-scores artifacts/pathway-answer-zero/scores.manifest.json \
+  --dump-scores-format jsonl
+
 python benchmarks/eval_pathway_intervention.py \
   --baseline-scores artifacts/pathway-baseline/scores.manifest.json \
-  --intervened-scores artifacts/pathway-prompt-knockout/scores.manifest.json \
-  --signals attn_prompt_flow_loss,pathway_disagreement,truth_proj \
+  --intervened-scores artifacts/pathway-answer-zero/scores.manifest.json \
+  --signals pathway_disagreement,truth_proj,nll_answer \
   --direction truth_proj=higher \
-  --pathway prompt \
-  --intervention-name prompt_attention_knockout \
-  --json artifacts/pathway-prompt-knockout/intervention-effect-report.json \
-  --artifact-manifest artifacts/pathway-prompt-knockout/artifact-manifest.json \
+  --pathway answer \
+  --intervention-name answer_activation_zero \
+  --json artifacts/pathway-answer-zero/intervention-effect-report.json \
+  --artifact-manifest artifacts/pathway-answer-zero/artifact-manifest.json \
   --registry artifacts/local-release-registry.json \
-  --register-name pathway-prompt-knockout \
+  --register-name pathway-answer-zero \
   --register-version 0.1
 ```
 
 The two score dumps must cover the same examples in the same order with
 identical labels. The report uses score directions to compute positive
 `risk_reduction` when the intervention lowers anomaly under that signal; it is
-rerun evidence, not a substitute for implementing the actual model-side
-intervention.
+rerun evidence from a model-side activation intervention. `--eval-reps-cache`
+and `--prefix-kv-cache` are intentionally disabled for activation intervention
+runs so a baseline representation cache cannot contaminate the intervention
+dump.
 
 Use `--runtime-preset quick` for bounded local smoke runs, `calibrate` when
 iterating on existing score dumps, and `full` for real TruthfulQA-oriented runs

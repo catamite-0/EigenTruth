@@ -4,8 +4,11 @@ import pytest
 import torch
 
 from eigentruth.intervention import (
+    ActivationInterventionSummary,
     AttentionPathwayKnockoutReport,
     PathwayInterventionEffect,
+    TemporaryActivationIntervention,
+    apply_activation_intervention,
     attention_pathway_knockout_report,
     knockout_attention_pathway,
     pathway_intervention_effect,
@@ -137,3 +140,62 @@ def test_pathway_intervention_helpers_reject_invalid_inputs():
         pathway_intervention_effect("bad", baseline_score=float("nan"), intervened_score=1.0)
     with pytest.raises(ValueError, match="direction"):
         pathway_intervention_effect("bad", baseline_score=1.0, intervened_score=2.0, direction="sideways")
+
+
+def test_apply_activation_intervention_scales_answer_span_and_roundtrips_summary():
+    hidden = torch.arange(24, dtype=torch.float32).reshape(2, 3, 4)
+
+    out = apply_activation_intervention(
+        hidden,
+        sequence_lengths=(3, 2),
+        answer_starts=(1, 1),
+        span="answer",
+        mode="scale",
+        scale=0.5,
+    )
+    summary = ActivationInterventionSummary(
+        layer_idx=0,
+        span="answer",
+        mode="scale",
+        scale=0.5,
+        sequence_lengths=(3, 2),
+        answer_starts=(1, 1),
+        affected_token_count=3,
+    )
+
+    assert torch.allclose(out[0, 0], hidden[0, 0])
+    assert torch.allclose(out[0, 1:3], hidden[0, 1:3] * 0.5)
+    assert torch.allclose(out[1, 1:2], hidden[1, 1:2] * 0.5)
+    assert ActivationInterventionSummary.from_dict(summary.to_dict()).to_dict() == summary.to_dict()
+
+
+def test_temporary_activation_intervention_modifies_layer_output():
+    class Block(torch.nn.Module):
+        def forward(self, x):
+            return x + 1.0
+
+    class Tiny(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.layers = torch.nn.ModuleList([Block()])
+
+        def forward(self, x):
+            return self.layers[0](x)
+
+    model = Tiny()
+    x = torch.ones(1, 3, 2)
+    baseline = model(x)
+    with TemporaryActivationIntervention(
+        model,
+        layer_idx=0,
+        sequence_lengths=(3,),
+        answer_starts=(1,),
+        span="answer",
+        mode="zero",
+    ) as intervention:
+        intervened = model(x)
+
+    assert torch.allclose(baseline[:, 0, :], torch.full((1, 2), 2.0))
+    assert torch.allclose(intervened[:, 0, :], torch.full((1, 2), 2.0))
+    assert torch.allclose(intervened[:, 1:3, :], torch.zeros(1, 2, 2))
+    assert intervention.summary.affected_token_count == 2

@@ -36973,6 +36973,70 @@ def test_eval_truthfulqa_batched_statement_reps_scores_residual_update_norm():
     assert reps[0]["first_token_entropy"] == pytest.approx(1.0)
 
 
+def test_eval_truthfulqa_activation_intervention_changes_forced_answer_nll():
+    module = importlib.import_module("benchmarks.eval_truthfulqa")
+
+    class NoCallTokenizer:
+        pad_token_id = 0
+        eos_token_id = 2
+
+        def __call__(self, *_args, **_kwargs):
+            raise AssertionError("precomputed encodings should bypass tokenizer calls")
+
+    class IdentityBlock(nn.Module):
+        def forward(self, x):
+            return x
+
+    class InterventionSensitiveModel(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.config = SimpleNamespace(num_hidden_layers=2)
+            self.layers = nn.ModuleList([IdentityBlock(), IdentityBlock()])
+
+        def forward(self, input_ids=None, attention_mask=None, output_hidden_states=False, **_kwargs):
+            del attention_mask
+            state0 = input_ids.float().unsqueeze(-1).repeat(1, 1, 4)
+            state1 = self.layers[0](state0)
+            state2 = self.layers[1](state1)
+            logits = torch.zeros((*input_ids.shape, 8), dtype=torch.float32)
+            logits[..., 4] = state2[..., 0] * 5.0
+            return SimpleNamespace(
+                logits=logits,
+                hidden_states=(state0, state1, state2) if output_hidden_states else None,
+            )
+
+    model = InterventionSensitiveModel()
+    baseline = module.batched_statement_reps(
+        model,
+        NoCallTokenizer(),
+        [module.Statement("Q?", "A B", 0)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 2, 3, 4), 2)],
+    )
+    intervened = module.batched_statement_reps(
+        model,
+        NoCallTokenizer(),
+        [module.Statement("Q?", "A B", 0)],
+        [1],
+        torch.device("cpu"),
+        8,
+        encoded_statements=[module.StatementEncoding((1, 2, 3, 4), 2)],
+        activation_intervention={
+            "layer_idx": 1,
+            "span": "answer",
+            "mode": "zero",
+            "metadata": {"source": "unit"},
+        },
+    )
+
+    assert intervened[0]["nll"] > baseline[0]["nll"]
+    assert torch.allclose(intervened[0]["last"][1], torch.zeros(4))
+    assert intervened[0]["activation_intervention"]["span"] == "answer"
+    assert intervened[0]["activation_intervention"]["affected_token_count"] == 2
+
+
 def test_eval_truthfulqa_batched_statement_reps_captures_attention_pathway():
     module = importlib.import_module("benchmarks.eval_truthfulqa")
 

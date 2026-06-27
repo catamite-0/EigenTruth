@@ -199,23 +199,26 @@ representation-observability toolkit spanning **training and inference**.
   path length, and pathway disagreement per monitored layer. Optionally request
   returned model attentions with `--attention-pathway --attn-implementation eager`
   and compute prompt-flow loss, answer-self flow, pathway gap, and pathway
-  concentration. For mechanism follow-up, apply `knockout_attention_pathway(...)`
-  to captured attention tensors and use `pathway_intervention_effect(...)` to
-  record direction-aware before/after score deltas from model reruns; use
-  `benchmarks/eval_pathway_intervention.py` to compare row-aligned baseline and
-  intervention score dumps as a manifest-backed evidence artifact. Run the
-  standard layer/score conformal sweep before treating any pathway metric as
-  evidence.
+  concentration. For mechanism follow-up, run
+  `eval_truthfulqa.py --activation-intervention-layer ...` to zero/scale/mean
+  patch prompt or answer hidden-state spans during forced-answer scoring, apply
+  `knockout_attention_pathway(...)` to captured attention tensors where useful,
+  and use `pathway_intervention_effect(...)` to record direction-aware
+  before/after score deltas; use `benchmarks/eval_pathway_intervention.py` to
+  compare row-aligned baseline and intervention score dumps as a manifest-backed
+  evidence artifact. Run the standard layer/score conformal sweep before
+  treating any pathway metric as evidence.
 - **Accept:** at least one pathway signal improves held-out calibrated detection
   or selected fusion over the current best baseline without increasing false
   alarm beyond the release gate, and attention-based runs must fail closed when
   attentions are unavailable.
 - **Deliverable:** `PromptAnswerPathwayMetrics`, `AttentionPathwayMetrics`,
-  attention-pathway knockout/effect helpers, rerun intervention comparator,
-  score-dump/layer-sweep wiring, docs, and CPU smoke tests. **Status:**
-  implementation landed as dependency-free exploratory signals plus
-  mechanism-experiment evidence scaffolding; model-side intervention reruns and
-  larger model replication are still required.
+  activation-intervention forced-answer reruns, attention-pathway
+  knockout/effect helpers, rerun intervention comparator, score-dump/layer-sweep
+  wiring, docs, and CPU smoke tests. **Status:** implementation landed as
+  dependency-free exploratory signals plus mechanism-experiment evidence
+  scaffolding; true attention-kernel/token-patching replication and larger model
+  evidence are still required.
 
 ### E8. Concept registry + multi-probe (platform glue)
 - **Question:** engineering, not science — can multiple (manifold, direction) pairs be
