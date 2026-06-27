@@ -43,6 +43,12 @@ Added dependency-free counterfactual verifier auditing:
 - `benchmarks/eval_counterfactual_verification.py` provides a local JSON/JSONL harness for `in_memory` and `structured_fact` verifier audits, and can write an artifact manifest plus local registry record for release evidence.
 - This does not claim broad hallucination mitigation; it gives structured-fact, retrieval, world-model, or future external verifier routes a reproducible perturbation-sensitivity gate before their outputs are trusted by release workflows.
 
+Added the covered-facts KG correction handoff:
+
+- `benchmarks/run_covered_facts_external_evidence_workflow.py` registers saved Wikidata covered-facts route manifests into a local `ArtifactRegistry`, runs `compare_external_evidence_baselines.py` with `require_covered_facts_route=True`, writes the comparison report plus recursive manifest verification, and can register the comparator report as the release-gate handoff.
+- The workflow is intentionally post-hoc and dependency-free: it does not rerun models, retrieval, databases, or external services. It turns existing canonical/paraphrase `structured_fact` route manifests into a reproducible external-evidence baseline comparison.
+- Current saved canonical/paraphrase artifacts promote the aggregate `structured_fact` route but predate per-property `property_metrics`, so the handoff defaults to aggregate record/source/true/false covered-fact gates. Rebuilt route manifests can enable the stricter per-property gates already supported by the comparator.
+
 Added dependency-free claim-risk localization:
 
 - `ClaimRiskSpan`, `ClaimRiskLocalizationReport`, and `localize_claim_risk_spans(...)` turn existing claim spans, verifier statuses, route hints, and verification-budget drops into a JSON-ready localization report.

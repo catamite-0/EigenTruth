@@ -11246,6 +11246,68 @@ def test_compare_external_evidence_baselines_manifest_includes_covered_facts(tmp
     assert record.metadata["covered_facts_route"] == "structured_qa"
 
 
+def test_covered_facts_external_evidence_workflow_registers_route_handoff(tmp_path):
+    module = importlib.import_module("benchmarks.run_covered_facts_external_evidence_workflow")
+    from eigentruth.registry import ArtifactRegistry
+
+    canonical_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="wikidata-structured-fact-canonical",
+        route="structured_fact",
+        selected=718,
+        source_documents=359,
+    )
+    paraphrase_manifest = _write_covered_fact_route_summary_manifest(
+        tmp_path,
+        name="wikidata-structured-fact-paraphrase",
+        route="structured_fact",
+        selected=2868,
+        source_documents=359,
+    )
+    output_dir = tmp_path / "covered-facts-handoff"
+    registry_path = tmp_path / "comparison-registry.json"
+
+    payload = module.run_covered_facts_external_evidence_workflow(
+        module.CoveredFactsExternalEvidenceWorkflowConfig(
+            route_manifests={
+                "canonical": canonical_manifest,
+                "paraphrase": paraphrase_manifest,
+            },
+            output_dir=output_dir,
+            registry_path=registry_path,
+            name="wikidata-structured-fact-handoff",
+            version="0.4",
+            min_covered_fact_records=700,
+            min_covered_fact_source_documents=300,
+            min_covered_fact_true=300,
+            min_covered_fact_false=300,
+        )
+    )
+    report_path = output_dir / "external-evidence-baseline-comparison.json"
+    manifest_path = output_dir / "artifact-manifest.json"
+    verification_path = output_dir / "manifest-verification.json"
+    route_registry_path = output_dir / "route-registry.json"
+    route_registry = ArtifactRegistry.load_json(route_registry_path)
+    comparison_registry = ArtifactRegistry.load_json(registry_path)
+    report_record = comparison_registry.get("report:wikidata-structured-fact-handoff:0.4")
+    registered_keys = payload["workflow_handoff"]["registered_route_keys"]
+
+    assert payload["decision"]["status"] == "promote"
+    assert payload["covered_facts_gate"]["route"] == "structured_fact"
+    assert len(registered_keys) == 2
+    assert route_registry.get(
+        "benchmark_manifest:wikidata-structured-fact-handoff-canonical:0.4"
+    ).path == str(canonical_manifest)
+    assert route_registry.get(
+        "benchmark_manifest:wikidata-structured-fact-handoff-paraphrase:0.4"
+    ).path == str(paraphrase_manifest)
+    assert json.loads(report_path.read_text(encoding="utf-8"))["decision"]["status"] == "promote"
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["summary"]["missing_count"] == 0
+    assert json.loads(verification_path.read_text(encoding="utf-8"))["passed"] is True
+    assert report_record.path == str(report_path)
+    assert report_record.metadata["covered_facts_passed"] is True
+
+
 def test_run_adapter_family_matrix_promotes_all_fixture_routes(tmp_path):
     module = importlib.import_module("benchmarks.run_adapter_family_matrix")
     matrix_path = tmp_path / "matrix.json"

@@ -3133,6 +3133,29 @@ covered-fact thresholds there when a release should fail closed if any covered
 property has too few records or weaker support/refutation quality than the
 aggregate route.
 
+For the current saved `structured_fact` canonical plus paraphrase artifacts,
+`run_covered_facts_external_evidence_workflow.py` provides the reproducible
+registry handoff into the external-evidence comparator:
+
+```bash
+python benchmarks/run_covered_facts_external_evidence_workflow.py \
+  --route-manifest canonical=artifacts/wikidata-country-core-facts-structured-fact-route/artifact-manifest.json \
+  --route-manifest paraphrase=artifacts/wikidata-country-core-facts-structured-fact-paraphrase-route/artifact-manifest.json \
+  --output-dir artifacts/wikidata-structured-fact-external-evidence-handoff \
+  --registry artifacts/staged-route-registry.json \
+  --name wikidata-structured-fact-external-evidence-handoff \
+  --version 0.4 \
+  --covered-fact-route structured_fact \
+  --min-covered-fact-records 700 \
+  --min-covered-fact-source-documents 300 \
+  --min-covered-fact-true 300 \
+  --min-covered-fact-false 300
+```
+
+Those historical artifacts predate `property_metrics`, so do not add
+`--min-covered-fact-property-*` gates unless the route manifests were rebuilt
+with the current `run_wikidata_structured_qa_route_workflow.py` schema.
+
 ## `analyze_retrieval_route_gaps.py`
 
 Explains blocked retrieval routes from `eval_verifier_ensemble.py
