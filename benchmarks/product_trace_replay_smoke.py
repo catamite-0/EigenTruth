@@ -58,6 +58,10 @@ def build_product_trace_replay_smoke(output_dir: Path) -> dict[str, Any]:
             compact_json=True,
             verify_manifest=True,
             fingerprint_cache_path=output_dir / "workflow" / "fingerprints.json",
+            max_action_audit_error_rate=0.0,
+            max_action_audit_missing_retrieval_rate=0.0,
+            max_action_audit_malformed_payload_rate=0.0,
+            max_action_audit_unexpected_action_rate=0.0,
             corpus_cache_path=output_dir / "workflow" / "corpus-cache.json",
             corpus_source_cache_path=output_dir / "workflow" / "corpus" / "source-cache.json",
             runtime_trace_records_cache_path=(
@@ -75,6 +79,8 @@ def build_product_trace_replay_smoke(output_dir: Path) -> dict[str, Any]:
         raise AssertionError("ProductTrace replay smoke did not accept all full traces.")
     if workflow_report["selector_replay"]["status"] != "promote":
         raise AssertionError("ProductTrace replay smoke selector replay did not promote.")
+    if workflow_report["action_audit_gate"]["status"] != "promote":
+        raise AssertionError("ProductTrace replay smoke action-audit gate did not promote.")
     if workflow_report["manifest_verification"]["verification"]["passed"] is not True:
         raise AssertionError("ProductTrace replay smoke manifest verification failed.")
     if not load_and_verify_artifact_manifest(
@@ -106,6 +112,13 @@ def _write_full_traces(output_dir: Path) -> tuple[Path, ...]:
                 "reason": "supported",
             },
             "claims": [{"claim_id": "c1", "text": "Private low-risk fact.", "metadata": {}}],
+            "actions": [
+                {
+                    "action": "accept",
+                    "reason": "supported",
+                    "payload": {"mode": "pass_through", "claim_ids": ["c1"]},
+                }
+            ],
             "verification_plan": {
                 "run_verifier": True,
                 "reason": "all claims selected",
@@ -142,6 +155,43 @@ def _write_full_traces(output_dir: Path) -> tuple[Path, ...]:
                 "reason": "unsupported",
             },
             "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            "verification_plan": {
+                "run_verifier": True,
+                "reason": "unsupported claim needs retrieval",
+                "verification_scope": "all",
+                "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+                "verify_claim_ids": ["c1"],
+                "skipped_claim_ids": [],
+                "triggered_claim_ids": ["c1"],
+                "triggered_features": {},
+                "triggered_metadata": {"unsupported": 1},
+                "route_hints": [
+                    {
+                        "claim_id": "c1",
+                        "routes": ["retrieval"],
+                        "reasons": ["unsupported"],
+                        "metadata": {},
+                    }
+                ],
+                "retrieval_queries": [
+                    {"claim_id": "c1", "query": "Private unsupported fact"}
+                ],
+                "calculation_checks": [],
+                "state_checks": [],
+                "world_model_checks": [],
+                "dependencies": [],
+            },
+            "actions": [
+                {
+                    "action": "retrieve",
+                    "reason": "unsupported",
+                    "payload": {
+                        "retrieval_targets": [
+                            {"claim_id": "c1", "query": "Private unsupported fact"}
+                        ]
+                    },
+                }
+            ],
             "metadata": {"runtime_profile": "balanced"},
             "runtime_trace": {"total_seconds": 0.20, "phases": []},
         },
@@ -158,6 +208,13 @@ def _write_full_traces(output_dir: Path) -> tuple[Path, ...]:
                     "claim_id": "c1",
                     "text": "Private account balance is 42.",
                     "metadata": {"features": {"has_number": True}},
+                }
+            ],
+            "actions": [
+                {
+                    "action": "accept",
+                    "reason": "numbered claim verified by smoke fixture",
+                    "payload": {"mode": "pass_through", "claim_ids": ["c1"]},
                 }
             ],
             "metadata": {"runtime_profile": "audit"},
@@ -254,6 +311,7 @@ def _print_report(report: Mapping[str, Any]) -> None:
     print(
         "product_trace_replay_smoke_ok "
         f"status={workflow['status']} "
+        f"action_audit={workflow['action_audit_gate']['status']} "
         f"selector={workflow['selector_replay']['recommended_candidate']} "
         f"bounded_status={bounded['status']}"
     )

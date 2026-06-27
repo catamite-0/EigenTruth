@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-_TRACE_RECORD_CACHE_SCHEMA_VERSION = 4
+_TRACE_RECORD_CACHE_SCHEMA_VERSION = 5
 _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "promotion_contract_coverage_rate",
     "triple_extraction_fixture_matrix_coverage_rate",
@@ -551,6 +551,22 @@ def _compact_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
         "verification_plan_state_check_count": metrics.get("verification_plan_state_check_count"),
         "verification_plan_world_model_check_count": metrics.get("verification_plan_world_model_check_count"),
         "verification_plan_dependency_count": metrics.get("verification_plan_dependency_count"),
+        "action_audit_summary": dict(_mapping(metrics.get("action_audit_summary"))),
+        "action_audit_available": bool(metrics.get("action_audit_available")),
+        "action_audit_source": metrics.get("action_audit_source"),
+        "action_audit_passed": metrics.get("action_audit_passed"),
+        "action_audit_issue_count": metrics.get("action_audit_issue_count"),
+        "action_audit_error_count": metrics.get("action_audit_error_count"),
+        "action_audit_warning_count": metrics.get("action_audit_warning_count"),
+        "action_audit_missing_decision_action_count": metrics.get(
+            "action_audit_missing_decision_action_count"
+        ),
+        "action_audit_missing_retrieval_action_count": metrics.get(
+            "action_audit_missing_retrieval_action_count"
+        ),
+        "action_audit_malformed_payload_count": metrics.get("action_audit_malformed_payload_count"),
+        "action_audit_unexpected_action_count": metrics.get("action_audit_unexpected_action_count"),
+        "action_audit_unknown_claim_id_count": metrics.get("action_audit_unknown_claim_id_count"),
         "triple_coverage_summary": dict(_mapping(metrics.get("triple_coverage_summary"))),
         "triple_coverage_source": metrics.get("triple_coverage_source"),
         "triple_claim_count": metrics.get("triple_claim_count"),
@@ -720,6 +736,7 @@ def _aggregate_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "verifier_saved_claim_count": _numeric_summary(item.get("verifier_saved_claim_count") for item in metrics),
         "verification_stage": _aggregate_verification_stage(metrics),
         "verification_plan": _aggregate_verification_plan(metrics),
+        "action_audit": _aggregate_action_audit(metrics),
         "triple_coverage": _aggregate_triple_coverage(metrics),
         "final_answer": _aggregate_final_answer(metrics),
         "promotion_contract": _aggregate_promotion_contract(metrics),
@@ -790,6 +807,18 @@ def _optimization_report(
                 summary,
                 "verification_plan",
                 "coverage_rate",
+            ),
+            "action_audit_error_rate": _nested(summary, "action_audit", "error_rate"),
+            "action_audit_failed_trace_rate": _nested(summary, "action_audit", "failed_trace_rate"),
+            "action_audit_missing_retrieval_action_rate": _nested(
+                summary,
+                "action_audit",
+                "missing_retrieval_action_rate",
+            ),
+            "action_audit_malformed_payload_rate": _nested(
+                summary,
+                "action_audit",
+                "malformed_payload_rate",
             ),
             "slowest_phase": None if not phase_hotspots else phase_hotspots[0]["phase"],
             "slowest_route": None if not route_hotspots else route_hotspots[0]["route"],
@@ -1394,6 +1423,69 @@ def _aggregate_verification_plan(metrics: Sequence[Mapping[str, Any]]) -> dict[s
         ),
         "per_trace_dependency_count": _numeric_summary(
             item.get("verification_plan_dependency_count") for item in metrics
+        ),
+        "summary_observations": sum(1 for summary in summaries if summary),
+    }
+
+
+def _aggregate_action_audit(metrics: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    summaries = [_mapping(item.get("action_audit_summary")) for item in metrics]
+    n_traces = len(metrics)
+    available_count = sum(1 for item in metrics if item.get("action_audit_available") is True)
+    passed_count = sum(1 for item in metrics if item.get("action_audit_passed") is True)
+    failed_count = sum(1 for item in metrics if item.get("action_audit_passed") is False)
+    counts_by_code: dict[str, int] = {}
+    counts_by_severity: dict[str, int] = {}
+    for summary in summaries:
+        _merge_counts(counts_by_code, _mapping(summary.get("counts_by_code")))
+        _merge_counts(counts_by_severity, _mapping(summary.get("counts_by_severity")))
+    issue_count = _sum_float(metrics, "action_audit_issue_count")
+    error_count = _sum_float(metrics, "action_audit_error_count")
+    warning_count = _sum_float(metrics, "action_audit_warning_count")
+    missing_decision_action_count = _sum_float(
+        metrics,
+        "action_audit_missing_decision_action_count",
+    ) or 0.0
+    missing_retrieval_action_count = _sum_float(
+        metrics,
+        "action_audit_missing_retrieval_action_count",
+    ) or 0.0
+    malformed_payload_count = _sum_float(metrics, "action_audit_malformed_payload_count") or 0.0
+    unexpected_action_count = _sum_float(metrics, "action_audit_unexpected_action_count") or 0.0
+    unknown_claim_id_count = _sum_float(metrics, "action_audit_unknown_claim_id_count") or 0.0
+    return {
+        "source_trace_count": n_traces,
+        "available_trace_count": available_count,
+        "missing_trace_count": n_traces - available_count,
+        "coverage_rate": _safe_div(available_count, n_traces),
+        "passed_trace_count": passed_count,
+        "failed_trace_count": failed_count,
+        "passed_trace_rate": _safe_div(passed_count, available_count),
+        "failed_trace_rate": _safe_div(failed_count, available_count),
+        "source_counts": _counts(item.get("action_audit_source") for item in metrics),
+        "issue_count": issue_count,
+        "error_count": error_count,
+        "warning_count": warning_count,
+        "issue_rate": _safe_div(issue_count, n_traces),
+        "error_rate": _safe_div(error_count, n_traces),
+        "warning_rate": _safe_div(warning_count, n_traces),
+        "missing_decision_action_count": missing_decision_action_count,
+        "missing_decision_action_rate": _safe_div(missing_decision_action_count, n_traces),
+        "missing_retrieval_action_count": missing_retrieval_action_count,
+        "missing_retrieval_action_rate": _safe_div(missing_retrieval_action_count, n_traces),
+        "malformed_payload_count": malformed_payload_count,
+        "malformed_payload_rate": _safe_div(malformed_payload_count, n_traces),
+        "unexpected_action_count": unexpected_action_count,
+        "unexpected_action_rate": _safe_div(unexpected_action_count, n_traces),
+        "unknown_claim_id_count": unknown_claim_id_count,
+        "unknown_claim_id_rate": _safe_div(unknown_claim_id_count, n_traces),
+        "counts_by_code": counts_by_code,
+        "counts_by_severity": counts_by_severity,
+        "per_trace_action_count": _numeric_summary(
+            summary.get("action_count") for summary in summaries
+        ),
+        "per_trace_issue_count": _numeric_summary(
+            item.get("action_audit_issue_count") for item in metrics
         ),
         "summary_observations": sum(1 for summary in summaries if summary),
     }

@@ -531,6 +531,12 @@ Added the first monitor-first tool-selection audit layer:
   `action_audit` summaries and metrics. This creates a release/replay hook for
   tool-bypass and parameter-hallucination failures before introducing learned
   tool-selection models or external tool routers.
+- `run_product_runtime_baseline.py` now aggregates action-audit error,
+  missing-retrieval, malformed-payload, unexpected-action, and unknown-claim-id
+  rates, and `run_product_trace_replay_workflow.py` can enforce them as an
+  optional action-audit release gate. The gate is off by default, writes a child
+  `action-audit-gate.json` report when configured, and blocks replay workflows
+  when configured rates exceed thresholds or required audit metrics are missing.
 - This layer is intentionally dependency-free and observational. It does not
   claim to solve tool selection; it makes tool-routing mistakes measurable so
   future internal-representation tool-selection or world-model-corrected
@@ -540,5 +546,4 @@ Added the first monitor-first tool-selection audit layer:
 
 1. Run the registered Wikidata structured-fact canonical/paraphrase route manifests through `compare_external_evidence_baselines.py --require-covered-facts-route`, then use the registered comparator report as the structured KG correction input to `compare_release_candidates.py --external-evidence-baseline-comparison-key`.
 2. Replicate the layer-band selector audit on a denser layer grid and at least one additional model family before using it as a default benchmark preset.
-3. Add an action-audit release gate for product-trace replay corpora: fail a candidate when missing retrieval actions, malformed retrieval payloads, malformed tool parameters, or unexpected tool actions exceed configured rates.
-4. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.
+3. Run an actual learned or external triple extractor through the new offline prediction adapter on the Wikidata adversarial matrix, then add broader non-template corpora before claiming open-domain extractor robustness.

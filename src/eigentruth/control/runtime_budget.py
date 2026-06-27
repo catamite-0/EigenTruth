@@ -617,15 +617,15 @@ def _action_audit_metrics(trace: ProductTrace | Mapping[str, Any]) -> dict[str, 
         "action_audit_warning_count": _finite_float(summary.get("warning_count")),
         "action_audit_missing_decision_action_count": _finite_float(
             counts_by_code.get("missing_decision_action")
-        ),
+        ) or 0.0,
         "action_audit_missing_retrieval_action_count": _finite_float(
             counts_by_code.get("missing_retrieval_action")
-        ),
+        ) or 0.0,
         "action_audit_malformed_payload_count": malformed_payload_count,
         "action_audit_unexpected_action_count": _finite_float(
             counts_by_code.get("unexpected_action_for_decision")
-        ),
-        "action_audit_unknown_claim_id_count": _finite_float(counts_by_code.get("unknown_claim_id")),
+        ) or 0.0,
+        "action_audit_unknown_claim_id_count": _finite_float(counts_by_code.get("unknown_claim_id")) or 0.0,
     }
 
 

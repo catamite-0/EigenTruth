@@ -96,6 +96,11 @@ class ProductTraceReplayWorkflowConfig:
     max_runtime_drift_covered_fact_max_false_supported_rate_increase: float | None = None
     max_runtime_drift_covered_fact_min_false_refuted_rate_drop: float | None = None
     min_runtime_drift_current_trace_count: int | None = None
+    max_action_audit_error_rate: float | None = None
+    max_action_audit_missing_retrieval_rate: float | None = None
+    max_action_audit_malformed_payload_rate: float | None = None
+    max_action_audit_unexpected_action_rate: float | None = None
+    max_action_audit_unknown_claim_id_rate: float | None = None
     artifact_manifest_path: str | Path | None = None
     registry_path: str | Path | None = None
     name: str | None = None
@@ -176,6 +181,18 @@ class ProductTraceReplayWorkflowConfig:
             raise ValueError("runtime drift gates require a runtime_drift_baseline path or registry record.")
         if self.registry_path is not None and (not self.name or not self.version):
             raise ValueError("registry_path requires name and version.")
+        for field_name in (
+            "max_action_audit_error_rate",
+            "max_action_audit_missing_retrieval_rate",
+            "max_action_audit_malformed_payload_rate",
+            "max_action_audit_unexpected_action_rate",
+            "max_action_audit_unknown_claim_id_rate",
+        ):
+            object.__setattr__(
+                self,
+                field_name,
+                _optional_rate_float(getattr(self, field_name), name=field_name),
+            )
         limit = None if self.limit is None else int(self.limit)
         if limit is not None and limit <= 0:
             raise ValueError("limit must be positive when provided.")
@@ -323,6 +340,11 @@ class ProductTraceReplayWorkflowConfig:
             return Path(self.runtime_drift_artifact_manifest_path)
         return Path(self.output_dir) / "runtime-drift" / "artifact-manifest.json"
 
+    @property
+    def resolved_action_audit_gate_report_path(self) -> Path:
+        """Return the child action-audit gate report path."""
+        return Path(self.output_dir) / "action-audit-gate.json"
+
 
 def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
     """Run corpus build, runtime baseline, and selector replay in one workflow."""
@@ -342,6 +364,11 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             phase_timings,
             lambda: _run_runtime_baseline(config, corpus_trace_paths),
         )
+        action_audit_gate = _timed_phase(
+            "action_audit_gate",
+            phase_timings,
+            lambda: _run_action_audit_gate(config, runtime_baseline),
+        )
         selector_replay = _timed_phase(
             "selector_replay",
             phase_timings,
@@ -356,7 +383,13 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             phase_timings,
             lambda: _run_runtime_drift_gate(config, runtime_baseline),
         )
-        status = _workflow_status(corpus, runtime_baseline, selector_replay, runtime_drift)
+        status = _workflow_status(
+            corpus,
+            runtime_baseline,
+            action_audit_gate,
+            selector_replay,
+            runtime_drift,
+        )
         report = {
             "schema_version": 1,
             "workflow": "product_trace_replay_workflow",
@@ -366,6 +399,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "blocking_reasons": _blocking_reasons(
                     corpus,
                     runtime_baseline,
+                    action_audit_gate,
                     selector_replay,
                     runtime_drift,
                 ),
@@ -387,6 +421,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
             },
             "corpus": _corpus_summary(corpus),
             "runtime_baseline": _runtime_baseline_summary(runtime_baseline),
+            "action_audit_gate": _action_audit_gate_summary(action_audit_gate),
             "selector_replay": _selector_replay_summary(selector_replay),
             "runtime_drift": _runtime_drift_summary(runtime_drift),
             "cache_summary": _workflow_cache_summary(corpus, runtime_baseline, selector_replay),
@@ -405,6 +440,7 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                 "runtime_baseline_report": _nested(runtime_baseline, "paths", "report"),
                 "runtime_baseline_manifest": _nested(runtime_baseline, "paths", "artifact_manifest"),
                 "runtime_recommended_policy": _nested(runtime_baseline, "paths", "recommended_policy"),
+                "action_audit_gate_report": _nested(action_audit_gate, "paths", "report"),
                 "runtime_drift_report": _nested(runtime_drift, "paths", "report"),
                 "runtime_drift_manifest": _nested(runtime_drift, "paths", "artifact_manifest"),
                 "selector_replay_report": _nested(selector_replay, "paths", "report"),
@@ -457,6 +493,12 @@ def run_product_trace_replay_workflow(config: ProductTraceReplayWorkflowConfig) 
                     else str(config.resolved_runtime_drift_artifact_manifest_path)
                 ),
                 "runtime_drift_gates": _runtime_drift_gate_config(config),
+                "action_audit_gates": _action_audit_gate_config(config),
+                "action_audit_gate_report": (
+                    None
+                    if not _action_audit_gate_configured(config)
+                    else str(config.resolved_action_audit_gate_report_path)
+                ),
                 "redact_text": config.redact_text,
                 "require_runtime_trace": config.require_runtime_trace,
                 "strict": config.strict,
@@ -876,6 +918,100 @@ def _run_selector_replay(
     )
 
 
+def _run_action_audit_gate(
+    config: ProductTraceReplayWorkflowConfig,
+    runtime_baseline: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not _action_audit_gate_configured(config):
+        return {
+            "schema_version": 1,
+            "workflow": "product_trace_action_audit_gate",
+            "status": "not_configured",
+            "decision": {
+                "status": "not_configured",
+                "blocking_reasons": (),
+            },
+            "summary": {
+                "gate_enabled": False,
+                "passed": None,
+                "blocked_metric_count": 0,
+            },
+            "checks": (),
+            "paths": {
+                "report": None,
+            },
+        }
+    action_audit = _mapping(_nested(runtime_baseline, "summary", "action_audit"))
+    if not action_audit:
+        payload = {
+            "schema_version": 1,
+            "workflow": "product_trace_action_audit_gate",
+            "status": "blocked",
+            "decision": {
+                "status": "blocked",
+                "blocking_reasons": ("runtime baseline action-audit summary is unavailable",),
+            },
+            "summary": {
+                "gate_enabled": True,
+                "passed": False,
+                "blocked_metric_count": 1,
+            },
+            "checks": (),
+            "paths": {
+                "report": str(config.resolved_action_audit_gate_report_path),
+            },
+        }
+        _write_json(config.resolved_action_audit_gate_report_path, payload, compact=config.compact_json)
+        return payload
+
+    gate_config = _action_audit_gate_config(config)
+    checks = tuple(_action_audit_gate_checks(action_audit, gate_config))
+    blocking_reasons = tuple(
+        str(check.get("reason"))
+        for check in checks
+        if check.get("status") == "blocked" and check.get("reason")
+    )
+    status = "blocked" if blocking_reasons else "promote"
+    summary = {
+        "gate_enabled": True,
+        "passed": not blocking_reasons,
+        "trace_count": action_audit.get("source_trace_count"),
+        "available_trace_count": action_audit.get("available_trace_count"),
+        "passed_trace_count": action_audit.get("passed_trace_count"),
+        "failed_trace_count": action_audit.get("failed_trace_count"),
+        "failed_trace_rate": action_audit.get("failed_trace_rate"),
+        "issue_count": action_audit.get("issue_count"),
+        "error_count": action_audit.get("error_count"),
+        "warning_count": action_audit.get("warning_count"),
+        "error_rate": action_audit.get("error_rate"),
+        "missing_decision_action_rate": action_audit.get("missing_decision_action_rate"),
+        "missing_retrieval_action_rate": action_audit.get("missing_retrieval_action_rate"),
+        "malformed_payload_rate": action_audit.get("malformed_payload_rate"),
+        "unexpected_action_rate": action_audit.get("unexpected_action_rate"),
+        "unknown_claim_id_rate": action_audit.get("unknown_claim_id_rate"),
+        "blocked_metric_count": len(blocking_reasons),
+        "checked_metric_count": len(checks),
+    }
+    payload = {
+        "schema_version": 1,
+        "workflow": "product_trace_action_audit_gate",
+        "status": status,
+        "decision": {
+            "status": status,
+            "blocking_reasons": blocking_reasons,
+        },
+        "summary": summary,
+        "checks": checks,
+        "action_audit": dict(action_audit),
+        "config": gate_config,
+        "paths": {
+            "report": str(config.resolved_action_audit_gate_report_path),
+        },
+    }
+    _write_json(config.resolved_action_audit_gate_report_path, payload, compact=config.compact_json)
+    return payload
+
+
 def _run_runtime_drift_gate(
     config: ProductTraceReplayWorkflowConfig,
     runtime_baseline: Mapping[str, Any],
@@ -948,12 +1084,14 @@ def _skipped_child_report(workflow: str, *, reason: str) -> dict[str, Any]:
 def _workflow_status(
     corpus: Mapping[str, Any],
     runtime_baseline: Mapping[str, Any],
+    action_audit_gate: Mapping[str, Any],
     selector_replay: Mapping[str, Any],
     runtime_drift: Mapping[str, Any],
 ) -> str:
     child_statuses = (
         corpus.get("status"),
         runtime_baseline.get("status"),
+        action_audit_gate.get("status"),
         selector_replay.get("status"),
         runtime_drift.get("status"),
     )
@@ -969,6 +1107,7 @@ def _workflow_status(
 def _blocking_reasons(
     corpus: Mapping[str, Any],
     runtime_baseline: Mapping[str, Any],
+    action_audit_gate: Mapping[str, Any],
     selector_replay: Mapping[str, Any],
     runtime_drift: Mapping[str, Any],
 ) -> tuple[str, ...]:
@@ -976,6 +1115,7 @@ def _blocking_reasons(
     for child_name, child in (
         ("corpus", corpus),
         ("runtime_baseline", runtime_baseline),
+        ("action_audit_gate", action_audit_gate),
         ("selector_replay", selector_replay),
         ("runtime_drift", runtime_drift),
     ):
@@ -1075,6 +1215,88 @@ def _runtime_drift_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict
     }
 
 
+def _action_audit_gate_configured(config: ProductTraceReplayWorkflowConfig) -> bool:
+    return any(
+        value is not None
+        for value in (
+            config.max_action_audit_error_rate,
+            config.max_action_audit_missing_retrieval_rate,
+            config.max_action_audit_malformed_payload_rate,
+            config.max_action_audit_unexpected_action_rate,
+            config.max_action_audit_unknown_claim_id_rate,
+        )
+    )
+
+
+def _action_audit_gate_config(config: ProductTraceReplayWorkflowConfig) -> dict[str, Any]:
+    return {
+        "max_error_rate": config.max_action_audit_error_rate,
+        "max_missing_retrieval_rate": config.max_action_audit_missing_retrieval_rate,
+        "max_malformed_payload_rate": config.max_action_audit_malformed_payload_rate,
+        "max_unexpected_action_rate": config.max_action_audit_unexpected_action_rate,
+        "max_unknown_claim_id_rate": config.max_action_audit_unknown_claim_id_rate,
+    }
+
+
+def _action_audit_gate_checks(
+    action_audit: Mapping[str, Any],
+    gate_config: Mapping[str, Any],
+) -> tuple[dict[str, Any], ...]:
+    check_specs = (
+        ("action_audit.error_rate", "error_rate", "max_error_rate"),
+        (
+            "action_audit.missing_retrieval_action_rate",
+            "missing_retrieval_action_rate",
+            "max_missing_retrieval_rate",
+        ),
+        (
+            "action_audit.malformed_payload_rate",
+            "malformed_payload_rate",
+            "max_malformed_payload_rate",
+        ),
+        (
+            "action_audit.unexpected_action_rate",
+            "unexpected_action_rate",
+            "max_unexpected_action_rate",
+        ),
+        (
+            "action_audit.unknown_claim_id_rate",
+            "unknown_claim_id_rate",
+            "max_unknown_claim_id_rate",
+        ),
+    )
+    checks = []
+    for metric_name, summary_key, limit_key in check_specs:
+        limit = gate_config.get(limit_key)
+        if limit is None:
+            continue
+        value = _finite_float(action_audit.get(summary_key))
+        if value is None:
+            checks.append({
+                "metric": metric_name,
+                "status": "blocked",
+                "value": None,
+                "limit": limit,
+                "operator": "<=",
+                "reason": f"{metric_name} is unavailable",
+            })
+            continue
+        status = "pass" if value <= float(limit) else "blocked"
+        checks.append({
+            "metric": metric_name,
+            "status": status,
+            "value": value,
+            "limit": float(limit),
+            "operator": "<=",
+            "reason": (
+                None
+                if status == "pass"
+                else f"{metric_name} {value:.6g} exceeded limit {float(limit):.6g}"
+            ),
+        })
+    return tuple(checks)
+
+
 def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(corpus.get("summary"))
     workflow_cache = _mapping(corpus.get("workflow_cache"))
@@ -1107,6 +1329,7 @@ def _corpus_summary(corpus: Mapping[str, Any]) -> dict[str, Any]:
 def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, Any]:
     summary = _mapping(runtime_baseline.get("summary"))
     total_seconds = _mapping(summary.get("total_seconds"))
+    action_audit = _mapping(summary.get("action_audit"))
     trace_record_cache = _mapping(_nested(runtime_baseline, "config", "trace_record_cache"))
     recommended_policy = _mapping(_nested(runtime_baseline, "config", "recommended_policy"))
     optimization = _mapping(runtime_baseline.get("optimization"))
@@ -1129,6 +1352,17 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
             "trace_scan_workers",
         ),
         "trace_scan_effective_workers": trace_record_cache.get("trace_scan_workers"),
+        "action_audit_available_trace_count": action_audit.get("available_trace_count"),
+        "action_audit_failed_trace_count": action_audit.get("failed_trace_count"),
+        "action_audit_failed_trace_rate": action_audit.get("failed_trace_rate"),
+        "action_audit_error_count": action_audit.get("error_count"),
+        "action_audit_error_rate": action_audit.get("error_rate"),
+        "action_audit_missing_retrieval_action_rate": action_audit.get(
+            "missing_retrieval_action_rate"
+        ),
+        "action_audit_malformed_payload_rate": action_audit.get("malformed_payload_rate"),
+        "action_audit_unexpected_action_rate": action_audit.get("unexpected_action_rate"),
+        "action_audit_unknown_claim_id_rate": action_audit.get("unknown_claim_id_rate"),
         "trace_records_cache_path": _nested(runtime_baseline, "paths", "trace_records_cache"),
         "recommended_policy_path": _nested(runtime_baseline, "paths", "recommended_policy"),
         "recommended_policy_written": recommended_policy.get("written"),
@@ -1136,6 +1370,28 @@ def _runtime_baseline_summary(runtime_baseline: Mapping[str, Any]) -> dict[str, 
         "recommended_policy_threshold_count": recommended_policy.get("threshold_count"),
         "optimization_status": optimization.get("status"),
         "optimization_recommendation_count": len(recommendations),
+    }
+
+
+def _action_audit_gate_summary(action_audit_gate: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _mapping(action_audit_gate.get("summary"))
+    return {
+        "status": action_audit_gate.get("status"),
+        "gate_enabled": summary.get("gate_enabled"),
+        "passed": summary.get("passed"),
+        "trace_count": summary.get("trace_count"),
+        "available_trace_count": summary.get("available_trace_count"),
+        "failed_trace_count": summary.get("failed_trace_count"),
+        "failed_trace_rate": summary.get("failed_trace_rate"),
+        "error_count": summary.get("error_count"),
+        "error_rate": summary.get("error_rate"),
+        "missing_retrieval_action_rate": summary.get("missing_retrieval_action_rate"),
+        "malformed_payload_rate": summary.get("malformed_payload_rate"),
+        "unexpected_action_rate": summary.get("unexpected_action_rate"),
+        "unknown_claim_id_rate": summary.get("unknown_claim_id_rate"),
+        "blocked_metric_count": summary.get("blocked_metric_count"),
+        "checked_metric_count": summary.get("checked_metric_count"),
+        "report_path": _nested(action_audit_gate, "paths", "report"),
     }
 
 
@@ -1315,6 +1571,7 @@ def _artifact_paths(
         "runtime_baseline_manifest": _nested(report, "paths", "runtime_baseline_manifest"),
         "runtime_trace_records_cache": _nested(report, "paths", "runtime_trace_records_cache"),
         "runtime_recommended_policy": _nested(report, "paths", "runtime_recommended_policy"),
+        "action_audit_gate_report": _nested(report, "paths", "action_audit_gate_report"),
         "runtime_drift_report": _nested(report, "paths", "runtime_drift_report"),
         "runtime_drift_manifest": _nested(report, "paths", "runtime_drift_manifest"),
         "selector_replay_report": _nested(report, "paths", "selector_replay_report"),
@@ -1346,6 +1603,36 @@ def _write_artifact_manifest(
             "status": report.get("status"),
             "corpus_status": _nested(report, "corpus", "status"),
             "runtime_baseline_status": _nested(report, "runtime_baseline", "status"),
+            "action_audit_gate_status": _nested(report, "action_audit_gate", "status"),
+            "action_audit_gate_enabled": _nested(report, "action_audit_gate", "gate_enabled"),
+            "action_audit_gate_passed": _nested(report, "action_audit_gate", "passed"),
+            "action_audit_gate_blocked_metric_count": _nested(
+                report,
+                "action_audit_gate",
+                "blocked_metric_count",
+            ),
+            "action_audit_error_rate": _nested(report, "action_audit_gate", "error_rate"),
+            "action_audit_missing_retrieval_action_rate": _nested(
+                report,
+                "action_audit_gate",
+                "missing_retrieval_action_rate",
+            ),
+            "action_audit_malformed_payload_rate": _nested(
+                report,
+                "action_audit_gate",
+                "malformed_payload_rate",
+            ),
+            "action_audit_unexpected_action_rate": _nested(
+                report,
+                "action_audit_gate",
+                "unexpected_action_rate",
+            ),
+            "action_audit_unknown_claim_id_rate": _nested(
+                report,
+                "action_audit_gate",
+                "unknown_claim_id_rate",
+            ),
+            "action_audit_gate_report": _nested(report, "paths", "action_audit_gate_report"),
             "selector_replay_status": _nested(report, "selector_replay", "status"),
             "workflow_total_seconds": _nested(report, "timing", "total_seconds"),
             "workflow_phase_total_seconds": _nested(report, "timing", "phase_total_seconds"),
@@ -1355,6 +1642,13 @@ def _write_artifact_manifest(
                 "timing",
                 "phases",
                 "runtime_baseline",
+                "seconds",
+            ),
+            "workflow_action_audit_gate_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "action_audit_gate",
                 "seconds",
             ),
             "workflow_selector_replay_seconds": _nested(
@@ -1506,6 +1800,36 @@ def _record_registry(
             "artifact_manifest": str(config.resolved_artifact_manifest_path),
             "corpus_status": _nested(report, "corpus", "status"),
             "runtime_baseline_status": _nested(report, "runtime_baseline", "status"),
+            "action_audit_gate_status": _nested(report, "action_audit_gate", "status"),
+            "action_audit_gate_enabled": _nested(report, "action_audit_gate", "gate_enabled"),
+            "action_audit_gate_passed": _nested(report, "action_audit_gate", "passed"),
+            "action_audit_gate_blocked_metric_count": _nested(
+                report,
+                "action_audit_gate",
+                "blocked_metric_count",
+            ),
+            "action_audit_error_rate": _nested(report, "action_audit_gate", "error_rate"),
+            "action_audit_missing_retrieval_action_rate": _nested(
+                report,
+                "action_audit_gate",
+                "missing_retrieval_action_rate",
+            ),
+            "action_audit_malformed_payload_rate": _nested(
+                report,
+                "action_audit_gate",
+                "malformed_payload_rate",
+            ),
+            "action_audit_unexpected_action_rate": _nested(
+                report,
+                "action_audit_gate",
+                "unexpected_action_rate",
+            ),
+            "action_audit_unknown_claim_id_rate": _nested(
+                report,
+                "action_audit_gate",
+                "unknown_claim_id_rate",
+            ),
+            "action_audit_gate_report": _nested(report, "paths", "action_audit_gate_report"),
             "selector_replay_status": _nested(report, "selector_replay", "status"),
             "workflow_total_seconds": _nested(report, "timing", "total_seconds"),
             "workflow_phase_total_seconds": _nested(report, "timing", "phase_total_seconds"),
@@ -1515,6 +1839,13 @@ def _record_registry(
                 "timing",
                 "phases",
                 "runtime_baseline",
+                "seconds",
+            ),
+            "workflow_action_audit_gate_seconds": _nested(
+                report,
+                "timing",
+                "phases",
+                "action_audit_gate",
                 "seconds",
             ),
             "workflow_selector_replay_seconds": _nested(
@@ -1779,6 +2110,27 @@ def _safe_div(numerator: int | float | None, denominator: int | float | None) ->
     return float(numerator) / float(denominator)
 
 
+def _finite_float(value: Any) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not (numeric == numeric and abs(numeric) != float("inf")):
+        return None
+    return numeric
+
+
+def _optional_rate_float(value: Any, *, name: str) -> float | None:
+    if value is None:
+        return None
+    numeric = _finite_float(value)
+    if numeric is None or numeric < 0.0 or numeric > 1.0:
+        raise ValueError(f"{name} must be a finite rate between 0 and 1.")
+    return numeric
+
+
 def _candidate_from_value(
     value: RuntimeProfileSelectorCandidate | Mapping[str, Any],
 ) -> RuntimeProfileSelectorCandidate:
@@ -1970,6 +2322,11 @@ def _config_from_args(args: argparse.Namespace) -> ProductTraceReplayWorkflowCon
             args.max_runtime_drift_covered_fact_min_false_refuted_rate_drop
         ),
         min_runtime_drift_current_trace_count=args.min_runtime_drift_current_trace_count,
+        max_action_audit_error_rate=args.max_action_audit_error_rate,
+        max_action_audit_missing_retrieval_rate=args.max_action_audit_missing_retrieval_rate,
+        max_action_audit_malformed_payload_rate=args.max_action_audit_malformed_payload_rate,
+        max_action_audit_unexpected_action_rate=args.max_action_audit_unexpected_action_rate,
+        max_action_audit_unknown_claim_id_rate=args.max_action_audit_unknown_claim_id_rate,
         artifact_manifest_path=Path(args.artifact_manifest) if args.artifact_manifest else None,
         registry_path=Path(args.registry) if args.registry else None,
         name=args.name,
@@ -2081,6 +2438,11 @@ def main(argv: Sequence[str] | None = None) -> None:
     )
     parser.add_argument("--max-runtime-drift-covered-fact-min-false-refuted-rate-drop", type=float, default=None)
     parser.add_argument("--min-runtime-drift-current-trace-count", type=int, default=None)
+    parser.add_argument("--max-action-audit-error-rate", type=float, default=None)
+    parser.add_argument("--max-action-audit-missing-retrieval-rate", type=float, default=None)
+    parser.add_argument("--max-action-audit-malformed-payload-rate", type=float, default=None)
+    parser.add_argument("--max-action-audit-unexpected-action-rate", type=float, default=None)
+    parser.add_argument("--max-action-audit-unknown-claim-id-rate", type=float, default=None)
     parser.add_argument("--artifact-manifest", default=None)
     parser.add_argument("--registry", default=None)
     parser.add_argument("--name", default=None)

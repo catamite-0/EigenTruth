@@ -19975,6 +19975,8 @@ def test_product_trace_replay_smoke_writes_workflow_and_rejects_bounded_trace(tm
 
     assert workflow["status"] == "promote"
     assert workflow["corpus"]["accepted_count"] == 3
+    assert workflow["action_audit_gate"]["status"] == "promote"
+    assert workflow["action_audit_gate"]["error_rate"] == pytest.approx(0.0)
     assert workflow["selector_replay"]["status"] == "promote"
     assert workflow["manifest_verification"]["verification"]["passed"] is True
     assert bounded["status"] == "blocked"
@@ -25685,7 +25687,7 @@ def test_run_product_runtime_baseline_reuses_trace_record_cache(tmp_path, monkey
     assert first["config"]["trace_record_cache"]["cache_hit"] is False
     assert first["config"]["trace_record_cache"]["cache_written"] is True
     assert first["paths"]["trace_records_cache"] == str(cache_path)
-    assert cache_payload["schema_version"] == 4
+    assert cache_payload["schema_version"] == 5
     assert cache_payload["workflow"] == "product_runtime_baseline_trace_records"
     assert cache_payload["summary"]["trace_count"] == 2
     assert cache_payload["policy"]["payload"]["max_total_seconds"] == 0.3
@@ -28328,6 +28330,109 @@ def test_run_product_trace_replay_workflow_applies_runtime_drift_gate(tmp_path):
     assert drift_record.metadata["covered_fact_property_blocked_metric_count"] == 0
 
 
+def test_run_product_trace_replay_workflow_applies_action_audit_gate(tmp_path):
+    module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
+    tuning_module = importlib.import_module("benchmarks.run_runtime_profile_selector_tuning")
+    output_dir = tmp_path / "workflow"
+    traces_dir = tmp_path / "input-traces"
+    traces_dir.mkdir()
+    trace_payloads = (
+        {
+            "request_id": "accept-complete",
+            "risk_decision": {
+                "action": "accept",
+                "risk_level": "low",
+                "confidence": 1.0,
+                "reason": "supported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private supported fact.", "metadata": {}}],
+            "actions": [
+                {
+                    "action": "accept",
+                    "reason": "supported",
+                    "payload": {"claim_ids": ["c1"]},
+                }
+            ],
+            "metadata": {"runtime_profile": "latency"},
+            "runtime_trace": {"total_seconds": 0.10, "phases": []},
+        },
+        {
+            "request_id": "retrieve-missing-action",
+            "risk_decision": {
+                "action": "retrieve",
+                "risk_level": "medium",
+                "confidence": 0.6,
+                "reason": "unsupported",
+            },
+            "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+            "verification_plan": {
+                "run_verifier": True,
+                "reason": "unsupported claim needs retrieval",
+                "verification_scope": "all",
+                "claims": [{"claim_id": "c1", "text": "Private unsupported fact.", "metadata": {}}],
+                "verify_claim_ids": ["c1"],
+                "skipped_claim_ids": [],
+                "triggered_claim_ids": ["c1"],
+                "triggered_features": {},
+                "triggered_metadata": {},
+                "route_hints": [],
+                "retrieval_queries": [{"claim_id": "c1", "query": "Private unsupported fact"}],
+                "calculation_checks": [],
+                "state_checks": [],
+                "world_model_checks": [],
+                "dependencies": [],
+            },
+            "metadata": {"runtime_profile": "balanced"},
+            "runtime_trace": {"total_seconds": 0.20, "phases": []},
+        },
+    )
+    trace_paths = []
+    for index, payload in enumerate(trace_payloads):
+        trace_path = traces_dir / f"trace-{index}.json"
+        trace_path.write_text(json.dumps(payload), encoding="utf-8")
+        trace_paths.append(trace_path)
+
+    payload = module.run_product_trace_replay_workflow(
+        module.ProductTraceReplayWorkflowConfig(
+            trace_paths=trace_paths,
+            output_dir=output_dir,
+            candidates=(tuning_module.RuntimeProfileSelectorCandidate(name="default", policy={}),),
+            require_runtime_trace=True,
+            max_action_audit_error_rate=0.0,
+            max_action_audit_missing_retrieval_rate=0.0,
+            max_action_audit_malformed_payload_rate=0.0,
+            max_action_audit_unexpected_action_rate=0.0,
+        )
+    )
+    gate_report = json.loads(Path(payload["paths"]["action_audit_gate_report"]).read_text(encoding="utf-8"))
+    manifest = json.loads(Path(payload["paths"]["artifact_manifest"]).read_text(encoding="utf-8"))
+
+    assert payload["status"] == "blocked"
+    assert payload["action_audit_gate"]["status"] == "blocked"
+    assert payload["action_audit_gate"]["gate_enabled"] is True
+    assert payload["action_audit_gate"]["error_rate"] == pytest.approx(1.0)
+    assert payload["action_audit_gate"]["missing_retrieval_action_rate"] == pytest.approx(0.5)
+    assert payload["action_audit_gate"]["malformed_payload_rate"] == pytest.approx(0.0)
+    assert payload["runtime_baseline"]["action_audit_error_rate"] == pytest.approx(1.0)
+    assert any(
+        str(reason).startswith("action_audit_gate:")
+        for reason in payload["decision"]["blocking_reasons"]
+    )
+    assert gate_report["status"] == "blocked"
+    assert gate_report["summary"]["blocked_metric_count"] == 2
+    assert {
+        check["metric"]
+        for check in gate_report["checks"]
+        if check["status"] == "blocked"
+    } == {
+        "action_audit.error_rate",
+        "action_audit.missing_retrieval_action_rate",
+    }
+    assert "action_audit_gate_report" in manifest["artifacts"]
+    assert manifest["metadata"]["action_audit_gate_status"] == "blocked"
+    assert manifest["metadata"]["action_audit_error_rate"] == pytest.approx(1.0)
+
+
 def test_run_product_trace_replay_workflow_reuses_corpus_cache(tmp_path, monkeypatch):
     module = importlib.import_module("benchmarks.run_product_trace_replay_workflow")
     output_dir = tmp_path / "workflow"
@@ -28441,6 +28546,7 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
         runtime_recommended_policy_path=tmp_path / "runtime-recommended-policy.json",
         selector_trace_inputs_path=tmp_path / "selector-trace-inputs.json",
         refresh_selector_trace_inputs="false",
+        max_action_audit_error_rate="0.25",
     )
     replay_config = replay_module.RuntimeProfileSelectorReplayConfig(
         trace_paths=("trace.json",),
@@ -28469,6 +28575,7 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
     assert workflow_config.runtime_recommended_policy_path == tmp_path / "runtime-recommended-policy.json"
     assert workflow_config.selector_trace_inputs_path == tmp_path / "selector-trace-inputs.json"
     assert workflow_config.refresh_selector_trace_inputs is False
+    assert workflow_config.max_action_audit_error_rate == pytest.approx(0.25)
     assert replay_config.compact_json is False
     assert baseline_config.compact_json is False
 
@@ -28478,6 +28585,14 @@ def test_product_trace_replay_runtime_configs_parse_bool_strings(tmp_path):
             output_dir=tmp_path / "bad-workflow-workers",
             candidates=(candidate,),
             runtime_trace_scan_workers=True,  # type: ignore[arg-type]
+        )
+
+    with pytest.raises(ValueError, match="max_action_audit_error_rate"):
+        workflow_module.ProductTraceReplayWorkflowConfig(
+            trace_paths=("trace.json",),
+            output_dir=tmp_path / "bad-workflow-action-audit-rate",
+            candidates=(candidate,),
+            max_action_audit_error_rate=True,  # type: ignore[arg-type]
         )
 
     with pytest.raises(ValueError, match="compact_json"):
