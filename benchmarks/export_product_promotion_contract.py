@@ -32,6 +32,16 @@ _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES: tuple[str, ...] = (
     "covered_fact_recommended_route_min_decision_accuracy",
     "covered_fact_recommended_route_max_false_supported_rate",
     "covered_fact_recommended_route_min_false_refuted_rate",
+    "product_trace_action_audit_error_rate",
+    "product_trace_action_audit_missing_retrieval_action_rate",
+    "product_trace_action_audit_missing_plan_retrieval_query_rate",
+    "product_trace_action_audit_malformed_payload_rate",
+    "product_trace_action_audit_unexpected_action_rate",
+    "product_trace_action_audit_unknown_claim_id_rate",
+    "product_trace_action_execution_alignment_failed_trace_rate",
+    "product_trace_action_execution_missing_result_rate",
+    "product_trace_action_execution_unexpected_result_rate",
+    "product_trace_action_execution_request_id_mismatch_rate",
 )
 
 
@@ -682,6 +692,15 @@ def _product_runtime_drift_flat_metadata(metadata: Mapping[str, Any]) -> dict[st
         ),
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": metadata.get(
             "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count"
+        ),
+        "product_runtime_drift_action_gate_evidence_required": metadata.get(
+            "product_runtime_drift_action_gate_evidence_required"
+        ),
+        "product_runtime_drift_action_gate_evidence_metric_count": metadata.get(
+            "product_runtime_drift_action_gate_evidence_metric_count"
+        ),
+        "product_runtime_drift_action_gate_evidence_blocked_metric_count": metadata.get(
+            "product_runtime_drift_action_gate_evidence_blocked_metric_count"
         ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_EVIDENCE_PREFIXES:

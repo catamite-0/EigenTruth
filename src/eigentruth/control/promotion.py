@@ -37,6 +37,18 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] 
     "covered_fact_recommended_route_max_false_supported_rate",
     "covered_fact_recommended_route_min_false_refuted_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_action_audit_error_rate",
+    "product_trace_action_audit_missing_retrieval_action_rate",
+    "product_trace_action_audit_missing_plan_retrieval_query_rate",
+    "product_trace_action_audit_malformed_payload_rate",
+    "product_trace_action_audit_unexpected_action_rate",
+    "product_trace_action_audit_unknown_claim_id_rate",
+    "product_trace_action_execution_alignment_failed_trace_rate",
+    "product_trace_action_execution_missing_result_rate",
+    "product_trace_action_execution_unexpected_result_rate",
+    "product_trace_action_execution_request_id_mismatch_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -730,6 +742,9 @@ class ProductPromotionContract:
                 "product_runtime_drift_covered_fact_property_evidence_required": config.get(
                     "require_product_runtime_drift_covered_fact_property_evidence"
                 ),
+                "product_runtime_drift_action_gate_evidence_required": config.get(
+                    "require_product_runtime_drift_action_gate_evidence"
+                ),
                 "product_runtime_drift_compared_metric_count": (
                     product_runtime_drift_summary.get("compared_metric_count")
                 ),
@@ -867,6 +882,12 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": summary.get(
             "covered_fact_property_evidence_blocked_metric_count"
         ),
+        "product_runtime_drift_action_gate_evidence_metric_count": summary.get(
+            "action_gate_evidence_metric_count"
+        ),
+        "product_runtime_drift_action_gate_evidence_blocked_metric_count": summary.get(
+            "action_gate_evidence_blocked_metric_count"
+        ),
     }
     for prefix in _PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
@@ -875,6 +896,9 @@ def _product_runtime_drift_promotion_metadata(summary: Mapping[str, Any]) -> dic
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     for prefix in _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES:
+        for suffix in ("baseline", "current", "status"):
+            metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
+    for prefix in _PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES:
         for suffix in ("baseline", "current", "status"):
             metadata[f"product_runtime_drift_{prefix}_{suffix}"] = summary.get(f"{prefix}_{suffix}")
     return metadata
@@ -1777,6 +1801,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_promotion_evidence_required",
         "product_runtime_drift_triple_audit_evidence_required",
         "product_runtime_drift_covered_fact_property_evidence_required",
+        "product_runtime_drift_action_gate_evidence_required",
         "product_runtime_drift_compared_metric_count",
         "product_runtime_drift_blocked_metric_count",
         "product_runtime_drift_promotion_evidence_metric_count",
@@ -1785,6 +1810,8 @@ def _promotion_contract_product_runtime_drift_metadata(
         "product_runtime_drift_triple_audit_evidence_blocked_metric_count",
         "product_runtime_drift_covered_fact_property_evidence_metric_count",
         "product_runtime_drift_covered_fact_property_evidence_blocked_metric_count",
+        "product_runtime_drift_action_gate_evidence_metric_count",
+        "product_runtime_drift_action_gate_evidence_blocked_metric_count",
     )
     flattened: dict[str, Any] = {
         f"promotion_contract_{key}": metadata.get(key)
@@ -1795,6 +1822,7 @@ def _promotion_contract_product_runtime_drift_metadata(
         *_PRODUCT_RUNTIME_DRIFT_PROMOTION_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_TRIPLE_AUDIT_EVIDENCE_PREFIXES,
         *_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
+        *_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
     )
     for prefix in evidence_prefixes:
         for suffix in ("baseline", "current", "status"):

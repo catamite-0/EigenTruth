@@ -28,6 +28,18 @@ _PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES: tuple[str, ...] 
     "covered_fact_recommended_route_max_false_supported_rate",
     "covered_fact_recommended_route_min_false_refuted_rate",
 )
+_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES: tuple[str, ...] = (
+    "product_trace_action_audit_error_rate",
+    "product_trace_action_audit_missing_retrieval_action_rate",
+    "product_trace_action_audit_missing_plan_retrieval_query_rate",
+    "product_trace_action_audit_malformed_payload_rate",
+    "product_trace_action_audit_unexpected_action_rate",
+    "product_trace_action_audit_unknown_claim_id_rate",
+    "product_trace_action_execution_alignment_failed_trace_rate",
+    "product_trace_action_execution_missing_result_rate",
+    "product_trace_action_execution_unexpected_result_rate",
+    "product_trace_action_execution_request_id_mismatch_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -1434,6 +1446,11 @@ def _promotion_contract_runtime_drift_from_metadata(
         contract_metadata=contract_metadata,
         prefixes=_PRODUCT_RUNTIME_DRIFT_COVERED_FACT_PROPERTY_EVIDENCE_PREFIXES,
     )
+    action_gate_evidence = _promotion_contract_runtime_drift_evidence(
+        metadata,
+        contract_metadata=contract_metadata,
+        prefixes=_PRODUCT_RUNTIME_DRIFT_ACTION_GATE_EVIDENCE_PREFIXES,
+    )
     drift = {
         "available": False,
         "status": _optional_string(value("product_runtime_drift_status")),
@@ -1450,6 +1467,9 @@ def _promotion_contract_runtime_drift_from_metadata(
         ),
         "covered_fact_property_evidence_required": _optional_bool(
             value("product_runtime_drift_covered_fact_property_evidence_required")
+        ),
+        "action_gate_evidence_required": _optional_bool(
+            value("product_runtime_drift_action_gate_evidence_required")
         ),
         "compared_metric_count": _finite_float(
             value("product_runtime_drift_compared_metric_count")
@@ -1473,9 +1493,16 @@ def _promotion_contract_runtime_drift_from_metadata(
         "covered_fact_property_evidence_blocked_metric_count": _finite_float(
             value("product_runtime_drift_covered_fact_property_evidence_blocked_metric_count")
         ),
+        "action_gate_evidence_metric_count": _finite_float(
+            value("product_runtime_drift_action_gate_evidence_metric_count")
+        ),
+        "action_gate_evidence_blocked_metric_count": _finite_float(
+            value("product_runtime_drift_action_gate_evidence_blocked_metric_count")
+        ),
         "promotion_evidence": promotion_evidence,
         "triple_audit_evidence": triple_audit_evidence,
         "covered_fact_property_evidence": covered_fact_property_evidence,
+        "action_gate_evidence": action_gate_evidence,
     }
     drift["available"] = any(
         item is not None
@@ -1486,11 +1513,13 @@ def _promotion_contract_runtime_drift_from_metadata(
             "promotion_evidence",
             "triple_audit_evidence",
             "covered_fact_property_evidence",
+            "action_gate_evidence",
         }
     ) or _runtime_drift_evidence_available(
         promotion_evidence,
         triple_audit_evidence,
         covered_fact_property_evidence,
+        action_gate_evidence,
     )
     return drift
 
@@ -1564,6 +1593,9 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_required": (
             runtime_drift.get("covered_fact_property_evidence_required")
         ),
+        "promotion_contract_product_runtime_drift_action_gate_evidence_required": (
+            runtime_drift.get("action_gate_evidence_required")
+        ),
         "promotion_contract_product_runtime_drift_compared_metric_count": (
             runtime_drift.get("compared_metric_count")
         ),
@@ -1588,6 +1620,12 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
         "promotion_contract_product_runtime_drift_covered_fact_property_evidence_blocked_metric_count": (
             runtime_drift.get("covered_fact_property_evidence_blocked_metric_count")
         ),
+        "promotion_contract_product_runtime_drift_action_gate_evidence_metric_count": (
+            runtime_drift.get("action_gate_evidence_metric_count")
+        ),
+        "promotion_contract_product_runtime_drift_action_gate_evidence_blocked_metric_count": (
+            runtime_drift.get("action_gate_evidence_blocked_metric_count")
+        ),
     }
     for prefix, values in _mapping(runtime_drift.get("promotion_evidence")).items():
         for suffix in ("baseline", "current", "status"):
@@ -1600,6 +1638,11 @@ def _promotion_contract_runtime_drift_metric_values(runtime_drift: Mapping[str, 
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
             ] = _mapping(values).get(suffix)
     for prefix, values in _mapping(runtime_drift.get("covered_fact_property_evidence")).items():
+        for suffix in ("baseline", "current", "status"):
+            metrics[
+                f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
+            ] = _mapping(values).get(suffix)
+    for prefix, values in _mapping(runtime_drift.get("action_gate_evidence")).items():
         for suffix in ("baseline", "current", "status"):
             metrics[
                 f"promotion_contract_product_runtime_drift_{prefix}_{suffix}"
