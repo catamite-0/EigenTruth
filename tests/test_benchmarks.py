@@ -17803,6 +17803,8 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                 "max_covariance_maha_last_auroc_drop": 0.05,
                 "require_product_runtime_drift_promotion_evidence": True,
                 "require_product_runtime_drift_triple_audit_evidence": True,
+                "require_product_trace_action_audit_gate": True,
+                "require_product_trace_action_execution_gate": True,
                 "require_structured_fact_robustness": True,
                 "structured_fact_canonical_route_key": (
                     "benchmark_manifest:structured-fact-canonical-route:0.1"
@@ -17963,6 +17965,34 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     "report_status": "promote",
                     "selector_replay_report_path": "artifacts/selector/selector-replay.json",
                     "product_runtime_drift_report_path": "artifacts/runtime-drift/runtime-drift.json",
+                    "require_action_audit_gate": True,
+                    "action_audit_gate_report_path": (
+                        "artifacts/trace-replay-workflow/action-audit-gate.json"
+                    ),
+                    "action_audit_gate": {
+                        "status": "promote",
+                        "gate_enabled": True,
+                        "passed": True,
+                        "error_rate": 0.0,
+                        "missing_retrieval_action_rate": 0.0,
+                        "missing_plan_retrieval_query_rate": 0.0,
+                        "malformed_payload_rate": 0.0,
+                        "unexpected_action_rate": 0.0,
+                        "unknown_claim_id_rate": 0.0,
+                    },
+                    "require_action_execution_gate": True,
+                    "action_execution_gate_report_path": (
+                        "artifacts/trace-replay-workflow/action-execution-gate.json"
+                    ),
+                    "action_execution_gate": {
+                        "status": "promote",
+                        "gate_enabled": True,
+                        "passed": True,
+                        "alignment_failed_trace_rate": 0.0,
+                        "missing_result_rate": 0.0,
+                        "unexpected_result_rate": 0.0,
+                        "request_id_mismatch_rate": 0.0,
+                    },
                 },
                 "selfcheck_signal_fusion_workflow": {
                     "report_path": "artifacts/selfcheck-signal-fusion/selfcheck-signal-fusion-workflow.json",
@@ -18058,6 +18088,12 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
                     ),
                     "product_trace_replay_workflow_manifest": (
                         "artifacts/trace-replay-workflow/artifact-manifest.json"
+                    ),
+                    "product_trace_action_audit_gate_report": (
+                        "artifacts/trace-replay-workflow/action-audit-gate.json"
+                    ),
+                    "product_trace_action_execution_gate_report": (
+                        "artifacts/trace-replay-workflow/action-execution-gate.json"
                     ),
                     "selfcheck_signal_fusion_workflow_manifest": (
                         "artifacts/selfcheck-signal-fusion/artifact-manifest.json"
@@ -18158,6 +18194,24 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["product_trace_replay_workflow"]["record_key"] == (
         "report:trace-replay-workflow:0.1"
     )
+    assert contract["product_trace_replay_workflow"]["action_audit_gate_status"] == (
+        "promote"
+    )
+    assert contract["product_trace_replay_workflow"]["action_audit_gate_passed"] is True
+    assert contract["product_trace_replay_workflow"]["action_audit_error_rate"] == 0.0
+    assert contract["product_trace_replay_workflow"]["action_audit_gate_report_path"] == (
+        "artifacts/trace-replay-workflow/action-audit-gate.json"
+    )
+    assert contract["product_trace_replay_workflow"]["action_execution_gate_status"] == (
+        "promote"
+    )
+    assert contract["product_trace_replay_workflow"]["action_execution_gate_passed"] is True
+    assert contract["product_trace_replay_workflow"][
+        "action_execution_missing_result_rate"
+    ] == 0.0
+    assert contract["product_trace_replay_workflow"][
+        "action_execution_gate_report_path"
+    ] == "artifacts/trace-replay-workflow/action-execution-gate.json"
     assert contract["feedback_policy_workflow"]["record_key"] == (
         "report:feedback-policy-workflow:0.1"
     )
@@ -18234,6 +18288,25 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert contract["metadata"]["feedback_policy_workflow_final_answered_but_wrong_rate"] == 0.07
     assert contract["metadata"]["feedback_policy_workflow_final_answer_false_block_rate"] == 0.01
     assert contract["metadata"]["feedback_policy_workflow_safety_coverage_rate"] == 0.92
+    assert contract["metadata"]["product_trace_action_audit_gate_required"] is True
+    assert contract["metadata"]["product_trace_action_audit_gate_status"] == "promote"
+    assert contract["metadata"]["product_trace_action_audit_gate_passed"] is True
+    assert contract["metadata"]["product_trace_action_audit_error_rate"] == pytest.approx(0.0)
+    assert contract["metadata"]["product_trace_action_audit_gate_report"] == (
+        "artifacts/trace-replay-workflow/action-audit-gate.json"
+    )
+    assert contract["metadata"]["product_trace_action_execution_gate_required"] is True
+    assert contract["metadata"]["product_trace_action_execution_gate_status"] == "promote"
+    assert contract["metadata"]["product_trace_action_execution_gate_passed"] is True
+    assert contract["metadata"]["product_trace_action_execution_missing_result_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert contract["metadata"][
+        "product_trace_action_execution_request_id_mismatch_rate"
+    ] == pytest.approx(0.0)
+    assert contract["metadata"]["product_trace_action_execution_gate_report"] == (
+        "artifacts/trace-replay-workflow/action-execution-gate.json"
+    )
     assert contract["metadata"]["product_runtime_drift_promotion_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_triple_audit_evidence_required"] is True
     assert contract["metadata"]["product_runtime_drift_blocked_metric_count"] == 0
@@ -18286,6 +18359,13 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert manifest["metadata"]["triple_extraction_fixture_matrix_report"] == (
         "artifacts/triple-extraction-fixture-matrix/triple-extraction-fixture-matrix.json"
     )
+    assert manifest["metadata"]["product_trace_action_audit_gate_required"] is True
+    assert manifest["metadata"]["product_trace_action_audit_gate_status"] == "promote"
+    assert manifest["metadata"]["product_trace_action_execution_gate_required"] is True
+    assert manifest["metadata"]["product_trace_action_execution_gate_status"] == "promote"
+    assert manifest["metadata"]["product_trace_action_execution_missing_result_rate"] == (
+        pytest.approx(0.0)
+    )
     assert manifest["metadata"]["triple_extraction_fixture_matrix_distinct_predicate_count"] == 6
     assert manifest["metadata"]["recommended_route_covered_fact_property_count"] == 3
     assert manifest["metadata"]["recommended_route_covered_fact_properties"] == [
@@ -18327,6 +18407,19 @@ def test_export_product_promotion_contract_writes_manifest_and_registry(tmp_path
     assert record.metadata["product_trace_replay_workflow_source"] == "registry"
     assert record.metadata["product_trace_replay_workflow_record"] == (
         "report:trace-replay-workflow:0.1"
+    )
+    assert record.metadata["product_trace_action_audit_gate_required"] is True
+    assert record.metadata["product_trace_action_audit_gate_status"] == "promote"
+    assert record.metadata["product_trace_action_audit_gate_report"] == (
+        "artifacts/trace-replay-workflow/action-audit-gate.json"
+    )
+    assert record.metadata["product_trace_action_execution_gate_required"] is True
+    assert record.metadata["product_trace_action_execution_gate_status"] == "promote"
+    assert record.metadata["product_trace_action_execution_missing_result_rate"] == (
+        pytest.approx(0.0)
+    )
+    assert record.metadata["product_trace_action_execution_gate_report"] == (
+        "artifacts/trace-replay-workflow/action-execution-gate.json"
     )
     assert record.metadata["product_trace_replay_workflow_runtime_drift_report"] == (
         "artifacts/runtime-drift/runtime-drift.json"

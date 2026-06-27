@@ -194,6 +194,10 @@ class ProductPromotionContract:
             _mapping(candidate.get("release_efficiency")),
             manifests=manifests,
         )
+        product_trace_replay_metadata = _product_trace_replay_workflow_metadata(
+            product_trace_replay_workflow,
+            manifests=manifests,
+        )
         selector_replay = _mapping(candidate.get("selector_replay"))
         selector_replay_recommended = _mapping(selector_replay.get("recommended"))
         product_runtime_drift = _mapping(candidate.get("product_runtime_drift"))
@@ -260,10 +264,7 @@ class ProductPromotionContract:
             control_defaults=_product_control_defaults_from_release_candidate(
                 comparison
             ),
-            product_trace_replay_workflow=_product_trace_replay_workflow_metadata(
-                product_trace_replay_workflow,
-                manifests=manifests,
-            ),
+            product_trace_replay_workflow=product_trace_replay_metadata,
             selfcheck_signal_fusion_workflow=_selfcheck_signal_fusion_workflow_metadata(
                 selfcheck_signal_fusion_workflow,
                 manifests=manifests,
@@ -311,30 +312,99 @@ class ProductPromotionContract:
                 "product_trace_replay_workflow_status": decision.get(
                     "product_trace_replay_workflow_status"
                 ),
-                "product_trace_replay_workflow_report": product_trace_replay_workflow.get(
+                "product_trace_replay_workflow_report": product_trace_replay_metadata.get(
                     "report_path"
                 ),
                 "product_trace_replay_workflow_manifest": (
-                    product_trace_replay_workflow.get("manifest_path")
-                    or manifests.get("product_trace_replay_workflow_manifest")
+                    product_trace_replay_metadata.get("manifest_path")
                 ),
-                "product_trace_replay_workflow_source": product_trace_replay_workflow.get(
+                "product_trace_replay_workflow_source": product_trace_replay_metadata.get(
                     "source"
                 ),
-                "product_trace_replay_workflow_registry": product_trace_replay_workflow.get(
+                "product_trace_replay_workflow_registry": product_trace_replay_metadata.get(
                     "registry"
                 ),
-                "product_trace_replay_workflow_record": product_trace_replay_workflow.get(
+                "product_trace_replay_workflow_record": product_trace_replay_metadata.get(
                     "record_key"
                 ),
                 "product_trace_replay_workflow_report_status": (
-                    product_trace_replay_workflow.get("report_status")
+                    product_trace_replay_metadata.get("report_status")
                 ),
                 "product_trace_replay_workflow_selector_replay_report": (
-                    product_trace_replay_workflow.get("selector_replay_report_path")
+                    product_trace_replay_metadata.get("selector_replay_report_path")
                 ),
                 "product_trace_replay_workflow_runtime_drift_report": (
-                    product_trace_replay_workflow.get("product_runtime_drift_report_path")
+                    product_trace_replay_metadata.get("product_runtime_drift_report_path")
+                ),
+                "product_trace_action_audit_gate_required": _first_present(
+                    product_trace_replay_metadata.get("require_action_audit_gate"),
+                    config.get("require_product_trace_action_audit_gate"),
+                ),
+                "product_trace_action_audit_gate_status": (
+                    product_trace_replay_metadata.get("action_audit_gate_status")
+                ),
+                "product_trace_action_audit_gate_enabled": (
+                    product_trace_replay_metadata.get("action_audit_gate_enabled")
+                ),
+                "product_trace_action_audit_gate_passed": (
+                    product_trace_replay_metadata.get("action_audit_gate_passed")
+                ),
+                "product_trace_action_audit_gate_report": (
+                    product_trace_replay_metadata.get("action_audit_gate_report_path")
+                ),
+                "product_trace_action_audit_error_rate": (
+                    product_trace_replay_metadata.get("action_audit_error_rate")
+                ),
+                "product_trace_action_audit_missing_retrieval_action_rate": (
+                    product_trace_replay_metadata.get(
+                        "action_audit_missing_retrieval_action_rate"
+                    )
+                ),
+                "product_trace_action_audit_missing_plan_retrieval_query_rate": (
+                    product_trace_replay_metadata.get(
+                        "action_audit_missing_plan_retrieval_query_rate"
+                    )
+                ),
+                "product_trace_action_audit_malformed_payload_rate": (
+                    product_trace_replay_metadata.get("action_audit_malformed_payload_rate")
+                ),
+                "product_trace_action_audit_unexpected_action_rate": (
+                    product_trace_replay_metadata.get("action_audit_unexpected_action_rate")
+                ),
+                "product_trace_action_audit_unknown_claim_id_rate": (
+                    product_trace_replay_metadata.get("action_audit_unknown_claim_id_rate")
+                ),
+                "product_trace_action_execution_gate_required": _first_present(
+                    product_trace_replay_metadata.get("require_action_execution_gate"),
+                    config.get("require_product_trace_action_execution_gate"),
+                ),
+                "product_trace_action_execution_gate_status": (
+                    product_trace_replay_metadata.get("action_execution_gate_status")
+                ),
+                "product_trace_action_execution_gate_enabled": (
+                    product_trace_replay_metadata.get("action_execution_gate_enabled")
+                ),
+                "product_trace_action_execution_gate_passed": (
+                    product_trace_replay_metadata.get("action_execution_gate_passed")
+                ),
+                "product_trace_action_execution_gate_report": (
+                    product_trace_replay_metadata.get("action_execution_gate_report_path")
+                ),
+                "product_trace_action_execution_alignment_failed_trace_rate": (
+                    product_trace_replay_metadata.get(
+                        "action_execution_alignment_failed_trace_rate"
+                    )
+                ),
+                "product_trace_action_execution_missing_result_rate": (
+                    product_trace_replay_metadata.get("action_execution_missing_result_rate")
+                ),
+                "product_trace_action_execution_unexpected_result_rate": (
+                    product_trace_replay_metadata.get("action_execution_unexpected_result_rate")
+                ),
+                "product_trace_action_execution_request_id_mismatch_rate": (
+                    product_trace_replay_metadata.get(
+                        "action_execution_request_id_mismatch_rate"
+                    )
                 ),
                 "selfcheck_signal_fusion_workflow_status": decision.get(
                     "selfcheck_signal_fusion_workflow_status"
@@ -1712,7 +1782,9 @@ def _product_trace_replay_workflow_metadata(
 ) -> dict[str, Any]:
     if not workflow:
         return {}
-    return {
+    action_audit_gate = _mapping(workflow.get("action_audit_gate"))
+    action_execution_gate = _mapping(workflow.get("action_execution_gate"))
+    metadata = {
         "report_path": workflow.get("report_path"),
         "manifest_path": (
             workflow.get("manifest_path")
@@ -1726,7 +1798,58 @@ def _product_trace_replay_workflow_metadata(
         "product_runtime_drift_report_path": workflow.get(
             "product_runtime_drift_report_path"
         ),
+        "require_action_audit_gate": workflow.get("require_action_audit_gate"),
+        "action_audit_gate_report_path": _first_present(
+            workflow.get("action_audit_gate_report_path"),
+            action_audit_gate.get("report_path"),
+            manifests.get("product_trace_action_audit_gate_report"),
+        ),
+        "action_audit_gate_status": action_audit_gate.get("status"),
+        "action_audit_gate_enabled": action_audit_gate.get("gate_enabled"),
+        "action_audit_gate_passed": action_audit_gate.get("passed"),
+        "action_audit_error_rate": action_audit_gate.get("error_rate"),
+        "action_audit_missing_retrieval_action_rate": action_audit_gate.get(
+            "missing_retrieval_action_rate"
+        ),
+        "action_audit_missing_plan_retrieval_query_rate": action_audit_gate.get(
+            "missing_plan_retrieval_query_rate"
+        ),
+        "action_audit_malformed_payload_rate": action_audit_gate.get(
+            "malformed_payload_rate"
+        ),
+        "action_audit_unexpected_action_rate": action_audit_gate.get(
+            "unexpected_action_rate"
+        ),
+        "action_audit_unknown_claim_id_rate": action_audit_gate.get(
+            "unknown_claim_id_rate"
+        ),
+        "require_action_execution_gate": workflow.get("require_action_execution_gate"),
+        "action_execution_gate_report_path": _first_present(
+            workflow.get("action_execution_gate_report_path"),
+            action_execution_gate.get("report_path"),
+            manifests.get("product_trace_action_execution_gate_report"),
+        ),
+        "action_execution_gate_status": action_execution_gate.get("status"),
+        "action_execution_gate_enabled": action_execution_gate.get("gate_enabled"),
+        "action_execution_gate_passed": action_execution_gate.get("passed"),
+        "action_execution_alignment_failed_trace_rate": action_execution_gate.get(
+            "alignment_failed_trace_rate"
+        ),
+        "action_execution_missing_result_rate": action_execution_gate.get(
+            "missing_result_rate"
+        ),
+        "action_execution_unexpected_result_rate": action_execution_gate.get(
+            "unexpected_result_rate"
+        ),
+        "action_execution_request_id_mismatch_rate": action_execution_gate.get(
+            "request_id_mismatch_rate"
+        ),
     }
+    if action_audit_gate:
+        metadata["action_audit_gate"] = action_audit_gate
+    if action_execution_gate:
+        metadata["action_execution_gate"] = action_execution_gate
+    return _drop_none_values(metadata)
 
 
 def _selfcheck_signal_fusion_workflow_metadata(
